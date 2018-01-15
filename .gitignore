@@ -1,0 +1,10 @@
+.*.swp
+gi_c/*.o
+gi_c/gi
+gi_c/loop2
+gi_c/l2
+gi_c/deps/lightning-*
+gi_c/deps/lib
+gi_c/deps/include
+gi_c/deps/share
+gi_c/deps/*.gz
