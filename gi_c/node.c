@@ -175,17 +175,20 @@ static void pflow(bip_t *ip, node_t *node, void *data)
 	for (i = start; i < node->nchild; i++)
 		print_node_label(fd, node->child[i], 1);
 	fprintf(fd, "\"]\n");
-	if (node->next[TRUE] != 0) {
-		if (node->next[FALSE] == 0)
-			fprintf(fd, "%d -> %d\n", node->num,
-				node->next[TRUE]->num);
-		else
-			fprintf(fd, "%d -> %d [color=green]\n", node->num,
-				node->next[TRUE]->num);
+	if (!node->snext)
+		return;
+
+	if (node->snext->next[TRUE]) {
+		fprintf(fd, "%d -> %d [color=green]\n", node->num,
+			node->snext->next[TRUE]->num);
 	}
-	if (node->next[FALSE] != 0)
+	if (node->snext->next[FALSE]) {
 		fprintf(fd, "%d -> %d [color=red]\n", node->num,
-			node->next[FALSE]->num);
+			node->snext->next[FALSE]->num);
+	}
+	if (!node->snext->next[TRUE] && !node->snext->next[FALSE]) {
+		fprintf(fd, "%d -> %d\n", node->num, node->snext->num);
+	}
 }
 
 void print_flow(bip_t *ip, FILE *fd, node_t *node)

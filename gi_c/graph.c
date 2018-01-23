@@ -33,12 +33,10 @@ static void cfg_out(bip_t *ip, node_t *node, void *data)
 		if (!node->start)
 			node->start = node;
 		for (i = 1; i < node->nchild; i++) {
-			node->child[i-1]->next[TRUE] = node->child[i]->start;
 			node->child[i-1]->snext = node->child[i]->start;
 		}
 		for (i = node->nchild - 1; i >= 0; i--) {
 			if (!is_leaf(node->child[i])) {
-				node->child[i]->next[TRUE] = node;
 				node->child[i]->snext = node;
 				break;
 			}
@@ -46,15 +44,9 @@ static void cfg_out(bip_t *ip, node_t *node, void *data)
 		break;
 	case IF:
 		node->start = node->child[0]->start;
-		node->child[0]->next[TRUE] = node->child[1]->start;
-		node->child[1]->next[TRUE] = node;
 		node->child[1]->snext = node;
 		if (node->nchild == 3) {
-			node->child[0]->next[FALSE] = node->child[2]->start;
-			node->child[2]->next[TRUE] = node;
 			node->child[2]->snext = node;
-		} else {
-			node->child[0]->next[FALSE] = node;
 		}
 		n = add_cond_branch(ip, node->child[0]);
 		node->child[0]->snext = n;
@@ -64,13 +56,9 @@ static void cfg_out(bip_t *ip, node_t *node, void *data)
 		} else {
 			n->next[FALSE] = node;
 		}
-
 		break;
 	case WHILE:
 		node->start = node->child[0]->start;
-		node->child[0]->next[TRUE] = node->child[1]->start;
-		node->child[0]->next[FALSE] = node;
-		node->child[1]->next[TRUE] = node->start;
 		node->child[1]->snext = node->start;
 		n = add_cond_branch(ip, node->child[0]);
 		node->child[0]->snext = n;
@@ -79,18 +67,13 @@ static void cfg_out(bip_t *ip, node_t *node, void *data)
 		break;
 	case FOR:
 		node->start = node->child[0]->start;
-		node->child[0]->next[TRUE] = node->child[1]->start;
 		node->child[0]->snext = node->child[1]->start;
-		node->child[1]->next[TRUE] = node->child[3]->start;
-		node->child[1]->next[FALSE] = node;
 		n = add_cond_branch(ip, node->child[1]);
 		node->child[1]->snext = n;
 		n->next[TRUE] = node->child[3]->start;
 		n->next[FALSE] = node;
 		node->child[3]->snext = node->child[2]->start;
 		node->child[2]->snext = node->child[1]->start;
-		node->child[3]->next[TRUE] = node->child[2]->start;
-		node->child[2]->next[TRUE] = node->child[1]->start;
 		break;
 	default:
 		; //t_s(nodetype[node->type]);
