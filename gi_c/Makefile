@@ -1,6 +1,12 @@
+sys = $(shell uname -s)
+
 CPPFLAGS ?= -Wall -Ideps/include
 CFLAGS ?= -g
-LDFLAGS ?= -Ldeps/lib -llightning
+
+# Linux linker requires rpath set if lib is not in default path
+Linux_LDFLAGS = -Wl,-rpath=$(CURDIR)/deps/lib
+
+LDFLAGS ?= $($(sys)_LDFLAGS) -Ldeps/lib -llightning
 
 all: deps gi l2 loop2
 
