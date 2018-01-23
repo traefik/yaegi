@@ -1,4 +1,6 @@
 .*.swp
+*.dot
+gi
 gi_c/*.o
 gi_c/gi
 gi_c/loop2
