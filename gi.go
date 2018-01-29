@@ -24,6 +24,7 @@ type node struct {
 	run   runfun       // function to run at CFG execution
 	val   *interface{} // pointer on generic value (CFG execution)
 	ident string       // set if node is a var or func
+	isnop bool         // node is a no op
 	anode *ast.Node    // original ast node (temporary, will be removed)
 }
 
@@ -82,6 +83,7 @@ func ast_to_cfg(root *node) {
 		case *ast.BlockStmt:
 			wire_child(n)
 			// FIXME: could bypass this node at CFG and wire directly last child
+			n.isnop = true
 			n.run = nop
 			n.val = n.child[len(n.child)-1].val
 			fmt.Println("block", n.index, n.start, n.snext)
@@ -97,11 +99,13 @@ func ast_to_cfg(root *node) {
 		case *ast.ExprStmt:
 			wire_child(n)
 			// FIXME: could bypass this node at CFG and wire directly last child
+			n.isnop = true
 			n.run = nop
 			n.val = n.child[len(n.child)-1].val
 		case *ast.ParenExpr:
 			wire_child(n)
 			// FIXME: could bypass this node at CFG and wire directly last child
+			n.isnop = true
 			n.run = nop
 			n.val = n.child[len(n.child)-1].val
 		case *ast.BinaryExpr:
@@ -118,6 +122,7 @@ func ast_to_cfg(root *node) {
 			wire_child(n)
 			n.run = call
 		case *ast.IfStmt:
+			n.isnop = true
 			n.run = nop
 			n.start = n.child[0].start
 			n.child[1].snext = n
@@ -132,6 +137,7 @@ func ast_to_cfg(root *node) {
 				n.child[0].next[0] = n
 			}
 		case *ast.ForStmt:
+			n.isnop = true
 			n.run = nop
 			// FIXME: works only if for node has 4 children
 			n.start = n.child[0].start
@@ -151,6 +157,15 @@ func ast_to_cfg(root *node) {
 			n.ident = x.Name
 		default:
 			println("unknown type:", reflect.TypeOf(*n.anode).String())
+		}
+	})
+}
+
+// optimisation: rewire CFG to skip nop nodes
+func optim_cfg(root *node) {
+	walk(root, nil, func(n *node) {
+		for s := n.snext; s != nil && s.snext != nil; s = s.snext {
+			n.snext = s
 		}
 	})
 }
@@ -374,7 +389,9 @@ package main
 
 func main() {
 	for a := 0; a < 20000000; a++ {
+	//for a := 0; a < 20000; a++ {
 		if (a & 0x8ffff) == 0x80000 {
+		//if (a & 0x8ff) == 0x800 {
 			println(a)
 		}
 	}
@@ -383,8 +400,10 @@ func main() {
 	sym = make(map[string]*interface{})
 	root := src_to_ast(src)
 	cfg_entry := root.child[1].child[2] // FIXME: entry point should be resolved from 'main' name
-	astdot(root)
+	//astdot(root)
 	ast_to_cfg(cfg_entry)
-	cfgdot(cfg_entry)
+	//cfgdot(cfg_entry)
+	optim_cfg(cfg_entry)
+	//cfgdot(cfg_entry)
 	run_cfg(cfg_entry.start)
 }
