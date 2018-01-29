@@ -53,13 +53,14 @@ func walk(n *node, in func(n *node), out func(n *node)) {
 
 // Wire AST nodes of sequential blocks
 func wire_child(n *node) {
-	println("wire_child", reflect.TypeOf(*n.anode).String())
+	println("wire_child", reflect.TypeOf(*n.anode).String(), n.index)
 	for _, child := range n.child {
 		if !child.is_leaf() {
 			n.start = child.start
 		}
 	}
 	if n.start == nil {
+		println("fix self start", n.index)
 		n.start = n
 	}
 	for i := 1; i < len(n.child); i++ {
@@ -67,6 +68,7 @@ func wire_child(n *node) {
 	}
 	for i := len(n.child) - 1; i >= 0; i-- {
 		if !n.child[i].is_leaf() {
+			println("wire next of", n.child[i].index, "to parent", n.index)
 			n.child[i].snext = n
 			break
 		}
@@ -82,6 +84,7 @@ func ast_to_cfg(root *node) {
 			// FIXME: could bypass this node at CFG and wire directly last child
 			n.run = nop
 			n.val = n.child[len(n.child)-1].val
+			fmt.Println("block", n.index, n.start, n.snext)
 		case *ast.IncDecStmt:
 			wire_child(n)
 			switch x.Tok {
@@ -115,34 +118,28 @@ func ast_to_cfg(root *node) {
 			wire_child(n)
 			n.run = call
 		case *ast.IfStmt:
+			n.run = nop
 			n.start = n.child[0].start
 			n.child[1].snext = n
 			println("if nchild:", len(n.child))
 			if len(n.child) == 3 {
 				n.child[2].snext = n
 			}
-			// CFG: add a conditional branch node to resolve the snext at execution
-			// The node is not chained in the AST, only reachable through snext
-			nod := &node{run: cond_branch, val: n.child[0].val}
-			n.child[0].snext = nod
-			nod.next[1] = n.child[1].start
+			n.child[0].next[1] = n.child[1].start
 			if len(n.child) == 3 {
-				nod.next[0] = n.child[2].start
+				n.child[0].next[0] = n.child[2].start
 			} else {
-				nod.next[0] = n
+				n.child[0].next[0] = n
 			}
-			n.run = nop
 		case *ast.ForStmt:
+			n.run = nop
 			// FIXME: works only if for node has 4 children
 			n.start = n.child[0].start
 			n.child[0].snext = n.child[1].start
-			nod := &node{run: cond_branch, val: n.child[1].val}
-			n.child[1].snext = nod
-			nod.next[0] = n
-			nod.next[1] = n.child[3].start
+			n.child[1].next[0] = n
+			n.child[1].next[1] = n.child[3].start
 			n.child[3].snext = n.child[2].start
 			n.child[2].snext = n.child[1].start
-			n.run = nop
 		case *ast.BasicLit:
 			// FIXME: values must be converted to int or float if possible
 			if v, err := strconv.ParseInt(x.Value, 0, 0); err == nil {
@@ -209,16 +206,13 @@ func cfgdot(root *node) {
 			return
 		}
 		fmt.Fprintf(dotin, "%d [label=\"%d\"]\n", n.index, n.index)
-		if n.snext == nil {
-			return
+		if n.next[1] != nil {
+			fmt.Fprintf(dotin, "%d -> %d [color=green]\n", n.index, n.next[1].index)
 		}
-		if n.snext.next[1] != nil {
-			fmt.Fprintf(dotin, "%d -> %d [color=green]\n", n.index, n.snext.next[1].index)
+		if n.next[0] != nil {
+			fmt.Fprintf(dotin, "%d -> %d [color=red]\n", n.index, n.next[0].index)
 		}
-		if n.snext.next[0] != nil {
-			fmt.Fprintf(dotin, "%d -> %d [color=red]\n", n.index, n.snext.next[0].index)
-		}
-		if n.snext.next[0] == nil && n.snext.next[1] == nil {
+		if n.next[0] == nil && n.next[1] == nil && n.snext != nil {
 			fmt.Fprintf(dotin, "%d -> %d [color=purple]\n", n.index, n.snext.index)
 		}
 	})
@@ -355,8 +349,17 @@ func src_to_ast(src string) *node {
 }
 
 func run_cfg(entry *node) {
-	for n := entry; n != nil; n = n.snext {
+	for n := entry; n != nil; {
 		n.run(n)
+		if n.snext != nil {
+			n = n.snext
+		} else if n.next[1] == nil && n.next[0] == nil {
+			break
+		} else if (*n.val).(bool) {
+			n = n.next[1]
+		} else {
+			n = n.next[0]
+		}
 	}
 }
 
@@ -380,8 +383,8 @@ func main() {
 	sym = make(map[string]*interface{})
 	root := src_to_ast(src)
 	cfg_entry := root.child[1].child[2] // FIXME: entry point should be resolved from 'main' name
-	//astdot(root)
+	astdot(root)
 	ast_to_cfg(cfg_entry)
-	//cfgdot(cfg_entry)
+	cfgdot(cfg_entry)
 	run_cfg(cfg_entry.start)
 }
