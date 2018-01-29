@@ -7,30 +7,29 @@ import (
 	"go/token"
 	"os/exec"
 	"reflect"
+	"strconv"
 )
 
-type nodetype int
-
-const (
-	Undef nodetype = iota
-	BasicLit
-	Ident
-	BinaryExpr
-	IncDecStmt
-	AssignStmt
-)
+// Function to run at CFG execution
+type runfun func(n *node)
 
 // Structure for AST and CFG
 type node struct {
-	child []*node   // child subtrees
-	anc   *node     // ancestor
-	start *node     // entry point in subtree (CFG)
-	snext *node     // successor (CFG)
-	next  [2]*node  // conditional successor (CFG)
-	index int       // node index (dot display)
-	typ   nodetype  // node type
-	anode *ast.Node // original ast node (temporary, will be removed)
-	//sym   *sym     // symbol
+	child []*node      // child subtrees
+	anc   *node        // ancestor
+	start *node        // entry point in subtree (CFG)
+	snext *node        // successor (CFG)
+	next  [2]*node     // conditional successors, for false and for true (CFG)
+	index int          // node index (dot display)
+	run   runfun       // function to run at CFG execution
+	val   *interface{} // pointer on generic value (CFG execution)
+	ident string       // set if node is a var or func
+	anode *ast.Node    // original ast node (temporary, will be removed)
+}
+
+// Interpreter execution state
+type interp struct {
+	entry *node // Execution entry point
 }
 
 // Returns true if node is a leaf in the AST
@@ -77,21 +76,44 @@ func wire_child(n *node) {
 // Generate a CFG from AST (wiring successors in AST)
 func ast_to_cfg(root *node) {
 	walk(root, nil, func(n *node) {
-		switch (*n.anode).(type) {
+		switch x := (*n.anode).(type) {
 		case *ast.BlockStmt:
 			wire_child(n)
+			// FIXME: could bypass this node at CFG and wire directly last child
+			n.run = nop
+			n.val = n.child[len(n.child)-1].val
 		case *ast.IncDecStmt:
 			wire_child(n)
+			switch x.Tok {
+			case token.INC:
+				n.run = inc
+			}
 		case *ast.AssignStmt:
+			n.run = assign
 			wire_child(n)
 		case *ast.ExprStmt:
 			wire_child(n)
+			// FIXME: could bypass this node at CFG and wire directly last child
+			n.run = nop
+			n.val = n.child[len(n.child)-1].val
 		case *ast.ParenExpr:
 			wire_child(n)
+			// FIXME: could bypass this node at CFG and wire directly last child
+			n.run = nop
+			n.val = n.child[len(n.child)-1].val
 		case *ast.BinaryExpr:
 			wire_child(n)
+			switch x.Op {
+			case token.AND:
+				n.run = and
+			case token.EQL:
+				n.run = equal
+			case token.LSS:
+				n.run = lower
+			}
 		case *ast.CallExpr:
 			wire_child(n)
+			n.run = call
 		case *ast.IfStmt:
 			n.start = n.child[0].start
 			n.child[1].snext = n
@@ -101,7 +123,7 @@ func ast_to_cfg(root *node) {
 			}
 			// CFG: add a conditional branch node to resolve the snext at execution
 			// The node is not chained in the AST, only reachable through snext
-			nod := &node{}
+			nod := &node{run: cond_branch, val: n.child[0].val}
 			n.child[0].snext = nod
 			nod.next[1] = n.child[1].start
 			if len(n.child) == 3 {
@@ -109,18 +131,27 @@ func ast_to_cfg(root *node) {
 			} else {
 				nod.next[0] = n
 			}
+			n.run = nop
 		case *ast.ForStmt:
 			// FIXME: works only if for node has 4 children
 			n.start = n.child[0].start
 			n.child[0].snext = n.child[1].start
-			nod := &node{}
+			nod := &node{run: cond_branch, val: n.child[1].val}
 			n.child[1].snext = nod
 			nod.next[0] = n
 			nod.next[1] = n.child[3].start
 			n.child[3].snext = n.child[2].start
 			n.child[2].snext = n.child[1].start
+			n.run = nop
 		case *ast.BasicLit:
+			// FIXME: values must be converted to int or float if possible
+			if v, err := strconv.ParseInt(x.Value, 0, 0); err == nil {
+				*n.val = v
+			} else {
+				*n.val = x.Value
+			}
 		case *ast.Ident:
+			n.ident = x.Name
 		default:
 			println("unknown type:", reflect.TypeOf(*n.anode).String())
 		}
@@ -215,6 +246,79 @@ func (s *nodestack) top() *node {
 	return nil
 }
 
+// Functions run during execution of CFG
+func assign(n *node) {
+	name := n.child[0].ident   // symbol name is in the expr LHS
+	sym[name] = n.child[1].val // Set symbol value
+	n.child[0].val = sym[name]
+	n.val = sym[name]
+	fmt.Println(name, "=", *n.child[1].val, ":", *n.val)
+}
+
+func cond_branch(n *node) {
+	if (*n.val).(bool) {
+		n.snext = n.next[1]
+	} else {
+		n.snext = n.next[0]
+	}
+}
+
+func and(n *node) {
+	for _, child := range n.child {
+		if child.ident != "" {
+			child.val = sym[child.ident]
+		}
+	}
+	*n.val = (*n.child[0].val).(int64) & (*n.child[1].val).(int64)
+}
+
+func printa(n []*node) {
+	for _, m := range n {
+		fmt.Printf("%v", *m.val)
+	}
+	fmt.Println("")
+}
+
+func call(n *node) {
+	for _, child := range n.child {
+		if child.ident != "" {
+			child.val = sym[child.ident]
+		}
+	}
+	switch n.child[0].ident {
+	case "println":
+		printa(n.child[1:])
+	default:
+		panic("function not implemented")
+	}
+}
+
+func equal(n *node) {
+	for _, child := range n.child {
+		if child.ident != "" {
+			child.val = sym[child.ident]
+		}
+	}
+	*n.val = (*n.child[0].val).(int64) == (*n.child[1].val).(int64)
+}
+
+func inc(n *node) {
+	n.child[0].val = sym[n.child[0].ident]
+	*n.child[0].val = (*n.child[0].val).(int64) + 1
+	*n.val = *n.child[0].val
+}
+
+func lower(n *node) {
+	for _, child := range n.child {
+		if child.ident != "" {
+			child.val = sym[child.ident]
+		}
+	}
+	*n.val = (*n.child[0].val).(int64) < (*n.child[1].val).(int64)
+}
+
+func nop(n *node) {}
+
 // Parse src string containing go code and generate AST. Returns the root node
 func src_to_ast(src string) *node {
 	fset := token.NewFileSet() // positions are relative to fset
@@ -236,7 +340,8 @@ func src_to_ast(src string) *node {
 			anc = st.pop()
 		default:
 			index++
-			nod := &node{anc: anc, index: index, anode: &n}
+			var i interface{}
+			nod := &node{anc: anc, index: index, anode: &n, val: &i}
 			if anc == nil {
 				root = nod
 			} else {
@@ -249,22 +354,34 @@ func src_to_ast(src string) *node {
 	return root
 }
 
+func run_cfg(entry *node) {
+	for n := entry; n != nil; n = n.snext {
+		n.run(n)
+	}
+}
+
+// Symbol table (aka variables), just a global one to start.
+// It should be organized in hierarchical scopes and frames
+// and belong to an interpreter context.
+var sym map[string]*interface{}
+
 func main() {
 	const src = `
 package main
 
 func main() {
-	for a := 0; a < 20000; a++ {
-		if (a & 0x8ff) == 0x800 {
+	for a := 0; a < 20000000; a++ {
+		if (a & 0x8ffff) == 0x80000 {
 			println(a)
 		}
 	}
-}
-`
+} `
 
+	sym = make(map[string]*interface{})
 	root := src_to_ast(src)
-	cfg_entry := root.child[1].child[2]
-	astdot(root)
+	cfg_entry := root.child[1].child[2] // FIXME: entry point should be resolved from 'main' name
+	//astdot(root)
 	ast_to_cfg(cfg_entry)
-	cfgdot(cfg_entry)
+	//cfgdot(cfg_entry)
+	run_cfg(cfg_entry.start)
 }
