@@ -388,7 +388,7 @@ package main
 func main() {
 	println(1)
 	//for a := 0; a < 20000000; a++ {
-	for a := 0; a < 20000; a++ {
+	for a := 0; a < 10000; a++ {
 		//if (a & 0x8ffff) == 0x80000 {
 		if (a & 0x8ff) == 0x800 {
 			println(a)
