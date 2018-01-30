@@ -54,14 +54,13 @@ func walk(n *node, in func(n *node), out func(n *node)) {
 
 // Wire AST nodes of sequential blocks
 func wire_child(n *node) {
-	println("wire_child", reflect.TypeOf(*n.anode).String(), n.index)
 	for _, child := range n.child {
 		if !child.is_leaf() {
 			n.start = child.start
+			break
 		}
 	}
 	if n.start == nil {
-		println("fix self start", n.index)
 		n.start = n
 	}
 	for i := 1; i < len(n.child); i++ {
@@ -69,7 +68,6 @@ func wire_child(n *node) {
 	}
 	for i := len(n.child) - 1; i >= 0; i-- {
 		if !n.child[i].is_leaf() {
-			println("wire next of", n.child[i].index, "to parent", n.index)
 			n.child[i].snext = n
 			break
 		}
@@ -86,7 +84,6 @@ func ast_to_cfg(root *node) {
 			n.isnop = true
 			n.run = nop
 			n.val = n.child[len(n.child)-1].val
-			fmt.Println("block", n.index, n.start, n.snext)
 		case *ast.IncDecStmt:
 			wire_child(n)
 			switch x.Tok {
@@ -126,7 +123,6 @@ func ast_to_cfg(root *node) {
 			n.run = nop
 			n.start = n.child[0].start
 			n.child[1].snext = n
-			println("if nchild:", len(n.child))
 			if len(n.child) == 3 {
 				n.child[2].snext = n
 			}
@@ -166,6 +162,9 @@ func optim_cfg(root *node) {
 	walk(root, nil, func(n *node) {
 		for s := n.snext; s != nil && s.snext != nil; s = s.snext {
 			n.snext = s
+		}
+		for s := n.next[0]; s != nil && s.snext != nil; s = s.snext {
+			n.next[0] = s
 		}
 	})
 }
@@ -261,7 +260,6 @@ func assign(n *node) {
 	sym[name] = n.child[1].val // Set symbol value
 	n.child[0].val = sym[name]
 	n.val = sym[name]
-	fmt.Println(name, "=", *n.child[1].val, ":", *n.val)
 }
 
 func cond_branch(n *node) {
@@ -388,10 +386,11 @@ func main() {
 package main
 
 func main() {
-	for a := 0; a < 20000000; a++ {
-	//for a := 0; a < 20000; a++ {
-		if (a & 0x8ffff) == 0x80000 {
-		//if (a & 0x8ff) == 0x800 {
+	println(1)
+	//for a := 0; a < 20000000; a++ {
+	for a := 0; a < 20000; a++ {
+		//if (a & 0x8ffff) == 0x80000 {
+		if (a & 0x8ff) == 0x800 {
 			println(a)
 		}
 	}
@@ -399,11 +398,11 @@ func main() {
 
 	sym = make(map[string]*interface{})
 	root := src_to_ast(src)
+	astdot(root)
 	cfg_entry := root.child[1].child[2] // FIXME: entry point should be resolved from 'main' name
-	//astdot(root)
 	ast_to_cfg(cfg_entry)
 	//cfgdot(cfg_entry)
 	optim_cfg(cfg_entry)
-	//cfgdot(cfg_entry)
+	cfgdot(cfg_entry)
 	run_cfg(cfg_entry.start)
 }
