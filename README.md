@@ -23,3 +23,29 @@ The second step consists to add a dynamic code generator, thus extending the int
 The dynamic code generator converts parts of the intermediate representation (IR), here a specialy annotated AST, directly to machine code in executable memory pages. It is expected to reuse parts of the Go assembler for the machine code generation).
 
 One idea is to use traces from the interpreter to replace hot paths (i.e. intensive loops) by snippets of stream-lined native code. The code generator doesn't need to be complete to start gaining performance improvemeents, as only parts where code generator is guaranteed to works will be applied, and the symbolic execution level serves as a fallback.
+
+## Design notes
+
+This section documents some design analyses and choices. It is related to symbolic interpretation (step 1) only for now.
+
+### AST Peculiarities
+
+AST is fundamental to code analysis, various compilation steps and interpretation. It is very important to get it right, specially for a dynamic interpreter.
+
+#### Limitations of go/ast
+
+The `go/ast` has been designed and optimized for parsing operations. It relies exclusively on interface methods to perform traversal of the tree (node objects must provide a `visitor` method).
+
+the AST is a tree structure where nodes are objects of different types (type being specialized according to the kind of object: expression, statement list, operator, identificator, etc.).
+
+In this case, traversal can be performed only recursively, less efficiently than an iterative traversal.
+
+In addition, the provided Walk method implements only depth first traversal in pre-order manner (where node callback is called before visiting children nodes), but it is required to process nodes in post-order (node callback called after visiting all children), at least for CFG generation, optimizations at AST level and code generation.
+
+#### Our AST
+
+Our AST is represented with a tree of objects of all the same type Node, each node containing pointers to ancestor and children.
+
+This structure allows a simpler implementation of recursive tree walk, and makes possible an faster and more efficient non-recursive tree walk.
+
+The tree walk allows callback both for pre-order and post-order processing.
