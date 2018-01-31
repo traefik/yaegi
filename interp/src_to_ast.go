@@ -33,7 +33,7 @@ func SrcToAst(src string) *Node {
 			if anc == nil {
 				root = nod
 			} else {
-				anc.child = append(anc.child, nod)
+				anc.Child = append(anc.Child, nod)
 			}
 			st.push(nod)
 		}

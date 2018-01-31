@@ -10,9 +10,9 @@ type RunFun func(n *Node)
 
 // Structure for AST and CFG
 type Node struct {
-	child []*Node      // child subtrees
+	Child []*Node      // child subtrees
 	anc   *Node        // ancestor
-	start *Node        // entry point in subtree (CFG)
+	Start *Node        // entry point in subtree (CFG)
 	snext *Node        // successor (CFG)
 	next  [2]*Node     // conditional successors, for false and for true (CFG)
 	index int          // node index (dot display)
@@ -30,7 +30,7 @@ type Interpreter struct {
 
 // Returns true if node is a leaf in the AST
 func (n *Node) isLeaf() bool {
-	return len((*n).child) == 0
+	return len((*n).Child) == 0
 }
 
 // Walk AST in depth first order, call 'in' function at node entry and
@@ -39,8 +39,8 @@ func (n *Node) Walk(in func(n *Node), out func(n *Node)) {
 	if in != nil {
 		in(n)
 	}
-	for _, child := range n.child {
-		child.Walk(in, out)
+	for _, Child := range n.Child {
+		Child.Walk(in, out)
 	}
 	if out != nil {
 		out(n)

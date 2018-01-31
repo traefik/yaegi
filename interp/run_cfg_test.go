@@ -9,9 +9,9 @@ func main() {
 }
 `
 	root := SrcToAst(src)
-	cfg_entry := root.child[1].child[2] // FIXME: entry point should be resolved from 'main' name
+	cfg_entry := root.Child[1].Child[2] // FIXME: entry point should be resolved from 'main' name
 	AstToCfg(cfg_entry)
-	RunCfg(cfg_entry.start)
+	RunCfg(cfg_entry.Start)
 	// Output:
 	// 1
 }
@@ -30,11 +30,10 @@ func main() {
 }
 `
 
-	sym = make(map[string]*interface{}) // FIXME: should be done elsewhere
 	root := SrcToAst(src)
-	cfg_entry := root.child[1].child[2] // FIXME: entry point should be resolved from 'main' name
+	cfg_entry := root.Child[1].Child[2] // FIXME: entry point should be resolved from 'main' name
 	AstToCfg(cfg_entry)
-	RunCfg(cfg_entry.start)
+	RunCfg(cfg_entry.Start)
 	// Output:
 	// 1
 	// 2048
