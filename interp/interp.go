@@ -6,7 +6,7 @@ import (
 )
 
 // Function to run at CFG execution
-type RunFun func(n *Node)
+type RunFun func(n *Node, i *Interpreter)
 
 // Structure for AST and CFG
 type Node struct {
@@ -26,6 +26,7 @@ type Node struct {
 // Interpreter execution context
 type Interpreter struct {
 	sym map[string]*interface{}
+	res interface{}
 }
 
 // Returns true if node is a leaf in the AST
@@ -45,4 +46,21 @@ func (n *Node) Walk(in func(n *Node), out func(n *Node)) {
 	if out != nil {
 		out(n)
 	}
+}
+
+// Create and return a new interpreter object
+func NewInterpreter() *Interpreter {
+	return &Interpreter{sym: make(map[string]*interface{})}
+}
+
+//
+func (i *Interpreter) Eval(src string) interface{} {
+	root := SrcToAst(src)
+	root.AstDot()
+	cfg_entry := root.Child[1].Child[2] // FIXME: entry point should be resolved from 'main' name
+	cfg_entry.AstToCfg()
+	cfg_entry.OptimCfg()
+	//cfg_entry.CfgDot()
+	i.RunCfg(cfg_entry.Start)
+	return i.res
 }

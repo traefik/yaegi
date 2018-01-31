@@ -2,10 +2,9 @@ package interp
 
 import "fmt"
 
-func RunCfg(entry *Node) {
-	sym = make(map[string]*interface{}) // FIXME: should be done elsewhere
+func (i *Interpreter) RunCfg(entry *Node) {
 	for n := entry; n != nil; {
-		n.run(n)
+		n.run(n, i)
 		if n.snext != nil {
 			n = n.snext
 		} else if n.next[1] == nil && n.next[0] == nil {
@@ -20,16 +19,16 @@ func RunCfg(entry *Node) {
 
 // Functions set to run during execution of CFG
 
-var sym map[string]*interface{} // FIXME: should be part of interpreter
+//var sym map[string]*interface{} // FIXME: should be part of interpreter
 
-func assign(n *Node) {
-	name := n.Child[0].ident   // symbol name is in the expr LHS
-	sym[name] = n.Child[1].val // Set symbol value
-	n.Child[0].val = sym[name]
-	n.val = sym[name]
+func assign(n *Node, i *Interpreter) {
+	name := n.Child[0].ident     // symbol name is in the expr LHS
+	i.sym[name] = n.Child[1].val // Set symbol value
+	n.Child[0].val = i.sym[name]
+	n.val = i.sym[name]
 }
 
-func cond_branch(n *Node) {
+func cond_branch(n *Node, i *Interpreter) {
 	if (*n.val).(bool) {
 		n.snext = n.next[1]
 	} else {
@@ -37,10 +36,10 @@ func cond_branch(n *Node) {
 	}
 }
 
-func and(n *Node) {
+func and(n *Node, i *Interpreter) {
 	for _, child := range n.Child {
 		if child.ident != "" {
-			child.val = sym[child.ident]
+			child.val = i.sym[child.ident]
 		}
 	}
 	*n.val = (*n.Child[0].val).(int64) & (*n.Child[1].val).(int64)
@@ -53,10 +52,10 @@ func printa(n []*Node) {
 	fmt.Println("")
 }
 
-func call(n *Node) {
+func call(n *Node, i *Interpreter) {
 	for _, child := range n.Child {
 		if child.ident != "" {
-			child.val = sym[child.ident]
+			child.val = i.sym[child.ident]
 		}
 	}
 	// Only builtin println is supported
@@ -68,28 +67,28 @@ func call(n *Node) {
 	}
 }
 
-func equal(n *Node) {
+func equal(n *Node, i *Interpreter) {
 	for _, child := range n.Child {
 		if child.ident != "" {
-			child.val = sym[child.ident]
+			child.val = i.sym[child.ident]
 		}
 	}
 	*n.val = (*n.Child[0].val).(int64) == (*n.Child[1].val).(int64)
 }
 
-func inc(n *Node) {
-	n.Child[0].val = sym[n.Child[0].ident]
+func inc(n *Node, i *Interpreter) {
+	n.Child[0].val = i.sym[n.Child[0].ident]
 	*n.Child[0].val = (*n.Child[0].val).(int64) + 1
 	*n.val = *n.Child[0].val
 }
 
-func lower(n *Node) {
+func lower(n *Node, i *Interpreter) {
 	for _, child := range n.Child {
 		if child.ident != "" {
-			child.val = sym[child.ident]
+			child.val = i.sym[child.ident]
 		}
 	}
 	*n.val = (*n.Child[0].val).(int64) < (*n.Child[1].val).(int64)
 }
 
-func nop(n *Node) {}
+func nop(n *Node, i *Interpreter) {}

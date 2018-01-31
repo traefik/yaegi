@@ -17,11 +17,6 @@ func main() {
 	}
 }
 `
-	root := interp.SrcToAst(src)
-	//root.AstDot()
-	cfg_entry := root.Child[1].Child[2] // FIXME: entry point should be resolved from 'main' name
-	cfg_entry.AstToCfg()
-	cfg_entry.OptimCfg()
-	//cfg_entry.CfgDot()
-	interp.RunCfg(cfg_entry.Start)
+	i := interp.NewInterpreter()
+	i.Eval(src)
 }
