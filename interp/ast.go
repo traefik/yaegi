@@ -6,8 +6,9 @@ import (
 	"go/token"
 )
 
-// Parse src string containing go code and generate AST. Returns the root node.
-func SrcToAst(src string) *Node {
+// Ast(src) parses src string containing Go code and generates the corresponding AST.
+// The AST root node is returned.
+func Ast(src string) *Node {
 	fset := token.NewFileSet() // positions are relative to fset
 	f, err := parser.ParseFile(fset, "sample.go", src, 0)
 	if err != nil {

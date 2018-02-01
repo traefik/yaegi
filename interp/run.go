@@ -2,7 +2,7 @@ package interp
 
 import "fmt"
 
-func (i *Interpreter) RunCfg(entry *Node) {
+func (i *Interpreter) Run(entry *Node) {
 	for n := entry; n != nil; {
 		n.run(n, i)
 		if n.snext != nil {
@@ -26,14 +26,6 @@ func assign(n *Node, i *Interpreter) {
 	i.sym[name] = n.Child[1].val // Set symbol value
 	n.Child[0].val = i.sym[name]
 	n.val = i.sym[name]
-}
-
-func cond_branch(n *Node, i *Interpreter) {
-	if (*n.val).(bool) {
-		n.snext = n.next[1]
-	} else {
-		n.snext = n.next[0]
-	}
 }
 
 func and(n *Node, i *Interpreter) {

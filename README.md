@@ -49,3 +49,25 @@ Our AST is represented with a tree of objects of all the same type Node, each no
 This structure allows a simpler implementation of recursive tree walk, and makes possible an faster and more efficient non-recursive tree walk.
 
 The tree walk allows callback both for pre-order and post-order processing.
+
+## Example
+
+Consider the following source:
+
+```go
+package main
+
+func main() {
+	for a := 0; a < 10000; a++ {
+		if (a & 0x8ff) == 0x800 {
+			println(a)
+		}
+	}
+}
+```
+
+AST: ![ast](images/ast.jpg)
+
+CFG: ![cfg](images/cfg.jpg)
+
+In CFG, the node labels correspond to the number in left of AST nodes

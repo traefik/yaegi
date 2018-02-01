@@ -7,16 +7,17 @@ import (
 	"strconv"
 )
 
-// TODO: remove coupling with go/ast and go/token. This should be handled only in SrcToAst
+// TODO: remove coupling with go/ast and go/token. This should be handled only in Ast()
 
-// Generate a CFG from AST (wiring successors in AST)
-func (e *Node) AstToCfg() {
+// n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
+func (e *Node) Cfg() {
+	//var findex int
 	e.Walk(nil, func(n *Node) {
 		switch x := (*n.anode).(type) {
 		case *ast.BlockStmt:
 			wire_child(n)
 			// FIXME: could bypass this node at CFG and wire directly last child
-			n.isnop = true
+			n.isNop = true
 			n.run = nop
 			n.val = n.Child[len(n.Child)-1].val
 		case *ast.IncDecStmt:
@@ -31,13 +32,13 @@ func (e *Node) AstToCfg() {
 		case *ast.ExprStmt:
 			wire_child(n)
 			// FIXME: could bypass this node at CFG and wire directly last child
-			n.isnop = true
+			n.isNop = true
 			n.run = nop
 			n.val = n.Child[len(n.Child)-1].val
 		case *ast.ParenExpr:
 			wire_child(n)
 			// FIXME: could bypass this node at CFG and wire directly last child
-			n.isnop = true
+			n.isNop = true
 			n.run = nop
 			n.val = n.Child[len(n.Child)-1].val
 		case *ast.BinaryExpr:
@@ -54,7 +55,7 @@ func (e *Node) AstToCfg() {
 			wire_child(n)
 			n.run = call
 		case *ast.IfStmt:
-			n.isnop = true
+			n.isNop = true
 			n.run = nop
 			n.Start = n.Child[0].Start
 			n.Child[1].snext = n
@@ -68,7 +69,7 @@ func (e *Node) AstToCfg() {
 				n.Child[0].next[0] = n
 			}
 		case *ast.ForStmt:
-			n.isnop = true
+			n.isNop = true
 			n.run = nop
 			// FIXME: works only if for node has 4 children
 			n.Start = n.Child[0].Start
@@ -78,6 +79,7 @@ func (e *Node) AstToCfg() {
 			n.Child[3].snext = n.Child[2].Start
 			n.Child[2].snext = n.Child[1].Start
 		case *ast.BasicLit:
+			n.isConst = true
 			// FIXME: values must be converted to int or float if possible
 			if v, err := strconv.ParseInt(x.Value, 0, 0); err == nil {
 				*n.val = v

@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestSrcToAst(t *testing.T) {
+func TestAst(t *testing.T) {
 	src := `
 package main
 
@@ -13,6 +13,6 @@ func main() {
 	println(1)
 }
 `
-	root := SrcToAst(src)
+	root := Ast(src)
 	fmt.Println(root.index)
 }

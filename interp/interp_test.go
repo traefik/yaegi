@@ -1,6 +1,6 @@
 package interp
 
-func ExampleRunCfg_1() {
+func ExampleEval_1() {
 	src := `
 package main
 
@@ -8,15 +8,12 @@ func main() {
 	println(1)
 }
 `
-	root := SrcToAst(src)
-	cfg_entry := root.Child[1].Child[2] // FIXME: entry point should be resolved from 'main' name
-	AstToCfg(cfg_entry)
-	RunCfg(cfg_entry.Start)
+	NewInterpreter().Eval(src)
 	// Output:
 	// 1
 }
 
-func ExampleRunCfg_2() {
+func ExampleEval_2() {
 	src := `
 package main
 
@@ -30,10 +27,7 @@ func main() {
 }
 `
 
-	root := SrcToAst(src)
-	cfg_entry := root.Child[1].Child[2] // FIXME: entry point should be resolved from 'main' name
-	AstToCfg(cfg_entry)
-	RunCfg(cfg_entry.Start)
+	NewInterpreter().Eval(src)
 	// Output:
 	// 1
 	// 2048
