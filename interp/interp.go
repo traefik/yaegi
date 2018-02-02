@@ -6,7 +6,7 @@ import (
 )
 
 // Function to run at CFG execution
-type RunFun func(n *Node, i *Interpreter)
+type RunFun func(n *Node, f *Frame)
 
 // Structure for AST and CFG
 type Node struct {
@@ -21,7 +21,7 @@ type Node struct {
 	val     *interface{} // pointer on generic value (CFG execution)
 	ident   string       // set if node is a var or func
 	isNop   bool         // node run function us a no-op
-	isConst bool         // node value is a constant
+	isConst bool         // true if node value is constant
 	anode   *ast.Node    // original ast node (temporary, will be removed)
 }
 
@@ -35,6 +35,7 @@ type Frame struct {
 // Interpreter contains global resources and state
 type Interpreter struct {
 	sym   map[string]*interface{}
+	size  int
 	frame *Frame
 	out   interface{}
 }
@@ -66,11 +67,11 @@ func NewInterpreter() *Interpreter {
 // i.Eval(s) evaluates Go code represented as a string
 func (i *Interpreter) Eval(src string) interface{} {
 	root := Ast(src)
-	root.AstDot()
+	//root.AstDot()
 	entry := root.Child[1].Child[2] // FIXME: entry point should be resolved from 'main' name
-	entry.Cfg()
+	i.size = entry.Cfg()
 	entry.OptimCfg()
-	entry.CfgDot()
+	//entry.CfgDot()
 	i.Run(entry.Start)
 	return i.out
 }

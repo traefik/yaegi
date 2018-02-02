@@ -10,7 +10,7 @@ import (
 // TODO: remove coupling with go/ast and go/token. This should be handled only in Ast()
 
 // n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
-func (e *Node) Cfg() {
+func (e *Node) Cfg() int {
 	symIndex := make(map[string]int)
 	maxIndex := 0
 
@@ -29,11 +29,11 @@ func (e *Node) Cfg() {
 			case token.INC:
 				n.run = inc
 			}
-			maxIndex++
-			n.findex = maxIndex
+			n.findex = n.Child[0].findex
 		case *ast.AssignStmt:
 			n.run = assign
 			wireChild(n)
+			n.findex = n.Child[0].findex
 		case *ast.ExprStmt:
 			wireChild(n)
 			// FIXME: could bypass this node at CFG and wire directly last child
@@ -98,15 +98,19 @@ func (e *Node) Cfg() {
 				*n.val = x.Value
 			}
 		case *ast.Ident:
+			// Lookup identifier in frame symbol table. If not found
+			// should check that ident is assign target.
 			n.ident = x.Name
 			if n.findex = symIndex[n.ident]; n.findex == 0 {
 				maxIndex++
 				symIndex[n.ident] = maxIndex
 			}
+			n.findex = symIndex[n.ident]
 		default:
 			println("unknown type:", reflect.TypeOf(*n.anode).String())
 		}
 	})
+	return maxIndex + 1
 }
 
 // Wire AST nodes of sequential blocks

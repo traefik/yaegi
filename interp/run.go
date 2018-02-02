@@ -4,15 +4,17 @@ import "fmt"
 
 func (i *Interpreter) Run(entry *Node) {
 	// Init Frame
+	f := &Frame{val: make([]interface{}, i.size)}
+	i.frame = f
 
 	// Start execution by runnning entry function and go to next
 	for n := entry; n != nil; {
-		n.run(n, i)
+		n.run(n, f)
 		if n.snext != nil {
 			n = n.snext
 		} else if n.next[1] == nil && n.next[0] == nil {
 			break
-		} else if (*n.val).(bool) {
+		} else if value(n, f).(bool) {
 			n = n.next[1]
 		} else {
 			n = n.next[0]
@@ -22,69 +24,48 @@ func (i *Interpreter) Run(entry *Node) {
 
 // Functions set to run during execution of CFG
 
-//var sym map[string]*interface{} // FIXME: should be part of interpreter
-
-func assign(n *Node, i *Interpreter) {
-	fmt.Println("assign findex", n.Child[0].findex)
-	name := n.Child[0].ident     // symbol name is in the expr LHS
-	i.sym[name] = n.Child[1].val // Set symbol value
-	n.Child[0].val = i.sym[name]
-	n.val = i.sym[name]
-}
-
-func and(n *Node, i *Interpreter) {
-	for _, child := range n.Child {
-		if child.ident != "" {
-			child.val = i.sym[child.ident]
-		}
+func value(n *Node, f *Frame) interface{} {
+	if n.isConst {
+		return *n.val
 	}
-	*n.val = (*n.Child[0].val).(int64) & (*n.Child[1].val).(int64)
+	return f.val[n.findex]
+
 }
 
-func printa(n []*Node) {
+func assign(n *Node, f *Frame) {
+	f.val[n.findex] = value(n.Child[1], f)
+}
+
+func and(n *Node, f *Frame) {
+	f.val[n.findex] = value(n.Child[0], f).(int64) & value(n.Child[1], f).(int64)
+}
+
+func printa(n []*Node, f *Frame) {
 	for _, m := range n {
-		fmt.Printf("%v", *m.val)
+		fmt.Printf("%v", value(m, f))
 	}
 	fmt.Println("")
 }
 
-func call(n *Node, i *Interpreter) {
-	for _, child := range n.Child {
-		if child.ident != "" {
-			child.val = i.sym[child.ident]
-		}
-	}
-	// Only builtin println is supported
+func call(n *Node, f *Frame) {
 	switch n.Child[0].ident {
 	case "println":
-		printa(n.Child[1:])
+		printa(n.Child[1:], f)
 	default:
 		panic("function not implemented")
 	}
 }
 
-func equal(n *Node, i *Interpreter) {
-	for _, child := range n.Child {
-		if child.ident != "" {
-			child.val = i.sym[child.ident]
-		}
-	}
-	*n.val = (*n.Child[0].val).(int64) == (*n.Child[1].val).(int64)
+func equal(n *Node, f *Frame) {
+	f.val[n.findex] = value(n.Child[0], f).(int64) == value(n.Child[1], f).(int64)
 }
 
-func inc(n *Node, i *Interpreter) {
-	n.Child[0].val = i.sym[n.Child[0].ident]
-	*n.Child[0].val = (*n.Child[0].val).(int64) + 1
-	*n.val = *n.Child[0].val
+func inc(n *Node, f *Frame) {
+	f.val[n.findex] = value(n.Child[0], f).(int64) + 1
 }
 
-func lower(n *Node, i *Interpreter) {
-	for _, child := range n.Child {
-		if child.ident != "" {
-			child.val = i.sym[child.ident]
-		}
-	}
-	*n.val = (*n.Child[0].val).(int64) < (*n.Child[1].val).(int64)
+func lower(n *Node, f *Frame) {
+	f.val[n.findex] = value(n.Child[0], f).(int64) < value(n.Child[1], f).(int64)
 }
 
-func nop(n *Node, i *Interpreter) {}
+func nop(n *Node, i *Frame) {}
