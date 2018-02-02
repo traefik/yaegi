@@ -57,7 +57,7 @@ func (n *Node) CfgDot() {
 		case *ast.Ident:
 			return
 		}
-		fmt.Fprintf(dotin, "%d [label=\"%d\"]\n", n.index, n.index)
+		fmt.Fprintf(dotin, "%d [label=\"%d %d\"]\n", n.index, n.index, n.findex)
 		if n.next[1] != nil {
 			fmt.Fprintf(dotin, "%d -> %d [color=green]\n", n.index, n.next[1].index)
 		}

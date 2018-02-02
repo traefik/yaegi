@@ -34,10 +34,9 @@ type Frame struct {
 
 // Interpreter contains global resources and state
 type Interpreter struct {
-	sym      map[string]*interface{}
-	constant map[string]*interface{}
-	frame    *Frame
-	out      interface{}
+	sym   map[string]*interface{}
+	frame *Frame
+	out   interface{}
 }
 
 // n.isLeaf() returns true if Node n is a leaf in the AST
@@ -67,11 +66,11 @@ func NewInterpreter() *Interpreter {
 // i.Eval(s) evaluates Go code represented as a string
 func (i *Interpreter) Eval(src string) interface{} {
 	root := Ast(src)
-	//root.AstDot()
+	root.AstDot()
 	entry := root.Child[1].Child[2] // FIXME: entry point should be resolved from 'main' name
 	entry.Cfg()
 	entry.OptimCfg()
-	//entry.CfgDot()
+	entry.CfgDot()
 	i.Run(entry.Start)
 	return i.out
 }

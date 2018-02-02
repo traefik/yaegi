@@ -11,38 +11,45 @@ import (
 
 // n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
 func (e *Node) Cfg() {
-	//var findex int
+	symIndex := make(map[string]int)
+	maxIndex := 0
+
 	e.Walk(nil, func(n *Node) {
 		switch x := (*n.anode).(type) {
 		case *ast.BlockStmt:
-			wire_child(n)
+			wireChild(n)
 			// FIXME: could bypass this node at CFG and wire directly last child
 			n.isNop = true
 			n.run = nop
 			n.val = n.Child[len(n.Child)-1].val
+			n.findex = n.Child[len(n.Child)-1].findex
 		case *ast.IncDecStmt:
-			wire_child(n)
+			wireChild(n)
 			switch x.Tok {
 			case token.INC:
 				n.run = inc
 			}
+			maxIndex++
+			n.findex = maxIndex
 		case *ast.AssignStmt:
 			n.run = assign
-			wire_child(n)
+			wireChild(n)
 		case *ast.ExprStmt:
-			wire_child(n)
+			wireChild(n)
 			// FIXME: could bypass this node at CFG and wire directly last child
 			n.isNop = true
 			n.run = nop
 			n.val = n.Child[len(n.Child)-1].val
+			n.findex = n.Child[len(n.Child)-1].findex
 		case *ast.ParenExpr:
-			wire_child(n)
+			wireChild(n)
 			// FIXME: could bypass this node at CFG and wire directly last child
 			n.isNop = true
 			n.run = nop
 			n.val = n.Child[len(n.Child)-1].val
+			n.findex = n.Child[len(n.Child)-1].findex
 		case *ast.BinaryExpr:
-			wire_child(n)
+			wireChild(n)
 			switch x.Op {
 			case token.AND:
 				n.run = and
@@ -51,9 +58,13 @@ func (e *Node) Cfg() {
 			case token.LSS:
 				n.run = lower
 			}
+			maxIndex++
+			n.findex = maxIndex
 		case *ast.CallExpr:
-			wire_child(n)
+			wireChild(n)
 			n.run = call
+			maxIndex++
+			n.findex = maxIndex
 		case *ast.IfStmt:
 			n.isNop = true
 			n.run = nop
@@ -88,6 +99,10 @@ func (e *Node) Cfg() {
 			}
 		case *ast.Ident:
 			n.ident = x.Name
+			if n.findex = symIndex[n.ident]; n.findex == 0 {
+				maxIndex++
+				symIndex[n.ident] = maxIndex
+			}
 		default:
 			println("unknown type:", reflect.TypeOf(*n.anode).String())
 		}
@@ -95,7 +110,7 @@ func (e *Node) Cfg() {
 }
 
 // Wire AST nodes of sequential blocks
-func wire_child(n *Node) {
+func wireChild(n *Node) {
 	for _, child := range n.Child {
 		if !child.isLeaf() {
 			n.Start = child.Start

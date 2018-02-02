@@ -3,6 +3,9 @@ package interp
 import "fmt"
 
 func (i *Interpreter) Run(entry *Node) {
+	// Init Frame
+
+	// Start execution by runnning entry function and go to next
 	for n := entry; n != nil; {
 		n.run(n, i)
 		if n.snext != nil {
@@ -22,6 +25,7 @@ func (i *Interpreter) Run(entry *Node) {
 //var sym map[string]*interface{} // FIXME: should be part of interpreter
 
 func assign(n *Node, i *Interpreter) {
+	fmt.Println("assign findex", n.Child[0].findex)
 	name := n.Child[0].ident     // symbol name is in the expr LHS
 	i.sym[name] = n.Child[1].val // Set symbol value
 	n.Child[0].val = i.sym[name]
