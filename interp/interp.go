@@ -15,8 +15,9 @@ type Node struct {
 	Start   *Node        // entry point in subtree (CFG)
 	snext   *Node        // successor (CFG)
 	next    [2]*Node     // conditional successors, for false and for true (CFG)
+	rank    int          // rank in child siblings (iterative walk)
 	index   int          // node index (dot display)
-	findex  int          // index of value in frame
+	findex  int          // index of value in frame or frame size (func def)
 	run     RunFun       // function to run at CFG execution
 	val     *interface{} // pointer on generic value (CFG execution)
 	ident   string       // set if node is a var or func
@@ -47,15 +48,63 @@ func (n *Node) isLeaf() bool {
 
 // n.Walk(cbin, cbout) traverses AST n in depth first order, call cbin function
 // at node entry and cbout function at node exit.
-func (n *Node) Walk(cbin func(n *Node), cbout func(n *Node)) {
-	if cbin != nil {
-		cbin(n)
+func (n *Node) Walk(in func(n *Node), out func(n *Node)) {
+	if in != nil {
+		in(n)
 	}
 	for _, Child := range n.Child {
-		Child.Walk(cbin, cbout)
+		Child.Walk(in, out)
 	}
-	if cbout != nil {
-		cbout(n)
+	if out != nil {
+		out(n)
+	}
+}
+
+// Same as n.Walk, non recursive
+func (e *Node) Walk2(in func(n *Node), out func(n *Node)) {
+	if e == nil {
+		return
+	}
+	n := e
+	var up *Node
+	if in != nil {
+		in(n)
+	}
+	for {
+		if len(n.Child) > 0 {
+			if up != nil {
+				if rank := up.rank + 1; rank < len(n.Child) {
+					up = nil
+					n = n.Child[rank]
+					if in != nil {
+						in(n)
+					}
+				} else {
+					if out != nil {
+						out(n)
+					}
+					if n == e {
+						break
+					}
+					up = n
+					n = n.anc
+				}
+			} else {
+				n = n.Child[0]
+				if in != nil {
+					in(n)
+				}
+			}
+		} else {
+			if out != nil {
+				out(n)
+			}
+			if n == e {
+				break
+			}
+			up = n
+			n = n.anc
+		}
 	}
 }
 

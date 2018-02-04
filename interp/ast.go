@@ -34,6 +34,7 @@ func Ast(src string) *Node {
 			if anc == nil {
 				root = nod
 			} else {
+				nod.rank = len(anc.Child)
 				anc.Child = append(anc.Child, nod)
 			}
 			st.push(nod)
