@@ -1,10 +1,11 @@
 package interp
 
 import (
+	"fmt"
 	"testing"
 )
 
-func TestWalk_1(t *testing.T) {
+func ExampleWalk_1() {
 	src := `
 package main
 
@@ -15,26 +16,33 @@ func main() {
 	n := Ast(src)
 	//n.AstDot()
 	n.Walk(func(n *Node) {
-		println("in:", n.index)
+		fmt.Println("in:", n.index)
 	}, func(n *Node) {
-		println("out:", n.index)
+		fmt.Println("out:", n.index)
 	})
-}
-
-func TestWalk_2(t *testing.T) {
-	src := `
-package main
-
-func main() {
-	println(1)
-}
-`
-	n := Ast(src)
-	n.Walk2(func(n *Node) {
-		println("in:", n.index)
-	}, func(n *Node) {
-		println("out:", n.index)
-	})
+	// Output:
+	// in: 1
+	// in: 2
+	// out: 2
+	// in: 3
+	// in: 4
+	// out: 4
+	// in: 5
+	// in: 6
+	// out: 6
+	// out: 5
+	// in: 7
+	// in: 8
+	// in: 9
+	// in: 10
+	// out: 10
+	// in: 11
+	// out: 11
+	// out: 9
+	// out: 8
+	// out: 7
+	// out: 3
+	// out: 1
 }
 
 func BenchmarkWalk(b *testing.B) {
@@ -54,26 +62,6 @@ func main() {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		n.Walk(func(n *Node) {}, func(n *Node) {})
-	}
-}
-
-func BenchmarkWalk2(b *testing.B) {
-	src := `
-package main
-
-func main() {
-	println(1)
-	for a := 0; a < 10000; a++ {
-		if (a & 0x8ff) == 0x800 {
-			println(a)
-		}
-	}
-}
-`
-	n := Ast(src)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		n.Walk2(func(n *Node) {}, func(n *Node) {})
 	}
 }
 

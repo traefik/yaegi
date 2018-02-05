@@ -58,14 +58,11 @@ func (n *Node) CfgDot() {
 			return
 		}
 		fmt.Fprintf(dotin, "%d [label=\"%d %d\"]\n", n.index, n.index, n.findex)
-		if n.next[1] != nil {
-			fmt.Fprintf(dotin, "%d -> %d [color=green]\n", n.index, n.next[1].index)
-		}
-		if n.next[0] != nil {
-			fmt.Fprintf(dotin, "%d -> %d [color=red]\n", n.index, n.next[0].index)
-		}
-		if n.next[0] == nil && n.next[1] == nil && n.snext != nil {
-			fmt.Fprintf(dotin, "%d -> %d [color=purple]\n", n.index, n.snext.index)
+		if n.fnext != nil {
+			fmt.Fprintf(dotin, "%d -> %d [color=green]\n", n.index, n.tnext.index)
+			fmt.Fprintf(dotin, "%d -> %d [color=red]\n", n.index, n.fnext.index)
+		} else if n.tnext != nil {
+			fmt.Fprintf(dotin, "%d -> %d [color=purple]\n", n.index, n.tnext.index)
 		}
 	})
 	fmt.Fprintf(dotin, "}")

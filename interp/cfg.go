@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"reflect"
@@ -69,26 +70,26 @@ func (e *Node) Cfg() int {
 			n.isNop = true
 			n.run = nop
 			n.Start = n.Child[0].Start
-			n.Child[1].snext = n
+			n.Child[1].tnext = n
 			if len(n.Child) == 3 {
-				n.Child[2].snext = n
+				n.Child[2].tnext = n
 			}
-			n.Child[0].next[1] = n.Child[1].Start
+			n.Child[0].tnext = n.Child[1].Start
 			if len(n.Child) == 3 {
-				n.Child[0].next[0] = n.Child[2].Start
+				n.Child[0].fnext = n.Child[2].Start
 			} else {
-				n.Child[0].next[0] = n
+				n.Child[0].fnext = n
 			}
 		case *ast.ForStmt:
 			n.isNop = true
 			n.run = nop
 			// FIXME: works only if for node has 4 children
 			n.Start = n.Child[0].Start
-			n.Child[0].snext = n.Child[1].Start
-			n.Child[1].next[0] = n
-			n.Child[1].next[1] = n.Child[3].Start
-			n.Child[3].snext = n.Child[2].Start
-			n.Child[2].snext = n.Child[1].Start
+			n.Child[0].tnext = n.Child[1].Start
+			n.Child[1].fnext = n
+			n.Child[1].tnext = n.Child[3].Start
+			n.Child[3].tnext = n.Child[2].Start
+			n.Child[2].tnext = n.Child[1].Start
 		case *ast.BasicLit:
 			n.isConst = true
 			// FIXME: values must be converted to int or float if possible
@@ -125,11 +126,11 @@ func wireChild(n *Node) {
 		n.Start = n
 	}
 	for i := 1; i < len(n.Child); i++ {
-		n.Child[i-1].snext = n.Child[i].Start
+		n.Child[i-1].tnext = n.Child[i].Start
 	}
 	for i := len(n.Child) - 1; i >= 0; i-- {
 		if !n.Child[i].isLeaf() {
-			n.Child[i].snext = n
+			n.Child[i].tnext = n
 			break
 		}
 	}
@@ -138,11 +139,18 @@ func wireChild(n *Node) {
 // optimisation: rewire CFG to skip nop nodes
 func (e *Node) OptimCfg() {
 	e.Walk(nil, func(n *Node) {
-		for s := n.snext; s != nil && s.snext != nil; s = s.snext {
-			n.snext = s
+		for n.tnext != nil && n.tnext.isNop {
+			fmt.Println("next nop:", n.index, n.tnext.index)
+			n.tnext = n.tnext.tnext
 		}
-		for s := n.next[0]; s != nil && s.snext != nil; s = s.snext {
-			n.next[0] = s
-		}
+		//for s := n.tnext; s != nil && s.tnext != nil && s.fnext == nil; s = s.tnext {
+		//	n.tnext = s
+		//}
+		//for s := n.tnext; s != nil && s.tnext != nil; s = s.tnext {
+		//	n.tnext = s
+		//}
+		//for s := n.fnext; s != nil && s.tnext != nil; s = s.tnext {
+		//	n.fnext = s
+		//}
 	})
 }

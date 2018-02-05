@@ -10,14 +10,10 @@ func (i *Interpreter) Run(entry *Node) {
 	// Start execution by runnning entry function and go to next
 	for n := entry; n != nil; {
 		n.run(n, f)
-		if n.snext != nil {
-			n = n.snext
-		} else if n.next[1] == nil && n.next[0] == nil {
-			break
-		} else if value(n, f).(bool) {
-			n = n.next[1]
+		if n.fnext == nil || value(n, f).(bool) {
+			n = n.tnext
 		} else {
-			n = n.next[0]
+			n = n.fnext
 		}
 	}
 }
