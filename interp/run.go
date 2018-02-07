@@ -22,7 +22,7 @@ func (i *Interpreter) Run(entry *Node) {
 
 func value(n *Node, f *Frame) interface{} {
 	if n.isConst {
-		return *n.val
+		return n.val
 	}
 	return f.val[n.findex]
 
@@ -43,13 +43,14 @@ func printa(n []*Node, f *Frame) {
 	fmt.Println("")
 }
 
-func call(n *Node, f *Frame) {
-	switch n.Child[0].ident {
-	case "println":
+func (i *Interpreter) call(n *Node, f *Frame) {
+	if n.Child[0].ident == "println" {
 		printa(n.Child[1:], f)
-	default:
-		panic("function not implemented")
+		return
 	}
+	fn := i.def[n.Child[0].ident]
+	fmt.Println("call node", fn.index, fn.Child[2].findex)
+	panic("function not implemented")
 }
 
 func equal(n *Node, f *Frame) {

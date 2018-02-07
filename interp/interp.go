@@ -10,19 +10,19 @@ type RunFun func(n *Node, f *Frame)
 
 // Structure for AST and CFG
 type Node struct {
-	Child   []*Node      // child subtrees
-	anc     *Node        // ancestor
-	Start   *Node        // entry point in subtree (CFG)
-	tnext   *Node        // true branch successor (CFG)
-	fnext   *Node        // false branch successor (CFG)
-	index   int          // node index (dot display)
-	findex  int          // index of value in frame or frame size (func def)
-	run     RunFun       // function to run at CFG execution
-	val     *interface{} // pointer on generic value (CFG execution)
-	ident   string       // set if node is a var or func
-	isNop   bool         // node run function us a no-op
-	isConst bool         // true if node value is constant
-	anode   *ast.Node    // original ast node (temporary, will be removed)
+	Child   []*Node     // child subtrees
+	anc     *Node       // ancestor
+	Start   *Node       // entry point in subtree (CFG)
+	tnext   *Node       // true branch successor (CFG)
+	fnext   *Node       // false branch successor (CFG)
+	index   int         // node index (dot display)
+	findex  int         // index of value in frame or frame size (func def)
+	run     RunFun      // function to run at CFG execution
+	val     interface{} // pointer on generic value (CFG execution)
+	ident   string      // set if node is a var or func
+	isNop   bool        // node run function us a no-op
+	isConst bool        // true if node value is constant
+	anode   *ast.Node   // original ast node (temporary, will be removed)
 }
 
 // A Frame contains values for the current execution level
@@ -34,10 +34,10 @@ type Frame struct {
 
 // Interpreter contains global resources and state
 type Interpreter struct {
-	sym   map[string]*interface{}
 	size  int
 	frame *Frame
 	out   interface{}
+	def   map[string]*Node // map of defined symbols
 }
 
 // n.isLeaf() returns true if Node n is a leaf in the AST
@@ -61,16 +61,17 @@ func (n *Node) Walk(in func(n *Node), out func(n *Node)) {
 
 // NewInterpreter()creates and returns a new interpreter object
 func NewInterpreter() *Interpreter {
-	return &Interpreter{sym: make(map[string]*interface{})}
+	return &Interpreter{def: make(map[string]*Node)}
 }
 
 // i.Eval(s) evaluates Go code represented as a string
 func (i *Interpreter) Eval(src string) interface{} {
 	root := Ast(src)
-	//root.AstDot()
+	root.AstDot()
+	i.size = root.Cfg(i)
+	root.CfgDot()
 	entry := root.Child[1].Child[2] // FIXME: entry point should be resolved from 'main' name
-	i.size = entry.Cfg()
-	entry.OptimCfg()
+	//entry.OptimCfg()
 	//entry.CfgDot()
 	i.Run(entry.Start)
 	return i.out

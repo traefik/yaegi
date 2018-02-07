@@ -1,7 +1,6 @@
 package interp
 
 import (
-	"fmt"
 	"go/ast"
 	"go/token"
 	"reflect"
@@ -11,18 +10,29 @@ import (
 // TODO: remove coupling with go/ast and go/token. This should be handled only in Ast()
 
 // n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
-func (e *Node) Cfg() int {
+func (e *Node) Cfg(i *Interpreter) int {
 	symIndex := make(map[string]int)
 	maxIndex := 0
 
-	e.Walk(nil, func(n *Node) {
+	e.Walk(func(n *Node) {
+		switch (*n.anode).(type) {
+		case *ast.FuncDecl:
+			symIndex = make(map[string]int)
+			maxIndex = 0
+		}
+	}, func(n *Node) {
 		switch x := (*n.anode).(type) {
+		case *ast.FuncDecl:
+			n.findex = maxIndex
+			n.isConst = true
+			// Node value is func body entry point
+			n.val = n.Child[2]
+			i.def[n.Child[0].ident] = n
 		case *ast.BlockStmt:
 			wireChild(n)
 			// FIXME: could bypass this node at CFG and wire directly last child
 			n.isNop = true
 			n.run = nop
-			n.val = n.Child[len(n.Child)-1].val
 			n.findex = n.Child[len(n.Child)-1].findex
 		case *ast.IncDecStmt:
 			wireChild(n)
@@ -40,14 +50,12 @@ func (e *Node) Cfg() int {
 			// FIXME: could bypass this node at CFG and wire directly last child
 			n.isNop = true
 			n.run = nop
-			n.val = n.Child[len(n.Child)-1].val
 			n.findex = n.Child[len(n.Child)-1].findex
 		case *ast.ParenExpr:
 			wireChild(n)
 			// FIXME: could bypass this node at CFG and wire directly last child
 			n.isNop = true
 			n.run = nop
-			n.val = n.Child[len(n.Child)-1].val
 			n.findex = n.Child[len(n.Child)-1].findex
 		case *ast.BinaryExpr:
 			wireChild(n)
@@ -63,7 +71,7 @@ func (e *Node) Cfg() int {
 			n.findex = maxIndex
 		case *ast.CallExpr:
 			wireChild(n)
-			n.run = call
+			n.run = i.call
 			maxIndex++
 			n.findex = maxIndex
 		case *ast.IfStmt:
@@ -94,9 +102,9 @@ func (e *Node) Cfg() int {
 			n.isConst = true
 			// FIXME: values must be converted to int or float if possible
 			if v, err := strconv.ParseInt(x.Value, 0, 0); err == nil {
-				*n.val = v
+				n.val = v
 			} else {
-				*n.val = x.Value
+				n.val = x.Value
 			}
 		case *ast.Ident:
 			// Lookup identifier in frame symbol table. If not found
@@ -140,17 +148,7 @@ func wireChild(n *Node) {
 func (e *Node) OptimCfg() {
 	e.Walk(nil, func(n *Node) {
 		for n.tnext != nil && n.tnext.isNop {
-			fmt.Println("next nop:", n.index, n.tnext.index)
 			n.tnext = n.tnext.tnext
 		}
-		//for s := n.tnext; s != nil && s.tnext != nil && s.fnext == nil; s = s.tnext {
-		//	n.tnext = s
-		//}
-		//for s := n.tnext; s != nil && s.tnext != nil; s = s.tnext {
-		//	n.tnext = s
-		//}
-		//for s := n.fnext; s != nil && s.tnext != nil; s = s.tnext {
-		//	n.fnext = s
-		//}
 	})
 }
