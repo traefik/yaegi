@@ -2,13 +2,25 @@ package interp
 
 import "fmt"
 
-func (i *Interpreter) Run(entry *Node) {
-	// Init Frame
-	f := &Frame{val: make([]interface{}, i.size)}
-	i.frame = f
+// Run a Go function
+func Run(def *Node, uf *Frame, args []*Node) {
+	body := def.Child[2]
+	param := def.Child[1].Child[0]
+
+	// Init new Frame
+	f := &Frame{val: make([]interface{}, def.findex), up: uf}
+	if uf != nil {
+		uf.down = f
+	}
+
+	// Pass func parameters as value: copy each func parameter from old to new frame
+	// Frame locations were pre-computed during cfg
+	for i := 0; i < len(args); i++ {
+		f.val[param.Child[i].findex] = uf.val[args[i].findex]
+	}
 
 	// Start execution by runnning entry function and go to next
-	for n := entry; n != nil; {
+	for n := body.Start; n != nil; {
 		n.run(n, f)
 		if n.fnext == nil || value(n, f).(bool) {
 			n = n.tnext
@@ -29,6 +41,7 @@ func value(n *Node, f *Frame) interface{} {
 }
 
 func assign(n *Node, f *Frame) {
+	fmt.Println("assign", n.index, n.Child[0].ident, n.findex)
 	f.val[n.findex] = value(n.Child[1], f)
 }
 
@@ -48,9 +61,12 @@ func (i *Interpreter) call(n *Node, f *Frame) {
 		printa(n.Child[1:], f)
 		return
 	}
-	fn := i.def[n.Child[0].ident]
-	fmt.Println("call node", fn.index, fn.Child[2].findex)
-	panic("function not implemented")
+	// FIXME: resolve fn during compile, not exec ?
+	if fn := i.def[n.Child[0].ident]; fn != nil {
+		Run(fn, f, n.Child[1:])
+	} else {
+		panic("function not found")
+	}
 }
 
 func equal(n *Node, f *Frame) {

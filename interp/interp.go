@@ -34,7 +34,6 @@ type Frame struct {
 
 // Interpreter contains global resources and state
 type Interpreter struct {
-	size  int
 	frame *Frame
 	out   interface{}
 	def   map[string]*Node // map of defined symbols
@@ -67,12 +66,12 @@ func NewInterpreter() *Interpreter {
 // i.Eval(s) evaluates Go code represented as a string
 func (i *Interpreter) Eval(src string) interface{} {
 	root := Ast(src)
-	root.AstDot()
-	i.size = root.Cfg(i)
-	root.CfgDot()
-	entry := root.Child[1].Child[2] // FIXME: entry point should be resolved from 'main' name
+	//root.AstDot()
+	root.Cfg(i)
+	//root.CfgDot()
+	entry := root.Child[1] // FIXME: entry point should be resolved from 'main' name
 	//entry.OptimCfg()
 	//entry.CfgDot()
-	i.Run(entry.Start)
+	Run(entry, nil, nil)
 	return i.out
 }

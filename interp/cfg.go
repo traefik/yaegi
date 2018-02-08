@@ -25,8 +25,6 @@ func (e *Node) Cfg(i *Interpreter) int {
 		case *ast.FuncDecl:
 			n.findex = maxIndex
 			n.isConst = true
-			// Node value is func body entry point
-			n.val = n.Child[2]
 			i.def[n.Child[0].ident] = n
 		case *ast.BlockStmt:
 			wireChild(n)
@@ -69,6 +67,8 @@ func (e *Node) Cfg(i *Interpreter) int {
 			}
 			maxIndex++
 			n.findex = maxIndex
+		case *ast.Field:
+			n.findex = n.Child[0].findex
 		case *ast.CallExpr:
 			wireChild(n)
 			n.run = i.call
@@ -108,13 +108,15 @@ func (e *Node) Cfg(i *Interpreter) int {
 			}
 		case *ast.Ident:
 			// Lookup identifier in frame symbol table. If not found
-			// should check that ident is assign target.
+			// should check if ident can be defined (assign, param passing...)
+			// or should lookup in upper scope of variables
+			// For now, simply allocate a new entry in local sym table
 			n.ident = x.Name
 			if n.findex = symIndex[n.ident]; n.findex == 0 {
 				maxIndex++
 				symIndex[n.ident] = maxIndex
+				n.findex = symIndex[n.ident]
 			}
-			n.findex = symIndex[n.ident]
 		default:
 			println("unknown type:", reflect.TypeOf(*n.anode).String())
 		}
