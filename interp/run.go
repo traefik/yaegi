@@ -41,7 +41,6 @@ func value(n *Node, f *Frame) interface{} {
 }
 
 func assign(n *Node, f *Frame) {
-	fmt.Println("assign", n.index, n.Child[0].ident, n.findex)
 	f.val[n.findex] = value(n.Child[1], f)
 }
 

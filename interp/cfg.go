@@ -3,7 +3,6 @@ package interp
 import (
 	"go/ast"
 	"go/token"
-	"reflect"
 	"strconv"
 )
 
@@ -118,7 +117,7 @@ func (e *Node) Cfg(i *Interpreter) int {
 				n.findex = symIndex[n.ident]
 			}
 		default:
-			println("unknown type:", reflect.TypeOf(*n.anode).String())
+			//println("unknown type:", reflect.TypeOf(*n.anode).String())
 		}
 	})
 	return maxIndex + 1

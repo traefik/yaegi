@@ -34,9 +34,15 @@ type Frame struct {
 
 // Interpreter contains global resources and state
 type Interpreter struct {
+	opt   InterpOpt
 	frame *Frame
 	out   interface{}
 	def   map[string]*Node // map of defined symbols
+}
+
+type InterpOpt struct {
+	Ast bool
+	Cfg bool
 }
 
 // n.isLeaf() returns true if Node n is a leaf in the AST
@@ -59,19 +65,27 @@ func (n *Node) Walk(in func(n *Node), out func(n *Node)) {
 }
 
 // NewInterpreter()creates and returns a new interpreter object
-func NewInterpreter() *Interpreter {
-	return &Interpreter{def: make(map[string]*Node)}
+func NewInterpreter(opt InterpOpt) *Interpreter {
+	return &Interpreter{opt: opt, def: make(map[string]*Node)}
 }
 
 // i.Eval(s) evaluates Go code represented as a string
 func (i *Interpreter) Eval(src string) interface{} {
+	// Parse source to AST
 	root := Ast(src)
-	//root.AstDot()
+	if i.opt.Ast {
+		root.AstDot(Dotty())
+	}
+
+	// Annotate AST with CFG infos
 	root.Cfg(i)
-	//root.CfgDot()
+	if i.opt.Cfg {
+		root.CfgDot(Dotty())
+	}
+
+	// Execute CFG
 	entry := root.Child[1] // FIXME: entry point should be resolved from 'main' name
 	//entry.OptimCfg()
-	//entry.CfgDot()
 	Run(entry, nil, nil)
 	return i.out
 }

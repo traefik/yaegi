@@ -1,26 +1,35 @@
 package main
 
 import (
+	"flag"
+	"io/ioutil"
+	"os"
+	"strings"
+
 	"github.com/containous/gi/interp"
 )
 
 func main() {
-	src := `
-package main
+	opt := interp.InterpOpt{}
+	flag.BoolVar(&opt.Ast, "a", false, "display AST graph")
+	flag.BoolVar(&opt.Cfg, "c", false, "display CFG graph")
+	flag.Parse()
+	args := flag.Args()
 
-func main() {
-	//for a := 0; a < 10000; a++ {
-	for a := 0; a < 20000000; a++ {
-		//if a & 0x8ff == 0x800 {
-		if a & 0x8ffff == 0x80000 {
-			//println(a)
-			myprint(a)
-		}
+	var b []byte
+	var err error
+	if len(args) > 0 {
+		b, err = ioutil.ReadFile(args[0])
+	} else {
+		b, err = ioutil.ReadAll(os.Stdin)
 	}
-}
-
-func myprint(i int) { println(i) }
-`
-	i := interp.NewInterpreter()
-	i.Eval(src)
+	if err != nil {
+		panic("Could not read gi source")
+	}
+	s := string(b)
+	if s[:2] == "#!" {
+		s = strings.Replace(s, "#!", "//", 1)
+	}
+	i := interp.NewInterpreter(opt)
+	i.Eval(string(s))
 }
