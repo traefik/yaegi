@@ -17,12 +17,17 @@ func (e *Node) Cfg(i *Interpreter) int {
 		switch (*n.anode).(type) {
 		case *ast.FuncDecl:
 			symIndex = make(map[string]int)
-			maxIndex = 0
+			// allocate entries for return values at start of frame
+			if len(n.Child[1].Child) == 2 {
+				maxIndex = len(n.Child[1].Child[1].Child)
+			} else {
+				maxIndex = 0
+			}
 		}
 	}, func(n *Node) {
 		switch x := (*n.anode).(type) {
 		case *ast.FuncDecl:
-			n.findex = maxIndex
+			n.findex = maxIndex + 1
 			n.isConst = true
 			i.def[n.Child[0].ident] = n
 		case *ast.BlockStmt:
@@ -31,6 +36,9 @@ func (e *Node) Cfg(i *Interpreter) int {
 			n.isNop = true
 			n.run = nop
 			n.findex = n.Child[len(n.Child)-1].findex
+		case *ast.ReturnStmt:
+			wireChild(n)
+			n.run = _return
 		case *ast.IncDecStmt:
 			wireChild(n)
 			switch x.Tok {
@@ -57,6 +65,8 @@ func (e *Node) Cfg(i *Interpreter) int {
 		case *ast.BinaryExpr:
 			wireChild(n)
 			switch x.Op {
+			case token.ADD:
+				n.run = add
 			case token.AND:
 				n.run = and
 			case token.EQL:
@@ -67,9 +77,20 @@ func (e *Node) Cfg(i *Interpreter) int {
 			maxIndex++
 			n.findex = maxIndex
 		case *ast.Field:
-			n.findex = n.Child[0].findex
+			// A single child node (no ident, just type) means that the field refers
+			// to a return value, and space on frame should be accordingly allocated.
+			// Otherwise, just point to corresponding location in frame, resolved in
+			// ident child.
+			if len(n.Child) == 1 {
+				maxIndex++
+				n.findex = maxIndex
+			} else {
+				n.findex = n.Child[0].findex
+			}
 		case *ast.CallExpr:
 			wireChild(n)
+			// FIXME: should reserve as many entries as nb of ret values for called function
+			// node frame index should point to the first entry
 			n.run = i.call
 			maxIndex++
 			n.findex = maxIndex

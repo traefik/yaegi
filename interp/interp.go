@@ -26,18 +26,18 @@ type Node struct {
 }
 
 // A Frame contains values for the current execution level
-type Frame struct {
-	up   *Frame        // up level in call stack
-	down *Frame        // down in call stack
-	val  []interface{} // array of values
-}
+type Frame []interface{}
+
+//type Frame struct {
+//	up  *Frame        // up level in call stack
+//	val []interface{} // array of values
+//}
 
 // Interpreter contains global resources and state
 type Interpreter struct {
-	opt   InterpOpt
-	frame *Frame
-	out   interface{}
-	def   map[string]*Node // map of defined symbols
+	opt InterpOpt
+	out interface{}
+	def map[string]*Node // map of defined symbols
 }
 
 type InterpOpt struct {
@@ -47,7 +47,7 @@ type InterpOpt struct {
 
 // n.isLeaf() returns true if Node n is a leaf in the AST
 func (n *Node) isLeaf() bool {
-	return len((*n).Child) == 0
+	return len(n.Child) == 0
 }
 
 // n.Walk(cbin, cbout) traverses AST n in depth first order, call cbin function
@@ -86,6 +86,6 @@ func (i *Interpreter) Eval(src string) interface{} {
 	// Execute CFG
 	entry := root.Child[1] // FIXME: entry point should be resolved from 'main' name
 	//entry.OptimCfg()
-	Run(entry, nil, nil)
+	Run(entry, nil, nil, nil)
 	return i.out
 }
