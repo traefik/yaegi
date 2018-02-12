@@ -4,6 +4,7 @@ import "fmt"
 
 // Run a Go function
 func Run(def *Node, cf *Frame, args []*Node, rets []int) {
+	//fmt.Println("run", def.Child[0].ident)
 	// Allocate a new Frame to store local variables
 	f := Frame(make([]interface{}, def.findex))
 
@@ -12,6 +13,7 @@ func Run(def *Node, cf *Frame, args []*Node, rets []int) {
 	for i, arg := range args {
 		f[param[i].findex] = value(arg, cf)
 	}
+	//fmt.Println("frame:", f)
 
 	// Execute by walking the CFG and running node func at each step
 	body := def.Child[2]
@@ -56,6 +58,7 @@ func printa(n []*Node, f *Frame) {
 }
 
 func (interp *Interpreter) call(n *Node, f *Frame) {
+	//fmt.Println("call", n.Child[0].ident)
 	if n.Child[0].ident == "println" {
 		printa(n.Child[1:], f)
 		return
@@ -81,6 +84,10 @@ func add(n *Node, f *Frame) {
 	(*f)[n.findex] = value(n.Child[0], f).(int64) + value(n.Child[1], f).(int64)
 }
 
+func sub(n *Node, f *Frame) {
+	(*f)[n.findex] = value(n.Child[0], f).(int64) - value(n.Child[1], f).(int64)
+}
+
 func equal(n *Node, f *Frame) {
 	(*f)[n.findex] = value(n.Child[0], f).(int64) == value(n.Child[1], f).(int64)
 }
@@ -99,4 +106,6 @@ func _return(n *Node, f *Frame) {
 	for i, c := range n.Child {
 		(*f)[i] = (*f)[c.findex]
 	}
+	// FIXME: should be done during compiling, not run
+	n.tnext = nil
 }

@@ -73,6 +73,8 @@ func (e *Node) Cfg(i *Interpreter) int {
 				n.run = equal
 			case token.LSS:
 				n.run = lower
+			case token.SUB:
+				n.run = sub
 			}
 			maxIndex++
 			n.findex = maxIndex

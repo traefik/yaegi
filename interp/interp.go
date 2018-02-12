@@ -82,10 +82,9 @@ func (i *Interpreter) Eval(src string) interface{} {
 	if i.opt.Cfg {
 		root.CfgDot(Dotty())
 	}
+	//root.OptimCfg()
 
 	// Execute CFG
-	entry := root.Child[1] // FIXME: entry point should be resolved from 'main' name
-	//entry.OptimCfg()
-	Run(entry, nil, nil, nil)
+	Run(i.def["main"], nil, nil, nil)
 	return i.out
 }
