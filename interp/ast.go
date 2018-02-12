@@ -22,15 +22,25 @@ func Ast(src string) *Node {
 	var st nodestack
 	// Populate our own private ast from go ast. A stack of ancestor nodes
 	// is used to keep track of curent ancestor for each depth level
-	ast.Inspect(f, func(n ast.Node) bool {
+	ast.Inspect(f, func(node ast.Node) bool {
 		anc = st.top()
-		switch n.(type) {
+		switch n := node.(type) {
 		case nil:
 			anc = st.pop()
+		case *ast.AssignStmt:
+			index++
+			var i interface{}
+			nod := &Node{anc: anc, index: index, anode: &node, val: &i, lhs: len(n.Lhs)}
+			if anc == nil {
+				root = nod
+			} else {
+				anc.Child = append(anc.Child, nod)
+			}
+			st.push(nod)
 		default:
 			index++
 			var i interface{}
-			nod := &Node{anc: anc, index: index, anode: &n, val: &i}
+			nod := &Node{anc: anc, index: index, anode: &node, val: &i}
 			if anc == nil {
 				root = nod
 			} else {

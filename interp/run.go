@@ -43,7 +43,22 @@ func value(n *Node, f *Frame) interface{} {
 }
 
 func assign(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[1], f)
+	// FIXME: should have different assign flavors set by CFG instead
+	if n.lhs > 1 {
+		if len(n.Child)-n.lhs > 1 {
+			// multiple single assign
+			for i := 0; i < n.lhs; i++ {
+				(*f)[n.Child[i].findex] = value(n.Child[len(n.Child)-n.lhs+i], f)
+			}
+		} else {
+			// Multiple vars set from a single call
+			for i := 0; i < n.lhs; i++ {
+				(*f)[n.Child[i].findex] = (*f)[n.Child[len(n.Child)-1].findex+i]
+			}
+		}
+	} else {
+		(*f)[n.findex] = value(n.Child[1], f)
+	}
 }
 
 func and(n *Node, f *Frame) {
@@ -52,7 +67,7 @@ func and(n *Node, f *Frame) {
 
 func printa(n []*Node, f *Frame) {
 	for _, m := range n {
-		fmt.Printf("%v", value(m, f))
+		fmt.Printf("%v ", value(m, f))
 	}
 	fmt.Println("")
 }
@@ -104,7 +119,7 @@ func nop(n *Node, i *Frame) {}
 
 func _return(n *Node, f *Frame) {
 	for i, c := range n.Child {
-		(*f)[i] = (*f)[c.findex]
+		(*f)[i] = value(c, f)
 	}
 	// FIXME: should be done during compiling, not run
 	n.tnext = nil

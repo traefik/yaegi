@@ -19,6 +19,7 @@ type Node struct {
 	findex  int         // index of value in frame or frame size (func def)
 	run     RunFun      // function to run at CFG execution
 	val     interface{} // pointer on generic value (CFG execution)
+	lhs     int         // number of left hand side nodes, set if node is an assign statement
 	ident   string      // set if node is a var or func
 	isNop   bool        // node run function us a no-op
 	isConst bool        // true if node value is constant
