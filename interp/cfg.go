@@ -3,15 +3,50 @@ package interp
 import (
 	"go/ast"
 	"go/token"
+	"reflect"
 	"strconv"
 )
 
+// TODO:
+// - hierarchical scopes for symbol resolution
+// - universe (global) scope
+// - closures
+// - if init statement
+// - &&, ||, break, continue, goto
+// - for range
+// - array / slices / map expressions
+// - switch
+// - go routines
+// - channels
+// - select
+// - import
+// - type declarations and checking
+// - type assertions and conversions
+// - interfaces
+// - pointers
+// - diagnostics and proper error handling
+// Done:
+// - basic literals
+// - variable definition and assignment
+// - arithmetic and logical expressions
+// - if / else statement
+// - for statement
+// - variables definition (1 scope per function)
+// - function definition
+// - function calls
+// - assignements, including to/from multi value
+// - return, including multiple values
+
 // n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
+// and pre-compute frame sizes and indexes for all un-named (temporary) and named
+// variables.
+// Following this pass, the CFG is ready to be run
 func (e *Node) Cfg(i *Interpreter) int {
 	symIndex := make(map[string]int)
 	maxIndex := 0
 
 	e.Walk(func(n *Node) {
+		// Pre-order processing
 		switch (*n.anode).(type) {
 		case *ast.FuncDecl:
 			symIndex = make(map[string]int)
@@ -23,20 +58,24 @@ func (e *Node) Cfg(i *Interpreter) int {
 			}
 		}
 	}, func(n *Node) {
+		// Post-order processing
 		switch a := (*n.anode).(type) {
 		case *ast.FuncDecl:
 			n.findex = maxIndex + 1
 			n.isConst = true
 			i.def[n.Child[0].ident] = n
+
 		case *ast.BlockStmt:
 			wireChild(n)
 			// FIXME: could bypass this node at CFG and wire directly last child
 			n.isNop = true
 			n.run = nop
 			n.findex = n.Child[len(n.Child)-1].findex
+
 		case *ast.ReturnStmt:
 			wireChild(n)
 			n.run = _return
+
 		case *ast.IncDecStmt:
 			wireChild(n)
 			switch a.Tok {
@@ -44,6 +83,7 @@ func (e *Node) Cfg(i *Interpreter) int {
 				n.run = inc
 			}
 			n.findex = n.Child[0].findex
+
 		case *ast.AssignStmt:
 			if len(a.Lhs) > 1 && len(a.Rhs) == 1 {
 				n.run = assignX
@@ -52,18 +92,21 @@ func (e *Node) Cfg(i *Interpreter) int {
 			}
 			wireChild(n)
 			n.findex = n.Child[0].findex
+
 		case *ast.ExprStmt:
 			wireChild(n)
 			// FIXME: could bypass this node at CFG and wire directly last child
 			n.isNop = true
 			n.run = nop
 			n.findex = n.Child[len(n.Child)-1].findex
+
 		case *ast.ParenExpr:
 			wireChild(n)
 			// FIXME: could bypass this node at CFG and wire directly last child
 			n.isNop = true
 			n.run = nop
 			n.findex = n.Child[len(n.Child)-1].findex
+
 		case *ast.BinaryExpr:
 			wireChild(n)
 			switch a.Op {
@@ -80,6 +123,7 @@ func (e *Node) Cfg(i *Interpreter) int {
 			}
 			maxIndex++
 			n.findex = maxIndex
+
 		case *ast.Field:
 			// A single child node (no ident, just type) means that the field refers
 			// to a return value, and space on frame should be accordingly allocated.
@@ -91,6 +135,7 @@ func (e *Node) Cfg(i *Interpreter) int {
 			} else {
 				n.findex = n.Child[0].findex
 			}
+
 		case *ast.CallExpr:
 			wireChild(n)
 			// FIXME: should reserve as many entries as nb of ret values for called function
@@ -98,6 +143,7 @@ func (e *Node) Cfg(i *Interpreter) int {
 			n.run = i.call
 			maxIndex++
 			n.findex = maxIndex
+
 		case *ast.IfStmt:
 			n.isNop = true
 			n.run = nop
@@ -112,6 +158,7 @@ func (e *Node) Cfg(i *Interpreter) int {
 			} else {
 				n.Child[0].fnext = n
 			}
+
 		case *ast.ForStmt:
 			n.isNop = true
 			n.run = nop
@@ -122,6 +169,7 @@ func (e *Node) Cfg(i *Interpreter) int {
 			n.Child[1].tnext = n.Child[3].Start
 			n.Child[3].tnext = n.Child[2].Start
 			n.Child[2].tnext = n.Child[1].Start
+
 		case *ast.BasicLit:
 			n.isConst = true
 			// FIXME: values must be converted to int or float if possible
@@ -130,6 +178,7 @@ func (e *Node) Cfg(i *Interpreter) int {
 			} else {
 				n.val = a.Value
 			}
+
 		case *ast.Ident:
 			// Lookup identifier in frame symbol table. If not found
 			// should check if ident can be defined (assign, param passing...)
@@ -141,8 +190,12 @@ func (e *Node) Cfg(i *Interpreter) int {
 				symIndex[n.ident] = maxIndex
 				n.findex = symIndex[n.ident]
 			}
+
+		case *ast.FieldList:
+		case *ast.FuncType:
+		case *ast.File:
 		default:
-			//println("unknown type:", reflect.TypeOf(*n.anode).String())
+			println("unknown type:", reflect.TypeOf(*n.anode).String())
 		}
 	})
 	return maxIndex + 1
