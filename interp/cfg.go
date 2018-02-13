@@ -11,7 +11,6 @@ import (
 // - hierarchical scopes for symbol resolution
 // - universe (global) scope
 // - closures
-// - if init statement
 // - &&, ||, break, continue, goto
 // - for range
 // - array / slices / map expressions
@@ -29,7 +28,7 @@ import (
 // - basic literals
 // - variable definition and assignment
 // - arithmetic and logical expressions
-// - if / else statement
+// - if / else statement, including init
 // - for statement
 // - variables definition (1 scope per function)
 // - function definition
@@ -116,6 +115,8 @@ func (e *Node) Cfg(i *Interpreter) int {
 				n.run = and
 			case token.EQL:
 				n.run = equal
+			case token.GTR:
+				n.run = greater
 			case token.LSS:
 				n.run = lower
 			case token.SUB:
@@ -148,15 +149,20 @@ func (e *Node) Cfg(i *Interpreter) int {
 			n.isNop = true
 			n.run = nop
 			n.Start = n.Child[0].Start
-			n.Child[1].tnext = n
-			if len(n.Child) == 3 {
-				n.Child[2].tnext = n
+			icond, ibody, ielse := 0, 1, 2
+			if a.Init != nil {
+				icond, ibody, ielse = 1, 2, 3
+				n.Child[0].tnext = n.Child[1].Start
 			}
-			n.Child[0].tnext = n.Child[1].Start
-			if len(n.Child) == 3 {
-				n.Child[0].fnext = n.Child[2].Start
+			n.Child[ibody].tnext = n
+			if a.Else != nil {
+				n.Child[ielse].tnext = n
+			}
+			n.Child[icond].tnext = n.Child[ibody].Start
+			if a.Else != nil {
+				n.Child[icond].fnext = n.Child[ielse].Start
 			} else {
-				n.Child[0].fnext = n
+				n.Child[icond].fnext = n
 			}
 
 		case *ast.ForStmt:

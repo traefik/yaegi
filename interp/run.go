@@ -109,6 +109,10 @@ func inc(n *Node, f *Frame) {
 	(*f)[n.findex] = value(n.Child[0], f).(int64) + 1
 }
 
+func greater(n *Node, f *Frame) {
+	(*f)[n.findex] = value(n.Child[0], f).(int64) > value(n.Child[1], f).(int64)
+}
+
 func lower(n *Node, f *Frame) {
 	(*f)[n.findex] = value(n.Child[0], f).(int64) < value(n.Child[1], f).(int64)
 }
