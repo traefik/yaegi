@@ -6,8 +6,6 @@ import (
 	"strconv"
 )
 
-// TODO: remove coupling with go/ast and go/token. This should be handled only in Ast()
-
 // n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
 func (e *Node) Cfg(i *Interpreter) int {
 	symIndex := make(map[string]int)
@@ -25,7 +23,7 @@ func (e *Node) Cfg(i *Interpreter) int {
 			}
 		}
 	}, func(n *Node) {
-		switch x := (*n.anode).(type) {
+		switch a := (*n.anode).(type) {
 		case *ast.FuncDecl:
 			n.findex = maxIndex + 1
 			n.isConst = true
@@ -41,13 +39,17 @@ func (e *Node) Cfg(i *Interpreter) int {
 			n.run = _return
 		case *ast.IncDecStmt:
 			wireChild(n)
-			switch x.Tok {
+			switch a.Tok {
 			case token.INC:
 				n.run = inc
 			}
 			n.findex = n.Child[0].findex
 		case *ast.AssignStmt:
-			n.run = assign
+			if len(a.Lhs) > 1 && len(a.Rhs) == 1 {
+				n.run = assignX
+			} else {
+				n.run = assign
+			}
 			wireChild(n)
 			n.findex = n.Child[0].findex
 		case *ast.ExprStmt:
@@ -64,7 +66,7 @@ func (e *Node) Cfg(i *Interpreter) int {
 			n.findex = n.Child[len(n.Child)-1].findex
 		case *ast.BinaryExpr:
 			wireChild(n)
-			switch x.Op {
+			switch a.Op {
 			case token.ADD:
 				n.run = add
 			case token.AND:
@@ -123,17 +125,17 @@ func (e *Node) Cfg(i *Interpreter) int {
 		case *ast.BasicLit:
 			n.isConst = true
 			// FIXME: values must be converted to int or float if possible
-			if v, err := strconv.ParseInt(x.Value, 0, 0); err == nil {
+			if v, err := strconv.ParseInt(a.Value, 0, 0); err == nil {
 				n.val = v
 			} else {
-				n.val = x.Value
+				n.val = a.Value
 			}
 		case *ast.Ident:
 			// Lookup identifier in frame symbol table. If not found
 			// should check if ident can be defined (assign, param passing...)
 			// or should lookup in upper scope of variables
 			// For now, simply allocate a new entry in local sym table
-			n.ident = x.Name
+			n.ident = a.Name
 			if n.findex = symIndex[n.ident]; n.findex == 0 {
 				maxIndex++
 				symIndex[n.ident] = maxIndex

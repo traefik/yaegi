@@ -42,22 +42,20 @@ func value(n *Node, f *Frame) interface{} {
 
 }
 
+// AssignX(n, f) implements assignement for a single call which returns multiple values
+func assignX(n *Node, f *Frame) {
+	l := len(n.Child) - 1
+	b := n.Child[l].findex
+	for i, c := range n.Child[:l] {
+		(*f)[c.findex] = (*f)[b+i]
+	}
+}
+
+// Assign implements assignement with the same number of left and right values
 func assign(n *Node, f *Frame) {
-	// FIXME: should have different assign flavors set by CFG instead
-	if n.lhs > 1 {
-		if len(n.Child)-n.lhs > 1 {
-			// multiple single assign
-			for i := 0; i < n.lhs; i++ {
-				(*f)[n.Child[i].findex] = value(n.Child[len(n.Child)-n.lhs+i], f)
-			}
-		} else {
-			// Multiple vars set from a single call
-			for i := 0; i < n.lhs; i++ {
-				(*f)[n.Child[i].findex] = (*f)[n.Child[len(n.Child)-1].findex+i]
-			}
-		}
-	} else {
-		(*f)[n.findex] = value(n.Child[1], f)
+	l := len(n.Child) / 2
+	for i, c := range n.Child[:l] {
+		(*f)[c.findex] = value(n.Child[l+i], f)
 	}
 }
 

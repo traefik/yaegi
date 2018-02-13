@@ -24,19 +24,9 @@ func Ast(src string) *Node {
 	// is used to keep track of curent ancestor for each depth level
 	ast.Inspect(f, func(node ast.Node) bool {
 		anc = st.top()
-		switch n := node.(type) {
+		switch node.(type) {
 		case nil:
 			anc = st.pop()
-		case *ast.AssignStmt:
-			index++
-			var i interface{}
-			nod := &Node{anc: anc, index: index, anode: &node, val: &i, lhs: len(n.Lhs)}
-			if anc == nil {
-				root = nod
-			} else {
-				anc.Child = append(anc.Child, nod)
-			}
-			st.push(nod)
 		default:
 			index++
 			var i interface{}
