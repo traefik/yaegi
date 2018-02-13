@@ -1,6 +1,9 @@
 package interp
 
-import "fmt"
+import (
+	"fmt"
+	"reflect"
+)
 
 // Run a Go function
 func Run(def *Node, cf *Frame, args []*Node, rets []int) {
@@ -93,6 +96,11 @@ func (interp *Interpreter) call(n *Node, f *Frame) {
 	}
 }
 
+func getIndex(n *Node, f *Frame) {
+	a := reflect.ValueOf(value(n.Child[0], f))
+	(*f)[n.findex] = a.Index(int(value(n.Child[1], f).(int64)))
+}
+
 func add(n *Node, f *Frame) {
 	(*f)[n.findex] = value(n.Child[0], f).(int64) + value(n.Child[1], f).(int64)
 }
@@ -117,7 +125,7 @@ func lower(n *Node, f *Frame) {
 	(*f)[n.findex] = value(n.Child[0], f).(int64) < value(n.Child[1], f).(int64)
 }
 
-func nop(n *Node, i *Frame) {}
+func nop(n *Node, f *Frame) {}
 
 func _return(n *Node, f *Frame) {
 	for i, c := range n.Child {
@@ -125,4 +133,13 @@ func _return(n *Node, f *Frame) {
 	}
 	// FIXME: should be done during compiling, not run
 	n.tnext = nil
+}
+
+// create an array of litteral values
+func arrayLit(n *Node, f *Frame) {
+	a := make([]interface{}, len(n.Child)-1)
+	for i, c := range n.Child[1:] {
+		a[i] = value(c, f)
+	}
+	(*f)[n.findex] = a
 }

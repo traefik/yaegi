@@ -121,6 +121,8 @@ func (e *Node) Cfg(i *Interpreter) int {
 				n.run = lower
 			case token.SUB:
 				n.run = sub
+			default:
+				panic("missing binary operator function")
 			}
 			maxIndex++
 			n.findex = maxIndex
@@ -184,6 +186,18 @@ func (e *Node) Cfg(i *Interpreter) int {
 			} else {
 				n.val = a.Value
 			}
+
+		case *ast.CompositeLit:
+			wireChild(n)
+			n.run = arrayLit
+			maxIndex++
+			n.findex = maxIndex
+
+		case *ast.IndexExpr:
+			wireChild(n)
+			n.run = getIndex
+			maxIndex++
+			n.findex = maxIndex
 
 		case *ast.Ident:
 			// Lookup identifier in frame symbol table. If not found
