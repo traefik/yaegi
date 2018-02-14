@@ -12,8 +12,7 @@ import (
 // - universe (global) scope
 // - closures
 // - &&, ||, break, continue, goto
-// - for range
-// - array / slices / map expressions
+// - slices / map expressions
 // - switch
 // - go routines
 // - channels
@@ -35,11 +34,13 @@ import (
 // - function calls
 // - assignements, including to/from multi value
 // - return, including multiple values
+// - for range
+// - arrays
 
 // n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables.
-// Following this pass, the CFG is ready to be run
+// Following this pass, the CFG is ready to run
 func (e *Node) Cfg(i *Interpreter) int {
 	symIndex := make(map[string]int)
 	maxIndex := 0
@@ -178,6 +179,15 @@ func (e *Node) Cfg(i *Interpreter) int {
 			n.Child[3].tnext = n.Child[2].Start
 			n.Child[2].tnext = n.Child[1].Start
 
+		case *ast.RangeStmt:
+			n.Start = n
+			n.Child[3].tnext = n
+			n.tnext = n.Child[3].Start
+			//  n.fnext set in wireChild() by ancestor
+			n.run = _range
+			maxIndex++
+			n.findex = maxIndex
+
 		case *ast.BasicLit:
 			n.isConst = true
 			// FIXME: values must be converted to int or float if possible
@@ -221,6 +231,14 @@ func (e *Node) Cfg(i *Interpreter) int {
 	return maxIndex + 1
 }
 
+func (n *Node) isRange() bool {
+	switch (*n.anode).(type) {
+	case *ast.RangeStmt:
+		return true
+	}
+	return false
+}
+
 // Wire AST nodes of sequential blocks
 func wireChild(n *Node) {
 	for _, child := range n.Child {
@@ -233,11 +251,21 @@ func wireChild(n *Node) {
 		n.Start = n
 	}
 	for i := 1; i < len(n.Child); i++ {
-		n.Child[i-1].tnext = n.Child[i].Start
+		if n.Child[i-1].isRange() {
+			n.Child[i-1].fnext = n.Child[i].Start
+			fmt.Println("#1 fnext", n.Child[i-1].index, n.Child[i].Start.index)
+		} else {
+			n.Child[i-1].tnext = n.Child[i].Start
+		}
 	}
 	for i := len(n.Child) - 1; i >= 0; i-- {
 		if !n.Child[i].isLeaf() {
-			n.Child[i].tnext = n
+			if n.Child[i].isRange() {
+				n.Child[i].fnext = n
+				fmt.Println("#2 fnext", n.Child[i].index, n.index)
+			} else {
+				n.Child[i].tnext = n
+			}
 			break
 		}
 	}

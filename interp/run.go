@@ -142,3 +142,18 @@ func arrayLit(n *Node, f *Frame) {
 	}
 	(*f)[n.findex] = a
 }
+
+func _range(n *Node, f *Frame) {
+	i, index := 0, n.Child[0].findex
+	if (*f)[index] != nil {
+		i = (*f)[index].(int)
+	}
+	a := value(n.Child[2], f).([]interface{})
+	if i >= len(a) {
+		(*f)[n.findex] = false
+		return
+	}
+	(*f)[index] = i + 1
+	(*f)[n.Child[1].findex] = a[i]
+	(*f)[n.findex] = true
+}
