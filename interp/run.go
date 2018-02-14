@@ -2,7 +2,6 @@ package interp
 
 import (
 	"fmt"
-	"reflect"
 )
 
 // Run a Go function
@@ -97,8 +96,8 @@ func (interp *Interpreter) call(n *Node, f *Frame) {
 }
 
 func getIndex(n *Node, f *Frame) {
-	a := reflect.ValueOf(value(n.Child[0], f))
-	(*f)[n.findex] = a.Index(int(value(n.Child[1], f).(int64)))
+	a := value(n.Child[0], f).([]interface{})
+	(*f)[n.findex] = a[value(n.Child[1], f).(int64)]
 }
 
 func add(n *Node, f *Frame) {

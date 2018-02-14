@@ -1,9 +1,9 @@
 package interp
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
-	"reflect"
 	"strconv"
 )
 
@@ -215,7 +215,7 @@ func (e *Node) Cfg(i *Interpreter) int {
 		case *ast.FuncType:
 		case *ast.File:
 		default:
-			println("unknown type:", reflect.TypeOf(*n.anode).String())
+			fmt.Printf("unknown type: %T\n", *n.anode)
 		}
 	})
 	return maxIndex + 1
