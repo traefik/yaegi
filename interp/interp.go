@@ -41,13 +41,9 @@ type Interpreter struct {
 }
 
 type InterpOpt struct {
-	Ast bool
-	Cfg bool
-}
-
-// n.isLeaf() returns true if Node n is a leaf in the AST
-func (n *Node) isLeaf() bool {
-	return len(n.Child) == 0
+	Ast   bool
+	Cfg   bool
+	NoRun bool
 }
 
 // n.Walk(cbin, cbout) traverses AST n in depth first order, call cbin function
@@ -85,6 +81,8 @@ func (i *Interpreter) Eval(src string) interface{} {
 	//root.OptimCfg()
 
 	// Execute CFG
-	Run(i.def["main"], nil, nil, nil)
+	if !i.opt.NoRun {
+		Run(i.def["main"], nil, nil, nil)
+	}
 	return i.out
 }

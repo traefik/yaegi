@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -13,12 +14,18 @@ func main() {
 	opt := interp.InterpOpt{}
 	flag.BoolVar(&opt.Ast, "a", false, "display AST graph")
 	flag.BoolVar(&opt.Cfg, "c", false, "display CFG graph")
+	flag.BoolVar(&opt.NoRun, "n", false, "do not run")
+	flag.Usage = func() {
+		fmt.Println("Usage:", os.Args[0], "[options] [script|-]] [args]")
+		fmt.Println("Options:")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 	args := flag.Args()
 
 	var b []byte
 	var err error
-	if len(args) > 0 {
+	if len(args) > 0 && args[0] != "-" {
 		b, err = ioutil.ReadFile(args[0])
 	} else {
 		b, err = ioutil.ReadAll(os.Stdin)
