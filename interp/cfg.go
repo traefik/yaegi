@@ -233,7 +233,7 @@ func (e *Node) Cfg(i *Interpreter) int {
 			n.isConst = true
 			// FIXME: values must be converted to int or float if possible
 			if v, err := strconv.ParseInt(a.Value, 0, 0); err == nil {
-				n.val = v
+				n.val = int(v)
 			} else {
 				n.val = a.Value
 			}

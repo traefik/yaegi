@@ -5,8 +5,8 @@ func main() {
 	println(a[1]) // 2
 	for i, v := range a {
 		println(v)
-		//if i == 3 {
-		//	break
-		//}
+		if i == 3 {
+			break
+		}
 	}
 }

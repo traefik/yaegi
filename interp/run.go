@@ -63,7 +63,7 @@ func assign(n *Node, f *Frame) {
 }
 
 func and(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(int64) & value(n.Child[1], f).(int64)
+	(*f)[n.findex] = value(n.Child[0], f).(int) & value(n.Child[1], f).(int)
 }
 
 func printa(n []*Node, f *Frame) {
@@ -98,31 +98,31 @@ func (interp *Interpreter) call(n *Node, f *Frame) {
 
 func getIndex(n *Node, f *Frame) {
 	a := value(n.Child[0], f).([]interface{})
-	(*f)[n.findex] = a[value(n.Child[1], f).(int64)]
+	(*f)[n.findex] = a[value(n.Child[1], f).(int)]
 }
 
 func add(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(int64) + value(n.Child[1], f).(int64)
+	(*f)[n.findex] = value(n.Child[0], f).(int) + value(n.Child[1], f).(int)
 }
 
 func sub(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(int64) - value(n.Child[1], f).(int64)
+	(*f)[n.findex] = value(n.Child[0], f).(int) - value(n.Child[1], f).(int)
 }
 
 func equal(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(int64) == value(n.Child[1], f).(int64)
+	(*f)[n.findex] = value(n.Child[0], f).(int) == value(n.Child[1], f).(int)
 }
 
 func inc(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(int64) + 1
+	(*f)[n.findex] = value(n.Child[0], f).(int) + 1
 }
 
 func greater(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(int64) > value(n.Child[1], f).(int64)
+	(*f)[n.findex] = value(n.Child[0], f).(int) > value(n.Child[1], f).(int)
 }
 
 func lower(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(int64) < value(n.Child[1], f).(int64)
+	(*f)[n.findex] = value(n.Child[0], f).(int) < value(n.Child[1], f).(int)
 }
 
 func nop(n *Node, f *Frame) {}
