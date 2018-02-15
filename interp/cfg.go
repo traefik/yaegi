@@ -145,8 +145,9 @@ func (e *Node) Cfg(i *Interpreter) int {
 
 		case *ast.BranchStmt:
 			// Break the current loop
-			fmt.Println("Break from", n.index, "to", loop.index)
 			n.tnext = loop
+			n.run = nop
+			n.isNop = true
 
 		case *ast.CallExpr:
 			wireChild(n)
@@ -254,10 +255,16 @@ func (e *Node) Cfg(i *Interpreter) int {
 // Wire AST nodes for CFG in subtree
 func wireChild(n *Node) {
 	// Find start node, in subtree
+start:
 	for _, child := range n.Child {
-		if len(child.Child) > 0 {
-			n.Start = child.Start
-			break
+		switch (*child.anode).(type) {
+		case *ast.BranchStmt:
+			n.Start = child
+		default:
+			if len(child.Child) > 0 {
+				n.Start = child.Start
+				break start
+			}
 		}
 	}
 	if n.Start == nil {

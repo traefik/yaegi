@@ -20,6 +20,7 @@ func Run(def *Node, cf *Frame, args []*Node, rets []int) {
 	// Execute by walking the CFG and running node func at each step
 	body := def.Child[2]
 	for n := body.Start; n != nil; {
+		//fmt.Println("run", n.index)
 		n.run(n, &f)
 		if n.fnext == nil || value(n, &f).(bool) {
 			n = n.tnext
