@@ -24,6 +24,8 @@ func (n *Node) AstDot(out io.WriteCloser) {
 			label = x.Tok.String()
 		case *ast.AssignStmt:
 			label = x.Tok.String()
+		case *ast.BranchStmt:
+			label = x.Tok.String()
 		default:
 			label = reflect.TypeOf(*n.anode).String()
 		}

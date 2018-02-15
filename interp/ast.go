@@ -31,6 +31,7 @@ func Ast(src string) *Node {
 			index++
 			var i interface{}
 			nod := &Node{anc: anc, index: index, anode: &node, val: &i}
+			nod.Start = nod
 			if anc == nil {
 				root = nod
 			} else {

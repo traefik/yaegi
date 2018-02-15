@@ -44,13 +44,22 @@ import (
 func (e *Node) Cfg(i *Interpreter) int {
 	symIndex := make(map[string]int)
 	maxIndex := 0
-	var loop *Node
+	var loop, loopRestart *Node
 
 	e.Walk(func(n *Node) {
 		// Pre-order processing
-		switch (*n.anode).(type) {
+		switch a := (*n.anode).(type) {
 		case *ast.ForStmt:
 			loop = n
+			if a.Cond == nil {
+				loopRestart = n.Child[0]
+			} else {
+				loopRestart = n.Child[len(n.Child)-1]
+			}
+
+		case *ast.RangeStmt:
+			loop, loopRestart = n, n
+
 		case *ast.FuncDecl:
 			symIndex = make(map[string]int)
 			// allocate entries for return values at start of frame
@@ -144,10 +153,15 @@ func (e *Node) Cfg(i *Interpreter) int {
 			}
 
 		case *ast.BranchStmt:
-			// Break the current loop
-			n.tnext = loop
 			n.run = nop
 			n.isNop = true
+			switch a.Tok {
+			default:
+			case token.BREAK:
+				n.tnext = loop
+			case token.CONTINUE:
+				n.tnext = loopRestart
+			}
 
 		case *ast.CallExpr:
 			wireChild(n)
@@ -185,6 +199,9 @@ func (e *Node) Cfg(i *Interpreter) int {
 			if a.Init != nil {
 				icond, ibody, ipost = 1, 3, 2
 			}
+			if a.Post == nil {
+				ibody--
+			}
 			n.Start = n.Child[0].Start
 			if a.Cond != nil {
 				n.Child[0].tnext = n.Child[icond].Start
@@ -193,21 +210,24 @@ func (e *Node) Cfg(i *Interpreter) int {
 				if a.Post != nil {
 					n.Child[ibody].tnext = n.Child[ipost].Start
 					n.Child[ipost].tnext = n.Child[icond].Start
+				} else {
+					n.Child[ibody].tnext = n.Child[icond].Start
 				}
 			} else {
 				// no condition: Infinite loop
 				n.Child[0].tnext = n.Child[0].Start
 			}
-			loop = nil
+			loop, loopRestart = nil, nil
 
 		case *ast.RangeStmt:
 			n.Start = n
 			n.Child[3].tnext = n
 			n.tnext = n.Child[3].Start
-			//  n.fnext set in wireChild() by ancestor
+			// exit n.fnext set in wireChild() by ancestor
 			n.run = _range
 			maxIndex++
 			n.findex = maxIndex
+			loop, loopRestart = nil, nil
 
 		case *ast.BasicLit:
 			n.isConst = true
@@ -254,39 +274,41 @@ func (e *Node) Cfg(i *Interpreter) int {
 
 // Wire AST nodes for CFG in subtree
 func wireChild(n *Node) {
-	// Find start node, in subtree
-start:
+	// Set start node, in subtree (propagated to ancestors due to post-order processing)
 	for _, child := range n.Child {
 		switch (*child.anode).(type) {
-		case *ast.BranchStmt:
-			n.Start = child
+		case *ast.ArrayType:
+			continue
+		case *ast.BasicLit:
+			continue // skip leaf node
+		case *ast.Ident:
+			continue // skip leaf node
 		default:
-			if len(child.Child) > 0 {
-				n.Start = child.Start
-				break start
-			}
+			n.Start = child.Start
 		}
+		break
 	}
-	if n.Start == nil {
-		n.Start = n
-	}
-	// Chain sequential operations inside a block
+	// Chain sequential operations inside a block (next is right sibling)
 	for i := 1; i < len(n.Child); i++ {
 		switch (*n.Child[i-1].anode).(type) {
 		case *ast.RangeStmt:
+			// Particular case, exit is on false branch
 			n.Child[i-1].fnext = n.Child[i].Start
 		default:
 			n.Child[i-1].tnext = n.Child[i].Start
 		}
 	}
-	// Chain block exit
+	// Chain subtree next to self
 	for i := len(n.Child) - 1; i >= 0; i-- {
-		if len(n.Child[i].Child) == 0 {
-			continue
-		}
 		switch (*n.Child[i].anode).(type) {
+		case *ast.BasicLit:
+			continue // skip leaf node
+		case *ast.Ident:
+			continue // skip leaf node
+		case *ast.BranchStmt:
+			// Next is already computed, no change
 		case *ast.RangeStmt:
-			// The exit node of a range statement is its ancestor
+			// Particular case, exit is on false branch
 			n.Child[i].fnext = n
 		default:
 			n.Child[i].tnext = n
