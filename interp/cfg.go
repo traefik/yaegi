@@ -58,9 +58,6 @@ func (e *Node) Cfg(i *Interpreter) int {
 					loopRestart = n.Child[len(n.Child)-1]
 				}
 
-			//case *ast.RangeStmt:
-			//	loop, loopRestart = n, n
-
 			case *ast.FuncDecl:
 				symIndex = make(map[string]int)
 				// allocate entries for return values at start of frame

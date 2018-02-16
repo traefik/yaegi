@@ -17,6 +17,7 @@ type Node struct {
 	fnext   *Node       // false branch successor (CFG)
 	index   int         // node index (dot display)
 	findex  int         // index of value in frame or frame size (func def)
+	kind    Kind        // Kind of node
 	run     RunFun      // function to run at CFG execution
 	val     interface{} // pointer on generic value (CFG execution)
 	ident   string      // set if node is a var or func
@@ -28,11 +29,6 @@ type Node struct {
 // A Frame contains values for the current execution level
 type Frame []interface{}
 
-//type Frame struct {
-//	up  *Frame        // up level in call stack
-//	val []interface{} // array of values
-//}
-
 // Interpreter contains global resources and state
 type Interpreter struct {
 	opt InterpOpt
@@ -41,9 +37,9 @@ type Interpreter struct {
 }
 
 type InterpOpt struct {
-	Ast   bool
-	Cfg   bool
-	NoRun bool
+	Ast   bool // Display AST graph (debug)
+	Cfg   bool // Display CFG graph (debug)
+	NoRun bool // Compile, but do not run
 }
 
 // n.Walk(cbin, cbout) traverses AST n in depth first order, call cbin function
