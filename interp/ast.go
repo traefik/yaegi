@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -17,9 +18,12 @@ const (
 	BinaryExpr
 	BlockStmt
 	BranchStmt
+	Break
 	CallExpr
 	CompositeLit
+	Continue
 	ExprStmt
+	Fallthrough
 	Field
 	FieldList
 	File
@@ -32,6 +36,7 @@ const (
 	ForStmt
 	FuncDecl
 	FuncType
+	Goto
 	Ident
 	If0 // if cond {}
 	If1 // if cond {} else {}
@@ -53,8 +58,10 @@ var kinds = [...]string{
 	BinaryExpr:   "BinaryExpr",
 	BlockStmt:    "BlockStmt",
 	BranchStmt:   "BranchStmt",
+	Break:        "Break",
 	CallExpr:     "CallExpr",
 	CompositeLit: "CompositLit",
+	Continue:     "Continue",
 	ExprStmt:     "ExprStmt",
 	Field:        "Field",
 	FieldList:    "FieldList",
@@ -68,6 +75,7 @@ var kinds = [...]string{
 	ForStmt:      "ForStmt",
 	FuncDecl:     "FuncDecl",
 	FuncType:     "FuncType",
+	Goto:         "Goto",
 	Ident:        "Ident",
 	If0:          "If0",
 	If1:          "If1",
@@ -92,6 +100,57 @@ func (k Kind) String() string {
 	return s
 }
 
+type Action int
+
+const (
+	Nop = iota
+	ArrayLit
+	Assign
+	AssignX
+	Add
+	And
+	Call
+	Dec
+	Equal
+	Greater
+	GetIndex
+	Inc
+	Lower
+	Range
+	Return
+	Sub
+)
+
+var actions = [...]string{
+	Nop:      "nop",
+	ArrayLit: "arraylit",
+	Assign:   "=",
+	AssignX:  "=",
+	Add:      "+",
+	And:      "&",
+	Call:     "call",
+	Dec:      "--",
+	Equal:    "==",
+	Greater:  ">",
+	GetIndex: "getindex",
+	Inc:      "++",
+	Lower:    "<",
+	Range:    "range",
+	Return:   "return",
+	Sub:      "-",
+}
+
+func (a Action) String() string {
+	s := ""
+	if 0 <= a && a <= Action(len(actions)) {
+		s = actions[a]
+	}
+	if s == "" {
+		s = "action(" + strconv.Itoa(int(a)) + ")"
+	}
+	return s
+}
+
 // Ast(src) parses src string containing Go code and generates the corresponding AST.
 // The AST root node is returned.
 func Ast(src string) *Node {
@@ -110,67 +169,160 @@ func Ast(src string) *Node {
 	// A stack of ancestor nodes is used to keep track of curent ancestor for each depth level
 	ast.Inspect(f, func(node ast.Node) bool {
 		anc = st.top()
-		switch node.(type) {
+		switch a := node.(type) {
 		case nil:
 			anc = st.pop()
+
 		case *ast.ArrayType:
-			st.push(addChild(&root, anc, &index, ArrayType, &node))
+			st.push(addChild(&root, anc, &index, ArrayType, Nop, &node))
+
 		case *ast.AssignStmt:
-			st.push(addChild(&root, anc, &index, AssignStmt, &node))
+			var action Action
+			if len(a.Lhs) > 1 && len(a.Rhs) == 1 {
+				action = AssignX
+			} else {
+				action = Assign
+			}
+			st.push(addChild(&root, anc, &index, AssignStmt, action, &node))
+
 		case *ast.BasicLit:
-			st.push(addChild(&root, anc, &index, BasicLit, &node))
+			n := addChild(&root, anc, &index, BasicLit, Nop, &node)
+			// FIXME: values must be converted to int or float if possible
+			n.ident = a.Value
+			if v, err := strconv.ParseInt(a.Value, 0, 0); err == nil {
+				n.val = int(v)
+			} else {
+				n.val = a.Value
+			}
+			st.push(n)
+
 		case *ast.BinaryExpr:
-			st.push(addChild(&root, anc, &index, BinaryExpr, &node))
+			var action Action
+			switch a.Op {
+			case token.ADD:
+				action = Add
+			case token.AND:
+				action = And
+			case token.EQL:
+				action = Equal
+			case token.GTR:
+				action = Greater
+			case token.LSS:
+				action = Lower
+			case token.SUB:
+				action = Sub
+			}
+			st.push(addChild(&root, anc, &index, BinaryExpr, action, &node))
+
 		case *ast.BlockStmt:
-			st.push(addChild(&root, anc, &index, BlockStmt, &node))
+			st.push(addChild(&root, anc, &index, BlockStmt, Nop, &node))
+
 		case *ast.BranchStmt:
-			st.push(addChild(&root, anc, &index, BranchStmt, &node))
+			var kind Kind
+			switch a.Tok {
+			case token.BREAK:
+				kind = Break
+			case token.CONTINUE:
+				kind = Continue
+			}
+			st.push(addChild(&root, anc, &index, kind, Nop, &node))
+
 		case *ast.CallExpr:
-			st.push(addChild(&root, anc, &index, CallExpr, &node))
+			st.push(addChild(&root, anc, &index, CallExpr, Nop, &node))
+
 		case *ast.CompositeLit:
-			st.push(addChild(&root, anc, &index, CompositeLit, &node))
+			st.push(addChild(&root, anc, &index, CompositeLit, Nop, &node))
+
 		case *ast.ExprStmt:
-			st.push(addChild(&root, anc, &index, ExprStmt, &node))
+			st.push(addChild(&root, anc, &index, ExprStmt, Nop, &node))
+
 		case *ast.Field:
-			st.push(addChild(&root, anc, &index, Field, &node))
+			st.push(addChild(&root, anc, &index, Field, Nop, &node))
+
 		case *ast.FieldList:
-			st.push(addChild(&root, anc, &index, FieldList, &node))
+			st.push(addChild(&root, anc, &index, FieldList, Nop, &node))
+
 		case *ast.File:
-			st.push(addChild(&root, anc, &index, File, &node))
+			st.push(addChild(&root, anc, &index, File, Nop, &node))
+
 		case *ast.ForStmt:
-			st.push(addChild(&root, anc, &index, ForStmt, &node))
+			var kind Kind
+			if a.Cond == nil {
+				kind = For0
+			} else {
+				if a.Init == nil && a.Post == nil {
+					kind = For1
+				} else if a.Init != nil && a.Post == nil {
+					kind = For2
+				} else if a.Init == nil && a.Post != nil {
+					kind = For3
+				} else {
+					kind = For4
+				}
+			}
+			st.push(addChild(&root, anc, &index, kind, Nop, &node))
+
 		case *ast.FuncDecl:
-			st.push(addChild(&root, anc, &index, FuncDecl, &node))
+			st.push(addChild(&root, anc, &index, FuncDecl, Nop, &node))
+
 		case *ast.FuncType:
-			st.push(addChild(&root, anc, &index, FuncType, &node))
+			st.push(addChild(&root, anc, &index, FuncType, Nop, &node))
+
 		case *ast.Ident:
-			st.push(addChild(&root, anc, &index, Ident, &node))
+			n := addChild(&root, anc, &index, Ident, Nop, &node)
+			n.ident = a.Name
+			st.push(n)
+
 		case *ast.IfStmt:
-			st.push(addChild(&root, anc, &index, IfStmt, &node))
+			var kind Kind
+			if a.Init == nil && a.Else == nil {
+				kind = If0
+			} else if a.Init == nil && a.Else != nil {
+				kind = If1
+			} else if a.Else == nil {
+				kind = If2
+			} else {
+				kind = If3
+			}
+			st.push(addChild(&root, anc, &index, kind, Nop, &node))
+
 		case *ast.IncDecStmt:
-			st.push(addChild(&root, anc, &index, IncDecStmt, &node))
+			var action Action
+			switch a.Tok {
+			case token.INC:
+				action = Inc
+			case token.DEC:
+				action = Dec
+			}
+			st.push(addChild(&root, anc, &index, IncDecStmt, action, &node))
+
 		case *ast.IndexExpr:
-			st.push(addChild(&root, anc, &index, IndexExpr, &node))
+			st.push(addChild(&root, anc, &index, IndexExpr, Nop, &node))
+
 		case *ast.ParenExpr:
-			st.push(addChild(&root, anc, &index, ParenExpr, &node))
+			st.push(addChild(&root, anc, &index, ParenExpr, Nop, &node))
+
 		case *ast.RangeStmt:
 			// Insert a missing ForRangeStmt for AST correctness
-			n := addChild(&root, anc, &index, ForRangeStmt, nil)
-			st.push(addChild(&root, n, &index, RangeStmt, &node))
+			n := addChild(&root, anc, &index, ForRangeStmt, Nop, nil)
+			st.push(addChild(&root, n, &index, RangeStmt, Nop, &node))
+
 		case *ast.ReturnStmt:
-			st.push(addChild(&root, anc, &index, ReturnStmt, &node))
+			st.push(addChild(&root, anc, &index, ReturnStmt, Nop, &node))
+
 		default:
-			st.push(addChild(&root, anc, &index, Undef, &node))
+			fmt.Printf("Unknown kind for %T\n", a)
+			st.push(addChild(&root, anc, &index, Undef, Nop, &node))
 		}
 		return true
 	})
 	return root
 }
 
-func addChild(root **Node, anc *Node, index *int, kind Kind, anode *ast.Node) *Node {
+func addChild(root **Node, anc *Node, index *int, kind Kind, action Action, anode *ast.Node) *Node {
 	*index++
 	var i interface{}
-	n := &Node{anc: anc, index: *index, kind: kind, anode: anode, val: &i}
+	n := &Node{anc: anc, index: *index, kind: kind, action: action, anode: anode, val: &i}
 	n.Start = n
 	if anc == nil {
 		*root = n

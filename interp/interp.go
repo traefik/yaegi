@@ -5,9 +5,6 @@ import (
 	"go/ast"
 )
 
-// Function to run at CFG execution
-type RunFun func(n *Node, f *Frame)
-
 // Structure for AST and CFG
 type Node struct {
 	Child   []*Node     // child subtrees
@@ -18,6 +15,7 @@ type Node struct {
 	index   int         // node index (dot display)
 	findex  int         // index of value in frame or frame size (func def)
 	kind    Kind        // Kind of node
+	action  Action      // function to run
 	run     RunFun      // function to run at CFG execution
 	val     interface{} // pointer on generic value (CFG execution)
 	ident   string      // set if node is a var or func

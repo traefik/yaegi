@@ -4,6 +4,28 @@ import (
 	"fmt"
 )
 
+// Function to run at CFG execution
+type Builtin func(n *Node, f *Frame)
+
+var builtin = [...]Builtin{
+	Nop:      nop,
+	ArrayLit: arrayLit,
+	Assign:   assign,
+	AssignX:  assignX,
+	Add:      add,
+	And:      and,
+	Call:     call,
+	Dec:      nop,
+	Equal:    equal,
+	Greater:  greater,
+	GetIndex: getIndex,
+	Inc:      inc,
+	Lower:    lower,
+	Range:    _range,
+	Return:   _return,
+	Sub:      sub,
+}
+
 // Run a Go function
 func Run(def *Node, cf *Frame, args []*Node, rets []int) {
 	//fmt.Println("run", def.Child[0].ident)
@@ -38,11 +60,12 @@ func Run(def *Node, cf *Frame, args []*Node, rets []int) {
 // Functions set to run during execution of CFG
 
 func value(n *Node, f *Frame) interface{} {
-	if n.isConst {
+	switch n.kind {
+	case BasicLit, FuncDecl:
 		return n.val
+	default:
+		return (*f)[n.findex]
 	}
-	return (*f)[n.findex]
-
 }
 
 // AssignX(n, f) implements assignement for a single call which returns multiple values

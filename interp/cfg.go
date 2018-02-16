@@ -3,7 +3,6 @@ package interp
 import (
 	"fmt"
 	"go/ast"
-	"go/token"
 	"strconv"
 )
 
@@ -48,151 +47,284 @@ func (e *Node) Cfg(i *Interpreter) int {
 
 	e.Walk(func(n *Node) {
 		// Pre-order processing
-		if n.anode != nil {
-			switch a := (*n.anode).(type) {
-			case *ast.ForStmt:
-				loop = n
-				if a.Cond == nil {
-					loopRestart = n.Child[0]
-				} else {
-					loopRestart = n.Child[len(n.Child)-1]
-				}
-
-			case *ast.FuncDecl:
-				symIndex = make(map[string]int)
-				// allocate entries for return values at start of frame
-				if len(n.Child[1].Child) == 2 {
-					maxIndex = len(n.Child[1].Child[1].Child)
-				} else {
-					maxIndex = 0
-				}
-			}
-		} else {
-			// empty anode means dummy For/range
+		switch n.kind {
+		case For0, ForRangeStmt:
 			loop, loopRestart = n, n.Child[0]
+		case For1, For2, For3, For4:
+			loop, loopRestart = n, n.Child[len(n.Child)-1]
+		case FuncDecl:
+			symIndex = make(map[string]int)
+			// allocate entries for return values at start of frame
+			if len(n.Child[1].Child) == 2 {
+				maxIndex = len(n.Child[1].Child[1].Child)
+			} else {
+				maxIndex = 0
+			}
 		}
+		/*
+			if n.anode != nil {
+				switch a := (*n.anode).(type) {
+				case *ast.ForStmt:
+					loop = n
+					if a.Cond == nil {
+						loopRestart = n.Child[0]
+					} else {
+						loopRestart = n.Child[len(n.Child)-1]
+					}
+
+				case *ast.FuncDecl:
+					symIndex = make(map[string]int)
+					// allocate entries for return values at start of frame
+					if len(n.Child[1].Child) == 2 {
+						maxIndex = len(n.Child[1].Child[1].Child)
+					} else {
+						maxIndex = 0
+					}
+				}
+			} else {
+				// empty anode means dummy For/range
+				loop, loopRestart = n, n.Child[0]
+			}
+		*/
 	}, func(n *Node) {
 		// Post-order processing
+		switch n.kind {
+		case FuncDecl:
+			n.findex = maxIndex + 1
+			i.def[n.Child[0].ident] = n
+
+		case BlockStmt, ExprStmt, ParenExpr:
+			wireChild(n)
+			n.findex = n.Child[len(n.Child)-1].findex
+
+		case ReturnStmt:
+			wireChild(n)
+
+		case AssignStmt, IncDecStmt:
+			wireChild(n)
+			n.findex = n.Child[0].findex
+
+		case BinaryExpr:
+			wireChild(n)
+			maxIndex++
+			n.findex = maxIndex
+
+		case Field:
+			// A single child node (no ident, just type) means that the field refers
+			// to a return value, and space on frame should be accordingly allocated.
+			// Otherwise, just point to corresponding location in frame, resolved in
+			// ident child.
+			if len(n.Child) == 1 {
+				maxIndex++
+				n.findex = maxIndex
+			} else {
+				n.findex = n.Child[0].findex
+			}
+
+		case Break:
+			n.tnext = loop
+
+		case Continue:
+			n.tnext = loopRestart
+
+		case CallExpr:
+			wireChild(n)
+			// FIXME: should reserve as many entries as nb of ret values for called function
+			// node frame index should point to the first entry
+			maxIndex++
+			n.findex = maxIndex
+
+		case If0: // if cond {}
+			cond, tbody := n.Child[0], n.Child[1]
+			n.Start = cond.Start
+			cond.tnext = tbody.Start
+			cond.fnext = n
+
+		case If1: // if cond {} else {}
+			cond, tbody, fbody := n.Child[0], n.Child[1], n.Child[2]
+			n.Start = cond.Start
+			cond.tnext = tbody.Start
+			cond.fnext = fbody.Start
+			fbody.tnext = n
+
+		case If2: // if init; cond {}
+			init, cond, tbody := n.Child[0], n.Child[1], n.Child[2]
+			n.Start = init.Start
+			init.tnext = cond.Start
+			cond.tnext = tbody.Start
+			cond.fnext = n
+
+		case If3: // if init; cond {} else {}
+			init, cond, tbody, fbody := n.Child[0], n.Child[1], n.Child[2], n.Child[3]
+			n.Start = init.Start
+			init.tnext = cond.Start
+			cond.tnext = tbody.Start
+			cond.fnext = fbody.Start
+			fbody.tnext = n
+
+		case For0: // for {}
+			body := n.Child[0]
+			n.Start = body.Start
+			body.tnext = n.Start
+			loop, loopRestart = nil, nil
+
+		case For1: // for cond {}
+			cond, body := n.Child[0], n.Child[1]
+			n.Start = cond.Start
+			cond.tnext = body.Start
+			cond.fnext = n
+			body.tnext = cond.Start
+			loop, loopRestart = nil, nil
+
+		case For2: // for init; cond; {}
+			init, cond, body := n.Child[0], n.Child[1], n.Child[2]
+			n.Start = init.Start
+			init.tnext = cond.Start
+			cond.tnext = body.Start
+			cond.fnext = n
+			body.tnext = cond.Start
+			loop, loopRestart = nil, nil
+
+		case For3: // for ; cond; post {}
+			cond, post, body := n.Child[0], n.Child[1], n.Child[2]
+			n.Start = cond.Start
+			cond.tnext = body.Start
+			cond.fnext = n
+			body.tnext = post.Start
+			post.tnext = cond.Start
+			loop, loopRestart = nil, nil
+
+		case For4: // for init; cond; post {}
+			init, cond, post, body := n.Child[0], n.Child[1], n.Child[2], n.Child[3]
+			n.Start = init.Start
+			init.tnext = cond.Start
+			cond.tnext = body.Start
+			cond.fnext = n
+			body.tnext = post.Start
+			post.tnext = cond.Start
+			loop, loopRestart = nil, nil
+		}
+
 		if n.anode != nil {
 			switch a := (*n.anode).(type) {
-			case *ast.FuncDecl:
-				n.findex = maxIndex + 1
-				n.isConst = true
-				i.def[n.Child[0].ident] = n
+			//case *ast.FuncDecl:
+			//	n.findex = maxIndex + 1
+			//	n.isConst = true
+			//	i.def[n.Child[0].ident] = n
 
-			case *ast.BlockStmt:
-				wireChild(n)
-				// FIXME: could bypass this node at CFG and wire directly last child
-				n.isNop = true
-				n.run = nop
-				n.findex = n.Child[len(n.Child)-1].findex
+			//case *ast.BlockStmt:
+			//	wireChild(n)
+			//	// FIXME: could bypass this node at CFG and wire directly last child
+			//	n.isNop = true
+			//	n.run = nop
+			//	n.findex = n.Child[len(n.Child)-1].findex
 
-			case *ast.ReturnStmt:
-				wireChild(n)
-				n.run = _return
+			//case *ast.ReturnStmt:
+			//	wireChild(n)
+			//	n.run = _return
 
-			case *ast.IncDecStmt:
-				wireChild(n)
-				switch a.Tok {
-				case token.INC:
-					n.run = inc
-				}
-				n.findex = n.Child[0].findex
+			//case *ast.IncDecStmt:
+			//	wireChild(n)
+			//	switch a.Tok {
+			//	case token.INC:
+			//		n.run = inc
+			//	}
+			//	n.findex = n.Child[0].findex
 
-			case *ast.AssignStmt:
-				if len(a.Lhs) > 1 && len(a.Rhs) == 1 {
-					n.run = assignX
-				} else {
-					n.run = assign
-				}
-				wireChild(n)
-				n.findex = n.Child[0].findex
+			//case *ast.AssignStmt:
+			//	if len(a.Lhs) > 1 && len(a.Rhs) == 1 {
+			//		n.run = assignX
+			//	} else {
+			//		n.run = assign
+			//	}
+			//	wireChild(n)
+			//	n.findex = n.Child[0].findex
 
-			case *ast.ExprStmt:
-				wireChild(n)
-				// FIXME: could bypass this node at CFG and wire directly last child
-				n.isNop = true
-				n.run = nop
-				n.findex = n.Child[len(n.Child)-1].findex
+			//case *ast.ExprStmt:
+			//	wireChild(n)
+			//	// FIXME: could bypass this node at CFG and wire directly last child
+			//	n.isNop = true
+			//	n.run = nop
+			//	n.findex = n.Child[len(n.Child)-1].findex
 
-			case *ast.ParenExpr:
-				wireChild(n)
-				// FIXME: could bypass this node at CFG and wire directly last child
-				n.isNop = true
-				n.run = nop
-				n.findex = n.Child[len(n.Child)-1].findex
+			//case *ast.ParenExpr:
+			//	wireChild(n)
+			//	// FIXME: could bypass this node at CFG and wire directly last child
+			//	n.isNop = true
+			//	n.run = nop
+			//	n.findex = n.Child[len(n.Child)-1].findex
 
-			case *ast.BinaryExpr:
-				wireChild(n)
-				switch a.Op {
-				case token.ADD:
-					n.run = add
-				case token.AND:
-					n.run = and
-				case token.EQL:
-					n.run = equal
-				case token.GTR:
-					n.run = greater
-				case token.LSS:
-					n.run = lower
-				case token.SUB:
-					n.run = sub
-				default:
-					panic("missing binary operator function")
-				}
-				maxIndex++
-				n.findex = maxIndex
+			//case *ast.BinaryExpr:
+			//	wireChild(n)
+			//	switch a.Op {
+			//	case token.ADD:
+			//		n.run = add
+			//	case token.AND:
+			//		n.run = and
+			//	case token.EQL:
+			//		n.run = equal
+			//	case token.GTR:
+			//		n.run = greater
+			//	case token.LSS:
+			//		n.run = lower
+			//	case token.SUB:
+			//		n.run = sub
+			//	default:
+			//		panic("missing binary operator function")
+			//	}
+			//	maxIndex++
+			//	n.findex = maxIndex
 
-			case *ast.Field:
-				// A single child node (no ident, just type) means that the field refers
-				// to a return value, and space on frame should be accordingly allocated.
-				// Otherwise, just point to corresponding location in frame, resolved in
-				// ident child.
-				if len(n.Child) == 1 {
-					maxIndex++
-					n.findex = maxIndex
-				} else {
-					n.findex = n.Child[0].findex
-				}
+			//case *ast.Field:
+			//	// A single child node (no ident, just type) means that the field refers
+			//	// to a return value, and space on frame should be accordingly allocated.
+			//	// Otherwise, just point to corresponding location in frame, resolved in
+			//	// ident child.
+			//	if len(n.Child) == 1 {
+			//		maxIndex++
+			//		n.findex = maxIndex
+			//	} else {
+			//		n.findex = n.Child[0].findex
+			//	}
 
-			case *ast.BranchStmt:
-				n.run = nop
-				n.isNop = true
-				switch a.Tok {
-				default:
-				case token.BREAK:
-					n.tnext = loop
-				case token.CONTINUE:
-					n.tnext = loopRestart
-				}
+			//case *ast.BranchStmt:
+			//	n.run = nop
+			//	n.isNop = true
+			//	switch a.Tok {
+			//	default:
+			//	case token.BREAK:
+			//		n.tnext = loop
+			//	case token.CONTINUE:
+			//		n.tnext = loopRestart
+			//	}
 
-			case *ast.CallExpr:
-				wireChild(n)
-				// FIXME: should reserve as many entries as nb of ret values for called function
-				// node frame index should point to the first entry
-				n.run = i.call
-				maxIndex++
-				n.findex = maxIndex
+			//case *ast.CallExpr:
+			//	wireChild(n)
+			//	// FIXME: should reserve as many entries as nb of ret values for called function
+			//	// node frame index should point to the first entry
+			//	n.run = i.call
+			//	maxIndex++
+			//	n.findex = maxIndex
 
-			case *ast.IfStmt:
-				n.isNop = true
-				n.run = nop
-				n.Start = n.Child[0].Start
-				icond, ibody, ielse := 0, 1, 2
-				if a.Init != nil {
-					icond, ibody, ielse = 1, 2, 3
-					n.Child[0].tnext = n.Child[1].Start
-				}
-				n.Child[ibody].tnext = n
-				if a.Else != nil {
-					n.Child[ielse].tnext = n
-				}
-				n.Child[icond].tnext = n.Child[ibody].Start
-				if a.Else != nil {
-					n.Child[icond].fnext = n.Child[ielse].Start
-				} else {
-					n.Child[icond].fnext = n
-				}
+			//case *ast.IfStmt:
+			//	n.isNop = true
+			//	n.run = nop
+			//	n.Start = n.Child[0].Start
+			//	icond, ibody, ielse := 0, 1, 2
+			//	if a.Init != nil {
+			//		icond, ibody, ielse = 1, 2, 3
+			//		n.Child[0].tnext = n.Child[1].Start
+			//	}
+			//	n.Child[ibody].tnext = n
+			//	if a.Else != nil {
+			//		n.Child[ielse].tnext = n
+			//	}
+			//	n.Child[icond].tnext = n.Child[ibody].Start
+			//	if a.Else != nil {
+			//		n.Child[icond].fnext = n.Child[ielse].Start
+			//	} else {
+			//		n.Child[icond].fnext = n
+			//	}
 
 			case *ast.ForStmt:
 				n.isNop = true
