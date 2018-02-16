@@ -27,6 +27,18 @@ func Ast(src string) *Node {
 		switch node.(type) {
 		case nil:
 			anc = st.pop()
+		case *ast.RangeStmt:
+			index++
+			var i, j interface{}
+			// Insert an extra node for handling CFG
+			nod0 := &Node{anc: anc, index: index, val: &i}
+			nod0.Start = nod0
+			anc.Child = append(anc.Child, nod0)
+			index++
+			nod1 := &Node{anc: nod0, index: index, anode: &node, val: &j}
+			nod1.Start = nod1
+			nod0.Child = append(nod0.Child, nod1)
+			st.push(nod1)
 		default:
 			index++
 			var i interface{}

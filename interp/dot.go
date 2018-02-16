@@ -13,21 +13,25 @@ func (n *Node) AstDot(out io.WriteCloser) {
 	fmt.Fprintf(out, "digraph ast {\n")
 	n.Walk(func(n *Node) {
 		var label string
-		switch x := (*n.anode).(type) {
-		case *ast.BasicLit:
-			label = x.Value
-		case *ast.Ident:
-			label = x.Name
-		case *ast.BinaryExpr:
-			label = x.Op.String()
-		case *ast.IncDecStmt:
-			label = x.Tok.String()
-		case *ast.AssignStmt:
-			label = x.Tok.String()
-		case *ast.BranchStmt:
-			label = x.Tok.String()
-		default:
-			label = reflect.TypeOf(*n.anode).String()
+		if n.anode != nil {
+			switch x := (*n.anode).(type) {
+			case *ast.BasicLit:
+				label = x.Value
+			case *ast.Ident:
+				label = x.Name
+			case *ast.BinaryExpr:
+				label = x.Op.String()
+			case *ast.IncDecStmt:
+				label = x.Tok.String()
+			case *ast.AssignStmt:
+				label = x.Tok.String()
+			case *ast.BranchStmt:
+				label = x.Tok.String()
+			default:
+				label = reflect.TypeOf(*n.anode).String()
+			}
+		} else {
+			label = "??"
 		}
 		fmt.Fprintf(out, "%d [label=\"%d: %s\"]\n", n.index, n.index, label)
 		if n.anc != nil {
@@ -42,11 +46,13 @@ func (n *Node) AstDot(out io.WriteCloser) {
 func (n *Node) CfgDot(out io.WriteCloser) {
 	fmt.Fprintf(out, "digraph cfg {\n")
 	n.Walk(nil, func(n *Node) {
-		switch (*n.anode).(type) {
-		case *ast.BasicLit:
-			return
-		case *ast.Ident:
-			return
+		if n.anode != nil {
+			switch (*n.anode).(type) {
+			case *ast.BasicLit:
+				return
+			case *ast.Ident:
+				return
+			}
 		}
 		fmt.Fprintf(out, "%d [label=\"%d %d\"]\n", n.index, n.index, n.findex)
 		if n.fnext != nil {

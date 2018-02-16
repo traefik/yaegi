@@ -1,7 +1,7 @@
 package main
 
 func main() {
-	a, b = r2()
+	a, b := r2()
 	println(a, b)
 }
 
