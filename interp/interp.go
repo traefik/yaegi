@@ -59,6 +59,7 @@ func (i *Interpreter) Eval(src string) interface{} {
 	root, def := Ast(src)
 	if i.opt.Ast {
 		root.AstDot(Dotty())
+		//root.AstDot(os.Stdout)
 	}
 
 	// Annotate AST with CFG infos

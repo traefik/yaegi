@@ -20,6 +20,8 @@ var builtin = [...]Builtin{
 	Greater:  greater,
 	GetIndex: getIndex,
 	Inc:      inc,
+	Land:     land,
+	Lor:      lor,
 	Lower:    lower,
 	Range:    _range,
 	Return:   _return,
@@ -43,7 +45,7 @@ func Run(def *Node, cf *Frame, args []*Node, rets []int) {
 	body := def.Child[2]
 	for n := body.Start; n != nil; {
 		n.run(n, &f)
-		//fmt.Println("run", n.index, n.kind, n.action, value(n, &f))
+		fmt.Println("run", n.index, n.kind, n.action, value(n, &f))
 		if n.fnext == nil || value(n, &f).(bool) {
 			n = n.tnext
 		} else {
@@ -143,6 +145,24 @@ func inc(n *Node, f *Frame) {
 
 func greater(n *Node, f *Frame) {
 	(*f)[n.findex] = value(n.Child[0], f).(int) > value(n.Child[1], f).(int)
+}
+
+func land(n *Node, f *Frame) {
+	v := value(n.Child[0], f).(bool)
+	if v {
+		(*f)[n.findex] = value(n.Child[1], f).(bool)
+	} else {
+		(*f)[n.findex] = v
+	}
+}
+
+func lor(n *Node, f *Frame) {
+	v := value(n.Child[0], f).(bool)
+	if v {
+		(*f)[n.findex] = v
+	} else {
+		(*f)[n.findex] = value(n.Child[1], f).(bool)
+	}
 }
 
 func lower(n *Node, f *Frame) {

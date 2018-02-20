@@ -136,6 +136,22 @@ func (e *Node) Cfg(def Def) int {
 			tbody.tnext = n
 			fbody.tnext = n
 
+		case LandExpr:
+			n.Start = n.Child[0].Start
+			n.Child[0].tnext = n.Child[1].Start
+			n.Child[0].fnext = n
+			n.Child[1].tnext = n
+			maxIndex++
+			n.findex = maxIndex
+
+		case LorExpr:
+			n.Start = n.Child[0].Start
+			n.Child[0].tnext = n
+			n.Child[0].fnext = n.Child[1].Start
+			n.Child[1].tnext = n
+			maxIndex++
+			n.findex = maxIndex
+
 		case For0: // for {}
 			body := n.Child[0]
 			n.Start = body.Start

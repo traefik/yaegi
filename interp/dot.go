@@ -26,7 +26,7 @@ func (n *Node) AstDot(out io.WriteCloser) {
 			fmt.Fprintf(out, "%d -> %d\n", n.anc.index, n.index)
 		}
 	}, nil)
-	fmt.Fprintf(out, "}")
+	fmt.Fprintf(out, "}\n")
 }
 
 // For debug: display a CFG in graphviz dot(1) format using dotty(1) co-process
@@ -45,7 +45,7 @@ func (n *Node) CfgDot(out io.WriteCloser) {
 			fmt.Fprintf(out, "%d -> %d\n", n.index, n.tnext.index)
 		}
 	})
-	fmt.Fprintf(out, "}")
+	fmt.Fprintf(out, "}\n")
 }
 
 // Dotty() returns an output stream to a dotty(1) co-process where to write data in .dot format

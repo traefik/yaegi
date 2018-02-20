@@ -45,6 +45,8 @@ const (
 	IfStmt
 	IncDecStmt
 	IndexExpr
+	LandExpr
+	LorExpr
 	ParenExpr
 	RangeStmt
 	ReturnStmt
@@ -84,6 +86,8 @@ var kinds = [...]string{
 	IfStmt:       "IfStmt",
 	IncDecStmt:   "IncDecStmt",
 	IndexExpr:    "IndexExpr",
+	LandExpr:     "LandExpr",
+	LorExpr:      "LorExpr",
 	ParenExpr:    "ParenExpr",
 	RangeStmt:    "RangeStmt",
 	ReturnStmt:   "ReturnStmt",
@@ -115,6 +119,8 @@ const (
 	Greater
 	GetIndex
 	Inc
+	Land
+	Lor
 	Lower
 	Println
 	Range
@@ -135,6 +141,8 @@ var actions = [...]string{
 	Greater:  ">",
 	GetIndex: "getindex",
 	Inc:      "++",
+	Land:     "&&",
+	Lor:      "||",
 	Lower:    "<",
 	Println:  "println",
 	Range:    "range",
@@ -191,6 +199,7 @@ func Ast(src string) (*Node, Def) {
 			st.push(addChild(&root, anc, &index, AssignStmt, action, &node))
 
 		case *ast.BasicLit:
+			//fmt.Println("BasicLit:", a)
 			n := addChild(&root, anc, &index, BasicLit, Nop, &node)
 			// FIXME: values must be converted to int or float if possible
 			n.ident = a.Value
@@ -202,7 +211,8 @@ func Ast(src string) (*Node, Def) {
 			st.push(n)
 
 		case *ast.BinaryExpr:
-			var action Action
+			kind := Kind(BinaryExpr)
+			action := Action(Nop)
 			switch a.Op {
 			case token.ADD:
 				action = Add
@@ -212,12 +222,18 @@ func Ast(src string) (*Node, Def) {
 				action = Equal
 			case token.GTR:
 				action = Greater
+			case token.LAND:
+				kind = LandExpr
+				action = Land
+			case token.LOR:
+				kind = LorExpr
+				action = Lor
 			case token.LSS:
 				action = Lower
 			case token.SUB:
 				action = Sub
 			}
-			st.push(addChild(&root, anc, &index, BinaryExpr, action, &node))
+			st.push(addChild(&root, anc, &index, kind, action, &node))
 
 		case *ast.BlockStmt:
 			st.push(addChild(&root, anc, &index, BlockStmt, Nop, &node))
@@ -277,6 +293,7 @@ func Ast(src string) (*Node, Def) {
 			st.push(addChild(&root, anc, &index, FuncType, Nop, &node))
 
 		case *ast.Ident:
+			//fmt.Println("Ident:", a)
 			n := addChild(&root, anc, &index, Ident, Nop, &node)
 			n.ident = a.Name
 			st.push(n)
