@@ -13,7 +13,7 @@ func main() {
 	println(1)
 }
 `
-	n := Ast(src)
+	n, _ := Ast(src)
 	//n.AstDot()
 	n.Walk(func(n *Node) {
 		fmt.Println("in:", n.index)
@@ -58,7 +58,7 @@ func main() {
 	}
 }
 `
-	n := Ast(src)
+	n, _ := Ast(src)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		n.Walk(func(n *Node) {}, func(n *Node) {})
@@ -73,7 +73,7 @@ func main() {
 	println(1)
 }
 `
-	NewInterpreter().Eval(src)
+	NewInterpreter(InterpOpt{}).Eval(src)
 	// Output:
 	// 1
 }
@@ -83,7 +83,6 @@ func ExampleEval_2() {
 package main
 
 func main() {
-	println(1)
 	for a := 0; a < 10000; a++ {
 		if (a & 0x8ff) == 0x800 {
 			println(a)
@@ -92,9 +91,8 @@ func main() {
 }
 `
 
-	NewInterpreter().Eval(src)
+	NewInterpreter(InterpOpt{}).Eval(src)
 	// Output:
-	// 1
 	// 2048
 	// 2304
 	// 2560

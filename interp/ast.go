@@ -116,6 +116,7 @@ const (
 	GetIndex
 	Inc
 	Lower
+	Println
 	Range
 	Return
 	Sub
@@ -135,6 +136,7 @@ var actions = [...]string{
 	GetIndex: "getindex",
 	Inc:      "++",
 	Lower:    "<",
+	Println:  "println",
 	Range:    "range",
 	Return:   "return",
 	Sub:      "-",
@@ -151,9 +153,12 @@ func (a Action) String() string {
 	return s
 }
 
+type Def map[string]*Node // map of defined symbols
+
 // Ast(src) parses src string containing Go code and generates the corresponding AST.
 // The AST root node is returned.
-func Ast(src string) *Node {
+func Ast(src string) (*Node, Def) {
+	var def Def = make(map[string]*Node)
 	fset := token.NewFileSet() // positions are relative to fset
 	f, err := parser.ParseFile(fset, "sample.go", src, 0)
 	if err != nil {
@@ -228,10 +233,10 @@ func Ast(src string) *Node {
 			st.push(addChild(&root, anc, &index, kind, Nop, &node))
 
 		case *ast.CallExpr:
-			st.push(addChild(&root, anc, &index, CallExpr, Nop, &node))
+			st.push(addChild(&root, anc, &index, CallExpr, Call, &node))
 
 		case *ast.CompositeLit:
-			st.push(addChild(&root, anc, &index, CompositeLit, Nop, &node))
+			st.push(addChild(&root, anc, &index, CompositeLit, ArrayLit, &node))
 
 		case *ast.ExprStmt:
 			st.push(addChild(&root, anc, &index, ExprStmt, Nop, &node))
@@ -263,7 +268,10 @@ func Ast(src string) *Node {
 			st.push(addChild(&root, anc, &index, kind, Nop, &node))
 
 		case *ast.FuncDecl:
-			st.push(addChild(&root, anc, &index, FuncDecl, Nop, &node))
+			n := addChild(&root, anc, &index, FuncDecl, Nop, &node)
+			// Add func name to definitions
+			def[a.Name.Name] = n
+			st.push(n)
 
 		case *ast.FuncType:
 			st.push(addChild(&root, anc, &index, FuncType, Nop, &node))
@@ -297,7 +305,7 @@ func Ast(src string) *Node {
 			st.push(addChild(&root, anc, &index, IncDecStmt, action, &node))
 
 		case *ast.IndexExpr:
-			st.push(addChild(&root, anc, &index, IndexExpr, Nop, &node))
+			st.push(addChild(&root, anc, &index, IndexExpr, GetIndex, &node))
 
 		case *ast.ParenExpr:
 			st.push(addChild(&root, anc, &index, ParenExpr, Nop, &node))
@@ -305,10 +313,10 @@ func Ast(src string) *Node {
 		case *ast.RangeStmt:
 			// Insert a missing ForRangeStmt for AST correctness
 			n := addChild(&root, anc, &index, ForRangeStmt, Nop, nil)
-			st.push(addChild(&root, n, &index, RangeStmt, Nop, &node))
+			st.push(addChild(&root, n, &index, RangeStmt, Range, &node))
 
 		case *ast.ReturnStmt:
-			st.push(addChild(&root, anc, &index, ReturnStmt, Nop, &node))
+			st.push(addChild(&root, anc, &index, ReturnStmt, Return, &node))
 
 		default:
 			fmt.Printf("Unknown kind for %T\n", a)
@@ -316,13 +324,14 @@ func Ast(src string) *Node {
 		}
 		return true
 	})
-	return root
+	return root, def
 }
 
 func addChild(root **Node, anc *Node, index *int, kind Kind, action Action, anode *ast.Node) *Node {
 	*index++
 	var i interface{}
-	n := &Node{anc: anc, index: *index, kind: kind, action: action, anode: anode, val: &i}
+	//n := &Node{anc: anc, index: *index, kind: kind, action: action, anode: anode, val: &i, run: builtin[action]}
+	n := &Node{anc: anc, index: *index, kind: kind, action: action, val: &i, run: builtin[action]}
 	n.Start = n
 	if anc == nil {
 		*root = n

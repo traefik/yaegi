@@ -42,8 +42,8 @@ func Run(def *Node, cf *Frame, args []*Node, rets []int) {
 	// Execute by walking the CFG and running node func at each step
 	body := def.Child[2]
 	for n := body.Start; n != nil; {
-		//fmt.Println("run", n.index)
 		n.run(n, &f)
+		//fmt.Println("run", n.index, n.kind, n.action, value(n, &f))
 		if n.fnext == nil || value(n, &f).(bool) {
 			n = n.tnext
 		} else {
@@ -90,33 +90,34 @@ func and(n *Node, f *Frame) {
 }
 
 func printa(n []*Node, f *Frame) {
-	for _, m := range n {
-		fmt.Printf("%v ", value(m, f))
+	for i, m := range n {
+		if i > 0 {
+			fmt.Printf(" ")
+		}
+		fmt.Printf("%v", value(m, f))
 	}
 	fmt.Println("")
 }
 
-func (interp *Interpreter) call(n *Node, f *Frame) {
+//func (interp *Interpreter) call(n *Node, f *Frame) {
+func call(n *Node, f *Frame) {
 	//fmt.Println("call", n.Child[0].ident)
+	// FIXME: builtin detection should be done at CFG generation
 	if n.Child[0].ident == "println" {
 		printa(n.Child[1:], f)
 		return
 	}
-	// FIXME: resolve fn during compile, not exec ?
-	if fn := interp.def[n.Child[0].ident]; fn != nil {
-		var rets []int
-		if len(fn.Child[1].Child) > 1 {
-			if fieldList := fn.Child[1].Child[1]; fieldList != nil {
-				rets = make([]int, len(fieldList.Child))
-				for i, _ := range fieldList.Child {
-					rets[i] = n.findex + i
-				}
+	fn := n.val.(*Node)
+	var rets []int
+	if len(fn.Child[1].Child) > 1 {
+		if fieldList := fn.Child[1].Child[1]; fieldList != nil {
+			rets = make([]int, len(fieldList.Child))
+			for i, _ := range fieldList.Child {
+				rets[i] = n.findex + i
 			}
 		}
-		Run(fn, f, n.Child[1:], rets)
-	} else {
-		panic("function not found")
 	}
+	Run(fn, f, n.Child[1:], rets)
 }
 
 func getIndex(n *Node, f *Frame) {
