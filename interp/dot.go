@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"strings"
 )
 
 // For debug: display an AST in graphviz dot(1) format using dotty(1) co-process
@@ -13,7 +14,7 @@ func (n *Node) AstDot(out io.WriteCloser) {
 		var label string
 		switch n.kind {
 		case BasicLit, Ident:
-			label = n.ident
+			label = strings.Replace(n.ident, "\"", "\\\"", -1)
 		default:
 			if n.action != Nop {
 				label = n.action.String()

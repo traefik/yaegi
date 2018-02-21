@@ -227,6 +227,7 @@ func (e *Node) Cfg(def Def) int {
 
 		case ReturnStmt:
 			wireChild(n)
+			n.tnext = nil
 
 		case Switch0:
 			n.Start = n.Child[1].Start
@@ -286,10 +287,10 @@ func wireChild(n *Node) {
 	// Chain subtree next to self
 	for i := len(n.Child) - 1; i >= 0; i-- {
 		switch n.Child[i].kind {
-		case BasicLit, Ident:
+		case ArrayType, BasicLit, Ident:
 			continue
-		case Break, Continue:
-			// Next is already computed, no change
+		case Break, Continue, ReturnStmt:
+			// tnext is already computed, no change
 		default:
 			n.Child[i].tnext = n
 		}

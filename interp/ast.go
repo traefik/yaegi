@@ -23,6 +23,7 @@ const (
 	CaseClause
 	CompositeLit
 	Continue
+	Defer
 	ExprStmt
 	Fallthrough
 	Field
@@ -36,6 +37,7 @@ const (
 	ForRangeStmt // for range
 	FuncDecl
 	FuncType
+	Go
 	Goto
 	Ident
 	If0 // if cond {}
@@ -67,6 +69,7 @@ var kinds = [...]string{
 	CaseClause:   "CaseClause",
 	CompositeLit: "CompositLit",
 	Continue:     "Continue",
+	Defer:        "Defer",
 	ExprStmt:     "ExprStmt",
 	Field:        "Field",
 	FieldList:    "FieldList",
@@ -79,6 +82,7 @@ var kinds = [...]string{
 	ForRangeStmt: "ForRangeStmt",
 	FuncDecl:     "FuncDecl",
 	FuncType:     "FuncType",
+	Go:           "Go",
 	Goto:         "Goto",
 	Ident:        "Ident",
 	If0:          "If0",
@@ -98,14 +102,10 @@ var kinds = [...]string{
 }
 
 func (k Kind) String() string {
-	s := ""
 	if 0 <= k && k <= Kind(len(kinds)) {
-		s = kinds[k]
+		return kinds[k]
 	}
-	if s == "" {
-		s = "kind(" + strconv.Itoa(int(k)) + ")"
-	}
-	return s
+	return "kind(" + strconv.Itoa(int(k)) + ")"
 }
 
 type Action int
@@ -157,14 +157,10 @@ var actions = [...]string{
 }
 
 func (a Action) String() string {
-	s := ""
 	if 0 <= a && a <= Action(len(actions)) {
-		s = actions[a]
+		return actions[a]
 	}
-	if s == "" {
-		s = "action(" + strconv.Itoa(int(a)) + ")"
-	}
-	return s
+	return "action(" + strconv.Itoa(int(a)) + ")"
 }
 
 type Def map[string]*Node // map of defined symbols
@@ -210,14 +206,21 @@ func Ast(src string, pre Def) (*Node, Def) {
 			st.push(addChild(&root, anc, &index, AssignStmt, action, &node))
 
 		case *ast.BasicLit:
-			//fmt.Println("BasicLit:", a)
 			n := addChild(&root, anc, &index, BasicLit, Nop, &node)
-			// FIXME: values must be converted to int or float if possible
 			n.ident = a.Value
-			if v, err := strconv.ParseInt(a.Value, 0, 0); err == nil {
+			switch a.Kind {
+			case token.CHAR:
+				n.val = a.Value[1]
+			case token.FLOAT:
+				n.val, _ = strconv.ParseFloat(a.Value, 64)
+			case token.IMAG:
+				v, _ := strconv.ParseFloat(a.Value[:len(a.Value)-1], 64)
+				n.val = complex(0, v)
+			case token.INT:
+				v, _ := strconv.ParseInt(a.Value, 0, 0)
 				n.val = int(v)
-			} else {
-				n.val = a.Value
+			case token.STRING:
+				n.val = a.Value[1 : len(a.Value)-1]
 			}
 			st.push(n)
 
@@ -307,7 +310,6 @@ func Ast(src string, pre Def) (*Node, Def) {
 			st.push(addChild(&root, anc, &index, FuncType, Nop, &node))
 
 		case *ast.Ident:
-			//fmt.Println("Ident:", a)
 			n := addChild(&root, anc, &index, Ident, Nop, &node)
 			n.ident = a.Name
 			st.push(n)
@@ -368,7 +370,6 @@ func Ast(src string, pre Def) (*Node, Def) {
 func addChild(root **Node, anc *Node, index *int, kind Kind, action Action, anode *ast.Node) *Node {
 	*index++
 	var i interface{}
-	//n := &Node{anc: anc, index: *index, kind: kind, action: action, anode: anode, val: &i, run: builtin[action]}
 	n := &Node{anc: anc, index: *index, kind: kind, action: action, val: &i, run: builtin[action]}
 	n.Start = n
 	if anc == nil {

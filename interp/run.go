@@ -80,7 +80,7 @@ func assignX(n *Node, f *Frame) {
 	}
 }
 
-// Assign implements assignement with the same number of left and right values
+// Assign(n, f) implements assignement with the same number of left and right values
 func assign(n *Node, f *Frame) {
 	l := len(n.Child) / 2
 	for i, c := range n.Child[:l] {
@@ -102,7 +102,6 @@ func printa(n []*Node, f *Frame) {
 	fmt.Println("")
 }
 
-//func (interp *Interpreter) call(n *Node, f *Frame) {
 func call(n *Node, f *Frame) {
 	//fmt.Println("call", n.Child[0].ident)
 	// FIXME: builtin detection should be done at CFG generation
@@ -174,8 +173,6 @@ func _return(n *Node, f *Frame) {
 	for i, c := range n.Child {
 		(*f)[i] = value(c, f)
 	}
-	// FIXME: should be done during compiling, not run
-	n.tnext = nil
 }
 
 // create an array of litteral values
@@ -203,9 +200,5 @@ func _range(n *Node, f *Frame) {
 }
 
 func _case(n *Node, f *Frame) {
-	if len(n.Child) == 1 {
-		//(*f)[n.findex] = true
-		return
-	}
 	(*f)[n.findex] = value(n.anc.anc.Child[0], f) == value(n.Child[0], f)
 }
