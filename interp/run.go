@@ -13,8 +13,8 @@ var builtin = [...]Builtin{
 	Assign:   assign,
 	AssignX:  assignX,
 	Add:      add,
-	And:      and,
 	Call:     call,
+	Case:     _case,
 	Dec:      nop,
 	Equal:    equal,
 	Greater:  greater,
@@ -148,8 +148,7 @@ func greater(n *Node, f *Frame) {
 }
 
 func land(n *Node, f *Frame) {
-	v := value(n.Child[0], f).(bool)
-	if v {
+	if v := value(n.Child[0], f).(bool); v {
 		(*f)[n.findex] = value(n.Child[1], f).(bool)
 	} else {
 		(*f)[n.findex] = v
@@ -157,8 +156,7 @@ func land(n *Node, f *Frame) {
 }
 
 func lor(n *Node, f *Frame) {
-	v := value(n.Child[0], f).(bool)
-	if v {
+	if v := value(n.Child[0], f).(bool); v {
 		(*f)[n.findex] = v
 	} else {
 		(*f)[n.findex] = value(n.Child[1], f).(bool)
@@ -201,4 +199,12 @@ func _range(n *Node, f *Frame) {
 	(*f)[index] = i + 1
 	(*f)[n.Child[1].findex] = a[i]
 	(*f)[n.findex] = true
+}
+
+func _case(n *Node, f *Frame) {
+	if len(n.Child) == 1 {
+		(*f)[n.findex] = true
+		return
+	}
+	(*f)[n.findex] = value(n.anc.anc.Child[0], f) == value(n.Child[0], f)
 }

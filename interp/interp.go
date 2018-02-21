@@ -56,7 +56,7 @@ func NewInterpreter(opt InterpOpt) *Interpreter {
 // i.Eval(s) evaluates Go code represented as a string
 func (i *Interpreter) Eval(src string) interface{} {
 	// Parse source to AST
-	root, def := Ast(src)
+	root, def := Ast(src, nil)
 	if i.opt.Ast {
 		root.AstDot(Dotty())
 		//root.AstDot(os.Stdout)

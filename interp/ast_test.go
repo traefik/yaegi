@@ -13,6 +13,6 @@ func main() {
 	println(1)
 }
 `
-	root, _ := Ast(src)
+	root, _ := Ast(src, nil)
 	fmt.Println(root.index)
 }

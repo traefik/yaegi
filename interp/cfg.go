@@ -1,5 +1,7 @@
 package interp
 
+import "fmt"
+
 // TODO:
 // - hierarchical scopes for symbol resolution
 // - universe (global) scope
@@ -58,17 +60,6 @@ func (e *Node) Cfg(def Def) int {
 	}, func(n *Node) {
 		// Post-order processing
 		switch n.kind {
-		case FuncDecl:
-			n.findex = maxIndex + 1
-			//i.def[n.Child[0].ident] = n
-
-		case BlockStmt, ExprStmt, ParenExpr:
-			wireChild(n)
-			n.findex = n.Child[len(n.Child)-1].findex
-
-		case ReturnStmt:
-			wireChild(n)
-
 		case AssignStmt, IncDecStmt:
 			wireChild(n)
 			n.findex = n.Child[0].findex
@@ -77,6 +68,29 @@ func (e *Node) Cfg(def Def) int {
 			wireChild(n)
 			maxIndex++
 			n.findex = maxIndex
+
+		case BlockStmt, ExprStmt, ParenExpr:
+			wireChild(n)
+			n.findex = n.Child[len(n.Child)-1].findex
+
+		case Break:
+			n.tnext = loop
+
+		case CallExpr:
+			wireChild(n)
+			// FIXME: should reserve as many entries as nb of ret values for called function
+			// node frame index should point to the first entry
+			maxIndex++
+			n.findex = maxIndex
+			n.val = def[n.Child[0].ident]
+
+		case CaseClause:
+			maxIndex++
+			n.findex = maxIndex
+			n.tnext = n.Child[len(n.Child)-1].Start
+
+		case Continue:
+			n.tnext = loopRestart
 
 		case Field:
 			// A single child node (no ident, just type) means that the field refers
@@ -90,19 +104,67 @@ func (e *Node) Cfg(def Def) int {
 				n.findex = n.Child[0].findex
 			}
 
-		case Break:
-			n.tnext = loop
+		case For0: // for {}
+			body := n.Child[0]
+			n.Start = body.Start
+			body.tnext = n.Start
+			loop, loopRestart = nil, nil
 
-		case Continue:
-			n.tnext = loopRestart
+		case For1: // for cond {}
+			cond, body := n.Child[0], n.Child[1]
+			n.Start = cond.Start
+			cond.tnext = body.Start
+			cond.fnext = n
+			body.tnext = cond.Start
+			loop, loopRestart = nil, nil
 
-		case CallExpr:
-			wireChild(n)
-			// FIXME: should reserve as many entries as nb of ret values for called function
-			// node frame index should point to the first entry
-			maxIndex++
-			n.findex = maxIndex
-			n.val = def[n.Child[0].ident]
+		case For2: // for init; cond; {}
+			init, cond, body := n.Child[0], n.Child[1], n.Child[2]
+			n.Start = init.Start
+			init.tnext = cond.Start
+			cond.tnext = body.Start
+			cond.fnext = n
+			body.tnext = cond.Start
+			loop, loopRestart = nil, nil
+
+		case For3: // for ; cond; post {}
+			cond, post, body := n.Child[0], n.Child[1], n.Child[2]
+			n.Start = cond.Start
+			cond.tnext = body.Start
+			cond.fnext = n
+			body.tnext = post.Start
+			post.tnext = cond.Start
+			loop, loopRestart = nil, nil
+
+		case For4: // for init; cond; post {}
+			init, cond, post, body := n.Child[0], n.Child[1], n.Child[2], n.Child[3]
+			n.Start = init.Start
+			init.tnext = cond.Start
+			cond.tnext = body.Start
+			cond.fnext = n
+			body.tnext = post.Start
+			post.tnext = cond.Start
+			loop, loopRestart = nil, nil
+
+		case ForRangeStmt:
+			loop, loopRestart = nil, nil
+			n.Start = n.Child[0].Start
+			n.findex = n.Child[0].findex
+
+		case FuncDecl:
+			n.findex = maxIndex + 1
+			//i.def[n.Child[0].ident] = n
+
+		case Ident:
+			// Lookup identifier in frame symbol table. If not found
+			// should check if ident can be defined (assign, param passing...)
+			// or should lookup in upper scope of variables
+			// For now, simply allocate a new entry in local sym table
+			if n.findex = symIndex[n.ident]; n.findex == 0 {
+				maxIndex++
+				symIndex[n.ident] = maxIndex
+				n.findex = symIndex[n.ident]
+			}
 
 		case If0: // if cond {}
 			cond, tbody := n.Child[0], n.Child[1]
@@ -152,53 +214,6 @@ func (e *Node) Cfg(def Def) int {
 			maxIndex++
 			n.findex = maxIndex
 
-		case For0: // for {}
-			body := n.Child[0]
-			n.Start = body.Start
-			body.tnext = n.Start
-			loop, loopRestart = nil, nil
-
-		case For1: // for cond {}
-			cond, body := n.Child[0], n.Child[1]
-			n.Start = cond.Start
-			cond.tnext = body.Start
-			cond.fnext = n
-			body.tnext = cond.Start
-			loop, loopRestart = nil, nil
-
-		case For2: // for init; cond; {}
-			init, cond, body := n.Child[0], n.Child[1], n.Child[2]
-			n.Start = init.Start
-			init.tnext = cond.Start
-			cond.tnext = body.Start
-			cond.fnext = n
-			body.tnext = cond.Start
-			loop, loopRestart = nil, nil
-
-		case For3: // for ; cond; post {}
-			cond, post, body := n.Child[0], n.Child[1], n.Child[2]
-			n.Start = cond.Start
-			cond.tnext = body.Start
-			cond.fnext = n
-			body.tnext = post.Start
-			post.tnext = cond.Start
-			loop, loopRestart = nil, nil
-
-		case For4: // for init; cond; post {}
-			init, cond, post, body := n.Child[0], n.Child[1], n.Child[2], n.Child[3]
-			n.Start = init.Start
-			init.tnext = cond.Start
-			cond.tnext = body.Start
-			cond.fnext = n
-			body.tnext = post.Start
-			post.tnext = cond.Start
-			loop, loopRestart = nil, nil
-
-		case ForRangeStmt:
-			loop, loopRestart = nil, nil
-			n.Start = n.Child[0].Start
-			n.findex = n.Child[0].findex
-
 		case RangeStmt:
 			n.Start = n
 			n.Child[3].tnext = n
@@ -206,19 +221,42 @@ func (e *Node) Cfg(def Def) int {
 			maxIndex++
 			n.findex = maxIndex
 
-		case Ident:
-			// Lookup identifier in frame symbol table. If not found
-			// should check if ident can be defined (assign, param passing...)
-			// or should lookup in upper scope of variables
-			// For now, simply allocate a new entry in local sym table
-			if n.findex = symIndex[n.ident]; n.findex == 0 {
-				maxIndex++
-				symIndex[n.ident] = maxIndex
-				n.findex = symIndex[n.ident]
+		case ReturnStmt:
+			wireChild(n)
+
+		case Switch0:
+			n.Start = n.Child[1].Start
+			// Chain case clauses
+			// FIXME : handle cases where default is not defined or in first position
+			if di := getDefault(n); di >= 0 {
+				fmt.Println("default index:", di)
+				clauses := n.Child[1].Child
+				l := len(clauses)
+				for i, c := range clauses {
+					if i != di && i < l-1 {
+						// chain to next clause
+						c.tnext = c.Child[1].Start
+						c.Child[1].tnext = n
+						c.fnext = clauses[i+1]
+					}
+				}
+				c := clauses[di]
+				c.tnext = c.Child[0].Start
+				c.Child[0].tnext = n
 			}
 		}
 	})
 	return maxIndex + 1
+}
+
+// find default case clause index of a switch statement, if any
+func getDefault(n *Node) int {
+	for i, c := range n.Child[1].Child {
+		if len(c.Child) == 1 {
+			return i
+		}
+	}
+	return -1
 }
 
 // Wire AST nodes for CFG in subtree

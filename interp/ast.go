@@ -20,6 +20,7 @@ const (
 	BranchStmt
 	Break
 	CallExpr
+	CaseClause
 	CompositeLit
 	Continue
 	ExprStmt
@@ -33,7 +34,6 @@ const (
 	For3         // for ; cond; post {}
 	For4         // for init; cond; post {}
 	ForRangeStmt // for range
-	ForStmt
 	FuncDecl
 	FuncType
 	Goto
@@ -50,6 +50,8 @@ const (
 	ParenExpr
 	RangeStmt
 	ReturnStmt
+	Switch0 // switch tag {}
+	Switch1 // switch init; tag {}
 )
 
 var kinds = [...]string{
@@ -62,6 +64,7 @@ var kinds = [...]string{
 	BranchStmt:   "BranchStmt",
 	Break:        "Break",
 	CallExpr:     "CallExpr",
+	CaseClause:   "CaseClause",
 	CompositeLit: "CompositLit",
 	Continue:     "Continue",
 	ExprStmt:     "ExprStmt",
@@ -74,7 +77,6 @@ var kinds = [...]string{
 	For3:         "For3",
 	For4:         "For4",
 	ForRangeStmt: "ForRangeStmt",
-	ForStmt:      "ForStmt",
 	FuncDecl:     "FuncDecl",
 	FuncType:     "FuncType",
 	Goto:         "Goto",
@@ -91,6 +93,8 @@ var kinds = [...]string{
 	ParenExpr:    "ParenExpr",
 	RangeStmt:    "RangeStmt",
 	ReturnStmt:   "ReturnStmt",
+	Switch0:      "Switch0",
+	Switch1:      "Switch1",
 }
 
 func (k Kind) String() string {
@@ -114,6 +118,7 @@ const (
 	Add
 	And
 	Call
+	Case
 	Dec
 	Equal
 	Greater
@@ -136,6 +141,7 @@ var actions = [...]string{
 	Add:      "+",
 	And:      "&",
 	Call:     "call",
+	Case:     "case",
 	Dec:      "--",
 	Equal:    "==",
 	Greater:  ">",
@@ -165,8 +171,13 @@ type Def map[string]*Node // map of defined symbols
 
 // Ast(src) parses src string containing Go code and generates the corresponding AST.
 // The AST root node is returned.
-func Ast(src string) (*Node, Def) {
-	var def Def = make(map[string]*Node)
+func Ast(src string, pre Def) (*Node, Def) {
+	var def Def
+	if pre == nil {
+		def = make(map[string]*Node)
+	} else {
+		def = pre
+	}
 	fset := token.NewFileSet() // positions are relative to fset
 	f, err := parser.ParseFile(fset, "sample.go", src, 0)
 	if err != nil {
@@ -251,6 +262,9 @@ func Ast(src string) (*Node, Def) {
 		case *ast.CallExpr:
 			st.push(addChild(&root, anc, &index, CallExpr, Call, &node))
 
+		case *ast.CaseClause:
+			st.push(addChild(&root, anc, &index, CaseClause, Case, &node))
+
 		case *ast.CompositeLit:
 			st.push(addChild(&root, anc, &index, CompositeLit, ArrayLit, &node))
 
@@ -334,6 +348,13 @@ func Ast(src string) (*Node, Def) {
 
 		case *ast.ReturnStmt:
 			st.push(addChild(&root, anc, &index, ReturnStmt, Return, &node))
+
+		case *ast.SwitchStmt:
+			if a.Init == nil {
+				st.push(addChild(&root, anc, &index, Switch0, Nop, &node))
+			} else {
+				st.push(addChild(&root, anc, &index, Switch1, Nop, &node))
+			}
 
 		default:
 			fmt.Printf("Unknown kind for %T\n", a)
