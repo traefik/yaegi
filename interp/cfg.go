@@ -1,7 +1,5 @@
 package interp
 
-import "fmt"
-
 // TODO:
 // - hierarchical scopes for symbol resolution
 // - universe (global) scope
@@ -55,6 +53,12 @@ func (e *Node) Cfg(def Def) int {
 				maxIndex = len(n.Child[1].Child[1].Child)
 			} else {
 				maxIndex = 0
+			}
+		case Switch0:
+			// Make sure default clause is in last position
+			c := n.Child[1].Child
+			if i, l := getDefault(n), len(c)-1; i >= 0 && i != l {
+				c[i], c[l] = c[l], c[i]
 			}
 		}
 	}, func(n *Node) {
@@ -227,20 +231,22 @@ func (e *Node) Cfg(def Def) int {
 		case Switch0:
 			n.Start = n.Child[1].Start
 			// Chain case clauses
-			// FIXME : handle cases where default is not defined or in first position
-			if di := getDefault(n); di >= 0 {
-				fmt.Println("default index:", di)
-				clauses := n.Child[1].Child
-				l := len(clauses)
-				for i, c := range clauses {
-					if i != di && i < l-1 {
-						// chain to next clause
-						c.tnext = c.Child[1].Start
-						c.Child[1].tnext = n
-						c.fnext = clauses[i+1]
-					}
-				}
-				c := clauses[di]
+			clauses := n.Child[1].Child
+			l := len(clauses)
+			for i, c := range clauses[:l-1] {
+				// chain to next clause
+				c.tnext = c.Child[1].Start
+				c.Child[1].tnext = n
+				c.fnext = clauses[i+1]
+			}
+			// Handle last clause
+			if c := clauses[l-1]; len(c.Child) > 1 {
+				// No default clause
+				c.tnext = c.Child[1].Start
+				c.fnext = n
+				c.Child[1].tnext = n
+			} else {
+				// Default
 				c.tnext = c.Child[0].Start
 				c.Child[0].tnext = n
 			}

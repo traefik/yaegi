@@ -13,6 +13,7 @@ var builtin = [...]Builtin{
 	Assign:   assign,
 	AssignX:  assignX,
 	Add:      add,
+	And:      and,
 	Call:     call,
 	Case:     _case,
 	Dec:      nop,
@@ -45,7 +46,7 @@ func Run(def *Node, cf *Frame, args []*Node, rets []int) {
 	body := def.Child[2]
 	for n := body.Start; n != nil; {
 		n.run(n, &f)
-		fmt.Println("run", n.index, n.kind, n.action, value(n, &f))
+		//fmt.Println("run", n.index, n.kind, n.action, value(n, &f))
 		if n.fnext == nil || value(n, &f).(bool) {
 			n = n.tnext
 		} else {
@@ -136,7 +137,7 @@ func sub(n *Node, f *Frame) {
 }
 
 func equal(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(int) == value(n.Child[1], f).(int)
+	(*f)[n.findex] = value(n.Child[0], f) == value(n.Child[1], f)
 }
 
 func inc(n *Node, f *Frame) {
@@ -203,7 +204,7 @@ func _range(n *Node, f *Frame) {
 
 func _case(n *Node, f *Frame) {
 	if len(n.Child) == 1 {
-		(*f)[n.findex] = true
+		//(*f)[n.findex] = true
 		return
 	}
 	(*f)[n.findex] = value(n.anc.anc.Child[0], f) == value(n.Child[0], f)
