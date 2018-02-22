@@ -10,7 +10,7 @@ import (
 // For debug: display an AST in graphviz dot(1) format using dotty(1) co-process
 func (n *Node) AstDot(out io.WriteCloser) {
 	fmt.Fprintf(out, "digraph ast {\n")
-	n.Walk(func(n *Node) {
+	n.Walk(func(n *Node) bool {
 		var label string
 		switch n.kind {
 		case BasicLit, Ident:
@@ -26,6 +26,7 @@ func (n *Node) AstDot(out io.WriteCloser) {
 		if n.anc != nil {
 			fmt.Fprintf(out, "%d -> %d\n", n.anc.index, n.index)
 		}
+		return true
 	}, nil)
 	fmt.Fprintf(out, "}\n")
 }

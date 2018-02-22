@@ -1,12 +1,16 @@
 package interp
 
+import (
+	"fmt"
+	"strconv"
+)
+
 // TODO:
 // - hierarchical scopes for symbol resolution
 // - universe (global) scope
 // - closures
-// - &&, ||, break, continue, goto
 // - slices / map expressions
-// - switch
+// - goto
 // - go routines
 // - channels
 // - select
@@ -14,6 +18,7 @@ package interp
 // - type declarations and checking
 // - type assertions and conversions
 // - interfaces
+// - methods
 // - pointers
 // - diagnostics and proper error handling
 // Done:
@@ -29,17 +34,80 @@ package interp
 // - return, including multiple values
 // - for range
 // - arrays
+// - &&, ||, break, continue
+// - switch (partial)
+
+// Type categories
+type Cat int
+
+const (
+	Unset = iota
+	ArrayT
+	BasicT
+	FuncT
+	InterfaceT
+	MapT
+	StructT
+)
+
+var cats = [...]string{
+	Unset:      "Unset",
+	ArrayT:     "ArrayT",
+	BasicT:     "BasicT",
+	InterfaceT: "InterfaceT",
+	MapT:       "MapT",
+	StructT:    "StructT",
+}
+
+func (c Cat) String() string {
+	if 0 <= c && c <= Cat(len(cats)) {
+		return cats[c]
+	}
+	return "Cat(" + strconv.Itoa(int(c)) + ")"
+}
+
+// Representation of types in interpreter
+type Type struct {
+	name  string  // Type name, of field name if used in struct
+	index int     // Index in containing struct, for access in frame
+	cat   Cat     // Type category
+	field []*Type // Array of fields if structT
+}
+
+type TypeDef map[string]*Type
+
+// Initialize Go basic types
+func initTypes() TypeDef {
+	var tdef TypeDef = make(map[string]*Type)
+	tdef["bool"] = &Type{name: "bool", cat: BasicT}
+	tdef["int"] = &Type{name: "int", cat: BasicT}
+	tdef["string"] = &Type{name: "string", cat: BasicT}
+	return tdef
+}
+
+func addType(tdef TypeDef, n *Node) {
+	name := n.Child[0].ident
+	switch n.Child[1].kind {
+	case StructType:
+		fmt.Println("Create a struct type")
+		t := Type{name: name, cat: StructT}
+		//fields := n.Child[1].Child[0].Child
+		//for _, c := range fields {
+		//}
+		tdef[n.Child[0].ident] = &t
+	}
+}
 
 // n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables.
 // Following this pass, the CFG is ready to run
-func (e *Node) Cfg(def Def) int {
+func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 	symIndex := make(map[string]int)
 	maxIndex := 0
 	var loop, loopRestart *Node
 
-	e.Walk(func(n *Node) {
+	e.Walk(func(n *Node) bool {
 		// Pre-order processing
 		switch n.kind {
 		case For0, ForRangeStmt:
@@ -60,7 +128,13 @@ func (e *Node) Cfg(def Def) int {
 			if i, l := getDefault(n), len(c)-1; i >= 0 && i != l {
 				c[i], c[l] = c[l], c[i]
 			}
+		case TypeSpec:
+			addType(tdef, n)
+			// Type analysis is performed recursively and no post-order processing
+			// needs to be done, so do not dive in subtree
+			return false
 		}
+		return true
 	}, func(n *Node) {
 		// Post-order processing
 		switch n.kind {
@@ -86,7 +160,7 @@ func (e *Node) Cfg(def Def) int {
 			// node frame index should point to the first entry
 			maxIndex++
 			n.findex = maxIndex
-			n.val = def[n.Child[0].ident]
+			n.val = sdef[n.Child[0].ident]
 
 		case CaseClause:
 			maxIndex++
@@ -156,8 +230,7 @@ func (e *Node) Cfg(def Def) int {
 			n.findex = n.Child[0].findex
 
 		case FuncDecl:
-			n.findex = maxIndex + 1
-			//i.def[n.Child[0].ident] = n
+			n.findex = maxIndex + 1 // Why ????
 
 		case Ident:
 			// Lookup identifier in frame symbol table. If not found
@@ -268,7 +341,7 @@ func getDefault(n *Node) int {
 
 // Wire AST nodes for CFG in subtree
 func wireChild(n *Node) {
-	// Set start node, in subtree (propagated to ancestors due to post-order processing)
+	// Set start node, in subtree (propagated to ancestors by post-order processing)
 	for _, child := range n.Child {
 		switch child.kind {
 		case ArrayType, BasicLit, Ident:

@@ -35,9 +35,9 @@ type InterpOpt struct {
 
 // n.Walk(cbin, cbout) traverses AST n in depth first order, call cbin function
 // at node entry and cbout function at node exit.
-func (n *Node) Walk(in func(n *Node), out func(n *Node)) {
-	if in != nil {
-		in(n)
+func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
+	if in != nil && !in(n) {
+		return
 	}
 	for _, Child := range n.Child {
 		Child.Walk(in, out)
@@ -56,14 +56,14 @@ func NewInterpreter(opt InterpOpt) *Interpreter {
 // i.Eval(s) evaluates Go code represented as a string
 func (i *Interpreter) Eval(src string) interface{} {
 	// Parse source to AST
-	root, def := Ast(src, nil)
+	root, sdef := Ast(src, nil)
 	if i.opt.Ast {
 		root.AstDot(Dotty())
-		//root.AstDot(os.Stdout)
 	}
 
 	// Annotate AST with CFG infos
-	root.Cfg(def)
+	tdef := initTypes()
+	root.Cfg(tdef, sdef)
 	if i.opt.Cfg {
 		root.CfgDot(Dotty())
 	}
@@ -71,7 +71,7 @@ func (i *Interpreter) Eval(src string) interface{} {
 
 	// Execute CFG
 	if !i.opt.NoRun {
-		Run(def["main"], nil, nil, nil)
+		Run(sdef["main"], nil, nil, nil)
 	}
 	return i.out
 }

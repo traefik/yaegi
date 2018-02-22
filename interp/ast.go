@@ -37,6 +37,7 @@ const (
 	ForRangeStmt // for range
 	FuncDecl
 	FuncType
+	GenDecl
 	Go
 	Goto
 	Ident
@@ -52,8 +53,11 @@ const (
 	ParenExpr
 	RangeStmt
 	ReturnStmt
+	SelectorExpr
+	StructType
 	Switch0 // switch tag {}
 	Switch1 // switch init; tag {}
+	TypeSpec
 )
 
 var kinds = [...]string{
@@ -82,6 +86,7 @@ var kinds = [...]string{
 	ForRangeStmt: "ForRangeStmt",
 	FuncDecl:     "FuncDecl",
 	FuncType:     "FuncType",
+	GenDecl:      "GenDecl",
 	Go:           "Go",
 	Goto:         "Goto",
 	Ident:        "Ident",
@@ -97,15 +102,18 @@ var kinds = [...]string{
 	ParenExpr:    "ParenExpr",
 	RangeStmt:    "RangeStmt",
 	ReturnStmt:   "ReturnStmt",
+	SelectorExpr: "SelectorExpr",
+	StructType:   "StructType",
 	Switch0:      "Switch0",
 	Switch1:      "Switch1",
+	TypeSpec:     "TypeSpec",
 }
 
 func (k Kind) String() string {
 	if 0 <= k && k <= Kind(len(kinds)) {
 		return kinds[k]
 	}
-	return "kind(" + strconv.Itoa(int(k)) + ")"
+	return "Kind(" + strconv.Itoa(int(k)) + ")"
 }
 
 type Action int
@@ -160,15 +168,16 @@ func (a Action) String() string {
 	if 0 <= a && a <= Action(len(actions)) {
 		return actions[a]
 	}
-	return "action(" + strconv.Itoa(int(a)) + ")"
+	return "Action(" + strconv.Itoa(int(a)) + ")"
 }
 
-type Def map[string]*Node // map of defined symbols
+// Map of defined symbols (const, variables and functions)
+type SymDef map[string]*Node
 
 // Ast(src) parses src string containing Go code and generates the corresponding AST.
 // The AST root node is returned.
-func Ast(src string, pre Def) (*Node, Def) {
-	var def Def
+func Ast(src string, pre SymDef) (*Node, SymDef) {
+	var def SymDef
 	if pre == nil {
 		def = make(map[string]*Node)
 	} else {
@@ -309,6 +318,9 @@ func Ast(src string, pre Def) (*Node, Def) {
 		case *ast.FuncType:
 			st.push(addChild(&root, anc, &index, FuncType, Nop, &node))
 
+		case *ast.GenDecl:
+			st.push(addChild(&root, anc, &index, GenDecl, Nop, &node))
+
 		case *ast.Ident:
 			n := addChild(&root, anc, &index, Ident, Nop, &node)
 			n.ident = a.Name
@@ -357,6 +369,15 @@ func Ast(src string, pre Def) (*Node, Def) {
 			} else {
 				st.push(addChild(&root, anc, &index, Switch1, Nop, &node))
 			}
+
+		case *ast.SelectorExpr:
+			st.push(addChild(&root, anc, &index, SelectorExpr, Nop, &node))
+
+		case *ast.StructType:
+			st.push(addChild(&root, anc, &index, StructType, Nop, &node))
+
+		case *ast.TypeSpec:
+			st.push(addChild(&root, anc, &index, TypeSpec, Nop, &node))
 
 		default:
 			fmt.Printf("Unknown kind for %T\n", a)
