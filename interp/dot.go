@@ -35,11 +35,10 @@ func (n *Node) AstDot(out io.WriteCloser) {
 func (n *Node) CfgDot(out io.WriteCloser) {
 	fmt.Fprintf(out, "digraph cfg {\n")
 	n.Walk(nil, func(n *Node) {
-		switch n.kind {
-		case BasicLit, Ident:
+		if n.kind == BasicLit || n.kind == Ident || n.tnext == nil {
 			return
 		}
-		fmt.Fprintf(out, "%d [label=\"%d %d\"]\n", n.index, n.index, n.findex)
+		fmt.Fprintf(out, "%d [label=\"%d: %v %d\"]\n", n.index, n.index, n.action, n.findex)
 		if n.fnext != nil {
 			fmt.Fprintf(out, "%d -> %d [color=green]\n", n.index, n.tnext.index)
 			fmt.Fprintf(out, "%d -> %d [color=red]\n", n.index, n.fnext.index)

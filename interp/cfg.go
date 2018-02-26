@@ -1,7 +1,6 @@
 package interp
 
 import (
-	"fmt"
 	"strconv"
 )
 
@@ -85,17 +84,32 @@ func initTypes() TypeDef {
 	return tdef
 }
 
-func addType(tdef TypeDef, n *Node) {
+// nodeType(tdef, n) returns the name and type definition from the corresponding
+// AST subtree
+func nodeType(tdef TypeDef, n *Node) *Type {
 	name := n.Child[0].ident
+	t := Type{name: name}
 	switch n.Child[1].kind {
+	case Ident:
+		t.cat = BasicT
 	case StructType:
-		fmt.Println("Create a struct type")
-		t := Type{name: name, cat: StructT}
-		//fields := n.Child[1].Child[0].Child
-		//for _, c := range fields {
-		//}
-		tdef[n.Child[0].ident] = &t
+		t.cat = StructT
+		for i, c := range n.Child[1].Child[0].Child {
+			stype := nodeType(tdef, c)
+			stype.index = i
+			t.field = append(t.field, stype)
+		}
 	}
+	return &t
+}
+
+// compute size of a type, in number of entries in frame
+func (t *Type) size() int {
+	s := 1
+	for _, f := range t.field {
+		s += f.size()
+	}
+	return s
 }
 
 // n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
@@ -128,10 +142,11 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			if i, l := getDefault(n), len(c)-1; i >= 0 && i != l {
 				c[i], c[l] = c[l], c[i]
 			}
-		case TypeSpec:
-			addType(tdef, n)
+		case GenDecl:
+			t := nodeType(tdef, n.Child[0])
+			tdef[t.name] = t
 			// Type analysis is performed recursively and no post-order processing
-			// needs to be done, so do not dive in subtree
+			// needs to be done for types, so do not dive in subtree
 			return false
 		}
 		return true
@@ -142,7 +157,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			wireChild(n)
 			n.findex = n.Child[0].findex
 
-		case BinaryExpr, CompositeLit, IndexExpr:
+		case BinaryExpr, CompositeLitExpr, IndexExpr:
 			wireChild(n)
 			maxIndex++
 			n.findex = maxIndex

@@ -21,7 +21,7 @@ const (
 	Break
 	CallExpr
 	CaseClause
-	CompositeLit
+	CompositeLitExpr
 	Continue
 	Defer
 	ExprStmt
@@ -50,6 +50,7 @@ const (
 	IndexExpr
 	LandExpr
 	LorExpr
+	KeyValueExpr
 	ParenExpr
 	RangeStmt
 	ReturnStmt
@@ -61,52 +62,53 @@ const (
 )
 
 var kinds = [...]string{
-	Undef:        "Undef",
-	ArrayType:    "ArrayType",
-	AssignStmt:   "AssignStmt",
-	BasicLit:     "BasicLit",
-	BinaryExpr:   "BinaryExpr",
-	BlockStmt:    "BlockStmt",
-	BranchStmt:   "BranchStmt",
-	Break:        "Break",
-	CallExpr:     "CallExpr",
-	CaseClause:   "CaseClause",
-	CompositeLit: "CompositLit",
-	Continue:     "Continue",
-	Defer:        "Defer",
-	ExprStmt:     "ExprStmt",
-	Field:        "Field",
-	FieldList:    "FieldList",
-	File:         "File",
-	For0:         "For0",
-	For1:         "For1",
-	For2:         "For2",
-	For3:         "For3",
-	For4:         "For4",
-	ForRangeStmt: "ForRangeStmt",
-	FuncDecl:     "FuncDecl",
-	FuncType:     "FuncType",
-	GenDecl:      "GenDecl",
-	Go:           "Go",
-	Goto:         "Goto",
-	Ident:        "Ident",
-	If0:          "If0",
-	If1:          "If1",
-	If2:          "If2",
-	If3:          "If3",
-	IfStmt:       "IfStmt",
-	IncDecStmt:   "IncDecStmt",
-	IndexExpr:    "IndexExpr",
-	LandExpr:     "LandExpr",
-	LorExpr:      "LorExpr",
-	ParenExpr:    "ParenExpr",
-	RangeStmt:    "RangeStmt",
-	ReturnStmt:   "ReturnStmt",
-	SelectorExpr: "SelectorExpr",
-	StructType:   "StructType",
-	Switch0:      "Switch0",
-	Switch1:      "Switch1",
-	TypeSpec:     "TypeSpec",
+	Undef:            "Undef",
+	ArrayType:        "ArrayType",
+	AssignStmt:       "AssignStmt",
+	BasicLit:         "BasicLit",
+	BinaryExpr:       "BinaryExpr",
+	BlockStmt:        "BlockStmt",
+	BranchStmt:       "BranchStmt",
+	Break:            "Break",
+	CallExpr:         "CallExpr",
+	CaseClause:       "CaseClause",
+	CompositeLitExpr: "CompositLitExpr",
+	Continue:         "Continue",
+	Defer:            "Defer",
+	ExprStmt:         "ExprStmt",
+	Field:            "Field",
+	FieldList:        "FieldList",
+	File:             "File",
+	For0:             "For0",
+	For1:             "For1",
+	For2:             "For2",
+	For3:             "For3",
+	For4:             "For4",
+	ForRangeStmt:     "ForRangeStmt",
+	FuncDecl:         "FuncDecl",
+	FuncType:         "FuncType",
+	GenDecl:          "GenDecl",
+	Go:               "Go",
+	Goto:             "Goto",
+	Ident:            "Ident",
+	If0:              "If0",
+	If1:              "If1",
+	If2:              "If2",
+	If3:              "If3",
+	IfStmt:           "IfStmt",
+	IncDecStmt:       "IncDecStmt",
+	IndexExpr:        "IndexExpr",
+	KeyValueExpr:     "KeyValueExpr",
+	LandExpr:         "LandExpr",
+	LorExpr:          "LorExpr",
+	ParenExpr:        "ParenExpr",
+	RangeStmt:        "RangeStmt",
+	ReturnStmt:       "ReturnStmt",
+	SelectorExpr:     "SelectorExpr",
+	StructType:       "StructType",
+	Switch0:          "Switch0",
+	Switch1:          "Switch1",
+	TypeSpec:         "TypeSpec",
 }
 
 func (k Kind) String() string {
@@ -127,6 +129,7 @@ const (
 	And
 	Call
 	Case
+	CompositeLit
 	Dec
 	Equal
 	Greater
@@ -142,26 +145,27 @@ const (
 )
 
 var actions = [...]string{
-	Nop:      "nop",
-	ArrayLit: "arraylit",
-	Assign:   "=",
-	AssignX:  "=",
-	Add:      "+",
-	And:      "&",
-	Call:     "call",
-	Case:     "case",
-	Dec:      "--",
-	Equal:    "==",
-	Greater:  ">",
-	GetIndex: "getindex",
-	Inc:      "++",
-	Land:     "&&",
-	Lor:      "||",
-	Lower:    "<",
-	Println:  "println",
-	Range:    "range",
-	Return:   "return",
-	Sub:      "-",
+	Nop:          "nop",
+	ArrayLit:     "arrayLit",
+	Assign:       "=",
+	AssignX:      "=",
+	Add:          "+",
+	And:          "&",
+	Call:         "call",
+	Case:         "case",
+	CompositeLit: "compositeLit",
+	Dec:          "--",
+	Equal:        "==",
+	Greater:      ">",
+	GetIndex:     "getindex",
+	Inc:          "++",
+	Land:         "&&",
+	Lor:          "||",
+	Lower:        "<",
+	Println:      "println",
+	Range:        "range",
+	Return:       "return",
+	Sub:          "-",
 }
 
 func (a Action) String() string {
@@ -278,7 +282,7 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			st.push(addChild(&root, anc, &index, CaseClause, Case, &node))
 
 		case *ast.CompositeLit:
-			st.push(addChild(&root, anc, &index, CompositeLit, ArrayLit, &node))
+			st.push(addChild(&root, anc, &index, CompositeLitExpr, ArrayLit, &node))
 
 		case *ast.ExprStmt:
 			st.push(addChild(&root, anc, &index, ExprStmt, Nop, &node))
@@ -351,6 +355,9 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 
 		case *ast.IndexExpr:
 			st.push(addChild(&root, anc, &index, IndexExpr, GetIndex, &node))
+
+		case *ast.KeyValueExpr:
+			st.push(addChild(&root, anc, &index, KeyValueExpr, GetIndex, &node))
 
 		case *ast.ParenExpr:
 			st.push(addChild(&root, anc, &index, ParenExpr, Nop, &node))

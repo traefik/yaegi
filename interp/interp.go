@@ -11,6 +11,7 @@ type Node struct {
 	index  int         // node index (dot display)
 	findex int         // index of value in frame or frame size (func def)
 	kind   Kind        // Kind of node
+	typ    *Type       // Type of value in frame, or nil
 	action Action      // function to run
 	run    Builtin     // function to run at CFG execution
 	val    interface{} // pointer on generic value (CFG execution)
