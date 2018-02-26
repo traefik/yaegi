@@ -14,6 +14,7 @@ const (
 	Undef = iota
 	ArrayType
 	AssignStmt
+	AssignXStmt
 	BasicLit
 	BinaryExpr
 	BlockStmt
@@ -45,7 +46,6 @@ const (
 	If1 // if cond {} else {}
 	If2 // if init; cond {}
 	If3 // if init; cond {} else {}
-	IfStmt
 	IncDecStmt
 	IndexExpr
 	LandExpr
@@ -65,6 +65,7 @@ var kinds = [...]string{
 	Undef:            "Undef",
 	ArrayType:        "ArrayType",
 	AssignStmt:       "AssignStmt",
+	AssignXStmt:      "AssignXStmt",
 	BasicLit:         "BasicLit",
 	BinaryExpr:       "BinaryExpr",
 	BlockStmt:        "BlockStmt",
@@ -95,7 +96,6 @@ var kinds = [...]string{
 	If1:              "If1",
 	If2:              "If2",
 	If3:              "If3",
-	IfStmt:           "IfStmt",
 	IncDecStmt:       "IncDecStmt",
 	IndexExpr:        "IndexExpr",
 	KeyValueExpr:     "KeyValueExpr",
@@ -133,6 +133,7 @@ const (
 	Dec
 	Equal
 	Greater
+	GetKeyIndex
 	GetIndex
 	Inc
 	Land
@@ -157,7 +158,8 @@ var actions = [...]string{
 	Dec:          "--",
 	Equal:        "==",
 	Greater:      ">",
-	GetIndex:     "getindex",
+	GetKeyIndex:  "getKeyIndex",
+	GetIndex:     "getIndex",
 	Inc:          "++",
 	Land:         "&&",
 	Lor:          "||",
@@ -175,8 +177,16 @@ func (a Action) String() string {
 	return "Action(" + strconv.Itoa(int(a)) + ")"
 }
 
+// Symbol type
+type Sym struct {
+	typ Type
+}
+
 // Map of defined symbols (const, variables and functions)
 type SymDef map[string]*Node
+
+// Note: no type analysis is performed at this stage, it is done in pre-order processing
+// of CFG, in order to accomodate forward type declarations
 
 // Ast(src) parses src string containing Go code and generates the corresponding AST.
 // The AST root node is returned.
@@ -211,12 +221,13 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 
 		case *ast.AssignStmt:
 			var action Action
+			var kind Kind
 			if len(a.Lhs) > 1 && len(a.Rhs) == 1 {
-				action = AssignX
+				kind, action = AssignXStmt, AssignX
 			} else {
-				action = Assign
+				kind, action = AssignStmt, Assign
 			}
-			st.push(addChild(&root, anc, &index, AssignStmt, action, &node))
+			st.push(addChild(&root, anc, &index, kind, action, &node))
 
 		case *ast.BasicLit:
 			n := addChild(&root, anc, &index, BasicLit, Nop, &node)
@@ -378,7 +389,7 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			}
 
 		case *ast.SelectorExpr:
-			st.push(addChild(&root, anc, &index, SelectorExpr, Nop, &node))
+			st.push(addChild(&root, anc, &index, SelectorExpr, GetKeyIndex, &node))
 
 		case *ast.StructType:
 			st.push(addChild(&root, anc, &index, StructType, Nop, &node))

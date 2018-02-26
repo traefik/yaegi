@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"fmt"
 	"strconv"
 )
 
@@ -70,7 +71,8 @@ type Type struct {
 	name  string  // Type name, of field name if used in struct
 	index int     // Index in containing struct, for access in frame
 	cat   Cat     // Type category
-	field []*Type // Array of fields if structT
+	field []*Type // Array of fields if StructT
+	basic *Type   // Pointer to existing basic type if BasicT
 }
 
 type TypeDef map[string]*Type
@@ -79,6 +81,7 @@ type TypeDef map[string]*Type
 func initTypes() TypeDef {
 	var tdef TypeDef = make(map[string]*Type)
 	tdef["bool"] = &Type{name: "bool", cat: BasicT}
+	tdef["float64"] = &Type{name: "float64", cat: BasicT}
 	tdef["int"] = &Type{name: "int", cat: BasicT}
 	tdef["string"] = &Type{name: "string", cat: BasicT}
 	return tdef
@@ -148,16 +151,54 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			// Type analysis is performed recursively and no post-order processing
 			// needs to be done for types, so do not dive in subtree
 			return false
+
+		case SelectorExpr:
+			return false
+
+		case BasicLit:
+			switch n.val.(type) {
+			case bool:
+				n.typ = tdef["bool"]
+			case float64:
+				n.typ = tdef["float64"]
+			case int:
+				n.typ = tdef["int"]
+			case string:
+				n.typ = tdef["string"]
+			}
 		}
 		return true
 	}, func(n *Node) {
 		// Post-order processing
 		switch n.kind {
-		case AssignStmt, IncDecStmt:
+		case AssignStmt:
 			wireChild(n)
 			n.findex = n.Child[0].findex
+			// Propagate type
+			// TODO: Check that existing destination type matches source type
+			n.Child[0].typ = n.Child[1].typ
+			n.typ = n.Child[0].typ
+			maxIndex += n.typ.size()
+			if n.Child[1].typ != nil && n.Child[1].typ.cat == StructT {
+				n.action, n.run = CompositeLit, assignCompositeLit
+			}
+			fmt.Println("Assign:", n.Child[1].typ)
 
-		case BinaryExpr, CompositeLitExpr, IndexExpr:
+		case IncDecStmt:
+			wireChild(n)
+			n.findex = n.Child[0].findex
+			// TODO: Propagate type
+			fmt.Println("inc child type", n.Child[0].typ)
+			n.Child[0].typ = tdef["int"]
+			n.typ = n.Child[0].typ
+
+		case AssignXStmt:
+			wireChild(n)
+			n.findex = n.Child[0].findex
+			// TODO: Propagate type
+			fmt.Println("AssignX:", n)
+
+		case BinaryExpr, IndexExpr:
 			wireChild(n)
 			maxIndex++
 			n.findex = maxIndex
@@ -181,6 +222,20 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			maxIndex++
 			n.findex = maxIndex
 			n.tnext = n.Child[len(n.Child)-1].Start
+
+		case CompositeLitExpr:
+			wireChild(n)
+			maxIndex++
+			n.findex = maxIndex
+			// Set and propagate type
+			n.Child[0].typ = tdef[n.Child[0].ident]
+			// TODO: Check that composite litteral expr matches corresponding type
+			n.typ = n.Child[0].typ
+			if n.typ != nil && n.typ.cat == StructT {
+				//n.action, n.run = CompositeLit, compositeLit
+				maxIndex += n.typ.size() // Allocate space for struct
+			}
+			fmt.Println("CompositeLit:", n.typ.cat)
 
 		case Continue:
 			n.tnext = loopRestart

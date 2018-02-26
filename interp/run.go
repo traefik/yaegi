@@ -20,6 +20,7 @@ var builtin = [...]Builtin{
 	Dec:          nop,
 	Equal:        equal,
 	Greater:      greater,
+	GetKeyIndex:  getKeyIndex,
 	GetIndex:     getIndex,
 	Inc:          inc,
 	Land:         land,
@@ -123,6 +124,13 @@ func call(n *Node, f *Frame) {
 	Run(fn, f, n.Child[1:], rets)
 }
 
+func getKeyIndex(n *Node, f *Frame) {
+	//a := value(n.Child[0], f).([]interface{})
+	//(*f)[n.findex] = a[value(n.Child[1], f).(int)]
+	fmt.Println("in getKeyIndex", n.Child[0].findex, (*f)[n.Child[0].findex])
+	//(*f)[n.findex] = (*f)[n.Child[0].findex]
+}
+
 func getIndex(n *Node, f *Frame) {
 	a := value(n.Child[0], f).([]interface{})
 	(*f)[n.findex] = a[value(n.Child[1], f).(int)]
@@ -183,6 +191,20 @@ func arrayLit(n *Node, f *Frame) {
 		a[i] = value(c, f)
 	}
 	(*f)[n.findex] = a
+}
+
+// assing a struct object of litteral values
+func assignCompositeLit(n *Node, f *Frame) {
+	fmt.Println("In compositeLit, t:", n.typ, n.typ.size())
+	//findex := n.anc.Child[0].findex
+	findex := n.Child[0].findex
+	// TODO: Handle nested struct
+	//for i, c := range n.Child[1:] {
+	fmt.Println("n:", n.index)
+	for i, c := range n.Child[1].Child[1:] {
+		(*f)[findex+i] = value(c, f)
+		fmt.Println("index:", findex+i, ", value:", (*f)[findex+i])
+	}
 }
 
 func _range(n *Node, f *Frame) {
