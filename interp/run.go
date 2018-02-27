@@ -20,7 +20,6 @@ var builtin = [...]Builtin{
 	Dec:          nop,
 	Equal:        equal,
 	Greater:      greater,
-	GetKeyIndex:  getKeyIndex,
 	GetIndex:     getIndex,
 	Inc:          inc,
 	Land:         land,

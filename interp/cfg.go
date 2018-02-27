@@ -115,12 +115,27 @@ func (t *Type) size() int {
 	return s
 }
 
+// return the field index in struct, or -1 if not found
+func (t *Type) fieldIndex(name string) int {
+	for i, field := range t.field {
+		if name == field.name {
+			return i
+		}
+	}
+	return -1
+}
+
+type Symbol struct {
+	typ   *Type
+	index int
+}
+
 // n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables.
 // Following this pass, the CFG is ready to run
 func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
-	symIndex := make(map[string]int)
+	symbol := make(map[string]*Symbol)
 	maxIndex := 0
 	var loop, loopRestart *Node
 
@@ -132,7 +147,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 		case For1, For2, For3, For4:
 			loop, loopRestart = n, n.Child[len(n.Child)-1]
 		case FuncDecl:
-			symIndex = make(map[string]int)
+			symbol = make(map[string]*Symbol)
 			// allocate entries for return values at start of frame
 			if len(n.Child[1].Child) == 2 {
 				maxIndex = len(n.Child[1].Child[1].Child)
@@ -153,6 +168,11 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			return false
 
 		case SelectorExpr:
+			if s, ok := symbol[n.Child[0].ident]; ok {
+				fmt.Println("Selector:", n.Child[0].ident, s)
+				fmt.Println("field index of", n.Child[1].ident, s.typ.fieldIndex(n.Child[1].ident))
+				n.findex = s.index + s.typ.fieldIndex(n.Child[1].ident)
+			}
 			return false
 
 		case BasicLit:
@@ -178,11 +198,15 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			// TODO: Check that existing destination type matches source type
 			n.Child[0].typ = n.Child[1].typ
 			n.typ = n.Child[0].typ
+			if sym, ok := symbol[n.Child[0].ident]; ok {
+				fmt.Println(n.index, "AssignStmt: set type of", n.Child[0].ident, "to", n.typ)
+				sym.typ = n.typ
+			}
+			fmt.Println("sym:", symbol[n.Child[0].ident])
 			maxIndex += n.typ.size()
 			if n.Child[1].typ != nil && n.Child[1].typ.cat == StructT {
 				n.action, n.run = CompositeLit, assignCompositeLit
 			}
-			fmt.Println("Assign:", n.Child[1].typ)
 
 		case IncDecStmt:
 			wireChild(n)
@@ -191,6 +215,10 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			fmt.Println("inc child type", n.Child[0].typ)
 			n.Child[0].typ = tdef["int"]
 			n.typ = n.Child[0].typ
+			if sym, ok := symbol[n.Child[0].ident]; ok {
+				fmt.Println("set type of", n.Child[0].ident, "to", n.typ)
+				sym.typ = n.typ
+			}
 
 		case AssignXStmt:
 			wireChild(n)
@@ -307,10 +335,13 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			// should check if ident can be defined (assign, param passing...)
 			// or should lookup in upper scope of variables
 			// For now, simply allocate a new entry in local sym table
-			if n.findex = symIndex[n.ident]; n.findex == 0 {
+			if sym, ok := symbol[n.ident]; ok {
+				n.typ, n.findex = sym.typ, sym.index
+				fmt.Println(n.index, "symbol", n.ident, sym)
+			} else {
 				maxIndex++
-				symIndex[n.ident] = maxIndex
-				n.findex = symIndex[n.ident]
+				symbol[n.ident] = &Symbol{index: maxIndex}
+				n.findex = maxIndex
 			}
 
 		case If0: // if cond {}
@@ -414,7 +445,7 @@ func wireChild(n *Node) {
 	// Set start node, in subtree (propagated to ancestors by post-order processing)
 	for _, child := range n.Child {
 		switch child.kind {
-		case ArrayType, BasicLit, Ident:
+		case ArrayType, BasicLit, Ident, SelectorExpr:
 			continue
 		default:
 			n.Start = child.Start
@@ -424,13 +455,17 @@ func wireChild(n *Node) {
 
 	// Chain sequential operations inside a block (next is right sibling)
 	for i := 1; i < len(n.Child); i++ {
+		//switch n.Child[i-1].kind {
+		//case ArrayType, BasicLit, Ident, SelectorExpr:
+		//	continue
+		//}
 		n.Child[i-1].tnext = n.Child[i].Start
 	}
 
 	// Chain subtree next to self
 	for i := len(n.Child) - 1; i >= 0; i-- {
 		switch n.Child[i].kind {
-		case ArrayType, BasicLit, Ident:
+		case ArrayType, BasicLit, Ident, SelectorExpr:
 			continue
 		case Break, Continue, ReturnStmt:
 			// tnext is already computed, no change

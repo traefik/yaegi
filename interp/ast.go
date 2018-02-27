@@ -133,7 +133,6 @@ const (
 	Dec
 	Equal
 	Greater
-	GetKeyIndex
 	GetIndex
 	Inc
 	Land
@@ -158,7 +157,6 @@ var actions = [...]string{
 	Dec:          "--",
 	Equal:        "==",
 	Greater:      ">",
-	GetKeyIndex:  "getKeyIndex",
 	GetIndex:     "getIndex",
 	Inc:          "++",
 	Land:         "&&",
@@ -175,11 +173,6 @@ func (a Action) String() string {
 		return actions[a]
 	}
 	return "Action(" + strconv.Itoa(int(a)) + ")"
-}
-
-// Symbol type
-type Sym struct {
-	typ Type
 }
 
 // Map of defined symbols (const, variables and functions)
@@ -389,7 +382,7 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			}
 
 		case *ast.SelectorExpr:
-			st.push(addChild(&root, anc, &index, SelectorExpr, GetKeyIndex, &node))
+			st.push(addChild(&root, anc, &index, SelectorExpr, Nop, &node))
 
 		case *ast.StructType:
 			st.push(addChild(&root, anc, &index, StructType, Nop, &node))

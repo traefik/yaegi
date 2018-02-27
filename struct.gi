@@ -6,6 +6,6 @@ type T struct {
 }
 
 func main() {
-	a := T{ 1, 2 }
+	a := T{ 7, 8 }
 	println(a.f, a.g)
 }

@@ -38,7 +38,13 @@ func (n *Node) CfgDot(out io.WriteCloser) {
 		if n.kind == BasicLit || n.kind == Ident || n.tnext == nil {
 			return
 		}
-		fmt.Fprintf(out, "%d [label=\"%d: %v %d\"]\n", n.index, n.index, n.action, n.findex)
+		var label string
+		if n.action == Nop {
+			label = "nop: end_" + n.kind.String()
+		} else {
+			label = n.action.String()
+		}
+		fmt.Fprintf(out, "%d [label=\"%d: %v %d\"]\n", n.index, n.index, label, n.findex)
 		if n.fnext != nil {
 			fmt.Fprintf(out, "%d -> %d [color=green]\n", n.index, n.tnext.index)
 			fmt.Fprintf(out, "%d -> %d [color=red]\n", n.index, n.fnext.index)
