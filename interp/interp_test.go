@@ -15,8 +15,9 @@ func main() {
 `
 	n, _ := Ast(src, nil)
 	//n.AstDot()
-	n.Walk(func(n *Node) {
+	n.Walk(func(n *Node) bool {
 		fmt.Println("in:", n.index)
+		return true
 	}, func(n *Node) {
 		fmt.Println("out:", n.index)
 	})
@@ -61,7 +62,7 @@ func main() {
 	n, _ := Ast(src, nil)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		n.Walk(func(n *Node) {}, func(n *Node) {})
+		n.Walk(func(n *Node) bool { return true }, func(n *Node) {})
 	}
 }
 

@@ -301,6 +301,7 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			st.push(addChild(&root, anc, &index, File, Nop, &node))
 
 		case *ast.ForStmt:
+			// Disambiguate variants of FOR statements with a node kind per variant
 			var kind Kind
 			if a.Cond == nil {
 				kind = For0
@@ -335,6 +336,7 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			st.push(n)
 
 		case *ast.IfStmt:
+			// Disambiguate variants of IF statements with a node kind per variant
 			var kind Kind
 			if a.Init == nil && a.Else == nil {
 				kind = If0
@@ -361,7 +363,7 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			st.push(addChild(&root, anc, &index, IndexExpr, GetIndex, &node))
 
 		case *ast.KeyValueExpr:
-			st.push(addChild(&root, anc, &index, KeyValueExpr, GetIndex, &node))
+			st.push(addChild(&root, anc, &index, KeyValueExpr, Nop, &node))
 
 		case *ast.ParenExpr:
 			st.push(addChild(&root, anc, &index, ParenExpr, Nop, &node))

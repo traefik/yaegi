@@ -73,6 +73,8 @@ type Type struct {
 	cat   Cat     // Type category
 	field []*Type // Array of fields if StructT
 	basic *Type   // Pointer to existing basic type if BasicT
+	key   *Type   // Type of key element if MapT
+	val   *Type   // Type of value element if MapT or ArrayT
 }
 
 type TypeDef map[string]*Type
@@ -106,16 +108,18 @@ func nodeType(tdef TypeDef, n *Node) *Type {
 	return &t
 }
 
-// compute size of a type, in number of entries in frame
+// compute frame size of a type, in number of entries in frame
 func (t *Type) size() int {
 	s := 1
-	for _, f := range t.field {
-		s += f.size()
+	if t.cat == StructT {
+		for _, f := range t.field {
+			s += f.size()
+		}
 	}
 	return s
 }
 
-// return the field index in struct, or -1 if not found
+// return the field index from name in a struct, or -1 if not found
 func (t *Type) fieldIndex(name string) int {
 	for i, field := range t.field {
 		if name == field.name {
@@ -126,8 +130,28 @@ func (t *Type) fieldIndex(name string) int {
 }
 
 type Symbol struct {
-	typ   *Type
-	index int
+	typ   *Type // type of value
+	index int   // index of value in frame
+}
+
+// Parse a selector expression to compute corresponding frame index
+func selectorIndex(n *Node, sym *map[string]*Symbol) (int, *Type, int) {
+	var index, fi int
+	var typ *Type
+	left, right := n.Child[0], n.Child[1]
+
+	fmt.Println("enter selectorIndex n:", n.index)
+	if left.kind == SelectorExpr {
+		index, typ, fi = selectorIndex(left, sym)
+		fi = typ.field[fi].fieldIndex(right.ident)
+		return index + fi, typ, fi
+	} else if s, ok := (*sym)[left.ident]; ok {
+		index, typ = s.index, s.typ
+		fi = typ.fieldIndex(right.ident)
+		return index + fi, typ, fi
+	} else {
+		panic("selector index error")
+	}
 }
 
 // n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
@@ -147,6 +171,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 		case For1, For2, For3, For4:
 			loop, loopRestart = n, n.Child[len(n.Child)-1]
 		case FuncDecl:
+			// TODO: better handling of scopes
 			symbol = make(map[string]*Symbol)
 			// allocate entries for return values at start of frame
 			if len(n.Child[1].Child) == 2 {
@@ -161,18 +186,16 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 				c[i], c[l] = c[l], c[i]
 			}
 		case GenDecl:
-			t := nodeType(tdef, n.Child[0])
-			tdef[t.name] = t
 			// Type analysis is performed recursively and no post-order processing
 			// needs to be done for types, so do not dive in subtree
+			t := nodeType(tdef, n.Child[0])
+			tdef[t.name] = t
 			return false
 
 		case SelectorExpr:
-			if s, ok := symbol[n.Child[0].ident]; ok {
-				fmt.Println("Selector:", n.Child[0].ident, s)
-				fmt.Println("field index of", n.Child[1].ident, s.typ.fieldIndex(n.Child[1].ident))
-				n.findex = s.index + s.typ.fieldIndex(n.Child[1].ident)
-			}
+			// selectorIndex recursively parses selector expression subtree, do not let Walk dive in
+			// TODO: make sure it works with methods ...
+			n.findex, _, _ = selectorIndex(n, &symbol)
 			return false
 
 		case BasicLit:
@@ -191,18 +214,24 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 	}, func(n *Node) {
 		// Post-order processing
 		switch n.kind {
+		case ArrayType:
+			// TODO: move to pre-processing ? See when handling complex array type def
+			n.typ = &Type{cat: ArrayT, val: tdef[n.Child[1].ident]}
+
 		case AssignStmt:
 			wireChild(n)
 			n.findex = n.Child[0].findex
 			// Propagate type
 			// TODO: Check that existing destination type matches source type
+			fmt.Println(n.index, "assign findex:", n.findex, "type:", n.typ)
+			fmt.Println("child1 typ:", n.Child[1].typ, n.Child[1].kind)
 			n.Child[0].typ = n.Child[1].typ
 			n.typ = n.Child[0].typ
 			if sym, ok := symbol[n.Child[0].ident]; ok {
 				fmt.Println(n.index, "AssignStmt: set type of", n.Child[0].ident, "to", n.typ)
 				sym.typ = n.typ
 			}
-			fmt.Println("sym:", symbol[n.Child[0].ident])
+			fmt.Println("sym", n.Child[0].ident, ":", symbol[n.Child[0].ident])
 			maxIndex += n.typ.size()
 			if n.Child[1].typ != nil && n.Child[1].typ.cat == StructT {
 				n.action, n.run = CompositeLit, assignCompositeLit
@@ -211,25 +240,24 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 		case IncDecStmt:
 			wireChild(n)
 			n.findex = n.Child[0].findex
-			// TODO: Propagate type
-			fmt.Println("inc child type", n.Child[0].typ)
 			n.Child[0].typ = tdef["int"]
 			n.typ = n.Child[0].typ
 			if sym, ok := symbol[n.Child[0].ident]; ok {
-				fmt.Println("set type of", n.Child[0].ident, "to", n.typ)
 				sym.typ = n.typ
 			}
 
 		case AssignXStmt:
 			wireChild(n)
 			n.findex = n.Child[0].findex
-			// TODO: Propagate type
+			n.Child[0].typ = n.Child[1].typ
+			n.typ = n.Child[0].typ
 			fmt.Println("AssignX:", n)
 
 		case BinaryExpr, IndexExpr:
 			wireChild(n)
 			maxIndex++
 			n.findex = maxIndex
+			n.typ = n.Child[0].typ
 
 		case BlockStmt, ExprStmt, ParenExpr:
 			wireChild(n)
@@ -240,11 +268,21 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 
 		case CallExpr:
 			wireChild(n)
-			// FIXME: should reserve as many entries as nb of ret values for called function
-			// node frame index should point to the first entry
 			maxIndex++
 			n.findex = maxIndex
 			n.val = sdef[n.Child[0].ident]
+			if def := n.val.(*Node); def != nil {
+				fmt.Println(def.index, "nb ret", len(def.Child[1].Child[1].Child))
+				// Reserve as many frame entries as nb of ret values for called function
+				// node frame index should point to the first entry
+				l := len(def.Child[1].Child[1].Child) // Number of return values for def
+				maxIndex += l - 1
+				if l == 1 {
+					// If def returns exactly one value, propagate its type in call node.
+					// Multiple return values will be handled differently through AssignX.
+					n.typ = tdef[def.Child[1].Child[1].Child[0].Child[0].ident]
+				}
+			}
 
 		case CaseClause:
 			maxIndex++
@@ -252,18 +290,18 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.tnext = n.Child[len(n.Child)-1].Start
 
 		case CompositeLitExpr:
+			fmt.Println(n.index, "CompositeLitExpr", n.Child[0].typ)
 			wireChild(n)
 			maxIndex++
 			n.findex = maxIndex
-			// Set and propagate type
-			n.Child[0].typ = tdef[n.Child[0].ident]
+			if n.Child[0].typ == nil {
+				n.Child[0].typ = tdef[n.Child[0].ident]
+			}
 			// TODO: Check that composite litteral expr matches corresponding type
 			n.typ = n.Child[0].typ
 			if n.typ != nil && n.typ.cat == StructT {
-				//n.action, n.run = CompositeLit, compositeLit
 				maxIndex += n.typ.size() // Allocate space for struct
 			}
-			fmt.Println("CompositeLit:", n.typ.cat)
 
 		case Continue:
 			n.tnext = loopRestart
@@ -383,6 +421,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.Child[1].tnext = n
 			maxIndex++
 			n.findex = maxIndex
+			n.typ = n.Child[0].typ
 
 		case LorExpr:
 			n.Start = n.Child[0].Start
@@ -391,6 +430,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.Child[1].tnext = n
 			maxIndex++
 			n.findex = maxIndex
+			n.typ = n.Child[0].typ
 
 		case RangeStmt:
 			n.Start = n
@@ -455,10 +495,6 @@ func wireChild(n *Node) {
 
 	// Chain sequential operations inside a block (next is right sibling)
 	for i := 1; i < len(n.Child); i++ {
-		//switch n.Child[i-1].kind {
-		//case ArrayType, BasicLit, Ident, SelectorExpr:
-		//	continue
-		//}
 		n.Child[i-1].tnext = n.Child[i].Start
 	}
 

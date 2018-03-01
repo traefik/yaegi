@@ -3,8 +3,8 @@ package interp
 
 // Structure for AST and CFG
 type Node struct {
-	Child  []*Node     // child subtrees
-	anc    *Node       // ancestor
+	Child  []*Node     // child subtrees (AST)
+	anc    *Node       // ancestor (AST)
 	Start  *Node       // entry point in subtree (CFG)
 	tnext  *Node       // true branch successor (CFG)
 	fnext  *Node       // false branch successor (CFG)
@@ -40,8 +40,8 @@ func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 	if in != nil && !in(n) {
 		return
 	}
-	for _, Child := range n.Child {
-		Child.Walk(in, out)
+	for _, child := range n.Child {
+		child.Walk(in, out)
 	}
 	if out != nil {
 		out(n)
