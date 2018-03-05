@@ -2,10 +2,11 @@ package main
 
 type T struct {
 	f int
-	g int
 }
 
 func main() {
-	a := T{ 7, 8 }
-	println(a.f, a.g)
+	a := T{}
+	println(a.f)
+	a.f = 8
+	println(a.f)
 }

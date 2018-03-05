@@ -58,13 +58,14 @@ func NewInterpreter(opt InterpOpt) *Interpreter {
 func (i *Interpreter) Eval(src string) interface{} {
 	// Parse source to AST
 	root, sdef := Ast(src, nil)
-	if i.opt.Ast {
-		root.AstDot(Dotty())
-	}
 
 	// Annotate AST with CFG infos
 	tdef := initTypes()
 	root.Cfg(tdef, sdef)
+
+	if i.opt.Ast {
+		root.AstDot(Dotty())
+	}
 	if i.opt.Cfg {
 		root.CfgDot(Dotty())
 	}

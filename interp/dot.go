@@ -10,6 +10,8 @@ import (
 // For debug: display an AST in graphviz dot(1) format using dotty(1) co-process
 func (n *Node) AstDot(out io.WriteCloser) {
 	fmt.Fprintf(out, "digraph ast {\n")
+	fmt.Fprintf(out, "labelloc=\"t\"\n")
+	fmt.Fprintf(out, "label=\"AST sample\"\n")
 	n.Walk(func(n *Node) bool {
 		var label string
 		switch n.kind {

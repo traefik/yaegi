@@ -25,6 +25,7 @@ var builtin = [...]Builtin{
 	Land:         land,
 	Lor:          lor,
 	Lower:        lower,
+	Mul:          mul,
 	Range:        _range,
 	Return:       _return,
 	Sub:          sub,
@@ -68,6 +69,7 @@ func value(n *Node, f *Frame) interface{} {
 	case BasicLit, FuncDecl:
 		return n.val
 	default:
+		//fmt.Println(n.index, "val(", n.findex, "):", (*f)[n.findex])
 		return (*f)[n.findex]
 	}
 }
@@ -87,6 +89,10 @@ func assign(n *Node, f *Frame) {
 	for i, c := range n.Child[:l] {
 		(*f)[c.findex] = value(n.Child[l+i], f)
 	}
+}
+
+func assignField(n *Node, f *Frame) {
+	(*(*f)[n.findex].(*interface{})) = value(n.Child[1], f)
 }
 
 func and(n *Node, f *Frame) {
@@ -123,16 +129,18 @@ func call(n *Node, f *Frame) {
 	Run(fn, f, n.Child[1:], rets)
 }
 
-func getKeyIndex(n *Node, f *Frame) {
-	//a := value(n.Child[0], f).([]interface{})
-	//(*f)[n.findex] = a[value(n.Child[1], f).(int)]
-	fmt.Println("in getKeyIndex", n.Child[0].findex, (*f)[n.Child[0].findex])
-	//(*f)[n.findex] = (*f)[n.Child[0].findex]
+func getIndexAddr(n *Node, f *Frame) {
+	a := value(n.Child[0], f).(*[]interface{})
+	(*f)[n.findex] = &(*a)[value(n.Child[1], f).(int)]
 }
 
 func getIndex(n *Node, f *Frame) {
-	a := value(n.Child[0], f).([]interface{})
-	(*f)[n.findex] = a[value(n.Child[1], f).(int)]
+	a := value(n.Child[0], f).(*[]interface{})
+	(*f)[n.findex] = (*a)[value(n.Child[1], f).(int)]
+}
+
+func mul(n *Node, f *Frame) {
+	(*f)[n.findex] = value(n.Child[0], f).(int) * value(n.Child[1], f).(int)
 }
 
 func add(n *Node, f *Frame) {
@@ -179,6 +187,7 @@ func nop(n *Node, f *Frame) {}
 
 func _return(n *Node, f *Frame) {
 	for i, c := range n.Child {
+		//fmt.Println(n.index, "return", value(c, f))
 		(*f)[i] = value(c, f)
 	}
 }
@@ -189,21 +198,33 @@ func arrayLit(n *Node, f *Frame) {
 	for i, c := range n.Child[1:] {
 		a[i] = value(c, f)
 	}
+	(*f)[n.findex] = &a
+}
+
+// Create a struct object
+func compositeLit(n *Node, f *Frame) {
+	l := len(n.typ.field)
+	a := n.typ.zero().(*[]interface{})
+	for i := 0; i < l; i++ {
+		if i < len(n.Child[1:]) {
+			c := n.Child[i+1]
+			(*a)[i] = value(c, f)
+			//fmt.Println(n.index, "compositeLit, set field", i, value(c, f))
+		} else {
+			(*a)[i] = n.typ.field[i].zero()
+		}
+	}
 	(*f)[n.findex] = a
 }
 
-// assing a struct object of litteral values
-func assignCompositeLit(n *Node, f *Frame) {
-	fmt.Println("In compositeLit, t:", n.typ, n.typ.size())
-	//findex := n.anc.Child[0].findex
-	findex := n.Child[0].findex
-	// TODO: Handle nested struct
-	//for i, c := range n.Child[1:] {
-	fmt.Println("n:", n.index)
-	for i, c := range n.Child[1].Child[1:] {
-		(*f)[findex+i] = value(c, f)
-		fmt.Println("index:", findex+i, ", value:", (*f)[findex+i])
+// Create a struct Object, filling fields from sparse key-values
+func compositeSparse(n *Node, f *Frame) {
+	a := n.typ.zero().(*[]interface{})
+	for _, c := range n.Child[1:] {
+		// index from key was pre-computed during CFG
+		(*a)[c.findex] = value(c.Child[1], f)
 	}
+	(*f)[n.findex] = a
 }
 
 func _range(n *Node, f *Frame) {
@@ -211,13 +232,13 @@ func _range(n *Node, f *Frame) {
 	if (*f)[index] != nil {
 		i = (*f)[index].(int)
 	}
-	a := value(n.Child[2], f).([]interface{})
-	if i >= len(a) {
+	a := value(n.Child[2], f).(*[]interface{})
+	if i >= len(*a) {
 		(*f)[n.findex] = false
 		return
 	}
 	(*f)[index] = i + 1
-	(*f)[n.Child[1].findex] = a[i]
+	(*f)[n.Child[1].findex] = (*a)[i]
 	(*f)[n.findex] = true
 }
 

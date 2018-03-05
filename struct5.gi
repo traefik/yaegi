@@ -5,7 +5,9 @@ type T struct {
 	g int
 }
 
+func f(i int) int { return i * i }
+
 func main() {
-	a := T{ 7, 8 }
+	a := T{ 7, f(4) }
 	println(a.f, a.g)
 }

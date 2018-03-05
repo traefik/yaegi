@@ -73,7 +73,7 @@ var kinds = [...]string{
 	Break:            "Break",
 	CallExpr:         "CallExpr",
 	CaseClause:       "CaseClause",
-	CompositeLitExpr: "CompositLitExpr",
+	CompositeLitExpr: "CompositeLitExpr",
 	Continue:         "Continue",
 	Defer:            "Defer",
 	ExprStmt:         "ExprStmt",
@@ -138,6 +138,7 @@ const (
 	Land
 	Lor
 	Lower
+	Mul
 	Println
 	Range
 	Return
@@ -162,6 +163,7 @@ var actions = [...]string{
 	Land:         "&&",
 	Lor:          "||",
 	Lower:        "<",
+	Mul:          "*",
 	Println:      "println",
 	Range:        "range",
 	Return:       "return",
@@ -261,6 +263,8 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 				action = Lor
 			case token.LSS:
 				action = Lower
+			case token.MUL:
+				action = Mul
 			case token.SUB:
 				action = Sub
 			}
@@ -384,7 +388,7 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			}
 
 		case *ast.SelectorExpr:
-			st.push(addChild(&root, anc, &index, SelectorExpr, Nop, &node))
+			st.push(addChild(&root, anc, &index, SelectorExpr, GetIndex, &node))
 
 		case *ast.StructType:
 			st.push(addChild(&root, anc, &index, StructType, Nop, &node))
