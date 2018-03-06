@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"fmt"
 	"strconv"
 )
 
@@ -89,36 +90,44 @@ func initTypes() TypeDef {
 	return tdef
 }
 
-// nodeType(tdef, n) returns the name and type definition from the corresponding
+// nodeType(tdef, n) returns an array of type definitions from the corresponding
 // AST subtree
-func nodeType(tdef TypeDef, n *Node) *Type {
-	name := n.Child[0].ident
-	t := Type{name: name}
+func nodeType(tdef TypeDef, n *Node) []*Type {
 	l := len(n.Child)
+	var res []*Type
 	if l == 1 {
-		t.embedded = true
+		res = append(res, &Type{name: n.Child[0].ident, embedded: true})
+	} else {
+		for _, c := range n.Child[:l-1] {
+			res = append(res, &Type{name: c.ident})
+		}
 	}
 	switch n.Child[l-1].kind {
 	case Ident:
 		td := tdef[n.Child[l-1].ident]
-		t.cat = td.cat
-		switch td.cat {
-		case BasicT:
-			t.basic = td
-		case StructT:
-			for _, f := range td.field {
-				t.field = append(t.field, f)
+		for _, t := range res {
+			t.cat = td.cat
+			switch td.cat {
+			case BasicT:
+				t.basic = td
+			case StructT:
+				t.field = td.field
 			}
 		}
 	case StructType:
-		t.cat = StructT
-		for i, c := range n.Child[l-1].Child[0].Child {
-			stype := nodeType(tdef, c)
-			stype.index = i
-			t.field = append(t.field, stype)
+		for _, t := range res {
+			t.cat = StructT
+			i := 0
+			for _, c := range n.Child[l-1].Child[0].Child {
+				for _, stype := range nodeType(tdef, c) {
+					stype.index = i
+					i++
+					t.field = append(t.field, stype)
+				}
+			}
 		}
 	}
-	return &t
+	return res
 }
 
 func (t *Type) zero() interface{} {
@@ -187,25 +196,6 @@ type Symbol struct {
 	index int   // index of value in frame
 }
 
-// Parse a selector expression to compute corresponding frame index
-func selectorIndex(n *Node, sym *map[string]*Symbol) (int, *Type, int) {
-	var index, fi int
-	var typ *Type
-	left, right := n.Child[0], n.Child[1]
-
-	if left.kind == SelectorExpr {
-		index, typ, fi = selectorIndex(left, sym)
-		fi = typ.field[fi].fieldIndex(right.ident)
-		return index + fi, typ, fi
-	} else if s, ok := (*sym)[left.ident]; ok {
-		index, typ = s.index, s.typ
-		fi = typ.fieldIndex(right.ident)
-		return index + fi, typ, fi
-	} else {
-		panic("selector index error")
-	}
-}
-
 // n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables.
@@ -240,8 +230,11 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 		case GenDecl:
 			// Type analysis is performed recursively and no post-order processing
 			// needs to be done for types, so do not dive in subtree
-			t := nodeType(tdef, n.Child[0])
-			tdef[t.name] = t
+			//t := nodeType(tdef, n.Child[0])
+			//tdef[t.name] = t
+			for _, t := range nodeType(tdef, n.Child[0]) {
+				tdef[t.name] = t
+			}
 			return false
 		case BasicLit:
 			switch n.val.(type) {
