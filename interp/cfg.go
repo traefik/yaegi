@@ -67,13 +67,14 @@ func (c Cat) String() string {
 
 // Representation of types in interpreter
 type Type struct {
-	name  string  // Type name, of field name if used in struct
-	index int     // Index in containing struct, for access in frame
-	cat   Cat     // Type category
-	field []*Type // Array of fields if StructT
-	basic *Type   // Pointer to existing basic type if BasicT
-	key   *Type   // Type of key element if MapT
-	val   *Type   // Type of value element if MapT or ArrayT
+	name     string  // Type name, of field name if used in struct
+	index    int     // Index in containing struct, for access in frame
+	cat      Cat     // Type category
+	embedded bool    // True if struct is embedded
+	field    []*Type // Array of fields if StructT
+	basic    *Type   // Pointer to existing basic type if BasicT
+	key      *Type   // Type of key element if MapT
+	val      *Type   // Type of value element if MapT or ArrayT
 }
 
 type TypeDef map[string]*Type
@@ -94,6 +95,9 @@ func nodeType(tdef TypeDef, n *Node) *Type {
 	name := n.Child[0].ident
 	t := Type{name: name}
 	l := len(n.Child)
+	if l == 1 {
+		t.embedded = true
+	}
 	switch n.Child[l-1].kind {
 	case Ident:
 		td := tdef[n.Child[l-1].ident]
@@ -159,6 +163,23 @@ func (t *Type) fieldIndex(name string) int {
 		}
 	}
 	return -1
+}
+
+func (t *Type) lookupTypeField(name string) []int {
+	var res []int
+	if fi := t.fieldIndex(name); fi < 0 {
+		for i, f := range t.field {
+			if f.embedded {
+				if res2 := f.lookupTypeField(name); len(res2) > 0 {
+					res = append([]int{i}, res2...)
+					break
+				}
+			}
+		}
+	} else {
+		res = append(res, fi)
+	}
+	return res
 }
 
 type Symbol struct {
@@ -478,13 +499,20 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			maxIndex++
 			n.findex = maxIndex
 			n.typ = n.Child[0].typ
-			// lookup field index once during compiling
+			// lookup field index once during compiling (simple and fast first)
 			if fi := n.typ.fieldIndex(n.Child[1].ident); fi >= 0 {
 				n.typ = n.typ.field[fi]
 				n.Child[1].kind = BasicLit
 				n.Child[1].val = fi
 			} else {
-				panic("Field not fount in selector")
+				// Handle promoted field in embedded struct
+				ti := n.typ.lookupTypeField(n.Child[1].ident)
+				n.Child[1].kind = BasicLit
+				n.Child[1].val = ti
+				n.run = getIndexSeq
+				if len(ti) == 0 {
+					panic("Field not found in selector")
+				}
 			}
 
 		case Switch0:

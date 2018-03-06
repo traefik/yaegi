@@ -139,6 +139,16 @@ func getIndex(n *Node, f *Frame) {
 	(*f)[n.findex] = (*a)[value(n.Child[1], f).(int)]
 }
 
+func getIndexSeq(n *Node, f *Frame) {
+	a := value(n.Child[0], f).(*[]interface{})
+	seq := value(n.Child[1], f).([]int)
+	l := len(seq) - 1
+	for _, i := range seq[:l] {
+		a = (*a)[i].(*[]interface{})
+	}
+	(*f)[n.findex] = (*a)[seq[l]]
+}
+
 func mul(n *Node, f *Frame) {
 	(*f)[n.findex] = value(n.Child[0], f).(int) * value(n.Child[1], f).(int)
 }
