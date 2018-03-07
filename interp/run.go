@@ -39,9 +39,10 @@ func Run(def *Node, cf *Frame, args []*Node, rets []int) {
 	f := Frame(make([]interface{}, def.findex))
 
 	// Pass func parameters by value: copy each parameter from caller frame
-	param := def.Child[1].Child[0].Child
+	// Get list of param indices built by FuncType at CFG
+	paramIndex := def.Child[1].Child[0].val.([]int)
 	for i, arg := range args {
-		f[param[i].findex] = value(arg, cf)
+		f[paramIndex[i]] = value(arg, cf)
 	}
 	//fmt.Println("frame:", f)
 

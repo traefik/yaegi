@@ -1,7 +1,6 @@
 package interp
 
 import (
-	"fmt"
 	"strconv"
 )
 
@@ -207,25 +206,29 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 				i := l / 2
 				n.Child = append(n.Child[:i], n.Child[i+1:]...)
 			}
+
 		case For0, ForRangeStmt:
 			loop, loopRestart = n, n.Child[0]
+
 		case For1, For2, For3, For4:
 			loop, loopRestart = n, n.Child[len(n.Child)-1]
+
 		case FuncDecl:
+			maxIndex = 0
 			// TODO: better handling of scopes
 			symbol = make(map[string]*Symbol)
 			// allocate entries for return values at start of frame
 			if len(n.Child[1].Child) == 2 {
-				maxIndex = len(n.Child[1].Child[1].Child)
-			} else {
-				maxIndex = 0
+				maxIndex += len(n.Child[1].Child[1].Child)
 			}
+
 		case Switch0:
 			// Make sure default clause is in last position
 			c := n.Child[1].Child
 			if i, l := getDefault(n), len(c)-1; i >= 0 && i != l {
 				c[i], c[l] = c[l], c[i]
 			}
+
 		case TypeSpec:
 			// Type analysis is performed recursively and no post-order processing
 			// needs to be done for types, so do not dive in subtree
@@ -233,6 +236,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 				tdef[t.name] = t
 			}
 			return false
+
 		case BasicLit:
 			switch n.val.(type) {
 			case bool:
@@ -354,7 +358,11 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 				maxIndex++
 				n.findex = maxIndex
 			} else {
-				n.findex = n.Child[0].findex
+				l := len(n.Child) - 1
+				t := tdef[n.Child[l].ident]
+				for _, f := range n.Child[:l] {
+					symbol[f.ident].typ = t
+				}
 			}
 
 		case For0: // for {}
@@ -406,6 +414,17 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 
 		case FuncDecl:
 			n.findex = maxIndex + 1 // Why ????
+
+		case FuncType:
+			// Store list of parameter frame indices in params val
+			var list []int
+			for _, c := range n.Child[0].Child {
+				for _, f := range c.Child[:len(c.Child)-1] {
+					list = append(list, f.findex)
+				}
+			}
+			n.Child[0].val = list
+			// TODO: do the same for return values
 
 		case Ident:
 			// Lookup identifier in frame symbol table. If not found
@@ -489,7 +508,6 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			maxIndex++
 			n.findex = maxIndex
 			n.typ = n.Child[0].typ
-			fmt.Println(n.index, "Selector", n.typ)
 			// lookup field index once during compiling (simple and fast first)
 			if fi := n.typ.fieldIndex(n.Child[1].ident); fi >= 0 {
 				n.typ = n.typ.field[fi]
