@@ -84,9 +84,13 @@ type TypeDef map[string]*Type
 func initTypes() TypeDef {
 	var tdef TypeDef = make(map[string]*Type)
 	tdef["bool"] = &Type{name: "bool", cat: BasicT}
+	tdef["bool"].basic = tdef["bool"]
 	tdef["float64"] = &Type{name: "float64", cat: BasicT}
+	tdef["float64"].basic = tdef["float64"]
 	tdef["int"] = &Type{name: "int", cat: BasicT}
+	tdef["int"].basic = tdef["int"]
 	tdef["string"] = &Type{name: "string", cat: BasicT}
+	tdef["string"].basic = tdef["string"]
 	return tdef
 }
 
@@ -197,6 +201,12 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 	e.Walk(func(n *Node) bool {
 		// Pre-order processing
 		switch n.kind {
+		case AssignStmt:
+			if l := len(n.Child); l%2 == 1 {
+				// Odd number of children: remove the type node, useless for assign
+				i := l / 2
+				n.Child = append(n.Child[:i], n.Child[i+1:]...)
+			}
 		case For0, ForRangeStmt:
 			loop, loopRestart = n, n.Child[0]
 		case For1, For2, For3, For4:
@@ -516,6 +526,13 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 				// Default
 				c.tnext = c.Child[0].Start
 				c.Child[0].tnext = n
+			}
+
+		case ValueSpec:
+			l := len(n.Child) - 1
+			n.typ = tdef[n.Child[l].ident]
+			for _, c := range n.Child[:l] {
+				c.typ = n.typ
 			}
 		}
 	})

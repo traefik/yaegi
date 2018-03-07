@@ -12,6 +12,7 @@ var builtin = [...]Builtin{
 	ArrayLit:     arrayLit,
 	Assign:       assign,
 	AssignX:      assignX,
+	Assign0:      assign0,
 	Add:          add,
 	And:          and,
 	Call:         call,
@@ -74,8 +75,9 @@ func value(n *Node, f *Frame) interface{} {
 	}
 }
 
-// AssignX(n, f) implements assignement for a single call which returns multiple values
+// assignX(n, f) implements assignement for a single call which returns multiple values
 func assignX(n *Node, f *Frame) {
+	fmt.Println(n.index, "in assignX")
 	l := len(n.Child) - 1
 	b := n.Child[l].findex
 	for i, c := range n.Child[:l] {
@@ -83,11 +85,22 @@ func assignX(n *Node, f *Frame) {
 	}
 }
 
-// Assign(n, f) implements assignement with the same number of left and right values
+// assign(n, f) implements assignement with the same number of left and right values
 func assign(n *Node, f *Frame) {
 	l := len(n.Child) / 2
 	for i, c := range n.Child[:l] {
 		(*f)[c.findex] = value(n.Child[l+i], f)
+	}
+}
+
+// assign0(n, f) implements assignement of zero value
+func assign0(n *Node, f *Frame) {
+	fmt.Println(n.index, "in assign0", n.typ)
+	l := len(n.Child) - 1
+	z := n.typ.zero()
+	fmt.Println("z:", z)
+	for _, c := range n.Child[:l] {
+		(*f)[c.findex] = n.typ.zero()
 	}
 }
 

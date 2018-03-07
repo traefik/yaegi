@@ -1,6 +1,6 @@
 package main
 
 func main() {
-	var a int
-	println(a)
+	var a, b, c int
+	println(a, b, c)
 }

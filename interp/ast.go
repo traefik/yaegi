@@ -129,6 +129,7 @@ const (
 	ArrayLit
 	Assign
 	AssignX
+	Assign0
 	Add
 	And
 	Call
@@ -154,6 +155,7 @@ var actions = [...]string{
 	ArrayLit:     "arrayLit",
 	Assign:       "=",
 	AssignX:      "=",
+	Assign0:      "=",
 	Add:          "+",
 	And:          "&",
 	Call:         "call",
@@ -407,13 +409,13 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			var kind Kind
 			var action Action
 			if a.Values != nil {
-				if len(a.Names) > 1 {
-					kind, action = AssignStmt, Assign
-				} else {
+				if len(a.Names) == 1 && len(a.Values) > 1 {
 					kind, action = AssignXStmt, AssignX
+				} else {
+					kind, action = AssignStmt, Assign
 				}
 			} else {
-				kind, action = ValueSpec, Nop
+				kind, action = ValueSpec, Assign0
 			}
 			st.push(addChild(&root, anc, &index, kind, action, &node))
 
