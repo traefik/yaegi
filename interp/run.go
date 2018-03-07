@@ -95,12 +95,10 @@ func assign(n *Node, f *Frame) {
 
 // assign0(n, f) implements assignement of zero value
 func assign0(n *Node, f *Frame) {
-	fmt.Println(n.index, "in assign0", n.typ)
 	l := len(n.Child) - 1
 	z := n.typ.zero()
-	fmt.Println("z:", z)
 	for _, c := range n.Child[:l] {
-		(*f)[c.findex] = n.typ.zero()
+		(*f)[c.findex] = z
 	}
 }
 

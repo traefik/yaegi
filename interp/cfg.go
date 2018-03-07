@@ -305,12 +305,13 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			if def := n.val.(*Node); def != nil {
 				// Reserve as many frame entries as nb of ret values for called function
 				// node frame index should point to the first entry
-				l := len(def.Child[1].Child[1].Child) // Number of return values for def
+				j := len(def.Child[1].Child) - 1
+				l := len(def.Child[1].Child[j].Child) // Number of return values for def
 				maxIndex += l - 1
 				if l == 1 {
 					// If def returns exactly one value, propagate its type in call node.
 					// Multiple return values will be handled differently through AssignX.
-					n.typ = tdef[def.Child[1].Child[1].Child[0].Child[0].ident]
+					n.typ = tdef[def.Child[1].Child[j].Child[0].Child[0].ident]
 				}
 			}
 			//fmt.Println(n.index, "callExpr:", n.Child[0].ident, "frame index:", n.findex)
