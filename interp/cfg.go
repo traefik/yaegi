@@ -153,17 +153,6 @@ func (t *Type) zero() interface{} {
 	return nil
 }
 
-// compute frame size of a type, in number of entries in frame
-func (t *Type) size() int {
-	s := 1
-	if t.cat == StructT {
-		for _, f := range t.field {
-			s += f.size()
-		}
-	}
-	return s
-}
-
 // return the field index from name in a struct, or -1 if not found
 func (t *Type) fieldIndex(name string) int {
 	for i, field := range t.field {
@@ -227,12 +216,10 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			if i, l := getDefault(n), len(c)-1; i >= 0 && i != l {
 				c[i], c[l] = c[l], c[i]
 			}
-		case GenDecl:
+		case TypeSpec:
 			// Type analysis is performed recursively and no post-order processing
 			// needs to be done for types, so do not dive in subtree
-			//t := nodeType(tdef, n.Child[0])
-			//tdef[t.name] = t
-			for _, t := range nodeType(tdef, n.Child[0]) {
+			for _, t := range nodeType(tdef, n) {
 				tdef[t.name] = t
 			}
 			return false
@@ -266,7 +253,6 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			if sym, ok := symbol[n.Child[0].ident]; ok {
 				sym.typ = n.typ
 			}
-			maxIndex += n.typ.size()
 			// If LHS is an indirection, get reference instead of value, to allow setting
 			if n.Child[0].action == GetIndex {
 				n.Child[0].run = getIndexAddr
@@ -294,7 +280,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.findex = maxIndex
 			n.typ = n.Child[0].typ
 
-		case BlockStmt, ExprStmt, ParenExpr:
+		case BlockStmt, DeclStmt, ExprStmt, GenDecl, ParenExpr:
 			wireChild(n)
 			n.findex = n.Child[len(n.Child)-1].findex
 
@@ -492,6 +478,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			maxIndex++
 			n.findex = maxIndex
 			n.typ = n.Child[0].typ
+			fmt.Println(n.index, "Selector", n.typ)
 			// lookup field index once during compiling (simple and fast first)
 			if fi := n.typ.fieldIndex(n.Child[1].ident); fi >= 0 {
 				n.typ = n.typ.field[fi]

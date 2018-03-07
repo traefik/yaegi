@@ -24,6 +24,7 @@ const (
 	CaseClause
 	CompositeLitExpr
 	Continue
+	DeclStmt
 	Defer
 	ExprStmt
 	Fallthrough
@@ -59,6 +60,7 @@ const (
 	Switch0 // switch tag {}
 	Switch1 // switch init; tag {}
 	TypeSpec
+	ValueSpec
 )
 
 var kinds = [...]string{
@@ -75,6 +77,7 @@ var kinds = [...]string{
 	CaseClause:       "CaseClause",
 	CompositeLitExpr: "CompositeLitExpr",
 	Continue:         "Continue",
+	DeclStmt:         "DeclStmt",
 	Defer:            "Defer",
 	ExprStmt:         "ExprStmt",
 	Field:            "Field",
@@ -109,6 +112,7 @@ var kinds = [...]string{
 	Switch0:          "Switch0",
 	Switch1:          "Switch1",
 	TypeSpec:         "TypeSpec",
+	ValueSpec:        "ValueSpec",
 }
 
 func (k Kind) String() string {
@@ -292,6 +296,9 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 		case *ast.CompositeLit:
 			st.push(addChild(&root, anc, &index, CompositeLitExpr, ArrayLit, &node))
 
+		case *ast.DeclStmt:
+			st.push(addChild(&root, anc, &index, DeclStmt, Nop, &node))
+
 		case *ast.ExprStmt:
 			st.push(addChild(&root, anc, &index, ExprStmt, Nop, &node))
 
@@ -395,6 +402,20 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 
 		case *ast.TypeSpec:
 			st.push(addChild(&root, anc, &index, TypeSpec, Nop, &node))
+
+		case *ast.ValueSpec:
+			var kind Kind
+			var action Action
+			if a.Values != nil {
+				if len(a.Names) > 1 {
+					kind, action = AssignStmt, Assign
+				} else {
+					kind, action = AssignXStmt, AssignX
+				}
+			} else {
+				kind, action = ValueSpec, Nop
+			}
+			st.push(addChild(&root, anc, &index, kind, action, &node))
 
 		default:
 			fmt.Printf("Unknown kind for %T\n", a)
