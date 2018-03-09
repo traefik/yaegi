@@ -151,28 +151,26 @@ func (t *Type) lookupField(name string) []int {
 	return res
 }
 
-func (t *Type) methodIndex(name string) int {
-	for i, m := range t.method {
+func (t *Type) getMethod(name string) *Node {
+	for _, m := range t.method {
 		if name == m.ident {
-			return i
+			return m
 		}
 	}
-	return -1
+	return nil
 }
 
-func (t *Type) lookupMethod(name string) []int {
-	var res []int
-	if fi := t.methodIndex(name); fi < 0 {
-		for i, f := range t.field {
+func (t *Type) lookupMethod(name string) *Node {
+	if m := t.getMethod(name); m == nil {
+		for _, f := range t.field {
 			if f.embedded {
-				if res2 := f.lookupMethod(name); len(res2) > 0 {
-					res = append([]int{i}, res2...)
-					break
+				if m := f.lookupMethod(name); m != nil {
+					return m
 				}
 			}
 		}
 	} else {
-		res = append(res, fi)
+		return m
 	}
-	return res
+	return nil
 }

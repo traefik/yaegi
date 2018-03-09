@@ -33,24 +33,29 @@ var builtin = [...]Builtin{
 }
 
 // Run a Go function
-func Run(def *Node, cf *Frame, args []*Node, rets []int) {
-	//fmt.Println("run", def.Child[0].ident)
+func Run(def *Node, cf *Frame, recv *Node, args []*Node, rets []int) {
+	//fmt.Println("run", def.Child[1].ident)
 	// Allocate a new Frame to store local variables
 	f := Frame(make([]interface{}, def.findex))
 
+	// Assign receiver value, if defined
+	if recv != nil {
+		f[def.Child[0].findex] = value(recv, cf)
+	}
+
 	// Pass func parameters by value: copy each parameter from caller frame
 	// Get list of param indices built by FuncType at CFG
-	paramIndex := def.Child[1].Child[0].val.([]int)
+	paramIndex := def.Child[2].Child[0].val.([]int)
 	for i, arg := range args {
 		f[paramIndex[i]] = value(arg, cf)
 	}
 	//fmt.Println("frame:", f)
 
 	// Execute by walking the CFG and running node func at each step
-	body := def.Child[2]
+	body := def.Child[3]
 	for n := body.Start; n != nil; {
+		//fmt.Println("run", n.index, n.kind, n.action)
 		n.run(n, &f)
-		//fmt.Println("run", n.index, n.kind, n.action, value(n, &f))
 		if n.fnext == nil || value(n, &f).(bool) {
 			n = n.tnext
 		} else {
@@ -78,7 +83,7 @@ func value(n *Node, f *Frame) interface{} {
 
 // assignX(n, f) implements assignement for a single call which returns multiple values
 func assignX(n *Node, f *Frame) {
-	fmt.Println(n.index, "in assignX")
+	//fmt.Println(n.index, "in assignX")
 	l := len(n.Child) - 1
 	b := n.Child[l].findex
 	for i, c := range n.Child[:l] {
@@ -123,22 +128,27 @@ func printa(n []*Node, f *Frame) {
 
 func call(n *Node, f *Frame) {
 	//fmt.Println("call", n.Child[0].ident)
-	// FIXME: builtin detection should be done at CFG generation
+	// TODO: builtin detection should be done at CFG generation and handled in a separate callBuiltin()
 	if n.Child[0].ident == "println" {
 		printa(n.Child[1:], f)
 		return
 	}
+	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
+	var recv *Node
+	if n.Child[0].kind == SelectorExpr {
+		recv = n.Child[0].Child[0]
+	}
 	fn := n.val.(*Node)
 	var rets []int
-	if len(fn.Child[1].Child) > 1 {
-		if fieldList := fn.Child[1].Child[1]; fieldList != nil {
+	if len(fn.Child[2].Child) > 1 {
+		if fieldList := fn.Child[2].Child[1]; fieldList != nil {
 			rets = make([]int, len(fieldList.Child))
 			for i, _ := range fieldList.Child {
 				rets[i] = n.findex + i
 			}
 		}
 	}
-	Run(fn, f, n.Child[1:], rets)
+	Run(fn, f, recv, n.Child[1:], rets)
 }
 
 func getIndexAddr(n *Node, f *Frame) {

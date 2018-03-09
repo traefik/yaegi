@@ -1,9 +1,5 @@
 package interp
 
-import (
-	"fmt"
-)
-
 // TODO:
 // - hierarchical scopes for symbol resolution
 // - universe (global) scope
@@ -14,7 +10,7 @@ import (
 // - channels
 // - select
 // - import
-// - type declarations and checking
+// - type checking
 // - type assertions and conversions
 // - interfaces
 // - methods
@@ -35,6 +31,7 @@ import (
 // - arrays
 // - &&, ||, break, continue
 // - switch (partial)
+// - type declarations
 
 type Symbol struct {
 	typ   *Type // type of value
@@ -70,16 +67,18 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			maxIndex = 0
 			// TODO: better handling of scopes
 			symbol = make(map[string]*Symbol)
-			// allocate entries for return values at start of frame
-			if len(n.Child[1].Child) == 2 {
-				maxIndex += len(n.Child[1].Child[1].Child)
-			}
 			if len(n.Child) == 4 {
 				// function is a method, add it to the related type
 				n.ident = n.Child[1].ident
 				t := tdef[n.Child[0].Child[0].Child[1].ident]
-				fmt.Println(n.index, n.ident, "method of", t.name)
 				t.method = append(t.method, n)
+			} else {
+				// no receiver, insert an empty fieldlist in child
+				n.Child = append([]*Node{&Node{kind: FieldList, anc: n}}, n.Child...)
+			}
+			// allocate entries for return values at start of frame
+			if len(n.Child[2].Child) == 2 {
+				maxIndex += len(n.Child[2].Child[1].Child)
 			}
 
 		case Switch0:
@@ -165,17 +164,21 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			wireChild(n)
 			maxIndex++
 			n.findex = maxIndex
-			n.val = sdef[n.Child[0].ident]
-			if def := n.val.(*Node); def != nil {
-				// Reserve as many frame entries as nb of ret values for called function
-				// node frame index should point to the first entry
-				j := len(def.Child[1].Child) - 1
-				l := len(def.Child[1].Child[j].Child) // Number of return values for def
-				maxIndex += l - 1
-				if l == 1 {
-					// If def returns exactly one value, propagate its type in call node.
-					// Multiple return values will be handled differently through AssignX.
-					n.typ = tdef[def.Child[1].Child[j].Child[0].Child[0].ident]
+			if n.Child[0].kind == SelectorExpr {
+				n.val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
+			} else {
+				n.val = sdef[n.Child[0].ident]
+				if def := n.val.(*Node); def != nil {
+					// Reserve as many frame entries as nb of ret values for called function
+					// node frame index should point to the first entry
+					j := len(def.Child[2].Child) - 1
+					l := len(def.Child[2].Child[j].Child) // Number of return values for def
+					maxIndex += l - 1
+					if l == 1 {
+						// If def returns exactly one value, propagate its type in call node.
+						// Multiple return values will be handled differently through AssignX.
+						n.typ = tdef[def.Child[2].Child[j].Child[0].Child[0].ident]
+					}
 				}
 			}
 			//fmt.Println(n.index, "callExpr:", n.Child[0].ident, "frame index:", n.findex)
@@ -274,6 +277,10 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 
 		case FuncDecl:
 			n.findex = maxIndex + 1 // Why ????
+			if len(n.Child[0].Child) > 0 {
+				// Store receiver frame location (used at run)
+				n.Child[0].findex = n.Child[0].Child[0].Child[0].findex
+			}
 
 		case FuncType:
 			// Store list of parameter frame indices in params val
@@ -368,11 +375,6 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			maxIndex++
 			n.findex = maxIndex
 			n.typ = n.Child[0].typ
-			fmt.Println(n.index, "selector anc", n.anc.index, n.anc.kind)
-			//if n.anc.kind == CallExpr {
-			//	mi := n.typ.lookupMethod(n.Child[1].ident)
-			//	fmt.Println(n.index, "method", mi)
-			//} else {
 			// lookup field index once during compiling (simple and fast first)
 			if fi := n.typ.fieldIndex(n.Child[1].ident); fi >= 0 {
 				n.typ = n.typ.field[fi]
@@ -380,16 +382,16 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 				n.Child[1].val = fi
 			} else {
 				// Handle promoted field in embedded struct
-				ti := n.typ.lookupField(n.Child[1].ident)
-				n.Child[1].kind = BasicLit
-				n.Child[1].val = ti
-				n.run = getIndexSeq
-				if len(ti) == 0 {
-					fmt.Println(n.index, "Selector")
-					panic("Field not found in selector")
+				if ti := n.typ.lookupField(n.Child[1].ident); len(ti) > 0 {
+					n.Child[1].kind = BasicLit
+					n.Child[1].val = ti
+					n.run = getIndexSeq
+				} else {
+					//fmt.Println(n.index, "Selector")
+					n.run = nop
+					//panic("Field not found in selector")
 				}
 			}
-			//}
 
 		case Switch0:
 			n.Start = n.Child[1].Start
