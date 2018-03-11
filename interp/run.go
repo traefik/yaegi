@@ -1,8 +1,6 @@
 package interp
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // Function to run at CFG execution
 type Builtin func(n *Node, f *Frame)
@@ -33,14 +31,18 @@ var builtin = [...]Builtin{
 }
 
 // Run a Go function
-func Run(def *Node, cf *Frame, recv *Node, args []*Node, rets []int) {
+func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int) {
 	//fmt.Println("run", def.Child[1].ident)
 	// Allocate a new Frame to store local variables
 	f := Frame(make([]interface{}, def.findex))
 
-	// Assign receiver value, if defined
+	// Assign receiver value, if defined (for methods)
 	if recv != nil {
-		f[def.Child[0].findex] = value(recv, cf)
+		if rseq != nil {
+			f[def.Child[0].findex] = valueSeq(recv, rseq, cf) // Promoted method
+		} else {
+			f[def.Child[0].findex] = value(recv, cf)
+		}
 	}
 
 	// Pass func parameters by value: copy each parameter from caller frame
@@ -135,8 +137,10 @@ func call(n *Node, f *Frame) {
 	}
 	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
 	var recv *Node
+	var rseq []int
 	if n.Child[0].kind == SelectorExpr {
 		recv = n.Child[0].Child[0]
+		rseq = n.Child[0].Child[1].val.([]int)
 	}
 	fn := n.val.(*Node)
 	var rets []int
@@ -148,7 +152,7 @@ func call(n *Node, f *Frame) {
 			}
 		}
 	}
-	Run(fn, f, recv, n.Child[1:], rets)
+	Run(fn, f, recv, rseq, n.Child[1:], rets)
 }
 
 func getIndexAddr(n *Node, f *Frame) {
@@ -169,6 +173,15 @@ func getIndexSeq(n *Node, f *Frame) {
 		a = (*a)[i].(*[]interface{})
 	}
 	(*f)[n.findex] = (*a)[seq[l]]
+}
+
+func valueSeq(n *Node, seq []int, f *Frame) interface{} {
+	a := (*f)[n.findex].(*[]interface{})
+	l := len(seq) - 1
+	for _, i := range seq[:l] {
+		a = (*a)[i].(*[]interface{})
+	}
+	return (*a)[seq[l]]
 }
 
 func mul(n *Node, f *Frame) {

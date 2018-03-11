@@ -70,8 +70,10 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			if len(n.Child) == 4 {
 				// function is a method, add it to the related type
 				n.ident = n.Child[1].ident
-				t := tdef[n.Child[0].Child[0].Child[1].ident]
+				tname := n.Child[0].Child[0].Child[1].ident
+				t := tdef[tname]
 				t.method = append(t.method, n)
+				//fmt.Println(n.index, "add method", n.ident, "to", t.name, tdef[tname])
 			} else {
 				// no receiver, insert an empty fieldlist in child
 				n.Child = append([]*Node{&Node{kind: FieldList, anc: n}}, n.Child...)
@@ -165,7 +167,8 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			maxIndex++
 			n.findex = maxIndex
 			if n.Child[0].kind == SelectorExpr {
-				n.val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
+				// Resolve method and receiver path, store them in node static value for run
+				n.val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
 			} else {
 				n.val = sdef[n.Child[0].ident]
 				if def := n.val.(*Node); def != nil {
@@ -387,7 +390,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 					n.Child[1].val = ti
 					n.run = getIndexSeq
 				} else {
-					//fmt.Println(n.index, "Selector")
+					//fmt.Println(n.index, "Selector not found:", n.Child[1].ident)
 					n.run = nop
 					//panic("Field not found in selector")
 				}

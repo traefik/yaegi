@@ -82,6 +82,7 @@ func nodeType(tdef TypeDef, n *Node) []*Type {
 				t.basic = td
 			case StructT:
 				t.field = td.field
+				t.method = td.method
 			}
 		}
 	case StructType:
@@ -100,6 +101,7 @@ func nodeType(tdef TypeDef, n *Node) []*Type {
 	return res
 }
 
+// t.zero() instantiates and return a zero value object for the givent type t
 func (t *Type) zero() interface{} {
 	switch t.cat {
 	case BasicT:
@@ -133,24 +135,25 @@ func (t *Type) fieldIndex(name string) int {
 	return -1
 }
 
-// lookupfield return a list of indices, i.e. a path to access a field in a struct object
+// t.lookupField(name) return a list of indices, i.e. a path to access a field in a struct object
 func (t *Type) lookupField(name string) []int {
-	var res []int
+	var index []int
 	if fi := t.fieldIndex(name); fi < 0 {
 		for i, f := range t.field {
 			if f.embedded {
-				if res2 := f.lookupField(name); len(res2) > 0 {
-					res = append([]int{i}, res2...)
+				if index2 := f.lookupField(name); len(index2) > 0 {
+					index = append([]int{i}, index2...)
 					break
 				}
 			}
 		}
 	} else {
-		res = append(res, fi)
+		index = append(index, fi)
 	}
-	return res
+	return index
 }
 
+// t.getMethod(name) returns a pointer to the method definition
 func (t *Type) getMethod(name string) *Node {
 	for _, m := range t.method {
 		if name == m.ident {
@@ -160,17 +163,21 @@ func (t *Type) getMethod(name string) *Node {
 	return nil
 }
 
-func (t *Type) lookupMethod(name string) *Node {
+// t.lookupMethod(name) returns a pointer to method definition associated to type t
+// and the list of indices to access the right struct field, in case of a promoted method
+func (t *Type) lookupMethod(name string) (*Node, []int) {
+	var index []int
 	if m := t.getMethod(name); m == nil {
-		for _, f := range t.field {
+		for i, f := range t.field {
 			if f.embedded {
-				if m := f.lookupMethod(name); m != nil {
-					return m
+				if m, index2 := f.lookupMethod(name); m != nil {
+					index = append([]int{i}, index2...)
+					return m, index
 				}
 			}
 		}
 	} else {
-		return m
+		return m, index
 	}
-	return nil
+	return nil, index
 }

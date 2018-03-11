@@ -73,7 +73,7 @@ func (i *Interpreter) Eval(src string) interface{} {
 
 	// Execute CFG
 	if !i.opt.NoRun {
-		Run(sdef["main"], nil, nil, nil, nil)
+		Run(sdef["main"], nil, nil, nil, nil, nil)
 	}
 	return i.out
 }
