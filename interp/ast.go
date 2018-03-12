@@ -152,7 +152,6 @@ const (
 	Lor
 	Lower
 	Mul
-	Println
 	Range
 	Return
 	Sub
@@ -178,7 +177,6 @@ var actions = [...]string{
 	Lor:          "||",
 	Lower:        "<",
 	Mul:          "*",
-	Println:      "println",
 	Range:        "range",
 	Return:       "return",
 	Sub:          "-",

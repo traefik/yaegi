@@ -166,6 +166,9 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			wireChild(n)
 			maxIndex++
 			n.findex = maxIndex
+			if builtin, ok := goBuiltin[n.Child[0].ident]; ok {
+				n.run = builtin
+			}
 			if n.Child[0].kind == SelectorExpr {
 				// Resolve method and receiver path, store them in node static value for run
 				n.val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)

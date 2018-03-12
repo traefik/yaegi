@@ -30,6 +30,13 @@ var builtin = [...]Builtin{
 	Sub:          sub,
 }
 
+var goBuiltin map[string]Builtin
+
+func initGoBuiltin() {
+	goBuiltin = make(map[string]Builtin)
+	goBuiltin["println"] = _println
+}
+
 // Run a Go function
 func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int) {
 	//fmt.Println("run", def.Child[1].ident)
@@ -118,8 +125,8 @@ func and(n *Node, f *Frame) {
 	(*f)[n.findex] = value(n.Child[0], f).(int) & value(n.Child[1], f).(int)
 }
 
-func printa(n []*Node, f *Frame) {
-	for i, m := range n {
+func _println(n *Node, f *Frame) {
+	for i, m := range n.Child[1:] {
 		if i > 0 {
 			fmt.Printf(" ")
 		}
@@ -130,11 +137,6 @@ func printa(n []*Node, f *Frame) {
 
 func call(n *Node, f *Frame) {
 	//fmt.Println("call", n.Child[0].ident)
-	// TODO: builtin detection should be done at CFG generation and handled in a separate callBuiltin()
-	if n.Child[0].ident == "println" {
-		printa(n.Child[1:], f)
-		return
-	}
 	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
 	var recv *Node
 	var rseq []int

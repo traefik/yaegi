@@ -64,6 +64,7 @@ func (i *Interpreter) Eval(src string) interface{} {
 
 	// Annotate AST with CFG infos
 	tdef := initTypes()
+	initGoBuiltin()
 	root.Cfg(tdef, sdef)
 
 	if i.opt.Cfg {
