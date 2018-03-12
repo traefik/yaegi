@@ -22,6 +22,7 @@ const (
 	Break
 	CallExpr
 	CaseClause
+	ChanType
 	CompositeLitExpr
 	Continue
 	DeclStmt
@@ -41,6 +42,7 @@ const (
 	FuncType
 	GenDecl
 	Go
+	GoStmt
 	Goto
 	Ident
 	If0 // if cond {}
@@ -56,10 +58,12 @@ const (
 	RangeStmt
 	ReturnStmt
 	SelectorExpr
+	SendStmt
 	StructType
 	Switch0 // switch tag {}
 	Switch1 // switch init; tag {}
 	TypeSpec
+	UnaryExpr
 	ValueSpec
 )
 
@@ -75,6 +79,7 @@ var kinds = [...]string{
 	Break:            "Break",
 	CallExpr:         "CallExpr",
 	CaseClause:       "CaseClause",
+	ChanType:         "ChanType",
 	CompositeLitExpr: "CompositeLitExpr",
 	Continue:         "Continue",
 	DeclStmt:         "DeclStmt",
@@ -93,6 +98,7 @@ var kinds = [...]string{
 	FuncType:         "FuncType",
 	GenDecl:          "GenDecl",
 	Go:               "Go",
+	GoStmt:           "GoStmt",
 	Goto:             "Goto",
 	Ident:            "Ident",
 	If0:              "If0",
@@ -108,10 +114,12 @@ var kinds = [...]string{
 	RangeStmt:        "RangeStmt",
 	ReturnStmt:       "ReturnStmt",
 	SelectorExpr:     "SelectorExpr",
+	SendStmt:         "SendStmt",
 	StructType:       "StructType",
 	Switch0:          "Switch0",
 	Switch1:          "Switch1",
 	TypeSpec:         "TypeSpec",
+	UnaryExpr:        "UnaryExpr",
 	ValueSpec:        "ValueSpec",
 }
 
@@ -295,6 +303,9 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 		case *ast.CaseClause:
 			st.push(addChild(&root, anc, &index, CaseClause, Case))
 
+		case *ast.ChanType:
+			st.push(addChild(&root, anc, &index, ChanType, Nop))
+
 		case *ast.CompositeLit:
 			st.push(addChild(&root, anc, &index, CompositeLitExpr, ArrayLit))
 
@@ -343,6 +354,9 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 		case *ast.GenDecl:
 			st.push(addChild(&root, anc, &index, GenDecl, Nop))
 
+		case *ast.GoStmt:
+			st.push(addChild(&root, anc, &index, GoStmt, Nop))
+
 		case *ast.Ident:
 			n := addChild(&root, anc, &index, Ident, Nop)
 			n.ident = a.Name
@@ -389,6 +403,15 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 		case *ast.ReturnStmt:
 			st.push(addChild(&root, anc, &index, ReturnStmt, Return))
 
+		case *ast.SelectorExpr:
+			st.push(addChild(&root, anc, &index, SelectorExpr, GetIndex))
+
+		case *ast.SendStmt:
+			st.push(addChild(&root, anc, &index, SendStmt, Nop))
+
+		case *ast.StructType:
+			st.push(addChild(&root, anc, &index, StructType, Nop))
+
 		case *ast.SwitchStmt:
 			if a.Init == nil {
 				st.push(addChild(&root, anc, &index, Switch0, Nop))
@@ -396,14 +419,11 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 				st.push(addChild(&root, anc, &index, Switch1, Nop))
 			}
 
-		case *ast.SelectorExpr:
-			st.push(addChild(&root, anc, &index, SelectorExpr, GetIndex))
-
-		case *ast.StructType:
-			st.push(addChild(&root, anc, &index, StructType, Nop))
-
 		case *ast.TypeSpec:
 			st.push(addChild(&root, anc, &index, TypeSpec, Nop))
+
+		case *ast.UnaryExpr:
+			st.push(addChild(&root, anc, &index, UnaryExpr, Nop))
 
 		case *ast.ValueSpec:
 			var kind Kind
