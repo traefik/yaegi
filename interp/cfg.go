@@ -8,14 +8,11 @@ import "fmt"
 // - closures
 // - slices / map expressions
 // - goto
-// - go routines
-// - channels
 // - select
 // - import
 // - type checking
 // - type assertions and conversions
 // - interfaces
-// - methods
 // - pointers
 // - diagnostics and proper error handling
 // Done:
@@ -24,9 +21,12 @@ import "fmt"
 // - arithmetic and logical expressions
 // - if / else statement, including init
 // - for statement
+// - go routines
+// - channels
 // - variables definition (1 scope per function)
 // - function definition
 // - function calls
+// - methods
 // - assignements, including to/from multi value
 // - return, including multiple values
 // - for range
@@ -157,7 +157,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.findex = maxIndex
 			n.typ = n.Child[0].typ
 
-		case BlockStmt, DeclStmt, ExprStmt, GenDecl, ParenExpr:
+		case BlockStmt, DeclStmt, ExprStmt, GenDecl, ParenExpr, SendStmt:
 			wireChild(n)
 			n.findex = n.Child[len(n.Child)-1].findex
 

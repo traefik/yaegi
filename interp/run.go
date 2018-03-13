@@ -28,8 +28,11 @@ var builtin = [...]Builtin{
 	Lor:          lor,
 	Lower:        lower,
 	Mul:          mul,
+	Not:          not,
 	Range:        _range,
+	Recv:         recv,
 	Return:       _return,
+	Send:         send,
 	Sub:          sub,
 }
 
@@ -130,6 +133,10 @@ func and(n *Node, f *Frame) {
 	(*f)[n.findex] = value(n.Child[0], f).(int) & value(n.Child[1], f).(int)
 }
 
+func not(n *Node, f *Frame) {
+	(*f)[n.findex] = !value(n.Child[0], f).(bool)
+}
+
 func _println(n *Node, f *Frame) {
 	for i, m := range n.Child[1:] {
 		if i > 0 {
@@ -166,7 +173,6 @@ func call(n *Node, f *Frame) {
 func callGoRoutine(n *Node, f *Frame) {
 	//fmt.Println("call", n.Child[0].ident)
 	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
-	fmt.Println("in callGoRoutine")
 	var recv *Node
 	var rseq []int
 	if n.Child[0].kind == SelectorExpr {
@@ -328,15 +334,7 @@ func _make(n *Node, f *Frame) {
 	fmt.Println(n.index, "in make", n.Child[1].index, typ, typ.cat)
 	switch typ.cat {
 	case ChanT:
-		fmt.Println("make channel of", typ.val)
-		switch typ.val.cat {
-		case BasicT:
-			switch typ.val.basic.name {
-			case "string":
-				(*f)[n.findex] = make(chan string)
-				fmt.Println("string chan!!!")
-			}
-		}
+		(*f)[n.findex] = make(chan interface{})
 	case MapT:
 		fmt.Println("make map of", typ.val)
 		switch typ.val.cat {
@@ -348,6 +346,20 @@ func _make(n *Node, f *Frame) {
 			}
 		}
 	}
+}
+
+// Read from a channel
+func recv(n *Node, f *Frame) {
+	fmt.Println(n.index, "entering recv chan", n.Child[0].ident, value(n.Child[0], f))
+	(*f)[n.findex] = <-value(n.Child[0], f).(chan interface{})
+	fmt.Println(n.index, "exiting recv chan", n.Child[0].ident)
+}
+
+// Write to a channel
+func send(n *Node, f *Frame) {
+	fmt.Println(n.index, "entering send chan", n.Child[0].ident, value(n.Child[0], f))
+	value(n.Child[0], f).(chan interface{}) <- value(n.Child[1], f)
+	fmt.Println(n.index, "exiting send chan", n.Child[0].ident)
 }
 
 // Temporary, for debugging purppose

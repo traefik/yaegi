@@ -2,13 +2,11 @@ package main
 
 type Channel chan string
 
-var channel Channel
-
-func send() { channel <- "ping" }
+func send(c Channel) { c <- "ping" }
 
 func main() {
-	channel = make(Channel)
-	go send()
+	channel := make(Channel)
+	go send(channel)
 	msg := <-channel
 	println(msg)
 }

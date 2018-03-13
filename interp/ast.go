@@ -154,8 +154,11 @@ const (
 	Lor
 	Lower
 	Mul
+	Not
 	Range
+	Recv
 	Return
+	Send
 	Sub
 )
 
@@ -179,8 +182,11 @@ var actions = [...]string{
 	Lor:          "||",
 	Lower:        "<",
 	Mul:          "*",
+	Not:          "!",
 	Range:        "range",
+	Recv:         "<-",
 	Return:       "return",
+	Send:         "<-",
 	Sub:          "-",
 }
 
@@ -410,7 +416,7 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			st.push(addChild(&root, anc, &index, SelectorExpr, GetIndex))
 
 		case *ast.SendStmt:
-			st.push(addChild(&root, anc, &index, SendStmt, Nop))
+			st.push(addChild(&root, anc, &index, SendStmt, Send))
 
 		case *ast.StructType:
 			st.push(addChild(&root, anc, &index, StructType, Nop))
@@ -426,7 +432,14 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			st.push(addChild(&root, anc, &index, TypeSpec, Nop))
 
 		case *ast.UnaryExpr:
-			st.push(addChild(&root, anc, &index, UnaryExpr, Nop))
+			var action Action
+			switch a.Op {
+			case token.ARROW:
+				action = Recv
+			case token.NOT:
+				action = Not
+			}
+			st.push(addChild(&root, anc, &index, UnaryExpr, action))
 
 		case *ast.ValueSpec:
 			var kind Kind
