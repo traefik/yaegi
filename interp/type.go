@@ -1,6 +1,8 @@
 package interp
 
-import "strconv"
+import (
+	"strconv"
+)
 
 // Type categories
 type Cat int
@@ -9,6 +11,7 @@ const (
 	Unset = iota
 	ArrayT
 	BasicT
+	ChanT
 	FuncT
 	InterfaceT
 	MapT
@@ -19,6 +22,7 @@ var cats = [...]string{
 	Unset:      "Unset",
 	ArrayT:     "ArrayT",
 	BasicT:     "BasicT",
+	ChanT:      "ChanT",
 	InterfaceT: "InterfaceT",
 	MapT:       "MapT",
 	StructT:    "StructT",
@@ -40,7 +44,7 @@ type Type struct {
 	field    []*Type // Array of fields if StructT
 	basic    *Type   // Pointer to existing basic type if BasicT
 	key      *Type   // Type of key element if MapT
-	val      *Type   // Type of value element if MapT or ArrayT
+	val      *Type   // Type of value element if ChanT, MapT or ArrayT
 	method   []*Node // Associated methods
 }
 
@@ -73,6 +77,16 @@ func nodeType(tdef TypeDef, n *Node) []*Type {
 		}
 	}
 	switch n.Child[l-1].kind {
+	case ArrayType:
+		for _, t := range res {
+			t.cat = ArrayT
+			t.val = tdef[n.Child[l-1].Child[0].ident]
+		}
+	case ChanType:
+		for _, t := range res {
+			t.cat = ChanT
+			t.val = tdef[n.Child[l-1].Child[0].ident]
+		}
 	case Ident:
 		td := tdef[n.Child[l-1].ident]
 		for _, t := range res {
@@ -84,6 +98,11 @@ func nodeType(tdef TypeDef, n *Node) []*Type {
 				t.field = td.field
 				t.method = td.method
 			}
+		}
+	case MapType:
+		for _, t := range res {
+			t.cat = MapT
+			t.val = tdef[n.Child[l-1].Child[0].ident]
 		}
 	case StructType:
 		for _, t := range res {

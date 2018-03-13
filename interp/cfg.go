@@ -1,5 +1,7 @@
 package interp
 
+import "fmt"
+
 // TODO:
 // - hierarchical scopes for symbol resolution
 // - universe (global) scope
@@ -168,6 +170,11 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.findex = maxIndex
 			if builtin, ok := goBuiltin[n.Child[0].ident]; ok {
 				n.run = builtin
+				if n.Child[0].ident == "make" {
+					n.Child[1].val = tdef[n.Child[1].ident]
+					n.Child[1].kind = BasicLit
+					fmt.Println(n.index, "call make", tdef[n.Child[1].ident])
+				}
 			}
 			if n.Child[0].kind == SelectorExpr {
 				// Resolve method and receiver path, store them in node static value for run

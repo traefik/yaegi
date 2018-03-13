@@ -34,6 +34,7 @@ var goBuiltin map[string]Builtin
 
 func initGoBuiltin() {
 	goBuiltin = make(map[string]Builtin)
+	goBuiltin["make"] = _make
 	goBuiltin["println"] = _println
 }
 
@@ -291,4 +292,23 @@ func _range(n *Node, f *Frame) {
 
 func _case(n *Node, f *Frame) {
 	(*f)[n.findex] = value(n.anc.anc.Child[0], f) == value(n.Child[0], f)
+}
+
+func _make(n *Node, f *Frame) {
+	typ := value(n.Child[1], f).(*Type)
+	fmt.Println(n.index, "in make", n.Child[1].index, typ, typ.cat)
+	switch typ.cat {
+	case ChanT:
+		fmt.Println("make channel of", typ.val)
+	case MapT:
+		fmt.Println("make map of", typ.val)
+		switch typ.val.cat {
+		case BasicT:
+			switch typ.val.basic.name {
+			case "string":
+				(*f)[n.findex] = make(map[string]string)
+				fmt.Println("string map!!!")
+			}
+		}
+	}
 }

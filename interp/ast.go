@@ -54,6 +54,7 @@ const (
 	LandExpr
 	LorExpr
 	KeyValueExpr
+	MapType
 	ParenExpr
 	RangeStmt
 	ReturnStmt
@@ -110,6 +111,7 @@ var kinds = [...]string{
 	KeyValueExpr:     "KeyValueExpr",
 	LandExpr:         "LandExpr",
 	LorExpr:          "LorExpr",
+	MapType:          "MapType",
 	ParenExpr:        "ParenExpr",
 	RangeStmt:        "RangeStmt",
 	ReturnStmt:       "ReturnStmt",
@@ -389,6 +391,9 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 
 		case *ast.KeyValueExpr:
 			st.push(addChild(&root, anc, &index, KeyValueExpr, Nop))
+
+		case *ast.MapType:
+			st.push(addChild(&root, anc, &index, MapType, Nop))
 
 		case *ast.ParenExpr:
 			st.push(addChild(&root, anc, &index, ParenExpr, Nop))
