@@ -1,6 +1,9 @@
 package interp
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // Function to run at CFG execution
 type Builtin func(n *Node, f *Frame)
@@ -36,6 +39,7 @@ func initGoBuiltin() {
 	goBuiltin = make(map[string]Builtin)
 	goBuiltin["make"] = _make
 	goBuiltin["println"] = _println
+	goBuiltin["sleep"] = sleep
 }
 
 // Run a Go function
@@ -156,6 +160,30 @@ func call(n *Node, f *Frame) {
 		}
 	}
 	Run(fn, f, recv, rseq, n.Child[1:], rets)
+}
+
+// Same as call(), but execute function in a goroutine
+func callGoRoutine(n *Node, f *Frame) {
+	//fmt.Println("call", n.Child[0].ident)
+	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
+	fmt.Println("in callGoRoutine")
+	var recv *Node
+	var rseq []int
+	if n.Child[0].kind == SelectorExpr {
+		recv = n.Child[0].Child[0]
+		rseq = n.Child[0].Child[1].val.([]int)
+	}
+	fn := n.val.(*Node)
+	var rets []int
+	if len(fn.Child[2].Child) > 1 {
+		if fieldList := fn.Child[2].Child[1]; fieldList != nil {
+			rets = make([]int, len(fieldList.Child))
+			for i, _ := range fieldList.Child {
+				rets[i] = n.findex + i
+			}
+		}
+	}
+	go Run(fn, f, recv, rseq, n.Child[1:], rets)
 }
 
 func getIndexAddr(n *Node, f *Frame) {
@@ -294,12 +322,21 @@ func _case(n *Node, f *Frame) {
 	(*f)[n.findex] = value(n.anc.anc.Child[0], f) == value(n.Child[0], f)
 }
 
+// Allocates and initializes a slice, a map or a chan.
 func _make(n *Node, f *Frame) {
 	typ := value(n.Child[1], f).(*Type)
 	fmt.Println(n.index, "in make", n.Child[1].index, typ, typ.cat)
 	switch typ.cat {
 	case ChanT:
 		fmt.Println("make channel of", typ.val)
+		switch typ.val.cat {
+		case BasicT:
+			switch typ.val.basic.name {
+			case "string":
+				(*f)[n.findex] = make(chan string)
+				fmt.Println("string chan!!!")
+			}
+		}
 	case MapT:
 		fmt.Println("make map of", typ.val)
 		switch typ.val.cat {
@@ -311,4 +348,10 @@ func _make(n *Node, f *Frame) {
 			}
 		}
 	}
+}
+
+// Temporary, for debugging purppose
+func sleep(n *Node, f *Frame) {
+	duration := time.Duration(value(n.Child[1], f).(int))
+	time.Sleep(duration * time.Millisecond)
 }

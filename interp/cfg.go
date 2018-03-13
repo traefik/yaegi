@@ -306,6 +306,11 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.Child[0].val = list
 			// TODO: do the same for return values
 
+		case GoStmt:
+			wireChild(n)
+			// TODO: should error if call expression refers to a builtin
+			n.Child[0].run = callGoRoutine
+
 		case Ident:
 			// Lookup identifier in frame symbol table. If not found
 			// should check if ident can be defined (assign, param passing...)
