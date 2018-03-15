@@ -1,7 +1,5 @@
 package interp
 
-import "fmt"
-
 // TODO:
 // - hierarchical scopes for symbol resolution
 // - universe (global) scope
@@ -132,8 +130,13 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			}
 			// If LHS is an indirection, get reference instead of value, to allow setting
 			if n.Child[0].action == GetIndex {
-				n.Child[0].run = getIndexAddr
-				n.run = assignField
+				if n.Child[0].Child[0].typ.cat == MapT {
+					n.Child[0].run = getMap
+					n.run = assignMap
+				} else {
+					n.Child[0].run = getIndexAddr
+					n.run = assignField
+				}
 			}
 
 		case IncDecStmt:
@@ -151,11 +154,20 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.Child[0].typ = n.Child[1].typ
 			n.typ = n.Child[0].typ
 
-		case BinaryExpr, IndexExpr:
+		case BinaryExpr:
 			wireChild(n)
 			maxIndex++
 			n.findex = maxIndex
 			n.typ = n.Child[0].typ
+
+		case IndexExpr:
+			wireChild(n)
+			maxIndex++
+			n.findex = maxIndex
+			n.typ = n.Child[0].typ
+			if n.typ.cat == MapT {
+				n.run = getIndexMap
+			}
 
 		case BlockStmt, DeclStmt, ExprStmt, GenDecl, ParenExpr, SendStmt:
 			wireChild(n)
@@ -171,9 +183,9 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			if builtin, ok := goBuiltin[n.Child[0].ident]; ok {
 				n.run = builtin
 				if n.Child[0].ident == "make" {
-					n.Child[1].val = tdef[n.Child[1].ident]
+					n.typ = tdef[n.Child[1].ident]
+					n.Child[1].val = n.typ
 					n.Child[1].kind = BasicLit
-					fmt.Println(n.index, "call make", tdef[n.Child[1].ident])
 				}
 			}
 			if n.Child[0].kind == SelectorExpr {

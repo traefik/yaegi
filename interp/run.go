@@ -129,6 +129,10 @@ func assignField(n *Node, f *Frame) {
 	(*(*f)[n.findex].(*interface{})) = value(n.Child[1], f)
 }
 
+func assignMap(n *Node, f *Frame) {
+	(*f)[n.findex].(map[interface{}]interface{})[value(n.Child[0].Child[1], f)] = value(n.Child[1], f)
+}
+
 func and(n *Node, f *Frame) {
 	(*f)[n.findex] = value(n.Child[0], f).(int) & value(n.Child[1], f).(int)
 }
@@ -200,6 +204,15 @@ func getIndexAddr(n *Node, f *Frame) {
 func getIndex(n *Node, f *Frame) {
 	a := value(n.Child[0], f).(*[]interface{})
 	(*f)[n.findex] = (*a)[value(n.Child[1], f).(int)]
+}
+
+func getIndexMap(n *Node, f *Frame) {
+	m := value(n.Child[0], f).(map[interface{}]interface{})
+	(*f)[n.findex] = m[value(n.Child[1], f)]
+}
+
+func getMap(n *Node, f *Frame) {
+	(*f)[n.findex] = value(n.Child[0], f).(map[interface{}]interface{})
 }
 
 func getIndexSeq(n *Node, f *Frame) {
@@ -331,35 +344,24 @@ func _case(n *Node, f *Frame) {
 // Allocates and initializes a slice, a map or a chan.
 func _make(n *Node, f *Frame) {
 	typ := value(n.Child[1], f).(*Type)
-	fmt.Println(n.index, "in make", n.Child[1].index, typ, typ.cat)
 	switch typ.cat {
+	case ArrayT:
+		(*f)[n.findex] = make([]interface{}, value(n.Child[2], f).(int))
 	case ChanT:
 		(*f)[n.findex] = make(chan interface{})
 	case MapT:
-		fmt.Println("make map of", typ.val)
-		switch typ.val.cat {
-		case BasicT:
-			switch typ.val.basic.name {
-			case "string":
-				(*f)[n.findex] = make(map[string]string)
-				fmt.Println("string map!!!")
-			}
-		}
+		(*f)[n.findex] = make(map[interface{}]interface{})
 	}
 }
 
 // Read from a channel
 func recv(n *Node, f *Frame) {
-	fmt.Println(n.index, "entering recv chan", n.Child[0].ident, value(n.Child[0], f))
 	(*f)[n.findex] = <-value(n.Child[0], f).(chan interface{})
-	fmt.Println(n.index, "exiting recv chan", n.Child[0].ident)
 }
 
 // Write to a channel
 func send(n *Node, f *Frame) {
-	fmt.Println(n.index, "entering send chan", n.Child[0].ident, value(n.Child[0], f))
 	value(n.Child[0], f).(chan interface{}) <- value(n.Child[1], f)
-	fmt.Println(n.index, "exiting send chan", n.Child[0].ident)
 }
 
 // Temporary, for debugging purppose
