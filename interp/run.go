@@ -282,7 +282,6 @@ func nop(n *Node, f *Frame) {}
 
 func _return(n *Node, f *Frame) {
 	for i, c := range n.Child {
-		//fmt.Println(n.index, "return", value(c, f))
 		(*f)[i] = value(c, f)
 	}
 }
@@ -294,6 +293,15 @@ func arrayLit(n *Node, f *Frame) {
 		a[i] = value(c, f)
 	}
 	(*f)[n.findex] = &a
+}
+
+// Create a map of litteral values
+func mapLit(n *Node, f *Frame) {
+	m := make(map[interface{}]interface{})
+	for _, c := range n.Child[1:] {
+		m[value(c.Child[0], f)] = value(c.Child[1], f)
+	}
+	(*f)[n.findex] = m
 }
 
 // Create a struct object

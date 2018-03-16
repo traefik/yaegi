@@ -29,6 +29,7 @@ package interp
 // - return, including multiple values
 // - for range
 // - arrays
+// - maps
 // - &&, ||, break, continue
 // - switch (partial)
 // - type declarations
@@ -96,6 +97,10 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			for _, t := range nodeType(tdef, n) {
 				tdef[t.name] = t
 			}
+			return false
+
+		case ArrayType, ChanType, MapType:
+			n.typ = nodeType2(tdef, n)
 			return false
 
 		case BasicLit:
@@ -183,9 +188,14 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			if builtin, ok := goBuiltin[n.Child[0].ident]; ok {
 				n.run = builtin
 				if n.Child[0].ident == "make" {
-					n.typ = tdef[n.Child[1].ident]
-					n.Child[1].val = n.typ
-					n.Child[1].kind = BasicLit
+					if n.typ = tdef[n.Child[1].ident]; n.typ != nil {
+						n.Child[1].val = n.typ
+						n.Child[1].kind = BasicLit
+					} else {
+						n.typ = nodeType2(tdef, n.Child[1])
+						n.Child[1].val = n.typ
+						n.Child[1].kind = BasicLit
+					}
 				}
 			}
 			if n.Child[0].kind == SelectorExpr {
@@ -222,7 +232,12 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			}
 			// TODO: Check that composite litteral expr matches corresponding type
 			n.typ = n.Child[0].typ
-			if n.typ != nil && n.typ.cat == StructT {
+			switch n.typ.cat {
+			case ArrayT:
+				n.run = arrayLit
+			case MapT:
+				n.run = mapLit
+			case StructT:
 				n.action, n.run = CompositeLit, compositeLit
 				// Handle object assign from sparse key / values
 				if len(n.Child) > 1 && n.Child[1].kind == KeyValueExpr {

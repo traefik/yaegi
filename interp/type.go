@@ -64,6 +64,22 @@ func initTypes() TypeDef {
 	return tdef
 }
 
+// return a type definition for the corresponding AST subtree
+// TODO: complete and replace nodeType
+func nodeType2(tdef TypeDef, n *Node) *Type {
+	var t *Type = &Type{}
+	switch n.kind {
+	case ArrayType:
+		t.cat = ArrayT
+		t.val = tdef[n.Child[0].ident]
+	case MapType:
+		t.cat = MapT
+		t.key = tdef[n.Child[0].ident]
+		t.val = tdef[n.Child[1].ident]
+	}
+	return t
+}
+
 // nodeType(tdef, n) returns an array of type definitions from the corresponding
 // AST subtree
 func nodeType(tdef TypeDef, n *Node) []*Type {
@@ -102,7 +118,8 @@ func nodeType(tdef TypeDef, n *Node) []*Type {
 	case MapType:
 		for _, t := range res {
 			t.cat = MapT
-			t.val = tdef[n.Child[l-1].Child[0].ident]
+			t.key = tdef[n.Child[l-1].Child[0].ident] // TODO: should recurse on type definition
+			t.val = tdef[n.Child[l-1].Child[1].ident] // TODO: should recurse on type definition
 		}
 	case StructType:
 		for _, t := range res {

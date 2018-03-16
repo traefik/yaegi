@@ -313,7 +313,7 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			st.push(addChild(&root, anc, &index, ChanType, Nop))
 
 		case *ast.CompositeLit:
-			st.push(addChild(&root, anc, &index, CompositeLitExpr, ArrayLit))
+			st.push(addChild(&root, anc, &index, CompositeLitExpr, Nop))
 
 		case *ast.DeclStmt:
 			st.push(addChild(&root, anc, &index, DeclStmt, Nop))
