@@ -24,14 +24,16 @@ type Frame []interface{}
 // Interpreter contains global resources and state
 type Interpreter struct {
 	opt InterpOpt
-	out interface{}
+	out Frame
 	//	def map[string]*Node // map of defined symbols
 }
 
 type InterpOpt struct {
-	Ast   bool // Display AST graph (debug)
-	Cfg   bool // Display CFG graph (debug)
-	NoRun bool // Compile, but do not run
+	Ast   bool   // Display AST graph (debug)
+	Cfg   bool   // Display CFG graph (debug)
+	NoRun bool   // Compile, but do not run
+	NbOut int    // Number of output values
+	entry string // Interpreter entry point
 }
 
 // n.Walk(cbin, cbout) traverses AST n in depth first order, call cbin function
@@ -55,7 +57,7 @@ func NewInterpreter(opt InterpOpt) *Interpreter {
 }
 
 // i.Eval(s) evaluates Go code represented as a string
-func (i *Interpreter) Eval(src string) interface{} {
+func (i *Interpreter) Eval(src string) Frame {
 	// Parse source to AST
 	root, sdef := Ast(src, nil)
 	if i.opt.Ast {
@@ -74,7 +76,7 @@ func (i *Interpreter) Eval(src string) interface{} {
 
 	// Execute CFG
 	if !i.opt.NoRun {
-		Run(sdef["main"], nil, nil, nil, nil, nil)
+		Run(sdef["main"], &i.out, nil, nil, nil, nil)
 	}
 	return i.out
 }
