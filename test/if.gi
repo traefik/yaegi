@@ -7,3 +7,5 @@ func main() {
 }
 
 func f() int { return 1 }
+// Output:
+// 1

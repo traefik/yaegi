@@ -331,6 +331,8 @@ func main() {
 
 func f() int { return 1 }`
 	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 1
 }
 
 func Example_l2() {

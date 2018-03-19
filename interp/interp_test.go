@@ -29,19 +29,21 @@ func main() {
 	// in: 4
 	// out: 4
 	// in: 5
-	// in: 6
-	// out: 6
 	// out: 5
+	// in: 6
 	// in: 7
+	// out: 7
+	// out: 6
 	// in: 8
 	// in: 9
 	// in: 10
-	// out: 10
 	// in: 11
 	// out: 11
+	// in: 12
+	// out: 12
+	// out: 10
 	// out: 9
 	// out: 8
-	// out: 7
 	// out: 3
 	// out: 1
 }

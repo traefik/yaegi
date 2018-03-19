@@ -68,16 +68,13 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			maxIndex = 0
 			// TODO: better handling of scopes
 			symbol = make(map[string]*Symbol)
-			if len(n.Child) == 4 {
+			if len(n.Child[0].Child) > 0 {
 				// function is a method, add it to the related type
 				n.ident = n.Child[1].ident
 				tname := n.Child[0].Child[0].Child[1].ident
 				t := tdef[tname]
 				t.method = append(t.method, n)
 				//fmt.Println(n.index, "add method", n.ident, "to", t.name, tdef[tname])
-			} else {
-				// no receiver, insert an empty fieldlist in child
-				n.Child = append([]*Node{&Node{kind: FieldList, anc: n}}, n.Child...)
 			}
 			// allocate entries for return values at start of frame
 			if len(n.Child[2].Child) == 2 {

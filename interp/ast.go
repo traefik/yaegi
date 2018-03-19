@@ -350,6 +350,10 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 
 		case *ast.FuncDecl:
 			n := addChild(&root, anc, &index, FuncDecl, Nop)
+			if a.Recv == nil {
+				// function is not a method, create an empty receiver list
+				addChild(&root, n, &index, FieldList, Nop)
+			}
 			// Add func name to definitions
 			def[a.Name.Name] = n
 			st.push(n)
