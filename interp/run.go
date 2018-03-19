@@ -63,10 +63,16 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int)
 	// Pass func parameters by value: copy each parameter from caller frame
 	// Get list of param indices built by FuncType at CFG
 	paramIndex := def.Child[2].Child[0].val.([]int)
-	for i, arg := range args {
+	i := 0
+	for _, arg := range args {
 		f[paramIndex[i]] = value(arg, cf)
+		i++
+		// Handle multiple results of a function call argmument
+		for j := 1; j < arg.fsize; j++ {
+			f[paramIndex[i]] = (*cf)[arg.findex+j]
+			i++
+		}
 	}
-	//fmt.Println("frame:", f)
 
 	// Execute by walking the CFG and running node func at each step
 	body := def.Child[3]
@@ -147,6 +153,11 @@ func _println(n *Node, f *Frame) {
 			fmt.Printf(" ")
 		}
 		fmt.Printf("%v", value(m, f))
+
+		// Handle multiple results of a function call argmument
+		for j := 1; j < m.fsize; j++ {
+			fmt.Printf(" %v", (*f)[m.findex+j])
+		}
 	}
 	fmt.Println("")
 }

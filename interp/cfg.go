@@ -198,6 +198,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			if n.Child[0].kind == SelectorExpr {
 				// Resolve method and receiver path, store them in node static value for run
 				n.val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
+				n.fsize = len(n.val.(*Node).Child[2].Child[1].Child)
 			} else {
 				n.val = sdef[n.Child[0].ident]
 				if def := n.val.(*Node); def != nil {
@@ -211,6 +212,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 						// Multiple return values will be handled differently through AssignX.
 						n.typ = tdef[def.Child[2].Child[j].Child[0].Child[0].ident]
 					}
+					n.fsize = l
 				}
 			}
 			//fmt.Println(n.index, "callExpr:", n.Child[0].ident, "frame index:", n.findex)

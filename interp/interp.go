@@ -10,6 +10,7 @@ type Node struct {
 	fnext  *Node       // false branch successor (CFG)
 	index  int         // node index (dot display)
 	findex int         // index of value in frame or frame size (func def, type def)
+	fsize  int         // number of entries in frame (call expressions)
 	kind   Kind        // Kind of node
 	typ    *Type       // Type of value in frame, or nil
 	action Action      // function to run

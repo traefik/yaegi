@@ -108,6 +108,27 @@ func main() {
 	// ping
 }
 
+func Example_cont() {
+	src := `
+package main
+
+func main() {
+	for i := 0; i < 10; i++ {
+		if i < 5 {
+			continue
+		}
+		println(i)
+	}
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 5
+	// 6
+	// 7
+	// 8
+	// 9
+}
+
 func Example_cont0() {
 	src := `
 package main
@@ -162,27 +183,6 @@ func main() {
 	// 8
 	// 9
 	// 10
-}
-
-func Example_cont() {
-	src := `
-package main
-
-func main() {
-	for i := 0; i < 10; i++ {
-		if i < 5 {
-			continue
-		}
-		println(i)
-	}
-}`
-	NewInterpreter(InterpOpt{}).Eval(src)
-	// Output:
-	// 5
-	// 6
-	// 7
-	// 8
-	// 9
 }
 
 func Example_fib() {
@@ -255,6 +255,20 @@ func main() {
 	// 4
 }
 
+func Example_fun() {
+	src := `
+package main
+
+func f (i int) int { return i+15 }
+
+func main() {
+	println(f(4))
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 19
+}
+
 func Example_fun2() {
 	src := `
 package main
@@ -287,20 +301,6 @@ func main() {
 	NewInterpreter(InterpOpt{}).Eval(src)
 	// Output:
 	// 18
-}
-
-func Example_fun() {
-	src := `
-package main
-
-func f (i int) int { return i+15 }
-
-func main() {
-	println(f(4))
-}`
-	NewInterpreter(InterpOpt{}).Eval(src)
-	// Output:
-	// 19
 }
 
 func Example_goroutine() {
@@ -377,6 +377,22 @@ func f(i int) int { return i + 1 }`
 	NewInterpreter(InterpOpt{}).Eval(src)
 }
 
+func Example_map() {
+	src := `
+package main
+
+type Dict map[string]string
+
+func main() {
+	dict := make(Dict)
+	dict["truc"] = "machin"
+	println(dict["truc"])
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// machin
+}
+
 func Example_map2() {
 	src := `
 package main
@@ -422,20 +438,23 @@ func main() {
 	// bonjour
 }
 
-func Example_map() {
+func Example_method() {
 	src := `
 package main
 
-type Dict map[string]string
+type Coord struct {
+	x, y int
+}
+
+func (c Coord) dist() int { return c.x * c.x + c.y * c.y }
 
 func main() {
-	dict := make(Dict)
-	dict["truc"] = "machin"
-	println(dict["truc"])
+	o := Coord{3, 4}
+	println(o.dist())
 }`
 	NewInterpreter(InterpOpt{}).Eval(src)
 	// Output:
-	// machin
+	// 25
 }
 
 func Example_method2() {
@@ -462,25 +481,6 @@ func main() {
 	// 25
 }
 
-func Example_method() {
-	src := `
-package main
-
-type Coord struct {
-	x, y int
-}
-
-func (c Coord) dist() int { return c.x * c.x + c.y * c.y }
-
-func main() {
-	o := Coord{3, 4}
-	println(o.dist())
-}`
-	NewInterpreter(InterpOpt{}).Eval(src)
-	// Output:
-	// 25
-}
-
 func Example_ret2() {
 	src := `
 package main
@@ -497,6 +497,20 @@ func r2() (int, int) {return 1, 2}
 	// 1 2
 }
 
+func Example_run0() {
+	src := `
+package main
+
+func f() (int, int) { return 2, 3 }
+
+func main() {
+	println(f())
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 2 3
+}
+
 func Example_run1() {
 	src := `
 package main
@@ -509,6 +523,8 @@ func main() {
 	println(g(f()))
 }`
 	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 5
 }
 
 func Example_sleep() {
@@ -535,24 +551,20 @@ func main() {
 	// hello world
 }
 
-func Example_struct0a() {
+func Example_struct() {
 	src := `
 package main
 
 type T struct {
 	f int
+	g int
 }
 
 func main() {
-	a := T{}
-	println(a.f)
-	a.f = 8
-	println(a.f)
+	a := T{ 7, 8 }
+	println(a.f, a.g)
 }`
 	NewInterpreter(InterpOpt{}).Eval(src)
-	// Output:
-	// 0
-	// 8
 }
 
 func Example_struct0() {
@@ -571,6 +583,26 @@ func main() {
 	NewInterpreter(InterpOpt{}).Eval(src)
 	// Output:
 	// 0 0
+}
+
+func Example_struct0a() {
+	src := `
+package main
+
+type T struct {
+	f int
+}
+
+func main() {
+	a := T{}
+	println(a.f)
+	a.f = 8
+	println(a.f)
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 0
+	// 8
 }
 
 func Example_struct1() {
@@ -703,22 +735,6 @@ func main() {
 	// 7 8
 }
 
-func Example_struct() {
-	src := `
-package main
-
-type T struct {
-	f int
-	g int
-}
-
-func main() {
-	a := T{ 7, 8 }
-	println(a.f, a.g)
-}`
-	NewInterpreter(InterpOpt{}).Eval(src)
-}
-
 func Example_switch() {
 	src := `
 package main
@@ -737,6 +753,19 @@ func main() {
 	NewInterpreter(InterpOpt{}).Eval(src)
 	// Output:
 	// 100
+}
+
+func Example_var() {
+	src := `
+package main
+
+func main() {
+	var a, b, c int
+	println(a, b, c)
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 0 0 0
 }
 
 func Example_var2() {
@@ -776,17 +805,4 @@ func main() {
 	NewInterpreter(InterpOpt{}).Eval(src)
 	// Output:
 	// 2 3
-}
-
-func Example_var() {
-	src := `
-package main
-
-func main() {
-	var a, b, c int
-	println(a, b, c)
-}`
-	NewInterpreter(InterpOpt{}).Eval(src)
-	// Output:
-	// 0 0 0
 }
