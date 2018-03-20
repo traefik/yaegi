@@ -22,6 +22,41 @@ Then in `test/`, run `make` to re-generate `interp/eval_test.go`
 
 When developping/debugging, I'm running `gi` on a single script, using `-a` and `-c` options to display AST and CFG graphs, and instrumenting code with temporary println statements to diagnose problems.
 
+## Status
+
+- [ ] hierarchical scopes for symbol resolution
+- [ ] universe (global) scope
+- [ ] closures
+- [ ] slices / map expressions
+- [ ] goto
+- [ ] select
+- [ ] import
+- [ ] type checking
+- [ ] type assertions and conversions
+- [ ] interfaces
+- [ ] pointers
+- [ ] diagnostics and proper error handling
+
+- [X] basic literals
+- [X] variable definition and assignment
+- [X] arithmetic and logical expressions
+- [X] if / else statement, including init
+- [X] for statement
+- [X] go routines
+- [X] channels
+- [X] variables definition (1 scope per function)
+- [X] function definition
+- [X] function calls
+- [X] methods
+- [X] assignements, including to/from multi value
+- [X] return, including multiple values
+- [X] for range
+- [X] arrays
+- [X] maps
+- [X] &&, ||, break, continue
+- [X] switch (partial)
+- [X] type declarations
+
 ## Developpement plan
 
 ### Step 1: a symbolic interpreter
