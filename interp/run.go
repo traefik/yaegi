@@ -47,7 +47,7 @@ func initGoBuiltin() {
 
 // Run a Go function
 func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int) {
-	//fmt.Println("run", def.Child[1].ident)
+	//println("run", def.Child[1].ident)
 	// Allocate a new Frame to store local variables
 	f := Frame(make([]interface{}, def.findex))
 
@@ -77,7 +77,7 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int)
 	// Execute by walking the CFG and running node func at each step
 	body := def.Child[3]
 	for n := body.Start; n != nil; {
-		//fmt.Println("run", n.index, n.kind, n.action)
+		//println("run", n.index, n.kind, n.action)
 		n.run(n, &f)
 		if n.fnext == nil || value(n, &f).(bool) {
 			n = n.tnext
@@ -99,14 +99,14 @@ func value(n *Node, f *Frame) interface{} {
 	case BasicLit, FuncDecl:
 		return n.val
 	default:
-		//fmt.Println(n.index, "val(", n.findex, "):", (*f)[n.findex])
+		//println(n.index, "val(", n.findex, "):", (*f)[n.findex])
 		return (*f)[n.findex]
 	}
 }
 
 // assignX(n, f) implements assignement for a single call which returns multiple values
 func assignX(n *Node, f *Frame) {
-	//fmt.Println(n.index, "in assignX")
+	//println(n.index, "in assignX")
 	l := len(n.Child) - 1
 	b := n.Child[l].findex
 	for i, c := range n.Child[:l] {
@@ -163,7 +163,7 @@ func _println(n *Node, f *Frame) {
 }
 
 func call(n *Node, f *Frame) {
-	//fmt.Println("call", n.Child[0].ident)
+	//println("call", n.Child[0].ident)
 	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
 	var recv *Node
 	var rseq []int
@@ -186,7 +186,7 @@ func call(n *Node, f *Frame) {
 
 // Same as call(), but execute function in a goroutine
 func callGoRoutine(n *Node, f *Frame) {
-	//fmt.Println("call", n.Child[0].ident)
+	//println("call", n.Child[0].ident)
 	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
 	var recv *Node
 	var rseq []int
@@ -323,7 +323,7 @@ func compositeLit(n *Node, f *Frame) {
 		if i < len(n.Child[1:]) {
 			c := n.Child[i+1]
 			(*a)[i] = value(c, f)
-			//fmt.Println(n.index, "compositeLit, set field", i, value(c, f))
+			//println(n.index, "compositeLit, set field", i, value(c, f))
 		} else {
 			(*a)[i] = n.typ.field[i].zero()
 		}

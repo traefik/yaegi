@@ -72,6 +72,9 @@ func nodeType2(tdef TypeDef, n *Node) *Type {
 	case ArrayType:
 		t.cat = ArrayT
 		t.val = tdef[n.Child[0].ident]
+	case ChanType:
+		t.cat = ChanT
+		t.val = tdef[n.Child[0].ident]
 	case MapType:
 		t.cat = MapT
 		t.key = tdef[n.Child[0].ident]

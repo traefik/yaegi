@@ -89,7 +89,7 @@ func main() {
 	// 1 2
 }
 
-func Example_chan() {
+func Example_chan0() {
 	src := `
 package main
 
@@ -108,25 +108,21 @@ func main() {
 	// ping
 }
 
-func Example_cont() {
+func Example_chan1() {
 	src := `
 package main
 
+func send(c chan<- string) { c <- "ping" }
+
 func main() {
-	for i := 0; i < 10; i++ {
-		if i < 5 {
-			continue
-		}
-		println(i)
-	}
+	channel := make(chan string)
+	go send(channel)
+	msg := <-channel
+	println(msg)
 }`
 	NewInterpreter(InterpOpt{}).Eval(src)
 	// Output:
-	// 5
-	// 6
-	// 7
-	// 8
-	// 9
+	// ping
 }
 
 func Example_cont0() {
@@ -183,6 +179,27 @@ func main() {
 	// 8
 	// 9
 	// 10
+}
+
+func Example_cont() {
+	src := `
+package main
+
+func main() {
+	for i := 0; i < 10; i++ {
+		if i < 5 {
+			continue
+		}
+		println(i)
+	}
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 5
+	// 6
+	// 7
+	// 8
+	// 9
 }
 
 func Example_fib() {
@@ -255,20 +272,6 @@ func main() {
 	// 4
 }
 
-func Example_fun() {
-	src := `
-package main
-
-func f (i int) int { return i+15 }
-
-func main() {
-	println(f(4))
-}`
-	NewInterpreter(InterpOpt{}).Eval(src)
-	// Output:
-	// 19
-}
-
 func Example_fun2() {
 	src := `
 package main
@@ -301,6 +304,20 @@ func main() {
 	NewInterpreter(InterpOpt{}).Eval(src)
 	// Output:
 	// 18
+}
+
+func Example_fun() {
+	src := `
+package main
+
+func f (i int) int { return i+15 }
+
+func main() {
+	println(f(4))
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 19
 }
 
 func Example_goroutine() {
@@ -377,22 +394,6 @@ func f(i int) int { return i + 1 }`
 	NewInterpreter(InterpOpt{}).Eval(src)
 }
 
-func Example_map() {
-	src := `
-package main
-
-type Dict map[string]string
-
-func main() {
-	dict := make(Dict)
-	dict["truc"] = "machin"
-	println(dict["truc"])
-}`
-	NewInterpreter(InterpOpt{}).Eval(src)
-	// Output:
-	// machin
-}
-
 func Example_map2() {
 	src := `
 package main
@@ -438,23 +439,20 @@ func main() {
 	// bonjour
 }
 
-func Example_method() {
+func Example_map() {
 	src := `
 package main
 
-type Coord struct {
-	x, y int
-}
-
-func (c Coord) dist() int { return c.x * c.x + c.y * c.y }
+type Dict map[string]string
 
 func main() {
-	o := Coord{3, 4}
-	println(o.dist())
+	dict := make(Dict)
+	dict["truc"] = "machin"
+	println(dict["truc"])
 }`
 	NewInterpreter(InterpOpt{}).Eval(src)
 	// Output:
-	// 25
+	// machin
 }
 
 func Example_method2() {
@@ -474,6 +472,25 @@ type Point struct {
 
 func main() {
 	o := Point{ Coord{3, 4}, 5}
+	println(o.dist())
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 25
+}
+
+func Example_method() {
+	src := `
+package main
+
+type Coord struct {
+	x, y int
+}
+
+func (c Coord) dist() int { return c.x * c.x + c.y * c.y }
+
+func main() {
+	o := Coord{3, 4}
 	println(o.dist())
 }`
 	NewInterpreter(InterpOpt{}).Eval(src)
@@ -527,6 +544,45 @@ func main() {
 	// 5
 }
 
+func Example_sieve() {
+	src := `
+// A concurrent prime sieve
+
+package main
+
+// Send the sequence 2, 3, 4, ... to channel 'ch'.
+func Generate(ch chan<- int) {
+	for i := 2; ; i++ {
+		ch <- i // Send 'i' to channel 'ch'.
+	}
+}
+
+// Copy the values from channel 'in' to channel 'out',
+// removing those divisible by 'prime'.
+func Filter(in <-chan int, out chan<- int, prime int) {
+	for {
+		i := <-in // Receive value from 'in'.
+		if i%prime != 0 {
+			out <- i // Send 'i' to 'out'.
+		}
+	}
+}
+
+// The prime sieve: Daisy-chain Filter processes.
+func main() {
+	ch := make(chan int) // Create a new channel.
+	go Generate(ch)      // Launch Generate goroutine.
+	for i := 0; i < 10; i++ {
+		prime := <-ch
+		println(prime)
+		ch1 := make(chan int)
+		go Filter(ch, ch1, prime)
+		ch = ch1
+	}
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+}
+
 func Example_sleep() {
 	src := `
 package main
@@ -551,40 +607,6 @@ func main() {
 	// hello world
 }
 
-func Example_struct() {
-	src := `
-package main
-
-type T struct {
-	f int
-	g int
-}
-
-func main() {
-	a := T{ 7, 8 }
-	println(a.f, a.g)
-}`
-	NewInterpreter(InterpOpt{}).Eval(src)
-}
-
-func Example_struct0() {
-	src := `
-package main
-
-type T struct {
-	f int
-	g int
-}
-
-func main() {
-	a := T{}
-	println(a.f, a.g)
-}`
-	NewInterpreter(InterpOpt{}).Eval(src)
-	// Output:
-	// 0 0
-}
-
 func Example_struct0a() {
 	src := `
 package main
@@ -603,6 +625,24 @@ func main() {
 	// Output:
 	// 0
 	// 8
+}
+
+func Example_struct0() {
+	src := `
+package main
+
+type T struct {
+	f int
+	g int
+}
+
+func main() {
+	a := T{}
+	println(a.f, a.g)
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 0 0
 }
 
 func Example_struct1() {
@@ -735,6 +775,22 @@ func main() {
 	// 7 8
 }
 
+func Example_struct() {
+	src := `
+package main
+
+type T struct {
+	f int
+	g int
+}
+
+func main() {
+	a := T{ 7, 8 }
+	println(a.f, a.g)
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+}
+
 func Example_switch() {
 	src := `
 package main
@@ -753,19 +809,6 @@ func main() {
 	NewInterpreter(InterpOpt{}).Eval(src)
 	// Output:
 	// 100
-}
-
-func Example_var() {
-	src := `
-package main
-
-func main() {
-	var a, b, c int
-	println(a, b, c)
-}`
-	NewInterpreter(InterpOpt{}).Eval(src)
-	// Output:
-	// 0 0 0
 }
 
 func Example_var2() {
@@ -805,4 +848,17 @@ func main() {
 	NewInterpreter(InterpOpt{}).Eval(src)
 	// Output:
 	// 2 3
+}
+
+func Example_var() {
+	src := `
+package main
+
+func main() {
+	var a, b, c int
+	println(a, b, c)
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 0 0 0
 }

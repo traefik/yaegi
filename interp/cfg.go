@@ -486,7 +486,7 @@ func wireChild(n *Node) {
 	// Set start node, in subtree (propagated to ancestors by post-order processing)
 	for _, child := range n.Child {
 		switch child.kind {
-		case ArrayType, BasicLit, Ident:
+		case ArrayType, ChanType, MapType, BasicLit, Ident:
 			continue
 		default:
 			n.Start = child.Start
@@ -502,7 +502,7 @@ func wireChild(n *Node) {
 	// Chain subtree next to self
 	for i := len(n.Child) - 1; i >= 0; i-- {
 		switch n.Child[i].kind {
-		case ArrayType, BasicLit, Ident:
+		case ArrayType, ChanType, MapType, BasicLit, Ident:
 			continue
 		case Break, Continue, ReturnStmt:
 			// tnext is already computed, no change
