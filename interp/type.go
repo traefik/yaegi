@@ -23,6 +23,7 @@ var cats = [...]string{
 	ArrayT:     "ArrayT",
 	BasicT:     "BasicT",
 	ChanT:      "ChanT",
+	FuncT:      "FuncT",
 	InterfaceT: "InterfaceT",
 	MapT:       "MapT",
 	StructT:    "StructT",
@@ -42,9 +43,8 @@ type Type struct {
 	cat      Cat     // Type category
 	embedded bool    // True if struct is embedded
 	field    []*Type // Array of fields if StructT
-	basic    *Type   // Pointer to existing basic type if BasicT
 	key      *Type   // Type of key element if MapT
-	val      *Type   // Type of value element if ChanT, MapT or ArrayT
+	val      *Type   // Type of value element if ChanT, MapT, ArrayT or BasicT
 	method   []*Node // Associated methods
 }
 
@@ -54,13 +54,13 @@ type TypeDef map[string]*Type
 func initTypes() TypeDef {
 	var tdef TypeDef = make(map[string]*Type)
 	tdef["bool"] = &Type{name: "bool", cat: BasicT}
-	tdef["bool"].basic = tdef["bool"]
+	tdef["bool"].val = tdef["bool"]
 	tdef["float64"] = &Type{name: "float64", cat: BasicT}
-	tdef["float64"].basic = tdef["float64"]
+	tdef["float64"].val = tdef["float64"]
 	tdef["int"] = &Type{name: "int", cat: BasicT}
-	tdef["int"].basic = tdef["int"]
+	tdef["int"].val = tdef["int"]
 	tdef["string"] = &Type{name: "string", cat: BasicT}
-	tdef["string"].basic = tdef["string"]
+	tdef["string"].val = tdef["string"]
 	return tdef
 }
 
@@ -69,16 +69,31 @@ func initTypes() TypeDef {
 func nodeType2(tdef TypeDef, n *Node) *Type {
 	var t *Type = &Type{}
 	switch n.kind {
+	case Ident:
+		if td, ok := tdef[n.ident]; ok {
+			t.cat = td.cat
+			t.val = td
+			t.name = n.ident
+		}
 	case ArrayType:
 		t.cat = ArrayT
-		t.val = tdef[n.Child[0].ident]
+		t.val = nodeType2(tdef, n.Child[0])
 	case ChanType:
 		t.cat = ChanT
-		t.val = tdef[n.Child[0].ident]
+		t.val = nodeType2(tdef, n.Child[0])
 	case MapType:
 		t.cat = MapT
-		t.key = tdef[n.Child[0].ident]
-		t.val = tdef[n.Child[1].ident]
+		t.key = nodeType2(tdef, n.Child[0])
+		t.val = nodeType2(tdef, n.Child[1])
+	case StructType:
+		t.cat = StructT
+		//i := 0
+		for _, c := range n.Child[0].Child {
+			if len(c.Child) == 1 {
+				// unnamed field takes the field type name
+				t.field = append(t.field, nodeType2(tdef, c))
+			}
+		}
 	}
 	return t
 }
@@ -86,6 +101,7 @@ func nodeType2(tdef TypeDef, n *Node) *Type {
 // nodeType(tdef, n) returns an array of type definitions from the corresponding
 // AST subtree
 func nodeType(tdef TypeDef, n *Node) []*Type {
+	println(n.index, "in nodeType")
 	l := len(n.Child)
 	var res []*Type
 	if l == 1 {
@@ -112,7 +128,7 @@ func nodeType(tdef TypeDef, n *Node) []*Type {
 			t.cat = td.cat
 			switch td.cat {
 			case BasicT:
-				t.basic = td
+				t.val = td
 			case StructT:
 				t.field = td.field
 				t.method = td.method
@@ -144,7 +160,7 @@ func nodeType(tdef TypeDef, n *Node) []*Type {
 func (t *Type) zero() interface{} {
 	switch t.cat {
 	case BasicT:
-		switch t.basic.name {
+		switch t.val.name {
 		case "bool":
 			return false
 		case "float64":

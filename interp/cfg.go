@@ -94,9 +94,10 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			for _, t := range nodeType(tdef, n) {
 				tdef[t.name] = t
 			}
+			//tdef[n.Child[0].ident] = nodeType2(tdef, n.Child[1])
 			return false
 
-		case ArrayType, ChanType, MapType:
+		case ArrayType, ChanType, MapType, StructType:
 			n.typ = nodeType2(tdef, n)
 			return false
 
