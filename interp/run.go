@@ -325,7 +325,7 @@ func compositeLit(n *Node, f *Frame) {
 			(*a)[i] = value(c, f)
 			//println(n.index, "compositeLit, set field", i, value(c, f))
 		} else {
-			(*a)[i] = n.typ.field[i].zero()
+			(*a)[i] = n.typ.field[i].typ.zero()
 		}
 	}
 	(*f)[n.findex] = a

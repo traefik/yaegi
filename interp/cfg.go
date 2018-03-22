@@ -1,39 +1,5 @@
 package interp
 
-// TODO:
-// - hierarchical scopes for symbol resolution
-// - universe (global) scope
-// - closures
-// - slices / map expressions
-// - goto
-// - select
-// - import
-// - type checking
-// - type assertions and conversions
-// - interfaces
-// - pointers
-// - diagnostics and proper error handling
-// Done:
-// - basic literals
-// - variable definition and assignment
-// - arithmetic and logical expressions
-// - if / else statement, including init
-// - for statement
-// - go routines
-// - channels
-// - variables definition (1 scope per function)
-// - function definition
-// - function calls
-// - methods
-// - assignements, including to/from multi value
-// - return, including multiple values
-// - for range
-// - arrays
-// - maps
-// - &&, ||, break, continue
-// - switch (partial)
-// - type declarations
-
 type Symbol struct {
 	typ   *Type // type of value
 	index int   // index of value in frame
@@ -91,14 +57,17 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 		case TypeSpec:
 			// Type analysis is performed recursively and no post-order processing
 			// needs to be done for types, so do not dive in subtree
-			for _, t := range nodeType(tdef, n) {
-				tdef[t.name] = t
+			if n.Child[1].kind == Ident {
+				// Create a type alias of an existing one
+				tdef[n.Child[0].ident] = &Type{cat: AliasT, val: nodeType(tdef, n.Child[1])}
+			} else {
+				// Define a new type
+				tdef[n.Child[0].ident] = nodeType(tdef, n.Child[1])
 			}
-			//tdef[n.Child[0].ident] = nodeType2(tdef, n.Child[1])
 			return false
 
 		case ArrayType, ChanType, MapType, StructType:
-			n.typ = nodeType2(tdef, n)
+			n.typ = nodeType(tdef, n)
 			return false
 
 		case BasicLit:
@@ -190,7 +159,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 						n.Child[1].val = n.typ
 						n.Child[1].kind = BasicLit
 					} else {
-						n.typ = nodeType2(tdef, n.Child[1])
+						n.typ = nodeType(tdef, n.Child[1])
 						n.Child[1].val = n.typ
 						n.Child[1].kind = BasicLit
 					}
@@ -422,7 +391,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.typ = n.Child[0].typ
 			// lookup field index once during compiling (simple and fast first)
 			if fi := n.typ.fieldIndex(n.Child[1].ident); fi >= 0 {
-				n.typ = n.typ.field[fi]
+				n.typ = n.typ.field[fi].typ
 				n.Child[1].kind = BasicLit
 				n.Child[1].val = fi
 			} else {

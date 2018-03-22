@@ -9,23 +9,31 @@ type Cat int
 
 const (
 	Unset = iota
+	AliasT
 	ArrayT
-	BasicT
+	BoolT
 	ChanT
+	Float64T
 	FuncT
 	InterfaceT
+	IntT
 	MapT
+	StringT
 	StructT
 )
 
 var cats = [...]string{
 	Unset:      "Unset",
+	AliasT:     "AliasT",
 	ArrayT:     "ArrayT",
-	BasicT:     "BasicT",
+	BoolT:      "BoolT",
 	ChanT:      "ChanT",
+	Float64T:   "Float64T",
 	FuncT:      "FuncT",
 	InterfaceT: "InterfaceT",
+	IntT:       "IntT",
 	MapT:       "MapT",
+	StringT:    "StringT",
 	StructT:    "StructT",
 }
 
@@ -36,144 +44,82 @@ func (c Cat) String() string {
 	return "Cat(" + strconv.Itoa(int(c)) + ")"
 }
 
+type StructField struct {
+	name string
+	typ  *Type
+}
+
 // Representation of types in interpreter
 type Type struct {
-	name     string  // Type name, of field name if used in struct
-	index    int     // Index in containing struct, for access in frame
-	cat      Cat     // Type category
-	embedded bool    // True if struct is embedded
-	field    []*Type // Array of fields if StructT
-	key      *Type   // Type of key element if MapT
-	val      *Type   // Type of value element if ChanT, MapT, ArrayT or BasicT
-	method   []*Node // Associated methods
+	cat    Cat           // Type category
+	field  []StructField // Array of struct fields if StrucT or nil
+	key    *Type         // Type of key element if MapT or nil
+	val    *Type         // Type of value element if ChanT, MapT, AliasT or ArrayT
+	method []*Node       // Associated methods or nil
 }
 
 type TypeDef map[string]*Type
 
 // Initialize Go basic types
 func initTypes() TypeDef {
-	var tdef TypeDef = make(map[string]*Type)
-	tdef["bool"] = &Type{name: "bool", cat: BasicT}
-	tdef["bool"].val = tdef["bool"]
-	tdef["float64"] = &Type{name: "float64", cat: BasicT}
-	tdef["float64"].val = tdef["float64"]
-	tdef["int"] = &Type{name: "int", cat: BasicT}
-	tdef["int"].val = tdef["int"]
-	tdef["string"] = &Type{name: "string", cat: BasicT}
-	tdef["string"].val = tdef["string"]
-	return tdef
+	return map[string]*Type{
+		"bool":    &Type{cat: BoolT},
+		"float64": &Type{cat: Float64T},
+		"int":     &Type{cat: IntT},
+		"string":  &Type{cat: StringT},
+	}
 }
 
 // return a type definition for the corresponding AST subtree
-// TODO: complete and replace nodeType
-func nodeType2(tdef TypeDef, n *Node) *Type {
+func nodeType(tdef TypeDef, n *Node) *Type {
 	var t *Type = &Type{}
 	switch n.kind {
-	case Ident:
-		if td, ok := tdef[n.ident]; ok {
-			t.cat = td.cat
-			t.val = td
-			t.name = n.ident
-		}
 	case ArrayType:
 		t.cat = ArrayT
-		t.val = nodeType2(tdef, n.Child[0])
+		t.val = nodeType(tdef, n.Child[0])
 	case ChanType:
 		t.cat = ChanT
-		t.val = nodeType2(tdef, n.Child[0])
+		t.val = nodeType(tdef, n.Child[0])
+	case Ident:
+		t = tdef[n.ident]
 	case MapType:
 		t.cat = MapT
-		t.key = nodeType2(tdef, n.Child[0])
-		t.val = nodeType2(tdef, n.Child[1])
+		t.key = nodeType(tdef, n.Child[0])
+		t.val = nodeType(tdef, n.Child[1])
 	case StructType:
 		t.cat = StructT
-		//i := 0
 		for _, c := range n.Child[0].Child {
 			if len(c.Child) == 1 {
-				// unnamed field takes the field type name
-				t.field = append(t.field, nodeType2(tdef, c))
+				t.field = append(t.field, StructField{typ: nodeType(tdef, c.Child[0])})
+			} else {
+				l := len(c.Child)
+				typ := nodeType(tdef, c.Child[l-1])
+				for _, d := range c.Child[:l-1] {
+					t.field = append(t.field, StructField{name: d.ident, typ: typ})
+				}
 			}
 		}
 	}
 	return t
 }
 
-// nodeType(tdef, n) returns an array of type definitions from the corresponding
-// AST subtree
-func nodeType(tdef TypeDef, n *Node) []*Type {
-	println(n.index, "in nodeType")
-	l := len(n.Child)
-	var res []*Type
-	if l == 1 {
-		res = append(res, &Type{name: n.Child[0].ident, embedded: true})
-	} else {
-		for _, c := range n.Child[:l-1] {
-			res = append(res, &Type{name: c.ident})
-		}
-	}
-	switch n.Child[l-1].kind {
-	case ArrayType:
-		for _, t := range res {
-			t.cat = ArrayT
-			t.val = tdef[n.Child[l-1].Child[0].ident]
-		}
-	case ChanType:
-		for _, t := range res {
-			t.cat = ChanT
-			t.val = tdef[n.Child[l-1].Child[0].ident]
-		}
-	case Ident:
-		td := tdef[n.Child[l-1].ident]
-		for _, t := range res {
-			t.cat = td.cat
-			switch td.cat {
-			case BasicT:
-				t.val = td
-			case StructT:
-				t.field = td.field
-				t.method = td.method
-			}
-		}
-	case MapType:
-		for _, t := range res {
-			t.cat = MapT
-			t.key = tdef[n.Child[l-1].Child[0].ident] // TODO: should recurse on type definition
-			t.val = tdef[n.Child[l-1].Child[1].ident] // TODO: should recurse on type definition
-		}
-	case StructType:
-		for _, t := range res {
-			t.cat = StructT
-			i := 0
-			for _, c := range n.Child[l-1].Child[0].Child {
-				for _, stype := range nodeType(tdef, c) {
-					stype.index = i
-					i++
-					t.field = append(t.field, stype)
-				}
-			}
-		}
-	}
-	return res
-}
-
 // t.zero() instantiates and return a zero value object for the givent type t
 func (t *Type) zero() interface{} {
 	switch t.cat {
-	case BasicT:
-		switch t.val.name {
-		case "bool":
-			return false
-		case "float64":
-			return 0.0
-		case "int":
-			return 0
-		case "string":
-			return ""
-		}
+	case AliasT:
+		return t.val.zero()
+	case BoolT:
+		return false
+	case Float64T:
+		return 0.0
+	case IntT:
+		return 0
+	case StringT:
+		return ""
 	case StructT:
 		z := make([]interface{}, len(t.field))
 		for i, f := range t.field {
-			z[i] = f.zero()
+			z[i] = f.typ.zero()
 		}
 		return &z
 	}
@@ -195,8 +141,8 @@ func (t *Type) lookupField(name string) []int {
 	var index []int
 	if fi := t.fieldIndex(name); fi < 0 {
 		for i, f := range t.field {
-			if f.embedded {
-				if index2 := f.lookupField(name); len(index2) > 0 {
+			if f.name == "" {
+				if index2 := f.typ.lookupField(name); len(index2) > 0 {
 					index = append([]int{i}, index2...)
 					break
 				}
@@ -224,8 +170,8 @@ func (t *Type) lookupMethod(name string) (*Node, []int) {
 	var index []int
 	if m := t.getMethod(name); m == nil {
 		for i, f := range t.field {
-			if f.embedded {
-				if m, index2 := f.lookupMethod(name); m != nil {
+			if f.name == "" {
+				if m, index2 := f.typ.lookupMethod(name); m != nil {
 					index = append([]int{i}, index2...)
 					return m, index
 				}
