@@ -73,7 +73,6 @@ func (i *Interpreter) Eval(src string) Frame {
 	if i.opt.Cfg {
 		root.CfgDot(Dotty())
 	}
-	//root.OptimCfg()
 
 	// Execute CFG
 	if !i.opt.NoRun {

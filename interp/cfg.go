@@ -292,6 +292,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			}
 
 		case FuncType:
+			n.typ = nodeType(tdef, n)
 			// Store list of parameter frame indices in params val
 			var list []int
 			for _, c := range n.Child[0].Child {
@@ -481,13 +482,4 @@ func wireChild(n *Node) {
 		}
 		break
 	}
-}
-
-// optimisation: rewire CFG to skip nop nodes
-func (e *Node) OptimCfg() {
-	e.Walk(nil, func(n *Node) {
-		for n.tnext != nil && n.tnext.action == Nop {
-			n.tnext = n.tnext.tnext
-		}
-	})
 }

@@ -55,6 +55,8 @@ type Type struct {
 	field  []StructField // Array of struct fields if StrucT or nil
 	key    *Type         // Type of key element if MapT or nil
 	val    *Type         // Type of value element if ChanT, MapT, AliasT or ArrayT
+	arg    []*Type       // Argument types if FuncT or nil
+	ret    []*Type       // Return types if FuncT or nil
 	method []*Node       // Associated methods or nil
 }
 
@@ -80,6 +82,16 @@ func nodeType(tdef TypeDef, n *Node) *Type {
 	case ChanType:
 		t.cat = ChanT
 		t.val = nodeType(tdef, n.Child[0])
+	case FuncType:
+		t.cat = FuncT
+		for _, arg := range n.Child[0].Child {
+			t.arg = append(t.arg, nodeType(tdef, arg.Child[len(arg.Child)-1]))
+		}
+		if len(n.Child) == 2 {
+			for _, ret := range n.Child[1].Child {
+				t.ret = append(t.ret, nodeType(tdef, ret.Child[len(ret.Child)-1]))
+			}
+		}
 	case Ident:
 		t = tdef[n.ident]
 	case MapType:

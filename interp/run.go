@@ -163,7 +163,7 @@ func _println(n *Node, f *Frame) {
 }
 
 func call(n *Node, f *Frame) {
-	//println("call", n.Child[0].ident)
+	//println(n.index, "call", n.Child[0].ident)
 	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
 	var recv *Node
 	var rseq []int
@@ -172,21 +172,22 @@ func call(n *Node, f *Frame) {
 		rseq = n.Child[0].Child[1].val.([]int)
 	}
 	fn := n.val.(*Node)
-	var rets []int
+	//fmt.Println("fn:", fn, (*f)[n.Child[0].findex])
+	var ret []int
 	if len(fn.Child[2].Child) > 1 {
 		if fieldList := fn.Child[2].Child[1]; fieldList != nil {
-			rets = make([]int, len(fieldList.Child))
+			ret = make([]int, len(fieldList.Child))
 			for i, _ := range fieldList.Child {
-				rets[i] = n.findex + i
+				ret[i] = n.findex + i
 			}
 		}
 	}
-	Run(fn, f, recv, rseq, n.Child[1:], rets)
+	Run(fn, f, recv, rseq, n.Child[1:], ret)
 }
 
 // Same as call(), but execute function in a goroutine
 func callGoRoutine(n *Node, f *Frame) {
-	//println("call", n.Child[0].ident)
+	//println(n.index, "call", n.Child[0].ident)
 	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
 	var recv *Node
 	var rseq []int
@@ -195,16 +196,16 @@ func callGoRoutine(n *Node, f *Frame) {
 		rseq = n.Child[0].Child[1].val.([]int)
 	}
 	fn := n.val.(*Node)
-	var rets []int
+	var ret []int
 	if len(fn.Child[2].Child) > 1 {
 		if fieldList := fn.Child[2].Child[1]; fieldList != nil {
-			rets = make([]int, len(fieldList.Child))
+			ret = make([]int, len(fieldList.Child))
 			for i, _ := range fieldList.Child {
-				rets[i] = n.findex + i
+				ret[i] = n.findex + i
 			}
 		}
 	}
-	go Run(fn, f, recv, rseq, n.Child[1:], rets)
+	go Run(fn, f, recv, rseq, n.Child[1:], ret)
 }
 
 func getIndexAddr(n *Node, f *Frame) {
