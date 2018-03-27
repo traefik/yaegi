@@ -11,22 +11,25 @@ type Node struct {
 	index  int         // node index (dot display)
 	findex int         // index of value in frame or frame size (func def, type def)
 	fsize  int         // number of entries in frame (call expressions)
+	level  int         // number of frame indirections to access value
 	kind   Kind        // Kind of node
 	typ    *Type       // Type of value in frame, or nil
-	action Action      // function to run
+	action Action      // Action
 	run    Builtin     // function to run at CFG execution
 	val    interface{} // pointer on generic value (CFG execution)
 	ident  string      // set if node is a var or func
 }
 
 // A Frame contains values for the current execution level
-type Frame []interface{}
+type Frame struct {
+	anc  *Frame        // Ancestor frame (global space)
+	data []interface{} // Values
+}
 
 // Interpreter contains global resources and state
 type Interpreter struct {
 	opt InterpOpt
 	out Frame
-	//	def map[string]*Node // map of defined symbols
 }
 
 type InterpOpt struct {
@@ -53,7 +56,6 @@ func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 
 // NewInterpreter()creates and returns a new interpreter object
 func NewInterpreter(opt InterpOpt) *Interpreter {
-	//return &Interpreter{opt: opt, def: make(map[string]*Node)}
 	return &Interpreter{opt: opt}
 }
 
@@ -76,7 +78,10 @@ func (i *Interpreter) Eval(src string) Frame {
 
 	// Execute CFG
 	if !i.opt.NoRun {
-		Run(sdef["main"], &i.out, nil, nil, nil, nil)
+		//frame := &Frame{data: make([]interface{}, root.fsize)}
+		frame := &Frame{data: make([]interface{}, 20)}
+		runCfg(root.Start, frame)
+		Run(sdef["main"], frame, nil, nil, nil, nil, true)
 	}
 	return i.out
 }

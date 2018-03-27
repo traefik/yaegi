@@ -27,6 +27,8 @@ const (
 	Continue
 	DeclStmt
 	Defer
+	Define
+	DefineX
 	ExprStmt
 	Fallthrough
 	Field
@@ -39,6 +41,7 @@ const (
 	For4         // for init; cond; post {}
 	ForRangeStmt // for range
 	FuncDecl
+	FuncLit
 	FuncType
 	GenDecl
 	Go
@@ -85,6 +88,8 @@ var kinds = [...]string{
 	Continue:         "Continue",
 	DeclStmt:         "DeclStmt",
 	Defer:            "Defer",
+	Define:           "Define",
+	DefineX:          "DefineX",
 	ExprStmt:         "ExprStmt",
 	Field:            "Field",
 	FieldList:        "FieldList",
@@ -97,6 +102,7 @@ var kinds = [...]string{
 	ForRangeStmt:     "ForRangeStmt",
 	FuncDecl:         "FuncDecl",
 	FuncType:         "FuncType",
+	FuncLit:          "FuncLit",
 	GenDecl:          "GenDecl",
 	Go:               "Go",
 	GoStmt:           "GoStmt",
@@ -220,8 +226,7 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 	//ast.Print(fset, f)
 
 	index := 0
-	var root *Node
-	var anc *Node
+	var root, anc *Node
 	var st nodestack
 	// Populate our own private AST from Go parser AST.
 	// A stack of ancestor nodes is used to keep track of curent ancestor for each depth level
@@ -238,9 +243,19 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			var action Action
 			var kind Kind
 			if len(a.Lhs) > 1 && len(a.Rhs) == 1 {
-				kind, action = AssignXStmt, AssignX
+				if a.Tok == token.DEFINE {
+					kind = DefineX
+				} else {
+					kind = AssignXStmt
+				}
+				action = AssignX
 			} else {
-				kind, action = AssignStmt, Assign
+				if a.Tok == token.DEFINE {
+					kind = Define
+				} else {
+					kind = AssignStmt
+				}
+				action = Assign
 			}
 			st.push(addChild(&root, anc, &index, kind, action))
 
@@ -357,6 +372,9 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			// Add func name to definitions
 			def[a.Name.Name] = n
 			st.push(n)
+
+		case *ast.FuncLit:
+			st.push(addChild(&root, anc, &index, FuncLit, Nop))
 
 		case *ast.FuncType:
 			st.push(addChild(&root, anc, &index, FuncType, Nop))

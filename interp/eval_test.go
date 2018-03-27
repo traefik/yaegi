@@ -498,6 +498,16 @@ func main() {
 	// 25
 }
 
+func Example_ret1() {
+	src := `
+package main
+
+func f(i int) (o int) { o = i+1; return }
+
+func main() { println(f(4)) }`
+	NewInterpreter(InterpOpt{}).Eval(src)
+}
+
 func Example_ret2() {
 	src := `
 package main
@@ -542,6 +552,67 @@ func main() {
 	NewInterpreter(InterpOpt{}).Eval(src)
 	// Output:
 	// 5
+}
+
+func Example_run4() {
+	src := `
+package main
+
+type fn func(int)
+
+func f1(i int) { println("f1", i) }
+
+func test(f fn, v int) { f(v) }
+
+func main() { test(f1, 21) }`
+	NewInterpreter(InterpOpt{}).Eval(src)
+}
+
+func Example_run5() {
+	src := `
+package main
+
+type fn func(int)
+
+func test(f fn, v int) { f(v) }
+
+func main() {
+	f1 := func(i int) {println("f1", i) }
+	test(f1, 21) 
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+}
+
+func Example_scope0() {
+	src := `
+package main
+
+var a int = 1
+
+func main() {
+	println(a)
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 1
+}
+
+func Example_scope1() {
+	src := `
+package main
+
+func f(a int) int {
+	return 2*a+1
+}
+
+var b int = f(3)
+
+func main() {
+	println(b)
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 7
 }
 
 func Example_sieve() {
@@ -809,6 +880,21 @@ func main() {
 	NewInterpreter(InterpOpt{}).Eval(src)
 	// Output:
 	// 100
+}
+
+func Example_type0() {
+	src := `
+package main
+
+type newInt int
+
+func main() {
+	var a newInt
+	println(a)
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 0
 }
 
 func Example_var2() {

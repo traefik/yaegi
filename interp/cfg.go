@@ -5,19 +5,40 @@ type Symbol struct {
 	index int   // index of value in frame
 }
 
+type Scope struct {
+	anc   *Scope             // Ancestor scope
+	level int                // Frame level: number of frame indirections to access var
+	sym   map[string]*Symbol // Symbol table indexed by idents
+}
+
+func (s *Scope) push(indirect int) *Scope {
+	return &Scope{anc: s, level: s.level + indirect, sym: make(map[string]*Symbol)}
+}
+
+func (s *Scope) lookup(ident string) (*Symbol, int, bool) {
+	level := s.level
+	for s != nil {
+		if sym, ok := s.sym[ident]; ok {
+			return sym, level - s.level, true
+		}
+		s = s.anc
+	}
+	return nil, 0, false
+}
+
 // n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables.
 // Following this pass, the CFG is ready to run
 func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
-	symbol := make(map[string]*Symbol)
+	scope := &Scope{sym: make(map[string]*Symbol)}
 	maxIndex := 0
 	var loop, loopRestart *Node
 
 	e.Walk(func(n *Node) bool {
 		// Pre-order processing
 		switch n.kind {
-		case AssignStmt:
+		case Define, AssignStmt:
 			if l := len(n.Child); l%2 == 1 {
 				// Odd number of children: remove the type node, useless for assign
 				i := l / 2
@@ -32,15 +53,13 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 
 		case FuncDecl:
 			maxIndex = 0
-			// TODO: better handling of scopes
-			symbol = make(map[string]*Symbol)
+			scope = scope.push(1)
 			if len(n.Child[0].Child) > 0 {
 				// function is a method, add it to the related type
 				n.ident = n.Child[1].ident
 				tname := n.Child[0].Child[0].Child[1].ident
 				t := tdef[tname]
 				t.method = append(t.method, n)
-				//fmt.Println(n.index, "add method", n.ident, "to", t.name, tdef[tname])
 			}
 			// allocate entries for return values at start of frame
 			if len(n.Child[2].Child) == 2 {
@@ -90,14 +109,14 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			// TODO: move to pre-processing ? See when handling complex array type def
 			n.typ = &Type{cat: ArrayT, val: tdef[n.Child[1].ident]}
 
-		case AssignStmt:
+		case Define, AssignStmt:
 			wireChild(n)
 			n.findex = n.Child[0].findex
 			// Propagate type
 			// TODO: Check that existing destination type matches source type
 			n.Child[0].typ = n.Child[1].typ
 			n.typ = n.Child[0].typ
-			if sym, ok := symbol[n.Child[0].ident]; ok {
+			if sym, _, ok := scope.lookup(n.Child[0].ident); ok {
 				sym.typ = n.typ
 			}
 			// If LHS is an indirection, get reference instead of value, to allow setting
@@ -116,11 +135,12 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.findex = n.Child[0].findex
 			n.Child[0].typ = tdef["int"]
 			n.typ = n.Child[0].typ
-			if sym, ok := symbol[n.Child[0].ident]; ok {
+			//if sym, ok := symbol[n.Child[0].ident]; ok {
+			if sym, _, ok := scope.lookup(n.Child[0].ident); ok {
 				sym.typ = n.typ
 			}
 
-		case AssignXStmt:
+		case DefineX, AssignXStmt:
 			wireChild(n)
 			n.findex = n.Child[0].findex
 			n.Child[0].typ = n.Child[1].typ
@@ -233,9 +253,14 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 				l := len(n.Child) - 1
 				t := tdef[n.Child[l].ident]
 				for _, f := range n.Child[:l] {
-					symbol[f.ident].typ = t
+					//symbol[f.ident].typ = t
+					scope.sym[f.ident].typ = t
 				}
 			}
+
+		case File:
+			wireChild(n)
+			n.fsize = maxIndex + 2
 
 		case For0: // for {}
 			body := n.Child[0]
@@ -285,11 +310,12 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.findex = n.Child[0].findex
 
 		case FuncDecl:
-			n.findex = maxIndex + 1 // Why ????
+			n.fsize = maxIndex + 1 // Why ????
 			if len(n.Child[0].Child) > 0 {
 				// Store receiver frame location (used at run)
 				n.Child[0].findex = n.Child[0].Child[0].Child[0].findex
 			}
+			scope = scope.anc
 
 		case FuncType:
 			n.typ = nodeType(tdef, n)
@@ -313,11 +339,12 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			// should check if ident can be defined (assign, param passing...)
 			// or should lookup in upper scope of variables
 			// For now, simply allocate a new entry in local sym table
-			if sym, ok := symbol[n.ident]; ok {
-				n.typ, n.findex = sym.typ, sym.index
+			if sym, level, ok := scope.lookup(n.ident); ok {
+				n.typ, n.findex, n.level = sym.typ, sym.index, level
+
 			} else {
 				maxIndex++
-				symbol[n.ident] = &Symbol{index: maxIndex}
+				scope.sym[n.ident] = &Symbol{index: maxIndex}
 				n.findex = maxIndex
 			}
 
@@ -457,7 +484,7 @@ func wireChild(n *Node) {
 	// Set start node, in subtree (propagated to ancestors by post-order processing)
 	for _, child := range n.Child {
 		switch child.kind {
-		case ArrayType, ChanType, MapType, BasicLit, Ident:
+		case ArrayType, ChanType, FuncDecl, MapType, BasicLit, Ident:
 			continue
 		default:
 			n.Start = child.Start
@@ -473,7 +500,7 @@ func wireChild(n *Node) {
 	// Chain subtree next to self
 	for i := len(n.Child) - 1; i >= 0; i-- {
 		switch n.Child[i].kind {
-		case ArrayType, ChanType, MapType, BasicLit, Ident:
+		case ArrayType, ChanType, MapType, FuncDecl, BasicLit, Ident:
 			continue
 		case Break, Continue, ReturnStmt:
 			// tnext is already computed, no change

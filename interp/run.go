@@ -46,17 +46,21 @@ func initGoBuiltin() {
 }
 
 // Run a Go function
-func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int) {
-	//println("run", def.Child[1].ident)
+func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int, fork bool) {
+	//println("run", def.Child[1].ident, "allocate", def.fsize)
 	// Allocate a new Frame to store local variables
-	f := Frame(make([]interface{}, def.findex))
+	anc := cf.anc
+	if fork {
+		anc = cf
+	}
+	f := Frame{anc: anc, data: make([]interface{}, def.fsize)}
 
 	// Assign receiver value, if defined (for methods)
 	if recv != nil {
 		if rseq != nil {
-			f[def.Child[0].findex] = valueSeq(recv, rseq, cf) // Promoted method
+			f.data[def.Child[0].findex] = valueSeq(recv, rseq, cf) // Promoted method
 		} else {
-			f[def.Child[0].findex] = value(recv, cf)
+			f.data[def.Child[0].findex] = value(recv, cf)
 		}
 	}
 
@@ -65,30 +69,21 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int)
 	paramIndex := def.Child[2].Child[0].val.([]int)
 	i := 0
 	for _, arg := range args {
-		f[paramIndex[i]] = value(arg, cf)
+		f.data[paramIndex[i]] = value(arg, cf)
 		i++
 		// Handle multiple results of a function call argmument
 		for j := 1; j < arg.fsize; j++ {
-			f[paramIndex[i]] = (*cf)[arg.findex+j]
+			f.data[paramIndex[i]] = cf.data[arg.findex+j]
 			i++
 		}
 	}
 
-	// Execute by walking the CFG and running node func at each step
-	body := def.Child[3]
-	for n := body.Start; n != nil; {
-		//println("run", n.index, n.kind, n.action)
-		n.run(n, &f)
-		if n.fnext == nil || value(n, &f).(bool) {
-			n = n.tnext
-		} else {
-			n = n.fnext
-		}
-	}
+	// Execute the function body
+	runCfg(def.Child[3].Start, &f)
 
 	// Propagate return values to caller frame
 	for i, ret := range rets {
-		(*cf)[ret] = f[i]
+		cf.data[ret] = f.data[i]
 	}
 }
 
@@ -99,8 +94,24 @@ func value(n *Node, f *Frame) interface{} {
 	case BasicLit, FuncDecl:
 		return n.val
 	default:
-		//println(n.index, "val(", n.findex, "):", (*f)[n.findex])
-		return (*f)[n.findex]
+		for level := n.level; level > 0; level-- {
+			f = f.anc
+		}
+		//println(n.index, "val(", n.findex, "):", n.level, f.data[n.findex])
+		return f.data[n.findex]
+	}
+}
+
+// Run by walking the CFG and running node builtin at each step
+func runCfg(n *Node, f *Frame) {
+	for n != nil {
+		//fmt.Println(n.index, "runCfg run")
+		n.run(n, f)
+		if n.fnext == nil || value(n, f).(bool) {
+			n = n.tnext
+		} else {
+			n = n.fnext
+		}
 	}
 }
 
@@ -110,7 +121,7 @@ func assignX(n *Node, f *Frame) {
 	l := len(n.Child) - 1
 	b := n.Child[l].findex
 	for i, c := range n.Child[:l] {
-		(*f)[c.findex] = (*f)[b+i]
+		f.data[c.findex] = f.data[b+i]
 	}
 }
 
@@ -118,7 +129,7 @@ func assignX(n *Node, f *Frame) {
 func assign(n *Node, f *Frame) {
 	l := len(n.Child) / 2
 	for i, c := range n.Child[:l] {
-		(*f)[c.findex] = value(n.Child[l+i], f)
+		f.data[c.findex] = value(n.Child[l+i], f)
 	}
 }
 
@@ -127,24 +138,24 @@ func assign0(n *Node, f *Frame) {
 	l := len(n.Child) - 1
 	z := n.typ.zero()
 	for _, c := range n.Child[:l] {
-		(*f)[c.findex] = z
+		f.data[c.findex] = z
 	}
 }
 
 func assignField(n *Node, f *Frame) {
-	(*(*f)[n.findex].(*interface{})) = value(n.Child[1], f)
+	(*f.data[n.findex].(*interface{})) = value(n.Child[1], f)
 }
 
 func assignMap(n *Node, f *Frame) {
-	(*f)[n.findex].(map[interface{}]interface{})[value(n.Child[0].Child[1], f)] = value(n.Child[1], f)
+	f.data[n.findex].(map[interface{}]interface{})[value(n.Child[0].Child[1], f)] = value(n.Child[1], f)
 }
 
 func and(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(int) & value(n.Child[1], f).(int)
+	f.data[n.findex] = value(n.Child[0], f).(int) & value(n.Child[1], f).(int)
 }
 
 func not(n *Node, f *Frame) {
-	(*f)[n.findex] = !value(n.Child[0], f).(bool)
+	f.data[n.findex] = !value(n.Child[0], f).(bool)
 }
 
 func _println(n *Node, f *Frame) {
@@ -156,7 +167,7 @@ func _println(n *Node, f *Frame) {
 
 		// Handle multiple results of a function call argmument
 		for j := 1; j < m.fsize; j++ {
-			fmt.Printf(" %v", (*f)[m.findex+j])
+			fmt.Printf(" %v", f.data[m.findex+j])
 		}
 	}
 	fmt.Println("")
@@ -172,7 +183,7 @@ func call(n *Node, f *Frame) {
 		rseq = n.Child[0].Child[1].val.([]int)
 	}
 	fn := n.val.(*Node)
-	//fmt.Println("fn:", fn, (*f)[n.Child[0].findex])
+	//fmt.Println("fn:", fn, f.data[n.Child[0].findex])
 	var ret []int
 	if len(fn.Child[2].Child) > 1 {
 		if fieldList := fn.Child[2].Child[1]; fieldList != nil {
@@ -182,7 +193,7 @@ func call(n *Node, f *Frame) {
 			}
 		}
 	}
-	Run(fn, f, recv, rseq, n.Child[1:], ret)
+	Run(fn, f, recv, rseq, n.Child[1:], ret, false)
 }
 
 // Same as call(), but execute function in a goroutine
@@ -205,26 +216,26 @@ func callGoRoutine(n *Node, f *Frame) {
 			}
 		}
 	}
-	go Run(fn, f, recv, rseq, n.Child[1:], ret)
+	go Run(fn, f, recv, rseq, n.Child[1:], ret, false)
 }
 
 func getIndexAddr(n *Node, f *Frame) {
 	a := value(n.Child[0], f).(*[]interface{})
-	(*f)[n.findex] = &(*a)[value(n.Child[1], f).(int)]
+	f.data[n.findex] = &(*a)[value(n.Child[1], f).(int)]
 }
 
 func getIndex(n *Node, f *Frame) {
 	a := value(n.Child[0], f).(*[]interface{})
-	(*f)[n.findex] = (*a)[value(n.Child[1], f).(int)]
+	f.data[n.findex] = (*a)[value(n.Child[1], f).(int)]
 }
 
 func getIndexMap(n *Node, f *Frame) {
 	m := value(n.Child[0], f).(map[interface{}]interface{})
-	(*f)[n.findex] = m[value(n.Child[1], f)]
+	f.data[n.findex] = m[value(n.Child[1], f)]
 }
 
 func getMap(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(map[interface{}]interface{})
+	f.data[n.findex] = value(n.Child[0], f).(map[interface{}]interface{})
 }
 
 func getIndexSeq(n *Node, f *Frame) {
@@ -234,11 +245,11 @@ func getIndexSeq(n *Node, f *Frame) {
 	for _, i := range seq[:l] {
 		a = (*a)[i].(*[]interface{})
 	}
-	(*f)[n.findex] = (*a)[seq[l]]
+	f.data[n.findex] = (*a)[seq[l]]
 }
 
 func valueSeq(n *Node, seq []int, f *Frame) interface{} {
-	a := (*f)[n.findex].(*[]interface{})
+	a := f.data[n.findex].(*[]interface{})
 	l := len(seq) - 1
 	for _, i := range seq[:l] {
 		a = (*a)[i].(*[]interface{})
@@ -247,54 +258,54 @@ func valueSeq(n *Node, seq []int, f *Frame) interface{} {
 }
 
 func mul(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(int) * value(n.Child[1], f).(int)
+	f.data[n.findex] = value(n.Child[0], f).(int) * value(n.Child[1], f).(int)
 }
 
 func add(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(int) + value(n.Child[1], f).(int)
+	f.data[n.findex] = value(n.Child[0], f).(int) + value(n.Child[1], f).(int)
 }
 
 func sub(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(int) - value(n.Child[1], f).(int)
+	f.data[n.findex] = value(n.Child[0], f).(int) - value(n.Child[1], f).(int)
 }
 
 func equal(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f) == value(n.Child[1], f)
+	f.data[n.findex] = value(n.Child[0], f) == value(n.Child[1], f)
 }
 
 func inc(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(int) + 1
+	f.data[n.findex] = value(n.Child[0], f).(int) + 1
 }
 
 func greater(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(int) > value(n.Child[1], f).(int)
+	f.data[n.findex] = value(n.Child[0], f).(int) > value(n.Child[1], f).(int)
 }
 
 func land(n *Node, f *Frame) {
 	if v := value(n.Child[0], f).(bool); v {
-		(*f)[n.findex] = value(n.Child[1], f).(bool)
+		f.data[n.findex] = value(n.Child[1], f).(bool)
 	} else {
-		(*f)[n.findex] = v
+		f.data[n.findex] = v
 	}
 }
 
 func lor(n *Node, f *Frame) {
 	if v := value(n.Child[0], f).(bool); v {
-		(*f)[n.findex] = v
+		f.data[n.findex] = v
 	} else {
-		(*f)[n.findex] = value(n.Child[1], f).(bool)
+		f.data[n.findex] = value(n.Child[1], f).(bool)
 	}
 }
 
 func lower(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.Child[0], f).(int) < value(n.Child[1], f).(int)
+	f.data[n.findex] = value(n.Child[0], f).(int) < value(n.Child[1], f).(int)
 }
 
 func nop(n *Node, f *Frame) {}
 
 func _return(n *Node, f *Frame) {
 	for i, c := range n.Child {
-		(*f)[i] = value(c, f)
+		f.data[i] = value(c, f)
 	}
 }
 
@@ -304,7 +315,7 @@ func arrayLit(n *Node, f *Frame) {
 	for i, c := range n.Child[1:] {
 		a[i] = value(c, f)
 	}
-	(*f)[n.findex] = &a
+	f.data[n.findex] = &a
 }
 
 // Create a map of litteral values
@@ -313,7 +324,7 @@ func mapLit(n *Node, f *Frame) {
 	for _, c := range n.Child[1:] {
 		m[value(c.Child[0], f)] = value(c.Child[1], f)
 	}
-	(*f)[n.findex] = m
+	f.data[n.findex] = m
 }
 
 // Create a struct object
@@ -329,7 +340,7 @@ func compositeLit(n *Node, f *Frame) {
 			(*a)[i] = n.typ.field[i].typ.zero()
 		}
 	}
-	(*f)[n.findex] = a
+	f.data[n.findex] = a
 }
 
 // Create a struct Object, filling fields from sparse key-values
@@ -339,26 +350,26 @@ func compositeSparse(n *Node, f *Frame) {
 		// index from key was pre-computed during CFG
 		(*a)[c.findex] = value(c.Child[1], f)
 	}
-	(*f)[n.findex] = a
+	f.data[n.findex] = a
 }
 
 func _range(n *Node, f *Frame) {
 	i, index := 0, n.Child[0].findex
-	if (*f)[index] != nil {
-		i = (*f)[index].(int)
+	if f.data[index] != nil {
+		i = f.data[index].(int)
 	}
 	a := value(n.Child[2], f).(*[]interface{})
 	if i >= len(*a) {
-		(*f)[n.findex] = false
+		f.data[n.findex] = false
 		return
 	}
-	(*f)[index] = i + 1
-	(*f)[n.Child[1].findex] = (*a)[i]
-	(*f)[n.findex] = true
+	f.data[index] = i + 1
+	f.data[n.Child[1].findex] = (*a)[i]
+	f.data[n.findex] = true
 }
 
 func _case(n *Node, f *Frame) {
-	(*f)[n.findex] = value(n.anc.anc.Child[0], f) == value(n.Child[0], f)
+	f.data[n.findex] = value(n.anc.anc.Child[0], f) == value(n.Child[0], f)
 }
 
 // Allocates and initializes a slice, a map or a chan.
@@ -366,17 +377,17 @@ func _make(n *Node, f *Frame) {
 	typ := value(n.Child[1], f).(*Type)
 	switch typ.cat {
 	case ArrayT:
-		(*f)[n.findex] = make([]interface{}, value(n.Child[2], f).(int))
+		f.data[n.findex] = make([]interface{}, value(n.Child[2], f).(int))
 	case ChanT:
-		(*f)[n.findex] = make(chan interface{})
+		f.data[n.findex] = make(chan interface{})
 	case MapT:
-		(*f)[n.findex] = make(map[interface{}]interface{})
+		f.data[n.findex] = make(map[interface{}]interface{})
 	}
 }
 
 // Read from a channel
 func recv(n *Node, f *Frame) {
-	(*f)[n.findex] = <-value(n.Child[0], f).(chan interface{})
+	f.data[n.findex] = <-value(n.Child[0], f).(chan interface{})
 }
 
 // Write to a channel

@@ -1,8 +1,8 @@
 package main
 
-type fn func(int, int)
+type fn func(int)
 
-func f1(int) { println("f1", i) }
+func f1(i int) { println("f1", i) }
 
 func test(f fn, v int) { f(v) }
 
