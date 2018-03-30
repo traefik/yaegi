@@ -2,7 +2,8 @@ package interp
 
 type Symbol struct {
 	typ   *Type // type of value
-	index int   // index of value in frame
+	node  *Node // Node value if index is negative
+	index int   // index of value in frame or -1
 }
 
 type Scope struct {
@@ -34,6 +35,11 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 	scope := &Scope{sym: make(map[string]*Symbol)}
 	maxIndex := 0
 	var loop, loopRestart *Node
+
+	// Fill root scope with initial symbol definitions
+	for name, node := range sdef {
+		scope.sym[name] = &Symbol{node: node, index: -1}
+	}
 
 	e.Walk(func(n *Node) bool {
 		// Pre-order processing
@@ -135,7 +141,6 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.findex = n.Child[0].findex
 			n.Child[0].typ = tdef["int"]
 			n.typ = n.Child[0].typ
-			//if sym, ok := symbol[n.Child[0].ident]; ok {
 			if sym, _, ok := scope.lookup(n.Child[0].ident); ok {
 				sym.typ = n.typ
 			}
@@ -187,8 +192,11 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			}
 			if n.Child[0].kind == SelectorExpr {
 				// Resolve method and receiver path, store them in node static value for run
-				n.val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
-				n.fsize = len(n.val.(*Node).Child[2].Child[1].Child)
+				//n.val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
+				//n.fsize = len(n.val.(*Node).Child[2].Child[1].Child)
+				n.Child[0].val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
+				n.fsize = len(n.Child[0].val.(*Node).Child[2].Child[1].Child)
+				n.Child[0].findex = -1 // To force reading value from node instead of frame
 			} else {
 				n.val = sdef[n.Child[0].ident]
 				if def := n.val.(*Node); def != nil {
@@ -253,7 +261,6 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 				l := len(n.Child) - 1
 				t := tdef[n.Child[l].ident]
 				for _, f := range n.Child[:l] {
-					//symbol[f.ident].typ = t
 					scope.sym[f.ident].typ = t
 				}
 			}
@@ -341,11 +348,15 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			// For now, simply allocate a new entry in local sym table
 			if sym, level, ok := scope.lookup(n.ident); ok {
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
-
+				//fmt.Println(n.index, "got symbol", sym, n.val)
+				if n.findex < 0 {
+					n.val = sym.node
+				}
 			} else {
 				maxIndex++
 				scope.sym[n.ident] = &Symbol{index: maxIndex}
 				n.findex = maxIndex
+				//fmt.Println(n.index, "new symbol")
 			}
 
 		case If0: // if cond {}

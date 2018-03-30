@@ -98,6 +98,10 @@ func value(n *Node, f *Frame) interface{} {
 			f = f.anc
 		}
 		//println(n.index, "val(", n.findex, "):", n.level, f.data[n.findex])
+		if n.findex < 0 {
+			//fmt.Println(n.index, "ident node value", n.val)
+			return n.val
+		}
 		return f.data[n.findex]
 	}
 }
@@ -182,7 +186,8 @@ func call(n *Node, f *Frame) {
 		recv = n.Child[0].Child[0]
 		rseq = n.Child[0].Child[1].val.([]int)
 	}
-	fn := n.val.(*Node)
+	//fn := n.val.(*Node)
+	fn := value(n.Child[0], f).(*Node)
 	//fmt.Println("fn:", fn, f.data[n.Child[0].findex])
 	var ret []int
 	if len(fn.Child[2].Child) > 1 {
