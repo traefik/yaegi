@@ -78,8 +78,7 @@ func (i *Interpreter) Eval(src string) Frame {
 
 	// Execute CFG
 	if !i.opt.NoRun {
-		//frame := &Frame{data: make([]interface{}, root.fsize)}
-		frame := &Frame{data: make([]interface{}, 20)}
+		frame := &Frame{data: make([]interface{}, root.fsize)}
 		runCfg(root.Start, frame)
 		Run(sdef["main"], frame, nil, nil, nil, nil, true)
 	}

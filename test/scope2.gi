@@ -10,3 +10,7 @@ func main() {
 	println(a)
 	f()
 }
+// Output:
+// 1
+// 2
+// 1

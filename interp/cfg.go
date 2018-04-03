@@ -14,10 +14,12 @@ type Scope struct {
 	sym   map[string]*Symbol // Symbol table indexed by idents
 }
 
+// Create a new scope and chain it to the current one
 func (s *Scope) push(indirect int) *Scope {
 	return &Scope{anc: s, level: s.level + indirect, sym: make(map[string]*Symbol)}
 }
 
+// Lookup for a symbol in the current scope, and upper ones if not found
 func (s *Scope) lookup(ident string) (*Symbol, int, bool) {
 	level := s.level
 	for s != nil {
@@ -29,13 +31,19 @@ func (s *Scope) lookup(ident string) (*Symbol, int, bool) {
 	return nil, 0, false
 }
 
+// Tracking of frame index for variables in function context
+type FrameIndex struct {
+	anc *FrameIndex // Ancestor upper frame
+	max int         // The highest index in frame
+}
+
 // n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables.
 // Following this pass, the CFG is ready to run
-func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
+func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 	scope := &Scope{sym: make(map[string]*Symbol)}
-	maxIndex := 0
+	frameIndex := &FrameIndex{}
 	var loop, loopRestart *Node
 
 	// Fill root scope with initial symbol definitions
@@ -65,7 +73,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			scope = scope.push(0)
 
 		case FuncDecl:
-			maxIndex = 0
+			frameIndex = &FrameIndex{anc: frameIndex}
 			scope = scope.push(1)
 			if len(n.Child[0].Child) > 0 {
 				// function is a method, add it to the related type
@@ -76,7 +84,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			}
 			// allocate entries for return values at start of frame
 			if len(n.Child[2].Child) == 2 {
-				maxIndex += len(n.Child[2].Child[1].Child)
+				frameIndex.max += len(n.Child[2].Child[1].Child)
 			}
 
 		case If0, If1, If2, If3:
@@ -129,9 +137,9 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 		case Define, AssignStmt:
 			if n.kind == Define {
 				// Force definition of assigned ident in current scope
-				maxIndex++
-				scope.sym[n.Child[0].ident] = &Symbol{index: maxIndex}
-				n.Child[0].findex = maxIndex
+				frameIndex.max++
+				scope.sym[n.Child[0].ident] = &Symbol{index: frameIndex.max}
+				n.Child[0].findex = frameIndex.max
 			}
 			wireChild(n)
 			n.findex = n.Child[0].findex
@@ -171,14 +179,14 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 
 		case BinaryExpr:
 			wireChild(n)
-			maxIndex++
-			n.findex = maxIndex
+			frameIndex.max++
+			n.findex = frameIndex.max
 			n.typ = n.Child[0].typ
 
 		case IndexExpr:
 			wireChild(n)
-			maxIndex++
-			n.findex = maxIndex
+			frameIndex.max++
+			n.findex = frameIndex.max
 			n.typ = n.Child[0].typ
 			if n.typ.cat == MapT {
 				n.run = getIndexMap
@@ -198,8 +206,8 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 
 		case CallExpr:
 			wireChild(n)
-			maxIndex++
-			n.findex = maxIndex
+			frameIndex.max++
+			n.findex = frameIndex.max
 			if builtin, ok := goBuiltin[n.Child[0].ident]; ok {
 				n.run = builtin
 				if n.Child[0].ident == "make" {
@@ -227,7 +235,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 					// node frame index should point to the first entry
 					j := len(def.Child[2].Child) - 1
 					l := len(def.Child[2].Child[j].Child) // Number of return values for def
-					maxIndex += l - 1
+					frameIndex.max += l - 1
 					if l == 1 {
 						// If def returns exactly one value, propagate its type in call node.
 						// Multiple return values will be handled differently through AssignX.
@@ -239,8 +247,8 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			//fmt.Println(n.index, "callExpr:", n.Child[0].ident, "frame index:", n.findex)
 
 		case CaseClause:
-			maxIndex++
-			n.findex = maxIndex
+			frameIndex.max++
+			n.findex = frameIndex.max
 			n.tnext = n.Child[len(n.Child)-1].Start
 
 		case FuncLit:
@@ -249,8 +257,8 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 
 		case CompositeLitExpr:
 			wireChild(n)
-			maxIndex++
-			n.findex = maxIndex
+			frameIndex.max++
+			n.findex = frameIndex.max
 			if n.Child[0].typ == nil {
 				n.Child[0].typ = tdef[n.Child[0].ident]
 			}
@@ -282,8 +290,8 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			// Otherwise, just point to corresponding location in frame, resolved in
 			// ident child.
 			if len(n.Child) == 1 {
-				maxIndex++
-				n.findex = maxIndex
+				frameIndex.max++
+				n.findex = frameIndex.max
 			} else {
 				l := len(n.Child) - 1
 				t := tdef[n.Child[l].ident]
@@ -294,7 +302,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 
 		case File:
 			wireChild(n)
-			n.fsize = maxIndex + 2
+			n.fsize = frameIndex.max + 1
 
 		case For0: // for {}
 			body := n.Child[0]
@@ -350,12 +358,13 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			scope = scope.anc
 
 		case FuncDecl:
-			n.fsize = maxIndex + 1 // Why ????
+			n.fsize = frameIndex.max + 1
 			if len(n.Child[0].Child) > 0 {
 				// Store receiver frame location (used at run)
 				n.Child[0].findex = n.Child[0].Child[0].Child[0].findex
 			}
 			scope = scope.anc
+			frameIndex = frameIndex.anc
 
 		case FuncType:
 			n.typ = nodeType(tdef, n)
@@ -381,9 +390,9 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 					n.val = sym.node
 				}
 			} else {
-				maxIndex++
-				scope.sym[n.ident] = &Symbol{index: maxIndex}
-				n.findex = maxIndex
+				frameIndex.max++
+				scope.sym[n.ident] = &Symbol{index: frameIndex.max}
+				n.findex = frameIndex.max
 			}
 
 		case If0: // if cond {}
@@ -430,8 +439,8 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.Child[0].tnext = n.Child[1].Start
 			n.Child[0].fnext = n
 			n.Child[1].tnext = n
-			maxIndex++
-			n.findex = maxIndex
+			frameIndex.max++
+			n.findex = frameIndex.max
 			n.typ = n.Child[0].typ
 
 		case LorExpr:
@@ -439,16 +448,16 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.Child[0].tnext = n
 			n.Child[0].fnext = n.Child[1].Start
 			n.Child[1].tnext = n
-			maxIndex++
-			n.findex = maxIndex
+			frameIndex.max++
+			n.findex = frameIndex.max
 			n.typ = n.Child[0].typ
 
 		case RangeStmt:
 			n.Start = n
 			n.Child[3].tnext = n
 			n.tnext = n.Child[3].Start
-			maxIndex++
-			n.findex = maxIndex
+			frameIndex.max++
+			n.findex = frameIndex.max
 
 		case ReturnStmt:
 			wireChild(n)
@@ -456,8 +465,8 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 
 		case SelectorExpr:
 			wireChild(n)
-			maxIndex++
-			n.findex = maxIndex
+			frameIndex.max++
+			n.findex = frameIndex.max
 			n.typ = n.Child[0].typ
 			// lookup field index once during compiling (simple and fast first)
 			if fi := n.typ.fieldIndex(n.Child[1].ident); fi >= 0 {
@@ -509,7 +518,6 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			}
 		}
 	})
-	return maxIndex + 1
 }
 
 // find default case clause index of a switch statement, if any

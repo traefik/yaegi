@@ -414,6 +414,8 @@ package main
 func main() { println(f(5)) }
 func f(i int) int { return i + 1 }`
 	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 6
 }
 
 func Example_map() {
@@ -654,6 +656,10 @@ func main() {
 	f()
 }`
 	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 1
+	// 2
+	// 1
 }
 
 func Example_scope3() {
@@ -772,6 +778,8 @@ func main() {
 	println(a.f, a.g)
 }`
 	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 7 8
 }
 
 func Example_struct0() {
