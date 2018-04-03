@@ -246,29 +246,6 @@ func main() {
 	// 3
 }
 
-func Example_fib1() {
-	src := `
-//#!/usr/bin/env gi
-
-package main
-
-// Compute fibonacci numbers, no memoization
-func fib(n int) int {
-	println("fib", n)
-	if n < 2 {
-		return n
-	}
-	return fib(n-2) + fib(n-1)
-}
-
-func main() {
-	println(fib(2))
-	//println(fib(10))
-}
-`
-	NewInterpreter(InterpOpt{}).Eval(src)
-}
-
 func Example_for0() {
 	src := `
 package main
@@ -677,6 +654,45 @@ func main() {
 	f()
 }`
 	NewInterpreter(InterpOpt{}).Eval(src)
+}
+
+func Example_scope3() {
+	src := `
+package main
+
+func main() {
+	a := 1
+	if a := 2; a > 0 {
+		println(a)
+	}
+	println(a)
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 2
+	// 1
+}
+
+func Example_scope4() {
+	src := `
+package main
+
+func main() {
+	a := 1
+	if a := 2; a > 0 {
+		println(a)
+	}
+	{
+		a := 3
+		println(a)
+	}
+	println(a)
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// 2
+	// 3
+	// 1
 }
 
 func Example_sieve() {

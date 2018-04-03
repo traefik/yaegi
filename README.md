@@ -24,8 +24,6 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 
 ## Status
 
-- [ ] hierarchical scopes for symbol resolution
-- [ ] universe (global) scope
 - [ ] closures
 - [ ] slices / map expressions
 - [ ] goto
@@ -56,6 +54,8 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [X] &&, ||, break, continue
 - [X] switch (partial)
 - [X] type declarations
+- [X] hierarchical scopes for symbol resolution
+- [X] universe (global) scope
 
 ## Developpement plan
 

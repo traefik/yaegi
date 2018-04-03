@@ -1,5 +1,7 @@
 package interp
 
+import "fmt"
+
 type Symbol struct {
 	typ   *Type // type of value
 	node  *Node // Node value if index is negative
@@ -7,7 +9,7 @@ type Symbol struct {
 }
 
 type Scope struct {
-	anc   *Scope             // Ancestor scope
+	anc   *Scope             // Ancestor upper scope
 	level int                // Frame level: number of frame indirections to access var
 	sym   map[string]*Symbol // Symbol table indexed by idents
 }
@@ -51,11 +53,16 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 				n.Child = append(n.Child[:i], n.Child[i+1:]...)
 			}
 
+		case BlockStmt:
+			scope = scope.push(0)
+
 		case For0, ForRangeStmt:
 			loop, loopRestart = n, n.Child[0]
+			scope = scope.push(0)
 
 		case For1, For2, For3, For4:
 			loop, loopRestart = n, n.Child[len(n.Child)-1]
+			scope = scope.push(0)
 
 		case FuncDecl:
 			maxIndex = 0
@@ -72,12 +79,16 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 				maxIndex += len(n.Child[2].Child[1].Child)
 			}
 
+		case If0, If1, If2, If3:
+			scope = scope.push(0)
+
 		case Switch0:
 			// Make sure default clause is in last position
 			c := n.Child[1].Child
 			if i, l := getDefault(n), len(c)-1; i >= 0 && i != l {
 				c[i], c[l] = c[l], c[i]
 			}
+			scope = scope.push(0)
 
 		case TypeSpec:
 			// Type analysis is performed recursively and no post-order processing
@@ -116,10 +127,17 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.typ = &Type{cat: ArrayT, val: tdef[n.Child[1].ident]}
 
 		case Define, AssignStmt:
+			if n.kind == Define {
+				// Force definition of assigned ident in current scope
+				maxIndex++
+				scope.sym[n.Child[0].ident] = &Symbol{index: maxIndex}
+				n.Child[0].findex = maxIndex
+			}
 			wireChild(n)
 			n.findex = n.Child[0].findex
 			// Propagate type
 			// TODO: Check that existing destination type matches source type
+			//fmt.Println(n.index, "Assign child1:", n.Child[1].index, n.Child[1].typ)
 			n.Child[0].typ = n.Child[1].typ
 			n.typ = n.Child[0].typ
 			if sym, _, ok := scope.lookup(n.Child[0].ident); ok {
@@ -166,7 +184,12 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 				n.run = getIndexMap
 			}
 
-		case BlockStmt, DeclStmt, ExprStmt, GenDecl, ParenExpr, SendStmt:
+		case BlockStmt:
+			wireChild(n)
+			n.findex = n.Child[len(n.Child)-1].findex
+			scope = scope.anc
+
+		case DeclStmt, ExprStmt, GenDecl, ParenExpr, SendStmt:
 			wireChild(n)
 			n.findex = n.Child[len(n.Child)-1].findex
 
@@ -219,6 +242,10 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			maxIndex++
 			n.findex = maxIndex
 			n.tnext = n.Child[len(n.Child)-1].Start
+
+		case FuncLit:
+			fmt.Println(n.index, "FuncLit", n.Child[0].typ.cat)
+			n.typ = n.Child[0].typ
 
 		case CompositeLitExpr:
 			wireChild(n)
@@ -274,6 +301,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.Start = body.Start
 			body.tnext = n.Start
 			loop, loopRestart = nil, nil
+			scope = scope.anc
 
 		case For1: // for cond {}
 			cond, body := n.Child[0], n.Child[1]
@@ -282,6 +310,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			cond.fnext = n
 			body.tnext = cond.Start
 			loop, loopRestart = nil, nil
+			scope = scope.anc
 
 		case For2: // for init; cond; {}
 			init, cond, body := n.Child[0], n.Child[1], n.Child[2]
@@ -291,6 +320,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			cond.fnext = n
 			body.tnext = cond.Start
 			loop, loopRestart = nil, nil
+			scope = scope.anc
 
 		case For3: // for ; cond; post {}
 			cond, post, body := n.Child[0], n.Child[1], n.Child[2]
@@ -300,6 +330,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			body.tnext = post.Start
 			post.tnext = cond.Start
 			loop, loopRestart = nil, nil
+			scope = scope.anc
 
 		case For4: // for init; cond; post {}
 			init, cond, post, body := n.Child[0], n.Child[1], n.Child[2], n.Child[3]
@@ -310,11 +341,13 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			body.tnext = post.Start
 			post.tnext = cond.Start
 			loop, loopRestart = nil, nil
+			scope = scope.anc
 
 		case ForRangeStmt:
 			loop, loopRestart = nil, nil
 			n.Start = n.Child[0].Start
 			n.findex = n.Child[0].findex
+			scope = scope.anc
 
 		case FuncDecl:
 			n.fsize = maxIndex + 1 // Why ????
@@ -342,13 +375,8 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			n.Child[0].run = callGoRoutine
 
 		case Ident:
-			// Lookup identifier in frame symbol table. If not found
-			// should check if ident can be defined (assign, param passing...)
-			// or should lookup in upper scope of variables
-			// For now, simply allocate a new entry in local sym table
 			if sym, level, ok := scope.lookup(n.ident); ok {
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
-				//fmt.Println(n.index, "got symbol", sym, n.val)
 				if n.findex < 0 {
 					n.val = sym.node
 				}
@@ -356,7 +384,6 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 				maxIndex++
 				scope.sym[n.ident] = &Symbol{index: maxIndex}
 				n.findex = maxIndex
-				//fmt.Println(n.index, "new symbol")
 			}
 
 		case If0: // if cond {}
@@ -365,6 +392,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			cond.tnext = tbody.Start
 			cond.fnext = n
 			tbody.tnext = n
+			scope = scope.anc
 
 		case If1: // if cond {} else {}
 			cond, tbody, fbody := n.Child[0], n.Child[1], n.Child[2]
@@ -373,6 +401,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			cond.fnext = fbody.Start
 			tbody.tnext = n
 			fbody.tnext = n
+			scope = scope.anc
 
 		case If2: // if init; cond {}
 			init, cond, tbody := n.Child[0], n.Child[1], n.Child[2]
@@ -381,6 +410,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			init.tnext = cond.Start
 			cond.tnext = tbody.Start
 			cond.fnext = n
+			scope = scope.anc
 
 		case If3: // if init; cond {} else {}
 			init, cond, tbody, fbody := n.Child[0], n.Child[1], n.Child[2], n.Child[3]
@@ -390,6 +420,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 			cond.fnext = fbody.Start
 			tbody.tnext = n
 			fbody.tnext = n
+			scope = scope.anc
 
 		case KeyValueExpr:
 			wireChild(n)
@@ -468,6 +499,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) int {
 				c.tnext = c.Child[0].Start
 				c.Child[0].tnext = n
 			}
+			scope = scope.anc
 
 		case ValueSpec:
 			l := len(n.Child) - 1
