@@ -627,6 +627,23 @@ func main() {
 	// f1 21
 }
 
+func Example_run7() {
+	src := `
+package main
+
+type fn func(int)
+
+func test(f fn, v int) { f(v) }
+
+func main() {
+	a := 3
+	test(func(i int) {println("f1", i, a) }, 21) 
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// f1 21 3
+}
+
 func Example_scope0() {
 	src := `
 package main

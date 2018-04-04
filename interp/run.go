@@ -183,6 +183,17 @@ func call(n *Node, f *Frame) {
 	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
 	var recv *Node
 	var rseq []int
+
+	// TODO: The following should be done at compiling in cfg.go
+	// Decide if frame must be forked. It must when a closure is defined and passed
+	var forkFrame bool
+	for _, c := range n.Child[1:] {
+		if c.typ != nil && c.typ.cat == FuncT {
+			forkFrame = true
+			break
+		}
+	}
+
 	if n.Child[0].kind == SelectorExpr {
 		recv = n.Child[0].Child[0]
 		rseq = n.Child[0].Child[1].val.([]int)
@@ -197,7 +208,7 @@ func call(n *Node, f *Frame) {
 			}
 		}
 	}
-	Run(fn, f, recv, rseq, n.Child[1:], ret, false)
+	Run(fn, f, recv, rseq, n.Child[1:], ret, forkFrame)
 }
 
 // Same as call(), but execute function in a goroutine
@@ -206,6 +217,17 @@ func callGoRoutine(n *Node, f *Frame) {
 	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
 	var recv *Node
 	var rseq []int
+
+	// TODO: The following should be done at compiling in cfg.go
+	// Decide if frame must be forked. It must when a closure is defined and passed
+	var forkFrame bool
+	for _, c := range n.Child[1:] {
+		if c.typ != nil && c.typ.cat == FuncT {
+			forkFrame = true
+			break
+		}
+	}
+
 	if n.Child[0].kind == SelectorExpr {
 		recv = n.Child[0].Child[0]
 		rseq = n.Child[0].Child[1].val.([]int)
@@ -220,7 +242,7 @@ func callGoRoutine(n *Node, f *Frame) {
 			}
 		}
 	}
-	go Run(fn, f, recv, rseq, n.Child[1:], ret, false)
+	go Run(fn, f, recv, rseq, n.Child[1:], ret, forkFrame)
 }
 
 func getIndexAddr(n *Node, f *Frame) {
