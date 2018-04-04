@@ -24,7 +24,7 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 
 ## Status
 
-- [ ] closures
+### To Do
 - [ ] slices / map expressions
 - [ ] goto
 - [ ] select
@@ -36,6 +36,7 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [ ] diagnostics and proper error handling
 - [ ] named output variables (test/ret1.gi)
 
+### Done
 - [X] basic literals
 - [X] variable definition and assignment
 - [X] arithmetic and logical expressions
@@ -57,6 +58,7 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [X] type declarations
 - [X] hierarchical scopes for symbol resolution
 - [X] universe (global) scope
+- [X] closures
 
 ## Developpement plan
 

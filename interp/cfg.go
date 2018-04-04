@@ -1,7 +1,5 @@
 package interp
 
-import "fmt"
-
 type Symbol struct {
 	typ   *Type // type of value
 	node  *Node // Node value if index is negative
@@ -72,7 +70,8 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 			loop, loopRestart = n, n.Child[len(n.Child)-1]
 			scope = scope.push(0)
 
-		case FuncDecl:
+		case FuncDecl, FuncLit:
+			// Add a frame indirection level as we enter in a func
 			frameIndex = &FrameIndex{anc: frameIndex}
 			scope = scope.push(1)
 			if len(n.Child[0].Child) > 0 {
@@ -82,8 +81,8 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 				t := tdef[tname]
 				t.method = append(t.method, n)
 			}
-			// allocate entries for return values at start of frame
 			if len(n.Child[2].Child) == 2 {
+				// allocate entries for return values at start of frame
 				frameIndex.max += len(n.Child[2].Child[1].Child)
 			}
 
@@ -223,8 +222,6 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 			}
 			if n.Child[0].kind == SelectorExpr {
 				// Resolve method and receiver path, store them in node static value for run
-				//n.val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
-				//n.fsize = len(n.val.(*Node).Child[2].Child[1].Child)
 				n.Child[0].val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
 				n.fsize = len(n.Child[0].val.(*Node).Child[2].Child[1].Child)
 				n.Child[0].findex = -1 // To force reading value from node instead of frame
@@ -235,7 +232,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 					// node frame index should point to the first entry
 					j := len(def.Child[2].Child) - 1
 					l := len(def.Child[2].Child[j].Child) // Number of return values for def
-					frameIndex.max += l - 1
+					frameIndex.max += l
 					if l == 1 {
 						// If def returns exactly one value, propagate its type in call node.
 						// Multiple return values will be handled differently through AssignX.
@@ -250,10 +247,6 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 			frameIndex.max++
 			n.findex = frameIndex.max
 			n.tnext = n.Child[len(n.Child)-1].Start
-
-		case FuncLit:
-			fmt.Println(n.index, "FuncLit", n.Child[0].typ.cat)
-			n.typ = n.Child[0].typ
 
 		case CompositeLitExpr:
 			wireChild(n)
@@ -358,11 +351,19 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 			scope = scope.anc
 
 		case FuncDecl:
-			n.fsize = frameIndex.max + 1
+			n.findex = frameIndex.max + 1
 			if len(n.Child[0].Child) > 0 {
 				// Store receiver frame location (used at run)
 				n.Child[0].findex = n.Child[0].Child[0].Child[0].findex
 			}
+			scope = scope.anc
+			frameIndex = frameIndex.anc
+
+		case FuncLit:
+			n.typ = n.Child[2].typ
+			n.val = n
+			n.findex = -1
+			n.findex = frameIndex.max + 1
 			scope = scope.anc
 			frameIndex = frameIndex.anc
 
@@ -535,7 +536,7 @@ func wireChild(n *Node) {
 	// Set start node, in subtree (propagated to ancestors by post-order processing)
 	for _, child := range n.Child {
 		switch child.kind {
-		case ArrayType, ChanType, FuncDecl, MapType, BasicLit, Ident:
+		case ArrayType, ChanType, FuncDecl, MapType, BasicLit, FuncLit, Ident:
 			continue
 		default:
 			n.Start = child.Start
@@ -551,7 +552,7 @@ func wireChild(n *Node) {
 	// Chain subtree next to self
 	for i := len(n.Child) - 1; i >= 0; i-- {
 		switch n.Child[i].kind {
-		case ArrayType, ChanType, MapType, FuncDecl, BasicLit, Ident:
+		case ArrayType, ChanType, MapType, FuncDecl, FuncLit, BasicLit, Ident:
 			continue
 		case Break, Continue, ReturnStmt:
 			// tnext is already computed, no change

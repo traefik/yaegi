@@ -374,7 +374,10 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			st.push(n)
 
 		case *ast.FuncLit:
-			st.push(addChild(&root, anc, &index, FuncLit, Nop))
+			n := addChild(&root, anc, &index, FuncLit, Nop)
+			addChild(&root, n, &index, FieldList, Nop)
+			addChild(&root, n, &index, Undef, Nop)
+			st.push(n)
 
 		case *ast.FuncType:
 			st.push(addChild(&root, anc, &index, FuncType, Nop))

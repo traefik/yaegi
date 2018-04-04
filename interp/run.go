@@ -47,13 +47,13 @@ func initGoBuiltin() {
 
 // Run a Go function
 func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int, fork bool) {
-	//println("run", def.Child[1].ident, "allocate", def.fsize)
+	//println("run", def.index, def.Child[1].ident, "allocate", def.findex)
 	// Allocate a new Frame to store local variables
 	anc := cf.anc
 	if fork {
 		anc = cf
 	}
-	f := Frame{anc: anc, data: make([]interface{}, def.fsize)}
+	f := Frame{anc: anc, data: make([]interface{}, def.findex)}
 
 	// Assign receiver value, if defined (for methods)
 	if recv != nil {
@@ -91,17 +91,18 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 
 func value(n *Node, f *Frame) interface{} {
 	switch n.kind {
-	case BasicLit, FuncDecl:
+	case BasicLit, FuncDecl, FuncLit:
+		//fmt.Println(n.index, "literal node value", n.ident, n.val)
 		return n.val
 	default:
 		for level := n.level; level > 0; level-- {
 			f = f.anc
 		}
-		//println(n.index, "val(", n.findex, "):", n.level, f.data[n.findex])
 		if n.findex < 0 {
-			//fmt.Println(n.index, "ident node value", n.val)
+			//fmt.Println(n.index, "ident node value", n.ident, n.val)
 			return n.val
 		}
+		//println(n.index, "val(", n.findex, n.ident, "):", n.level) //, f.data[n.findex])
 		return f.data[n.findex]
 	}
 }
@@ -186,9 +187,7 @@ func call(n *Node, f *Frame) {
 		recv = n.Child[0].Child[0]
 		rseq = n.Child[0].Child[1].val.([]int)
 	}
-	//fn := n.val.(*Node)
 	fn := value(n.Child[0], f).(*Node)
-	//fmt.Println("fn:", fn, f.data[n.Child[0].findex])
 	var ret []int
 	if len(fn.Child[2].Child) > 1 {
 		if fieldList := fn.Child[2].Child[1]; fieldList != nil {
@@ -211,7 +210,7 @@ func callGoRoutine(n *Node, f *Frame) {
 		recv = n.Child[0].Child[0]
 		rseq = n.Child[0].Child[1].val.([]int)
 	}
-	fn := n.val.(*Node)
+	fn := value(n.Child[0], f).(*Node)
 	var ret []int
 	if len(fn.Child[2].Child) > 1 {
 		if fieldList := fn.Child[2].Child[1]; fieldList != nil {

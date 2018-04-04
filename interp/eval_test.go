@@ -607,6 +607,24 @@ func main() {
 	test(f1, 21) 
 }`
 	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// f1 21
+}
+
+func Example_run6() {
+	src := `
+package main
+
+type fn func(int)
+
+func test(f fn, v int) { f(v) }
+
+func main() {
+	test(func(i int) {println("f1", i) }, 21) 
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// f1 21
 }
 
 func Example_scope0() {
