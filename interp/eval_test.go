@@ -644,6 +644,20 @@ func main() {
 	// f1 21 3
 }
 
+func Example_run8() {
+	src := `
+package main
+
+func main() {
+	a := 3
+	f := func(i int) { println("f1", i, a) }
+	f(21)
+}`
+	NewInterpreter(InterpOpt{}).Eval(src)
+	// Output:
+	// f1 21 3
+}
+
 func Example_scope0() {
 	src := `
 package main

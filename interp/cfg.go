@@ -43,6 +43,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 	scope := &Scope{sym: make(map[string]*Symbol)}
 	frameIndex := &FrameIndex{}
 	var loop, loopRestart *Node
+	var funcDef bool // True if a function is defined in the current frame context
 
 	// Fill root scope with initial symbol definitions
 	for name, node := range sdef {
@@ -85,6 +86,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 				// allocate entries for return values at start of frame
 				frameIndex.max += len(n.Child[2].Child[1].Child)
 			}
+			funcDef = false
 
 		case If0, If1, If2, If3:
 			scope = scope.push(0)
@@ -241,6 +243,10 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 					n.fsize = l
 				}
 			}
+			if funcDef {
+				// Trigger frame indirection to handle nested functions
+				n.action = CallF
+			}
 			//fmt.Println(n.index, "callExpr:", n.Child[0].ident, "frame index:", n.findex)
 
 		case CaseClause:
@@ -366,6 +372,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 			n.findex = frameIndex.max + 1
 			scope = scope.anc
 			frameIndex = frameIndex.anc
+			funcDef = true
 
 		case FuncType:
 			n.typ = nodeType(tdef, n)

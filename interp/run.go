@@ -17,6 +17,7 @@ var builtin = [...]Builtin{
 	Add:          add,
 	And:          and,
 	Call:         call,
+	CallF:        call,
 	Case:         _case,
 	CompositeLit: arrayLit,
 	Dec:          nop,
@@ -183,15 +184,10 @@ func call(n *Node, f *Frame) {
 	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
 	var recv *Node
 	var rseq []int
-
-	// TODO: The following should be done at compiling in cfg.go
-	// Decide if frame must be forked. It must when a closure is defined and passed
 	var forkFrame bool
-	for _, c := range n.Child[1:] {
-		if c.typ != nil && c.typ.cat == FuncT {
-			forkFrame = true
-			break
-		}
+
+	if n.action == CallF {
+		forkFrame = true
 	}
 
 	if n.Child[0].kind == SelectorExpr {
@@ -217,15 +213,10 @@ func callGoRoutine(n *Node, f *Frame) {
 	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
 	var recv *Node
 	var rseq []int
-
-	// TODO: The following should be done at compiling in cfg.go
-	// Decide if frame must be forked. It must when a closure is defined and passed
 	var forkFrame bool
-	for _, c := range n.Child[1:] {
-		if c.typ != nil && c.typ.cat == FuncT {
-			forkFrame = true
-			break
-		}
+
+	if n.action == CallF {
+		forkFrame = true
 	}
 
 	if n.Child[0].kind == SelectorExpr {
