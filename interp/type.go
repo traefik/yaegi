@@ -8,7 +8,7 @@ import (
 type Cat int
 
 const (
-	Unset = iota
+	Unset = Cat(iota)
 	AliasT
 	ArrayT
 	BoolT
@@ -18,6 +18,7 @@ const (
 	InterfaceT
 	IntT
 	MapT
+	PkgT
 	StringT
 	StructT
 )
@@ -33,6 +34,7 @@ var cats = [...]string{
 	InterfaceT: "InterfaceT",
 	IntT:       "IntT",
 	MapT:       "MapT",
+	PkgT:       "PkgT",
 	StringT:    "StringT",
 	StructT:    "StructT",
 }

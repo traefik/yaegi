@@ -1,9 +1,12 @@
 package interp
 
+import "fmt"
+
 type Symbol struct {
-	typ   *Type // type of value
-	node  *Node // Node value if index is negative
-	index int   // index of value in frame or -1
+	typ   *Type    // Type of value
+	node  *Node    // Node value if index is negative
+	index int      // index of value in frame or -1
+	pkg   *FuncMap // Map of package symbols if typ.cat is PkgT, or nil
 }
 
 type Scope struct {
@@ -39,7 +42,7 @@ type FrameIndex struct {
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables.
 // Following this pass, the CFG is ready to run
-func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
+func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 	scope := &Scope{sym: make(map[string]*Symbol)}
 	frameIndex := &FrameIndex{}
 	var loop, loopRestart *Node
@@ -50,7 +53,7 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 		scope.sym[name] = &Symbol{node: node, index: -1}
 	}
 
-	e.Walk(func(n *Node) bool {
+	root.Walk(func(n *Node) bool {
 		// Pre-order processing
 		switch n.kind {
 		case Define, AssignStmt:
@@ -222,7 +225,9 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 					}
 				}
 			}
-			if n.Child[0].kind == SelectorExpr {
+			if n.Child[0].kind == SelectorImport {
+				n.run = callImport
+			} else if n.Child[0].kind == SelectorExpr {
 				// Resolve method and receiver path, store them in node static value for run
 				n.Child[0].val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
 				n.fsize = len(n.Child[0].val.(*Node).Child[2].Child[1].Child)
@@ -396,6 +401,8 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
 				if n.findex < 0 {
 					n.val = sym.node
+				} else if n.typ != nil && n.typ.cat == PkgT {
+					n.val = sym.pkg
 				}
 			} else {
 				frameIndex.max++
@@ -439,6 +446,14 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 			fbody.tnext = n
 			scope = scope.anc
 
+		case ImportSpec:
+			name := n.Child[0].val.(string)
+			if pkg, ok := interp.imports[name]; ok {
+				scope.sym[name] = &Symbol{typ: &Type{cat: PkgT}, pkg: &pkg}
+			} else {
+				fmt.Println("import", name, "not found")
+			}
+
 		case KeyValueExpr:
 			wireChild(n)
 
@@ -476,8 +491,17 @@ func (e *Node) Cfg(tdef TypeDef, sdef SymDef) {
 			frameIndex.max++
 			n.findex = frameIndex.max
 			n.typ = n.Child[0].typ
-			// lookup field index once during compiling (simple and fast first)
-			if fi := n.typ.fieldIndex(n.Child[1].ident); fi >= 0 {
+			if n.typ != nil && n.typ.cat == PkgT {
+				// Resolve package symbol
+				name := n.Child[1].ident
+				pkgSym := n.Child[0].val.(*FuncMap)
+				if f, ok := (*pkgSym)[name]; ok {
+					n.kind = SelectorImport
+					n.val = f
+					n.run = nop
+				}
+			} else if fi := n.typ.fieldIndex(n.Child[1].ident); fi >= 0 {
+				// Resolve struct field index
 				n.typ = n.typ.field[fi].typ
 				n.Child[1].kind = BasicLit
 				n.Child[1].val = fi

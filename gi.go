@@ -38,5 +38,6 @@ func main() {
 		s = strings.Replace(s, "#!", "//", 1)
 	}
 	i := interp.NewInterpreter(opt)
+	i.AddImport("fmt", "Println", fmt.Println)
 	i.Eval(string(s))
 }

@@ -26,10 +26,15 @@ type Frame struct {
 	data []interface{} // Values
 }
 
+type FuncMap map[string]interface{}
+
+type ImportMap map[string]FuncMap
+
 // Interpreter contains global resources and state
 type Interpreter struct {
-	opt InterpOpt
-	out Frame
+	opt     InterpOpt
+	out     Frame
+	imports ImportMap
 }
 
 type InterpOpt struct {
@@ -56,7 +61,15 @@ func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 
 // NewInterpreter()creates and returns a new interpreter object
 func NewInterpreter(opt InterpOpt) *Interpreter {
-	return &Interpreter{opt: opt}
+	return &Interpreter{opt: opt, imports: make(ImportMap)}
+}
+
+// Register a symbol from an imported package to be visible from the interpreter
+func (i *Interpreter) AddImport(pkg string, sym string, f interface{}) {
+	if i.imports[pkg] == nil {
+		i.imports[pkg] = make(FuncMap)
+	}
+	i.imports[pkg][sym] = f
 }
 
 // i.Eval(s) evaluates Go code represented as a string
@@ -70,7 +83,7 @@ func (i *Interpreter) Eval(src string) Frame {
 	// Annotate AST with CFG infos
 	tdef := initTypes()
 	initGoBuiltin()
-	root.Cfg(tdef, sdef)
+	i.Cfg(root, tdef, sdef)
 
 	if i.opt.Cfg {
 		root.CfgDot(Dotty())

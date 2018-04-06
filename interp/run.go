@@ -2,6 +2,7 @@ package interp
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 )
 
@@ -92,7 +93,7 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 
 func value(n *Node, f *Frame) interface{} {
 	switch n.kind {
-	case BasicLit, FuncDecl, FuncLit:
+	case BasicLit, FuncDecl, FuncLit, SelectorImport:
 		//fmt.Println(n.index, "literal node value", n.ident, n.val)
 		return n.val
 	default:
@@ -103,7 +104,7 @@ func value(n *Node, f *Frame) interface{} {
 			//fmt.Println(n.index, "ident node value", n.ident, n.val)
 			return n.val
 		}
-		//println(n.index, "val(", n.findex, n.ident, "):", n.level) //, f.data[n.findex])
+		//println(n.index, "val(", n.findex, n.ident, "):", n.level, f.data[n.findex])
 		return f.data[n.findex]
 	}
 }
@@ -111,7 +112,6 @@ func value(n *Node, f *Frame) interface{} {
 // Run by walking the CFG and running node builtin at each step
 func runCfg(n *Node, f *Frame) {
 	for n != nil {
-		//fmt.Println(n.index, "runCfg run")
 		n.run(n, f)
 		if n.fnext == nil || value(n, f).(bool) {
 			n = n.tnext
@@ -123,7 +123,6 @@ func runCfg(n *Node, f *Frame) {
 
 // assignX(n, f) implements assignement for a single call which returns multiple values
 func assignX(n *Node, f *Frame) {
-	//println(n.index, "in assignX")
 	l := len(n.Child) - 1
 	b := n.Child[l].findex
 	for i, c := range n.Child[:l] {
@@ -205,6 +204,16 @@ func call(n *Node, f *Frame) {
 		}
 	}
 	Run(fn, f, recv, rseq, n.Child[1:], ret, forkFrame)
+}
+
+func callImport(n *Node, f *Frame) {
+	fun := reflect.ValueOf(value(n.Child[0], f))
+	in := make([]reflect.Value, len(n.Child)-1)
+	for i, c := range n.Child[1:] {
+		in[i] = reflect.ValueOf(value(c, f))
+	}
+	fun.Call(in)
+	// TODO: handle return values
 }
 
 // Same as call(), but execute function in a goroutine

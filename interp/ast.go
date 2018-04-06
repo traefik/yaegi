@@ -11,7 +11,7 @@ import (
 type Kind int
 
 const (
-	Undef = iota
+	Undef = Kind(iota)
 	ArrayType
 	AssignStmt
 	AssignXStmt
@@ -52,6 +52,7 @@ const (
 	If1 // if cond {} else {}
 	If2 // if init; cond {}
 	If3 // if init; cond {} else {}
+	ImportSpec
 	IncDecStmt
 	IndexExpr
 	LandExpr
@@ -62,6 +63,7 @@ const (
 	RangeStmt
 	ReturnStmt
 	SelectorExpr
+	SelectorImport
 	SendStmt
 	StructType
 	Switch0 // switch tag {}
@@ -112,6 +114,7 @@ var kinds = [...]string{
 	If1:              "If1",
 	If2:              "If2",
 	If3:              "If3",
+	ImportSpec:       "ImportSpec",
 	IncDecStmt:       "IncDecStmt",
 	IndexExpr:        "IndexExpr",
 	KeyValueExpr:     "KeyValueExpr",
@@ -122,6 +125,7 @@ var kinds = [...]string{
 	RangeStmt:        "RangeStmt",
 	ReturnStmt:       "ReturnStmt",
 	SelectorExpr:     "SelectorExpr",
+	SelectorImport:   "SelectorImport",
 	SendStmt:         "SendStmt",
 	StructType:       "StructType",
 	Switch0:          "Switch0",
@@ -141,7 +145,7 @@ func (k Kind) String() string {
 type Action int
 
 const (
-	Nop = iota
+	Nop = Action(iota)
 	ArrayLit
 	Assign
 	AssignX
@@ -408,6 +412,9 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 				kind = If3
 			}
 			st.push(addChild(&root, anc, &index, kind, Nop))
+
+		case *ast.ImportSpec:
+			st.push(addChild(&root, anc, &index, ImportSpec, Nop))
 
 		case *ast.IncDecStmt:
 			var action Action
