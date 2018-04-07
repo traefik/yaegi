@@ -206,7 +206,7 @@ func call(n *Node, f *Frame) {
 	Run(fn, f, recv, rseq, n.Child[1:], ret, forkFrame)
 }
 
-func callImport(n *Node, f *Frame) {
+func callBin(n *Node, f *Frame) {
 	fun := reflect.ValueOf(value(n.Child[0], f))
 	in := make([]reflect.Value, len(n.Child)-1)
 	for i, c := range n.Child[1:] {

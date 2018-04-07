@@ -11,6 +11,7 @@ const (
 	Unset = Cat(iota)
 	AliasT
 	ArrayT
+	BinT
 	BoolT
 	ChanT
 	Float64T
@@ -27,6 +28,7 @@ var cats = [...]string{
 	Unset:      "Unset",
 	AliasT:     "AliasT",
 	ArrayT:     "ArrayT",
+	BinT:       "BinT",
 	BoolT:      "BoolT",
 	ChanT:      "ChanT",
 	Float64T:   "Float64T",

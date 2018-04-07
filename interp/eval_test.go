@@ -281,23 +281,6 @@ func main() {
 	// 3
 }
 
-func Example_fmt0() {
-	src := `
-package main
-
-import "fmt"
-
-func main() {
-	fmt.Println("Hello", 42)
-}`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println)
-	i.Eval(src)
-
-	// Output:
-	// Hello 42
-}
-
 func Example_for0() {
 	src := `
 package main
@@ -445,6 +428,57 @@ func f() int { return 1 }`
 
 	// Output:
 	// 1
+}
+
+func Example_import0() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("Hello", 42)
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.Eval(src)
+
+	// Output:
+	// Hello 42
+}
+
+func Example_import1() {
+	src := `
+package main
+
+import f "fmt"
+
+func main() {
+	f.Println("Hello", 42)
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.Eval(src)
+
+	// Output:
+	// Hello 42
+}
+
+func Example_import2() {
+	src := `
+package main
+
+import . "fmt"
+
+func main() {
+	Println("Hello", 42)
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.Eval(src)
+
+	// Output:
+	// Hello 42
 }
 
 func Example_l2() {
