@@ -31,6 +31,7 @@ var builtin = [...]Builtin{
 	Lower:        lower,
 	Mul:          mul,
 	Not:          not,
+	Quotient:     quotient,
 	Range:        _range,
 	Recv:         recv,
 	Return:       _return,
@@ -212,8 +213,10 @@ func callBin(n *Node, f *Frame) {
 	for i, c := range n.Child[1:] {
 		in[i] = reflect.ValueOf(value(c, f))
 	}
-	fun.Call(in)
-	// TODO: handle return values
+	v := fun.Call(in)
+	for i := 0; i < n.fsize; i++ {
+		f.data[n.findex+i] = v[i].Interface()
+	}
 }
 
 // Same as call(), but execute function in a goroutine
@@ -285,6 +288,10 @@ func valueSeq(n *Node, seq []int, f *Frame) interface{} {
 
 func mul(n *Node, f *Frame) {
 	f.data[n.findex] = value(n.Child[0], f).(int) * value(n.Child[1], f).(int)
+}
+
+func quotient(n *Node, f *Frame) {
+	f.data[n.findex] = value(n.Child[0], f).(int) / value(n.Child[1], f).(int)
 }
 
 func add(n *Node, f *Frame) {

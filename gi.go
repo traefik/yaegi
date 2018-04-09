@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"strings"
 
@@ -38,6 +39,8 @@ func main() {
 		s = strings.Replace(s, "#!", "//", 1)
 	}
 	i := interp.NewInterpreter(opt)
-	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("fmt", "Println", fmt.Println, 0)
+	i.AddImport("math", "Pi", math.Pi, 0)
+	i.AddImport("math", "Cos", math.Cos, 1)
 	i.Eval(string(s))
 }

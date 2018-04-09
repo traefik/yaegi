@@ -9,8 +9,9 @@ type Symbol struct {
 	typ   *Type       // Type of value
 	node  *Node       // Node value if index is negative
 	index int         // index of value in frame or -1
-	pkg   *FuncMap    // Map of package symbols if typ.cat is PkgT, or nil
+	pkg   *SymMap     // Map of package symbols if typ.cat is PkgT, or nil
 	bin   interface{} // Symbol from imported bin package if typ.cat is BinT, or nil
+	nret  int         // Number of returned values for bin symbol if defined
 }
 
 type Scope struct {
@@ -231,6 +232,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			}
 			if n.Child[0].kind == SelectorImport {
 				n.run = callBin
+				n.fsize = n.Child[0].fsize
 			} else if n.Child[0].kind == SelectorExpr {
 				// Resolve method and receiver path, store them in node static value for run
 				n.Child[0].val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
@@ -240,6 +242,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 				sym, _, _ := scope.lookup(n.Child[0].ident)
 				if sym.typ != nil && sym.typ.cat == BinT {
 					n.run = callBin
+					n.Child[0].fsize = sym.nret
 					n.Child[0].val = sym.bin
 					n.Child[0].kind = BasicLit
 				} else {
@@ -249,7 +252,6 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 						// node frame index should point to the first entry
 						j := len(def.Child[2].Child) - 1
 						l := len(def.Child[2].Child[j].Child) // Number of return values for def
-						frameIndex.max += l
 						if l == 1 {
 							// If def returns exactly one value, propagate its type in call node.
 							// Multiple return values will be handled differently through AssignX.
@@ -259,6 +261,8 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 					}
 				}
 			}
+			// Reserve entries in frame to store results of call
+			frameIndex.max += n.fsize
 			if funcDef {
 				// Trigger frame indirection to handle nested functions
 				n.action = CallF
@@ -468,8 +472,8 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			}
 			if pkg, ok := interp.imports[ipath]; ok {
 				if name == "." {
-					for n, f := range pkg {
-						scope.sym[n] = &Symbol{typ: &Type{cat: BinT}, bin: f}
+					for n, s := range pkg {
+						scope.sym[n] = &Symbol{typ: &Type{cat: BinT}, bin: s.sym, nret: s.nret}
 					}
 				} else {
 					scope.sym[name] = &Symbol{typ: &Type{cat: PkgT}, pkg: &pkg}
@@ -519,10 +523,11 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			if n.typ != nil && n.typ.cat == PkgT {
 				// Resolve package symbol
 				name := n.Child[1].ident
-				pkgSym := n.Child[0].val.(*FuncMap)
-				if f, ok := (*pkgSym)[name]; ok {
+				pkgSym := n.Child[0].val.(*SymMap)
+				if s, ok := (*pkgSym)[name]; ok {
 					n.kind = SelectorImport
-					n.val = f
+					n.val = s.sym
+					n.fsize = s.nret
 					n.run = nop
 				}
 			} else if fi := n.typ.fieldIndex(n.Child[1].ident); fi >= 0 {

@@ -166,6 +166,7 @@ const (
 	Lower
 	Mul
 	Not
+	Quotient
 	Range
 	Recv
 	Return
@@ -195,6 +196,7 @@ var actions = [...]string{
 	Lower:        "<",
 	Mul:          "*",
 	Not:          "!",
+	Quotient:     "/",
 	Range:        "range",
 	Recv:         "<-",
 	Return:       "return",
@@ -308,6 +310,8 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 				action = Mul
 			case token.SUB:
 				action = Sub
+			case token.QUO:
+				action = Quotient
 			}
 			st.push(addChild(&root, anc, &index, kind, action))
 
