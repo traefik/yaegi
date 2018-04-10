@@ -13,32 +13,64 @@ const (
 	ArrayT
 	BinT
 	BoolT
+	ByteT
 	ChanT
+	Complex64T
+	Complex128T
+	ErrorT
+	Float32T
 	Float64T
 	FuncT
 	InterfaceT
 	IntT
+	Int8T
+	Int16T
+	Int32T
+	Int64T
 	MapT
 	PkgT
+	RuneT
 	StringT
 	StructT
+	UintT
+	Uint8T
+	Uint16T
+	Uint32T
+	Uint64T
+	UintptrT
 )
 
 var cats = [...]string{
-	Unset:      "Unset",
-	AliasT:     "AliasT",
-	ArrayT:     "ArrayT",
-	BinT:       "BinT",
-	BoolT:      "BoolT",
-	ChanT:      "ChanT",
-	Float64T:   "Float64T",
-	FuncT:      "FuncT",
-	InterfaceT: "InterfaceT",
-	IntT:       "IntT",
-	MapT:       "MapT",
-	PkgT:       "PkgT",
-	StringT:    "StringT",
-	StructT:    "StructT",
+	Unset:       "Unset",
+	AliasT:      "AliasT",
+	ArrayT:      "ArrayT",
+	BinT:        "BinT",
+	ByteT:       "ByteT",
+	BoolT:       "BoolT",
+	ChanT:       "ChanT",
+	Complex64T:  "Complex64T",
+	Complex128T: "Complex128T",
+	ErrorT:      "ErrorT",
+	Float32T:    "Float32",
+	Float64T:    "Float64T",
+	FuncT:       "FuncT",
+	InterfaceT:  "InterfaceT",
+	IntT:        "IntT",
+	Int8T:       "Int8T",
+	Int16T:      "Int16T",
+	Int32T:      "Int32T",
+	Int64T:      "Int64T",
+	MapT:        "MapT",
+	PkgT:        "PkgT",
+	RuneT:       "RuneT",
+	StringT:     "StringT",
+	StructT:     "StructT",
+	UintT:       "UintT",
+	Uint8T:      "Uint8T",
+	Uint16T:     "Uint16T",
+	Uint32T:     "Uint32T",
+	Uint64T:     "Uint64T",
+	UintptrT:    "UintptrT",
 }
 
 func (c Cat) String() string {
@@ -69,10 +101,26 @@ type TypeDef map[string]*Type
 // Initialize Go basic types
 func initTypes() TypeDef {
 	return map[string]*Type{
-		"bool":    &Type{cat: BoolT},
-		"float64": &Type{cat: Float64T},
-		"int":     &Type{cat: IntT},
-		"string":  &Type{cat: StringT},
+		"bool":       &Type{cat: BoolT},
+		"byte":       &Type{cat: ByteT},
+		"complex64":  &Type{cat: Complex64T},
+		"complex128": &Type{cat: Complex128T},
+		"error":      &Type{cat: ErrorT},
+		"float32":    &Type{cat: Float32T},
+		"float64":    &Type{cat: Float64T},
+		"int":        &Type{cat: IntT},
+		"int8":       &Type{cat: Int8T},
+		"int16":      &Type{cat: Int16T},
+		"int32":      &Type{cat: Int32T},
+		"int64":      &Type{cat: Int64T},
+		"rune":       &Type{cat: RuneT},
+		"string":     &Type{cat: StringT},
+		"uint":       &Type{cat: UintT},
+		"uint8":      &Type{cat: Uint8T},
+		"uint16":     &Type{cat: Uint16T},
+		"uint32":     &Type{cat: Uint32T},
+		"uint64":     &Type{cat: Uint64T},
+		"uintptr":    &Type{cat: UintptrT},
 	}
 }
 
@@ -126,9 +174,11 @@ func (t *Type) zero() interface{} {
 		return t.val.zero()
 	case BoolT:
 		return false
-	case Float64T:
+	case Complex64T, Complex128T:
+		return 0 + 0i
+	case Float32T, Float64T:
 		return 0.0
-	case IntT:
+	case ByteT, IntT, Int8T, Int16T, Int32T, Int64T, UintT, Uint8T, Uint16T, Uint32T, Uint64T, UintptrT:
 		return 0
 	case StringT:
 		return ""

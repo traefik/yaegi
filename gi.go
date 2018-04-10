@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/containous/gi/interp"
 )
@@ -42,5 +43,6 @@ func main() {
 	i.AddImport("fmt", "Println", fmt.Println, 0)
 	i.AddImport("math", "Pi", math.Pi, 0)
 	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("time", "Now", time.Now, 1)
 	i.Eval(string(s))
 }

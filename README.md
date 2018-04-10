@@ -28,13 +28,17 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [ ] slices / map expressions
 - [ ] goto
 - [ ] select
-- [ ] import
+- [ ] imports from source
 - [ ] type checking
 - [ ] type assertions and conversions
 - [ ] interfaces
 - [ ] pointers
 - [ ] diagnostics and proper error handling
 - [ ] named output variables (test/ret1.gi)
+- [ ] constants
+- [ ] iota
+- [ ] blank
+- [ ] ellipsis
 
 ### Done
 - [X] basic literals
@@ -59,6 +63,7 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [X] hierarchical scopes for symbol resolution
 - [X] universe (global) scope
 - [X] closures
+- [X] imports from exec
 
 ## Developpement plan
 
