@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math"
 	"os"
 	"strings"
@@ -24,6 +25,7 @@ func main() {
 	}
 	flag.Parse()
 	args := flag.Args()
+	log.SetFlags(log.Lshortfile)
 
 	var b []byte
 	var err error
@@ -33,7 +35,7 @@ func main() {
 		b, err = ioutil.ReadAll(os.Stdin)
 	}
 	if err != nil {
-		panic("Could not read gi source")
+		log.Fatal("Could not read file: ", args[0])
 	}
 	s := string(b)
 	if s[:2] == "#!" {
@@ -44,5 +46,6 @@ func main() {
 	i.AddImport("math", "Pi", math.Pi, 0)
 	i.AddImport("math", "Cos", math.Cos, 1)
 	i.AddImport("time", "Now", time.Now, 1)
+	i.AddImport("time", "Time", new(time.Time), 0)
 	i.Eval(string(s))
 }

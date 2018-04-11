@@ -1,8 +1,9 @@
 package interp
 
 import (
-	"fmt"
+	"log"
 	"path"
+	"reflect"
 )
 
 type Symbol struct {
@@ -127,6 +128,10 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			switch n.val.(type) {
 			case bool:
 				n.typ = tdef["bool"]
+			case byte:
+				n.typ = tdef["byte"]
+			case float32:
+				n.typ = tdef["float32"]
 			case float64:
 				n.typ = tdef["float64"]
 			case int:
@@ -154,7 +159,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			n.findex = n.Child[0].findex
 			// Propagate type
 			// TODO: Check that existing destination type matches source type
-			//fmt.Println(n.index, "Assign child1:", n.Child[1].index, n.Child[1].typ)
+			//log.Println(n.index, "Assign child1:", n.Child[1].index, n.Child[1].typ)
 			n.Child[0].typ = n.Child[1].typ
 			n.typ = n.Child[0].typ
 			if sym, _, ok := scope.lookup(n.Child[0].ident); ok {
@@ -233,18 +238,28 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			if n.Child[0].kind == SelectorImport {
 				n.run = callBin
 				n.fsize = n.Child[0].fsize
+				n.typ = &Type{cat: ValueT}
 			} else if n.Child[0].kind == SelectorExpr {
-				// Resolve method and receiver path, store them in node static value for run
-				n.Child[0].val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
-				n.fsize = len(n.Child[0].val.(*Node).Child[2].Child[1].Child)
-				n.Child[0].findex = -1 // To force reading value from node instead of frame
+				log.Println(n.index, "CallExpr SelectorExpr", n.Child[0].Child[0].typ.cat)
+				if n.Child[0].Child[0].typ.cat == ValueT {
+					n.run = callBinMethod
+					n.typ = &Type{cat: ValueT}
+					log.Println(n.index, "CallExpr value", reflect.TypeOf(n.Child[0].Child[0].val))
+				} else {
+					// Resolve method and receiver path, store them in node static value for run
+					n.Child[0].val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
+					n.fsize = len(n.Child[0].val.(*Node).Child[2].Child[1].Child)
+					n.Child[0].findex = -1 // To force reading value from node instead of frame
+				}
 			} else {
 				sym, _, _ := scope.lookup(n.Child[0].ident)
 				if sym.typ != nil && sym.typ.cat == BinT {
 					n.run = callBin
+					n.typ = &Type{cat: ValueT}
 					n.Child[0].fsize = sym.nret
 					n.Child[0].val = sym.bin
 					n.Child[0].kind = BasicLit
+					log.Println(n.index, "CallExpr bin", reflect.TypeOf(sym.bin))
 				} else {
 					n.val = sym.node
 					if def := n.val.(*Node); def != nil {
@@ -267,7 +282,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 				// Trigger frame indirection to handle nested functions
 				n.action = CallF
 			}
-			//fmt.Println(n.index, "callExpr:", n.Child[0].ident, "frame index:", n.findex)
+			//log.Println(n.index, "callExpr:", n.Child[0].ident, "frame index:", n.findex)
 
 		case CaseClause:
 			frameIndex.max++
@@ -479,7 +494,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 					scope.sym[name] = &Symbol{typ: &Type{cat: PkgT}, pkg: &pkg}
 				}
 			} else {
-				fmt.Println("import", name, "not found")
+				log.Println("import", name, "not found")
 				// TODO: attempt to load source file
 			}
 
@@ -520,6 +535,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			frameIndex.max++
 			n.findex = frameIndex.max
 			n.typ = n.Child[0].typ
+			log.Println(n.index, "SelectorExpr", n.typ)
 			if n.typ != nil && n.typ.cat == PkgT {
 				// Resolve package symbol
 				name := n.Child[1].ident
@@ -529,6 +545,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 					n.val = s.sym
 					n.fsize = s.nret
 					n.run = nop
+					log.Println(n.index, "selector pkg", reflect.TypeOf(s.sym).Kind())
 				}
 			} else if fi := n.typ.fieldIndex(n.Child[1].ident); fi >= 0 {
 				// Resolve struct field index
@@ -542,7 +559,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 					n.Child[1].val = ti
 					n.run = getIndexSeq
 				} else {
-					//fmt.Println(n.index, "Selector not found:", n.Child[1].ident)
+					//log.Println(n.index, "Selector not found:", n.Child[1].ident)
 					n.run = nop
 					//panic("Field not found in selector")
 				}

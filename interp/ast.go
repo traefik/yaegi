@@ -8,10 +8,10 @@ import (
 	"strconv"
 )
 
-type Kind int
+type Kind uint
 
 const (
-	Undef = Kind(iota)
+	Undef Kind = iota
 	ArrayType
 	AssignStmt
 	AssignXStmt
@@ -136,16 +136,16 @@ var kinds = [...]string{
 }
 
 func (k Kind) String() string {
-	if 0 <= k && k <= Kind(len(kinds)) {
+	if k < Kind(len(kinds)) {
 		return kinds[k]
 	}
 	return "Kind(" + strconv.Itoa(int(k)) + ")"
 }
 
-type Action int
+type Action uint
 
 const (
-	Nop = Action(iota)
+	Nop Action = iota
 	ArrayLit
 	Assign
 	AssignX
@@ -205,7 +205,7 @@ var actions = [...]string{
 }
 
 func (a Action) String() string {
-	if 0 <= a && a <= Action(len(actions)) {
+	if a < Action(len(actions)) {
 		return actions[a]
 	}
 	return "Action(" + strconv.Itoa(int(a)) + ")"

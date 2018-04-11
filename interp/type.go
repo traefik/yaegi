@@ -1,14 +1,15 @@
 package interp
 
 import (
+	"reflect"
 	"strconv"
 )
 
 // Type categories
-type Cat int
+type Cat uint
 
 const (
-	Unset = Cat(iota)
+	Unset Cat = iota
 	AliasT
 	ArrayT
 	BinT
@@ -38,6 +39,7 @@ const (
 	Uint32T
 	Uint64T
 	UintptrT
+	ValueT
 )
 
 var cats = [...]string{
@@ -71,10 +73,11 @@ var cats = [...]string{
 	Uint32T:     "Uint32T",
 	Uint64T:     "Uint64T",
 	UintptrT:    "UintptrT",
+	ValueT:      "ValueT",
 }
 
 func (c Cat) String() string {
-	if 0 <= c && c <= Cat(len(cats)) {
+	if c < Cat(len(cats)) {
 		return cats[c]
 	}
 	return "Cat(" + strconv.Itoa(int(c)) + ")"
@@ -94,6 +97,7 @@ type Type struct {
 	arg    []*Type       // Argument types if FuncT or nil
 	ret    []*Type       // Return types if FuncT or nil
 	method []*Node       // Associated methods or nil
+	rtype  *reflect.Type // Reflection type if ValueT, or nil
 }
 
 type TypeDef map[string]*Type

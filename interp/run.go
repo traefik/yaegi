@@ -2,6 +2,7 @@ package interp
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"time"
 )
@@ -50,7 +51,7 @@ func initGoBuiltin() {
 
 // Run a Go function
 func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int, fork bool) {
-	//println("run", def.index, def.Child[1].ident, "allocate", def.findex)
+	// log.Println("run", def.index, def.Child[1].ident, "allocate", def.findex)
 	// Allocate a new Frame to store local variables
 	anc := cf.anc
 	if fork {
@@ -95,14 +96,14 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 func value(n *Node, f *Frame) interface{} {
 	switch n.kind {
 	case BasicLit, FuncDecl, FuncLit, SelectorImport:
-		//fmt.Println(n.index, "literal node value", n.ident, n.val)
+		//log.Println(n.index, "literal node value", n.ident, n.val)
 		return n.val
 	default:
 		for level := n.level; level > 0; level-- {
 			f = f.anc
 		}
 		if n.findex < 0 {
-			//fmt.Println(n.index, "ident node value", n.ident, n.val)
+			//log.Println(n.index, "ident node value", n.ident, n.val)
 			return n.val
 		}
 		//println(n.index, "val(", n.findex, n.ident, "):", n.level, f.data[n.findex])
@@ -208,7 +209,24 @@ func call(n *Node, f *Frame) {
 }
 
 func callBin(n *Node, f *Frame) {
+	log.Println(n.index, "in callBin")
 	fun := reflect.ValueOf(value(n.Child[0], f))
+	in := make([]reflect.Value, len(n.Child)-1)
+	for i, c := range n.Child[1:] {
+		log.Println("in", i, value(c, f))
+		in[i] = reflect.ValueOf(value(c, f))
+	}
+	v := fun.Call(in)
+	for i := 0; i < n.fsize; i++ {
+		f.data[n.findex+i] = v[i].Interface()
+	}
+}
+
+func callBinMethod(n *Node, f *Frame) {
+	log.Println(n.index, "in CallBinMethod", reflect.TypeOf(value(n.Child[0].Child[0], f)))
+
+	recv := reflect.ValueOf(value(n.Child[0].Child[0], f))
+	fun := recv.MethodByName(n.Child[0].Child[1].ident)
 	in := make([]reflect.Value, len(n.Child)-1)
 	for i, c := range n.Child[1:] {
 		in[i] = reflect.ValueOf(value(c, f))
@@ -217,6 +235,7 @@ func callBin(n *Node, f *Frame) {
 	for i := 0; i < n.fsize; i++ {
 		f.data[n.findex+i] = v[i].Interface()
 	}
+	log.Println("v:", v)
 }
 
 // Same as call(), but execute function in a goroutine
