@@ -210,7 +210,7 @@ func call(n *Node, f *Frame) {
 
 func callBin(n *Node, f *Frame) {
 	log.Println(n.index, "in callBin")
-	fun := reflect.ValueOf(value(n.Child[0], f))
+	fun := value(n.Child[0], f).(reflect.Value)
 	in := make([]reflect.Value, len(n.Child)-1)
 	for i, c := range n.Child[1:] {
 		log.Println("in", i, value(c, f))
@@ -235,7 +235,7 @@ func callBinMethod(n *Node, f *Frame) {
 	for i := 0; i < n.fsize; i++ {
 		f.data[n.findex+i] = v[i].Interface()
 	}
-	log.Println("v:", v)
+	log.Println("v:", f.data[n.findex])
 }
 
 // Same as call(), but execute function in a goroutine

@@ -97,7 +97,7 @@ type Type struct {
 	arg    []*Type       // Argument types if FuncT or nil
 	ret    []*Type       // Return types if FuncT or nil
 	method []*Node       // Associated methods or nil
-	rtype  *reflect.Type // Reflection type if ValueT, or nil
+	rtype  reflect.Type  // Reflection type if ValueT, or nil
 }
 
 type TypeDef map[string]*Type

@@ -187,9 +187,19 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 
 		case DefineX, AssignXStmt:
 			wireChild(n)
-			n.findex = n.Child[0].findex
-			n.Child[0].typ = n.Child[1].typ
-			n.typ = n.Child[0].typ
+			log.Println(n.index, "assignX", len(n.Child))
+			l := len(n.Child) - 1
+			if n.kind == DefineX {
+				// Force definition of assigned idents in current scope
+				for _, c := range n.Child[:l] {
+					frameIndex.max++
+					scope.sym[c.ident] = &Symbol{index: frameIndex.max}
+					c.findex = frameIndex.max
+				}
+			}
+			// Propagate types to assignees
+			//for _, c := range n.Child[:l] {
+			//}
 
 		case BinaryExpr:
 			wireChild(n)
@@ -225,20 +235,19 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			if builtin, ok := goBuiltin[n.Child[0].ident]; ok {
 				n.run = builtin
 				if n.Child[0].ident == "make" {
-					if n.typ = tdef[n.Child[1].ident]; n.typ != nil {
-						n.Child[1].val = n.typ
-						n.Child[1].kind = BasicLit
-					} else {
+					if n.typ = tdef[n.Child[1].ident]; n.typ == nil {
 						n.typ = nodeType(tdef, n.Child[1])
-						n.Child[1].val = n.typ
-						n.Child[1].kind = BasicLit
 					}
+					n.Child[1].val = n.typ
+					n.Child[1].kind = BasicLit
 				}
 			}
 			if n.Child[0].kind == SelectorImport {
 				n.run = callBin
 				n.fsize = n.Child[0].fsize
-				n.typ = &Type{cat: ValueT}
+				n.typ = &Type{cat: ValueT, rtype: n.Child[0].val.(reflect.Value).Type().Out(0)}
+				// TODO: handle multiple return value
+				log.Println(n.index, "call selectorImport", n.typ.rtype)
 			} else if n.Child[0].kind == SelectorExpr {
 				log.Println(n.index, "CallExpr SelectorExpr", n.Child[0].Child[0].typ.cat)
 				if n.Child[0].Child[0].typ.cat == ValueT {
@@ -256,8 +265,8 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 				if sym.typ != nil && sym.typ.cat == BinT {
 					n.run = callBin
 					n.typ = &Type{cat: ValueT}
-					n.Child[0].fsize = sym.nret
-					n.Child[0].val = sym.bin
+					n.Child[0].fsize = reflect.TypeOf(sym.bin).NumOut()
+					n.Child[0].val = reflect.ValueOf(sym.bin)
 					n.Child[0].kind = BasicLit
 					log.Println(n.index, "CallExpr bin", reflect.TypeOf(sym.bin))
 				} else {
@@ -536,14 +545,25 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			n.findex = frameIndex.max
 			n.typ = n.Child[0].typ
 			log.Println(n.index, "SelectorExpr", n.typ)
-			if n.typ != nil && n.typ.cat == PkgT {
+			if n.typ != nil && n.typ.cat == ValueT {
+				log.Println(n.index, "selector value", n.typ.rtype, n.Child[1].ident)
+				if method, ok := n.typ.rtype.MethodByName(n.Child[1].ident); ok {
+					log.Println("method:", method)
+					n.kind = SelectorImport
+					n.val = method.Func
+					n.fsize = method.Type.NumOut()
+					n.run = nop
+				}
+			} else if n.typ != nil && n.typ.cat == PkgT {
 				// Resolve package symbol
 				name := n.Child[1].ident
 				pkgSym := n.Child[0].val.(*SymMap)
 				if s, ok := (*pkgSym)[name]; ok {
 					n.kind = SelectorImport
-					n.val = s.sym
-					n.fsize = s.nret
+					n.val = reflect.ValueOf(s.sym)
+					if typ := reflect.TypeOf(s.sym); typ.Kind() == reflect.Func {
+						n.fsize = typ.NumOut()
+					}
 					n.run = nop
 					log.Println(n.index, "selector pkg", reflect.TypeOf(s.sym).Kind())
 				}
