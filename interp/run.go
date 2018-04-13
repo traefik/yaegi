@@ -2,7 +2,6 @@ package interp
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"time"
 )
@@ -95,7 +94,7 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 
 func value(n *Node, f *Frame) interface{} {
 	switch n.kind {
-	case BasicLit, FuncDecl, FuncLit, SelectorImport:
+	case BasicLit, FuncDecl, FuncLit:
 		//log.Println(n.index, "literal node value", n.ident, n.val)
 		return n.val
 	default:
@@ -208,12 +207,40 @@ func call(n *Node, f *Frame) {
 	Run(fn, f, recv, rseq, n.Child[1:], ret, forkFrame)
 }
 
-func callBin(n *Node, f *Frame) {
-	log.Println(n.index, "in callBin")
+// Same as callBin, but for handling f(g()) where g returns multiple values
+func callBinX(n *Node, f *Frame) {
+	l := n.Child[1].fsize
+	b := n.Child[1].findex
+	in := make([]reflect.Value, l)
+	for i := 0; i < l; i++ {
+		in[i] = reflect.ValueOf(f.data[b+i])
+	}
 	fun := value(n.Child[0], f).(reflect.Value)
+	v := fun.Call(in)
+	for i := 0; i < n.fsize; i++ {
+		f.data[n.findex+i] = v[i].Interface()
+	}
+}
+
+// Call a function from a bin import, accessible through reflect
+func callBin(n *Node, f *Frame) {
 	in := make([]reflect.Value, len(n.Child)-1)
 	for i, c := range n.Child[1:] {
-		log.Println("in", i, value(c, f))
+		in[i] = reflect.ValueOf(value(c, f))
+	}
+	fun := value(n.Child[0], f).(reflect.Value)
+	v := fun.Call(in)
+	for i := 0; i < n.fsize; i++ {
+		f.data[n.findex+i] = v[i].Interface()
+	}
+}
+
+// Call a method on an object recturned by a bin import function, through reflect
+func callBinMethod(n *Node, f *Frame) {
+	fun := value(n.Child[0], f).(reflect.Value)
+	in := make([]reflect.Value, len(n.Child))
+	in[0] = reflect.ValueOf(value(n.Child[0].Child[0], f))
+	for i, c := range n.Child[1:] {
 		in[i] = reflect.ValueOf(value(c, f))
 	}
 	v := fun.Call(in)
@@ -222,20 +249,20 @@ func callBin(n *Node, f *Frame) {
 	}
 }
 
-func callBinMethod(n *Node, f *Frame) {
-	log.Println(n.index, "in CallBinMethod", reflect.TypeOf(value(n.Child[0].Child[0], f)))
-
-	recv := reflect.ValueOf(value(n.Child[0].Child[0], f))
-	fun := recv.MethodByName(n.Child[0].Child[1].ident)
-	in := make([]reflect.Value, len(n.Child)-1)
-	for i, c := range n.Child[1:] {
-		in[i] = reflect.ValueOf(value(c, f))
+// Same as callBinMethod, but for handling f(g()) where g returns multiple values
+func callBinMethodX(n *Node, f *Frame) {
+	fun := value(n.Child[0], f).(reflect.Value)
+	l := n.Child[1].fsize
+	b := n.Child[1].findex
+	in := make([]reflect.Value, l+1)
+	in[0] = reflect.ValueOf(value(n.Child[0].Child[0], f))
+	for i := 0; i < l; i++ {
+		in[i+1] = reflect.ValueOf(f.data[b+i])
 	}
 	v := fun.Call(in)
 	for i := 0; i < n.fsize; i++ {
 		f.data[n.findex+i] = v[i].Interface()
 	}
-	log.Println("v:", f.data[n.findex])
 }
 
 // Same as call(), but execute function in a goroutine

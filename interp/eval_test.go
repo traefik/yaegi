@@ -160,6 +160,27 @@ func main() {
 	// ping
 }
 
+func Example_const0() {
+	src := `
+package main
+
+//const a = 1
+const (
+	a = iota
+	b 
+)
+
+func main() {
+	println(a, b)
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println, 0)
+	i.AddImport("math", "Pi", math.Pi, 0)
+	i.AddImport("math", "Cos", math.Cos, 1)
+	i.Eval(src)
+
+}
+
 func Example_cont0() {
 	src := `
 package main
@@ -761,6 +782,28 @@ package main
 func main() {
 	a, b := r2()
 	println(a, b)
+}
+
+func r2() (int, int) {return 1, 2}
+`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println, 0)
+	i.AddImport("math", "Pi", math.Pi, 0)
+	i.AddImport("math", "Cos", math.Cos, 1)
+	i.Eval(src)
+
+	// Output:
+	// 1 2
+}
+
+func Example_ret3() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println(r2())
 }
 
 func r2() (int, int) {return 1, 2}
@@ -1403,6 +1446,71 @@ import (
 
 func main() {
 	fmt.Println(time.Now())
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println, 0)
+	i.AddImport("math", "Pi", math.Pi, 0)
+	i.AddImport("math", "Cos", math.Cos, 1)
+	i.Eval(src)
+
+}
+
+func Example_time1() {
+	src := `
+package main
+
+import (
+	"time"
+	"fmt"
+)
+
+func main() {
+	t := time.Now()
+	m := t.Minute()
+	fmt.Println(t, m)
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println, 0)
+	i.AddImport("math", "Pi", math.Pi, 0)
+	i.AddImport("math", "Cos", math.Cos, 1)
+	i.Eval(src)
+
+}
+
+func Example_time2() {
+	src := `
+package main
+
+import (
+	"time"
+	"fmt"
+)
+
+func main() {
+	t := time.Now()
+	h, m, s := t.Clock()
+	fmt.Println(h, m, s)
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println, 0)
+	i.AddImport("math", "Pi", math.Pi, 0)
+	i.AddImport("math", "Cos", math.Cos, 1)
+	i.Eval(src)
+
+}
+
+func Example_time3() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+func main() {
+	t := time.Now()
+	fmt.Println(t.Clock())
 }`
 	i := NewInterpreter(InterpOpt{})
 	i.AddImport("fmt", "Println", fmt.Println, 0)

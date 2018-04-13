@@ -187,7 +187,6 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 
 		case DefineX, AssignXStmt:
 			wireChild(n)
-			log.Println(n.index, "assignX", len(n.Child))
 			l := len(n.Child) - 1
 			if n.kind == DefineX {
 				// Force definition of assigned idents in current scope
@@ -243,17 +242,22 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 				}
 			}
 			if n.Child[0].kind == SelectorImport {
-				n.run = callBin
 				n.fsize = n.Child[0].fsize
 				n.typ = &Type{cat: ValueT, rtype: n.Child[0].val.(reflect.Value).Type().Out(0)}
+				n.Child[0].kind = BasicLit
 				// TODO: handle multiple return value
-				log.Println(n.index, "call selectorImport", n.typ.rtype)
+				if len(n.Child) == 2 && n.Child[1].fsize > 1 {
+					n.run = callBinX
+				} else {
+					n.run = callBin
+				}
 			} else if n.Child[0].kind == SelectorExpr {
-				log.Println(n.index, "CallExpr SelectorExpr", n.Child[0].Child[0].typ.cat)
 				if n.Child[0].Child[0].typ.cat == ValueT {
 					n.run = callBinMethod
-					n.typ = &Type{cat: ValueT}
-					log.Println(n.index, "CallExpr value", reflect.TypeOf(n.Child[0].Child[0].val))
+					// TODO: handle multiple return value
+					n.Child[0].kind = BasicLit // Temporary hack for force value() to return n.val at run
+					n.typ = &Type{cat: ValueT, rtype: n.Child[0].val.(reflect.Value).Type()}
+					n.fsize = n.Child[0].fsize
 				} else {
 					// Resolve method and receiver path, store them in node static value for run
 					n.Child[0].val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
@@ -268,7 +272,6 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 					n.Child[0].fsize = reflect.TypeOf(sym.bin).NumOut()
 					n.Child[0].val = reflect.ValueOf(sym.bin)
 					n.Child[0].kind = BasicLit
-					log.Println(n.index, "CallExpr bin", reflect.TypeOf(sym.bin))
 				} else {
 					n.val = sym.node
 					if def := n.val.(*Node); def != nil {
@@ -544,12 +547,8 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			frameIndex.max++
 			n.findex = frameIndex.max
 			n.typ = n.Child[0].typ
-			log.Println(n.index, "SelectorExpr", n.typ)
 			if n.typ != nil && n.typ.cat == ValueT {
-				log.Println(n.index, "selector value", n.typ.rtype, n.Child[1].ident)
 				if method, ok := n.typ.rtype.MethodByName(n.Child[1].ident); ok {
-					log.Println("method:", method)
-					n.kind = SelectorImport
 					n.val = method.Func
 					n.fsize = method.Type.NumOut()
 					n.run = nop
@@ -565,7 +564,6 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 						n.fsize = typ.NumOut()
 					}
 					n.run = nop
-					log.Println(n.index, "selector pkg", reflect.TypeOf(s.sym).Kind())
 				}
 			} else if fi := n.typ.fieldIndex(n.Child[1].ident); fi >= 0 {
 				// Resolve struct field index
