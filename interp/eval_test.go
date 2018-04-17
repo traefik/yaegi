@@ -160,6 +160,30 @@ func main() {
 	// ping
 }
 
+func Example_chan2() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	messages := make(chan string)
+
+	go func() { messages <- "ping" }()
+
+	msg := <-messages
+	fmt.Println(msg)
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println, 0)
+	i.AddImport("math", "Pi", math.Pi, 0)
+	i.AddImport("math", "Cos", math.Cos, 1)
+	i.Eval(src)
+
+	// Output:
+	// ping
+}
+
 func Example_const0() {
 	src := `
 package main
@@ -179,6 +203,32 @@ func main() {
 	i.AddImport("math", "Cos", math.Cos, 1)
 	i.Eval(src)
 
+}
+
+func Example_cont() {
+	src := `
+package main
+
+func main() {
+	for i := 0; i < 10; i++ {
+		if i < 5 {
+			continue
+		}
+		println(i)
+	}
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println, 0)
+	i.AddImport("math", "Pi", math.Pi, 0)
+	i.AddImport("math", "Cos", math.Cos, 1)
+	i.Eval(src)
+
+	// Output:
+	// 5
+	// 6
+	// 7
+	// 8
+	// 9
 }
 
 func Example_cont0() {
@@ -247,30 +297,31 @@ func main() {
 	// 10
 }
 
-func Example_cont() {
+func Example_fib() {
 	src := `
+//#!/usr/bin/env gi
+
 package main
 
-func main() {
-	for i := 0; i < 10; i++ {
-		if i < 5 {
-			continue
-		}
-		println(i)
+// Compute fibonacci numbers, no memoization
+func fib(n int) int {
+	if n < 2 {
+		return n
 	}
-}`
+	return fib(n-2) + fib(n-1)
+}
+
+func main() {
+	println(fib(35))
+	//println(fib(10))
+}
+`
 	i := NewInterpreter(InterpOpt{})
 	i.AddImport("fmt", "Println", fmt.Println, 0)
 	i.AddImport("math", "Pi", math.Pi, 0)
 	i.AddImport("math", "Cos", math.Cos, 1)
 	i.Eval(src)
 
-	// Output:
-	// 5
-	// 6
-	// 7
-	// 8
-	// 9
 }
 
 func Example_fib0() {
@@ -298,33 +349,6 @@ func main() {
 
 	// Output:
 	// 3
-}
-
-func Example_fib() {
-	src := `
-//#!/usr/bin/env gi
-
-package main
-
-// Compute fibonacci numbers, no memoization
-func fib(n int) int {
-	if n < 2 {
-		return n
-	}
-	return fib(n-2) + fib(n-1)
-}
-
-func main() {
-	println(fib(35))
-	//println(fib(10))
-}
-`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.Eval(src)
-
 }
 
 func Example_for0() {
@@ -385,6 +409,49 @@ func main() {
 	// 4
 }
 
+func Example_for2() {
+	src := `
+package main
+
+func main() {
+	for i := 2; ; i++ {
+		println(i)
+		if i > 3 {
+			break
+		}
+	}
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println, 0)
+	i.AddImport("math", "Pi", math.Pi, 0)
+	i.AddImport("math", "Cos", math.Cos, 1)
+	i.Eval(src)
+
+	// Output:
+	// 2
+	// 3
+	// 4
+}
+
+func Example_fun() {
+	src := `
+package main
+
+func f (i int) int { return i+15 }
+
+func main() {
+	println(f(4))
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println, 0)
+	i.AddImport("math", "Pi", math.Pi, 0)
+	i.AddImport("math", "Cos", math.Cos, 1)
+	i.Eval(src)
+
+	// Output:
+	// 19
+}
+
 func Example_fun2() {
 	src := `
 package main
@@ -427,25 +494,6 @@ func main() {
 
 	// Output:
 	// 18
-}
-
-func Example_fun() {
-	src := `
-package main
-
-func f (i int) int { return i+15 }
-
-func main() {
-	println(f(4))
-}`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.Eval(src)
-
-	// Output:
-	// 19
 }
 
 func Example_goroutine() {
@@ -606,6 +654,27 @@ func f(i int) int { return i + 1 }`
 	// 6
 }
 
+func Example_map() {
+	src := `
+package main
+
+type Dict map[string]string
+
+func main() {
+	dict := make(Dict)
+	dict["truc"] = "machin"
+	println(dict["truc"])
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println, 0)
+	i.AddImport("math", "Pi", math.Pi, 0)
+	i.AddImport("math", "Cos", math.Cos, 1)
+	i.Eval(src)
+
+	// Output:
+	// machin
+}
+
 func Example_map2() {
 	src := `
 package main
@@ -666,27 +735,6 @@ func main() {
 	// bonjour
 }
 
-func Example_map() {
-	src := `
-package main
-
-type Dict map[string]string
-
-func main() {
-	dict := make(Dict)
-	dict["truc"] = "machin"
-	println(dict["truc"])
-}`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.Eval(src)
-
-	// Output:
-	// machin
-}
-
 func Example_math0() {
 	src := `
 package main
@@ -707,6 +755,30 @@ func main() {
 
 }
 
+func Example_method() {
+	src := `
+package main
+
+type Coord struct {
+	x, y int
+}
+
+func (c Coord) dist() int { return c.x * c.x + c.y * c.y }
+
+func main() {
+	o := Coord{3, 4}
+	println(o.dist())
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println, 0)
+	i.AddImport("math", "Pi", math.Pi, 0)
+	i.AddImport("math", "Cos", math.Cos, 1)
+	i.Eval(src)
+
+	// Output:
+	// 25
+}
+
 func Example_method2() {
 	src := `
 package main
@@ -724,30 +796,6 @@ type Point struct {
 
 func main() {
 	o := Point{ Coord{3, 4}, 5}
-	println(o.dist())
-}`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.Eval(src)
-
-	// Output:
-	// 25
-}
-
-func Example_method() {
-	src := `
-package main
-
-type Coord struct {
-	x, y int
-}
-
-func (c Coord) dist() int { return c.x * c.x + c.y * c.y }
-
-func main() {
-	o := Coord{3, 4}
 	println(o.dist())
 }`
 	i := NewInterpreter(InterpOpt{})
@@ -856,6 +904,23 @@ func main() {
 
 	// Output:
 	// 5
+}
+
+func Example_run10() {
+	src := `
+package main
+
+func main() {
+	func() {println("hello")}()
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println, 0)
+	i.AddImport("math", "Pi", math.Pi, 0)
+	i.AddImport("math", "Cos", math.Cos, 1)
+	i.Eval(src)
+
+	// Output:
+	// hello
 }
 
 func Example_run4() {
@@ -1129,6 +1194,7 @@ func Filter(in <-chan int, out chan<- int, prime int) {
 func main() {
 	ch := make(chan int) // Create a new channel.
 	go Generate(ch)      // Launch Generate goroutine.
+/*
 	for i := 0; i < 10; i++ {
 		prime := <-ch
 		println(prime)
@@ -1136,6 +1202,34 @@ func main() {
 		go Filter(ch, ch1, prime)
 		ch = ch1
 	}
+*/
+/*
+	prime := <-ch
+	println(prime)
+	ch1 := make(chan int)
+	go Filter(ch, ch1, prime)
+
+	prime = <-ch1
+	println(prime)
+	ch2 := make(chan int)
+	go Filter(ch1, ch2, prime)
+
+	prime := <-ch2
+	println(prime)
+	ch3 := make(chan int)
+	go Filter(ch2, ch3, prime)
+
+	prime := <-ch3
+	println(prime)
+*/
+	prime := <-ch
+	println(prime)
+	ch1 := make(chan int)
+	go Filter(ch, ch1, prime)
+	ch = ch1
+
+	prime = <-ch1
+	println(prime)
 }`
 	i := NewInterpreter(InterpOpt{})
 	i.AddImport("fmt", "Println", fmt.Println, 0)
@@ -1179,19 +1273,18 @@ func main() {
 	// hello world
 }
 
-func Example_struct0a() {
+func Example_struct() {
 	src := `
 package main
 
 type T struct {
 	f int
+	g int
 }
 
 func main() {
-	a := T{}
-	println(a.f)
-	a.f = 8
-	println(a.f)
+	a := T{ 7, 8 }
+	println(a.f, a.g)
 }`
 	i := NewInterpreter(InterpOpt{})
 	i.AddImport("fmt", "Println", fmt.Println, 0)
@@ -1200,8 +1293,7 @@ func main() {
 	i.Eval(src)
 
 	// Output:
-	// 0
-	// 8
+	// 7 8
 }
 
 func Example_struct0() {
@@ -1225,6 +1317,31 @@ func main() {
 
 	// Output:
 	// 0 0
+}
+
+func Example_struct0a() {
+	src := `
+package main
+
+type T struct {
+	f int
+}
+
+func main() {
+	a := T{}
+	println(a.f)
+	a.f = 8
+	println(a.f)
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println, 0)
+	i.AddImport("math", "Pi", math.Pi, 0)
+	i.AddImport("math", "Cos", math.Cos, 1)
+	i.Eval(src)
+
+	// Output:
+	// 0
+	// 8
 }
 
 func Example_struct1() {
@@ -1387,29 +1504,6 @@ func main() {
 	// 7 8
 }
 
-func Example_struct() {
-	src := `
-package main
-
-type T struct {
-	f int
-	g int
-}
-
-func main() {
-	a := T{ 7, 8 }
-	println(a.f, a.g)
-}`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.Eval(src)
-
-	// Output:
-	// 7 8
-}
-
 func Example_switch() {
 	src := `
 package main
@@ -1540,6 +1634,24 @@ func main() {
 	// 0
 }
 
+func Example_var() {
+	src := `
+package main
+
+func main() {
+	var a, b, c int
+	println(a, b, c)
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println, 0)
+	i.AddImport("math", "Pi", math.Pi, 0)
+	i.AddImport("math", "Cos", math.Cos, 1)
+	i.Eval(src)
+
+	// Output:
+	// 0 0 0
+}
+
 func Example_var2() {
 	src := `
 package main
@@ -1592,22 +1704,4 @@ func main() {
 
 	// Output:
 	// 2 3
-}
-
-func Example_var() {
-	src := `
-package main
-
-func main() {
-	var a, b, c int
-	println(a, b, c)
-}`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.Eval(src)
-
-	// Output:
-	// 0 0 0
 }

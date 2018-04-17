@@ -264,8 +264,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 					n.fsize = len(n.Child[0].val.(*Node).Child[2].Child[1].Child)
 					n.Child[0].findex = -1 // To force reading value from node instead of frame
 				}
-			} else {
-				sym, _, _ := scope.lookup(n.Child[0].ident)
+			} else if sym, _, _ := scope.lookup(n.Child[0].ident); sym != nil {
 				if sym.typ != nil && sym.typ.cat == BinT {
 					n.run = callBin
 					n.typ = &Type{cat: ValueT}
