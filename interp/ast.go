@@ -168,6 +168,7 @@ const (
 	Lower
 	Mul
 	Not
+	NotEqual
 	Quotient
 	Range
 	Recv
@@ -198,6 +199,7 @@ var actions = [...]string{
 	Lower:        "<",
 	Mul:          "*",
 	Not:          "!",
+	NotEqual:     "!=",
 	Quotient:     "/",
 	Range:        "range",
 	Recv:         "<-",
@@ -310,6 +312,8 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 				action = Lower
 			case token.MUL:
 				action = Mul
+			case token.NEQ:
+				action = NotEqual
 			case token.SUB:
 				action = Sub
 			case token.QUO:

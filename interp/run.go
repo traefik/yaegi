@@ -31,6 +31,7 @@ var builtin = [...]Builtin{
 	Lower:        lower,
 	Mul:          mul,
 	Not:          not,
+	NotEqual:     notEqual,
 	Quotient:     quotient,
 	Range:        _range,
 	Recv:         recv,
@@ -350,6 +351,10 @@ func sub(n *Node, f *Frame) {
 
 func equal(n *Node, f *Frame) {
 	f.data[n.findex] = value(n.Child[0], f) == value(n.Child[1], f)
+}
+
+func notEqual(n *Node, f *Frame) {
+	f.data[n.findex] = value(n.Child[0], f) != value(n.Child[1], f)
 }
 
 func inc(n *Node, f *Frame) {

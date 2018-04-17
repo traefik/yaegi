@@ -390,8 +390,8 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			init, post, body := n.Child[0], n.Child[1], n.Child[2]
 			n.Start = init.Start
 			init.tnext = body.Start
-			post.tnext = body.Start
 			body.tnext = post.Start
+			post.tnext = body.Start
 			loop, loopRestart = nil, nil
 			scope = scope.anc
 
