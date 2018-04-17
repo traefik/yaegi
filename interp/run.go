@@ -51,7 +51,7 @@ func initGoBuiltin() {
 }
 
 // Run a Go function
-func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int, fork bool) {
+func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int, fork bool, goroutine bool) {
 	// log.Println("run", def.index, def.Child[1].ident, "allocate", def.findex)
 	// Allocate a new Frame to store local variables
 	anc := cf.anc
@@ -84,11 +84,15 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 	}
 
 	// Execute the function body
-	runCfg(def.Child[3].Start, &f)
+	if goroutine {
+		go runCfg(def.Child[3].Start, &f)
+	} else {
 
-	// Propagate return values to caller frame
-	for i, ret := range rets {
-		cf.data[ret] = f.data[i]
+		runCfg(def.Child[3].Start, &f)
+		// Propagate return values to caller frame
+		for i, ret := range rets {
+			cf.data[ret] = f.data[i]
+		}
 	}
 }
 
@@ -206,7 +210,36 @@ func call(n *Node, f *Frame) {
 			}
 		}
 	}
-	Run(fn, f, recv, rseq, n.Child[1:], ret, forkFrame)
+	Run(fn, f, recv, rseq, n.Child[1:], ret, forkFrame, false)
+}
+
+// Same as call(), but execute function in a goroutine
+func callGoRoutine(n *Node, f *Frame) {
+	//println(n.index, "call", n.Child[0].ident)
+	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
+	var recv *Node
+	var rseq []int
+	var forkFrame bool
+
+	if n.action == CallF {
+		forkFrame = true
+	}
+
+	if n.Child[0].kind == SelectorExpr {
+		recv = n.Child[0].Child[0]
+		rseq = n.Child[0].Child[1].val.([]int)
+	}
+	fn := value(n.Child[0], f).(*Node)
+	var ret []int
+	if len(fn.Child[2].Child) > 1 {
+		if fieldList := fn.Child[2].Child[1]; fieldList != nil {
+			ret = make([]int, len(fieldList.Child))
+			for i, _ := range fieldList.Child {
+				ret[i] = n.findex + i
+			}
+		}
+	}
+	Run(fn, f, recv, rseq, n.Child[1:], ret, forkFrame, true)
 }
 
 // Same as callBin, but for handling f(g()) where g returns multiple values
@@ -265,35 +298,6 @@ func callBinMethodX(n *Node, f *Frame) {
 	for i := 0; i < n.fsize; i++ {
 		f.data[n.findex+i] = v[i].Interface()
 	}
-}
-
-// Same as call(), but execute function in a goroutine
-func callGoRoutine(n *Node, f *Frame) {
-	//println(n.index, "call", n.Child[0].ident)
-	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
-	var recv *Node
-	var rseq []int
-	var forkFrame bool
-
-	if n.action == CallF {
-		forkFrame = true
-	}
-
-	if n.Child[0].kind == SelectorExpr {
-		recv = n.Child[0].Child[0]
-		rseq = n.Child[0].Child[1].val.([]int)
-	}
-	fn := value(n.Child[0], f).(*Node)
-	var ret []int
-	if len(fn.Child[2].Child) > 1 {
-		if fieldList := fn.Child[2].Child[1]; fieldList != nil {
-			ret = make([]int, len(fieldList.Child))
-			for i, _ := range fieldList.Child {
-				ret[i] = n.findex + i
-			}
-		}
-	}
-	go Run(fn, f, recv, rseq, n.Child[1:], ret, forkFrame)
 }
 
 func getIndexAddr(n *Node, f *Frame) {

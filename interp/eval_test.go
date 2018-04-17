@@ -1194,7 +1194,7 @@ func Filter(in <-chan int, out chan<- int, prime int) {
 func main() {
 	ch := make(chan int) // Create a new channel.
 	go Generate(ch)      // Launch Generate goroutine.
-/*
+
 	for i := 0; i < 10; i++ {
 		prime := <-ch
 		println(prime)
@@ -1202,34 +1202,6 @@ func main() {
 		go Filter(ch, ch1, prime)
 		ch = ch1
 	}
-*/
-/*
-	prime := <-ch
-	println(prime)
-	ch1 := make(chan int)
-	go Filter(ch, ch1, prime)
-
-	prime = <-ch1
-	println(prime)
-	ch2 := make(chan int)
-	go Filter(ch1, ch2, prime)
-
-	prime := <-ch2
-	println(prime)
-	ch3 := make(chan int)
-	go Filter(ch2, ch3, prime)
-
-	prime := <-ch3
-	println(prime)
-*/
-	prime := <-ch
-	println(prime)
-	ch1 := make(chan int)
-	go Filter(ch, ch1, prime)
-	ch = ch1
-
-	prime = <-ch1
-	println(prime)
 }`
 	i := NewInterpreter(InterpOpt{})
 	i.AddImport("fmt", "Println", fmt.Println, 0)
@@ -1237,6 +1209,17 @@ func main() {
 	i.AddImport("math", "Cos", math.Cos, 1)
 	i.Eval(src)
 
+	// Output:
+	// 2
+	// 3
+	// 5
+	// 7
+	// 11
+	// 13
+	// 17
+	// 19
+	// 23
+	// 29
 }
 
 func Example_sleep() {
