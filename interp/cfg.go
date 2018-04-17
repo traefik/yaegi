@@ -76,7 +76,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			loop, loopRestart = n, n.Child[0]
 			scope = scope.push(0)
 
-		case For1, For2, For3, For4:
+		case For1, For2, For3, For3a, For4:
 			loop, loopRestart = n, n.Child[len(n.Child)-1]
 			scope = scope.push(0)
 
@@ -383,6 +383,15 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			cond.fnext = n
 			body.tnext = post.Start
 			post.tnext = cond.Start
+			loop, loopRestart = nil, nil
+			scope = scope.anc
+
+		case For3a: // for int; ; post {}
+			init, post, body := n.Child[0], n.Child[1], n.Child[2]
+			n.Start = init.Start
+			init.tnext = body.Start
+			post.tnext = body.Start
+			body.tnext = post.Start
 			loop, loopRestart = nil, nil
 			scope = scope.anc
 

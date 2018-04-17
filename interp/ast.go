@@ -38,6 +38,7 @@ const (
 	For1         // for cond {}
 	For2         // for init; cond; {}
 	For3         // for ; cond; post {}
+	For3a        // for init; ; post {}
 	For4         // for init; cond; post {}
 	ForRangeStmt // for range
 	FuncDecl
@@ -100,6 +101,7 @@ var kinds = [...]string{
 	For1:             "For1",
 	For2:             "For2",
 	For3:             "For3",
+	For3a:            "For3a",
 	For4:             "For4",
 	ForRangeStmt:     "ForRangeStmt",
 	FuncDecl:         "FuncDecl",
@@ -359,7 +361,11 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			// Disambiguate variants of FOR statements with a node kind per variant
 			var kind Kind
 			if a.Cond == nil {
-				kind = For0
+				if a.Init != nil && a.Post != nil {
+					kind = For3a
+				} else {
+					kind = For0
+				}
 			} else {
 				if a.Init == nil && a.Post == nil {
 					kind = For1
