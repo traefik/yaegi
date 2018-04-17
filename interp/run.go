@@ -35,6 +35,7 @@ var builtin = [...]Builtin{
 	Quotient:     quotient,
 	Range:        _range,
 	Recv:         recv,
+	Remain:       remain,
 	Return:       _return,
 	Send:         send,
 	Sub:          sub,
@@ -339,6 +340,10 @@ func mul(n *Node, f *Frame) {
 
 func quotient(n *Node, f *Frame) {
 	f.data[n.findex] = value(n.Child[0], f).(int) / value(n.Child[1], f).(int)
+}
+
+func remain(n *Node, f *Frame) {
+	f.data[n.findex] = value(n.Child[0], f).(int) % value(n.Child[1], f).(int)
 }
 
 func add(n *Node, f *Frame) {

@@ -172,6 +172,7 @@ const (
 	Quotient
 	Range
 	Recv
+	Remain
 	Return
 	Send
 	Sub
@@ -203,6 +204,7 @@ var actions = [...]string{
 	Quotient:     "/",
 	Range:        "range",
 	Recv:         "<-",
+	Remain:       "%",
 	Return:       "return",
 	Send:         "<-",
 	Sub:          "-",
@@ -314,6 +316,8 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 				action = Mul
 			case token.NEQ:
 				action = NotEqual
+			case token.REM:
+				action = Remain
 			case token.SUB:
 				action = Sub
 			case token.QUO:
