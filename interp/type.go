@@ -98,6 +98,7 @@ type Type struct {
 	ret    []*Type       // Return types if FuncT or nil
 	method []*Node       // Associated methods or nil
 	rtype  reflect.Type  // Reflection type if ValueT, or nil
+	rzero  reflect.Value // Reflection zero settable value, or nil
 }
 
 type TypeDef map[string]*Type
@@ -192,6 +193,8 @@ func (t *Type) zero() interface{} {
 			z[i] = f.typ.zero()
 		}
 		return &z
+	case ValueT:
+		return t.rzero
 	}
 	return nil
 }

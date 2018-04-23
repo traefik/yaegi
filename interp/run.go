@@ -2,6 +2,7 @@ package interp
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"time"
 )
@@ -126,6 +127,11 @@ func runCfg(n *Node, f *Frame) {
 			n = n.fnext
 		}
 	}
+}
+
+func setInt(n *Node, f *Frame) {
+	log.Println(n.index, "setInt", value(n.Child[0], f))
+	f.data[n.Child[0].findex].(reflect.Value).SetInt(int64(value(n.Child[1], f).(int)))
 }
 
 // assignX(n, f) implements assignement for a single call which returns multiple values

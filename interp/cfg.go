@@ -149,19 +149,20 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			n.typ = &Type{cat: ArrayT, val: tdef[n.Child[1].ident]}
 
 		case Define, AssignStmt:
+			wireChild(n)
 			if n.kind == Define {
 				// Force definition of assigned ident in current scope
 				frameIndex.max++
 				scope.sym[n.Child[0].ident] = &Symbol{index: frameIndex.max}
 				n.Child[0].findex = frameIndex.max
+				n.Child[0].typ = n.Child[1].typ
 			}
-			wireChild(n)
 			n.findex = n.Child[0].findex
 			// Propagate type
 			// TODO: Check that existing destination type matches source type
 			//log.Println(n.index, "Assign child1:", n.Child[1].index, n.Child[1].typ)
-			n.Child[0].typ = n.Child[1].typ
 			n.typ = n.Child[0].typ
+			//n.run = setInt // Temporary, debug
 			if sym, _, ok := scope.lookup(n.Child[0].ident); ok {
 				sym.typ = n.typ
 			}
@@ -570,6 +571,11 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 					n.val = reflect.ValueOf(s.sym)
 					if typ := reflect.TypeOf(s.sym); typ.Kind() == reflect.Func {
 						n.fsize = typ.NumOut()
+					} else if typ.Kind() == reflect.Ptr {
+						// a symbol of kind pointer must be dereferenced to access type
+						n.typ = &Type{cat: ValueT, rtype: typ.Elem(), rzero: n.val.(reflect.Value).Elem()}
+					} else {
+						n.typ = &Type{cat: ValueT, rtype: typ}
 					}
 					n.run = nop
 				}
@@ -617,9 +623,12 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 
 		case ValueSpec:
 			l := len(n.Child) - 1
-			n.typ = tdef[n.Child[l].ident]
+			if n.typ = n.Child[l].typ; n.typ == nil {
+				n.typ = tdef[n.Child[l].ident]
+			}
 			for _, c := range n.Child[:l] {
 				c.typ = n.typ
+				scope.sym[c.ident].typ = n.typ
 			}
 		}
 	})
