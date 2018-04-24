@@ -26,12 +26,7 @@ type Frame struct {
 	data []interface{} // Values
 }
 
-type ImportSym struct {
-	sym  interface{} // Imported symbol
-	nret int         // Number of returned values if sym is a func
-}
-
-type SymMap map[string]ImportSym
+type SymMap map[string]interface{}
 
 type ImportMap map[string]SymMap
 
@@ -70,11 +65,11 @@ func NewInterpreter(opt InterpOpt) *Interpreter {
 }
 
 // Register a symbol from an imported package to be visible from the interpreter
-func (i *Interpreter) AddImport(pkgName string, symName string, f interface{}, nret int) {
-	if i.imports[pkgName] == nil {
-		i.imports[pkgName] = make(SymMap)
+func (i *Interpreter) AddImport(pkg string, name string, sym interface{}) {
+	if i.imports[pkg] == nil {
+		i.imports[pkg] = make(SymMap)
 	}
-	i.imports[pkgName][symName] = ImportSym{sym: f, nret: nret}
+	i.imports[pkg][name] = sym
 }
 
 // i.Eval(s) evaluates Go code represented as a string

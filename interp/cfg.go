@@ -12,7 +12,6 @@ type Symbol struct {
 	index int         // index of value in frame or -1
 	pkg   *SymMap     // Map of package symbols if typ.cat is PkgT, or nil
 	bin   interface{} // Symbol from imported bin package if typ.cat is BinT, or nil
-	nret  int         // Number of returned values for bin symbol if defined
 }
 
 type Scope struct {
@@ -509,7 +508,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			if pkg, ok := interp.imports[ipath]; ok {
 				if name == "." {
 					for n, s := range pkg {
-						scope.sym[n] = &Symbol{typ: &Type{cat: BinT}, bin: s.sym, nret: s.nret}
+						scope.sym[n] = &Symbol{typ: &Type{cat: BinT}, bin: s}
 					}
 				} else {
 					scope.sym[name] = &Symbol{typ: &Type{cat: PkgT}, pkg: &pkg}
@@ -568,8 +567,8 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 				pkgSym := n.Child[0].val.(*SymMap)
 				if s, ok := (*pkgSym)[name]; ok {
 					n.kind = SelectorImport
-					n.val = reflect.ValueOf(s.sym)
-					if typ := reflect.TypeOf(s.sym); typ.Kind() == reflect.Func {
+					n.val = reflect.ValueOf(s)
+					if typ := reflect.TypeOf(s); typ.Kind() == reflect.Func {
 						n.fsize = typ.NumOut()
 					} else if typ.Kind() == reflect.Ptr {
 						// a symbol of kind pointer must be dereferenced to access type

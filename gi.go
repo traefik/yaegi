@@ -42,10 +42,11 @@ func main() {
 		s = strings.Replace(s, "#!", "//", 1)
 	}
 	i := interp.NewInterpreter(opt)
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.AddImport("time", "Now", time.Now, 1)
-	i.AddImport("time", "Time", new(time.Time), 0)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
+	i.AddImport("time", "Now", time.Now)
+	i.AddImport("time", "Time", new(time.Time))
+	i.AddImport("time", "Month", new(time.Month))
 	i.Eval(string(s))
 }

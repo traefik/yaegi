@@ -17,9 +17,9 @@ do
 		print "func Example_'${file%.*}'() {"
 		print "src := `" src "`"
 		print "i := NewInterpreter(InterpOpt{})"
-		print "i.AddImport(\"fmt\", \"Println\", fmt.Println, 0)"
-		print "i.AddImport(\"math\", \"Pi\", math.Pi, 0)"
-		print "i.AddImport(\"math\", \"Cos\", math.Cos, 1)"
+		print "i.AddImport(\"fmt\", \"Println\", fmt.Println)"
+		print "i.AddImport(\"math\", \"Pi\", math.Pi)"
+		print "i.AddImport(\"math\", \"Cos\", math.Cos)"
 		print "i.Eval(src)"
 		print out
 		print "}"

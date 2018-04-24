@@ -22,9 +22,9 @@ func main() {
 	}
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -50,9 +50,9 @@ func main() {
 	}
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -86,9 +86,9 @@ func f2() bool {
 	return 1 == 0
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -105,9 +105,9 @@ func main() {
 	println(a, b)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -129,9 +129,9 @@ func main() {
 	println(msg)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -151,9 +151,9 @@ func main() {
 	println(msg)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -175,9 +175,9 @@ func main() {
 	fmt.Println(msg)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -198,37 +198,11 @@ func main() {
 	println(a, b)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
-}
-
-func Example_cont() {
-	src := `
-package main
-
-func main() {
-	for i := 0; i < 10; i++ {
-		if i < 5 {
-			continue
-		}
-		println(i)
-	}
-}`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.Eval(src)
-
-	// Output:
-	// 5
-	// 6
-	// 7
-	// 8
-	// 9
 }
 
 func Example_cont0() {
@@ -249,9 +223,9 @@ func main() {
 	}
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -283,9 +257,9 @@ func main() {
 	}
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -295,6 +269,59 @@ func main() {
 	// 8
 	// 9
 	// 10
+}
+
+func Example_cont() {
+	src := `
+package main
+
+func main() {
+	for i := 0; i < 10; i++ {
+		if i < 5 {
+			continue
+		}
+		println(i)
+	}
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
+	i.Eval(src)
+
+	// Output:
+	// 5
+	// 6
+	// 7
+	// 8
+	// 9
+}
+
+func Example_fib0() {
+	src := `
+//#!/usr/bin/env gi
+
+package main
+
+// Compute fibonacci numbers, no memoization
+func fib(n int) int {
+	if n < 2 {
+		return n
+	}
+	return fib(n-2) + fib(n-1)
+}
+
+func main() {
+	println(fib(4))
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
+	i.Eval(src)
+
+	// Output:
+	// 3
 }
 
 func Example_fib() {
@@ -317,38 +344,11 @@ func main() {
 }
 `
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
-}
-
-func Example_fib0() {
-	src := `
-//#!/usr/bin/env gi
-
-package main
-
-// Compute fibonacci numbers, no memoization
-func fib(n int) int {
-	if n < 2 {
-		return n
-	}
-	return fib(n-2) + fib(n-1)
-}
-
-func main() {
-	println(fib(4))
-}`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.Eval(src)
-
-	// Output:
-	// 3
 }
 
 func Example_for0() {
@@ -367,9 +367,9 @@ func main() {
 	}
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -396,9 +396,9 @@ func main() {
 	}
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -422,34 +422,15 @@ func main() {
 	}
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
 	// 2
 	// 3
 	// 4
-}
-
-func Example_fun() {
-	src := `
-package main
-
-func f (i int) int { return i+15 }
-
-func main() {
-	println(f(4))
-}`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.Eval(src)
-
-	// Output:
-	// 19
 }
 
 func Example_fun2() {
@@ -465,9 +446,9 @@ func main() {
 	println(f(c))
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -487,13 +468,32 @@ func main() {
 	println(f(2, 3, c))
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
 	// 18
+}
+
+func Example_fun() {
+	src := `
+package main
+
+func f (i int) int { return i+15 }
+
+func main() {
+	println(f(4))
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
+	i.Eval(src)
+
+	// Output:
+	// 19
 }
 
 func Example_goroutine() {
@@ -510,9 +510,9 @@ func main() {
 	println("in main")
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 }
@@ -529,9 +529,9 @@ func main() {
 
 func f() int { return 1 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -548,9 +548,9 @@ func main() {
 	fmt.Println("Hello", 42)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -567,9 +567,9 @@ func main() {
 	f.Println("Hello", 42)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -586,9 +586,9 @@ func main() {
 	Println("Hello", 42)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -608,9 +608,9 @@ func main() {
 	}
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 }
@@ -632,9 +632,9 @@ for a := 0; a < 20000000; a++ {
 }
 `
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 }
@@ -645,34 +645,13 @@ package main
 func main() { println(f(5)) }
 func f(i int) int { return i + 1 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
 	// 6
-}
-
-func Example_map() {
-	src := `
-package main
-
-type Dict map[string]string
-
-func main() {
-	dict := make(Dict)
-	dict["truc"] = "machin"
-	println(dict["truc"])
-}`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.Eval(src)
-
-	// Output:
-	// machin
 }
 
 func Example_map2() {
@@ -685,9 +664,9 @@ func main() {
 	println(dict["truc"])
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -704,9 +683,9 @@ func main() {
 	println(dict["truc"])
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -725,14 +704,35 @@ func main() {
 }
 `
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
 	// machin
 	// bonjour
+}
+
+func Example_map() {
+	src := `
+package main
+
+type Dict map[string]string
+
+func main() {
+	dict := make(Dict)
+	dict["truc"] = "machin"
+	println(dict["truc"])
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
+	i.Eval(src)
+
+	// Output:
+	// machin
 }
 
 func Example_math0() {
@@ -748,35 +748,11 @@ func main() {
 	fmt.Println(math.Cos(math.Pi))
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
-}
-
-func Example_method() {
-	src := `
-package main
-
-type Coord struct {
-	x, y int
-}
-
-func (c Coord) dist() int { return c.x * c.x + c.y * c.y }
-
-func main() {
-	o := Coord{3, 4}
-	println(o.dist())
-}`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.Eval(src)
-
-	// Output:
-	// 25
 }
 
 func Example_method2() {
@@ -799,9 +775,33 @@ func main() {
 	println(o.dist())
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
+	i.Eval(src)
+
+	// Output:
+	// 25
+}
+
+func Example_method() {
+	src := `
+package main
+
+type Coord struct {
+	x, y int
+}
+
+func (c Coord) dist() int { return c.x * c.x + c.y * c.y }
+
+func main() {
+	o := Coord{3, 4}
+	println(o.dist())
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -816,9 +816,9 @@ func f(i int) (o int) { o = i+1; return }
 
 func main() { println(f(4)) }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 }
@@ -835,9 +835,9 @@ func main() {
 func r2() (int, int) {return 1, 2}
 `
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -857,9 +857,9 @@ func main() {
 func r2() (int, int) {return 1, 2}
 `
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -876,13 +876,30 @@ func main() {
 	println(f())
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
 	// 2 3
+}
+
+func Example_run10() {
+	src := `
+package main
+
+func main() {
+	func() {println("hello")}()
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
+	i.Eval(src)
+
+	// Output:
+	// hello
 }
 
 func Example_run1() {
@@ -897,30 +914,13 @@ func main() {
 	println(g(f()))
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
 	// 5
-}
-
-func Example_run10() {
-	src := `
-package main
-
-func main() {
-	func() {println("hello")}()
-}`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.Eval(src)
-
-	// Output:
-	// hello
 }
 
 func Example_run4() {
@@ -935,9 +935,9 @@ func test(f fn, v int) { f(v) }
 
 func main() { test(f1, 21) }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -957,9 +957,9 @@ func main() {
 	test(f1, 21) 
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -978,9 +978,9 @@ func main() {
 	test(func(i int) {println("f1", i) }, 21) 
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1000,9 +1000,9 @@ func main() {
 	test(func(i int) {println("f1", i, a) }, 21) 
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1019,9 +1019,9 @@ func main() {
 	f(21)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1039,9 +1039,9 @@ func main() {
 	println(b)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1059,9 +1059,9 @@ func main() {
 	println(a)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1082,9 +1082,9 @@ func main() {
 	println(b)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1106,9 +1106,9 @@ func main() {
 	f()
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1129,9 +1129,9 @@ func main() {
 	println(a)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1155,9 +1155,9 @@ func main() {
 	println(a)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1204,9 +1204,9 @@ func main() {
 	}
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1232,9 +1232,9 @@ func main() {
 	println("bye")
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 }
@@ -1247,59 +1247,13 @@ func main() {
 	println("hello world")
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
 	// hello world
-}
-
-func Example_struct() {
-	src := `
-package main
-
-type T struct {
-	f int
-	g int
-}
-
-func main() {
-	a := T{ 7, 8 }
-	println(a.f, a.g)
-}`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.Eval(src)
-
-	// Output:
-	// 7 8
-}
-
-func Example_struct0() {
-	src := `
-package main
-
-type T struct {
-	f int
-	g int
-}
-
-func main() {
-	a := T{}
-	println(a.f, a.g)
-}`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.Eval(src)
-
-	// Output:
-	// 0 0
 }
 
 func Example_struct0a() {
@@ -1317,14 +1271,37 @@ func main() {
 	println(a.f)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
 	// 0
 	// 8
+}
+
+func Example_struct0() {
+	src := `
+package main
+
+type T struct {
+	f int
+	g int
+}
+
+func main() {
+	a := T{}
+	println(a.f, a.g)
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
+	i.Eval(src)
+
+	// Output:
+	// 0 0
 }
 
 func Example_struct1() {
@@ -1344,9 +1321,9 @@ func main() {
 	println("a.g.h", a.g.h)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1367,9 +1344,9 @@ func main() {
 	println(a.f, a.g)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1396,9 +1373,9 @@ func main() {
 	println(a.h.k)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1431,9 +1408,9 @@ func main() {
        println(a.f, a.g, a.h, a.k)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1456,9 +1433,9 @@ func main() {
 	println(a.f, a.g)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1478,9 +1455,32 @@ func main() {
 	println(a.f, a.g)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
+	i.Eval(src)
+
+	// Output:
+	// 7 8
+}
+
+func Example_struct() {
+	src := `
+package main
+
+type T struct {
+	f int
+	g int
+}
+
+func main() {
+	a := T{ 7, 8 }
+	println(a.f, a.g)
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1503,9 +1503,9 @@ func main() {
 	}
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1525,9 +1525,9 @@ func main() {
 	fmt.Println(time.Now())
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 }
@@ -1547,9 +1547,9 @@ func main() {
 	fmt.Println(t, m)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 }
@@ -1569,9 +1569,9 @@ func main() {
 	fmt.Println(h, m, s)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 }
@@ -1590,9 +1590,31 @@ func main() {
 	fmt.Println(t.Clock())
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
+	i.Eval(src)
+
+}
+
+func Example_time4() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+func main() {
+	var m time.Month
+	m = 9
+	fmt.Println(m)
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 }
@@ -1608,31 +1630,13 @@ func main() {
 	println(a)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
 	// 0
-}
-
-func Example_var() {
-	src := `
-package main
-
-func main() {
-	var a, b, c int
-	println(a, b, c)
-}`
-	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
-	i.Eval(src)
-
-	// Output:
-	// 0 0 0
 }
 
 func Example_var2() {
@@ -1644,9 +1648,9 @@ func main() {
 	println(a)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1662,9 +1666,9 @@ func main() {
 	println(a, b)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
@@ -1680,11 +1684,29 @@ func main() {
 	println(a, b)
 }`
 	i := NewInterpreter(InterpOpt{})
-	i.AddImport("fmt", "Println", fmt.Println, 0)
-	i.AddImport("math", "Pi", math.Pi, 0)
-	i.AddImport("math", "Cos", math.Cos, 1)
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
 	i.Eval(src)
 
 	// Output:
 	// 2 3
+}
+
+func Example_var() {
+	src := `
+package main
+
+func main() {
+	var a, b, c int
+	println(a, b, c)
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
+	i.Eval(src)
+
+	// Output:
+	// 0 0 0
 }
