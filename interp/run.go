@@ -203,7 +203,7 @@ func call(n *Node, f *Frame) {
 	}
 
 	if n.Child[0].kind == SelectorExpr {
-		recv = n.Child[0].Child[0]
+		recv = n.Child[0].recv
 		rseq = n.Child[0].Child[1].val.([]int)
 	}
 	fn := value(n.Child[0], f).(*Node)
@@ -232,7 +232,7 @@ func callGoRoutine(n *Node, f *Frame) {
 	}
 
 	if n.Child[0].kind == SelectorExpr {
-		recv = n.Child[0].Child[0]
+		recv = n.Child[0].recv
 		rseq = n.Child[0].Child[1].val.([]int)
 	}
 	fn := value(n.Child[0], f).(*Node)

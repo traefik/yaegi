@@ -14,6 +14,7 @@ type Node struct {
 	level  int         // number of frame indirections to access value
 	kind   Kind        // Kind of node
 	typ    *Type       // Type of value in frame, or nil
+	recv   *Node       // Method receiver node for call, or nil
 	action Action      // Action
 	run    Builtin     // function to run at CFG execution
 	val    interface{} // pointer on generic value (CFG execution)

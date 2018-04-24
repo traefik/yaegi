@@ -784,6 +784,69 @@ func main() {
 	// 25
 }
 
+func Example_method3() {
+	src := `
+package main
+
+type Coord struct {
+	x, y int
+}
+
+func (c Coord) dist() int { return c.x * c.x + c.y * c.y }
+
+type Point struct {
+	Coord
+	z int
+}
+
+func main() {
+	o := Point{ Coord{3, 4}, 5}
+	println(o.Coord.dist())
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
+	i.Eval(src)
+
+	// Output:
+	// 25
+}
+
+func Example_method4() {
+	src := `
+package main
+
+type Coord struct {
+	x, y int
+}
+
+func (c Coord) dist() int { return c.x * c.x + c.y * c.y }
+
+type Point struct {
+	Coord
+	z int
+}
+
+type Tpoint struct {
+	t int
+	Point
+}
+
+func main() {
+	o := Tpoint{ 0, Point{ Coord{3, 4}, 5} }
+	println(o.dist())
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.AddImport("fmt", "Println", fmt.Println)
+	i.AddImport("math", "Pi", math.Pi)
+	i.AddImport("math", "Cos", math.Cos)
+	i.Eval(src)
+
+	// Output:
+	// 25
+}
+
 func Example_method() {
 	src := `
 package main

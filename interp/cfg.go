@@ -454,6 +454,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 				} else if n.typ != nil && n.typ.cat == PkgT {
 					n.val = sym.pkg
 				}
+				n.recv = n
 			} else {
 				frameIndex.max++
 				scope.sym[n.ident] = &Symbol{index: frameIndex.max}
@@ -555,6 +556,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			frameIndex.max++
 			n.findex = frameIndex.max
 			n.typ = n.Child[0].typ
+			n.recv = n.Child[0].recv
 			if n.typ != nil && n.typ.cat == ValueT {
 				if method, ok := n.typ.rtype.MethodByName(n.Child[1].ident); ok {
 					n.val = method.Func
