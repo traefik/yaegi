@@ -1,5 +1,6 @@
 .*.swp
 *.dot
+cmd/goexports/goexports
 gi
 gi_c/*.o
 gi_c/gi
