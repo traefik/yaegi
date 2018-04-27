@@ -73,6 +73,9 @@ func (i *Interpreter) AddImport(pkg string, name string, sym interface{}) {
 	i.imports[pkg][name] = sym
 }
 
+func (i *Interpreter) importBin(pkg *map[string]*map[string]interface{}) {
+}
+
 // i.Eval(s) evaluates Go code represented as a string
 func (i *Interpreter) Eval(src string) Frame {
 	// Parse source to AST

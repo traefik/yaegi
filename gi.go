@@ -1,5 +1,7 @@
 package main
 
+//go:generate go generate github.com/containous/gi/export
+
 import (
 	"flag"
 	"fmt"
@@ -10,10 +12,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/containous/gi/export"
 	"github.com/containous/gi/interp"
 )
 
 func main() {
+	p := export.Pkg
+	log.Println((*p)["fmt"])
 	opt := interp.InterpOpt{}
 	flag.BoolVar(&opt.Ast, "a", false, "display AST graph")
 	flag.BoolVar(&opt.Cfg, "c", false, "display CFG graph")
