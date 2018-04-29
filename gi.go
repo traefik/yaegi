@@ -7,18 +7,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/containous/gi/export"
 	"github.com/containous/gi/interp"
 )
 
 func main() {
-	p := export.Pkg
-	log.Println((*p)["fmt"])
 	opt := interp.InterpOpt{}
 	flag.BoolVar(&opt.Ast, "a", false, "display AST graph")
 	flag.BoolVar(&opt.Cfg, "c", false, "display CFG graph")
@@ -47,11 +43,6 @@ func main() {
 		s = strings.Replace(s, "#!", "//", 1)
 	}
 	i := interp.NewInterpreter(opt)
-	i.AddImport("fmt", "Println", fmt.Println)
-	i.AddImport("math", "Pi", math.Pi)
-	i.AddImport("math", "Cos", math.Cos)
-	i.AddImport("time", "Now", time.Now)
-	i.AddImport("time", "Time", new(time.Time))
-	i.AddImport("time", "Month", new(time.Month))
+	i.ImportBin(export.Pkg)
 	i.Eval(string(s))
 }

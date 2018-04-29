@@ -508,11 +508,11 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			}
 			if pkg, ok := interp.imports[ipath]; ok {
 				if name == "." {
-					for n, s := range pkg {
+					for n, s := range *pkg {
 						scope.sym[n] = &Symbol{typ: &Type{cat: BinT}, bin: s}
 					}
 				} else {
-					scope.sym[name] = &Symbol{typ: &Type{cat: PkgT}, pkg: &pkg}
+					scope.sym[name] = &Symbol{typ: &Type{cat: PkgT}, pkg: pkg}
 				}
 			} else {
 				log.Println("import", name, "not found")

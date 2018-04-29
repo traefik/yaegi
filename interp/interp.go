@@ -29,7 +29,7 @@ type Frame struct {
 
 type SymMap map[string]interface{}
 
-type ImportMap map[string]SymMap
+type ImportMap map[string]*SymMap
 
 // Interpreter contains global resources and state
 type Interpreter struct {
@@ -68,12 +68,16 @@ func NewInterpreter(opt InterpOpt) *Interpreter {
 // Register a symbol from an imported package to be visible from the interpreter
 func (i *Interpreter) AddImport(pkg string, name string, sym interface{}) {
 	if i.imports[pkg] == nil {
-		i.imports[pkg] = make(SymMap)
+		s := make(SymMap)
+		i.imports[pkg] = &s
 	}
-	i.imports[pkg][name] = sym
+	(*i.imports[pkg])[name] = sym
 }
 
-func (i *Interpreter) importBin(pkg *map[string]*map[string]interface{}) {
+func (i *Interpreter) ImportBin(pkg *map[string]*map[string]interface{}) {
+	for n, p := range *pkg {
+		i.imports[n] = (*SymMap)(p)
+	}
 }
 
 // i.Eval(s) evaluates Go code represented as a string
