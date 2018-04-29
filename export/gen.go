@@ -38,10 +38,10 @@ func genfile(pkgName string, ofile string) error {
 		// avoid collision with crypto/rand
 		varName = "math_rand"
 	} else if pkgName == "text/scanner" {
-		// avoid collision this go/scanner
+		// avoid collision with go/scanner
 		varName = "text_scanner"
 	} else if pkgName == "text/template" {
-		// avoid collision this html/template
+		// avoid collision with html/template
 		varName = "text_template"
 	}
 

@@ -17,7 +17,8 @@ func main() {
 			break
 		}
 	}
-}`
+}
+`
 	i := NewInterpreter(InterpOpt{})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -546,7 +547,6 @@ func main() {
 
 func Example_l2() {
 	src := `
-#!/usr/bin/env gi
 package main
 
 func main() {
@@ -564,20 +564,18 @@ func main() {
 
 func Example_l3() {
 	src := `
-//#!/usr/bin/env gi
 package main
 
 func myprint(i int) { println(i) }
 
 func main() {
-for a := 0; a < 20000000; a++ {
-	if a & 0x8ffff == 0x80000 {
-		println(a)
-		//myprint(a)
+	for a := 0; a < 20000000; a++ {
+		if a&0x8ffff == 0x80000 {
+			println(a)
+			//myprint(a)
+		}
 	}
-}
-}
-`
+}`
 	i := NewInterpreter(InterpOpt{})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
