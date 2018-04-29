@@ -33,6 +33,17 @@ func genfile(pkgName string, ofile string) error {
 	out := bufio.NewWriter(f)
 
 	symName := path.Base(pkgName)
+	varName := symName
+	if pkgName == "math/rand" {
+		// avoid collision with crypto/rand
+		varName = "math_rand"
+	} else if pkgName == "text/scanner" {
+		// avoid collision this go/scanner
+		varName = "text_scanner"
+	} else if pkgName == "text/template" {
+		// avoid collision this html/template
+		varName = "text_template"
+	}
 
 	// Print header
 	fmt.Fprintln(out, `package export
@@ -40,19 +51,21 @@ func genfile(pkgName string, ofile string) error {
 
 import "`+pkgName+`"
 
-var sym_`+symName+` = &map[string]interface{}{`)
+var sym_`+varName+` = &map[string]interface{}{`)
 
 	// Print package exports
 	sc := pkg.Scope()
 	for _, name := range sc.Names() {
 		// Skip private symboles
-		if r := []rune(name); unicode.IsLower(r[0]) {
+		if r := []rune(name); unicode.IsLower(r[0]) || name[0] == '_' {
 			continue
 		}
 		o := sc.Lookup(name)
 		switch o.(type) {
 		case *types.Const:
-			if pkgName == "math" && name == "MaxUint64" {
+			if (pkgName == "math" && name == "MaxUint64") ||
+				(pkgName == "hash/crc64" && name == "ECMA") ||
+				(pkgName == "hash/crc64" && name == "ISO") {
 				// go build will fail with overflow error if this const is untyped. Fix this.
 				fmt.Fprintln(out, "\""+name+"\": uint("+symName+"."+name+"),")
 			} else {
