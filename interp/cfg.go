@@ -174,6 +174,9 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 					n.Child[0].run = getIndexAddr
 					n.run = assignField
 				}
+			} else if n.Child[0].action == Star {
+				n.findex = n.Child[0].Child[0].findex
+				n.run = dassign
 			}
 
 		case IncDecStmt:

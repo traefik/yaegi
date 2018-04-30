@@ -90,7 +90,6 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 	if goroutine {
 		go runCfg(def.Child[3].Start, &f)
 	} else {
-
 		runCfg(def.Child[3].Start, &f)
 		// Propagate return values to caller frame
 		for i, ret := range rets {
@@ -161,6 +160,11 @@ func assignX(n *Node, f *Frame) {
 	for i, c := range n.Child[:l] {
 		f.data[c.findex] = f.data[b+i]
 	}
+}
+
+// Indirect assign
+func dassign(n *Node, f *Frame) {
+	*(f.data[n.findex].(*interface{})) = value(n.Child[1], f)
 }
 
 // assign(n, f) implements assignement with the same number of left and right values
