@@ -28,6 +28,7 @@ func main() {
 	// 1
 	// 2
 	// 3
+	// 4
 }
 
 func Example_a2() {
@@ -44,7 +45,8 @@ func main() {
 			break
 		}
 	}
-}`
+}
+`
 	i := NewInterpreter(InterpOpt{})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -54,6 +56,7 @@ func main() {
 	// 1
 	// 5
 	// 3
+	// 4
 }
 
 func Example_and() {
@@ -475,6 +478,54 @@ func main() {
 
 }
 
+func Example_heap() {
+	src := `
+// This example demonstrates an integer heap built using the heap interface.
+package main
+
+import (
+	"container/heap"
+	"fmt"
+)
+
+// An IntHeap is a min-heap of ints.
+type IntHeap []int
+
+func (h IntHeap) Len() int           { return len(h) }
+func (h IntHeap) Less(i, j int) bool { return h[i] < h[j] }
+func (h IntHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+
+func (h *IntHeap) Push(x interface{}) {
+	// Push and Pop use pointer receivers because they modify the slice's length,
+	// not just its contents.
+	*h = append(*h, x.(int))
+}
+
+func (h *IntHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
+}
+
+// This example inserts several ints into an IntHeap, checks the minimum,
+// and removes them in order of priority.
+func main() {
+	h := &IntHeap{2, 1, 5}
+	heap.Init(h)
+	heap.Push(h, 3)
+	fmt.Printf("minimum: %d\n", (*h)[0])
+	for h.Len() > 0 {
+		fmt.Printf("%d ", heap.Pop(h))
+	}
+}`
+	i := NewInterpreter(InterpOpt{})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
 func Example_if() {
 	src := `
 package main
@@ -792,6 +843,44 @@ func main() {
 
 	// Output:
 	// 25
+}
+
+func Example_ptr0() {
+	src := `
+package main
+
+type myint int
+
+func main() {
+	var a myint = 2
+	var b *myint = &a
+	println(*b)
+}
+`
+	i := NewInterpreter(InterpOpt{})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 2
+}
+
+func Example_ptr1() {
+	src := `
+package main
+
+func main() {
+	var a int = 2
+	b := &a
+	println(*b)
+}
+`
+	i := NewInterpreter(InterpOpt{})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 2
 }
 
 func Example_ret1() {

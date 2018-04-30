@@ -12,6 +12,7 @@ type Builtin func(n *Node, f *Frame)
 
 var builtin = [...]Builtin{
 	Nop:          nop,
+	Address:      address,
 	ArrayLit:     arrayLit,
 	Assign:       assign,
 	AssignX:      assignX,
@@ -39,6 +40,7 @@ var builtin = [...]Builtin{
 	Remain:       remain,
 	Return:       _return,
 	Send:         send,
+	Star:         deref,
 	Sub:          sub,
 }
 
@@ -117,6 +119,24 @@ func value(n *Node, f *Frame) interface{} {
 	}
 }
 
+func addressValue(n *Node, f *Frame) *interface{} {
+	switch n.kind {
+	case BasicLit, FuncDecl, FuncLit:
+		//log.Println(n.index, "literal node value", n.ident, n.val)
+		return &n.val
+	default:
+		for level := n.level; level > 0; level-- {
+			f = f.anc
+		}
+		if n.findex < 0 {
+			//log.Println(n.index, "ident node value", n.ident, n.val)
+			return &n.val
+		}
+		//println(n.index, "val(", n.findex, n.ident, "):", n.level, f.data[n.findex])
+		return &f.data[n.findex]
+	}
+}
+
 // Run by walking the CFG and running node builtin at each step
 func runCfg(n *Node, f *Frame) {
 	for n != nil {
@@ -174,6 +194,14 @@ func and(n *Node, f *Frame) {
 
 func not(n *Node, f *Frame) {
 	f.data[n.findex] = !value(n.Child[0], f).(bool)
+}
+
+func address(n *Node, f *Frame) {
+	f.data[n.findex] = addressValue(n.Child[0], f)
+}
+
+func deref(n *Node, f *Frame) {
+	f.data[n.findex] = *(value(n.Child[0], f).(*interface{}))
 }
 
 func _println(n *Node, f *Frame) {

@@ -66,6 +66,7 @@ const (
 	SelectorExpr
 	SelectorImport
 	SendStmt
+	StarExpr
 	StructType
 	Switch0 // switch tag {}
 	Switch1 // switch init; tag {}
@@ -129,6 +130,7 @@ var kinds = [...]string{
 	SelectorExpr:     "SelectorExpr",
 	SelectorImport:   "SelectorImport",
 	SendStmt:         "SendStmt",
+	StarExpr:         "StarExpr",
 	StructType:       "StructType",
 	Switch0:          "Switch0",
 	Switch1:          "Switch1",
@@ -148,6 +150,7 @@ type Action uint
 
 const (
 	Nop Action = iota
+	Address
 	ArrayLit
 	Assign
 	AssignX
@@ -175,11 +178,13 @@ const (
 	Remain
 	Return
 	Send
+	Star
 	Sub
 )
 
 var actions = [...]string{
 	Nop:          "nop",
+	Address:      "&",
 	ArrayLit:     "arrayLit",
 	Assign:       "=",
 	AssignX:      "X=",
@@ -207,6 +212,7 @@ var actions = [...]string{
 	Remain:       "%",
 	Return:       "return",
 	Send:         "<-",
+	Star:         "*",
 	Sub:          "-",
 }
 
@@ -470,6 +476,9 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 		case *ast.SendStmt:
 			st.push(addChild(&root, anc, &index, SendStmt, Send))
 
+		case *ast.StarExpr:
+			st.push(addChild(&root, anc, &index, StarExpr, Star))
+
 		case *ast.StructType:
 			st.push(addChild(&root, anc, &index, StructType, Nop))
 
@@ -486,6 +495,8 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 		case *ast.UnaryExpr:
 			var action Action
 			switch a.Op {
+			case token.AND:
+				action = Address
 			case token.ARROW:
 				action = Recv
 			case token.NOT:
