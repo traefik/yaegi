@@ -163,7 +163,7 @@ func assignX(n *Node, f *Frame) {
 }
 
 // Indirect assign
-func dassign(n *Node, f *Frame) {
+func indirectAssign(n *Node, f *Frame) {
 	*(f.data[n.findex].(*interface{})) = value(n.Child[1], f)
 }
 
@@ -402,6 +402,10 @@ func equal(n *Node, f *Frame) {
 
 func notEqual(n *Node, f *Frame) {
 	f.data[n.findex] = value(n.Child[0], f) != value(n.Child[1], f)
+}
+
+func indirectInc(n *Node, f *Frame) {
+	*(f.data[n.findex].(*interface{})) = value(n.Child[0], f).(int) + 1
 }
 
 func inc(n *Node, f *Frame) {

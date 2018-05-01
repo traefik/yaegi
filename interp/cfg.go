@@ -176,7 +176,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 				}
 			} else if n.Child[0].action == Star {
 				n.findex = n.Child[0].Child[0].findex
-				n.run = dassign
+				n.run = indirectAssign
 			}
 
 		case IncDecStmt:
@@ -186,6 +186,10 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			n.typ = n.Child[0].typ
 			if sym, _, ok := scope.lookup(n.Child[0].ident); ok {
 				sym.typ = n.typ
+			}
+			if n.Child[0].action == Star {
+				n.findex = n.Child[0].Child[0].findex
+				n.run = indirectInc
 			}
 
 		case DefineX, AssignXStmt:
