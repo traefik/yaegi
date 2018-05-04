@@ -34,6 +34,7 @@ func main() {
 		ch = ch1
 	}
 }
+
 // Output:
 // 2
 // 3

@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"log"
 	"strconv"
 )
 
@@ -248,6 +249,39 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 	index := 0
 	var root, anc *Node
 	var st nodestack
+	var nbAssign int
+	addChild := func(root **Node, anc *Node, index *int, kind Kind, action Action) *Node {
+		*index++
+		var i interface{}
+		n := &Node{anc: anc, index: *index, kind: kind, action: action, val: &i, run: builtin[action]}
+		n.Start = n
+		if anc == nil {
+			*root = n
+		} else {
+			anc.Child = append(anc.Child, n)
+			if anc.action == Assign && nbAssign > 1 && len(anc.Child) == 2*nbAssign {
+				// All LHS and RSH assing child are now defined, so split multiple assign
+				// statement into single assign statements
+				newAnc := anc.anc
+				newChild := []*Node{}
+				for i := 0; i < nbAssign; i++ {
+					// set new signle assign
+					*index++
+					na := &Node{anc: anc.anc, index: *index, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
+					na.Start = na
+					newChild = append(newChild, na)
+					// Set single assign left hand side
+					anc.Child[i].anc = na
+					na.Child = append(na.Child, anc.Child[i])
+					// Set single assign right hand side
+					anc.Child[i+nbAssign].anc = na
+					na.Child = append(na.Child, anc.Child[i+nbAssign])
+				}
+				newAnc.Child = newChild
+			}
+		}
+		return n
+	}
 	// Populate our own private AST from Go parser AST.
 	// A stack of ancestor nodes is used to keep track of curent ancestor for each depth level
 	ast.Inspect(f, func(node ast.Node) bool {
@@ -276,6 +310,7 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 					kind = AssignStmt
 				}
 				action = Assign
+				nbAssign = len(a.Lhs)
 			}
 			st.push(addChild(&root, anc, &index, kind, action))
 
@@ -516,6 +551,7 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			} else {
 				kind, action = ValueSpec, Assign0
 			}
+			log.Println(index, "valuespec", action)
 			st.push(addChild(&root, anc, &index, kind, action))
 
 		default:
@@ -525,19 +561,6 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 		return true
 	})
 	return root, def
-}
-
-func addChild(root **Node, anc *Node, index *int, kind Kind, action Action) *Node {
-	*index++
-	var i interface{}
-	n := &Node{anc: anc, index: *index, kind: kind, action: action, val: &i, run: builtin[action]}
-	n.Start = n
-	if anc == nil {
-		*root = n
-	} else {
-		anc.Child = append(anc.Child, n)
-	}
-	return n
 }
 
 type nodestack []*Node

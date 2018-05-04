@@ -153,7 +153,7 @@ func setInt(n *Node, f *Frame) {
 	f.data[n.Child[0].findex].(reflect.Value).SetInt(int64(value(n.Child[1], f).(int)))
 }
 
-// assignX(n, f) implements assignement for a single call which returns multiple values
+// assignX(n, f) implements multiple value assignement
 func assignX(n *Node, f *Frame) {
 	l := len(n.Child) - 1
 	b := n.Child[l].findex
@@ -167,12 +167,9 @@ func indirectAssign(n *Node, f *Frame) {
 	*(f.data[n.findex].(*interface{})) = value(n.Child[1], f)
 }
 
-// assign(n, f) implements assignement with the same number of left and right values
+// assign(n, f) implements single value assignement
 func assign(n *Node, f *Frame) {
-	l := len(n.Child) / 2
-	for i, c := range n.Child[:l] {
-		f.data[c.findex] = value(n.Child[l+i], f)
-	}
+	f.data[n.findex] = value(n.Child[1], f)
 }
 
 // assign0(n, f) implements assignement of zero value
