@@ -5,7 +5,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"log"
 	"strconv"
 )
 
@@ -244,12 +243,12 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 	if err != nil {
 		panic(err)
 	}
-	//ast.Print(fset, f)
 
 	index := 0
 	var root, anc *Node
 	var st nodestack
 	var nbAssign int
+	var typeSpec bool
 	addChild := func(root **Node, anc *Node, index *int, kind Kind, action Action) *Node {
 		*index++
 		var i interface{}
@@ -259,25 +258,53 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 			*root = n
 		} else {
 			anc.Child = append(anc.Child, n)
-			if anc.action == Assign && nbAssign > 1 && len(anc.Child) == 2*nbAssign {
-				// All LHS and RSH assing child are now defined, so split multiple assign
-				// statement into single assign statements
-				newAnc := anc.anc
-				newChild := []*Node{}
-				for i := 0; i < nbAssign; i++ {
-					// set new signle assign
-					*index++
-					na := &Node{anc: anc.anc, index: *index, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
-					na.Start = na
-					newChild = append(newChild, na)
-					// Set single assign left hand side
-					anc.Child[i].anc = na
-					na.Child = append(na.Child, anc.Child[i])
-					// Set single assign right hand side
-					anc.Child[i+nbAssign].anc = na
-					na.Child = append(na.Child, anc.Child[i+nbAssign])
+			if anc.action == Assign && nbAssign > 1 {
+				if !typeSpec && len(anc.Child) == 2*nbAssign {
+					// All LHS and RSH assing child are now defined, so split multiple assign
+					// statement into single assign statements.
+					newAnc := anc.anc
+					newChild := []*Node{}
+					for i := 0; i < nbAssign; i++ {
+						// set new signle assign
+						*index++
+						na := &Node{anc: anc.anc, index: *index, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
+						na.Start = na
+						newChild = append(newChild, na)
+						// Set single assign left hand side
+						anc.Child[i].anc = na
+						na.Child = append(na.Child, anc.Child[i])
+						// Set single assign right hand side
+						anc.Child[i+nbAssign].anc = na
+						na.Child = append(na.Child, anc.Child[i+nbAssign])
+					}
+					newAnc.Child = newChild
+				} else if typeSpec && len(anc.Child) == 2*nbAssign+1 {
+					// All LHS and RSH assing child are now defined, so split multiple assign
+					// statement into single assign statements. Set type for each assignment.
+					typeSpec = false
+					newAnc := anc.anc
+					newChild := []*Node{}
+					typeNode := anc.Child[nbAssign]
+					for i := 0; i < nbAssign; i++ {
+						// set new signle assign
+						*index++
+						na := &Node{anc: anc.anc, index: *index, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
+						na.Start = na
+						newChild = append(newChild, na)
+						// set new type for this assignment
+						*index++
+						nt := &Node{anc: na, ident: typeNode.ident, index: *index, kind: typeNode.kind, action: typeNode.action, val: new(interface{}), run: typeNode.run}
+						// Set single assign left hand side
+						anc.Child[i].anc = na
+						na.Child = append(na.Child, anc.Child[i])
+						// Set assignment type
+						na.Child = append(na.Child, nt)
+						// Set single assign right hand side
+						anc.Child[i+nbAssign+1].anc = na
+						na.Child = append(na.Child, anc.Child[i+nbAssign+1])
+					}
+					newAnc.Child = newChild
 				}
-				newAnc.Child = newChild
 			}
 		}
 		return n
@@ -547,11 +574,14 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 					kind, action = AssignXStmt, AssignX
 				} else {
 					kind, action = AssignStmt, Assign
+					nbAssign = len(a.Names)
+				}
+				if a.Type != nil {
+					typeSpec = true
 				}
 			} else {
 				kind, action = ValueSpec, Assign0
 			}
-			log.Println(index, "valuespec", action)
 			st.push(addChild(&root, anc, &index, kind, action))
 
 		default:

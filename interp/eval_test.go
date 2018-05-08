@@ -883,6 +883,50 @@ func main() {
 	// 2
 }
 
+func Example_ptr2() {
+	src := `
+package main
+
+func f(i *int) {
+	*i = *i + 3
+}
+
+func main() {
+	var a int = 2
+	f(&a)
+	println(a)
+}
+`
+	i := NewInterpreter(InterpOpt{})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 5
+}
+
+func Example_ptr3() {
+	src := `
+package main
+
+func f(i *int) {
+	*i++
+}
+
+func main() {
+	var a int = 2
+	f(&a)
+	println(a)
+}
+`
+	i := NewInterpreter(InterpOpt{})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 3
+}
+
 func Example_ret1() {
 	src := `
 package main
@@ -1243,7 +1287,8 @@ func main() {
 		go Filter(ch, ch1, prime)
 		ch = ch1
 	}
-}`
+}
+`
 	i := NewInterpreter(InterpOpt{})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
