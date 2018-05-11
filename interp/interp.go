@@ -15,6 +15,7 @@ type Node struct {
 	kind   Kind        // Kind of node
 	typ    *Type       // Type of value in frame, or nil
 	recv   *Node       // Method receiver node for call, or nil
+	frame  *Frame      // Frame pointer, only used for script callbacks from binary (wrapNode)
 	action Action      // Action
 	run    Builtin     // function to run at CFG execution
 	val    interface{} // pointer on generic value (CFG execution)

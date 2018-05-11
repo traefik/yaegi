@@ -250,8 +250,24 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			}
 			if n.Child[0].kind == SelectorImport {
 				n.fsize = n.Child[0].fsize
-				n.typ = &Type{cat: ValueT, rtype: n.Child[0].val.(reflect.Value).Type().Out(0)}
+				typ := n.Child[0].val.(reflect.Value).Type()
+				log.Println(n.index, "callExpr", typ)
+				if typ.NumOut() > 1 {
+					n.typ = &Type{cat: ValueT, rtype: n.Child[0].val.(reflect.Value).Type().Out(0)}
+				}
 				n.Child[0].kind = BasicLit
+				for i, c := range n.Child[1:] {
+					// If a call parameter is a function definition, wrap it into a typed func so it can called from bin
+					if c.kind == FuncLit {
+						log.Println(n.index, "call FuncLit, wrap", c.index, "in type", typ.In(i))
+						n.Child[1+i].val = reflect.MakeFunc(typ.In(i), c.wrapNode)
+						n.Child[1+i].kind = Rvalue
+					} else if c.ident == "nil" {
+						log.Println(n.index, "call nil type", typ.In(i))
+						n.Child[1+i].val = reflect.New(typ.In(i)).Elem()
+						n.Child[1+i].kind = Rvalue
+					}
+				}
 				// TODO: handle multiple return value
 				if len(n.Child) == 2 && n.Child[1].fsize > 1 {
 					n.run = callBinX
@@ -269,7 +285,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 					// Resolve method and receiver path, store them in node static value for run
 					n.Child[0].val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
 					n.fsize = len(n.Child[0].val.(*Node).Child[2].Child[1].Child)
-					n.Child[0].findex = -1 // To force reading value from node instead of frame
+					n.Child[0].findex = -1 // To force reading value from node instead of frame (methods)
 				}
 			} else if sym, _, _ := scope.lookup(n.Child[0].ident); sym != nil {
 				if sym.typ != nil && sym.typ.cat == BinT {

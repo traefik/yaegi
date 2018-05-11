@@ -63,6 +63,7 @@ const (
 	ParenExpr
 	RangeStmt
 	ReturnStmt
+	Rvalue
 	SelectorExpr
 	SelectorImport
 	SendStmt
@@ -127,6 +128,7 @@ var kinds = [...]string{
 	ParenExpr:        "ParenExpr",
 	RangeStmt:        "RangeStmt",
 	ReturnStmt:       "ReturnStmt",
+	Rvalue:           "Rvalue",
 	SelectorExpr:     "SelectorExpr",
 	SelectorImport:   "SelectorImport",
 	SendStmt:         "SendStmt",

@@ -102,7 +102,7 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 
 func value(n *Node, f *Frame) interface{} {
 	switch n.kind {
-	case BasicLit, FuncDecl, FuncLit:
+	case BasicLit, FuncDecl, FuncLit, Rvalue:
 		//log.Println(n.index, "literal node value", n.ident, n.val)
 		return n.val
 	default:
@@ -120,7 +120,7 @@ func value(n *Node, f *Frame) interface{} {
 
 func addressValue(n *Node, f *Frame) *interface{} {
 	switch n.kind {
-	case BasicLit, FuncDecl, FuncLit:
+	case BasicLit, FuncDecl, FuncLit, Rvalue:
 		//log.Println(n.index, "literal node value", n.ident, n.val)
 		return &n.val
 	default:
@@ -220,6 +220,21 @@ func _println(n *Node, f *Frame) {
 	fmt.Println("")
 }
 
+// wrap a call to interpreter node in a function that can be called from binary
+func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
+	var result []reflect.Value
+	log.Println(n.index, "wrapNode", in, n.frame)
+	frame := Frame{anc: n.frame, data: make([]interface{}, n.findex)}
+	paramIndex := n.Child[2].Child[0].val.([]int)
+	i := 0
+	for _, arg := range in {
+		frame.data[paramIndex[i]] = arg.Interface()
+		i++
+	}
+	runCfg(n.Child[3].Start, &frame)
+	return result
+}
+
 func call(n *Node, f *Frame) {
 	//println(n.index, "call", n.Child[0].ident)
 	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
@@ -294,9 +309,15 @@ func callBinX(n *Node, f *Frame) {
 
 // Call a function from a bin import, accessible through reflect
 func callBin(n *Node, f *Frame) {
+	log.Println(n.index, "callBin")
 	in := make([]reflect.Value, len(n.Child)-1)
 	for i, c := range n.Child[1:] {
-		in[i] = reflect.ValueOf(value(c, f))
+		if c.kind == Rvalue {
+			in[i] = value(c, f).(reflect.Value)
+			c.frame = f
+		} else {
+			in[i] = reflect.ValueOf(value(c, f))
+		}
 	}
 	fun := value(n.Child[0], f).(reflect.Value)
 	v := fun.Call(in)
