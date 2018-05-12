@@ -220,10 +220,9 @@ func _println(n *Node, f *Frame) {
 	fmt.Println("")
 }
 
-// wrap a call to interpreter node in a function that can be called from binary
+// wrap a call to interpreter node in a function that can be called from runtime
 func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	var result []reflect.Value
-	log.Println(n.index, "wrapNode", in, n.frame)
 	frame := Frame{anc: n.frame, data: make([]interface{}, n.findex)}
 	paramIndex := n.Child[2].Child[0].val.([]int)
 	i := 0
@@ -232,6 +231,14 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 		i++
 	}
 	runCfg(n.Child[3].Start, &frame)
+	if len(n.Child[2].Child) > 1 {
+		if fieldList := n.Child[2].Child[1]; fieldList != nil {
+			result = make([]reflect.Value, len(fieldList.Child))
+			for i, _ := range fieldList.Child {
+				result[i] = reflect.ValueOf(frame.data[i])
+			}
+		}
+	}
 	return result
 }
 
@@ -309,7 +316,6 @@ func callBinX(n *Node, f *Frame) {
 
 // Call a function from a bin import, accessible through reflect
 func callBin(n *Node, f *Frame) {
-	log.Println(n.index, "callBin")
 	in := make([]reflect.Value, len(n.Child)-1)
 	for i, c := range n.Child[1:] {
 		if c.kind == Rvalue {

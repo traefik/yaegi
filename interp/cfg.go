@@ -251,7 +251,6 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			if n.Child[0].kind == SelectorImport {
 				n.fsize = n.Child[0].fsize
 				typ := n.Child[0].val.(reflect.Value).Type()
-				log.Println(n.index, "callExpr", typ)
 				if typ.NumOut() > 1 {
 					n.typ = &Type{cat: ValueT, rtype: n.Child[0].val.(reflect.Value).Type().Out(0)}
 				}
@@ -259,11 +258,9 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 				for i, c := range n.Child[1:] {
 					// If a call parameter is a function definition, wrap it into a typed func so it can called from bin
 					if c.kind == FuncLit {
-						log.Println(n.index, "call FuncLit, wrap", c.index, "in type", typ.In(i))
 						n.Child[1+i].val = reflect.MakeFunc(typ.In(i), c.wrapNode)
 						n.Child[1+i].kind = Rvalue
 					} else if c.ident == "nil" {
-						log.Println(n.index, "call nil type", typ.In(i))
 						n.Child[1+i].val = reflect.New(typ.In(i)).Elem()
 						n.Child[1+i].kind = Rvalue
 					}
