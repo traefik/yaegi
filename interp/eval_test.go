@@ -19,7 +19,7 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -47,7 +47,7 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -82,7 +82,7 @@ func f2() bool {
 	//return false
 	return 1 == 0
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -99,7 +99,7 @@ func main() {
 	a, b := 1, 2	// Multiple assign
 	println(a, b)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -121,7 +121,7 @@ func main() {
 	msg := <-channel
 	println(msg)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -141,7 +141,7 @@ func main() {
 	msg := <-channel
 	println(msg)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -163,7 +163,7 @@ func main() {
 	msg := <-messages
 	fmt.Println(msg)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -184,7 +184,7 @@ const (
 func main() {
 	println(a, b)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -202,7 +202,7 @@ func main() {
 		println(i)
 	}
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -231,7 +231,7 @@ func main() {
 		println(i)
 	}
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -263,7 +263,7 @@ func main() {
 		i++
 	}
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -295,7 +295,7 @@ func main() {
 	//println(fib(10))
 }
 `
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -318,7 +318,7 @@ func fib(n int) int {
 func main() {
 	println(fib(4))
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -341,7 +341,7 @@ func main() {
 		i++
 	}
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -368,7 +368,7 @@ func main() {
 		i++
 	}
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -392,7 +392,7 @@ func main() {
 		}
 	}
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -411,7 +411,7 @@ func f (i int) int { return i+15 }
 func main() {
 	println(f(4))
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -431,7 +431,7 @@ func main() {
 	c := Coord{3, 4}
 	println(f(c))
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -451,7 +451,7 @@ func main() {
 	c := Coord{3, 4}
 	println(f(2, 3, c))
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -472,7 +472,7 @@ func main() {
 	sleep(100)
 	println("in main")
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -520,7 +520,7 @@ func main() {
 		fmt.Printf("%d ", heap.Pop(h))
 	}
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -537,7 +537,7 @@ func main() {
 }
 
 func f() int { return 1 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -554,7 +554,7 @@ import "fmt"
 func main() {
 	fmt.Println("Hello", 42)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -571,7 +571,7 @@ import f "fmt"
 func main() {
 	f.Println("Hello", 42)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -588,12 +588,38 @@ import . "fmt"
 func main() {
 	Println("Hello", 42)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
 	// Output:
 	// Hello 42
+}
+
+func Example_init0() {
+	src := `
+package main
+
+func init() {
+	println("Hello from init 1")
+}
+
+func init() {
+	println("Hello from init 2")
+}
+
+func main() {
+	println("Hello from main")
+}
+`
+	i := NewInterpreter(InterpOpt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// Hello from init 1
+	// Hello from init 2
+	// Hello from main
 }
 
 func Example_l2() {
@@ -607,7 +633,7 @@ func main() {
 		}
 	}
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -627,7 +653,7 @@ func main() {
 		}
 	}
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -638,7 +664,7 @@ func Example_l4() {
 package main
 func main() { println(f(5)) }
 func f(i int) int { return i + 1 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -657,7 +683,7 @@ func main() {
 	dict["truc"] = "machin"
 	println(dict["truc"])
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -674,7 +700,7 @@ func main() {
 	dict["truc"] = "machin"
 	println(dict["truc"])
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -691,7 +717,7 @@ func main() {
 	dict["truc"] = "machin"
 	println(dict["truc"])
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -710,7 +736,7 @@ func main() {
 	println(dict["hello"])
 }
 `
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -731,7 +757,7 @@ import (
 func main() {
 	fmt.Println(math.Cos(math.Pi))
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -751,7 +777,7 @@ func main() {
 	o := Coord{3, 4}
 	println(o.dist())
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -778,7 +804,7 @@ func main() {
 	o := Point{ Coord{3, 4}, 5}
 	println(o.dist())
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -805,7 +831,7 @@ func main() {
 	o := Point{ Coord{3, 4}, 5}
 	println(o.Coord.dist())
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -837,7 +863,7 @@ func main() {
 	o := Tpoint{ 0, Point{ Coord{3, 4}, 5} }
 	println(o.dist())
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -857,7 +883,7 @@ func main() {
 	println(*b)
 }
 `
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -875,7 +901,7 @@ func main() {
 	println(*b)
 }
 `
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -897,7 +923,7 @@ func main() {
 	println(a)
 }
 `
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -919,7 +945,7 @@ func main() {
 	println(a)
 }
 `
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -934,7 +960,7 @@ package main
 func f(i int) (o int) { o = i+1; return }
 
 func main() { println(f(4)) }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -951,7 +977,7 @@ func main() {
 
 func r2() (int, int) {return 1, 2}
 `
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -971,7 +997,7 @@ func main() {
 
 func r2() (int, int) {return 1, 2}
 `
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -988,7 +1014,7 @@ func f() (int, int) { return 2, 3 }
 func main() {
 	println(f())
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1007,7 +1033,7 @@ func g(i, j int) int { return i + j }
 func main() {
 	println(g(f()))
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1022,7 +1048,7 @@ package main
 func main() {
 	func() {println("hello")}()
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1041,7 +1067,7 @@ func f1(i int) { println("f1", i) }
 func test(f fn, v int) { f(v) }
 
 func main() { test(f1, 21) }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1061,7 +1087,7 @@ func main() {
 	f1 := func(i int) {println("f1", i) }
 	test(f1, 21) 
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1080,7 +1106,7 @@ func test(f fn, v int) { f(v) }
 func main() {
 	test(func(i int) {println("f1", i) }, 21) 
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1100,7 +1126,7 @@ func main() {
 	a := 3
 	test(func(i int) {println("f1", i, a) }, 21) 
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1117,7 +1143,7 @@ func main() {
 	f := func(i int) { println("f1", i, a) }
 	f(21)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1135,7 +1161,7 @@ func main() {
 	b := f(21)
 	println(b)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1153,7 +1179,7 @@ var a int = 1
 func main() {
 	println(a)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1174,7 +1200,7 @@ var b int = f(3)
 func main() {
 	println(b)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1196,7 +1222,7 @@ func main() {
 	println(a)
 	f()
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1217,7 +1243,7 @@ func main() {
 	}
 	println(a)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1241,7 +1267,7 @@ func main() {
 	}
 	println(a)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1249,6 +1275,31 @@ func main() {
 	// 2
 	// 3
 	// 1
+}
+
+func Example_server() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"net/http"
+)
+
+var v string = "v1.0"
+
+func main() {
+	a := "hello "
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "Welcome to my website! ", a, v)
+	})
+
+	http.ListenAndServe(":8080", nil)
+}`
+	i := NewInterpreter(InterpOpt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
 }
 
 func Example_sieve() {
@@ -1289,7 +1340,7 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1315,7 +1366,7 @@ func main() {
 	sleep(1000)
 	println("bye")
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1328,7 +1379,7 @@ package main
 func main() {
 	println("hello world")
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1349,7 +1400,7 @@ func main() {
 	a := T{ 7, 8 }
 	println(a.f, a.g)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1370,7 +1421,7 @@ func main() {
 	a := T{}
 	println(a.f, a.g)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1392,7 +1443,7 @@ func main() {
 	a.f = 8
 	println(a.f)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1417,7 +1468,7 @@ func main() {
 	a.g.h = 3 + 2
 	println("a.g.h", a.g.h)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1438,7 +1489,7 @@ func main() {
 	a := T{g: 8, f: 7}
 	println(a.f, a.g)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1465,7 +1516,7 @@ func main() {
 	a.h.k = f(4)
 	println(a.h.k)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1498,7 +1549,7 @@ func main() {
 	a := T{ 5, 7, T2{ f(8), T3{ 9 } } }
        println(a.f, a.g, a.h, a.k)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1521,7 +1572,7 @@ func main() {
 	a := T{ 7, f(4) }
 	println(a.f, a.g)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1541,7 +1592,7 @@ func main() {
 	a := T{ 7, 8 }
 	println(a.f, a.g)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1564,7 +1615,7 @@ func main() {
 		println(100)
 	}
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1584,7 +1635,7 @@ import (
 func main() {
 	fmt.Println(time.Now())
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1604,7 +1655,7 @@ func main() {
 	m := t.Minute()
 	fmt.Println(t, m)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1624,7 +1675,7 @@ func main() {
 	h, m, s := t.Clock()
 	fmt.Println(h, m, s)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1643,7 +1694,7 @@ func main() {
 	t := time.Now()
 	fmt.Println(t.Clock())
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1663,7 +1714,7 @@ func main() {
 	m = 9
 	fmt.Println(m)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1679,7 +1730,7 @@ func main() {
 	var a newInt
 	println(a)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1695,7 +1746,7 @@ func main() {
 	var a, b, c int
 	println(a, b, c)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1711,7 +1762,7 @@ func main() {
 	var a int = 2
 	println(a)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1727,7 +1778,7 @@ func main() {
 	var a, b int = 2, 3
 	println(a, b)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
@@ -1743,7 +1794,7 @@ func main() {
 	var a, b = 2, 3
 	println(a, b)
 }`
-	i := NewInterpreter(InterpOpt{})
+	i := NewInterpreter(InterpOpt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 

@@ -15,7 +15,7 @@ do
 	END {
 		print "func Example_'${file%.*}'() {"
 		print "src := `" src "`"
-		print "i := NewInterpreter(InterpOpt{})"
+		print "i := NewInterpreter(InterpOpt{Entry: \"main\"})"
 		print "i.ImportBin(export.Pkg)"
 		print "i.Eval(src)"
 		print out

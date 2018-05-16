@@ -65,6 +65,7 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [X] universe (global) scope
 - [X] closures
 - [X] imports from exec
+- [X] init functions
 
 ## Developpement plan
 

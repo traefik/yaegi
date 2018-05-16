@@ -75,7 +75,7 @@ func main() {
 	println(1)
 }
 `
-	NewInterpreter(InterpOpt{}).Eval(src)
+	NewInterpreter(InterpOpt{Entry: "main"}).Eval(src)
 	// Output:
 	// 1
 }
@@ -93,7 +93,7 @@ func main() {
 }
 `
 
-	NewInterpreter(InterpOpt{}).Eval(src)
+	NewInterpreter(InterpOpt{Entry: "main"}).Eval(src)
 	// Output:
 	// 2048
 	// 2304

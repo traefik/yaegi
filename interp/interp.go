@@ -12,11 +12,11 @@ type Node struct {
 	findex int         // index of value in frame or frame size (func def, type def)
 	fsize  int         // number of entries in frame (call expressions)
 	level  int         // number of frame indirections to access value
-	kind   Kind        // Kind of node
-	typ    *Type       // Type of value in frame, or nil
-	recv   *Node       // Method receiver node for call, or nil
-	frame  *Frame      // Frame pointer, only used for script callbacks from binary (wrapNode)
-	action Action      // Action
+	kind   Kind        // kind of node
+	typ    *Type       // type of value in frame, or nil
+	recv   *Node       // method receiver node for call, or nil
+	frame  *Frame      // frame pointer, only used for script callbacks from runtime (wrapNode)
+	action Action      // action
 	run    Builtin     // function to run at CFG execution
 	val    interface{} // pointer on generic value (CFG execution)
 	ident  string      // set if node is a var or func
@@ -24,27 +24,28 @@ type Node struct {
 
 // A Frame contains values for the current execution level
 type Frame struct {
-	anc  *Frame        // Ancestor frame (global space)
-	data []interface{} // Values
+	anc  *Frame        // ancestor frame (global space)
+	data []interface{} // values
 }
 
 type SymMap map[string]interface{}
 
-type ImportMap map[string]*SymMap
+type PkgMap map[string]*SymMap
 
 // Interpreter contains global resources and state
 type Interpreter struct {
 	opt     InterpOpt
-	out     Frame
-	imports ImportMap
+	frame   *Frame
+	imports PkgMap
+	Exports PkgMap
 }
 
 type InterpOpt struct {
-	Ast   bool   // Display AST graph (debug)
-	Cfg   bool   // Display CFG graph (debug)
-	NoRun bool   // Compile, but do not run
-	NbOut int    // Number of output values
-	entry string // Interpreter entry point
+	Ast   bool   // display AST graph (debug)
+	Cfg   bool   // display CFG graph (debug)
+	NoRun bool   // compile, but do not run
+	NbOut int    // number of output values
+	Entry string // interpreter entry point
 }
 
 // n.Walk(cbin, cbout) traverses AST n in depth first order, call cbin function
@@ -63,7 +64,7 @@ func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 
 // NewInterpreter()creates and returns a new interpreter object
 func NewInterpreter(opt InterpOpt) *Interpreter {
-	return &Interpreter{opt: opt, imports: make(ImportMap)}
+	return &Interpreter{opt: opt, imports: make(PkgMap)}
 }
 
 // Register a symbol from an imported package to be visible from the interpreter
@@ -82,7 +83,7 @@ func (i *Interpreter) ImportBin(pkg *map[string]*map[string]interface{}) {
 }
 
 // i.Eval(s) evaluates Go code represented as a string
-func (i *Interpreter) Eval(src string) Frame {
+func (i *Interpreter) Eval(src string) {
 	// Parse source to AST
 	root, sdef := Ast(src, nil)
 	if i.opt.Ast {
@@ -92,7 +93,10 @@ func (i *Interpreter) Eval(src string) Frame {
 	// Annotate AST with CFG infos
 	tdef := initTypes()
 	initGoBuiltin()
-	i.Cfg(root, tdef, sdef)
+	initNodes := i.Cfg(root, tdef, sdef)
+	if entry, ok := sdef[i.opt.Entry]; ok {
+		initNodes = append(initNodes, entry)
+	}
 
 	if i.opt.Cfg {
 		root.CfgDot(Dotty())
@@ -100,9 +104,10 @@ func (i *Interpreter) Eval(src string) Frame {
 
 	// Execute CFG
 	if !i.opt.NoRun {
-		frame := &Frame{data: make([]interface{}, root.fsize)}
-		runCfg(root.Start, frame)
-		Run(sdef["main"], frame, nil, nil, nil, nil, true, false)
+		i.frame = &Frame{data: make([]interface{}, root.fsize)}
+		runCfg(root.Start, i.frame)
+		for _, n := range initNodes {
+			Run(n, i.frame, nil, nil, nil, nil, true, false)
+		}
 	}
-	return i.out
 }

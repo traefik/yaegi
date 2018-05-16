@@ -45,13 +45,14 @@ type FrameIndex struct {
 
 // n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
-// variables.
+// variables. A list of nodes of init functions is returned.
 // Following this pass, the CFG is ready to run
-func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
+func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
 	scope := &Scope{sym: make(map[string]*Symbol)}
 	frameIndex := &FrameIndex{}
 	var loop, loopRestart *Node
 	var funcDef bool // True if a function is defined in the current frame context
+	var initNodes []*Node
 
 	// Fill root scope with initial symbol definitions
 	for name, node := range sdef {
@@ -83,6 +84,9 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			// Add a frame indirection level as we enter in a func
 			frameIndex = &FrameIndex{anc: frameIndex}
 			scope = scope.push(1)
+			if n.Child[1].ident == "init" {
+				initNodes = append(initNodes, n)
+			}
 			if len(n.Child[0].Child) > 0 {
 				// function is a method, add it to the related type
 				n.ident = n.Child[1].ident
@@ -653,6 +657,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) {
 			}
 		}
 	})
+	return initNodes
 }
 
 // find default case clause index of a switch statement, if any
