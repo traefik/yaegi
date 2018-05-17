@@ -4,6 +4,7 @@ import (
 	"log"
 	"path"
 	"reflect"
+	"unicode"
 )
 
 type Symbol struct {
@@ -47,12 +48,13 @@ type FrameIndex struct {
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
 // Following this pass, the CFG is ready to run
-func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
+func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 	scope := &Scope{sym: make(map[string]*Symbol)}
 	frameIndex := &FrameIndex{}
 	var loop, loopRestart *Node
 	var funcDef bool // True if a function is defined in the current frame context
 	var initNodes []*Node
+	var exports *SymMap
 
 	// Fill root scope with initial symbol definitions
 	for name, node := range sdef {
@@ -72,6 +74,16 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
 		case BlockStmt:
 			scope = scope.push(0)
 
+		case File:
+			pkgName := n.Child[0].ident
+			if pkg, ok := interp.Exports[pkgName]; ok {
+				exports = pkg
+			} else {
+				x := make(SymMap)
+				exports = &x
+				interp.Exports[pkgName] = exports
+			}
+
 		case For0, ForRangeStmt:
 			loop, loopRestart = n, n.Child[0]
 			scope = scope.push(0)
@@ -84,14 +96,18 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
 			// Add a frame indirection level as we enter in a func
 			frameIndex = &FrameIndex{anc: frameIndex}
 			scope = scope.push(1)
-			if n.Child[1].ident == "init" {
+			funcName := n.Child[1].ident
+			if funcName == "init" {
 				initNodes = append(initNodes, n)
+			}
+			if canExport(funcName) {
+				(*exports)[funcName] = n
 			}
 			if len(n.Child[0].Child) > 0 {
 				// function is a method, add it to the related type
 				n.ident = n.Child[1].ident
 				tname := n.Child[0].Child[0].Child[1].ident
-				t := tdef[tname]
+				t := interp.types[tname]
 				t.method = append(t.method, n)
 			}
 			if len(n.Child[2].Child) == 2 {
@@ -116,31 +132,31 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
 			// needs to be done for types, so do not dive in subtree
 			if n.Child[1].kind == Ident {
 				// Create a type alias of an existing one
-				tdef[n.Child[0].ident] = &Type{cat: AliasT, val: nodeType(tdef, n.Child[1])}
+				interp.types[n.Child[0].ident] = &Type{cat: AliasT, val: nodeType(interp.types, n.Child[1])}
 			} else {
 				// Define a new type
-				tdef[n.Child[0].ident] = nodeType(tdef, n.Child[1])
+				interp.types[n.Child[0].ident] = nodeType(interp.types, n.Child[1])
 			}
 			return false
 
 		case ArrayType, ChanType, MapType, StructType:
-			n.typ = nodeType(tdef, n)
+			n.typ = nodeType(interp.types, n)
 			return false
 
 		case BasicLit:
 			switch n.val.(type) {
 			case bool:
-				n.typ = tdef["bool"]
+				n.typ = interp.types["bool"]
 			case byte:
-				n.typ = tdef["byte"]
+				n.typ = interp.types["byte"]
 			case float32:
-				n.typ = tdef["float32"]
+				n.typ = interp.types["float32"]
 			case float64:
-				n.typ = tdef["float64"]
+				n.typ = interp.types["float64"]
 			case int:
-				n.typ = tdef["int"]
+				n.typ = interp.types["int"]
 			case string:
-				n.typ = tdef["string"]
+				n.typ = interp.types["string"]
 			}
 		}
 		return true
@@ -149,7 +165,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
 		switch n.kind {
 		case ArrayType:
 			// TODO: move to pre-processing ? See when handling complex array type def
-			n.typ = &Type{cat: ArrayT, val: tdef[n.Child[1].ident]}
+			n.typ = &Type{cat: ArrayT, val: interp.types[n.Child[1].ident]}
 
 		case Define, AssignStmt:
 			wireChild(n)
@@ -186,7 +202,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
 		case IncDecStmt:
 			wireChild(n)
 			n.findex = n.Child[0].findex
-			n.Child[0].typ = tdef["int"]
+			n.Child[0].typ = interp.types["int"]
 			n.typ = n.Child[0].typ
 			if sym, _, ok := scope.lookup(n.Child[0].ident); ok {
 				sym.typ = n.typ
@@ -207,9 +223,6 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
 					c.findex = frameIndex.max
 				}
 			}
-			// Propagate types to assignees
-			//for _, c := range n.Child[:l] {
-			//}
 
 		case BinaryExpr:
 			wireChild(n)
@@ -245,8 +258,8 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
 			if builtin, ok := goBuiltin[n.Child[0].ident]; ok {
 				n.run = builtin
 				if n.Child[0].ident == "make" {
-					if n.typ = tdef[n.Child[1].ident]; n.typ == nil {
-						n.typ = nodeType(tdef, n.Child[1])
+					if n.typ = interp.types[n.Child[1].ident]; n.typ == nil {
+						n.typ = nodeType(interp.types, n.Child[1])
 					}
 					n.Child[1].val = n.typ
 					n.Child[1].kind = BasicLit
@@ -260,7 +273,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
 				}
 				n.Child[0].kind = BasicLit
 				for i, c := range n.Child[1:] {
-					// If a call parameter is a function definition, wrap it into a typed func so it can called from bin
+					// Wrap function defintion so it can be called from runtime
 					if c.kind == FuncLit {
 						n.Child[1+i].val = reflect.MakeFunc(typ.In(i), c.wrapNode)
 						n.Child[1+i].kind = Rvalue
@@ -305,7 +318,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
 						if l == 1 {
 							// If def returns exactly one value, propagate its type in call node.
 							// Multiple return values will be handled differently through AssignX.
-							n.typ = tdef[def.Child[2].Child[j].Child[0].Child[0].ident]
+							n.typ = interp.types[def.Child[2].Child[j].Child[0].Child[0].ident]
 						}
 						n.fsize = l
 					}
@@ -329,7 +342,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
 			frameIndex.max++
 			n.findex = frameIndex.max
 			if n.Child[0].typ == nil {
-				n.Child[0].typ = tdef[n.Child[0].ident]
+				n.Child[0].typ = interp.types[n.Child[0].ident]
 			}
 			// TODO: Check that composite litteral expr matches corresponding type
 			n.typ = n.Child[0].typ
@@ -343,7 +356,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
 				// Handle object assign from sparse key / values
 				if len(n.Child) > 1 && n.Child[1].kind == KeyValueExpr {
 					n.run = compositeSparse
-					n.typ = tdef[n.Child[0].ident]
+					n.typ = interp.types[n.Child[0].ident]
 					for _, c := range n.Child[1:] {
 						c.findex = n.typ.fieldIndex(c.Child[0].ident)
 					}
@@ -363,7 +376,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
 				n.findex = frameIndex.max
 			} else {
 				l := len(n.Child) - 1
-				t := tdef[n.Child[l].ident]
+				t := interp.types[n.Child[l].ident]
 				for _, f := range n.Child[:l] {
 					scope.sym[f.ident].typ = t
 				}
@@ -454,7 +467,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
 			funcDef = true
 
 		case FuncType:
-			n.typ = nodeType(tdef, n)
+			n.typ = nodeType(interp.types, n)
 			// Store list of parameter frame indices in params val
 			var list []int
 			for _, c := range n.Child[0].Child {
@@ -649,7 +662,7 @@ func (interp *Interpreter) Cfg(root *Node, tdef TypeDef, sdef SymDef) []*Node {
 		case ValueSpec:
 			l := len(n.Child) - 1
 			if n.typ = n.Child[l].typ; n.typ == nil {
-				n.typ = tdef[n.Child[l].ident]
+				n.typ = interp.types[n.Child[l].ident]
 			}
 			for _, c := range n.Child[:l] {
 				c.typ = n.typ
@@ -700,4 +713,11 @@ func wireChild(n *Node) {
 		}
 		break
 	}
+}
+
+func canExport(name string) bool {
+	if r := []rune(name); len(r) > 0 && unicode.IsUpper(r[0]) {
+		return true
+	}
+	return false
 }

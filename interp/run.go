@@ -44,13 +44,10 @@ var builtin = [...]Builtin{
 	Sub:          sub,
 }
 
-var goBuiltin map[string]Builtin
-
-func initGoBuiltin() {
-	goBuiltin = make(map[string]Builtin)
-	goBuiltin["make"] = _make
-	goBuiltin["println"] = _println
-	goBuiltin["sleep"] = sleep
+var goBuiltin = map[string]Builtin{
+	"make":    _make,
+	"println": _println,
+	"sleep":   sleep,
 }
 
 // Run a Go function

@@ -226,15 +226,15 @@ func (a Action) String() string {
 }
 
 // Map of defined symbols (const, variables and functions)
-type SymDef map[string]*Node
+type NodeMap map[string]*Node
 
 // Note: no type analysis is performed at this stage, it is done in pre-order processing
 // of CFG, in order to accomodate forward type declarations
 
 // Ast(src) parses src string containing Go code and generates the corresponding AST.
 // The AST root node is returned.
-func Ast(src string, pre SymDef) (*Node, SymDef) {
-	var def SymDef
+func Ast(src string, pre NodeMap) (*Node, NodeMap) {
+	var def NodeMap
 	if pre == nil {
 		def = make(map[string]*Node)
 	} else {
@@ -281,7 +281,7 @@ func Ast(src string, pre SymDef) (*Node, SymDef) {
 					}
 					newAnc.Child = newChild
 				} else if typeSpec && len(anc.Child) == 2*nbAssign+1 {
-					// All LHS and RSH assing child are now defined, so split multiple assign
+					// All LHS and RHS assing child are now defined, so split multiple assign
 					// statement into single assign statements. Set type for each assignment.
 					typeSpec = false
 					newAnc := anc.anc

@@ -1,6 +1,8 @@
 // Package interp implements a Go interpreter.
 package interp
 
+import "log"
+
 // Structure for AST and CFG
 type Node struct {
 	Child  []*Node     // child subtrees (AST)
@@ -36,6 +38,7 @@ type PkgMap map[string]*SymMap
 type Interpreter struct {
 	opt     InterpOpt
 	frame   *Frame
+	types   TypeDef
 	imports PkgMap
 	Exports PkgMap
 }
@@ -64,7 +67,7 @@ func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 
 // NewInterpreter()creates and returns a new interpreter object
 func NewInterpreter(opt InterpOpt) *Interpreter {
-	return &Interpreter{opt: opt, imports: make(PkgMap)}
+	return &Interpreter{opt: opt, imports: make(PkgMap), Exports: make(PkgMap), types: defaultTypes}
 }
 
 // Register a symbol from an imported package to be visible from the interpreter
@@ -91,11 +94,13 @@ func (i *Interpreter) Eval(src string) {
 	}
 
 	// Annotate AST with CFG infos
-	tdef := initTypes()
-	initGoBuiltin()
-	initNodes := i.Cfg(root, tdef, sdef)
+	initNodes := i.Cfg(root, sdef)
 	if entry, ok := sdef[i.opt.Entry]; ok {
 		initNodes = append(initNodes, entry)
+	}
+
+	for k, v := range i.Exports {
+		log.Println("exports:", k, v)
 	}
 
 	if i.opt.Cfg {
