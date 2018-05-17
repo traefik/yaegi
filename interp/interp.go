@@ -1,8 +1,6 @@
 // Package interp implements a Go interpreter.
 package interp
 
-import "log"
-
 // Structure for AST and CFG
 type Node struct {
 	Child  []*Node     // child subtrees (AST)
@@ -97,10 +95,6 @@ func (i *Interpreter) Eval(src string) {
 	initNodes := i.Cfg(root, sdef)
 	if entry, ok := sdef[i.opt.Entry]; ok {
 		initNodes = append(initNodes, entry)
-	}
-
-	for k, v := range i.Exports {
-		log.Println("exports:", k, v)
 	}
 
 	if i.opt.Cfg {

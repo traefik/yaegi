@@ -96,12 +96,8 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 			// Add a frame indirection level as we enter in a func
 			frameIndex = &FrameIndex{anc: frameIndex}
 			scope = scope.push(1)
-			funcName := n.Child[1].ident
-			if funcName == "init" {
+			if n.Child[1].ident == "init" {
 				initNodes = append(initNodes, n)
-			}
-			if canExport(funcName) {
-				(*exports)[funcName] = n
 			}
 			if len(n.Child[0].Child) > 0 {
 				// function is a method, add it to the related type
@@ -456,6 +452,9 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 			}
 			scope = scope.anc
 			frameIndex = frameIndex.anc
+			if canExport(n.Child[1].ident) {
+				(*exports)[n.Child[1].ident] = reflect.MakeFunc(n.Child[2].typ.TypeOf(), n.wrapNode).Interface()
+			}
 
 		case FuncLit:
 			n.typ = n.Child[2].typ

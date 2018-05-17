@@ -30,6 +30,7 @@ const (
 	Int64T
 	MapT
 	PkgT
+	PtrT
 	RuneT
 	StringT
 	StructT
@@ -64,6 +65,7 @@ var cats = [...]string{
 	Int64T:      "Int64T",
 	MapT:        "MapT",
 	PkgT:        "PkgT",
+	PtrT:        "PtrT",
 	RuneT:       "RuneT",
 	StringT:     "StringT",
 	StructT:     "StructT",
@@ -103,30 +105,27 @@ type Type struct {
 
 type TypeDef map[string]*Type
 
-// Initialize Go basic types
-func initTypes() TypeDef {
-	return map[string]*Type{
-		"bool":       &Type{cat: BoolT},
-		"byte":       &Type{cat: ByteT},
-		"complex64":  &Type{cat: Complex64T},
-		"complex128": &Type{cat: Complex128T},
-		"error":      &Type{cat: ErrorT},
-		"float32":    &Type{cat: Float32T},
-		"float64":    &Type{cat: Float64T},
-		"int":        &Type{cat: IntT},
-		"int8":       &Type{cat: Int8T},
-		"int16":      &Type{cat: Int16T},
-		"int32":      &Type{cat: Int32T},
-		"int64":      &Type{cat: Int64T},
-		"rune":       &Type{cat: RuneT},
-		"string":     &Type{cat: StringT},
-		"uint":       &Type{cat: UintT},
-		"uint8":      &Type{cat: Uint8T},
-		"uint16":     &Type{cat: Uint16T},
-		"uint32":     &Type{cat: Uint32T},
-		"uint64":     &Type{cat: Uint64T},
-		"uintptr":    &Type{cat: UintptrT},
-	}
+var defaultTypes TypeDef = map[string]*Type{
+	"bool":       &Type{cat: BoolT},
+	"byte":       &Type{cat: ByteT},
+	"complex64":  &Type{cat: Complex64T},
+	"complex128": &Type{cat: Complex128T},
+	"error":      &Type{cat: ErrorT},
+	"float32":    &Type{cat: Float32T},
+	"float64":    &Type{cat: Float64T},
+	"int":        &Type{cat: IntT},
+	"int8":       &Type{cat: Int8T},
+	"int16":      &Type{cat: Int16T},
+	"int32":      &Type{cat: Int32T},
+	"int64":      &Type{cat: Int64T},
+	"rune":       &Type{cat: RuneT},
+	"string":     &Type{cat: StringT},
+	"uint":       &Type{cat: UintT},
+	"uint8":      &Type{cat: Uint8T},
+	"uint16":     &Type{cat: Uint16T},
+	"uint32":     &Type{cat: Uint32T},
+	"uint64":     &Type{cat: Uint64T},
+	"uintptr":    &Type{cat: UintptrT},
 }
 
 // return a type definition for the corresponding AST subtree
@@ -172,21 +171,38 @@ func nodeType(tdef TypeDef, n *Node) *Type {
 	return t
 }
 
+var zeroValues = [...]interface{}{
+	BoolT:       false,
+	ByteT:       byte(0),
+	Complex64T:  complex64(0),
+	Complex128T: complex128(0),
+	ErrorT:      error(nil),
+	Float32T:    float32(0),
+	Float64T:    float64(0),
+	IntT:        int(0),
+	Int8T:       int8(0),
+	Int16T:      int16(0),
+	Int32T:      int32(0),
+	Int64T:      int64(0),
+	RuneT:       rune(0),
+	StringT:     "",
+	UintT:       uint(0),
+	Uint8T:      uint8(0),
+	Uint16T:     uint16(0),
+	Uint32T:     uint32(0),
+	Uint64T:     uint64(0),
+	UintptrT:    uintptr(0),
+	ValueT:      nil,
+}
+
 // t.zero() instantiates and return a zero value object for the givent type t
 func (t *Type) zero() interface{} {
+	if t.cat >= Cat(len(zeroValues)) {
+		return nil
+	}
 	switch t.cat {
 	case AliasT:
 		return t.val.zero()
-	case BoolT:
-		return false
-	case Complex64T, Complex128T:
-		return 0 + 0i
-	case Float32T, Float64T:
-		return 0.0
-	case ByteT, IntT, Int8T, Int16T, Int32T, Int64T, UintT, Uint8T, Uint16T, Uint32T, Uint64T, UintptrT:
-		return 0
-	case StringT:
-		return ""
 	case StructT:
 		z := make([]interface{}, len(t.field))
 		for i, f := range t.field {
@@ -195,8 +211,9 @@ func (t *Type) zero() interface{} {
 		return &z
 	case ValueT:
 		return t.rzero
+	default:
+		return zeroValues[t.cat]
 	}
-	return nil
 }
 
 // return the field index from name in a struct, or -1 if not found
@@ -254,4 +271,36 @@ func (t *Type) lookupMethod(name string) (*Node, []int) {
 		return m, index
 	}
 	return nil, index
+}
+
+// t.TypeOf() returns the reflection type of dynamic interpreter type t.
+func (t *Type) TypeOf() reflect.Type {
+	switch t.cat {
+	case ArrayT:
+		return reflect.SliceOf(t.val.TypeOf())
+	case ChanT:
+		return reflect.ChanOf(reflect.BothDir, t.val.TypeOf())
+	case FuncT:
+		in := make([]reflect.Type, len(t.arg))
+		out := make([]reflect.Type, len(t.ret))
+		for i, v := range t.arg {
+			in[i] = v.TypeOf()
+		}
+		for i, v := range t.ret {
+			out[i] = v.TypeOf()
+		}
+		return reflect.FuncOf(in, out, false)
+	case MapT:
+		return reflect.MapOf(t.key.TypeOf(), t.val.TypeOf())
+	case PtrT:
+		return reflect.PtrTo(t.val.TypeOf())
+	case StructT:
+		fields := make([]reflect.StructField, len(t.field))
+		for i, f := range t.field {
+			fields[i] = reflect.StructField{Name: f.name, Type: f.typ.TypeOf()}
+		}
+		return reflect.StructOf(fields)
+	default:
+		return reflect.TypeOf(t.zero())
+	}
 }

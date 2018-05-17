@@ -40,6 +40,7 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [ ] iota
 - [ ] blank
 - [ ] ellipsis
+- [ ] variadic functions
 
 ### Done
 - [X] basic literals
@@ -66,6 +67,7 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [X] closures
 - [X] imports from exec
 - [X] init functions
+- [X] exports to exec
 
 ## Developpement plan
 
