@@ -5,9 +5,10 @@ import (
 	"strconv"
 )
 
-// Type categories
+// Cat defines interpreter type categories
 type Cat uint
 
+// Types for go language
 const (
 	Unset Cat = iota
 	AliasT
@@ -85,12 +86,13 @@ func (c Cat) String() string {
 	return "Cat(" + strconv.Itoa(int(c)) + ")"
 }
 
+// StructField type defines a field in a struct
 type StructField struct {
 	name string
 	typ  *Type
 }
 
-// Representation of types in interpreter
+// Type defines the internal representation of types in the interpreter
 type Type struct {
 	cat    Cat           // Type category
 	field  []StructField // Array of struct fields if StrucT or nil
@@ -103,9 +105,10 @@ type Type struct {
 	rzero  reflect.Value // Reflection zero settable value, or nil
 }
 
-type TypeDef map[string]*Type
+// TypeMap defines a map of Types indexed by type names
+type TypeMap map[string]*Type
 
-var defaultTypes TypeDef = map[string]*Type{
+var defaultTypes TypeMap = map[string]*Type{
 	"bool":       &Type{cat: BoolT},
 	"byte":       &Type{cat: ByteT},
 	"complex64":  &Type{cat: Complex64T},
@@ -129,8 +132,8 @@ var defaultTypes TypeDef = map[string]*Type{
 }
 
 // return a type definition for the corresponding AST subtree
-func nodeType(tdef TypeDef, n *Node) *Type {
-	var t *Type = &Type{}
+func nodeType(tdef TypeMap, n *Node) *Type {
+	var t = &Type{}
 	switch n.kind {
 	case ArrayType:
 		t.cat = ArrayT
@@ -195,7 +198,7 @@ var zeroValues = [...]interface{}{
 	ValueT:      nil,
 }
 
-// t.zero() instantiates and return a zero value object for the givent type t
+// zero instantiates and return a zero value object for the givent type t
 func (t *Type) zero() interface{} {
 	if t.cat >= Cat(len(zeroValues)) {
 		return nil
@@ -216,7 +219,7 @@ func (t *Type) zero() interface{} {
 	}
 }
 
-// return the field index from name in a struct, or -1 if not found
+// fieldIndex returns the field index from name in a struct, or -1 if not found
 func (t *Type) fieldIndex(name string) int {
 	for i, field := range t.field {
 		if name == field.name {
@@ -226,7 +229,7 @@ func (t *Type) fieldIndex(name string) int {
 	return -1
 }
 
-// t.lookupField(name) return a list of indices, i.e. a path to access a field in a struct object
+// lookupField return a list of indices, i.e. a path to access a field in a struct object
 func (t *Type) lookupField(name string) []int {
 	var index []int
 	if fi := t.fieldIndex(name); fi < 0 {
@@ -244,7 +247,7 @@ func (t *Type) lookupField(name string) []int {
 	return index
 }
 
-// t.getMethod(name) returns a pointer to the method definition
+// getMethod returns a pointer to the method definition
 func (t *Type) getMethod(name string) *Node {
 	for _, m := range t.method {
 		if name == m.ident {
@@ -254,7 +257,7 @@ func (t *Type) getMethod(name string) *Node {
 	return nil
 }
 
-// t.lookupMethod(name) returns a pointer to method definition associated to type t
+// lookupMethod returns a pointer to method definition associated to type t
 // and the list of indices to access the right struct field, in case of a promoted method
 func (t *Type) lookupMethod(name string) (*Node, []int) {
 	var index []int
@@ -273,7 +276,7 @@ func (t *Type) lookupMethod(name string) (*Node, []int) {
 	return nil, index
 }
 
-// t.TypeOf() returns the reflection type of dynamic interpreter type t.
+// TypeOf returns the reflection type of dynamic interpreter type t.
 func (t *Type) TypeOf() reflect.Type {
 	switch t.cat {
 	case ArrayT:

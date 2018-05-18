@@ -8,8 +8,10 @@ import (
 	"strconv"
 )
 
+// Kind defines the kind of AST, i.e. the grammar category
 type Kind uint
 
+// Node kinds for the go language
 const (
 	Undef Kind = iota
 	ArrayType
@@ -148,8 +150,10 @@ func (k Kind) String() string {
 	return "Kind(" + strconv.Itoa(int(k)) + ")"
 }
 
+// Action defines the node action to perform at execution
 type Action uint
 
+// Node actions for the go language
 const (
 	Nop Action = iota
 	Address
@@ -225,13 +229,13 @@ func (a Action) String() string {
 	return "Action(" + strconv.Itoa(int(a)) + ")"
 }
 
-// Map of defined symbols (const, variables and functions)
+// NodeMap defines a Map of symbols (const, variables and functions) indexed by names
 type NodeMap map[string]*Node
 
 // Note: no type analysis is performed at this stage, it is done in pre-order processing
 // of CFG, in order to accomodate forward type declarations
 
-// Ast(src) parses src string containing Go code and generates the corresponding AST.
+// Ast parses src string containing Go code and generates the corresponding AST.
 // The AST root node is returned.
 func Ast(src string, pre NodeMap) (*Node, NodeMap) {
 	var def NodeMap

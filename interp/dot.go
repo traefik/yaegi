@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// For debug: display an AST in graphviz dot(1) format using dotty(1) co-process
+// AstDot displays an AST in graphviz dot(1) format using dotty(1) co-process
 func (n *Node) AstDot(out io.WriteCloser) {
 	fmt.Fprintf(out, "digraph ast {\n")
 	fmt.Fprintf(out, "labelloc=\"t\"\n")
@@ -33,7 +33,7 @@ func (n *Node) AstDot(out io.WriteCloser) {
 	fmt.Fprintf(out, "}\n")
 }
 
-// For debug: display a CFG in graphviz dot(1) format using dotty(1) co-process
+// CfgDot displays a CFG in graphviz dot(1) format using dotty(1) co-process
 func (n *Node) CfgDot(out io.WriteCloser) {
 	fmt.Fprintf(out, "digraph cfg {\n")
 	n.Walk(nil, func(n *Node) {
@@ -57,7 +57,7 @@ func (n *Node) CfgDot(out io.WriteCloser) {
 	fmt.Fprintf(out, "}\n")
 }
 
-// Dotty() returns an output stream to a dotty(1) co-process where to write data in .dot format
+// Dotty returns an output stream to a dotty(1) co-process where to write data in .dot format
 func Dotty() io.WriteCloser {
 	cmd := exec.Command("dotty", "-")
 	dotin, err := cmd.StdinPipe()

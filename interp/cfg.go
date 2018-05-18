@@ -7,6 +7,7 @@ import (
 	"unicode"
 )
 
+// Symbol type defines symbol values entities
 type Symbol struct {
 	typ   *Type       // Type of value
 	node  *Node       // Node value if index is negative
@@ -15,6 +16,7 @@ type Symbol struct {
 	bin   interface{} // Symbol from imported bin package if typ.cat is BinT, or nil
 }
 
+// Scope type stores the list of visible symbols at current scope level
 type Scope struct {
 	anc   *Scope             // Ancestor upper scope
 	level int                // Frame level: number of frame indirections to access var
@@ -23,7 +25,7 @@ type Scope struct {
 
 // Create a new scope and chain it to the current one
 func (s *Scope) push(indirect int) *Scope {
-	return &Scope{anc: s, level: s.level + indirect, sym: make(map[string]*Symbol)}
+	return &Scope{anc: s, level: s.level + indirect, sym: map[string]*Symbol{}}
 }
 
 // Lookup for a symbol in the current scope, and upper ones if not found
@@ -38,18 +40,18 @@ func (s *Scope) lookup(ident string) (*Symbol, int, bool) {
 	return nil, 0, false
 }
 
-// Tracking of frame index for variables in function context
+// FrameIndex type defines metadata for Tracking frame index for variables in function context
 type FrameIndex struct {
 	anc *FrameIndex // Ancestor upper frame
 	max int         // The highest index in frame
 }
 
-// n.Cfg() generates a control flow graph (CFG) from AST (wiring successors in AST)
+// Cfg generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
 // Following this pass, the CFG is ready to run
 func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
-	scope := &Scope{sym: make(map[string]*Symbol)}
+	scope := &Scope{sym: map[string]*Symbol{}}
 	frameIndex := &FrameIndex{}
 	var loop, loopRestart *Node
 	var funcDef bool // True if a function is defined in the current frame context
@@ -672,7 +674,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 	return initNodes
 }
 
-// find default case clause index of a switch statement, if any
+// Find default case clause index of a switch statement, if any
 func getDefault(n *Node) int {
 	for i, c := range n.Child[1].Child {
 		if len(c.Child) == 1 {

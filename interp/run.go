@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Function to run at CFG execution
+// Builtin type defines functions which run at CFG execution
 type Builtin func(n *Node, f *Frame)
 
 var builtin = [...]Builtin{
@@ -231,7 +231,7 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	if len(n.Child[2].Child) > 1 {
 		if fieldList := n.Child[2].Child[1]; fieldList != nil {
 			result = make([]reflect.Value, len(fieldList.Child))
-			for i, _ := range fieldList.Child {
+			for i := range fieldList.Child {
 				result[i] = reflect.ValueOf(frame.data[i])
 			}
 		}
@@ -259,7 +259,7 @@ func call(n *Node, f *Frame) {
 	if len(fn.Child[2].Child) > 1 {
 		if fieldList := fn.Child[2].Child[1]; fieldList != nil {
 			ret = make([]int, len(fieldList.Child))
-			for i, _ := range fieldList.Child {
+			for i := range fieldList.Child {
 				ret[i] = n.findex + i
 			}
 		}
@@ -288,7 +288,7 @@ func callGoRoutine(n *Node, f *Frame) {
 	if len(fn.Child[2].Child) > 1 {
 		if fieldList := fn.Child[2].Child[1]; fieldList != nil {
 			ret = make([]int, len(fieldList.Child))
-			for i, _ := range fieldList.Child {
+			for i := range fieldList.Child {
 				ret[i] = n.findex + i
 			}
 		}

@@ -15,9 +15,9 @@ import (
 )
 
 func main() {
-	opt := interp.InterpOpt{Entry: "main"}
-	flag.BoolVar(&opt.Ast, "a", false, "display AST graph")
-	flag.BoolVar(&opt.Cfg, "c", false, "display CFG graph")
+	opt := interp.Opt{Entry: "main"}
+	flag.BoolVar(&opt.AstDot, "a", false, "display AST graph")
+	flag.BoolVar(&opt.CfgDot, "c", false, "display CFG graph")
 	flag.BoolVar(&opt.NoRun, "n", false, "do not run")
 	flag.Usage = func() {
 		fmt.Println("Usage:", os.Args[0], "[options] [script|-]] [args]")

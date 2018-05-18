@@ -1,7 +1,7 @@
 // Package interp implements a Go interpreter.
 package interp
 
-// Structure for AST and CFG
+// Node structure for AST and CFG
 type Node struct {
 	Child  []*Node     // child subtrees (AST)
 	anc    *Node       // ancestor (AST)
@@ -22,34 +22,37 @@ type Node struct {
 	ident  string      // set if node is a var or func
 }
 
-// A Frame contains values for the current execution level
+// Frame contains values for the current execution level
 type Frame struct {
 	anc  *Frame        // ancestor frame (global space)
 	data []interface{} // values
 }
 
+// SymMap stores executable symbols indexed by name
 type SymMap map[string]interface{}
 
+// PkgMap stores package executable symbols
 type PkgMap map[string]*SymMap
+
+// Opt stores interpreter options
+type Opt struct {
+	AstDot bool   // display AST graph (debug)
+	CfgDot bool   // display CFG graph (debug)
+	NoRun  bool   // compile, but do not run
+	NbOut  int    // number of output values
+	Entry  string // interpreter entry point
+}
 
 // Interpreter contains global resources and state
 type Interpreter struct {
-	opt     InterpOpt
+	Opt
 	frame   *Frame
-	types   TypeDef
+	types   TypeMap
 	imports PkgMap
 	Exports PkgMap
 }
 
-type InterpOpt struct {
-	Ast   bool   // display AST graph (debug)
-	Cfg   bool   // display CFG graph (debug)
-	NoRun bool   // compile, but do not run
-	NbOut int    // number of output values
-	Entry string // interpreter entry point
-}
-
-// n.Walk(cbin, cbout) traverses AST n in depth first order, call cbin function
+// Walk traverses AST n in depth first order, call cbin function
 // at node entry and cbout function at node exit.
 func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 	if in != nil && !in(n) {
@@ -63,12 +66,12 @@ func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 	}
 }
 
-// NewInterpreter()creates and returns a new interpreter object
-func NewInterpreter(opt InterpOpt) *Interpreter {
-	return &Interpreter{opt: opt, imports: make(PkgMap), Exports: make(PkgMap), types: defaultTypes}
+// NewInterpreter creates and returns a new interpreter object
+func NewInterpreter(opt Opt) *Interpreter {
+	return &Interpreter{Opt: opt, imports: make(PkgMap), Exports: make(PkgMap), types: defaultTypes}
 }
 
-// Register a symbol from an imported package to be visible from the interpreter
+// AddImport registers a symbol from an imported package to be visible from the interpreter
 func (i *Interpreter) AddImport(pkg string, name string, sym interface{}) {
 	if i.imports[pkg] == nil {
 		s := make(SymMap)
@@ -77,32 +80,33 @@ func (i *Interpreter) AddImport(pkg string, name string, sym interface{}) {
 	(*i.imports[pkg])[name] = sym
 }
 
+// ImportBin registers symbols contained in pkg map
 func (i *Interpreter) ImportBin(pkg *map[string]*map[string]interface{}) {
 	for n, p := range *pkg {
 		i.imports[n] = (*SymMap)(p)
 	}
 }
 
-// i.Eval(s) evaluates Go code represented as a string
+// Eval evaluates Go code represented as a string
 func (i *Interpreter) Eval(src string) {
 	// Parse source to AST
 	root, sdef := Ast(src, nil)
-	if i.opt.Ast {
+	if i.AstDot {
 		root.AstDot(Dotty())
 	}
 
 	// Annotate AST with CFG infos
 	initNodes := i.Cfg(root, sdef)
-	if entry, ok := sdef[i.opt.Entry]; ok {
+	if entry, ok := sdef[i.Entry]; ok {
 		initNodes = append(initNodes, entry)
 	}
 
-	if i.opt.Cfg {
+	if i.CfgDot {
 		root.CfgDot(Dotty())
 	}
 
 	// Execute CFG
-	if !i.opt.NoRun {
+	if !i.NoRun {
 		i.frame = &Frame{data: make([]interface{}, root.fsize)}
 		runCfg(root.Start, i.frame)
 		for _, n := range initNodes {
