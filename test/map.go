@@ -1,4 +1,3 @@
-// +build ignore
 package main
 
 type Dict map[string]string
@@ -8,5 +7,6 @@ func main() {
 	dict["truc"] = "machin"
 	println(dict["truc"])
 }
+
 // Output:
 // machin

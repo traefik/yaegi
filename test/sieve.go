@@ -1,4 +1,3 @@
-// +build ignore
 // A concurrent prime sieve
 
 package main

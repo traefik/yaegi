@@ -1,4 +1,3 @@
-// +build ignore
 package main
 
 func main() {
@@ -20,6 +19,7 @@ func f2() bool {
 	//return false
 	return 1 == 0
 }
+
 // Output:
 // f1
 // f2

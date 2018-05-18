@@ -81,7 +81,8 @@ func f2() bool {
 	println("f2")
 	//return false
 	return 1 == 0
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -96,9 +97,10 @@ func Example_assign() {
 package main
 
 func main() {
-	a, b := 1, 2	// Multiple assign
+	a, b := 1, 2 // Multiple assign
 	println(a, b)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -120,7 +122,8 @@ func main() {
 	go send(channel)
 	msg := <-channel
 	println(msg)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -140,7 +143,8 @@ func main() {
 	go send(channel)
 	msg := <-channel
 	println(msg)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -162,7 +166,8 @@ func main() {
 
 	msg := <-messages
 	fmt.Println(msg)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -178,7 +183,7 @@ package main
 //const a = 1
 const (
 	a = iota
-	b 
+	b
 )
 
 func main() {
@@ -201,7 +206,8 @@ func main() {
 		}
 		println(i)
 	}
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -230,7 +236,8 @@ func main() {
 		}
 		println(i)
 	}
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -262,7 +269,8 @@ func main() {
 		println(i)
 		i++
 	}
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -291,8 +299,6 @@ func Test() {
 
 func Example_fib() {
 	src := `
-//#!/usr/bin/env gi
-
 package main
 
 // Compute fibonacci numbers, no memoization
@@ -306,8 +312,7 @@ func fib(n int) int {
 func main() {
 	println(fib(35))
 	//println(fib(10))
-}
-`
+}`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -316,8 +321,6 @@ func main() {
 
 func Example_fib0() {
 	src := `
-//#!/usr/bin/env gi
-
 package main
 
 // Compute fibonacci numbers, no memoization
@@ -330,7 +333,8 @@ func fib(n int) int {
 
 func main() {
 	println(fib(4))
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -353,7 +357,8 @@ func main() {
 		println(i)
 		i++
 	}
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -380,7 +385,8 @@ func main() {
 		println(i)
 		i++
 	}
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -404,7 +410,8 @@ func main() {
 			break
 		}
 	}
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -419,11 +426,12 @@ func Example_fun() {
 	src := `
 package main
 
-func f (i int) int { return i+15 }
+func f(i int) int { return i + 15 }
 
 func main() {
 	println(f(4))
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -436,14 +444,15 @@ func Example_fun2() {
 	src := `
 package main
 
-type Coord struct { x, y int }
+type Coord struct{ x, y int }
 
 func f(c Coord) int { return c.x + c.y }
 
 func main() {
 	c := Coord{3, 4}
 	println(f(c))
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -456,14 +465,15 @@ func Example_fun3() {
 	src := `
 package main
 
-type Coord struct { x, y int }
+type Coord struct{ x, y int }
 
-func f(i, j int, c Coord) int { return i * c.x + j * c.y }
+func f(i, j int, c Coord) int { return i*c.x + j*c.y }
 
 func main() {
 	c := Coord{3, 4}
 	println(f(2, 3, c))
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -549,7 +559,8 @@ func main() {
 	}
 }
 
-func f() int { return 1 }`
+func f() int { return 1 }
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -566,7 +577,8 @@ import "fmt"
 
 func main() {
 	fmt.Println("Hello", 42)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -583,7 +595,8 @@ import f "fmt"
 
 func main() {
 	f.Println("Hello", 42)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -600,7 +613,8 @@ import . "fmt"
 
 func main() {
 	Println("Hello", 42)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -675,8 +689,10 @@ func main() {
 func Example_l4() {
 	src := `
 package main
-func main() { println(f(5)) }
-func f(i int) int { return i + 1 }`
+
+func main()       { println(f(5)) }
+func f(i int) int { return i + 1 }
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -695,7 +711,8 @@ func main() {
 	dict := make(Dict)
 	dict["truc"] = "machin"
 	println(dict["truc"])
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -712,7 +729,8 @@ func main() {
 	dict := make(map[string]string)
 	dict["truc"] = "machin"
 	println(dict["truc"])
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -729,7 +747,8 @@ func main() {
 	dict := map[string]string{}
 	dict["truc"] = "machin"
 	println(dict["truc"])
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -763,8 +782,8 @@ func Example_math0() {
 package main
 
 import (
-	"math"
 	"fmt"
+	"math"
 )
 
 func main() {
@@ -784,12 +803,13 @@ type Coord struct {
 	x, y int
 }
 
-func (c Coord) dist() int { return c.x * c.x + c.y * c.y }
+func (c Coord) dist() int { return c.x*c.x + c.y*c.y }
 
 func main() {
 	o := Coord{3, 4}
 	println(o.dist())
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -806,7 +826,7 @@ type Coord struct {
 	x, y int
 }
 
-func (c Coord) dist() int { return c.x * c.x + c.y * c.y }
+func (c Coord) dist() int { return c.x*c.x + c.y*c.y }
 
 type Point struct {
 	Coord
@@ -814,9 +834,10 @@ type Point struct {
 }
 
 func main() {
-	o := Point{ Coord{3, 4}, 5}
+	o := Point{Coord{3, 4}, 5}
 	println(o.dist())
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -833,7 +854,7 @@ type Coord struct {
 	x, y int
 }
 
-func (c Coord) dist() int { return c.x * c.x + c.y * c.y }
+func (c Coord) dist() int { return c.x*c.x + c.y*c.y }
 
 type Point struct {
 	Coord
@@ -841,9 +862,10 @@ type Point struct {
 }
 
 func main() {
-	o := Point{ Coord{3, 4}, 5}
+	o := Point{Coord{3, 4}, 5}
 	println(o.Coord.dist())
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -860,7 +882,7 @@ type Coord struct {
 	x, y int
 }
 
-func (c Coord) dist() int { return c.x * c.x + c.y * c.y }
+func (c Coord) dist() int { return c.x*c.x + c.y*c.y }
 
 type Point struct {
 	Coord
@@ -873,9 +895,10 @@ type Tpoint struct {
 }
 
 func main() {
-	o := Tpoint{ 0, Point{ Coord{3, 4}, 5} }
+	o := Tpoint{0, Point{Coord{3, 4}, 5}}
 	println(o.dist())
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -970,7 +993,7 @@ func Example_ret1() {
 	src := `
 package main
 
-func f(i int) (o int) { o = i+1; return }
+func f(i int) (o int) { o = i + 1; return }
 
 func main() { println(f(4)) }`
 	i := NewInterpreter(Opt{Entry: "main"})
@@ -988,7 +1011,7 @@ func main() {
 	println(a, b)
 }
 
-func r2() (int, int) {return 1, 2}
+func r2() (int, int) { return 1, 2 }
 `
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
@@ -1008,7 +1031,7 @@ func main() {
 	fmt.Println(r2())
 }
 
-func r2() (int, int) {return 1, 2}
+func r2() (int, int) { return 1, 2 }
 `
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
@@ -1026,7 +1049,8 @@ func f() (int, int) { return 2, 3 }
 
 func main() {
 	println(f())
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1045,7 +1069,8 @@ func g(i, j int) int { return i + j }
 
 func main() {
 	println(g(f()))
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1059,8 +1084,9 @@ func Example_run10() {
 package main
 
 func main() {
-	func() {println("hello")}()
-}`
+	func() { println("hello") }()
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1079,7 +1105,8 @@ func f1(i int) { println("f1", i) }
 
 func test(f fn, v int) { f(v) }
 
-func main() { test(f1, 21) }`
+func main() { test(f1, 21) }
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1097,9 +1124,10 @@ type fn func(int)
 func test(f fn, v int) { f(v) }
 
 func main() {
-	f1 := func(i int) {println("f1", i) }
-	test(f1, 21) 
-}`
+	f1 := func(i int) { println("f1", i) }
+	test(f1, 21)
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1117,8 +1145,9 @@ type fn func(int)
 func test(f fn, v int) { f(v) }
 
 func main() {
-	test(func(i int) {println("f1", i) }, 21) 
-}`
+	test(func(i int) { println("f1", i) }, 21)
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1137,8 +1166,9 @@ func test(f fn, v int) { f(v) }
 
 func main() {
 	a := 3
-	test(func(i int) {println("f1", i, a) }, 21) 
-}`
+	test(func(i int) { println("f1", i, a) }, 21)
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1155,7 +1185,8 @@ func main() {
 	a := 3
 	f := func(i int) { println("f1", i, a) }
 	f(21)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1170,10 +1201,11 @@ package main
 
 func main() {
 	a := 3
-	f := func(i int) int { println("f1", i, a); return i+1 }
+	f := func(i int) int { println("f1", i, a); return i + 1 }
 	b := f(21)
 	println(b)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1191,7 +1223,8 @@ var a int = 1
 
 func main() {
 	println(a)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1205,14 +1238,15 @@ func Example_scope1() {
 package main
 
 func f(a int) int {
-	return 2*a+1
+	return 2*a + 1
 }
 
 var b int = f(3)
 
 func main() {
 	println(b)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1234,7 +1268,8 @@ func main() {
 	a := 2
 	println(a)
 	f()
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1255,7 +1290,8 @@ func main() {
 		println(a)
 	}
 	println(a)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1279,7 +1315,8 @@ func main() {
 		println(a)
 	}
 	println(a)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1391,7 +1428,8 @@ package main
 
 func main() {
 	println("hello world")
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1410,9 +1448,10 @@ type T struct {
 }
 
 func main() {
-	a := T{ 7, 8 }
+	a := T{7, 8}
 	println(a.f, a.g)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1433,7 +1472,8 @@ type T struct {
 func main() {
 	a := T{}
 	println(a.f, a.g)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1455,7 +1495,8 @@ func main() {
 	println(a.f)
 	a.f = 8
 	println(a.f)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1477,10 +1518,11 @@ type T struct {
 }
 
 func main() {
-	a := T{ }
+	a := T{}
 	a.g.h = 3 + 2
 	println("a.g.h", a.g.h)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1501,7 +1543,8 @@ type T struct {
 func main() {
 	a := T{g: 8, f: 7}
 	println(a.f, a.g)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1528,7 +1571,8 @@ func main() {
 	a := T{}
 	a.h.k = f(4)
 	println(a.h.k)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1546,22 +1590,23 @@ type T3 struct {
 }
 
 type T2 struct {
-        h int
+	h int
 	T3
 }
 
-type T struct { 
-        f int
-        g int
-        T2
-}       
+type T struct {
+	f int
+	g int
+	T2
+}
 
 func f(i int) int { return i * i }
 
 func main() {
-	a := T{ 5, 7, T2{ f(8), T3{ 9 } } }
-       println(a.f, a.g, a.h, a.k)
-}`
+	a := T{5, 7, T2{f(8), T3{9}}}
+	println(a.f, a.g, a.h, a.k)
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1582,9 +1627,10 @@ type T struct {
 func f(i int) int { return i * i }
 
 func main() {
-	a := T{ 7, f(4) }
+	a := T{7, f(4)}
 	println(a.f, a.g)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1602,9 +1648,10 @@ type T struct {
 }
 
 func main() {
-	a := T{ 7, 8 }
+	a := T{7, 8}
 	println(a.f, a.g)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1627,7 +1674,8 @@ func main() {
 	case 3:
 		println(100)
 	}
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1641,8 +1689,8 @@ func Example_time0() {
 package main
 
 import (
-	"time"
 	"fmt"
+	"time"
 )
 
 func main() {
@@ -1659,8 +1707,8 @@ func Example_time1() {
 package main
 
 import (
-	"time"
 	"fmt"
+	"time"
 )
 
 func main() {
@@ -1679,8 +1727,8 @@ func Example_time2() {
 package main
 
 import (
-	"time"
 	"fmt"
+	"time"
 )
 
 func main() {
@@ -1742,7 +1790,8 @@ type newInt int
 func main() {
 	var a newInt
 	println(a)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1758,7 +1807,8 @@ package main
 func main() {
 	var a, b, c int
 	println(a, b, c)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1774,7 +1824,8 @@ package main
 func main() {
 	var a int = 2
 	println(a)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1790,7 +1841,8 @@ package main
 func main() {
 	var a, b int = 2, 3
 	println(a, b)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
@@ -1806,7 +1858,8 @@ package main
 func main() {
 	var a, b = 2, 3
 	println(a, b)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)

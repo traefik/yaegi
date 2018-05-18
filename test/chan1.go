@@ -1,4 +1,3 @@
-// +build ignore
 package main
 
 func send(c chan<- string) { c <- "ping" }
@@ -9,5 +8,6 @@ func main() {
 	msg := <-channel
 	println(msg)
 }
+
 // Output:
 // ping

@@ -1,4 +1,3 @@
-// +build ignore
 package main
 
 type T struct {
@@ -16,5 +15,6 @@ func main() {
 	a.h.k = f(4)
 	println(a.h.k)
 }
+
 // Output:
 // 7

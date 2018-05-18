@@ -1,4 +1,3 @@
-// +build ignore
 package main
 
 type T struct {
@@ -6,8 +5,9 @@ type T struct {
 }
 
 func main() {
-	a := T{ 7, 8 }
+	a := T{7, 8}
 	println(a.f, a.g)
 }
+
 // Output:
 // 7 8

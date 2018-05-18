@@ -1,10 +1,9 @@
-// +build ignore
 package main
 
 //const a = 1
 const (
 	a = iota
-	b 
+	b
 )
 
 func main() {

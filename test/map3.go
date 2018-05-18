@@ -1,4 +1,3 @@
-// +build ignore
 package main
 
 func main() {
@@ -6,5 +5,6 @@ func main() {
 	dict["truc"] = "machin"
 	println(dict["truc"])
 }
+
 // Output:
 // machin

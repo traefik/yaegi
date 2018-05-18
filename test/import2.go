@@ -1,4 +1,3 @@
-// +build ignore
 package main
 
 import . "fmt"
@@ -6,5 +5,6 @@ import . "fmt"
 func main() {
 	Println("Hello", 42)
 }
+
 // Output:
 // Hello 42

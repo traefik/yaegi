@@ -1,4 +1,3 @@
-// +build ignore
 package main
 
 func main() {
@@ -9,6 +8,7 @@ func main() {
 		}
 	}
 }
+
 // Output:
 // 2
 // 3

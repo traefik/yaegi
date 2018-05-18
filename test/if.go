@@ -1,4 +1,3 @@
-// +build ignore
 package main
 
 func main() {
@@ -8,5 +7,6 @@ func main() {
 }
 
 func f() int { return 1 }
+
 // Output:
 // 1

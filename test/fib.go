@@ -1,6 +1,3 @@
-// +build ignore
-//#!/usr/bin/env gi
-
 package main
 
 // Compute fibonacci numbers, no memoization
@@ -15,4 +12,3 @@ func main() {
 	println(fib(35))
 	//println(fib(10))
 }
-

@@ -1,4 +1,3 @@
-// +build ignore
 package main
 
 type Channel chan string
@@ -11,5 +10,6 @@ func main() {
 	msg := <-channel
 	println(msg)
 }
+
 // Output:
 // ping

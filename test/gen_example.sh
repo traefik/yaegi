@@ -9,7 +9,6 @@ echo
 for file in *.go
 do
 	awk '
-	$0 == "// +build ignore" { next }
 	$0 == "// Output:" { done = 1 }
 	{ if (done) out = out "\n" $0; else src = src "\n" $0 }
 	END {

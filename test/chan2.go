@@ -1,4 +1,3 @@
-// +build ignore
 package main
 
 import "fmt"
@@ -11,5 +10,6 @@ func main() {
 	msg := <-messages
 	fmt.Println(msg)
 }
+
 // Output:
 // ping

@@ -1,4 +1,3 @@
-// +build ignore
 package main
 
 type T struct {
@@ -9,8 +8,9 @@ type T struct {
 func f(i int) int { return i * i }
 
 func main() {
-	a := T{ 7, f(4) }
+	a := T{7, f(4)}
 	println(a.f, a.g)
 }
+
 // Output:
 // 7 16

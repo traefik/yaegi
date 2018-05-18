@@ -1,4 +1,3 @@
-// +build ignore
 package main
 
 var a int = 1
@@ -11,6 +10,7 @@ func main() {
 	println(a)
 	f()
 }
+
 // Output:
 // 1
 // 2

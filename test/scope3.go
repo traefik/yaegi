@@ -1,4 +1,3 @@
-// +build ignore
 package main
 
 func main() {
@@ -8,6 +7,7 @@ func main() {
 	}
 	println(a)
 }
+
 // Output:
 // 2
 // 1

@@ -1,9 +1,8 @@
-// +build ignore
 package main
 
 import (
-	"math"
 	"fmt"
+	"math"
 )
 
 func main() {
