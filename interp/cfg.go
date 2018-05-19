@@ -615,6 +615,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 						n.typ = &Type{cat: ValueT, rtype: typ.Elem(), rzero: n.val.(reflect.Value).Elem()}
 					} else {
 						n.typ = &Type{cat: ValueT, rtype: typ}
+						n.kind = Rvalue
 					}
 					n.run = nop
 				}

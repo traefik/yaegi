@@ -788,11 +788,14 @@ import (
 
 func main() {
 	fmt.Println(math.Cos(math.Pi))
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
+	// Output:
+	// -1
 }
 
 func Example_method() {
