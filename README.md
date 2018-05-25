@@ -31,8 +31,8 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [ ] imports from source
 - [ ] type checking
 - [ ] type assertions and conversions
+- [ ] type switch
 - [ ] interfaces
-- [ ] pointers
 - [ ] diagnostics and proper error handling
 - [ ] named output variables (test/ret1.gi)
 - [ ] constants
@@ -68,6 +68,7 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [X] imports from exec
 - [X] init functions
 - [X] exports to exec
+- [X] pointers, including on struct, method receivers...
 
 ## Developpement plan
 

@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"log"
 	"reflect"
 	"strconv"
 )
@@ -97,7 +98,7 @@ type Type struct {
 	cat    Cat           // Type category
 	field  []StructField // Array of struct fields if StrucT or nil
 	key    *Type         // Type of key element if MapT or nil
-	val    *Type         // Type of value element if ChanT, MapT, AliasT or ArrayT
+	val    *Type         // Type of value element if ChanT, MapT, PtrT, AliasT or ArrayT
 	arg    []*Type       // Argument types if FuncT or nil
 	ret    []*Type       // Return types if FuncT or nil
 	method []*Node       // Associated methods or nil
@@ -133,11 +134,31 @@ var defaultTypes TypeMap = map[string]*Type{
 
 // return a type definition for the corresponding AST subtree
 func nodeType(tdef TypeMap, n *Node) *Type {
+	if n.typ != nil {
+		return n.typ
+	}
 	var t = &Type{}
 	switch n.kind {
 	case ArrayType:
 		t.cat = ArrayT
 		t.val = nodeType(tdef, n.Child[0])
+	case BasicLit:
+		switch n.val.(type) {
+		case bool:
+			t.cat = BoolT
+		case byte:
+			t.cat = ByteT
+		case float32:
+			t.cat = Float32T
+		case float64:
+			t.cat = Float64T
+		case int:
+			t.cat = IntT
+		case string:
+			t.cat = StringT
+		default:
+			log.Panicf("Missing support for basic type %T, node %v\n", n.val, n.index)
+		}
 	case ChanType:
 		t.cat = ChanT
 		t.val = nodeType(tdef, n.Child[0])
@@ -157,6 +178,9 @@ func nodeType(tdef TypeMap, n *Node) *Type {
 		t.cat = MapT
 		t.key = nodeType(tdef, n.Child[0])
 		t.val = nodeType(tdef, n.Child[1])
+	case StarExpr:
+		t.cat = PtrT
+		t.val = nodeType(tdef, n.Child[0])
 	case StructType:
 		t.cat = StructT
 		for _, c := range n.Child[0].Child {
@@ -170,6 +194,8 @@ func nodeType(tdef TypeMap, n *Node) *Type {
 				}
 			}
 		}
+	default:
+		log.Panicln("type definition not implemented for node", n.index, n.kind)
 	}
 	return t
 }
@@ -219,8 +245,19 @@ func (t *Type) zero() interface{} {
 	}
 }
 
+// fieldType returns the field type of a struct or *struct type
+func (t *Type) fieldType(index int) *Type {
+	if t.cat == PtrT {
+		return t.val.fieldType(index)
+	}
+	return t.field[index].typ
+}
+
 // fieldIndex returns the field index from name in a struct, or -1 if not found
 func (t *Type) fieldIndex(name string) int {
+	if t.cat == PtrT {
+		return t.val.fieldIndex(name)
+	}
 	for i, field := range t.field {
 		if name == field.name {
 			return i
@@ -260,6 +297,10 @@ func (t *Type) getMethod(name string) *Node {
 // lookupMethod returns a pointer to method definition associated to type t
 // and the list of indices to access the right struct field, in case of a promoted method
 func (t *Type) lookupMethod(name string) (*Node, []int) {
+	if t.cat == PtrT {
+		m, index := t.val.lookupMethod(name)
+		return m, index
+	}
 	var index []int
 	if m := t.getMethod(name); m == nil {
 		for i, f := range t.field {
@@ -274,6 +315,11 @@ func (t *Type) lookupMethod(name string) (*Node, []int) {
 		return m, index
 	}
 	return nil, index
+}
+
+// ptrTo returns the pointer type with element t.
+func ptrTo(t *Type) *Type {
+	return &Type{cat: PtrT, val: t}
 }
 
 // TypeOf returns the reflection type of dynamic interpreter type t.

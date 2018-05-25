@@ -103,9 +103,17 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 			}
 			if len(n.Child[0].Child) > 0 {
 				// function is a method, add it to the related type
+				var t *Type
 				n.ident = n.Child[1].ident
 				tname := n.Child[0].Child[0].Child[1].ident
-				t := interp.types[tname]
+				if tname == "" {
+					tname = n.Child[0].Child[0].Child[1].Child[0].ident
+					elemtype := interp.types[tname]
+					t = &Type{cat: PtrT, val: elemtype}
+					elemtype.method = append(elemtype.method, n)
+				} else {
+					t = interp.types[tname]
+				}
 				t.method = append(t.method, n)
 			}
 			if len(n.Child[2].Child) == 2 {
@@ -137,37 +145,25 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 			}
 			return false
 
-		case ArrayType, ChanType, MapType, StructType:
+		case ArrayType, BasicLit, ChanType, MapType, StructType:
 			n.typ = nodeType(interp.types, n)
 			return false
-
-		case BasicLit:
-			switch n.val.(type) {
-			case bool:
-				n.typ = interp.types["bool"]
-			case byte:
-				n.typ = interp.types["byte"]
-			case float32:
-				n.typ = interp.types["float32"]
-			case float64:
-				n.typ = interp.types["float64"]
-			case int:
-				n.typ = interp.types["int"]
-			case string:
-				n.typ = interp.types["string"]
-			}
 		}
 		return true
 	}, func(n *Node) {
 		// Post-order processing
 		switch n.kind {
+		case Address:
+			wireChild(n)
+			n.typ = &Type{cat: PtrT, val: n.Child[0].typ}
+
 		case ArrayType:
 			// TODO: move to pre-processing ? See when handling complex array type def
 			n.typ = &Type{cat: ArrayT, val: interp.types[n.Child[1].ident]}
 
 		case Define, AssignStmt:
 			wireChild(n)
-			if n.kind == Define {
+			if n.kind == Define || n.anc.kind == GenDecl {
 				// Force definition of assigned ident in current scope
 				frameIndex.max++
 				scope.sym[n.Child[0].ident] = &Symbol{index: frameIndex.max}
@@ -188,6 +184,10 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 				if n.Child[0].Child[0].typ.cat == MapT {
 					n.Child[0].run = getMap
 					n.run = assignMap
+				} else if n.Child[0].Child[0].typ.cat == PtrT {
+					// Handle the case where the receiver is a pointer to an object
+					n.Child[0].run = getPtrIndexAddr
+					n.run = assignPtrField
 				} else {
 					n.Child[0].run = getIndexAddr
 					n.run = assignField
@@ -265,18 +265,21 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 			}
 			if n.Child[0].kind == SelectorImport {
 				n.fsize = n.Child[0].fsize
-				typ := n.Child[0].val.(reflect.Value).Type()
-				if typ.NumOut() > 1 {
-					n.typ = &Type{cat: ValueT, rtype: n.Child[0].val.(reflect.Value).Type().Out(0)}
+				rtype := n.Child[0].val.(reflect.Value).Type()
+				if rtype.NumOut() > 1 {
+					n.typ = &Type{cat: ValueT, rtype: rtype.Out(0)}
 				}
 				n.Child[0].kind = BasicLit
 				for i, c := range n.Child[1:] {
 					// Wrap function defintion so it can be called from runtime
 					if c.kind == FuncLit {
-						n.Child[1+i].val = reflect.MakeFunc(typ.In(i), c.wrapNode)
+						n.Child[1+i].rval = reflect.MakeFunc(rtype.In(i), c.wrapNode)
 						n.Child[1+i].kind = Rvalue
 					} else if c.ident == "nil" {
-						n.Child[1+i].val = reflect.New(typ.In(i)).Elem()
+						n.Child[1+i].rval = reflect.New(rtype.In(i)).Elem()
+						n.Child[1+i].kind = Rvalue
+					} else if c.typ.cat == FuncT {
+						n.Child[1+i].rval = reflect.MakeFunc(rtype.In(i), c.wrapNode)
 						n.Child[1+i].kind = Rvalue
 					}
 				}
@@ -296,7 +299,12 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 				} else {
 					// Resolve method and receiver path, store them in node static value for run
 					n.Child[0].val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
-					n.fsize = len(n.Child[0].val.(*Node).Child[2].Child[1].Child)
+					if methodDecl := n.Child[0].val.(*Node); len(methodDecl.Child[2].Child) > 1 {
+						// Allocate frame for method return values (if any)
+						n.fsize = len(methodDecl.Child[2].Child[1].Child)
+					} else {
+						n.fsize = 0
+					}
 					n.Child[0].findex = -1 // To force reading value from node instead of frame (methods)
 				}
 			} else if sym, _, _ := scope.lookup(n.Child[0].ident); sym != nil {
@@ -374,7 +382,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 				n.findex = frameIndex.max
 			} else {
 				l := len(n.Child) - 1
-				t := interp.types[n.Child[l].ident]
+				t := nodeType(interp.types, n.Child[l])
 				for _, f := range n.Child[:l] {
 					scope.sym[f.ident].typ = t
 				}
@@ -457,6 +465,8 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 			if canExport(n.Child[1].ident) {
 				(*exports)[n.Child[1].ident] = reflect.MakeFunc(n.Child[2].typ.TypeOf(), n.wrapNode).Interface()
 			}
+			n.typ = n.Child[2].typ
+			scope.sym[n.Child[1].ident].typ = n.typ
 
 		case FuncLit:
 			n.typ = n.Child[2].typ
@@ -595,13 +605,16 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 			n.findex = frameIndex.max
 			n.typ = n.Child[0].typ
 			n.recv = n.Child[0].recv
-			if n.typ != nil && n.typ.cat == ValueT {
+			if n.typ == nil {
+				log.Fatal("typ should not be nil:", n.index)
+			}
+			if n.typ.cat == ValueT {
 				if method, ok := n.typ.rtype.MethodByName(n.Child[1].ident); ok {
 					n.val = method.Func
 					n.fsize = method.Type.NumOut()
 					n.run = nop
 				}
-			} else if n.typ != nil && n.typ.cat == PkgT {
+			} else if n.typ.cat == PkgT {
 				// Resolve package symbol
 				name := n.Child[1].ident
 				pkgSym := n.Child[0].val.(*SymMap)
@@ -615,15 +628,25 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 						n.typ = &Type{cat: ValueT, rtype: typ.Elem(), rzero: n.val.(reflect.Value).Elem()}
 					} else {
 						n.typ = &Type{cat: ValueT, rtype: typ}
+						n.rval = n.val.(reflect.Value)
 						n.kind = Rvalue
 					}
 					n.run = nop
 				}
 			} else if fi := n.typ.fieldIndex(n.Child[1].ident); fi >= 0 {
 				// Resolve struct field index
-				n.typ = n.typ.field[fi].typ
+				if n.typ.cat == PtrT {
+					n.run = getPtrIndex
+				}
+				n.typ = n.typ.fieldType(fi)
 				n.Child[1].kind = BasicLit
 				n.Child[1].val = fi
+			} else if m, lind := n.typ.lookupMethod(n.Child[1].ident); m != nil {
+				// Handle method
+				n.run = nop
+				n.val = m
+				n.Child[1].val = lind
+				n.typ = m.typ
 			} else {
 				// Handle promoted field in embedded struct
 				if ti := n.typ.lookupField(n.Child[1].ident); len(ti) > 0 {

@@ -14,6 +14,7 @@ type Kind uint
 // Node kinds for the go language
 const (
 	Undef Kind = iota
+	Address
 	ArrayType
 	AssignStmt
 	AssignXStmt
@@ -80,6 +81,7 @@ const (
 
 var kinds = [...]string{
 	Undef:            "Undef",
+	Address:          "Address",
 	ArrayType:        "ArrayType",
 	AssignStmt:       "AssignStmt",
 	AssignXStmt:      "AssignXStmt",
@@ -156,7 +158,7 @@ type Action uint
 // Node actions for the go language
 const (
 	Nop Action = iota
-	Address
+	Addr
 	ArrayLit
 	Assign
 	AssignX
@@ -190,7 +192,7 @@ const (
 
 var actions = [...]string{
 	Nop:          "nop",
-	Address:      "&",
+	Addr:         "&",
 	ArrayLit:     "arrayLit",
 	Assign:       "=",
 	AssignX:      "X=",
@@ -561,16 +563,18 @@ func Ast(src string, pre NodeMap) (*Node, NodeMap) {
 			st.push(addChild(&root, anc, &index, TypeSpec, Nop))
 
 		case *ast.UnaryExpr:
+			var kind = UnaryExpr
 			var action Action
 			switch a.Op {
 			case token.AND:
-				action = Address
+				kind = Address
+				action = Addr
 			case token.ARROW:
 				action = Recv
 			case token.NOT:
 				action = Not
 			}
-			st.push(addChild(&root, anc, &index, UnaryExpr, action))
+			st.push(addChild(&root, anc, &index, kind, action))
 
 		case *ast.ValueSpec:
 			var kind Kind

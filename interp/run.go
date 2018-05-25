@@ -12,7 +12,7 @@ type Builtin func(n *Node, f *Frame)
 
 var builtin = [...]Builtin{
 	Nop:          nop,
-	Address:      address,
+	Addr:         addr,
 	ArrayLit:     arrayLit,
 	Assign:       assign,
 	AssignX:      assignX,
@@ -99,9 +99,11 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 
 func value(n *Node, f *Frame) interface{} {
 	switch n.kind {
-	case BasicLit, FuncDecl, FuncLit, Rvalue:
+	case BasicLit, FuncDecl, FuncLit:
 		//log.Println(n.index, "literal node value", n.ident, n.val)
 		return n.val
+	case Rvalue:
+		return n.rval
 	default:
 		for level := n.level; level > 0; level-- {
 			f = f.anc
@@ -115,7 +117,7 @@ func value(n *Node, f *Frame) interface{} {
 	}
 }
 
-func addressValue(n *Node, f *Frame) *interface{} {
+func addrValue(n *Node, f *Frame) *interface{} {
 	switch n.kind {
 	case BasicLit, FuncDecl, FuncLit, Rvalue:
 		//log.Println(n.index, "literal node value", n.ident, n.val)
@@ -150,7 +152,7 @@ func setInt(n *Node, f *Frame) {
 	f.data[n.Child[0].findex].(reflect.Value).SetInt(int64(value(n.Child[1], f).(int)))
 }
 
-// assignX(n, f) implements multiple value assignement
+// assignX implements multiple value assignement
 func assignX(n *Node, f *Frame) {
 	l := len(n.Child) - 1
 	b := n.Child[l].findex
@@ -164,12 +166,12 @@ func indirectAssign(n *Node, f *Frame) {
 	*(f.data[n.findex].(*interface{})) = value(n.Child[1], f)
 }
 
-// assign(n, f) implements single value assignement
+// assign implements single value assignement
 func assign(n *Node, f *Frame) {
 	f.data[n.findex] = value(n.Child[1], f)
 }
 
-// assign0(n, f) implements assignement of zero value
+// assign0 implements assignement of zero value
 func assign0(n *Node, f *Frame) {
 	l := len(n.Child) - 1
 	z := n.typ.zero()
@@ -179,6 +181,10 @@ func assign0(n *Node, f *Frame) {
 }
 
 func assignField(n *Node, f *Frame) {
+	(*f.data[n.findex].(*interface{})) = value(n.Child[1], f)
+}
+
+func assignPtrField(n *Node, f *Frame) {
 	(*f.data[n.findex].(*interface{})) = value(n.Child[1], f)
 }
 
@@ -194,8 +200,8 @@ func not(n *Node, f *Frame) {
 	f.data[n.findex] = !value(n.Child[0], f).(bool)
 }
 
-func address(n *Node, f *Frame) {
-	f.data[n.findex] = addressValue(n.Child[0], f)
+func addr(n *Node, f *Frame) {
+	f.data[n.findex] = addrValue(n.Child[0], f)
 }
 
 func deref(n *Node, f *Frame) {
@@ -219,17 +225,22 @@ func _println(n *Node, f *Frame) {
 
 // wrap a call to interpreter node in a function that can be called from runtime
 func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
+	def := n.val.(*Node)
 	var result []reflect.Value
-	frame := Frame{anc: n.frame, data: make([]interface{}, n.findex)}
-	paramIndex := n.Child[2].Child[0].val.([]int)
+	frame := Frame{anc: n.frame, data: make([]interface{}, def.findex)}
+	if len(def.Child[0].Child) > 0 {
+		// Set method receiver
+		frame.data[def.Child[0].findex] = value(n.recv, n.frame)
+	}
+	paramIndex := def.Child[2].Child[0].val.([]int)
 	i := 0
 	for _, arg := range in {
 		frame.data[paramIndex[i]] = arg.Interface()
 		i++
 	}
-	runCfg(n.Child[3].Start, &frame)
-	if len(n.Child[2].Child) > 1 {
-		if fieldList := n.Child[2].Child[1]; fieldList != nil {
+	runCfg(def.Child[3].Start, &frame)
+	if len(def.Child[2].Child) > 1 {
+		if fieldList := def.Child[2].Child[1]; fieldList != nil {
 			result = make([]reflect.Value, len(fieldList.Child))
 			for i := range fieldList.Child {
 				result[i] = reflect.ValueOf(frame.data[i])
@@ -359,9 +370,19 @@ func callBinMethodX(n *Node, f *Frame) {
 	}
 }
 
+func getPtrIndexAddr(n *Node, f *Frame) {
+	a := (*value(n.Child[0], f).(*interface{})).(*[]interface{})
+	f.data[n.findex] = &(*a)[value(n.Child[1], f).(int)]
+}
+
 func getIndexAddr(n *Node, f *Frame) {
 	a := value(n.Child[0], f).(*[]interface{})
 	f.data[n.findex] = &(*a)[value(n.Child[1], f).(int)]
+}
+
+func getPtrIndex(n *Node, f *Frame) {
+	a := (*value(n.Child[0], f).(*interface{})).(*[]interface{})
+	f.data[n.findex] = (*a)[value(n.Child[1], f).(int)]
 }
 
 func getIndex(n *Node, f *Frame) {
@@ -376,6 +397,16 @@ func getIndexMap(n *Node, f *Frame) {
 
 func getMap(n *Node, f *Frame) {
 	f.data[n.findex] = value(n.Child[0], f).(map[interface{}]interface{})
+}
+
+func getPtrIndexSeq(n *Node, f *Frame) {
+	a := (*value(n.Child[0], f).(*interface{})).(*[]interface{})
+	seq := value(n.Child[1], f).([]int)
+	l := len(seq) - 1
+	for _, i := range seq[:l] {
+		a = (*a)[i].(*[]interface{})
+	}
+	f.data[n.findex] = (*a)[seq[l]]
 }
 
 func getIndexSeq(n *Node, f *Frame) {
@@ -491,7 +522,6 @@ func compositeLit(n *Node, f *Frame) {
 		if i < len(n.Child[1:]) {
 			c := n.Child[i+1]
 			(*a)[i] = value(c, f)
-			//println(n.index, "compositeLit, set field", i, value(c, f))
 		} else {
 			(*a)[i] = n.typ.field[i].typ.zero()
 		}

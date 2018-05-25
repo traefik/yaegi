@@ -1,25 +1,28 @@
 // Package interp implements a Go interpreter.
 package interp
 
+import "reflect"
+
 // Node structure for AST and CFG
 type Node struct {
-	Child  []*Node     // child subtrees (AST)
-	anc    *Node       // ancestor (AST)
-	Start  *Node       // entry point in subtree (CFG)
-	tnext  *Node       // true branch successor (CFG)
-	fnext  *Node       // false branch successor (CFG)
-	index  int         // node index (dot display)
-	findex int         // index of value in frame or frame size (func def, type def)
-	fsize  int         // number of entries in frame (call expressions)
-	level  int         // number of frame indirections to access value
-	kind   Kind        // kind of node
-	typ    *Type       // type of value in frame, or nil
-	recv   *Node       // method receiver node for call, or nil
-	frame  *Frame      // frame pointer, only used for script callbacks from runtime (wrapNode)
-	action Action      // action
-	run    Builtin     // function to run at CFG execution
-	val    interface{} // pointer on generic value (CFG execution)
-	ident  string      // set if node is a var or func
+	Child  []*Node       // child subtrees (AST)
+	anc    *Node         // ancestor (AST)
+	Start  *Node         // entry point in subtree (CFG)
+	tnext  *Node         // true branch successor (CFG)
+	fnext  *Node         // false branch successor (CFG)
+	index  int           // node index (dot display)
+	findex int           // index of value in frame or frame size (func def, type def)
+	fsize  int           // number of entries in frame (call expressions)
+	level  int           // number of frame indirections to access value
+	kind   Kind          // kind of node
+	typ    *Type         // type of value in frame, or nil
+	recv   *Node         // method receiver node for call, or nil
+	frame  *Frame        // frame pointer, only used for script callbacks from runtime (wrapNode)
+	action Action        // action
+	run    Builtin       // function to run at CFG execution
+	val    interface{}   // static generic value (CFG execution)
+	rval   reflect.Value // reflection value to let runtime access interpreter (CFG)
+	ident  string        // set if node is a var or func
 }
 
 // Frame contains values for the current execution level
