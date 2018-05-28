@@ -278,7 +278,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 					} else if c.ident == "nil" {
 						n.Child[1+i].rval = reflect.New(rtype.In(i)).Elem()
 						n.Child[1+i].kind = Rvalue
-					} else if c.typ.cat == FuncT {
+					} else if c.typ != nil && c.typ.cat == FuncT {
 						n.Child[1+i].rval = reflect.MakeFunc(rtype.In(i), c.wrapNode)
 						n.Child[1+i].kind = Rvalue
 					}
@@ -466,6 +466,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 				(*exports)[n.Child[1].ident] = reflect.MakeFunc(n.Child[2].typ.TypeOf(), n.wrapNode).Interface()
 			}
 			n.typ = n.Child[2].typ
+			n.val = n
 			scope.sym[n.Child[1].ident].typ = n.typ
 
 		case FuncLit:

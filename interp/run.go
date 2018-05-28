@@ -226,6 +226,7 @@ func _println(n *Node, f *Frame) {
 // wrap a call to interpreter node in a function that can be called from runtime
 func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	def := n.val.(*Node)
+	//def := n
 	var result []reflect.Value
 	frame := Frame{anc: n.frame, data: make([]interface{}, def.findex)}
 	if len(def.Child[0].Child) > 0 {
