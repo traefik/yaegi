@@ -10,7 +10,8 @@ var v string = "v1.0"
 func main() {
 
 	myHandler := func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Welcome to my website!", v)
+		//fmt.Fprintln(w, "Welcome to my website!", v)
+		fmt.Fprintln(w, "Welcome to my website!")
 	}
 
 	http.HandleFunc("/", myHandler)

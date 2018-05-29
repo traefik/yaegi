@@ -347,7 +347,12 @@ func callBinMethod(n *Node, f *Frame) {
 	in := make([]reflect.Value, len(n.Child))
 	in[0] = reflect.ValueOf(value(n.Child[0].Child[0], f))
 	for i, c := range n.Child[1:] {
-		in[i] = reflect.ValueOf(value(c, f))
+		if c.kind == Rvalue {
+			in[i+1] = value(c, f).(reflect.Value)
+			c.frame = f
+		} else {
+			in[i+1] = reflect.ValueOf(value(c, f))
+		}
 	}
 	v := fun.Call(in)
 	for i := 0; i < n.fsize; i++ {
@@ -384,6 +389,16 @@ func getIndexAddr(n *Node, f *Frame) {
 func getPtrIndex(n *Node, f *Frame) {
 	a := (*value(n.Child[0], f).(*interface{})).(*[]interface{})
 	f.data[n.findex] = (*a)[value(n.Child[1], f).(int)]
+}
+
+func getPtrIndexBin(n *Node, f *Frame) {
+	a := reflect.ValueOf(value(n.Child[0], f)).Elem()
+	f.data[n.findex] = a.FieldByIndex(n.val.([]int)).Interface()
+}
+
+func getIndexBin(n *Node, f *Frame) {
+	a := reflect.ValueOf(value(n.Child[0], f))
+	f.data[n.findex] = a.FieldByIndex(n.val.([]int))
 }
 
 func getIndex(n *Node, f *Frame) {

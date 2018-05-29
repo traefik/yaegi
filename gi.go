@@ -45,4 +45,6 @@ func main() {
 	i := interp.NewInterpreter(opt)
 	i.ImportBin(export.Pkg)
 	i.Eval(string(s))
+	//samp := *i.Exports["sample"]
+	//log.Println("exports:", samp)
 }

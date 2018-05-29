@@ -24,6 +24,7 @@ func (n *Node) AstDot(out io.WriteCloser) {
 				label = n.kind.String()
 			}
 		}
+		//fmt.Fprintf(out, "%d [label=\"%d: %s\" shape=box]\n", n.index, n.index, label)
 		fmt.Fprintf(out, "%d [label=\"%d: %s\"]\n", n.index, n.index, label)
 		if n.anc != nil {
 			fmt.Fprintf(out, "%d -> %d\n", n.anc.index, n.index)
@@ -60,6 +61,7 @@ func (n *Node) CfgDot(out io.WriteCloser) {
 // Dotty returns an output stream to a dotty(1) co-process where to write data in .dot format
 func Dotty() io.WriteCloser {
 	cmd := exec.Command("dotty", "-")
+	//cmd := exec.Command("dot", "-T", "xlib")
 	dotin, err := cmd.StdinPipe()
 	if err != nil {
 		panic("dotty stdin error")

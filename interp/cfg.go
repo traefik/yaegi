@@ -263,10 +263,11 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 					n.Child[1].kind = BasicLit
 				}
 			}
+			// TODO: Should process according to child type, not kind.
 			if n.Child[0].kind == SelectorImport {
 				n.fsize = n.Child[0].fsize
 				rtype := n.Child[0].val.(reflect.Value).Type()
-				if rtype.NumOut() > 1 {
+				if rtype.NumOut() > 0 {
 					n.typ = &Type{cat: ValueT, rtype: rtype.Out(0)}
 				}
 				n.Child[0].kind = BasicLit
@@ -610,7 +611,19 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 				log.Fatal("typ should not be nil:", n.index)
 			}
 			if n.typ.cat == ValueT {
+				// Handle object defined in runtime
 				if method, ok := n.typ.rtype.MethodByName(n.Child[1].ident); ok {
+					n.val = method.Func
+					n.fsize = method.Type.NumOut()
+					n.run = nop
+				}
+			} else if n.typ.cat == PtrT && n.typ.val.cat == ValueT {
+				// Handle pointer on object defined in runtime
+				if field, ok := n.typ.val.rtype.FieldByName(n.Child[1].ident); ok {
+					n.typ = &Type{cat: ValueT, rtype: field.Type}
+					n.val = field.Index
+					n.run = getPtrIndexBin
+				} else if method, ok := n.typ.val.rtype.MethodByName(n.Child[1].ident); ok {
 					n.val = method.Func
 					n.fsize = method.Type.NumOut()
 					n.run = nop
@@ -623,6 +636,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 					n.kind = SelectorImport
 					n.val = reflect.ValueOf(s)
 					if typ := reflect.TypeOf(s); typ.Kind() == reflect.Func {
+						n.typ = &Type{cat: ValueT, rtype: typ}
 						n.fsize = typ.NumOut()
 					} else if typ.Kind() == reflect.Ptr {
 						// a symbol of kind pointer must be dereferenced to access type

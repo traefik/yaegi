@@ -117,3 +117,5 @@ func (i *Interpreter) Eval(src string) {
 		}
 	}
 }
+
+// func New(pkg, name string) interface{} { }

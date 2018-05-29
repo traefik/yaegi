@@ -1,0 +1,19 @@
+package sample
+  
+import (
+	"fmt"
+	"net/http"
+)
+
+type Sample struct{}
+
+func (s *Sample) ServeHTTP(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+	r.Header.Set("X-sample-test", "Hello")
+	if next != nil {
+		next(w, r)
+	}		
+}
+
+func Test() {
+        fmt.Println("Hello from toto.Test()")
+}
