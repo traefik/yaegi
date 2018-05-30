@@ -223,23 +223,29 @@ func _println(n *Node, f *Frame) {
 	fmt.Println("")
 }
 
-// wrap a call to interpreter node in a function that can be called from runtime
+// wrapNode wraps a call to an interpreter node in a function that can be called from runtime
 func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	def := n.val.(*Node)
-	//def := n
 	var result []reflect.Value
 	frame := Frame{anc: n.frame, data: make([]interface{}, def.findex)}
+
+	// If fucnction is a method, set its receiver data in the frame
 	if len(def.Child[0].Child) > 0 {
-		// Set method receiver
 		frame.data[def.Child[0].findex] = value(n.recv, n.frame)
 	}
+
+	// Unwrap input arguments from their reflect value and store them in the frame
 	paramIndex := def.Child[2].Child[0].val.([]int)
 	i := 0
 	for _, arg := range in {
 		frame.data[paramIndex[i]] = arg.Interface()
 		i++
 	}
+
+	// Interpreter code execution
 	runCfg(def.Child[3].Start, &frame)
+
+	// Wrap output results in reflect values and return them
 	if len(def.Child[2].Child) > 1 {
 		if fieldList := def.Child[2].Child[1]; fieldList != nil {
 			result = make([]reflect.Value, len(fieldList.Child))

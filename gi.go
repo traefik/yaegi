@@ -7,12 +7,23 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 
 	"github.com/containous/gi/export"
 	"github.com/containous/gi/interp"
 )
+
+type Plugin struct {
+	Pkgname, Typename string
+	Interp            *interp.Interpreter
+	Syms              *interp.SymMap
+}
+
+func (p *Plugin) Handler(w http.ResponseWriter, r *http.Request) {
+	(*p.Syms)["Handler"].(func(http.ResponseWriter, *http.Request))(w, r)
+}
 
 func main() {
 	opt := interp.Opt{Entry: "main"}
@@ -47,4 +58,9 @@ func main() {
 	i.Eval(string(s))
 	//samp := *i.Exports["sample"]
 	//log.Println("exports:", samp)
+
+	p := &Plugin{"sample", "Middleware", i, nil}
+	p.Syms = p.Interp.Exports[p.Pkgname]
+	http.HandleFunc("/", p.Handler)
+	http.ListenAndServe(":8080", nil)
 }

@@ -349,6 +349,8 @@ func (t *Type) TypeOf() reflect.Type {
 			fields[i] = reflect.StructField{Name: f.name, Type: f.typ.TypeOf()}
 		}
 		return reflect.StructOf(fields)
+	case ValueT:
+		return t.rtype
 	default:
 		return reflect.TypeOf(t.zero())
 	}
