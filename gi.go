@@ -15,16 +15,6 @@ import (
 	"github.com/containous/gi/interp"
 )
 
-type Plugin struct {
-	Pkgname, Typename string
-	Interp            *interp.Interpreter
-	Syms              *interp.SymMap
-}
-
-func (p *Plugin) Handler(w http.ResponseWriter, r *http.Request) {
-	(*p.Syms)["Handler"].(func(http.ResponseWriter, *http.Request))(w, r)
-}
-
 func main() {
 	opt := interp.Opt{Entry: "main"}
 	flag.BoolVar(&opt.AstDot, "a", false, "display AST graph")
@@ -59,8 +49,20 @@ func main() {
 	//samp := *i.Exports["sample"]
 	//log.Println("exports:", samp)
 
-	p := &Plugin{"sample", "Middleware", i, nil}
-	p.Syms = p.Interp.Exports[p.Pkgname]
-	http.HandleFunc("/", p.Handler)
-	http.ListenAndServe(":8080", nil)
+	/*
+		p := &Plugin{"sample", "Middleware", i, nil}
+		p.Syms = p.Interp.Exports[p.Pkgname]
+		http.HandleFunc("/", p.Handler)
+		http.ListenAndServe(":8080", nil)
+	*/
+}
+
+type Plugin struct {
+	Pkgname, Typename string
+	Interp            *interp.Interpreter
+	Syms              *interp.SymMap
+}
+
+func (p *Plugin) Handler(w http.ResponseWriter, r *http.Request) {
+	(*p.Syms)["Handler"].(func(http.ResponseWriter, *http.Request))(w, r)
 }
