@@ -315,6 +315,9 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 					n.Child[0].fsize = reflect.TypeOf(sym.bin).NumOut()
 					n.Child[0].val = reflect.ValueOf(sym.bin)
 					n.Child[0].kind = BasicLit
+				} else if sym.typ != nil && sym.typ.cat == ValueT {
+					n.run = callDirectBin
+					n.typ = &Type{cat: ValueT}
 				} else {
 					n.val = sym.node
 					if def := n.val.(*Node); def != nil {

@@ -330,6 +330,24 @@ func callBinX(n *Node, f *Frame) {
 }
 
 // Call a function from a bin import, accessible through reflect
+func callDirectBin(n *Node, f *Frame) {
+	in := make([]reflect.Value, len(n.Child)-1)
+	for i, c := range n.Child[1:] {
+		if c.kind == Rvalue {
+			in[i] = value(c, f).(reflect.Value)
+			c.frame = f
+		} else {
+			in[i] = reflect.ValueOf(value(c, f))
+		}
+	}
+	fun := reflect.ValueOf(value(n.Child[0], f))
+	v := fun.Call(in)
+	for i := 0; i < n.fsize; i++ {
+		f.data[n.findex+i] = v[i].Interface()
+	}
+}
+
+// Call a function from a bin import, accessible through reflect
 func callBin(n *Node, f *Frame) {
 	in := make([]reflect.Value, len(n.Child)-1)
 	for i, c := range n.Child[1:] {
