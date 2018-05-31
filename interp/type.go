@@ -16,6 +16,7 @@ const (
 	ArrayT
 	BinT
 	BoolT
+	BuiltinT
 	ByteT
 	ChanT
 	Complex64T
@@ -52,6 +53,7 @@ var cats = [...]string{
 	BinT:        "BinT",
 	ByteT:       "ByteT",
 	BoolT:       "BoolT",
+	BuiltinT:    "BuiltinT",
 	ChanT:       "ChanT",
 	Complex64T:  "Complex64T",
 	Complex128T: "Complex128T",

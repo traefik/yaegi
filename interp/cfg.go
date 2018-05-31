@@ -255,6 +255,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 			n.findex = frameIndex.max
 			if builtin, ok := goBuiltin[n.Child[0].ident]; ok {
 				n.run = builtin
+				n.Child[0].typ = &Type{cat: BuiltinT}
 				if n.Child[0].ident == "make" {
 					if n.typ = interp.types[n.Child[1].ident]; n.typ == nil {
 						n.typ = nodeType(interp.types, n.Child[1])
