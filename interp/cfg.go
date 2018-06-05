@@ -264,6 +264,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 					n.Child[1].kind = BasicLit
 				}
 			}
+			log.Println(n.index, "callexpr", n.Child[0].typ)
 			// TODO: Should process according to child type, not kind.
 			if n.Child[0].kind == SelectorImport {
 				n.fsize = n.Child[0].fsize
@@ -296,8 +297,15 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 					n.run = callBinMethod
 					// TODO: handle multiple return value
 					n.Child[0].kind = BasicLit // Temporary hack for force value() to return n.val at run
-					n.typ = &Type{cat: ValueT, rtype: n.Child[0].val.(reflect.Value).Type()}
+					//recv, methodName := n.Child[0].Child[0], n.Child[0].Child[1].ident
+					//log.Println(n.index, "callexpr bin", recv.typ.rtype, methodName)
+					//if method, found := recv.typ.rtype.MethodByName(methodName); found {
+					//	log.Println(n.index, "method", method)
+					//} else {
+					//n.typ = &Type{cat: ValueT, rtype: n.Child[0].val.(reflect.Value).Type()}
+					n.typ = &Type{cat: ValueT, rtype: n.Child[0].typ.rtype}
 					n.fsize = n.Child[0].fsize
+					//}
 				} else {
 					// Resolve method and receiver path, store them in node static value for run
 					n.Child[0].val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
@@ -616,10 +624,18 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 			}
 			if n.typ.cat == ValueT {
 				// Handle object defined in runtime
+				log.Println(n.index, "selector", n.typ.cat)
 				if method, ok := n.typ.rtype.MethodByName(n.Child[1].ident); ok {
-					n.val = method.Func
+					log.Println(n.index, "selector method", method.Func, n.typ.rtype)
+					if method.Func.IsValid() {
+						n.rval = method.Func
+						n.run = nop
+					} else {
+						n.val = method.Index
+						//n.run = getIndexBinMethod
+						n.run = nop
+					}
 					n.fsize = method.Type.NumOut()
-					n.run = nop
 				}
 			} else if n.typ.cat == PtrT && n.typ.val.cat == ValueT {
 				// Handle pointer on object defined in runtime

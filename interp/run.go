@@ -359,15 +359,23 @@ func callBin(n *Node, f *Frame) {
 		}
 	}
 	fun := value(n.Child[0], f).(reflect.Value)
+	log.Println(n.index, "in callBin", fun, in)
 	v := fun.Call(in)
 	for i := 0; i < n.fsize; i++ {
 		f.data[n.findex+i] = v[i].Interface()
 	}
 }
 
-// Call a method on an object recturned by a bin import function, through reflect
+// Call a method defined by an interface type on an object returned by a bin import, through reflect.
+// In that case, the method func value can be resolved only at execution from the actual value
+// of node, not during CFG.
+func callBinInterfaceMethod(n *Node, f *Frame) {
+}
+
+// Call a method on an object returned by a bin import function, through reflect
 func callBinMethod(n *Node, f *Frame) {
-	fun := value(n.Child[0], f).(reflect.Value)
+	//fun := value(n.Child[0], f).(reflect.Value)
+	fun := n.Child[0].rval
 	in := make([]reflect.Value, len(n.Child))
 	in[0] = reflect.ValueOf(value(n.Child[0].Child[0], f))
 	for i, c := range n.Child[1:] {
@@ -377,6 +385,11 @@ func callBinMethod(n *Node, f *Frame) {
 		} else {
 			in[i+1] = reflect.ValueOf(value(c, f))
 		}
+	}
+	log.Println(n.index, "in callBinMethod", n.ident, in, in[0].MethodByName(n.Child[0].Child[1].ident).Type())
+	if !fun.IsValid() {
+		fun = in[0].MethodByName(n.Child[0].Child[1].ident)
+		in = in[1:]
 	}
 	v := fun.Call(in)
 	for i := 0; i < n.fsize; i++ {

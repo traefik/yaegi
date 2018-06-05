@@ -50,6 +50,7 @@ func main() {
 	//log.Println("exports:", samp)
 
 	/*
+		// To run test/export1.go
 		p := &Plugin{"sample", "Middleware", i, nil}
 		p.Syms = p.Interp.Exports[p.Pkgname]
 		http.HandleFunc("/", p.Handler)
