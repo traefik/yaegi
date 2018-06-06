@@ -136,13 +136,17 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 		case TypeSpec:
 			// Type analysis is performed recursively and no post-order processing
 			// needs to be done for types, so do not dive in subtree
+			typeName := n.Child[0].ident
 			if n.Child[1].kind == Ident {
 				// Create a type alias of an existing one
-				interp.types[n.Child[0].ident] = &Type{cat: AliasT, val: nodeType(interp.types, n.Child[1])}
+				interp.types[typeName] = &Type{cat: AliasT, val: nodeType(interp.types, n.Child[1])}
 			} else {
 				// Define a new type
-				interp.types[n.Child[0].ident] = nodeType(interp.types, n.Child[1])
+				interp.types[typeName] = nodeType(interp.types, n.Child[1])
 			}
+			//if canExport(typeName) {
+			//	(*exports)[funcName] = reflect.MakeFunc(n.Child[2].typ.TypeOf(), n.wrapNode).Interface()
+			//}
 			return false
 
 		case ArrayType, BasicLit, ChanType, MapType, StructType:
@@ -475,12 +479,13 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 			}
 			scope = scope.anc
 			frameIndex = frameIndex.anc
-			if canExport(n.Child[1].ident) {
-				(*exports)[n.Child[1].ident] = reflect.MakeFunc(n.Child[2].typ.TypeOf(), n.wrapNode).Interface()
+			funcName := n.Child[1].ident
+			if canExport(funcName) {
+				(*exports)[funcName] = reflect.MakeFunc(n.Child[2].typ.TypeOf(), n.wrapNode).Interface()
 			}
 			n.typ = n.Child[2].typ
 			n.val = n
-			scope.sym[n.Child[1].ident].typ = n.typ
+			scope.sym[funcName].typ = n.typ
 
 		case FuncLit:
 			n.typ = n.Child[2].typ
@@ -718,6 +723,13 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 				c.Child[0].tnext = n
 			}
 			scope = scope.anc
+
+		case TypeAssertExpr:
+			if n.Child[1].typ == nil {
+				n.Child[1].typ = interp.types[n.Child[1].ident]
+			}
+			log.Println(n.index, "TypeAssertExpr", n.Child[0].typ.cat, n.Child[1].ident, n.Child[1].typ.cat)
+			n.typ = n.Child[1].typ
 
 		case ValueSpec:
 			l := len(n.Child) - 1

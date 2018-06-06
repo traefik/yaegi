@@ -49,13 +49,14 @@ func main() {
 	//samp := *i.Exports["sample"]
 	//log.Println("exports:", samp)
 
-	/*
-		// To run test/export1.go
-		p := &Plugin{"sample", "Middleware", i, nil}
-		p.Syms = p.Interp.Exports[p.Pkgname]
-		http.HandleFunc("/", p.Handler)
-		http.ListenAndServe(":8080", nil)
-	*/
+	// /*
+	// To run test/plugin1.go
+	p := &Plugin{"sample", "Middleware", i, nil}
+	p.Syms = p.Interp.Exports[p.Pkgname]
+	log.Println("p.Syms:", p.Syms)
+	http.HandleFunc("/", p.Handler)
+	http.ListenAndServe(":8080", nil)
+	// */
 }
 
 type Plugin struct {

@@ -176,6 +176,11 @@ func nodeType(tdef TypeMap, n *Node) *Type {
 		}
 	case Ident:
 		t = tdef[n.ident]
+	case InterfaceType:
+		t.cat = InterfaceT
+		//for _, method := range n.Child[0].Child {
+		//	t.method = append(t.method, nodeType(tdef, method))
+		//}
 	case MapType:
 		t.cat = MapT
 		t.key = nodeType(tdef, n.Child[0])

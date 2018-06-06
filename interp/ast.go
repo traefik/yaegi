@@ -59,6 +59,7 @@ const (
 	ImportSpec
 	IncDecStmt
 	IndexExpr
+	InterfaceType
 	LandExpr
 	LorExpr
 	KeyValueExpr
@@ -74,6 +75,7 @@ const (
 	StructType
 	Switch0 // switch tag {}
 	Switch1 // switch init; tag {}
+	TypeAssertExpr
 	TypeSpec
 	UnaryExpr
 	ValueSpec
@@ -125,6 +127,7 @@ var kinds = [...]string{
 	ImportSpec:       "ImportSpec",
 	IncDecStmt:       "IncDecStmt",
 	IndexExpr:        "IndexExpr",
+	InterfaceType:    "InterfaceType",
 	KeyValueExpr:     "KeyValueExpr",
 	LandExpr:         "LandExpr",
 	LorExpr:          "LorExpr",
@@ -140,6 +143,7 @@ var kinds = [...]string{
 	StructType:       "StructType",
 	Switch0:          "Switch0",
 	Switch1:          "Switch1",
+	TypeAssertExpr:   "TypeAssertExpr",
 	TypeSpec:         "TypeSpec",
 	UnaryExpr:        "UnaryExpr",
 	ValueSpec:        "ValueSpec",
@@ -523,6 +527,9 @@ func Ast(src string, pre NodeMap) (*Node, NodeMap) {
 		case *ast.IndexExpr:
 			st.push(addChild(&root, anc, &index, IndexExpr, GetIndex))
 
+		case *ast.InterfaceType:
+			st.push(addChild(&root, anc, &index, InterfaceType, Nop))
+
 		case *ast.KeyValueExpr:
 			st.push(addChild(&root, anc, &index, KeyValueExpr, Nop))
 
@@ -558,6 +565,9 @@ func Ast(src string, pre NodeMap) (*Node, NodeMap) {
 			} else {
 				st.push(addChild(&root, anc, &index, Switch1, Nop))
 			}
+
+		case *ast.TypeAssertExpr:
+			st.push(addChild(&root, anc, &index, TypeAssertExpr, Nop))
 
 		case *ast.TypeSpec:
 			st.push(addChild(&root, anc, &index, TypeSpec, Nop))
