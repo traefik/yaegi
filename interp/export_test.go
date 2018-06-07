@@ -1,6 +1,6 @@
 package interp
 
-func Example_export1() {
+func Example_export() {
 	src := `package tst
 
 func Exported() { println("Hello from Exported") }

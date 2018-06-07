@@ -195,6 +195,31 @@ func main() {
 
 }
 
+func Example_cont() {
+	src := `
+package main
+
+func main() {
+	for i := 0; i < 10; i++ {
+		if i < 5 {
+			continue
+		}
+		println(i)
+	}
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 5
+	// 6
+	// 7
+	// 8
+	// 9
+}
+
 func Example_cont0() {
 	src := `
 package main
@@ -259,37 +284,49 @@ func main() {
 	// 10
 }
 
-func Example_cont() {
-	src := `
-package main
-
-func main() {
-	for i := 0; i < 10; i++ {
-		if i < 5 {
-			continue
-		}
-		println(i)
-	}
-}
-`
-	i := NewInterpreter(Opt{Entry: "main"})
-	i.ImportBin(export.Pkg)
-	i.Eval(src)
-
-	// Output:
-	// 5
-	// 6
-	// 7
-	// 8
-	// 9
-}
-
 func Example_export0() {
 	src := `
 package main
 
 func Test() {
 	println("Hello from test")
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
+func Example_export1() {
+	src := `
+package sample
+
+type Sample struct{ Name string }
+
+func (s *Sample) Test() {
+	println("Hello from test", s.Name)
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
+func Example_fib() {
+	src := `
+package main
+
+// Compute fibonacci numbers, no memoization
+func fib(n int) int {
+	if n < 2 {
+		return n
+	}
+	return fib(n-2) + fib(n-1)
+}
+
+func main() {
+	println(fib(35))
+	//println(fib(10))
 }`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
@@ -319,28 +356,6 @@ func main() {
 
 	// Output:
 	// 3
-}
-
-func Example_fib() {
-	src := `
-package main
-
-// Compute fibonacci numbers, no memoization
-func fib(n int) int {
-	if n < 2 {
-		return n
-	}
-	return fib(n-2) + fib(n-1)
-}
-
-func main() {
-	println(fib(35))
-	//println(fib(10))
-}`
-	i := NewInterpreter(Opt{Entry: "main"})
-	i.ImportBin(export.Pkg)
-	i.Eval(src)
-
 }
 
 func Example_for0() {
@@ -422,6 +437,24 @@ func main() {
 	// 4
 }
 
+func Example_fun() {
+	src := `
+package main
+
+func f(i int) int { return i + 15 }
+
+func main() {
+	println(f(4))
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 19
+}
+
 func Example_fun2() {
 	src := `
 package main
@@ -462,24 +495,6 @@ func main() {
 
 	// Output:
 	// 18
-}
-
-func Example_fun() {
-	src := `
-package main
-
-func f(i int) int { return i + 15 }
-
-func main() {
-	println(f(4))
-}
-`
-	i := NewInterpreter(Opt{Entry: "main"})
-	i.ImportBin(export.Pkg)
-	i.Eval(src)
-
-	// Output:
-	// 19
 }
 
 func Example_goroutine() {
@@ -649,6 +664,30 @@ func main() {
 	// Hello from main
 }
 
+func Example_interface0() {
+	src := `
+package main
+
+type sample struct {
+	count int
+}
+
+func run(inf interface{}, name string) {
+	x := inf.(sample)
+	println(x.count, name)
+}
+
+func main() {
+	a := sample{2}
+	println(a.count)
+	run(a, "truc")
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
 func Example_l2() {
 	src := `
 package main
@@ -699,6 +738,26 @@ func f(i int) int { return i + 1 }
 
 	// Output:
 	// 6
+}
+
+func Example_map() {
+	src := `
+package main
+
+type Dict map[string]string
+
+func main() {
+	dict := make(Dict)
+	dict["truc"] = "machin"
+	println(dict["truc"])
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// machin
 }
 
 func Example_map2() {
@@ -757,26 +816,6 @@ func main() {
 	// bonjour
 }
 
-func Example_map() {
-	src := `
-package main
-
-type Dict map[string]string
-
-func main() {
-	dict := make(Dict)
-	dict["truc"] = "machin"
-	println(dict["truc"])
-}
-`
-	i := NewInterpreter(Opt{Entry: "main"})
-	i.ImportBin(export.Pkg)
-	i.Eval(src)
-
-	// Output:
-	// machin
-}
-
 func Example_math0() {
 	src := `
 package main
@@ -796,6 +835,29 @@ func main() {
 
 	// Output:
 	// -1
+}
+
+func Example_method() {
+	src := `
+package main
+
+type Coord struct {
+	x, y int
+}
+
+func (c Coord) dist() int { return c.x*c.x + c.y*c.y }
+
+func main() {
+	o := Coord{3, 4}
+	println(o.dist())
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 25
 }
 
 func Example_method1() {
@@ -910,27 +972,62 @@ func main() {
 	// 25
 }
 
-func Example_method() {
+func Example_plugin0() {
 	src := `
-package main
+package sample
 
-type Coord struct {
-	x, y int
+import (
+	"fmt"
+	"net/http"
+)
+
+func Handler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Welcome to my website")
 }
 
-func (c Coord) dist() int { return c.x*c.x + c.y*c.y }
-
-func main() {
-	o := Coord{3, 4}
-	println(o.dist())
-}
-`
+//func main() {
+//	m := &Middleware{"Test"}
+//	http.HandleFunc("/", Handler)
+//	http.ListenAndServe(":8080", nil)
+//}`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
-	// Output:
-	// 25
+}
+
+func Example_plugin1() {
+	src := `
+package sample
+
+import (
+	"fmt"
+	"net/http"
+)
+
+type Sample struct{ Name string }
+
+func NewSample(name string) *Sample {
+	return &Sample{Name: name}
+}
+
+func (s *Sample) Handler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Welcome to my website")
+}
+
+func WrapHandler(s *Sample, w httpResponseWriter, r *http.Request) {
+	s.Handler(w, r)
+}
+
+//func main() {
+//	m := &Middleware{"Test"}
+//	http.HandleFunc("/", Handler)
+//	http.ListenAndServe(":8080", nil)
+//}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
 }
 
 func Example_ptr0() {
@@ -1041,6 +1138,27 @@ func main() {
 	// 5
 }
 
+func Example_ptr5() {
+	src := `
+package main
+
+type Foo struct {
+	val int
+}
+
+func main() {
+	var a = &Foo{3}
+	println(a.val)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 3
+}
+
 func Example_ptr5a() {
 	src := `
 package main
@@ -1053,27 +1171,6 @@ func main() {
 	var a = Foo{3}
 	b := &a
 	println(b.val)
-}
-`
-	i := NewInterpreter(Opt{Entry: "main"})
-	i.ImportBin(export.Pkg)
-	i.Eval(src)
-
-	// Output:
-	// 3
-}
-
-func Example_ptr5() {
-	src := `
-package main
-
-type Foo struct {
-	val int
-}
-
-func main() {
-	var a = &Foo{3}
-	println(a.val)
 }
 `
 	i := NewInterpreter(Opt{Entry: "main"})
@@ -1176,22 +1273,6 @@ func main() {
 	// 2 3
 }
 
-func Example_run10() {
-	src := `
-package main
-
-func main() {
-	func() { println("hello") }()
-}
-`
-	i := NewInterpreter(Opt{Entry: "main"})
-	i.ImportBin(export.Pkg)
-	i.Eval(src)
-
-	// Output:
-	// hello
-}
-
 func Example_run1() {
 	src := `
 package main
@@ -1210,6 +1291,22 @@ func main() {
 
 	// Output:
 	// 5
+}
+
+func Example_run10() {
+	src := `
+package main
+
+func main() {
+	func() { println("hello") }()
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// hello
 }
 
 func Example_run4() {
@@ -1444,6 +1541,31 @@ func main() {
 	// 1
 }
 
+func Example_server() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"net/http"
+)
+
+var v string = "v1.0"
+
+func main() {
+	a := "hello "
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "Welcome to my website! ", a, v)
+	})
+
+	http.ListenAndServe(":8080", nil)
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
 func Example_server0() {
 	src := `
 package main
@@ -1456,7 +1578,8 @@ import (
 var v string = "v1.0"
 
 func myHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome to my website!", v)
+	//fmt.Fprintln(w, "Welcome to my website!", v)
+	fmt.Fprintln(w, "Welcome to my website!")
 }
 
 func main() {
@@ -1478,6 +1601,35 @@ import (
 	"net/http"
 )
 
+type Middleware struct {
+	Name string
+}
+
+func (m *Middleware) Handler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Welcome to my website", m.Name)
+}
+
+func main() {
+	m := &Middleware{"Test"}
+	http.HandleFunc("/", m.Handler)
+	http.ListenAndServe(":8080", nil)
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
+func Example_server1a() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+)
+
 var v string = "v1.0"
 
 type Middleware struct {
@@ -1485,6 +1637,9 @@ type Middleware struct {
 }
 
 func (m *Middleware) Handler(w http.ResponseWriter, r *http.Request) {
+	println("Hello")
+	log.Println(r.Header.Get("User-Agent"))
+	log.Println(w.Header())
 	fmt.Fprintln(w, "Welcome to my website", m.Name)
 }
 
@@ -1513,35 +1668,11 @@ var v string = "v1.0"
 func main() {
 
 	myHandler := func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Welcome to my website!", v)
+		//fmt.Fprintln(w, "Welcome to my website!", v)
+		fmt.Fprintln(w, "Welcome to my website!")
 	}
 
 	http.HandleFunc("/", myHandler)
-	http.ListenAndServe(":8080", nil)
-}`
-	i := NewInterpreter(Opt{Entry: "main"})
-	i.ImportBin(export.Pkg)
-	i.Eval(src)
-
-}
-
-func Example_server() {
-	src := `
-package main
-
-import (
-	"fmt"
-	"net/http"
-)
-
-var v string = "v1.0"
-
-func main() {
-	a := "hello "
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "Welcome to my website! ", a, v)
-	})
-
 	http.ListenAndServe(":8080", nil)
 }`
 	i := NewInterpreter(Opt{Entry: "main"})
@@ -1620,6 +1751,39 @@ func main() {
 
 }
 
+func Example_src0() {
+	src := `
+package main
+
+import "github.com/containous/gi/test/provider"
+
+func main() {
+	provider.Sample()
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// Hello from Provider
+}
+
+func Example_src1() {
+	src := `
+package main
+
+import "github.com/containous/provider2"
+
+func main() {
+	provider2.Sample()
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
 func Example_str() {
 	src := `
 package main
@@ -1634,6 +1798,50 @@ func main() {
 
 	// Output:
 	// hello world
+}
+
+func Example_struct() {
+	src := `
+package main
+
+type T struct {
+	f int
+	g int
+}
+
+func main() {
+	a := T{7, 8}
+	println(a.f, a.g)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 7 8
+}
+
+func Example_struct0() {
+	src := `
+package main
+
+type T struct {
+	f int
+	g int
+}
+
+func main() {
+	a := T{}
+	println(a.f, a.g)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 0 0
 }
 
 func Example_struct0a() {
@@ -1658,28 +1866,6 @@ func main() {
 	// Output:
 	// 0
 	// 8
-}
-
-func Example_struct0() {
-	src := `
-package main
-
-type T struct {
-	f int
-	g int
-}
-
-func main() {
-	a := T{}
-	println(a.f, a.g)
-}
-`
-	i := NewInterpreter(Opt{Entry: "main"})
-	i.ImportBin(export.Pkg)
-	i.Eval(src)
-
-	// Output:
-	// 0 0
 }
 
 func Example_struct1() {
@@ -1836,28 +2022,6 @@ func main() {
 	// 7 8
 }
 
-func Example_struct() {
-	src := `
-package main
-
-type T struct {
-	f int
-	g int
-}
-
-func main() {
-	a := T{7, 8}
-	println(a.f, a.g)
-}
-`
-	i := NewInterpreter(Opt{Entry: "main"})
-	i.ImportBin(export.Pkg)
-	i.Eval(src)
-
-	// Output:
-	// 7 8
-}
-
 func Example_switch() {
 	src := `
 package main
@@ -1979,6 +2143,27 @@ func main() {
 
 }
 
+func Example_time5() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+func main() {
+	//	t := time.Now()
+	t := time.Unix(1000000000, 0)
+	m := t.Minute()
+	fmt.Println(t, m)
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
 func Example_type0() {
 	src := `
 package main
@@ -1996,6 +2181,23 @@ func main() {
 
 	// Output:
 	// 0
+}
+
+func Example_var() {
+	src := `
+package main
+
+func main() {
+	var a, b, c int
+	println(a, b, c)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 0 0 0
 }
 
 func Example_var2() {
@@ -2047,21 +2249,4 @@ func main() {
 
 	// Output:
 	// 2 3
-}
-
-func Example_var() {
-	src := `
-package main
-
-func main() {
-	var a, b, c int
-	println(a, b, c)
-}
-`
-	i := NewInterpreter(Opt{Entry: "main"})
-	i.ImportBin(export.Pkg)
-	i.Eval(src)
-
-	// Output:
-	// 0 0 0
 }
