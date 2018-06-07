@@ -4,11 +4,16 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 func (interp *Interpreter) importSrcFile(path string) {
-	basedir := os.Getenv("HOME") + "/go/src/"
-	dir := basedir + path
+	//basedir := os.Getenv("HOME") + "/go/src/"
+	basedir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		log.Fatal(err)
+	}
+	dir := basedir + "/vendor/" + path
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		log.Fatal(err)
