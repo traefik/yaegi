@@ -99,8 +99,7 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 
 func value(n *Node, f *Frame) interface{} {
 	switch n.kind {
-	case BasicLit, FuncDecl, FuncLit:
-		//log.Println(n.index, "literal node value", n.ident, n.val)
+	case BasicLit, FuncDecl, FuncLit, SelectorSrc:
 		return n.val
 	case Rvalue:
 		return n.rval
@@ -109,10 +108,8 @@ func value(n *Node, f *Frame) interface{} {
 			f = f.anc
 		}
 		if n.findex < 0 {
-			//log.Println(n.index, "ident node value", n.ident, n.val)
 			return n.val
 		}
-		//println(n.index, "val(", n.findex, n.ident, "):", n.level, f.data[n.findex])
 		return f.data[n.findex]
 	}
 }
@@ -258,7 +255,7 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 }
 
 func call(n *Node, f *Frame) {
-	//println(n.index, "call", n.Child[0].ident)
+	//log.Println(n.index, "call", n.Child[0].Child[1].ident, n.Child[0].typ.cat)
 	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
 	var recv *Node
 	var rseq []int
@@ -268,7 +265,7 @@ func call(n *Node, f *Frame) {
 		forkFrame = true
 	}
 
-	if n.Child[0].kind == SelectorExpr {
+	if n.Child[0].kind == SelectorExpr && n.Child[0].typ.cat != SrcPkgT {
 		recv = n.Child[0].recv
 		rseq = n.Child[0].Child[1].val.([]int)
 	}
@@ -359,7 +356,6 @@ func callBin(n *Node, f *Frame) {
 		}
 	}
 	fun := value(n.Child[0], f).(reflect.Value)
-	log.Println(n.index, "in callBin", fun, in)
 	v := fun.Call(in)
 	for i := 0; i < n.fsize; i++ {
 		f.data[n.findex+i] = v[i].Interface()

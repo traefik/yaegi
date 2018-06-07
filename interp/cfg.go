@@ -9,11 +9,12 @@ import (
 
 // Symbol type defines symbol values entities
 type Symbol struct {
-	typ   *Type       // Type of value
-	node  *Node       // Node value if index is negative
-	index int         // index of value in frame or -1
-	pkg   *SymMap     // Map of package symbols if typ.cat is PkgT, or nil
-	bin   interface{} // Symbol from imported bin package if typ.cat is BinT, or nil
+	typ    *Type       // Type of value
+	node   *Node       // Node value if index is negative
+	index  int         // index of value in frame or -1
+	pkgbin *SymMap     // Map of package symbols if typ.cat is BinPkgT, or nil
+	pkgsrc *NodeMap    // Map of package symbols if typ.cat is SrcPkgT, or nil
+	bin    interface{} // Symbol from imported bin package if typ.cat is BinT, or nil
 }
 
 // Scope type stores the list of visible symbols at current scope level
@@ -50,7 +51,7 @@ type FrameIndex struct {
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
 // Following this pass, the CFG is ready to run
-func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
+func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 	scope := &Scope{sym: map[string]*Symbol{}}
 	frameIndex := &FrameIndex{}
 	var loop, loopRestart *Node
@@ -59,7 +60,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 	var exports *SymMap
 
 	// Fill root scope with initial symbol definitions
-	for name, node := range sdef {
+	for name, node := range *sdef {
 		scope.sym[name] = &Symbol{node: node, index: -1}
 	}
 
@@ -268,7 +269,6 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 					n.Child[1].kind = BasicLit
 				}
 			}
-			log.Println(n.index, "callexpr", n.Child[0].typ)
 			// TODO: Should process according to child type, not kind.
 			if n.Child[0].kind == SelectorImport {
 				n.fsize = n.Child[0].fsize
@@ -310,6 +310,20 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 					n.typ = &Type{cat: ValueT, rtype: n.Child[0].typ.rtype}
 					n.fsize = n.Child[0].fsize
 					//}
+				} else if n.Child[0].typ.cat == SrcPkgT {
+					n.val = n.Child[0].val
+					if def := n.val.(*Node); def != nil {
+						// Reserve as many frame entries as nb of ret values for called function
+						// node frame index should point to the first entry
+						j := len(def.Child[2].Child) - 1
+						l := len(def.Child[2].Child[j].Child) // Number of return values for def
+						if l == 1 {
+							// If def returns exactly one value, propagate its type in call node.
+							// Multiple return values will be handled differently through AssignX.
+							n.typ = interp.types[def.Child[2].Child[j].Child[0].Child[0].ident]
+						}
+						n.fsize = l
+					}
 				} else {
 					// Resolve method and receiver path, store them in node static value for run
 					n.Child[0].val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
@@ -518,8 +532,13 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
 				if n.findex < 0 {
 					n.val = sym.node
-				} else if n.typ != nil && n.typ.cat == PkgT {
-					n.val = sym.pkg
+				} else if n.typ != nil {
+					if n.typ.cat == BinPkgT {
+						n.val = sym.pkgbin
+					} else if n.typ.cat == SrcPkgT {
+						log.Println(n.index, "ident SrcPkgT", n.ident)
+						n.val = sym.pkgsrc
+					}
 				}
 				n.recv = n
 			} else {
@@ -573,17 +592,18 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 				ipath = n.Child[0].val.(string)
 				name = path.Base(ipath)
 			}
-			if pkg, ok := interp.imports[ipath]; ok {
+			if pkg, ok := interp.binPkg[ipath]; ok {
 				if name == "." {
 					for n, s := range *pkg {
 						scope.sym[n] = &Symbol{typ: &Type{cat: BinT}, bin: s}
 					}
 				} else {
-					scope.sym[name] = &Symbol{typ: &Type{cat: PkgT}, pkg: pkg}
+					scope.sym[name] = &Symbol{typ: &Type{cat: BinPkgT}, pkgbin: pkg}
 				}
 			} else {
-				log.Println("import", name, "not found")
-				// TODO: attempt to load source file
+				// TODO: make sure we do not import a src package more than once
+				interp.importSrcFile(ipath)
+				scope.sym[name] = &Symbol{typ: &Type{cat: SrcPkgT}, pkgsrc: interp.srcPkg[name]}
 			}
 
 		case KeyValueExpr:
@@ -653,8 +673,8 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 					n.fsize = method.Type.NumOut()
 					n.run = nop
 				}
-			} else if n.typ.cat == PkgT {
-				// Resolve package symbol
+			} else if n.typ.cat == BinPkgT {
+				// Resolve binary package symbol
 				name := n.Child[1].ident
 				pkgSym := n.Child[0].val.(*SymMap)
 				if s, ok := (*pkgSym)[name]; ok {
@@ -672,6 +692,17 @@ func (interp *Interpreter) Cfg(root *Node, sdef NodeMap) []*Node {
 						n.kind = Rvalue
 					}
 					n.run = nop
+				}
+			} else if n.typ.cat == SrcPkgT {
+				// Resolve source package symbol
+				log.Println(n.index, "selector srcpkg", n.Child[0].ident, n.Child[1].ident)
+				pkgSrc := n.Child[0].val.(*NodeMap)
+				name := n.Child[1].ident
+				if node, ok := (*pkgSrc)[name]; ok {
+					log.Println(n.index, "src import sym", node.Child[1].ident)
+					n.val = node
+					n.run = nop
+					n.kind = SelectorSrc
 				}
 			} else if fi := n.typ.fieldIndex(n.Child[1].ident); fi >= 0 {
 				// Resolve struct field index

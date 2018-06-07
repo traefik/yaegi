@@ -1,7 +1,9 @@
 // Package interp implements a Go interpreter.
 package interp
 
-import "reflect"
+import (
+	"reflect"
+)
 
 // Node structure for AST and CFG
 type Node struct {
@@ -31,6 +33,12 @@ type Frame struct {
 	data []interface{} // values
 }
 
+// NodeMap defines a Map of symbols (const, variables and functions) indexed by names
+type NodeMap map[string]*Node
+
+// PkgSrcMap stores package source nodes
+type PkgSrcMap map[string]*NodeMap
+
 // SymMap stores executable symbols indexed by name
 type SymMap map[string]interface{}
 
@@ -51,7 +59,8 @@ type Interpreter struct {
 	Opt
 	frame   *Frame
 	types   TypeMap
-	imports PkgMap
+	srcPkg  PkgSrcMap
+	binPkg  PkgMap
 	Exports PkgMap
 }
 
@@ -71,41 +80,47 @@ func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 
 // NewInterpreter creates and returns a new interpreter object
 func NewInterpreter(opt Opt) *Interpreter {
-	return &Interpreter{Opt: opt, imports: make(PkgMap), Exports: make(PkgMap), types: defaultTypes}
+	return &Interpreter{
+		Opt:     opt,
+		types:   defaultTypes,
+		srcPkg:  make(PkgSrcMap),
+		binPkg:  make(PkgMap),
+		Exports: make(PkgMap),
+	}
 }
 
 // AddImport registers a symbol from an imported package to be visible from the interpreter
 func (i *Interpreter) AddImport(pkg string, name string, sym interface{}) {
-	if i.imports[pkg] == nil {
+	if i.binPkg[pkg] == nil {
 		s := make(SymMap)
-		i.imports[pkg] = &s
+		i.binPkg[pkg] = &s
 	}
-	(*i.imports[pkg])[name] = sym
+	(*i.binPkg[pkg])[name] = sym
 }
 
 // ImportBin registers symbols contained in pkg map
 func (i *Interpreter) ImportBin(pkg *map[string]*map[string]interface{}) {
 	for n, p := range *pkg {
-		i.imports[n] = (*SymMap)(p)
+		i.binPkg[n] = (*SymMap)(p)
 	}
 }
 
 // Eval evaluates Go code represented as a string
-func (i *Interpreter) Eval(src string) {
+func (i *Interpreter) Eval(src string) (string, *NodeMap) {
 	// Parse source to AST
 	root, sdef := Ast(src, nil)
 	if i.AstDot {
-		root.AstDot(Dotty())
+		root.AstDot(DotX())
 	}
 
 	// Annotate AST with CFG infos
 	initNodes := i.Cfg(root, sdef)
-	if entry, ok := sdef[i.Entry]; ok {
+	if entry, ok := (*sdef)[i.Entry]; ok {
 		initNodes = append(initNodes, entry)
 	}
 
 	if i.CfgDot {
-		root.CfgDot(Dotty())
+		root.CfgDot(DotX())
 	}
 
 	// Execute CFG
@@ -116,6 +131,5 @@ func (i *Interpreter) Eval(src string) {
 			Run(n, i.frame, nil, nil, nil, nil, true, false)
 		}
 	}
+	return root.Child[0].ident, sdef
 }
-
-// func New(pkg, name string) interface{} { }

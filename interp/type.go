@@ -15,6 +15,7 @@ const (
 	AliasT
 	ArrayT
 	BinT
+	BinPkgT
 	BoolT
 	BuiltinT
 	ByteT
@@ -32,9 +33,9 @@ const (
 	Int32T
 	Int64T
 	MapT
-	PkgT
 	PtrT
 	RuneT
+	SrcPkgT
 	StringT
 	StructT
 	UintT
@@ -51,6 +52,7 @@ var cats = [...]string{
 	AliasT:      "AliasT",
 	ArrayT:      "ArrayT",
 	BinT:        "BinT",
+	BinPkgT:     "BinPkgT",
 	ByteT:       "ByteT",
 	BoolT:       "BoolT",
 	BuiltinT:    "BuiltinT",
@@ -68,9 +70,9 @@ var cats = [...]string{
 	Int32T:      "Int32T",
 	Int64T:      "Int64T",
 	MapT:        "MapT",
-	PkgT:        "PkgT",
 	PtrT:        "PtrT",
 	RuneT:       "RuneT",
+	SrcPkgT:     "SrcPkgT",
 	StringT:     "StringT",
 	StructT:     "StructT",
 	UintT:       "UintT",

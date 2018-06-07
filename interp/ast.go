@@ -70,6 +70,7 @@ const (
 	Rvalue
 	SelectorExpr
 	SelectorImport
+	SelectorSrc
 	SendStmt
 	StarExpr
 	StructType
@@ -138,6 +139,7 @@ var kinds = [...]string{
 	Rvalue:           "Rvalue",
 	SelectorExpr:     "SelectorExpr",
 	SelectorImport:   "SelectorImport",
+	SelectorSrc:      "SelectorSrc",
 	SendStmt:         "SendStmt",
 	StarExpr:         "StarExpr",
 	StructType:       "StructType",
@@ -235,20 +237,17 @@ func (a Action) String() string {
 	return "Action(" + strconv.Itoa(int(a)) + ")"
 }
 
-// NodeMap defines a Map of symbols (const, variables and functions) indexed by names
-type NodeMap map[string]*Node
-
 // Note: no type analysis is performed at this stage, it is done in pre-order processing
 // of CFG, in order to accomodate forward type declarations
 
 // Ast parses src string containing Go code and generates the corresponding AST.
 // The AST root node is returned.
-func Ast(src string, pre NodeMap) (*Node, NodeMap) {
+func Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 	var def NodeMap
 	if pre == nil {
 		def = make(map[string]*Node)
 	} else {
-		def = pre
+		def = *pre
 	}
 	fset := token.NewFileSet() // positions are relative to fset
 	f, err := parser.ParseFile(fset, "sample.go", src, 0)
@@ -610,7 +609,7 @@ func Ast(src string, pre NodeMap) (*Node, NodeMap) {
 		}
 		return true
 	})
-	return root, def
+	return root, &def
 }
 
 type nodestack []*Node
