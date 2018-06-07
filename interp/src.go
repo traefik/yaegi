@@ -8,12 +8,15 @@ import (
 )
 
 func (interp *Interpreter) importSrcFile(path string) {
-	//basedir := os.Getenv("HOME") + "/go/src/"
-	basedir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		log.Fatal(err)
-	}
-	dir := basedir + "/vendor/" + path
+	/*
+		//basedir := os.Getenv("HOME") + "/go/src/"
+		basedir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+		if err != nil {
+			log.Fatal(err)
+		}
+		dir := basedir + "/vendor/" + path
+	*/
+	dir := pkgDir(path)
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		log.Fatal(err)
@@ -39,4 +42,20 @@ func (interp *Interpreter) importSrcFile(path string) {
 			(*interp.srcPkg[pkgName])[name] = node
 		}
 	}
+}
+
+func pkgDir(path string) string {
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		log.Fatal(err)
+	}
+	dir += "/vendor/" + path
+	if _, err := os.Stat(dir); err == nil {
+		return dir
+	}
+	dir = os.Getenv("HOME") + "/go/src/" + path
+	if _, err := os.Stat(dir); err != nil {
+		log.Fatal(err)
+	}
+	return dir
 }
