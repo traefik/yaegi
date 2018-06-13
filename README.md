@@ -25,7 +25,6 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 ## Status
 
 ### To Do
-- [ ] slices / map expressions
 - [ ] goto
 - [ ] select
 - [ ] type checking
@@ -41,6 +40,7 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [ ] ellipsis
 - [ ] variadic functions
 - [ ] method calls from runtime to interpreter
+- [ ] forward declarations
 
 ### Done
 - [X] basic literals
@@ -70,6 +70,7 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [X] init functions
 - [X] exports to exec
 - [X] pointers, including on struct, method receivers...
+- [X] slices / map expressions
 
 ## Developpement plan
 

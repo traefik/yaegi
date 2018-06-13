@@ -59,6 +59,82 @@ func main() {
 	// 4
 }
 
+func Example_a3() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	a := [6]int{1, 2, 3, 4, 5, 6}
+	fmt.Println(a[2:])
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// [3 4 5 6]
+}
+
+func Example_a4() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	a := [6]int{1, 2, 3, 4, 5, 6}
+	fmt.Println(a[2:4])
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// [3 4]
+}
+
+func Example_a5() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	a := [6]int{1, 2, 3, 4, 5, 6}
+	fmt.Println(a[:4])
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// [1 2 3 4]
+}
+
+func Example_a6() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	a := [6]int{1, 2, 3, 4, 5, 6}
+	fmt.Println(a[:])
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// [1 2 3 4 5 6]
+}
+
 func Example_and() {
 	src := `
 package main
@@ -740,51 +816,6 @@ func f(i int) int { return i + 1 }
 	// 6
 }
 
-func Example_m() {
-	src := `
-package main
-
-import "fmt"
-
-type Foo struct {
-}
-
-func (f Foo) Call() {
-	fmt.Println("Foo Called")
-	f.Show()
-}
-
-func (Foo) Show() {
-	fmt.Println("Foo Showed")
-}
-
-type Bar struct {
-Foo
-}
-
-type Baz struct {
-Foo
-}
-
-func (Baz) Call() {
-	fmt.Println("Baz Called")
-}
-
-func (Baz) Show() {
-	fmt.Println("Baz Showed")
-}
-
-func main() {
-	Foo{}.Call()
-	Bar{}.Call()
-	Baz{}.Call()
-}`
-	i := NewInterpreter(Opt{Entry: "main"})
-	i.ImportBin(export.Pkg)
-	i.Eval(src)
-
-}
-
 func Example_map() {
 	src := `
 package main
@@ -1056,6 +1087,51 @@ func main() {
 
 	// Output:
 	// 25
+}
+
+func Example_method5() {
+	src := `
+package main
+
+import "fmt"
+
+type Foo struct {
+}
+
+func (Foo) Show() {
+	fmt.Println("Foo Showed")
+}
+
+func (f Foo) Call() {
+	fmt.Println("Foo Called")
+	f.Show()
+}
+
+type Bar struct {
+	Foo
+}
+
+type Baz struct {
+	Foo
+}
+
+func (Baz) Call() {
+	fmt.Println("Baz Called")
+}
+
+func (Baz) Show() {
+	fmt.Println("Baz Showed")
+}
+
+func main() {
+	Foo{}.Call()
+	Bar{}.Call()
+	Baz{}.Call()
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
 }
 
 func Example_plugin0() {

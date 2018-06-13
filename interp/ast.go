@@ -72,6 +72,7 @@ const (
 	SelectorImport
 	SelectorSrc
 	SendStmt
+	SliceExpr
 	StarExpr
 	StructType
 	Switch0 // switch tag {}
@@ -141,6 +142,7 @@ var kinds = [...]string{
 	SelectorImport:   "SelectorImport",
 	SelectorSrc:      "SelectorSrc",
 	SendStmt:         "SendStmt",
+	SliceExpr:        "SliceExpr",
 	StarExpr:         "StarExpr",
 	StructType:       "StructType",
 	Switch0:          "Switch0",
@@ -192,6 +194,8 @@ const (
 	Remain
 	Return
 	Send
+	Slice
+	Slice0
 	Star
 	Sub
 )
@@ -226,6 +230,8 @@ var actions = [...]string{
 	Remain:       "%",
 	Return:       "return",
 	Send:         "<-",
+	Slice:        "slice",
+	Slice0:       "slice0",
 	Star:         "*",
 	Sub:          "-",
 }
@@ -260,6 +266,7 @@ func Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 	var st nodestack
 	var nbAssign int
 	var typeSpec bool
+
 	addChild := func(root **Node, anc *Node, index *int, kind Kind, action Action) *Node {
 		*index++
 		var i interface{}
@@ -320,6 +327,7 @@ func Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 		}
 		return n
 	}
+
 	// Populate our own private AST from Go parser AST.
 	// A stack of ancestor nodes is used to keep track of curent ancestor for each depth level
 	ast.Inspect(f, func(node ast.Node) bool {
@@ -551,6 +559,13 @@ func Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 
 		case *ast.SendStmt:
 			st.push(addChild(&root, anc, &index, SendStmt, Send))
+
+		case *ast.SliceExpr:
+			if a.Low == nil {
+				st.push(addChild(&root, anc, &index, SliceExpr, Slice0))
+			} else {
+				st.push(addChild(&root, anc, &index, SliceExpr, Slice))
+			}
 
 		case *ast.StarExpr:
 			st.push(addChild(&root, anc, &index, StarExpr, Star))

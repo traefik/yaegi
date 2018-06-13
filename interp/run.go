@@ -40,6 +40,8 @@ var builtin = [...]Builtin{
 	Remain:       remain,
 	Return:       _return,
 	Send:         send,
+	Slice:        slice,
+	Slice0:       slice0,
 	Star:         deref,
 	Sub:          sub,
 }
@@ -628,6 +630,32 @@ func recv(n *Node, f *Frame) {
 // Write to a channel
 func send(n *Node, f *Frame) {
 	value(n.child[0], f).(chan interface{}) <- value(n.child[1], f)
+}
+
+// slice expression
+func slice(n *Node, f *Frame) {
+	a := value(n.child[0], f).(*[]interface{})
+	switch len(n.child) {
+	case 2:
+		f.data[n.findex] = (*a)[value(n.child[1], f).(int):]
+	case 3:
+		f.data[n.findex] = (*a)[value(n.child[1], f).(int):value(n.child[2], f).(int)]
+	case 4:
+		f.data[n.findex] = (*a)[value(n.child[1], f).(int):value(n.child[2], f).(int):value(n.child[3], f).(int)]
+	}
+}
+
+// slice expression, no low value
+func slice0(n *Node, f *Frame) {
+	a := value(n.child[0], f).(*[]interface{})
+	switch len(n.child) {
+	case 1:
+		f.data[n.findex] = (*a)[:]
+	case 2:
+		f.data[n.findex] = (*a)[0:value(n.child[1], f).(int)]
+	case 3:
+		f.data[n.findex] = (*a)[0:value(n.child[1], f).(int):value(n.child[2], f).(int)]
+	}
 }
 
 // Temporary, for debugging purppose
