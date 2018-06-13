@@ -105,10 +105,17 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			if len(n.Child[0].Child) > 0 {
 				// function is a method, add it to the related type
 				var t *Type
+				var tname string
 				n.ident = n.Child[1].ident
-				tname := n.Child[0].Child[0].Child[1].ident
+				recv := n.Child[0].Child[0]
+				if len(recv.Child) < 2 {
+					// Receiver var name is skipped in method declaration (fix that in AST ?)
+					tname = recv.Child[0].ident
+				} else {
+					tname = recv.Child[1].ident
+				}
 				if tname == "" {
-					tname = n.Child[0].Child[0].Child[1].Child[0].ident
+					tname = recv.Child[1].Child[0].ident
 					elemtype := interp.types[tname]
 					t = &Type{cat: PtrT, val: elemtype}
 					elemtype.method = append(elemtype.method, n)
