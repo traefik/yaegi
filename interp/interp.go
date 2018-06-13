@@ -7,9 +7,9 @@ import (
 
 // Node structure for AST and CFG
 type Node struct {
-	Child  []*Node       // child subtrees (AST)
+	child  []*Node       // child subtrees (AST)
 	anc    *Node         // ancestor (AST)
-	Start  *Node         // entry point in subtree (CFG)
+	start  *Node         // entry point in subtree (CFG)
 	tnext  *Node         // true branch successor (CFG)
 	fnext  *Node         // false branch successor (CFG)
 	index  int           // node index (dot display)
@@ -50,7 +50,6 @@ type Opt struct {
 	AstDot bool   // display AST graph (debug)
 	CfgDot bool   // display CFG graph (debug)
 	NoRun  bool   // compile, but do not run
-	NbOut  int    // number of output values
 	Entry  string // interpreter entry point
 }
 
@@ -70,7 +69,7 @@ func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 	if in != nil && !in(n) {
 		return
 	}
-	for _, child := range n.Child {
+	for _, child := range n.child {
 		child.Walk(in, out)
 	}
 	if out != nil {
@@ -126,10 +125,10 @@ func (i *Interpreter) Eval(src string) (string, *NodeMap) {
 	// Execute CFG
 	if !i.NoRun {
 		i.frame = &Frame{data: make([]interface{}, root.fsize)}
-		runCfg(root.Start, i.frame)
+		runCfg(root.start, i.frame)
 		for _, n := range initNodes {
 			Run(n, i.frame, nil, nil, nil, nil, true, false)
 		}
 	}
-	return root.Child[0].ident, sdef
+	return root.child[0].ident, sdef
 }

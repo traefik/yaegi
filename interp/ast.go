@@ -264,13 +264,13 @@ func Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 		*index++
 		var i interface{}
 		n := &Node{anc: anc, index: *index, kind: kind, action: action, val: &i, run: builtin[action]}
-		n.Start = n
+		n.start = n
 		if anc == nil {
 			*root = n
 		} else {
-			anc.Child = append(anc.Child, n)
+			anc.child = append(anc.child, n)
 			if anc.action == Assign && nbAssign > 1 {
-				if !typeSpec && len(anc.Child) == 2*nbAssign {
+				if !typeSpec && len(anc.child) == 2*nbAssign {
 					// All LHS and RSH assing child are now defined, so split multiple assign
 					// statement into single assign statements.
 					newAnc := anc.anc
@@ -279,42 +279,42 @@ func Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 						// set new signle assign
 						*index++
 						na := &Node{anc: anc.anc, index: *index, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
-						na.Start = na
+						na.start = na
 						newChild = append(newChild, na)
 						// Set single assign left hand side
-						anc.Child[i].anc = na
-						na.Child = append(na.Child, anc.Child[i])
+						anc.child[i].anc = na
+						na.child = append(na.child, anc.child[i])
 						// Set single assign right hand side
-						anc.Child[i+nbAssign].anc = na
-						na.Child = append(na.Child, anc.Child[i+nbAssign])
+						anc.child[i+nbAssign].anc = na
+						na.child = append(na.child, anc.child[i+nbAssign])
 					}
-					newAnc.Child = newChild
-				} else if typeSpec && len(anc.Child) == 2*nbAssign+1 {
+					newAnc.child = newChild
+				} else if typeSpec && len(anc.child) == 2*nbAssign+1 {
 					// All LHS and RHS assing child are now defined, so split multiple assign
 					// statement into single assign statements. Set type for each assignment.
 					typeSpec = false
 					newAnc := anc.anc
 					newChild := []*Node{}
-					typeNode := anc.Child[nbAssign]
+					typeNode := anc.child[nbAssign]
 					for i := 0; i < nbAssign; i++ {
 						// set new signle assign
 						*index++
 						na := &Node{anc: anc.anc, index: *index, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
-						na.Start = na
+						na.start = na
 						newChild = append(newChild, na)
 						// set new type for this assignment
 						*index++
 						nt := &Node{anc: na, ident: typeNode.ident, index: *index, kind: typeNode.kind, action: typeNode.action, val: new(interface{}), run: typeNode.run}
 						// Set single assign left hand side
-						anc.Child[i].anc = na
-						na.Child = append(na.Child, anc.Child[i])
+						anc.child[i].anc = na
+						na.child = append(na.child, anc.child[i])
 						// Set assignment type
-						na.Child = append(na.Child, nt)
+						na.child = append(na.child, nt)
 						// Set single assign right hand side
-						anc.Child[i+nbAssign+1].anc = na
-						na.Child = append(na.Child, anc.Child[i+nbAssign+1])
+						anc.child[i+nbAssign+1].anc = na
+						na.child = append(na.child, anc.child[i+nbAssign+1])
 					}
-					newAnc.Child = newChild
+					newAnc.child = newChild
 				}
 			}
 		}

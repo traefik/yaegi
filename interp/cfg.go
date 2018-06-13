@@ -68,17 +68,17 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 		// Pre-order processing
 		switch n.kind {
 		case Define, AssignStmt:
-			if l := len(n.Child); l%2 == 1 {
+			if l := len(n.child); l%2 == 1 {
 				// Odd number of children: remove the type node, useless for assign
 				i := l / 2
-				n.Child = append(n.Child[:i], n.Child[i+1:]...)
+				n.child = append(n.child[:i], n.child[i+1:]...)
 			}
 
 		case BlockStmt:
 			scope = scope.push(0)
 
 		case File:
-			pkgName := n.Child[0].ident
+			pkgName := n.child[0].ident
 			if pkg, ok := interp.Exports[pkgName]; ok {
 				exports = pkg
 			} else {
@@ -88,34 +88,34 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			}
 
 		case For0, ForRangeStmt:
-			loop, loopRestart = n, n.Child[0]
+			loop, loopRestart = n, n.child[0]
 			scope = scope.push(0)
 
 		case For1, For2, For3, For3a, For4:
-			loop, loopRestart = n, n.Child[len(n.Child)-1]
+			loop, loopRestart = n, n.child[len(n.child)-1]
 			scope = scope.push(0)
 
 		case FuncDecl, FuncLit:
 			// Add a frame indirection level as we enter in a func
 			frameIndex = &FrameIndex{anc: frameIndex}
 			scope = scope.push(1)
-			if n.Child[1].ident == "init" {
+			if n.child[1].ident == "init" {
 				initNodes = append(initNodes, n)
 			}
-			if len(n.Child[0].Child) > 0 {
+			if len(n.child[0].child) > 0 {
 				// function is a method, add it to the related type
 				var t *Type
 				var tname string
-				n.ident = n.Child[1].ident
-				recv := n.Child[0].Child[0]
-				if len(recv.Child) < 2 {
+				n.ident = n.child[1].ident
+				recv := n.child[0].child[0]
+				if len(recv.child) < 2 {
 					// Receiver var name is skipped in method declaration (fix that in AST ?)
-					tname = recv.Child[0].ident
+					tname = recv.child[0].ident
 				} else {
-					tname = recv.Child[1].ident
+					tname = recv.child[1].ident
 				}
 				if tname == "" {
-					tname = recv.Child[1].Child[0].ident
+					tname = recv.child[1].child[0].ident
 					elemtype := interp.types[tname]
 					t = &Type{cat: PtrT, val: elemtype}
 					elemtype.method = append(elemtype.method, n)
@@ -124,9 +124,9 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				}
 				t.method = append(t.method, n)
 			}
-			if len(n.Child[2].Child) == 2 {
+			if len(n.child[2].child) == 2 {
 				// allocate entries for return values at start of frame
-				frameIndex.max += len(n.Child[2].Child[1].Child)
+				frameIndex.max += len(n.child[2].child[1].child)
 			}
 			funcDef = false
 
@@ -135,7 +135,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 
 		case Switch0:
 			// Make sure default clause is in last position
-			c := n.Child[1].Child
+			c := n.child[1].child
 			if i, l := getDefault(n), len(c)-1; i >= 0 && i != l {
 				c[i], c[l] = c[l], c[i]
 			}
@@ -144,16 +144,16 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 		case TypeSpec:
 			// Type analysis is performed recursively and no post-order processing
 			// needs to be done for types, so do not dive in subtree
-			typeName := n.Child[0].ident
-			if n.Child[1].kind == Ident {
+			typeName := n.child[0].ident
+			if n.child[1].kind == Ident {
 				// Create a type alias of an existing one
-				interp.types[typeName] = &Type{cat: AliasT, val: nodeType(interp.types, n.Child[1])}
+				interp.types[typeName] = &Type{cat: AliasT, val: nodeType(interp.types, n.child[1])}
 			} else {
 				// Define a new type
-				interp.types[typeName] = nodeType(interp.types, n.Child[1])
+				interp.types[typeName] = nodeType(interp.types, n.child[1])
 			}
 			//if canExport(typeName) {
-			//	(*exports)[funcName] = reflect.MakeFunc(n.Child[2].typ.TypeOf(), n.wrapNode).Interface()
+			//	(*exports)[funcName] = reflect.MakeFunc(n.child[2].typ.TypeOf(), n.wrapNode).Interface()
 			//}
 			return false
 
@@ -167,67 +167,67 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 		switch n.kind {
 		case Address:
 			wireChild(n)
-			n.typ = &Type{cat: PtrT, val: n.Child[0].typ}
+			n.typ = &Type{cat: PtrT, val: n.child[0].typ}
 
 		case ArrayType:
 			// TODO: move to pre-processing ? See when handling complex array type def
-			n.typ = &Type{cat: ArrayT, val: interp.types[n.Child[1].ident]}
+			n.typ = &Type{cat: ArrayT, val: interp.types[n.child[1].ident]}
 
 		case Define, AssignStmt:
 			wireChild(n)
 			if n.kind == Define || n.anc.kind == GenDecl {
 				// Force definition of assigned ident in current scope
 				frameIndex.max++
-				scope.sym[n.Child[0].ident] = &Symbol{index: frameIndex.max}
-				n.Child[0].findex = frameIndex.max
-				n.Child[0].typ = n.Child[1].typ
+				scope.sym[n.child[0].ident] = &Symbol{index: frameIndex.max}
+				n.child[0].findex = frameIndex.max
+				n.child[0].typ = n.child[1].typ
 			}
-			n.findex = n.Child[0].findex
+			n.findex = n.child[0].findex
 			// Propagate type
 			// TODO: Check that existing destination type matches source type
-			//log.Println(n.index, "Assign child1:", n.Child[1].index, n.Child[1].typ)
-			n.typ = n.Child[0].typ
+			//log.Println(n.index, "Assign child1:", n.child[1].index, n.child[1].typ)
+			n.typ = n.child[0].typ
 			//n.run = setInt // Temporary, debug
-			if sym, _, ok := scope.lookup(n.Child[0].ident); ok {
+			if sym, _, ok := scope.lookup(n.child[0].ident); ok {
 				sym.typ = n.typ
 			}
 			// If LHS is an indirection, get reference instead of value, to allow setting
-			if n.Child[0].action == GetIndex {
-				if n.Child[0].Child[0].typ.cat == MapT {
-					n.Child[0].run = getMap
+			if n.child[0].action == GetIndex {
+				if n.child[0].child[0].typ.cat == MapT {
+					n.child[0].run = getMap
 					n.run = assignMap
-				} else if n.Child[0].Child[0].typ.cat == PtrT {
+				} else if n.child[0].child[0].typ.cat == PtrT {
 					// Handle the case where the receiver is a pointer to an object
-					n.Child[0].run = getPtrIndexAddr
+					n.child[0].run = getPtrIndexAddr
 					n.run = assignPtrField
 				} else {
-					n.Child[0].run = getIndexAddr
+					n.child[0].run = getIndexAddr
 					n.run = assignField
 				}
-			} else if n.Child[0].action == Star {
-				n.findex = n.Child[0].Child[0].findex
+			} else if n.child[0].action == Star {
+				n.findex = n.child[0].child[0].findex
 				n.run = indirectAssign
 			}
 
 		case IncDecStmt:
 			wireChild(n)
-			n.findex = n.Child[0].findex
-			n.Child[0].typ = interp.types["int"]
-			n.typ = n.Child[0].typ
-			if sym, _, ok := scope.lookup(n.Child[0].ident); ok {
+			n.findex = n.child[0].findex
+			n.child[0].typ = interp.types["int"]
+			n.typ = n.child[0].typ
+			if sym, _, ok := scope.lookup(n.child[0].ident); ok {
 				sym.typ = n.typ
 			}
-			if n.Child[0].action == Star {
-				n.findex = n.Child[0].Child[0].findex
+			if n.child[0].action == Star {
+				n.findex = n.child[0].child[0].findex
 				n.run = indirectInc
 			}
 
 		case DefineX, AssignXStmt:
 			wireChild(n)
-			l := len(n.Child) - 1
+			l := len(n.child) - 1
 			if n.kind == DefineX {
 				// Force definition of assigned idents in current scope
-				for _, c := range n.Child[:l] {
+				for _, c := range n.child[:l] {
 					frameIndex.max++
 					scope.sym[c.ident] = &Symbol{index: frameIndex.max}
 					c.findex = frameIndex.max
@@ -238,25 +238,25 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			wireChild(n)
 			frameIndex.max++
 			n.findex = frameIndex.max
-			n.typ = n.Child[0].typ
+			n.typ = n.child[0].typ
 
 		case IndexExpr:
 			wireChild(n)
 			frameIndex.max++
 			n.findex = frameIndex.max
-			n.typ = n.Child[0].typ
+			n.typ = n.child[0].typ
 			if n.typ.cat == MapT {
 				n.run = getIndexMap
 			}
 
 		case BlockStmt:
 			wireChild(n)
-			n.findex = n.Child[len(n.Child)-1].findex
+			n.findex = n.child[len(n.child)-1].findex
 			scope = scope.anc
 
 		case DeclStmt, ExprStmt, GenDecl, ParenExpr, SendStmt:
 			wireChild(n)
-			n.findex = n.Child[len(n.Child)-1].findex
+			n.findex = n.child[len(n.child)-1].findex
 
 		case Break:
 			n.tnext = loop
@@ -265,90 +265,90 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			wireChild(n)
 			frameIndex.max++
 			n.findex = frameIndex.max
-			if builtin, ok := goBuiltin[n.Child[0].ident]; ok {
+			if builtin, ok := goBuiltin[n.child[0].ident]; ok {
 				n.run = builtin
-				n.Child[0].typ = &Type{cat: BuiltinT}
-				if n.Child[0].ident == "make" {
-					if n.typ = interp.types[n.Child[1].ident]; n.typ == nil {
-						n.typ = nodeType(interp.types, n.Child[1])
+				n.child[0].typ = &Type{cat: BuiltinT}
+				if n.child[0].ident == "make" {
+					if n.typ = interp.types[n.child[1].ident]; n.typ == nil {
+						n.typ = nodeType(interp.types, n.child[1])
 					}
-					n.Child[1].val = n.typ
-					n.Child[1].kind = BasicLit
+					n.child[1].val = n.typ
+					n.child[1].kind = BasicLit
 				}
 			}
 			// TODO: Should process according to child type, not kind.
-			if n.Child[0].kind == SelectorImport {
-				n.fsize = n.Child[0].fsize
-				rtype := n.Child[0].val.(reflect.Value).Type()
+			if n.child[0].kind == SelectorImport {
+				n.fsize = n.child[0].fsize
+				rtype := n.child[0].val.(reflect.Value).Type()
 				if rtype.NumOut() > 0 {
 					n.typ = &Type{cat: ValueT, rtype: rtype.Out(0)}
 				}
-				n.Child[0].kind = BasicLit
-				for i, c := range n.Child[1:] {
+				n.child[0].kind = BasicLit
+				for i, c := range n.child[1:] {
 					// Wrap function defintion so it can be called from runtime
 					if c.kind == FuncLit {
-						n.Child[1+i].rval = reflect.MakeFunc(rtype.In(i), c.wrapNode)
-						n.Child[1+i].kind = Rvalue
+						n.child[1+i].rval = reflect.MakeFunc(rtype.In(i), c.wrapNode)
+						n.child[1+i].kind = Rvalue
 					} else if c.ident == "nil" {
-						n.Child[1+i].rval = reflect.New(rtype.In(i)).Elem()
-						n.Child[1+i].kind = Rvalue
+						n.child[1+i].rval = reflect.New(rtype.In(i)).Elem()
+						n.child[1+i].kind = Rvalue
 					} else if c.typ != nil && c.typ.cat == FuncT {
-						n.Child[1+i].rval = reflect.MakeFunc(rtype.In(i), c.wrapNode)
-						n.Child[1+i].kind = Rvalue
+						n.child[1+i].rval = reflect.MakeFunc(rtype.In(i), c.wrapNode)
+						n.child[1+i].kind = Rvalue
 					}
 				}
 				// TODO: handle multiple return value
-				if len(n.Child) == 2 && n.Child[1].fsize > 1 {
+				if len(n.child) == 2 && n.child[1].fsize > 1 {
 					n.run = callBinX
 				} else {
 					n.run = callBin
 				}
-			} else if n.Child[0].kind == SelectorExpr {
-				if n.Child[0].Child[0].typ.cat == ValueT {
+			} else if n.child[0].kind == SelectorExpr {
+				if n.child[0].child[0].typ.cat == ValueT {
 					n.run = callBinMethod
 					// TODO: handle multiple return value
-					n.Child[0].kind = BasicLit // Temporary hack for force value() to return n.val at run
-					//recv, methodName := n.Child[0].Child[0], n.Child[0].Child[1].ident
+					n.child[0].kind = BasicLit // Temporary hack for force value() to return n.val at run
+					//recv, methodName := n.child[0].child[0], n.child[0].child[1].ident
 					//log.Println(n.index, "callexpr bin", recv.typ.rtype, methodName)
 					//if method, found := recv.typ.rtype.MethodByName(methodName); found {
 					//	log.Println(n.index, "method", method)
 					//} else {
-					//n.typ = &Type{cat: ValueT, rtype: n.Child[0].val.(reflect.Value).Type()}
-					n.typ = &Type{cat: ValueT, rtype: n.Child[0].typ.rtype}
-					n.fsize = n.Child[0].fsize
+					//n.typ = &Type{cat: ValueT, rtype: n.child[0].val.(reflect.Value).Type()}
+					n.typ = &Type{cat: ValueT, rtype: n.child[0].typ.rtype}
+					n.fsize = n.child[0].fsize
 					//}
-				} else if n.Child[0].typ.cat == SrcPkgT {
-					n.val = n.Child[0].val
+				} else if n.child[0].typ.cat == SrcPkgT {
+					n.val = n.child[0].val
 					if def := n.val.(*Node); def != nil {
 						// Reserve as many frame entries as nb of ret values for called function
 						// node frame index should point to the first entry
-						j := len(def.Child[2].Child) - 1
-						l := len(def.Child[2].Child[j].Child) // Number of return values for def
+						j := len(def.child[2].child) - 1
+						l := len(def.child[2].child[j].child) // Number of return values for def
 						if l == 1 {
 							// If def returns exactly one value, propagate its type in call node.
 							// Multiple return values will be handled differently through AssignX.
-							n.typ = interp.types[def.Child[2].Child[j].Child[0].Child[0].ident]
+							n.typ = interp.types[def.child[2].child[j].child[0].child[0].ident]
 						}
 						n.fsize = l
 					}
 				} else {
 					// Resolve method and receiver path, store them in node static value for run
-					n.Child[0].val, n.Child[0].Child[1].val = n.Child[0].Child[0].typ.lookupMethod(n.Child[0].Child[1].ident)
-					if methodDecl := n.Child[0].val.(*Node); len(methodDecl.Child[2].Child) > 1 {
+					n.child[0].val, n.child[0].child[1].val = n.child[0].child[0].typ.lookupMethod(n.child[0].child[1].ident)
+					if methodDecl := n.child[0].val.(*Node); len(methodDecl.child[2].child) > 1 {
 						// Allocate frame for method return values (if any)
-						n.fsize = len(methodDecl.Child[2].Child[1].Child)
+						n.fsize = len(methodDecl.child[2].child[1].child)
 					} else {
 						n.fsize = 0
 					}
-					n.Child[0].findex = -1 // To force reading value from node instead of frame (methods)
+					n.child[0].findex = -1 // To force reading value from node instead of frame (methods)
 				}
-			} else if sym, _, _ := scope.lookup(n.Child[0].ident); sym != nil {
+			} else if sym, _, _ := scope.lookup(n.child[0].ident); sym != nil {
 				if sym.typ != nil && sym.typ.cat == BinT {
 					n.run = callBin
 					n.typ = &Type{cat: ValueT}
-					n.Child[0].fsize = reflect.TypeOf(sym.bin).NumOut()
-					n.Child[0].val = reflect.ValueOf(sym.bin)
-					n.Child[0].kind = BasicLit
+					n.child[0].fsize = reflect.TypeOf(sym.bin).NumOut()
+					n.child[0].val = reflect.ValueOf(sym.bin)
+					n.child[0].kind = BasicLit
 				} else if sym.typ != nil && sym.typ.cat == ValueT {
 					n.run = callDirectBin
 					n.typ = &Type{cat: ValueT}
@@ -357,12 +357,12 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 					if def := n.val.(*Node); def != nil {
 						// Reserve as many frame entries as nb of ret values for called function
 						// node frame index should point to the first entry
-						j := len(def.Child[2].Child) - 1
-						l := len(def.Child[2].Child[j].Child) // Number of return values for def
+						j := len(def.child[2].child) - 1
+						l := len(def.child[2].child[j].child) // Number of return values for def
 						if l == 1 {
 							// If def returns exactly one value, propagate its type in call node.
 							// Multiple return values will be handled differently through AssignX.
-							n.typ = interp.types[def.Child[2].Child[j].Child[0].Child[0].ident]
+							n.typ = interp.types[def.child[2].child[j].child[0].child[0].ident]
 						}
 						n.fsize = l
 					}
@@ -374,22 +374,22 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				// Trigger frame indirection to handle nested functions
 				n.action = CallF
 			}
-			//log.Println(n.index, "callExpr:", n.Child[0].ident, "frame index:", n.findex)
+			//log.Println(n.index, "callExpr:", n.child[0].ident, "frame index:", n.findex)
 
 		case CaseClause:
 			frameIndex.max++
 			n.findex = frameIndex.max
-			n.tnext = n.Child[len(n.Child)-1].Start
+			n.tnext = n.child[len(n.child)-1].start
 
 		case CompositeLitExpr:
 			wireChild(n)
 			frameIndex.max++
 			n.findex = frameIndex.max
-			if n.Child[0].typ == nil {
-				n.Child[0].typ = interp.types[n.Child[0].ident]
+			if n.child[0].typ == nil {
+				n.child[0].typ = interp.types[n.child[0].ident]
 			}
 			// TODO: Check that composite litteral expr matches corresponding type
-			n.typ = n.Child[0].typ
+			n.typ = n.child[0].typ
 			switch n.typ.cat {
 			case ArrayT:
 				n.run = arrayLit
@@ -398,11 +398,11 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			case StructT:
 				n.action, n.run = CompositeLit, compositeLit
 				// Handle object assign from sparse key / values
-				if len(n.Child) > 1 && n.Child[1].kind == KeyValueExpr {
+				if len(n.child) > 1 && n.child[1].kind == KeyValueExpr {
 					n.run = compositeSparse
-					n.typ = interp.types[n.Child[0].ident]
-					for _, c := range n.Child[1:] {
-						c.findex = n.typ.fieldIndex(c.Child[0].ident)
+					n.typ = interp.types[n.child[0].ident]
+					for _, c := range n.child[1:] {
+						c.findex = n.typ.fieldIndex(c.child[0].ident)
 					}
 				}
 			}
@@ -415,13 +415,13 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			// to a return value, and space on frame should be accordingly allocated.
 			// Otherwise, just point to corresponding location in frame, resolved in
 			// ident child.
-			if len(n.Child) == 1 {
+			if len(n.child) == 1 {
 				frameIndex.max++
 				n.findex = frameIndex.max
 			} else {
-				l := len(n.Child) - 1
-				t := nodeType(interp.types, n.Child[l])
-				for _, f := range n.Child[:l] {
+				l := len(n.child) - 1
+				t := nodeType(interp.types, n.child[l])
+				for _, f := range n.child[:l] {
 					scope.sym[f.ident].typ = t
 				}
 			}
@@ -431,85 +431,85 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			n.fsize = frameIndex.max + 1
 
 		case For0: // for {}
-			body := n.Child[0]
-			n.Start = body.Start
-			body.tnext = n.Start
+			body := n.child[0]
+			n.start = body.start
+			body.tnext = n.start
 			loop, loopRestart = nil, nil
 			scope = scope.anc
 
 		case For1: // for cond {}
-			cond, body := n.Child[0], n.Child[1]
-			n.Start = cond.Start
-			cond.tnext = body.Start
+			cond, body := n.child[0], n.child[1]
+			n.start = cond.start
+			cond.tnext = body.start
 			cond.fnext = n
-			body.tnext = cond.Start
+			body.tnext = cond.start
 			loop, loopRestart = nil, nil
 			scope = scope.anc
 
 		case For2: // for init; cond; {}
-			init, cond, body := n.Child[0], n.Child[1], n.Child[2]
-			n.Start = init.Start
-			init.tnext = cond.Start
-			cond.tnext = body.Start
+			init, cond, body := n.child[0], n.child[1], n.child[2]
+			n.start = init.start
+			init.tnext = cond.start
+			cond.tnext = body.start
 			cond.fnext = n
-			body.tnext = cond.Start
+			body.tnext = cond.start
 			loop, loopRestart = nil, nil
 			scope = scope.anc
 
 		case For3: // for ; cond; post {}
-			cond, post, body := n.Child[0], n.Child[1], n.Child[2]
-			n.Start = cond.Start
-			cond.tnext = body.Start
+			cond, post, body := n.child[0], n.child[1], n.child[2]
+			n.start = cond.start
+			cond.tnext = body.start
 			cond.fnext = n
-			body.tnext = post.Start
-			post.tnext = cond.Start
+			body.tnext = post.start
+			post.tnext = cond.start
 			loop, loopRestart = nil, nil
 			scope = scope.anc
 
 		case For3a: // for int; ; post {}
-			init, post, body := n.Child[0], n.Child[1], n.Child[2]
-			n.Start = init.Start
-			init.tnext = body.Start
-			body.tnext = post.Start
-			post.tnext = body.Start
+			init, post, body := n.child[0], n.child[1], n.child[2]
+			n.start = init.start
+			init.tnext = body.start
+			body.tnext = post.start
+			post.tnext = body.start
 			loop, loopRestart = nil, nil
 			scope = scope.anc
 
 		case For4: // for init; cond; post {}
-			init, cond, post, body := n.Child[0], n.Child[1], n.Child[2], n.Child[3]
-			n.Start = init.Start
-			init.tnext = cond.Start
-			cond.tnext = body.Start
+			init, cond, post, body := n.child[0], n.child[1], n.child[2], n.child[3]
+			n.start = init.start
+			init.tnext = cond.start
+			cond.tnext = body.start
 			cond.fnext = n
-			body.tnext = post.Start
-			post.tnext = cond.Start
+			body.tnext = post.start
+			post.tnext = cond.start
 			loop, loopRestart = nil, nil
 			scope = scope.anc
 
 		case ForRangeStmt:
 			loop, loopRestart = nil, nil
-			n.Start = n.Child[0].Start
-			n.findex = n.Child[0].findex
+			n.start = n.child[0].start
+			n.findex = n.child[0].findex
 			scope = scope.anc
 
 		case FuncDecl:
 			n.findex = frameIndex.max + 1
-			if len(n.Child[0].Child) > 0 {
+			if len(n.child[0].child) > 0 {
 				// Store receiver frame location (used at run)
-				n.Child[0].findex = n.Child[0].Child[0].Child[0].findex
+				n.child[0].findex = n.child[0].child[0].child[0].findex
 			}
 			scope = scope.anc
 			frameIndex = frameIndex.anc
-			funcName := n.Child[1].ident
+			funcName := n.child[1].ident
 			if canExport(funcName) {
-				(*exports)[funcName] = reflect.MakeFunc(n.Child[2].typ.TypeOf(), n.wrapNode).Interface()
+				(*exports)[funcName] = reflect.MakeFunc(n.child[2].typ.TypeOf(), n.wrapNode).Interface()
 			}
-			n.typ = n.Child[2].typ
+			n.typ = n.child[2].typ
 			n.val = n
 			scope.sym[funcName].typ = n.typ
 
 		case FuncLit:
-			n.typ = n.Child[2].typ
+			n.typ = n.child[2].typ
 			n.val = n
 			n.findex = -1
 			n.findex = frameIndex.max + 1
@@ -521,18 +521,18 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			n.typ = nodeType(interp.types, n)
 			// Store list of parameter frame indices in params val
 			var list []int
-			for _, c := range n.Child[0].Child {
-				for _, f := range c.Child[:len(c.Child)-1] {
+			for _, c := range n.child[0].child {
+				for _, f := range c.child[:len(c.child)-1] {
 					list = append(list, f.findex)
 				}
 			}
-			n.Child[0].val = list
+			n.child[0].val = list
 			// TODO: do the same for return values
 
 		case GoStmt:
 			wireChild(n)
 			// TODO: should error if call expression refers to a builtin
-			n.Child[0].run = callGoRoutine
+			n.child[0].run = callGoRoutine
 
 		case Ident:
 			if sym, level, ok := scope.lookup(n.ident); ok {
@@ -555,48 +555,48 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			}
 
 		case If0: // if cond {}
-			cond, tbody := n.Child[0], n.Child[1]
-			n.Start = cond.Start
-			cond.tnext = tbody.Start
+			cond, tbody := n.child[0], n.child[1]
+			n.start = cond.start
+			cond.tnext = tbody.start
 			cond.fnext = n
 			tbody.tnext = n
 			scope = scope.anc
 
 		case If1: // if cond {} else {}
-			cond, tbody, fbody := n.Child[0], n.Child[1], n.Child[2]
-			n.Start = cond.Start
-			cond.tnext = tbody.Start
-			cond.fnext = fbody.Start
+			cond, tbody, fbody := n.child[0], n.child[1], n.child[2]
+			n.start = cond.start
+			cond.tnext = tbody.start
+			cond.fnext = fbody.start
 			tbody.tnext = n
 			fbody.tnext = n
 			scope = scope.anc
 
 		case If2: // if init; cond {}
-			init, cond, tbody := n.Child[0], n.Child[1], n.Child[2]
-			n.Start = init.Start
+			init, cond, tbody := n.child[0], n.child[1], n.child[2]
+			n.start = init.start
 			tbody.tnext = n
-			init.tnext = cond.Start
-			cond.tnext = tbody.Start
+			init.tnext = cond.start
+			cond.tnext = tbody.start
 			cond.fnext = n
 			scope = scope.anc
 
 		case If3: // if init; cond {} else {}
-			init, cond, tbody, fbody := n.Child[0], n.Child[1], n.Child[2], n.Child[3]
-			n.Start = init.Start
-			init.tnext = cond.Start
-			cond.tnext = tbody.Start
-			cond.fnext = fbody.Start
+			init, cond, tbody, fbody := n.child[0], n.child[1], n.child[2], n.child[3]
+			n.start = init.start
+			init.tnext = cond.start
+			cond.tnext = tbody.start
+			cond.fnext = fbody.start
 			tbody.tnext = n
 			fbody.tnext = n
 			scope = scope.anc
 
 		case ImportSpec:
 			var name, ipath string
-			if len(n.Child) == 2 {
-				ipath = n.Child[1].val.(string)
-				name = n.Child[0].ident
+			if len(n.child) == 2 {
+				ipath = n.child[1].val.(string)
+				name = n.child[0].ident
 			} else {
-				ipath = n.Child[0].val.(string)
+				ipath = n.child[0].val.(string)
 				name = path.Base(ipath)
 			}
 			if pkg, ok := interp.binPkg[ipath]; ok {
@@ -617,27 +617,27 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			wireChild(n)
 
 		case LandExpr:
-			n.Start = n.Child[0].Start
-			n.Child[0].tnext = n.Child[1].Start
-			n.Child[0].fnext = n
-			n.Child[1].tnext = n
+			n.start = n.child[0].start
+			n.child[0].tnext = n.child[1].start
+			n.child[0].fnext = n
+			n.child[1].tnext = n
 			frameIndex.max++
 			n.findex = frameIndex.max
-			n.typ = n.Child[0].typ
+			n.typ = n.child[0].typ
 
 		case LorExpr:
-			n.Start = n.Child[0].Start
-			n.Child[0].tnext = n
-			n.Child[0].fnext = n.Child[1].Start
-			n.Child[1].tnext = n
+			n.start = n.child[0].start
+			n.child[0].tnext = n
+			n.child[0].fnext = n.child[1].start
+			n.child[1].tnext = n
 			frameIndex.max++
 			n.findex = frameIndex.max
-			n.typ = n.Child[0].typ
+			n.typ = n.child[0].typ
 
 		case RangeStmt:
-			n.Start = n
-			n.Child[3].tnext = n
-			n.tnext = n.Child[3].Start
+			n.start = n
+			n.child[3].tnext = n
+			n.tnext = n.child[3].start
 			frameIndex.max++
 			n.findex = frameIndex.max
 
@@ -649,15 +649,15 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			wireChild(n)
 			frameIndex.max++
 			n.findex = frameIndex.max
-			n.typ = n.Child[0].typ
-			n.recv = n.Child[0].recv
+			n.typ = n.child[0].typ
+			n.recv = n.child[0].recv
 			if n.typ == nil {
 				log.Fatal("typ should not be nil:", n.index)
 			}
 			if n.typ.cat == ValueT {
 				// Handle object defined in runtime
 				log.Println(n.index, "selector", n.typ.cat)
-				if method, ok := n.typ.rtype.MethodByName(n.Child[1].ident); ok {
+				if method, ok := n.typ.rtype.MethodByName(n.child[1].ident); ok {
 					log.Println(n.index, "selector method", method.Func, n.typ.rtype)
 					if method.Func.IsValid() {
 						n.rval = method.Func
@@ -671,19 +671,19 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				}
 			} else if n.typ.cat == PtrT && n.typ.val.cat == ValueT {
 				// Handle pointer on object defined in runtime
-				if field, ok := n.typ.val.rtype.FieldByName(n.Child[1].ident); ok {
+				if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
 					n.typ = &Type{cat: ValueT, rtype: field.Type}
 					n.val = field.Index
 					n.run = getPtrIndexBin
-				} else if method, ok := n.typ.val.rtype.MethodByName(n.Child[1].ident); ok {
+				} else if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
 					n.val = method.Func
 					n.fsize = method.Type.NumOut()
 					n.run = nop
 				}
 			} else if n.typ.cat == BinPkgT {
 				// Resolve binary package symbol
-				name := n.Child[1].ident
-				pkgSym := n.Child[0].val.(*SymMap)
+				name := n.child[1].ident
+				pkgSym := n.child[0].val.(*SymMap)
 				if s, ok := (*pkgSym)[name]; ok {
 					n.kind = SelectorImport
 					n.val = reflect.ValueOf(s)
@@ -702,79 +702,79 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				}
 			} else if n.typ.cat == SrcPkgT {
 				// Resolve source package symbol
-				log.Println(n.index, "selector srcpkg", n.Child[0].ident, n.Child[1].ident)
-				pkgSrc := n.Child[0].val.(*NodeMap)
-				name := n.Child[1].ident
+				log.Println(n.index, "selector srcpkg", n.child[0].ident, n.child[1].ident)
+				pkgSrc := n.child[0].val.(*NodeMap)
+				name := n.child[1].ident
 				if node, ok := (*pkgSrc)[name]; ok {
-					log.Println(n.index, "src import sym", node.Child[1].ident)
+					log.Println(n.index, "src import sym", node.child[1].ident)
 					n.val = node
 					n.run = nop
 					n.kind = SelectorSrc
 				}
-			} else if fi := n.typ.fieldIndex(n.Child[1].ident); fi >= 0 {
+			} else if fi := n.typ.fieldIndex(n.child[1].ident); fi >= 0 {
 				// Resolve struct field index
 				if n.typ.cat == PtrT {
 					n.run = getPtrIndex
 				}
 				n.typ = n.typ.fieldType(fi)
-				n.Child[1].kind = BasicLit
-				n.Child[1].val = fi
-			} else if m, lind := n.typ.lookupMethod(n.Child[1].ident); m != nil {
+				n.child[1].kind = BasicLit
+				n.child[1].val = fi
+			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
 				// Handle method
 				n.run = nop
 				n.val = m
-				n.Child[1].val = lind
+				n.child[1].val = lind
 				n.typ = m.typ
 			} else {
 				// Handle promoted field in embedded struct
-				if ti := n.typ.lookupField(n.Child[1].ident); len(ti) > 0 {
-					n.Child[1].kind = BasicLit
-					n.Child[1].val = ti
+				if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
+					n.child[1].kind = BasicLit
+					n.child[1].val = ti
 					n.run = getIndexSeq
 				} else {
-					//log.Println(n.index, "Selector not found:", n.Child[1].ident)
+					//log.Println(n.index, "Selector not found:", n.child[1].ident)
 					n.run = nop
 					//panic("Field not found in selector")
 				}
 			}
 
 		case Switch0:
-			n.Start = n.Child[1].Start
+			n.start = n.child[1].start
 			// Chain case clauses
-			clauses := n.Child[1].Child
+			clauses := n.child[1].child
 			l := len(clauses)
 			for i, c := range clauses[:l-1] {
 				// chain to next clause
-				c.tnext = c.Child[1].Start
-				c.Child[1].tnext = n
+				c.tnext = c.child[1].start
+				c.child[1].tnext = n
 				c.fnext = clauses[i+1]
 			}
 			// Handle last clause
-			if c := clauses[l-1]; len(c.Child) > 1 {
+			if c := clauses[l-1]; len(c.child) > 1 {
 				// No default clause
-				c.tnext = c.Child[1].Start
+				c.tnext = c.child[1].start
 				c.fnext = n
-				c.Child[1].tnext = n
+				c.child[1].tnext = n
 			} else {
 				// Default
-				c.tnext = c.Child[0].Start
-				c.Child[0].tnext = n
+				c.tnext = c.child[0].start
+				c.child[0].tnext = n
 			}
 			scope = scope.anc
 
 		case TypeAssertExpr:
-			if n.Child[1].typ == nil {
-				n.Child[1].typ = interp.types[n.Child[1].ident]
+			if n.child[1].typ == nil {
+				n.child[1].typ = interp.types[n.child[1].ident]
 			}
-			log.Println(n.index, "TypeAssertExpr", n.Child[0].typ.cat, n.Child[1].ident, n.Child[1].typ.cat)
-			n.typ = n.Child[1].typ
+			log.Println(n.index, "TypeAssertExpr", n.child[0].typ.cat, n.child[1].ident, n.child[1].typ.cat)
+			n.typ = n.child[1].typ
 
 		case ValueSpec:
-			l := len(n.Child) - 1
-			if n.typ = n.Child[l].typ; n.typ == nil {
-				n.typ = interp.types[n.Child[l].ident]
+			l := len(n.child) - 1
+			if n.typ = n.child[l].typ; n.typ == nil {
+				n.typ = interp.types[n.child[l].ident]
 			}
-			for _, c := range n.Child[:l] {
+			for _, c := range n.child[:l] {
 				c.typ = n.typ
 				scope.sym[c.ident].typ = n.typ
 			}
@@ -785,8 +785,8 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 
 // Find default case clause index of a switch statement, if any
 func getDefault(n *Node) int {
-	for i, c := range n.Child[1].Child {
-		if len(c.Child) == 1 {
+	for i, c := range n.child[1].child {
+		if len(c.child) == 1 {
 			return i
 		}
 	}
@@ -796,30 +796,30 @@ func getDefault(n *Node) int {
 // Wire AST nodes for CFG in subtree
 func wireChild(n *Node) {
 	// Set start node, in subtree (propagated to ancestors by post-order processing)
-	for _, child := range n.Child {
+	for _, child := range n.child {
 		switch child.kind {
 		case ArrayType, ChanType, FuncDecl, MapType, BasicLit, FuncLit, Ident:
 			continue
 		default:
-			n.Start = child.Start
+			n.start = child.start
 		}
 		break
 	}
 
 	// Chain sequential operations inside a block (next is right sibling)
-	for i := 1; i < len(n.Child); i++ {
-		n.Child[i-1].tnext = n.Child[i].Start
+	for i := 1; i < len(n.child); i++ {
+		n.child[i-1].tnext = n.child[i].start
 	}
 
 	// Chain subtree next to self
-	for i := len(n.Child) - 1; i >= 0; i-- {
-		switch n.Child[i].kind {
+	for i := len(n.child) - 1; i >= 0; i-- {
+		switch n.child[i].kind {
 		case ArrayType, ChanType, MapType, FuncDecl, FuncLit, BasicLit, Ident:
 			continue
 		case Break, Continue, ReturnStmt:
 			// tnext is already computed, no change
 		default:
-			n.Child[i].tnext = n
+			n.child[i].tnext = n
 		}
 		break
 	}

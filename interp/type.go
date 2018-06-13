@@ -145,7 +145,7 @@ func nodeType(tdef TypeMap, n *Node) *Type {
 	switch n.kind {
 	case ArrayType:
 		t.cat = ArrayT
-		t.val = nodeType(tdef, n.Child[0])
+		t.val = nodeType(tdef, n.child[0])
 	case BasicLit:
 		switch n.val.(type) {
 		case bool:
@@ -165,40 +165,40 @@ func nodeType(tdef TypeMap, n *Node) *Type {
 		}
 	case ChanType:
 		t.cat = ChanT
-		t.val = nodeType(tdef, n.Child[0])
+		t.val = nodeType(tdef, n.child[0])
 	case FuncType:
 		t.cat = FuncT
-		for _, arg := range n.Child[0].Child {
-			t.arg = append(t.arg, nodeType(tdef, arg.Child[len(arg.Child)-1]))
+		for _, arg := range n.child[0].child {
+			t.arg = append(t.arg, nodeType(tdef, arg.child[len(arg.child)-1]))
 		}
-		if len(n.Child) == 2 {
-			for _, ret := range n.Child[1].Child {
-				t.ret = append(t.ret, nodeType(tdef, ret.Child[len(ret.Child)-1]))
+		if len(n.child) == 2 {
+			for _, ret := range n.child[1].child {
+				t.ret = append(t.ret, nodeType(tdef, ret.child[len(ret.child)-1]))
 			}
 		}
 	case Ident:
 		t = tdef[n.ident]
 	case InterfaceType:
 		t.cat = InterfaceT
-		//for _, method := range n.Child[0].Child {
+		//for _, method := range n.child[0].child {
 		//	t.method = append(t.method, nodeType(tdef, method))
 		//}
 	case MapType:
 		t.cat = MapT
-		t.key = nodeType(tdef, n.Child[0])
-		t.val = nodeType(tdef, n.Child[1])
+		t.key = nodeType(tdef, n.child[0])
+		t.val = nodeType(tdef, n.child[1])
 	case StarExpr:
 		t.cat = PtrT
-		t.val = nodeType(tdef, n.Child[0])
+		t.val = nodeType(tdef, n.child[0])
 	case StructType:
 		t.cat = StructT
-		for _, c := range n.Child[0].Child {
-			if len(c.Child) == 1 {
-				t.field = append(t.field, StructField{typ: nodeType(tdef, c.Child[0])})
+		for _, c := range n.child[0].child {
+			if len(c.child) == 1 {
+				t.field = append(t.field, StructField{typ: nodeType(tdef, c.child[0])})
 			} else {
-				l := len(c.Child)
-				typ := nodeType(tdef, c.Child[l-1])
-				for _, d := range c.Child[:l-1] {
+				l := len(c.child)
+				typ := nodeType(tdef, c.child[l-1])
+				for _, d := range c.child[:l-1] {
 					t.field = append(t.field, StructField{name: d.ident, typ: typ})
 				}
 			}
