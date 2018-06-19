@@ -248,7 +248,7 @@ func (a Action) String() string {
 
 // Ast parses src string containing Go code and generates the corresponding AST.
 // The AST root node is returned.
-func Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
+func (interp *Interpreter) Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 	var def NodeMap
 	if pre == nil {
 		def = make(map[string]*Node)
@@ -270,7 +270,7 @@ func Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 	addChild := func(root **Node, anc *Node, index *int, kind Kind, action Action) *Node {
 		*index++
 		var i interface{}
-		n := &Node{anc: anc, index: *index, kind: kind, action: action, val: &i, run: builtin[action]}
+		n := &Node{anc: anc, interp: interp, index: *index, kind: kind, action: action, val: &i, run: builtin[action]}
 		n.start = n
 		if anc == nil {
 			*root = n
@@ -285,7 +285,7 @@ func Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 					for i := 0; i < nbAssign; i++ {
 						// set new signle assign
 						*index++
-						na := &Node{anc: anc.anc, index: *index, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
+						na := &Node{anc: anc.anc, interp: interp, index: *index, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
 						na.start = na
 						newChild = append(newChild, na)
 						// Set single assign left hand side
@@ -306,12 +306,12 @@ func Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 					for i := 0; i < nbAssign; i++ {
 						// set new signle assign
 						*index++
-						na := &Node{anc: anc.anc, index: *index, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
+						na := &Node{anc: anc.anc, interp: interp, index: *index, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
 						na.start = na
 						newChild = append(newChild, na)
 						// set new type for this assignment
 						*index++
-						nt := &Node{anc: na, ident: typeNode.ident, index: *index, kind: typeNode.kind, action: typeNode.action, val: new(interface{}), run: typeNode.run}
+						nt := &Node{anc: na, interp: interp, ident: typeNode.ident, index: *index, kind: typeNode.kind, action: typeNode.action, val: new(interface{}), run: typeNode.run}
 						// Set single assign left hand side
 						anc.child[i].anc = na
 						na.child = append(na.child, anc.child[i])

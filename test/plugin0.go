@@ -5,8 +5,10 @@ import (
 	"net/http"
 )
 
+var version = "test"
+
 func Handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome to my website")
+	fmt.Fprintln(w, "Welcome to my website", version)
 }
 
 //func main() {

@@ -47,6 +47,7 @@ var builtin = [...]Builtin{
 }
 
 var goBuiltin = map[string]Builtin{
+	"len":     _len,
 	"make":    _make,
 	"println": _println,
 	"sleep":   sleep,
@@ -226,8 +227,12 @@ func _println(n *Node, f *Frame) {
 func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	def := n.val.(*Node)
 	var result []reflect.Value
+	if n.frame == nil {
+		n.frame = n.interp.Frame
+	}
 	frame := Frame{anc: n.frame, data: make([]interface{}, def.findex)}
 
+	log.Println(n.index, "in WrapNode", def.index, in, n.frame)
 	// If fucnction is a method, set its receiver data in the frame
 	if len(def.child[0].child) > 0 {
 		frame.data[def.child[0].findex] = value(n.recv, n.frame)
@@ -237,6 +242,7 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	paramIndex := def.child[2].child[0].val.([]int)
 	i := 0
 	for _, arg := range in {
+		log.Println(paramIndex[i], arg.Interface())
 		frame.data[paramIndex[i]] = arg.Interface()
 		i++
 	}
@@ -249,6 +255,7 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 		if fieldList := def.child[2].child[1]; fieldList != nil {
 			result = make([]reflect.Value, len(fieldList.child))
 			for i := range fieldList.child {
+				// log.Println("frame", i, frame.data[i], reflect.TypeOf(v))
 				result[i] = reflect.ValueOf(frame.data[i])
 			}
 		}
@@ -412,18 +419,18 @@ func callBinMethodX(n *Node, f *Frame) {
 }
 
 func getPtrIndexAddr(n *Node, f *Frame) {
-	a := (*value(n.child[0], f).(*interface{})).(*[]interface{})
-	f.data[n.findex] = &(*a)[value(n.child[1], f).(int)]
+	a := (*value(n.child[0], f).(*interface{})).([]interface{})
+	f.data[n.findex] = &a[value(n.child[1], f).(int)]
 }
 
 func getIndexAddr(n *Node, f *Frame) {
-	a := value(n.child[0], f).(*[]interface{})
-	f.data[n.findex] = &(*a)[value(n.child[1], f).(int)]
+	a := value(n.child[0], f).([]interface{})
+	f.data[n.findex] = &a[value(n.child[1], f).(int)]
 }
 
 func getPtrIndex(n *Node, f *Frame) {
-	a := (*value(n.child[0], f).(*interface{})).(*[]interface{})
-	f.data[n.findex] = (*a)[value(n.child[1], f).(int)]
+	a := (*value(n.child[0], f).(*interface{})).([]interface{})
+	f.data[n.findex] = a[value(n.child[1], f).(int)]
 }
 
 func getPtrIndexBin(n *Node, f *Frame) {
@@ -437,8 +444,8 @@ func getIndexBin(n *Node, f *Frame) {
 }
 
 func getIndex(n *Node, f *Frame) {
-	a := value(n.child[0], f).(*[]interface{})
-	f.data[n.findex] = (*a)[value(n.child[1], f).(int)]
+	a := value(n.child[0], f).([]interface{})
+	f.data[n.findex] = a[value(n.child[1], f).(int)]
 }
 
 func getIndexMap(n *Node, f *Frame) {
@@ -451,32 +458,32 @@ func getMap(n *Node, f *Frame) {
 }
 
 func getPtrIndexSeq(n *Node, f *Frame) {
-	a := (*value(n.child[0], f).(*interface{})).(*[]interface{})
+	a := (*value(n.child[0], f).(*interface{})).([]interface{})
 	seq := value(n.child[1], f).([]int)
 	l := len(seq) - 1
 	for _, i := range seq[:l] {
-		a = (*a)[i].(*[]interface{})
+		a = a[i].([]interface{})
 	}
-	f.data[n.findex] = (*a)[seq[l]]
+	f.data[n.findex] = a[seq[l]]
 }
 
 func getIndexSeq(n *Node, f *Frame) {
-	a := value(n.child[0], f).(*[]interface{})
+	a := value(n.child[0], f).([]interface{})
 	seq := value(n.child[1], f).([]int)
 	l := len(seq) - 1
 	for _, i := range seq[:l] {
-		a = (*a)[i].(*[]interface{})
+		a = a[i].([]interface{})
 	}
-	f.data[n.findex] = (*a)[seq[l]]
+	f.data[n.findex] = a[seq[l]]
 }
 
 func valueSeq(n *Node, seq []int, f *Frame) interface{} {
-	a := f.data[n.findex].(*[]interface{})
+	a := f.data[n.findex].([]interface{})
 	l := len(seq) - 1
 	for _, i := range seq[:l] {
-		a = (*a)[i].(*[]interface{})
+		a = a[i].([]interface{})
 	}
-	return (*a)[seq[l]]
+	return a[seq[l]]
 }
 
 func mul(n *Node, f *Frame) {
@@ -553,7 +560,7 @@ func arrayLit(n *Node, f *Frame) {
 	for i, c := range n.child[1:] {
 		a[i] = value(c, f)
 	}
-	f.data[n.findex] = &a
+	f.data[n.findex] = a
 }
 
 // Create a map of litteral values
@@ -567,14 +574,15 @@ func mapLit(n *Node, f *Frame) {
 
 // Create a struct object
 func compositeLit(n *Node, f *Frame) {
+	log.Println(n.index, "in compositeLit")
 	l := len(n.typ.field)
-	a := n.typ.zero().(*[]interface{})
+	a := n.typ.zero().([]interface{})
 	for i := 0; i < l; i++ {
 		if i < len(n.child[1:]) {
 			c := n.child[i+1]
-			(*a)[i] = value(c, f)
+			a[i] = value(c, f)
 		} else {
-			(*a)[i] = n.typ.field[i].typ.zero()
+			a[i] = n.typ.field[i].typ.zero()
 		}
 	}
 	f.data[n.findex] = a
@@ -582,10 +590,10 @@ func compositeLit(n *Node, f *Frame) {
 
 // Create a struct Object, filling fields from sparse key-values
 func compositeSparse(n *Node, f *Frame) {
-	a := n.typ.zero().(*[]interface{})
+	a := n.typ.zero().([]interface{})
 	for _, c := range n.child[1:] {
 		// index from key was pre-computed during CFG
-		(*a)[c.findex] = value(c.child[1], f)
+		a[c.findex] = value(c.child[1], f)
 	}
 	f.data[n.findex] = a
 }
@@ -595,18 +603,23 @@ func _range(n *Node, f *Frame) {
 	if f.data[index] != nil {
 		i = f.data[index].(int) + 1
 	}
-	a := value(n.child[2], f).(*[]interface{})
-	if i >= len(*a) {
+	a := value(n.child[2], f).([]interface{})
+	if i >= len(a) {
 		f.data[n.findex] = false
 		return
 	}
 	f.data[index] = i
-	f.data[n.child[1].findex] = (*a)[i]
+	f.data[n.child[1].findex] = a[i]
 	f.data[n.findex] = true
 }
 
 func _case(n *Node, f *Frame) {
 	f.data[n.findex] = value(n.anc.anc.child[0], f) == value(n.child[0], f)
+}
+
+func _len(n *Node, f *Frame) {
+	a := value(n.child[1], f).([]interface{})
+	f.data[n.findex] = len(a)
 }
 
 // Allocates and initializes a slice, a map or a chan.
@@ -634,27 +647,27 @@ func send(n *Node, f *Frame) {
 
 // slice expression
 func slice(n *Node, f *Frame) {
-	a := value(n.child[0], f).(*[]interface{})
+	a := value(n.child[0], f).([]interface{})
 	switch len(n.child) {
 	case 2:
-		f.data[n.findex] = (*a)[value(n.child[1], f).(int):]
+		f.data[n.findex] = a[value(n.child[1], f).(int):]
 	case 3:
-		f.data[n.findex] = (*a)[value(n.child[1], f).(int):value(n.child[2], f).(int)]
+		f.data[n.findex] = a[value(n.child[1], f).(int):value(n.child[2], f).(int)]
 	case 4:
-		f.data[n.findex] = (*a)[value(n.child[1], f).(int):value(n.child[2], f).(int):value(n.child[3], f).(int)]
+		f.data[n.findex] = a[value(n.child[1], f).(int):value(n.child[2], f).(int):value(n.child[3], f).(int)]
 	}
 }
 
 // slice expression, no low value
 func slice0(n *Node, f *Frame) {
-	a := value(n.child[0], f).(*[]interface{})
+	a := value(n.child[0], f).([]interface{})
 	switch len(n.child) {
 	case 1:
-		f.data[n.findex] = (*a)[:]
+		f.data[n.findex] = a[:]
 	case 2:
-		f.data[n.findex] = (*a)[0:value(n.child[1], f).(int)]
+		f.data[n.findex] = a[0:value(n.child[1], f).(int)]
 	case 3:
-		f.data[n.findex] = (*a)[0:value(n.child[1], f).(int):value(n.child[2], f).(int)]
+		f.data[n.findex] = a[0:value(n.child[1], f).(int):value(n.child[2], f).(int)]
 	}
 }
 

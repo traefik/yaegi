@@ -12,6 +12,7 @@ type Node struct {
 	start  *Node         // entry point in subtree (CFG)
 	tnext  *Node         // true branch successor (CFG)
 	fnext  *Node         // false branch successor (CFG)
+	interp *Interpreter  // interpreter context
 	index  int           // node index (dot display)
 	findex int           // index of value in frame or frame size (func def, type def)
 	fsize  int           // number of entries in frame (call expressions)
@@ -45,6 +46,10 @@ type SymMap map[string]interface{}
 // PkgMap stores package executable symbols
 type PkgMap map[string]*SymMap
 
+type ValueMap map[string]reflect.Value
+
+type PkgValueMap map[string]*ValueMap
+
 // Opt stores interpreter options
 type Opt struct {
 	AstDot bool   // display AST graph (debug)
@@ -56,11 +61,12 @@ type Opt struct {
 // Interpreter contains global resources and state
 type Interpreter struct {
 	Opt
-	frame   *Frame
+	Frame   *Frame
 	types   TypeMap
 	srcPkg  PkgSrcMap
 	binPkg  PkgMap
 	Exports PkgMap
+	Expval  PkgValueMap
 }
 
 // Walk traverses AST n in depth first order, call cbin function
@@ -85,6 +91,7 @@ func NewInterpreter(opt Opt) *Interpreter {
 		srcPkg:  make(PkgSrcMap),
 		binPkg:  make(PkgMap),
 		Exports: make(PkgMap),
+		Expval:  make(PkgValueMap),
 	}
 }
 
@@ -107,7 +114,7 @@ func (i *Interpreter) ImportBin(pkg *map[string]*map[string]interface{}) {
 // Eval evaluates Go code represented as a string
 func (i *Interpreter) Eval(src string) (string, *NodeMap) {
 	// Parse source to AST
-	root, sdef := Ast(src, nil)
+	root, sdef := i.Ast(src, nil)
 	if i.AstDot {
 		root.AstDot(DotX())
 	}
@@ -124,10 +131,10 @@ func (i *Interpreter) Eval(src string) (string, *NodeMap) {
 
 	// Execute CFG
 	if !i.NoRun {
-		i.frame = &Frame{data: make([]interface{}, root.fsize)}
-		runCfg(root.start, i.frame)
+		i.Frame = &Frame{data: make([]interface{}, root.fsize)}
+		runCfg(root.start, i.Frame)
 		for _, n := range initNodes {
-			Run(n, i.frame, nil, nil, nil, nil, true, false)
+			Run(n, i.Frame, nil, nil, nil, nil, true, false)
 		}
 	}
 	return root.child[0].ident, sdef

@@ -135,6 +135,65 @@ func main() {
 	// [1 2 3 4 5 6]
 }
 
+func Example_a7() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	a := [6]int{1, 2, 3, 4, 5, 6}
+	fmt.Println(len(a))
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 6
+}
+
+func Example_a8() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	//a := []int{1, 2}
+	a := make([]int, 2)
+	//a[0] = 1
+	//a[1] = 2
+	fmt.Println(a)
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
+func Example_a9() {
+	src := `
+package main
+
+import "fmt"
+
+type Sample struct {
+	Name string
+}
+
+var samples = []Sample{}
+
+func main() {
+	fmt.Println(samples)
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
 func Example_and() {
 	src := `
 package main
@@ -993,11 +1052,14 @@ func main() {
 	sample := Sample{"hello"}
 	s := &sample
 	s.foo(3)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
+	// Output:
+	// in foo hello 3
 }
 
 func Example_method2() {
@@ -1143,8 +1205,10 @@ import (
 	"net/http"
 )
 
+var version = "test"
+
 func Handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome to my website")
+	fmt.Fprintln(w, "Welcome to my website", version)
 }
 
 //func main() {
@@ -1167,18 +1231,25 @@ import (
 	"net/http"
 )
 
+var version = "v1"
+
 type Sample struct{ Name string }
 
-func NewSample(name string) *Sample {
-	return &Sample{Name: name}
+var samples = []Sample{}
+
+func NewSample(name string) int {
+	fmt.Println("in NewSample", version)
+	samples = append(samples, Sample{Name: name})
+	i := len(samples)
+	return i
 }
 
 func (s *Sample) Handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome to my website")
+	fmt.Fprintln(w, "Welcome to my website", s.Name)
 }
 
-func WrapHandler(s *Sample, w httpResponseWriter, r *http.Request) {
-	s.Handler(w, r)
+func WrapHandler(i int, w http.ResponseWriter, r *http.Request) {
+	samples[i].Handler(w, r)
 }
 
 //func main() {

@@ -54,6 +54,23 @@ func main() {
 		p := &Plugin{"sample", "Middleware", i, nil}
 		p.Syms = p.Interp.Exports[p.Pkgname]
 		log.Println("p.Syms:", p.Syms)
+		//(*p.Syms)["NewSample"].(func(string) interface{})("test")
+		log.Println(p.Interp.Expval[p.Pkgname])
+		ns := (*p.Interp.Expval[p.Pkgname])["NewSample"]
+		rarg := []reflect.Value{reflect.ValueOf("test")}
+		log.Println("ns:", ns, rarg)
+		res := ns.Call(rarg)
+		log.Println("res:", res)
+		http.HandleFunc("/", p.Handler)
+		http.ListenAndServe(":8080", nil)
+	*/
+
+	/*
+		// To run test.plugin0.go
+		log.Println("frame:", i.Frame)
+		p := &Plugin{"sample", "Middleware", i, nil}
+		p.Syms = p.Interp.Exports[p.Pkgname]
+		log.Println("p.Syms:", p.Syms)
 		http.HandleFunc("/", p.Handler)
 		http.ListenAndServe(":8080", nil)
 	*/

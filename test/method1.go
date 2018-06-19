@@ -13,3 +13,6 @@ func main() {
 	s := &sample
 	s.foo(3)
 }
+
+// Output:
+// in foo hello 3

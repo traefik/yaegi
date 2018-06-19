@@ -108,6 +108,7 @@ type Type struct {
 	method []*Node       // Associated methods or nil
 	rtype  reflect.Type  // Reflection type if ValueT, or nil
 	rzero  reflect.Value // Reflection zero settable value, or nil
+	nindex int           // node index (for debug only)
 }
 
 // TypeMap defines a map of Types indexed by type names
@@ -141,7 +142,7 @@ func nodeType(tdef TypeMap, n *Node) *Type {
 	if n.typ != nil {
 		return n.typ
 	}
-	var t = &Type{}
+	var t = &Type{nindex: n.index}
 	switch n.kind {
 	case ArrayType:
 		t.cat = ArrayT
@@ -246,7 +247,7 @@ func (t *Type) zero() interface{} {
 		for i, f := range t.field {
 			z[i] = f.typ.zero()
 		}
-		return &z
+		return z
 	case ValueT:
 		return t.rzero
 	default:

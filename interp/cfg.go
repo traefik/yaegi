@@ -58,6 +58,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 	var funcDef bool // True if a function is defined in the current frame context
 	var initNodes []*Node
 	var exports *SymMap
+	var expval *ValueMap
 
 	// Fill root scope with initial symbol definitions
 	for name, node := range *sdef {
@@ -81,10 +82,14 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			pkgName := n.child[0].ident
 			if pkg, ok := interp.Exports[pkgName]; ok {
 				exports = pkg
+				expval = interp.Expval[pkgName]
 			} else {
 				x := make(SymMap)
 				exports = &x
 				interp.Exports[pkgName] = exports
+				y := make(ValueMap)
+				expval = &y
+				interp.Expval[pkgName] = expval
 			}
 
 		case For0, ForRangeStmt:
@@ -244,8 +249,8 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			wireChild(n)
 			frameIndex.max++
 			n.findex = frameIndex.max
-			n.typ = n.child[0].typ
-			if n.typ.cat == MapT {
+			n.typ = n.child[0].typ.val
+			if n.child[0].typ.cat == MapT {
 				n.run = getIndexMap
 			}
 
@@ -333,7 +338,6 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 					}
 				} else {
 					// Resolve method and receiver path, store them in node static value for run
-					n.child[0].val, n.child[0].child[1].val = n.child[0].child[0].typ.lookupMethod(n.child[0].child[1].ident)
 					if methodDecl := n.child[0].val.(*Node); len(methodDecl.child[2].child) > 1 {
 						// Allocate frame for method return values (if any)
 						n.fsize = len(methodDecl.child[2].child[1].child)
@@ -503,6 +507,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			funcName := n.child[1].ident
 			if canExport(funcName) {
 				(*exports)[funcName] = reflect.MakeFunc(n.child[2].typ.TypeOf(), n.wrapNode).Interface()
+				(*expval)[funcName] = reflect.MakeFunc(n.child[2].typ.TypeOf(), n.wrapNode)
 			}
 			n.typ = n.child[2].typ
 			n.val = n
@@ -700,6 +705,10 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 					}
 					n.run = nop
 				}
+			} else if n.typ.cat == ArrayT {
+				log.Println(n.index, "selector array", n.typ.val.cat)
+				n.typ = n.typ.val
+				n.run = nop
 			} else if n.typ.cat == SrcPkgT {
 				// Resolve source package symbol
 				log.Println(n.index, "selector srcpkg", n.child[0].ident, n.child[1].ident)
@@ -720,6 +729,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				n.child[1].kind = BasicLit
 				n.child[1].val = fi
 			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
+				log.Println(n.index, "lookup method", n.child[1].ident)
 				// Handle method
 				n.run = nop
 				n.val = m
@@ -732,7 +742,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 					n.child[1].val = ti
 					n.run = getIndexSeq
 				} else {
-					//log.Println(n.index, "Selector not found:", n.child[1].ident)
+					log.Println(n.index, "Selector not found:", n.child[1].ident)
 					n.run = nop
 					//panic("Field not found in selector")
 				}
