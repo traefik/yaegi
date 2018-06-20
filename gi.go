@@ -51,16 +51,13 @@ func main() {
 
 	/*
 		// To run test/plugin1.go
-		p := &Plugin{"sample", "Middleware", i, nil}
-		p.Syms = p.Interp.Exports[p.Pkgname]
-		log.Println("p.Syms:", p.Syms)
-		//(*p.Syms)["NewSample"].(func(string) interface{})("test")
-		log.Println(p.Interp.Expval[p.Pkgname])
-		ns := (*p.Interp.Expval[p.Pkgname])["NewSample"]
+		p := &Plugin{"sample", "Middleware", 0, nil}
+		p.Syms = i.Exports[p.Pkgname]
+		ns := (*i.Expval[p.Pkgname])["NewSample"]
 		rarg := []reflect.Value{reflect.ValueOf("test")}
-		log.Println("ns:", ns, rarg)
 		res := ns.Call(rarg)
-		log.Println("res:", res)
+		p.Id = res[0].Interface().(int)
+		log.Println("res:", res, p.Id)
 		http.HandleFunc("/", p.Handler)
 		http.ListenAndServe(":8080", nil)
 	*/
@@ -69,7 +66,7 @@ func main() {
 		// To run test.plugin0.go
 		log.Println("frame:", i.Frame)
 		p := &Plugin{"sample", "Middleware", i, nil}
-		p.Syms = p.Interp.Exports[p.Pkgname]
+		p.Syms = i.Exports[p.Pkgname]
 		log.Println("p.Syms:", p.Syms)
 		http.HandleFunc("/", p.Handler)
 		http.ListenAndServe(":8080", nil)
@@ -78,10 +75,10 @@ func main() {
 
 type Plugin struct {
 	Pkgname, Typename string
-	Interp            *interp.Interpreter
+	Id                int
 	Syms              *interp.SymMap
 }
 
 func (p *Plugin) Handler(w http.ResponseWriter, r *http.Request) {
-	(*p.Syms)["Handler"].(func(http.ResponseWriter, *http.Request))(w, r)
+	(*p.Syms)["WrapHandler"].(func(int, http.ResponseWriter, *http.Request))(p.Id, w, r)
 }

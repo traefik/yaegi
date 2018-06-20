@@ -13,17 +13,13 @@ var samples = []Sample{}
 
 func NewSample(name string) int {
 	fmt.Println("in NewSample", version)
-	samples = append(samples, Sample{Name: name})
 	i := len(samples)
+	samples = append(samples, Sample{Name: name})
 	return i
 }
 
-func (s *Sample) Handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome to my website", s.Name)
-}
-
 func WrapHandler(i int, w http.ResponseWriter, r *http.Request) {
-	samples[i].Handler(w, r)
+	fmt.Fprintln(w, "Welcome to my website", samples[i].Name)
 }
 
 //func main() {

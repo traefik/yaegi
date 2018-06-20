@@ -121,17 +121,14 @@ func value(n *Node, f *Frame) interface{} {
 func addrValue(n *Node, f *Frame) *interface{} {
 	switch n.kind {
 	case BasicLit, FuncDecl, FuncLit, Rvalue:
-		//log.Println(n.index, "literal node value", n.ident, n.val)
 		return &n.val
 	default:
 		for level := n.level; level > 0; level-- {
 			f = f.anc
 		}
 		if n.findex < 0 {
-			//log.Println(n.index, "ident node value", n.ident, n.val)
 			return &n.val
 		}
-		//println(n.index, "val(", n.findex, n.ident, "):", n.level, f.data[n.findex])
 		return &f.data[n.findex]
 	}
 }
@@ -158,7 +155,6 @@ func assignX(n *Node, f *Frame) {
 	l := len(n.child) - 1
 	b := n.child[l].findex
 	for i, c := range n.child[:l] {
-		//f.data[c.findex] = f.data[b+i]
 		*addrValue(c, f) = f.data[b+i]
 	}
 }
@@ -178,7 +174,6 @@ func assign0(n *Node, f *Frame) {
 	l := len(n.child) - 1
 	z := n.typ.zero()
 	for _, c := range n.child[:l] {
-		//f.data[c.findex] = z
 		*addrValue(c, f) = z
 	}
 }
@@ -235,7 +230,6 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	}
 	frame := Frame{anc: n.frame, data: make([]interface{}, def.findex)}
 
-	log.Println(n.index, "in WrapNode", def.index, in, n.frame)
 	// If fucnction is a method, set its receiver data in the frame
 	if len(def.child[0].child) > 0 {
 		frame.data[def.child[0].findex] = value(n.recv, n.frame)
@@ -245,7 +239,6 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	paramIndex := def.child[2].child[0].val.([]int)
 	i := 0
 	for _, arg := range in {
-		log.Println(paramIndex[i], arg.Interface())
 		frame.data[paramIndex[i]] = arg.Interface()
 		i++
 	}
@@ -258,7 +251,6 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 		if fieldList := def.child[2].child[1]; fieldList != nil {
 			result = make([]reflect.Value, len(fieldList.child))
 			for i := range fieldList.child {
-				// log.Println("frame", i, frame.data[i], reflect.TypeOf(v))
 				result[i] = reflect.ValueOf(frame.data[i])
 			}
 		}
@@ -522,7 +514,6 @@ func indirectInc(n *Node, f *Frame) {
 }
 
 func inc(n *Node, f *Frame) {
-	//f.data[n.findex] = value(n.child[0], f).(int) + 1
 	*addrValue(n, f) = value(n.child[0], f).(int) + 1
 }
 
