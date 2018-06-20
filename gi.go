@@ -50,7 +50,7 @@ func main() {
 	//log.Println("exports:", samp)
 
 	/*
-		// To run test/plugin1.go
+		// To run test/plugin1.go or test/plugin2.go
 		p := &Plugin{"sample", "Middleware", 0, nil}
 		p.Syms = i.Exports[p.Pkgname]
 		ns := (*i.Expval[p.Pkgname])["NewSample"]

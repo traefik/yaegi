@@ -252,6 +252,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			frameIndex.max++
 			n.findex = frameIndex.max
 			n.typ = n.child[0].typ.val
+			n.recv = n
 			if n.child[0].typ.cat == MapT {
 				n.run = getIndexMap
 			}
@@ -713,7 +714,6 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				n.run = nop
 			} else if n.typ.cat == SrcPkgT {
 				// Resolve source package symbol
-				log.Println(n.index, "selector srcpkg", n.child[0].ident, n.child[1].ident)
 				pkgSrc := n.child[0].val.(*NodeMap)
 				name := n.child[1].ident
 				if node, ok := (*pkgSrc)[name]; ok {
@@ -731,7 +731,6 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				n.child[1].kind = BasicLit
 				n.child[1].val = fi
 			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
-				log.Println(n.index, "lookup method", n.child[1].ident)
 				// Handle method
 				n.run = nop
 				n.val = m

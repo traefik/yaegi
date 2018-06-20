@@ -424,8 +424,12 @@ func getIndexAddr(n *Node, f *Frame) {
 }
 
 func getPtrIndex(n *Node, f *Frame) {
-	a := (*value(n.child[0], f).(*interface{})).([]interface{})
-	f.data[n.findex] = a[value(n.child[1], f).(int)]
+	// if error, fallback to getIndex, to make receiver methods work both with pointers and objects
+	if a, ok := value(n.child[0], f).(*interface{}); ok {
+		f.data[n.findex] = (*a).([]interface{})[value(n.child[1], f).(int)]
+	} else {
+		getIndex(n, f)
+	}
 }
 
 func getPtrIndexBin(n *Node, f *Frame) {
@@ -569,7 +573,6 @@ func mapLit(n *Node, f *Frame) {
 
 // Create a struct object
 func compositeLit(n *Node, f *Frame) {
-	log.Println(n.index, "in compositeLit")
 	l := len(n.typ.field)
 	a := n.typ.zero().([]interface{})
 	for i := 0; i < l; i++ {

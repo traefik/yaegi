@@ -1223,6 +1223,62 @@ func main() {
 
 }
 
+func Example_method6() {
+	src := `
+package main
+
+type Sample struct {
+	Name string
+}
+
+func (s Sample) foo(i int) {
+	println("in foo", s.Name, i)
+}
+
+var samples = []Sample{
+	Sample{"hello"},
+}
+
+func main() {
+	samples[0].foo(3)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// in foo hello 3
+}
+
+func Example_method7() {
+	src := `
+package main
+
+type Sample struct {
+	Name string
+}
+
+func (s *Sample) foo(i int) {
+	println("in foo", s.Name, i)
+}
+
+var samples = []Sample{
+	Sample{"hello"},
+}
+
+func main() {
+	samples[0].foo(3)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// in foo hello 3
+}
+
 func Example_plugin0() {
 	src := `
 package sample
@@ -1266,16 +1322,54 @@ var samples = []Sample{}
 
 func NewSample(name string) int {
 	fmt.Println("in NewSample", version)
-	samples = append(samples, Sample{Name: name})
 	i := len(samples)
+	samples = append(samples, Sample{Name: name})
 	return i
 }
+
+func WrapHandler(i int, w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Welcome to my website", samples[i].Name)
+}
+
+//func main() {
+//	m := &Middleware{"Test"}
+//	http.HandleFunc("/", Handler)
+//	http.ListenAndServe(":8080", nil)
+//}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
+func Example_plugin2() {
+	src := `
+package sample
+
+import (
+	"fmt"
+	"net/http"
+)
+
+var version = "v1"
+
+type Sample struct{ Name string }
+
+var samples = []Sample{}
 
 func (s *Sample) Handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Welcome to my website", s.Name)
 }
 
+func NewSample(name string) int {
+	fmt.Println("in NewSample", version)
+	i := len(samples)
+	samples = append(samples, Sample{Name: name})
+	return i
+}
+
 func WrapHandler(i int, w http.ResponseWriter, r *http.Request) {
+	//fmt.Fprintln(w, "Welcome to my website", samples[i].Name)
 	samples[i].Handler(w, r)
 }
 
