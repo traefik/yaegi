@@ -193,8 +193,9 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			//log.Println(n.index, "Assign child1:", n.child[1].index, n.child[1].typ)
 			n.typ = n.child[0].typ
 			//n.run = setInt // Temporary, debug
-			if sym, _, ok := scope.lookup(n.child[0].ident); ok {
+			if sym, level, ok := scope.lookup(n.child[0].ident); ok {
 				sym.typ = n.typ
+				n.level = level
 			}
 			// If LHS is an indirection, get reference instead of value, to allow setting
 			if n.child[0].action == GetIndex {
@@ -219,8 +220,9 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			n.findex = n.child[0].findex
 			n.child[0].typ = interp.types["int"]
 			n.typ = n.child[0].typ
-			if sym, _, ok := scope.lookup(n.child[0].ident); ok {
+			if sym, level, ok := scope.lookup(n.child[0].ident); ok {
 				sym.typ = n.typ
+				n.level = level
 			}
 			if n.child[0].action == Star {
 				n.findex = n.child[0].child[0].findex

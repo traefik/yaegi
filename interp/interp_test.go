@@ -31,6 +31,33 @@ func main() {
 	// 4
 }
 
+func Example_a10() {
+	src := `
+package main
+
+type Sample struct {
+	Name string
+}
+
+var samples = []Sample{}
+
+func f(i int) {
+	println(samples[i].Name)
+}
+
+func main() {
+	samples = append(samples, Sample{Name: "test"})
+	f(0)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// test
+}
+
 func Example_a2() {
 	src := `
 package main
@@ -179,19 +206,19 @@ package main
 
 import "fmt"
 
-type Sample struct {
-	Name string
-}
-
-var samples = []Sample{}
+var samples = []int{}
 
 func main() {
+	samples = append(samples, 1)
 	fmt.Println(samples)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
+	// Output:
+	// [1]
 }
 
 func Example_and() {
@@ -1772,6 +1799,81 @@ func main() {
 	// 2
 	// 3
 	// 1
+}
+
+func Example_scope5() {
+	src := `
+package main
+
+var a int = 1
+
+func f() { println(a) }
+
+func main() {
+	println(a)
+	a = 2
+	println(a)
+	f()
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 1
+	// 2
+	// 2
+}
+
+func Example_scope6() {
+	src := `
+package main
+
+import "fmt"
+
+var a = [3]int{1, 2, 3}
+
+func f() { fmt.Println(a) }
+
+func main() {
+	fmt.Println(a)
+	a[1] = 5
+	f()
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// [1 2 3]
+	// [1 5 3]
+}
+
+func Example_scope7() {
+	src := `
+package main
+
+import "fmt"
+
+var a = []int{1, 2, 3}
+
+func f() { fmt.Println(a) }
+
+func main() {
+	fmt.Println(a)
+	a = []int{6, 7}
+	f()
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// [1 2 3]
+	// [6 7]
 }
 
 func Example_server() {

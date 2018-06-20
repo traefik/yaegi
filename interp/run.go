@@ -47,6 +47,7 @@ var builtin = [...]Builtin{
 }
 
 var goBuiltin = map[string]Builtin{
+	"append":  _append,
 	"len":     _len,
 	"make":    _make,
 	"println": _println,
@@ -157,7 +158,8 @@ func assignX(n *Node, f *Frame) {
 	l := len(n.child) - 1
 	b := n.child[l].findex
 	for i, c := range n.child[:l] {
-		f.data[c.findex] = f.data[b+i]
+		//f.data[c.findex] = f.data[b+i]
+		*addrValue(c, f) = f.data[b+i]
 	}
 }
 
@@ -168,7 +170,7 @@ func indirectAssign(n *Node, f *Frame) {
 
 // assign implements single value assignement
 func assign(n *Node, f *Frame) {
-	f.data[n.findex] = value(n.child[1], f)
+	*addrValue(n, f) = value(n.child[1], f)
 }
 
 // assign0 implements assignement of zero value
@@ -176,7 +178,8 @@ func assign0(n *Node, f *Frame) {
 	l := len(n.child) - 1
 	z := n.typ.zero()
 	for _, c := range n.child[:l] {
-		f.data[c.findex] = z
+		//f.data[c.findex] = z
+		*addrValue(c, f) = z
 	}
 }
 
@@ -519,7 +522,8 @@ func indirectInc(n *Node, f *Frame) {
 }
 
 func inc(n *Node, f *Frame) {
-	f.data[n.findex] = value(n.child[0], f).(int) + 1
+	//f.data[n.findex] = value(n.child[0], f).(int) + 1
+	*addrValue(n, f) = value(n.child[0], f).(int) + 1
 }
 
 func greater(n *Node, f *Frame) {
@@ -615,6 +619,12 @@ func _range(n *Node, f *Frame) {
 
 func _case(n *Node, f *Frame) {
 	f.data[n.findex] = value(n.anc.anc.child[0], f) == value(n.child[0], f)
+}
+
+// TODO: handle variable number of arguments to append
+func _append(n *Node, f *Frame) {
+	a := value(n.child[1], f).([]interface{})
+	f.data[n.findex] = append(a, value(n.child[2], f))
 }
 
 func _len(n *Node, f *Frame) {

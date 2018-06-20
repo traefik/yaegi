@@ -2,13 +2,12 @@ package main
 
 import "fmt"
 
-type Sample struct {
-	Name string
-}
-
-var samples = []Sample{}
+var samples = []int{}
 
 func main() {
-	samples = append(samples, Sample{Name: "test"})
+	samples = append(samples, 1)
 	fmt.Println(samples)
 }
+
+// Output:
+// [1]
