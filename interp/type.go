@@ -99,16 +99,17 @@ type StructField struct {
 
 // Type defines the internal representation of types in the interpreter
 type Type struct {
-	cat    Cat           // Type category
-	field  []StructField // Array of struct fields if StrucT or nil
-	key    *Type         // Type of key element if MapT or nil
-	val    *Type         // Type of value element if ChanT, MapT, PtrT, AliasT or ArrayT
-	arg    []*Type       // Argument types if FuncT or nil
-	ret    []*Type       // Return types if FuncT or nil
-	method []*Node       // Associated methods or nil
-	rtype  reflect.Type  // Reflection type if ValueT, or nil
-	rzero  reflect.Value // Reflection zero settable value, or nil
-	nindex int           // node index (for debug only)
+	cat      Cat           // Type category
+	field    []StructField // Array of struct fields if StrucT or nil
+	key      *Type         // Type of key element if MapT or nil
+	val      *Type         // Type of value element if ChanT, MapT, PtrT, AliasT or ArrayT
+	arg      []*Type       // Argument types if FuncT or nil
+	ret      []*Type       // Return types if FuncT or nil
+	method   []*Node       // Associated methods or nil
+	rtype    reflect.Type  // Reflection type if ValueT, or nil
+	rzero    reflect.Value // Reflection zero settable value, or nil
+	variadic bool          // true if type is variadic
+	nindex   int           // node index (for debug only)
 }
 
 // TypeMap defines a map of Types indexed by type names
@@ -167,6 +168,9 @@ func nodeType(tdef TypeMap, n *Node) *Type {
 	case ChanType:
 		t.cat = ChanT
 		t.val = nodeType(tdef, n.child[0])
+	case Ellipsis:
+		t = nodeType(tdef, n.child[0])
+		t.variadic = true
 	case FuncType:
 		t.cat = FuncT
 		for _, arg := range n.child[0].child {

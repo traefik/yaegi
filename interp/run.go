@@ -75,16 +75,31 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 
 	// Pass func parameters by value: copy each parameter from caller frame
 	// Get list of param indices built by FuncType at CFG
-	paramIndex := def.child[2].child[0].val.([]int)
+	defargs := def.child[2].child[0]
+	paramIndex := defargs.val.([]int)
 	i := 0
-	for _, arg := range args {
-		f.data[paramIndex[i]] = value(arg, cf)
-		i++
-		// Handle multiple results of a function call argmument
-		for j := 1; j < arg.fsize; j++ {
-			f.data[paramIndex[i]] = cf.data[arg.findex+j]
+	for k, arg := range args {
+		// Variadic: store remaining args in array
+		if i < len(defargs.child) && defargs.child[i].typ.variadic {
+			variadic := make([]interface{}, len(args[k:]))
+			for l, a := range args[k:] {
+				variadic[l] = value(a, cf)
+			}
+			f.data[paramIndex[i]] = variadic
+			break
+		} else {
+			f.data[paramIndex[i]] = value(arg, cf)
 			i++
+			// Handle multiple results of a function call argmument
+			for j := 1; j < arg.fsize; j++ {
+				f.data[paramIndex[i]] = cf.data[arg.findex+j]
+				i++
+			}
 		}
+	}
+	// Handle empty variadic arg
+	if l := len(defargs.child) - 1; len(args) <= l && defargs.child[l].typ.variadic {
+		f.data[paramIndex[l]] = []interface{}{}
 	}
 
 	// Execute the function body

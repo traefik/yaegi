@@ -38,7 +38,6 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [ ] iota
 - [ ] blank
 - [ ] ellipsis
-- [ ] variadic functions
 - [ ] method calls from runtime to interpreter
 - [ ] forward declarations
 
@@ -71,6 +70,7 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [X] exports to exec
 - [X] pointers, including on struct, method receivers...
 - [X] slices / map expressions
+- [X] variadic functions
 
 ## Developpement plan
 

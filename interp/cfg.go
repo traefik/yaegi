@@ -422,14 +422,14 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			// to a return value, and space on frame should be accordingly allocated.
 			// Otherwise, just point to corresponding location in frame, resolved in
 			// ident child.
-			if len(n.child) == 1 {
+			l := len(n.child) - 1
+			n.typ = nodeType(interp.types, n.child[l])
+			if l == 0 {
 				frameIndex.max++
 				n.findex = frameIndex.max
 			} else {
-				l := len(n.child) - 1
-				t := nodeType(interp.types, n.child[l])
 				for _, f := range n.child[:l] {
-					scope.sym[f.ident].typ = t
+					scope.sym[f.ident].typ = n.typ
 				}
 			}
 

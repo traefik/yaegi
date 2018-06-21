@@ -32,6 +32,7 @@ const (
 	Defer
 	Define
 	DefineX
+	Ellipsis
 	ExprStmt
 	Fallthrough
 	Field
@@ -103,6 +104,7 @@ var kinds = [...]string{
 	Defer:            "Defer",
 	Define:           "Define",
 	DefineX:          "DefineX",
+	Ellipsis:         "Ellipsis",
 	ExprStmt:         "ExprStmt",
 	Field:            "Field",
 	FieldList:        "FieldList",
@@ -439,6 +441,9 @@ func (interp *Interpreter) Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 
 		case *ast.DeclStmt:
 			st.push(addChild(&root, anc, &index, DeclStmt, Nop))
+
+		case *ast.Ellipsis:
+			st.push(addChild(&root, anc, &index, Ellipsis, Nop))
 
 		case *ast.ExprStmt:
 			st.push(addChild(&root, anc, &index, ExprStmt, Nop))

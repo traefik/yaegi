@@ -2679,3 +2679,47 @@ func main() {
 	// Output:
 	// 2 3
 }
+
+func Example_variadic() {
+	src := `
+package main
+
+import "fmt"
+
+func f(a ...int) {
+	fmt.Println(a)
+}
+
+func main() {
+	f(1, 2, 3, 4)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// [1 2 3 4]
+}
+
+func Example_variadic0() {
+	src := `
+package main
+
+import "fmt"
+
+func f(s string, a ...int) {
+	fmt.Println(s, a)
+}
+
+func main() {
+	f("hello")
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// hello []
+}
