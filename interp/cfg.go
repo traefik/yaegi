@@ -59,6 +59,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 	var initNodes []*Node
 	var exports *SymMap
 	var expval *ValueMap
+	var iotaValue int
 
 	// Fill root scope with initial symbol definitions
 	for name, node := range *sdef {
@@ -69,7 +70,10 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 		// Pre-order processing
 		switch n.kind {
 		case Define, AssignStmt:
-			if l := len(n.child); l%2 == 1 {
+			if l := len(n.child); n.anc.kind == ConstDecl && l == 1 {
+				// Implicit iota assignment. TODO: replicate previous explicit assignment
+				n.child = append(n.child, &Node{anc: n, interp: interp, kind: Ident, ident: "iota"})
+			} else if l%2 == 1 {
 				// Odd number of children: remove the type node, useless for assign
 				i := l / 2
 				n.child = append(n.child[:i], n.child[i+1:]...)
@@ -180,7 +184,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 
 		case Define, AssignStmt:
 			wireChild(n)
-			if n.kind == Define || n.anc.kind == GenDecl {
+			if n.kind == Define || n.anc.kind == VarDecl {
 				// Force definition of assigned ident in current scope
 				frameIndex.max++
 				scope.sym[n.child[0].ident] = &Symbol{index: frameIndex.max}
@@ -213,6 +217,9 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			} else if n.child[0].action == Star {
 				n.findex = n.child[0].child[0].findex
 				n.run = indirectAssign
+			}
+			if n.anc.kind == ConstDecl {
+				iotaValue++
 			}
 
 		case IncDecStmt:
@@ -262,7 +269,11 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			n.findex = n.child[len(n.child)-1].findex
 			scope = scope.anc
 
-		case DeclStmt, ExprStmt, GenDecl, ParenExpr, SendStmt:
+		case ConstDecl:
+			wireChild(n)
+			iotaValue = 0
+
+		case DeclStmt, ExprStmt, VarDecl, ParenExpr, SendStmt:
 			wireChild(n)
 			n.findex = n.child[len(n.child)-1].findex
 
@@ -543,7 +554,19 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			n.child[0].run = callGoRoutine
 
 		case Ident:
-			if sym, level, ok := scope.lookup(n.ident); ok {
+			if n.ident == "false" {
+				n.val = false
+				n.typ = defaultTypes["bool"]
+				n.kind = BasicLit
+			} else if n.ident == "true" {
+				n.val = true
+				n.typ = defaultTypes["bool"]
+				n.kind = BasicLit
+			} else if n.ident == "iota" {
+				n.val = iotaValue
+				n.typ = defaultTypes["int"]
+				n.kind = BasicLit
+			} else if sym, level, ok := scope.lookup(n.ident); ok {
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
 				if n.findex < 0 {
 					n.val = sym.node

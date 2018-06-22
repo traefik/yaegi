@@ -271,6 +271,21 @@ func main() {
 	// 1 2
 }
 
+func Example_bool() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println(true)
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
 func Example_chan0() {
 	src := `
 package main
@@ -848,6 +863,39 @@ func main() {
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
+}
+
+func Example_iota() {
+	src := `
+package main
+
+import "fmt"
+
+const (
+	Foo = iota
+	Bar
+	Baz
+)
+
+const (
+	Asm = iota
+	C
+	Java
+	Go
+)
+
+func main() {
+	fmt.Println(Foo, Bar, Baz)
+	fmt.Println(Asm, C, Java, Go)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 0 1 2
+	// 0 1 2 3
 }
 
 func Example_l2() {

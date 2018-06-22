@@ -27,6 +27,7 @@ const (
 	CaseClause
 	ChanType
 	CompositeLitExpr
+	ConstDecl
 	Continue
 	DeclStmt
 	Defer
@@ -48,7 +49,6 @@ const (
 	FuncDecl
 	FuncLit
 	FuncType
-	GenDecl
 	Go
 	GoStmt
 	Goto
@@ -57,6 +57,7 @@ const (
 	If1 // if cond {} else {}
 	If2 // if init; cond {}
 	If3 // if init; cond {} else {}
+	ImportDecl
 	ImportSpec
 	IncDecStmt
 	IndexExpr
@@ -79,9 +80,11 @@ const (
 	Switch0 // switch tag {}
 	Switch1 // switch init; tag {}
 	TypeAssertExpr
+	TypeDecl
 	TypeSpec
 	UnaryExpr
 	ValueSpec
+	VarDecl
 )
 
 var kinds = [...]string{
@@ -99,6 +102,7 @@ var kinds = [...]string{
 	CaseClause:       "CaseClause",
 	ChanType:         "ChanType",
 	CompositeLitExpr: "CompositeLitExpr",
+	ConstDecl:        "ConstDecl",
 	Continue:         "Continue",
 	DeclStmt:         "DeclStmt",
 	Defer:            "Defer",
@@ -119,7 +123,6 @@ var kinds = [...]string{
 	FuncDecl:         "FuncDecl",
 	FuncType:         "FuncType",
 	FuncLit:          "FuncLit",
-	GenDecl:          "GenDecl",
 	Go:               "Go",
 	GoStmt:           "GoStmt",
 	Goto:             "Goto",
@@ -128,6 +131,7 @@ var kinds = [...]string{
 	If1:              "If1",
 	If2:              "If2",
 	If3:              "If3",
+	ImportDecl:       "ImportDecl",
 	ImportSpec:       "ImportSpec",
 	IncDecStmt:       "IncDecStmt",
 	IndexExpr:        "IndexExpr",
@@ -150,9 +154,11 @@ var kinds = [...]string{
 	Switch0:          "Switch0",
 	Switch1:          "Switch1",
 	TypeAssertExpr:   "TypeAssertExpr",
+	TypeDecl:         "TypeDecl",
 	TypeSpec:         "TypeSpec",
 	UnaryExpr:        "UnaryExpr",
 	ValueSpec:        "ValueSpec",
+	VarDecl:          "VarDecl",
 }
 
 func (k Kind) String() string {
@@ -499,7 +505,18 @@ func (interp *Interpreter) Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 			st.push(addChild(&root, anc, &index, FuncType, Nop))
 
 		case *ast.GenDecl:
-			st.push(addChild(&root, anc, &index, GenDecl, Nop))
+			var kind Kind
+			switch a.Tok {
+			case token.CONST:
+				kind = ConstDecl
+			case token.IMPORT:
+				kind = ImportDecl
+			case token.TYPE:
+				kind = TypeDecl
+			case token.VAR:
+				kind = VarDecl
+			}
+			st.push(addChild(&root, anc, &index, kind, Nop))
 
 		case *ast.GoStmt:
 			st.push(addChild(&root, anc, &index, GoStmt, Nop))
@@ -618,6 +635,8 @@ func (interp *Interpreter) Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 				if a.Type != nil {
 					typeSpec = true
 				}
+			} else if anc.kind == ConstDecl {
+				kind, action = AssignStmt, Assign
 			} else {
 				kind, action = ValueSpec, Assign0
 			}

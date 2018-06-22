@@ -33,9 +33,7 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [ ] interfaces (in progress)
 - [ ] diagnostics and proper error handling
 - [ ] named output variables (test/ret1.gi)
-- [ ] constants
 - [ ] defer
-- [ ] iota
 - [ ] blank
 - [ ] ellipsis
 - [ ] method calls from runtime to interpreter
@@ -71,6 +69,8 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [X] pointers, including on struct, method receivers...
 - [X] slices / map expressions
 - [X] variadic functions
+- [X] constants
+- [X] iota
 
 ## Developpement plan
 
