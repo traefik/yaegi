@@ -508,6 +508,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			loop, loopRestart = nil, nil
 			n.start = n.child[0].start
 			n.findex = n.child[0].findex
+			n.child[0].fnext = n
 			scope = scope.anc
 
 		case FuncDecl:

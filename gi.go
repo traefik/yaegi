@@ -73,12 +73,14 @@ func main() {
 	*/
 }
 
+// Plugin struct stores metadata for external modules
 type Plugin struct {
 	Pkgname, Typename string
-	Id                int
+	ID                int
 	Syms              *interp.SymMap
 }
 
+// Handler redirect http.Handler processing in the interpreter
 func (p *Plugin) Handler(w http.ResponseWriter, r *http.Request) {
-	(*p.Syms)["WrapHandler"].(func(int, http.ResponseWriter, *http.Request))(p.Id, w, r)
+	(*p.Syms)["WrapHandler"].(func(int, http.ResponseWriter, *http.Request))(p.ID, w, r)
 }

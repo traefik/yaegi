@@ -58,6 +58,28 @@ func main() {
 	// test
 }
 
+func Example_a11() {
+	src := `
+package main
+
+func main() {
+	a := []int{1, 2, 3, 4}
+	for _, v := range a {
+		println(v)
+	}
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 1
+	// 2
+	// 3
+	// 4
+}
+
 func Example_a2() {
 	src := `
 package main
@@ -278,12 +300,15 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println(true)
-}`
+	fmt.Println(false, true)
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
+	// Output:
+	// false true
 }
 
 func Example_chan0() {
