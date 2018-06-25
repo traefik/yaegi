@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"go/build"
 	"io/ioutil"
 	"log"
 	"os"
@@ -53,7 +54,7 @@ func pkgDir(path string) string {
 	if _, err := os.Stat(dir); err == nil {
 		return dir
 	}
-	dir = os.Getenv("HOME") + "/go/src/" + path
+	dir = filepath.Join(build.Default.GOPATH, "src", path)
 	if _, err := os.Stat(dir); err != nil {
 		log.Fatal(err)
 	}
