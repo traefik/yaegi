@@ -6,7 +6,7 @@ A Go interpreter in go
 
 Tests are simple standalone go programs to be run by `gi` executable.
 Scripts are converted to go test examples for execution by `go test` as well.
-To create a new test, simply add a new .gi file, specifying expected output at end of program in a `// Output:' comment block like in the following example:
+To create a new test, simply add a new .gi file, specifying expected output at end of program in a `// Output:` comment block like in the following example:
 
 ```go
 package main
