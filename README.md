@@ -18,7 +18,7 @@ func main() {
 // Hello
 ```
 
-Then in `test/`, run `make` to re-generate `interp/eval_test.go`
+Then in `_test/`, run `make` to re-generate `interp/eval_test.go`
 
 When developping/debugging, I'm running `gi` on a single script, using `-a` and `-c` options to display AST and CFG graphs, and instrumenting code with temporary println statements to diagnose problems.
 
