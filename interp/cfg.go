@@ -323,19 +323,17 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 					n.run = callBin
 				}
 			} else if n.child[0].kind == SelectorExpr {
-				if n.child[0].child[0].typ.cat == ValueT {
+				if n.child[0].typ.cat == ValueT {
 					n.run = callBinMethod
 					// TODO: handle multiple return value
 					n.child[0].kind = BasicLit // Temporary hack for force value() to return n.val at run
-					//recv, methodName := n.child[0].child[0], n.child[0].child[1].ident
-					//log.Println(n.index, "callexpr bin", recv.typ.rtype, methodName)
-					//if method, found := recv.typ.rtype.MethodByName(methodName); found {
-					//	log.Println(n.index, "method", method)
-					//} else {
-					//n.typ = &Type{cat: ValueT, rtype: n.child[0].val.(reflect.Value).Type()}
 					n.typ = &Type{cat: ValueT, rtype: n.child[0].typ.rtype}
 					n.fsize = n.child[0].fsize
-					//}
+				} else if n.child[0].typ.cat == PtrT && n.child[0].typ.val.cat == ValueT {
+					n.run = callBinMethod
+					n.child[0].kind = BasicLit // Temporary hack for force value() to return n.val at run
+					n.fsize = n.child[0].fsize
+					// TODO: handle type ?
 				} else if n.child[0].typ.cat == SrcPkgT {
 					n.val = n.child[0].val
 					if def := n.val.(*Node); def != nil {
@@ -688,9 +686,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			}
 			if n.typ.cat == ValueT {
 				// Handle object defined in runtime
-				log.Println(n.index, "selector", n.typ.cat)
 				if method, ok := n.typ.rtype.MethodByName(n.child[1].ident); ok {
-					log.Println(n.index, "selector method", method.Func, n.typ.rtype)
 					if method.Func.IsValid() {
 						n.rval = method.Func
 						n.run = nop
@@ -707,7 +703,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 					n.typ = &Type{cat: ValueT, rtype: field.Type}
 					n.val = field.Index
 					n.run = getPtrIndexBin
-				} else if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
+				} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
 					n.val = method.Func
 					n.fsize = method.Type.NumOut()
 					n.run = nop
@@ -733,7 +729,6 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 					n.run = nop
 				}
 			} else if n.typ.cat == ArrayT {
-				log.Println(n.index, "selector array", n.typ.val.cat)
 				n.typ = n.typ.val
 				n.run = nop
 			} else if n.typ.cat == SrcPkgT {
@@ -741,7 +736,6 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				pkgSrc := n.child[0].val.(*NodeMap)
 				name := n.child[1].ident
 				if node, ok := (*pkgSrc)[name]; ok {
-					log.Println(n.index, "src import sym", node.child[1].ident)
 					n.val = node
 					n.run = nop
 					n.kind = SelectorSrc
