@@ -46,8 +46,10 @@ type SymMap map[string]interface{}
 // PkgMap stores package executable symbols
 type PkgMap map[string]*SymMap
 
+// ValueMap stores symbols as reflect values
 type ValueMap map[string]reflect.Value
 
+// PkgValueMap stores package value maps
 type PkgValueMap map[string]*ValueMap
 
 // Opt stores interpreter options
