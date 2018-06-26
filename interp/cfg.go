@@ -240,10 +240,22 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			wireChild(n)
 			l := len(n.child) - 1
 			if n.kind == DefineX {
+				// retrieve assigned value types from call signature
+				var types []*Type
+				if n.child[l].kind == CallExpr {
+					if funtype := n.child[l].child[0].typ; funtype.cat == ValueT {
+						// Handle functions imported from runtime
+						for i := 0; i < funtype.rtype.NumOut(); i++ {
+							types = append(types, &Type{cat: ValueT, rtype: funtype.rtype.Out(i)})
+						}
+					} else {
+						types = funtype.ret
+					}
+				}
 				// Force definition of assigned idents in current scope
-				for _, c := range n.child[:l] {
+				for i, c := range n.child[:l] {
 					frameIndex.max++
-					scope.sym[c.ident] = &Symbol{index: frameIndex.max}
+					scope.sym[c.ident] = &Symbol{index: frameIndex.max, typ: types[i]}
 					c.findex = frameIndex.max
 				}
 			}
@@ -682,7 +694,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			n.typ = n.child[0].typ
 			n.recv = n.child[0].recv
 			if n.typ == nil {
-				log.Fatal("typ should not be nil:", n.index)
+				log.Fatal("typ should not be nil:", n.index, n.child[0])
 			}
 			if n.typ.cat == ValueT {
 				// Handle object defined in runtime

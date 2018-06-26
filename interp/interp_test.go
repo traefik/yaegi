@@ -923,6 +923,30 @@ func main() {
 	// 0 1 2 3
 }
 
+func Example_ioutil() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+)
+
+func main() {
+	_, err := ioutil.ReadFile("__NotExisting__")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// open __NotExisting__: no such file or directory
+}
+
 func Example_l2() {
 	src := `
 package main
@@ -1647,12 +1671,12 @@ func Example_ret2() {
 	src := `
 package main
 
+func r2() (int, int) { return 1, 2 }
+
 func main() {
 	a, b := r2()
 	println(a, b)
 }
-
-func r2() (int, int) { return 1, 2 }
 `
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
