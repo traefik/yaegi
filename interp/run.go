@@ -401,7 +401,7 @@ func callBinMethod(n *Node, f *Frame) {
 			in[i+1] = reflect.ValueOf(value(c, f))
 		}
 	}
-	log.Println(n.index, "in callBinMethod", n.ident, in, in[0].MethodByName(n.child[0].child[1].ident).Type())
+	//log.Println(n.index, "in callBinMethod", n.ident, in, in[0].MethodByName(n.child[0].child[1].ident).Type())
 	if !fun.IsValid() {
 		fun = in[0].MethodByName(n.child[0].child[1].ident)
 		in = in[1:]
@@ -464,7 +464,10 @@ func getIndex(n *Node, f *Frame) {
 
 func getIndexMap(n *Node, f *Frame) {
 	m := value(n.child[0], f).(map[interface{}]interface{})
-	f.data[n.findex] = m[value(n.child[1], f)]
+	if f.data[n.findex], f.data[n.findex+1] = m[value(n.child[1], f)]; !f.data[n.findex+1].(bool) {
+		// Force a zero value if key is not present in map
+		f.data[n.findex] = n.child[0].typ.val.zero()
+	}
 }
 
 func getMap(n *Node, f *Frame) {

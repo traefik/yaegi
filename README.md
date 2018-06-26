@@ -34,7 +34,6 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [ ] diagnostics and proper error handling
 - [ ] named output variables (test/ret1.gi)
 - [ ] defer
-- [ ] blank
 - [ ] ellipsis
 - [ ] method calls from runtime to interpreter
 - [ ] forward declarations

@@ -1075,6 +1075,26 @@ func main() {
 	// bonjour
 }
 
+func Example_map5() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	dict := map[string]string{"bidule": "machin", "truc": "bidule"}
+	r, ok := dict["xxx"]
+	fmt.Println(r, ok)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	//  false
+}
+
 func Example_math0() {
 	src := `
 package main

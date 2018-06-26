@@ -242,7 +242,8 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			if n.kind == DefineX {
 				// retrieve assigned value types from call signature
 				var types []*Type
-				if n.child[l].kind == CallExpr {
+				switch n.child[l].kind {
+				case CallExpr:
 					if funtype := n.child[l].child[0].typ; funtype.cat == ValueT {
 						// Handle functions imported from runtime
 						for i := 0; i < funtype.rtype.NumOut(); i++ {
@@ -251,6 +252,10 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 					} else {
 						types = funtype.ret
 					}
+				case TypeAssertExpr, IndexExpr:
+					types = append(types, n.child[l].child[1].typ, defaultTypes["error"])
+				default:
+					log.Fatalln(n.index, "Assign expression unsupported:", n.child[l].kind)
 				}
 				// Force definition of assigned idents in current scope
 				for i, c := range n.child[:l] {
@@ -273,6 +278,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			n.typ = n.child[0].typ.val
 			n.recv = n
 			if n.child[0].typ.cat == MapT {
+				frameIndex.max++ // Reserve an entry for getIndexMap 2nd return value
 				n.run = getIndexMap
 			}
 
@@ -832,6 +838,18 @@ func getDefault(n *Node) int {
 		}
 	}
 	return -1
+}
+
+// isType returns true if node refers to a type definition, false otherwise
+func (n *Node) isType() bool {
+	switch n.kind {
+	case ArrayType, ChanType, FuncType, MapType, StructType:
+		return true
+	case Ident:
+		_, ok := n.interp.types[n.ident]
+		return ok
+	}
+	return false
 }
 
 // Wire AST nodes for CFG in subtree
