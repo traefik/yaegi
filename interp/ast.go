@@ -206,6 +206,7 @@ const (
 	Slice0
 	Star
 	Sub
+	TypeAssert
 )
 
 var actions = [...]string{
@@ -242,6 +243,7 @@ var actions = [...]string{
 	Slice0:       "slice0",
 	Star:         "*",
 	Sub:          "-",
+	TypeAssert:   "TypeAssert",
 }
 
 func (a Action) String() string {
@@ -603,7 +605,7 @@ func (interp *Interpreter) Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 			}
 
 		case *ast.TypeAssertExpr:
-			st.push(addChild(&root, anc, &index, TypeAssertExpr, Nop))
+			st.push(addChild(&root, anc, &index, TypeAssertExpr, TypeAssert))
 
 		case *ast.TypeSpec:
 			st.push(addChild(&root, anc, &index, TypeSpec, Nop))

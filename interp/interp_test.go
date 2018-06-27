@@ -2729,6 +2729,26 @@ func main() {
 	// 0
 }
 
+func Example_type1() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	var i interface{} = "hello"
+	s := i.(string)
+	fmt.Println(s)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// hello
+}
+
 func Example_var() {
 	src := `
 package main

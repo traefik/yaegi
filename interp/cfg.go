@@ -813,7 +813,6 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			if n.child[1].typ == nil {
 				n.child[1].typ = interp.types[n.child[1].ident]
 			}
-			log.Println(n.index, "TypeAssertExpr", n.child[0].typ.cat, n.child[1].ident, n.child[1].typ.cat)
 			n.typ = n.child[1].typ
 
 		case ValueSpec:

@@ -44,6 +44,7 @@ var builtin = [...]Builtin{
 	Slice0:       slice0,
 	Star:         deref,
 	Sub:          sub,
+	TypeAssert:   typeAssert,
 }
 
 var goBuiltin = map[string]Builtin{
@@ -163,6 +164,10 @@ func runCfg(n *Node, f *Frame) {
 func setInt(n *Node, f *Frame) {
 	log.Println(n.index, "setInt", value(n.child[0], f))
 	f.data[n.child[0].findex].(reflect.Value).SetInt(int64(value(n.child[1], f).(int)))
+}
+
+func typeAssert(n *Node, f *Frame) {
+	f.data[n.findex] = value(n.child[0], f)
 }
 
 // assignX implements multiple value assignement
