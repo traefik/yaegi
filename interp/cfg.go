@@ -717,14 +717,16 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				}
 			} else if n.typ.cat == PtrT && n.typ.val.cat == ValueT {
 				// Handle pointer on object defined in runtime
-				if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
+				if field, ok := n.typ.val.rtype.Elem().FieldByName(n.child[1].ident); ok {
 					n.typ = &Type{cat: ValueT, rtype: field.Type}
 					n.val = field.Index
 					n.run = getPtrIndexBin
-				} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
+				} else if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
 					n.val = method.Func
 					n.fsize = method.Type.NumOut()
 					n.run = nop
+				} else {
+					log.Println(n.index, "selector unresolved")
 				}
 			} else if n.typ.cat == BinPkgT {
 				// Resolve binary package symbol

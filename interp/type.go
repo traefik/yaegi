@@ -367,9 +367,12 @@ func (t *Type) TypeOf() reflect.Type {
 	case PtrT:
 		return reflect.PtrTo(t.val.TypeOf())
 	case StructT:
-		fields := make([]reflect.StructField, len(t.field))
-		for i, f := range t.field {
-			fields[i] = reflect.StructField{Name: f.name, Type: f.typ.TypeOf()}
+		var fields = []reflect.StructField{}
+		for _, f := range t.field {
+			if !canExport(f.name) {
+				continue
+			}
+			fields = append(fields, reflect.StructField{Name: f.name, Type: f.typ.TypeOf()})
 		}
 		return reflect.StructOf(fields)
 	case ValueT:
