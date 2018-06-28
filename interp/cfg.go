@@ -156,10 +156,10 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			typeName := n.child[0].ident
 			if n.child[1].kind == Ident {
 				// Create a type alias of an existing one
-				interp.types[typeName] = &Type{cat: AliasT, val: nodeType(interp, n.child[1])}
+				interp.types[typeName] = &Type{cat: AliasT, val: nodeType(interp, scope, n.child[1])}
 			} else {
 				// Define a new type
-				interp.types[typeName] = nodeType(interp, n.child[1])
+				interp.types[typeName] = nodeType(interp, scope, n.child[1])
 			}
 			//if canExport(typeName) {
 			//	(*exports)[funcName] = reflect.MakeFunc(n.child[2].typ.TypeOf(), n.wrapNode).Interface()
@@ -167,7 +167,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			return false
 
 		case ArrayType, BasicLit, ChanType, MapType, StructType:
-			n.typ = nodeType(interp, n)
+			n.typ = nodeType(interp, scope, n)
 			return false
 		}
 		return true
@@ -307,7 +307,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				n.child[0].typ = &Type{cat: BuiltinT}
 				if n.child[0].ident == "make" {
 					if n.typ = interp.types[n.child[1].ident]; n.typ == nil {
-						n.typ = nodeType(interp, n.child[1])
+						n.typ = nodeType(interp, scope, n.child[1])
 					}
 					n.child[1].val = n.typ
 					n.child[1].kind = BasicLit
@@ -450,7 +450,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			// Otherwise, just point to corresponding location in frame, resolved in
 			// ident child.
 			l := len(n.child) - 1
-			n.typ = nodeType(interp, n.child[l])
+			n.typ = nodeType(interp, scope, n.child[l])
 			if l == 0 {
 				frameIndex.max++
 				n.findex = frameIndex.max
@@ -554,7 +554,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			funcDef = true
 
 		case FuncType:
-			n.typ = nodeType(interp, n)
+			n.typ = nodeType(interp, scope, n)
 			// Store list of parameter frame indices in params val
 			var list []int
 			for _, c := range n.child[0].child {

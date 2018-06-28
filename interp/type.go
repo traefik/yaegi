@@ -139,7 +139,7 @@ var defaultTypes TypeMap = map[string]*Type{
 }
 
 // return a type definition for the corresponding AST subtree
-func nodeType(interp *Interpreter, n *Node) *Type {
+func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 	if n.typ != nil {
 		return n.typ
 	}
@@ -147,7 +147,7 @@ func nodeType(interp *Interpreter, n *Node) *Type {
 	switch n.kind {
 	case ArrayType:
 		t.cat = ArrayT
-		t.val = nodeType(interp, n.child[0])
+		t.val = nodeType(interp, scope, n.child[0])
 	case BasicLit:
 		switch n.val.(type) {
 		case bool:
@@ -167,18 +167,18 @@ func nodeType(interp *Interpreter, n *Node) *Type {
 		}
 	case ChanType:
 		t.cat = ChanT
-		t.val = nodeType(interp, n.child[0])
+		t.val = nodeType(interp, scope, n.child[0])
 	case Ellipsis:
-		t = nodeType(interp, n.child[0])
+		t = nodeType(interp, scope, n.child[0])
 		t.variadic = true
 	case FuncType:
 		t.cat = FuncT
 		for _, arg := range n.child[0].child {
-			t.arg = append(t.arg, nodeType(interp, arg.child[len(arg.child)-1]))
+			t.arg = append(t.arg, nodeType(interp, scope, arg.child[len(arg.child)-1]))
 		}
 		if len(n.child) == 2 {
 			for _, ret := range n.child[1].child {
-				t.ret = append(t.ret, nodeType(interp, ret.child[len(ret.child)-1]))
+				t.ret = append(t.ret, nodeType(interp, scope, ret.child[len(ret.child)-1]))
 			}
 		}
 	case Ident:
@@ -186,32 +186,31 @@ func nodeType(interp *Interpreter, n *Node) *Type {
 	case InterfaceType:
 		t.cat = InterfaceT
 		//for _, method := range n.child[0].child {
-		//	t.method = append(t.method, nodeType(interp, method))
+		//	t.method = append(t.method, nodeType(interp, scope, method))
 		//}
 	case MapType:
 		t.cat = MapT
-		t.key = nodeType(interp, n.child[0])
-		t.val = nodeType(interp, n.child[1])
+		t.key = nodeType(interp, scope, n.child[0])
+		t.val = nodeType(interp, scope, n.child[1])
 	case SelectorExpr:
 		pkgName, typeName := n.child[0].ident, n.child[1].ident
-		if pkg, ok := interp.binPkg[pkgName]; ok {
-			if typ, ok := (*pkg)[typeName]; ok {
+		if pkg, _, ok := scope.lookup(pkgName); ok {
+			if typ, ok := (*pkg.pkgbin)[typeName]; ok {
 				t.cat = ValueT
 				t.rtype = reflect.TypeOf(typ).Elem()
-				log.Println("found bin type", t.rtype)
 			}
 		}
 	case StarExpr:
 		t.cat = PtrT
-		t.val = nodeType(interp, n.child[0])
+		t.val = nodeType(interp, scope, n.child[0])
 	case StructType:
 		t.cat = StructT
 		for _, c := range n.child[0].child {
 			if len(c.child) == 1 {
-				t.field = append(t.field, StructField{typ: nodeType(interp, c.child[0])})
+				t.field = append(t.field, StructField{typ: nodeType(interp, scope, c.child[0])})
 			} else {
 				l := len(c.child)
-				typ := nodeType(interp, c.child[l-1])
+				typ := nodeType(interp, scope, c.child[l-1])
 				for _, d := range c.child[:l-1] {
 					t.field = append(t.field, StructField{name: d.ident, typ: typ})
 				}
