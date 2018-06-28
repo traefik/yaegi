@@ -139,7 +139,7 @@ var defaultTypes TypeMap = map[string]*Type{
 }
 
 // return a type definition for the corresponding AST subtree
-func nodeType(tdef TypeMap, n *Node) *Type {
+func nodeType(interp *Interpreter, n *Node) *Type {
 	if n.typ != nil {
 		return n.typ
 	}
@@ -147,7 +147,7 @@ func nodeType(tdef TypeMap, n *Node) *Type {
 	switch n.kind {
 	case ArrayType:
 		t.cat = ArrayT
-		t.val = nodeType(tdef, n.child[0])
+		t.val = nodeType(interp, n.child[0])
 	case BasicLit:
 		switch n.val.(type) {
 		case bool:
@@ -167,42 +167,51 @@ func nodeType(tdef TypeMap, n *Node) *Type {
 		}
 	case ChanType:
 		t.cat = ChanT
-		t.val = nodeType(tdef, n.child[0])
+		t.val = nodeType(interp, n.child[0])
 	case Ellipsis:
-		t = nodeType(tdef, n.child[0])
+		t = nodeType(interp, n.child[0])
 		t.variadic = true
 	case FuncType:
 		t.cat = FuncT
 		for _, arg := range n.child[0].child {
-			t.arg = append(t.arg, nodeType(tdef, arg.child[len(arg.child)-1]))
+			t.arg = append(t.arg, nodeType(interp, arg.child[len(arg.child)-1]))
 		}
 		if len(n.child) == 2 {
 			for _, ret := range n.child[1].child {
-				t.ret = append(t.ret, nodeType(tdef, ret.child[len(ret.child)-1]))
+				t.ret = append(t.ret, nodeType(interp, ret.child[len(ret.child)-1]))
 			}
 		}
 	case Ident:
-		t = tdef[n.ident]
+		t = interp.types[n.ident]
 	case InterfaceType:
 		t.cat = InterfaceT
 		//for _, method := range n.child[0].child {
-		//	t.method = append(t.method, nodeType(tdef, method))
+		//	t.method = append(t.method, nodeType(interp, method))
 		//}
 	case MapType:
 		t.cat = MapT
-		t.key = nodeType(tdef, n.child[0])
-		t.val = nodeType(tdef, n.child[1])
+		t.key = nodeType(interp, n.child[0])
+		t.val = nodeType(interp, n.child[1])
+	case SelectorExpr:
+		pkgName, typeName := n.child[0].ident, n.child[1].ident
+		if pkg, ok := interp.binPkg[pkgName]; ok {
+			if typ, ok := (*pkg)[typeName]; ok {
+				t.cat = ValueT
+				t.rtype = reflect.TypeOf(typ).Elem()
+				log.Println("found bin type", t.rtype)
+			}
+		}
 	case StarExpr:
 		t.cat = PtrT
-		t.val = nodeType(tdef, n.child[0])
+		t.val = nodeType(interp, n.child[0])
 	case StructType:
 		t.cat = StructT
 		for _, c := range n.child[0].child {
 			if len(c.child) == 1 {
-				t.field = append(t.field, StructField{typ: nodeType(tdef, c.child[0])})
+				t.field = append(t.field, StructField{typ: nodeType(interp, c.child[0])})
 			} else {
 				l := len(c.child)
-				typ := nodeType(tdef, c.child[l-1])
+				typ := nodeType(interp, c.child[l-1])
 				for _, d := range c.child[:l-1] {
 					t.field = append(t.field, StructField{name: d.ident, typ: typ})
 				}
