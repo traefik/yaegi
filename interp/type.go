@@ -351,6 +351,9 @@ func (t *Type) TypeOf() reflect.Type {
 		return reflect.SliceOf(t.val.TypeOf())
 	case ChanT:
 		return reflect.ChanOf(reflect.BothDir, t.val.TypeOf())
+	case ErrorT:
+		var e = new(error)
+		return reflect.TypeOf(e).Elem()
 	case FuncT:
 		in := make([]reflect.Type, len(t.arg))
 		out := make([]reflect.Type, len(t.ret))
@@ -375,7 +378,7 @@ func (t *Type) TypeOf() reflect.Type {
 		}
 		return reflect.StructOf(fields)
 	case ValueT:
-		return t.rtype
+		return t.rtype.Elem()
 	default:
 		return reflect.TypeOf(t.zero())
 	}
