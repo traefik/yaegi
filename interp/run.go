@@ -2,7 +2,6 @@ package interp
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"time"
 )
@@ -161,13 +160,12 @@ func runCfg(n *Node, f *Frame) {
 	}
 }
 
-func setInt(n *Node, f *Frame) {
-	log.Println(n.index, "setInt", value(n.child[0], f))
-	f.data[n.child[0].findex].(reflect.Value).SetInt(int64(value(n.child[1], f).(int)))
-}
-
 func typeAssert(n *Node, f *Frame) {
 	f.data[n.findex] = value(n.child[0], f)
+}
+
+func convert(n *Node, f *Frame) {
+	f.data[n.findex] = value(n.child[1], f)
 }
 
 // assignX implements multiple value assignement
@@ -279,7 +277,6 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 }
 
 func call(n *Node, f *Frame) {
-	//log.Println(n.index, "call", n.child[0].child[1].ident, n.child[0].typ.cat)
 	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
 	var recv *Node
 	var rseq []int

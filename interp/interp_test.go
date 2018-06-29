@@ -2781,6 +2781,46 @@ func main() {
 	// 2009-11-10 23:00:00 +0000 UTC
 }
 
+func Example_type3() {
+	src := `
+package main
+
+import "fmt"
+
+type S1 string
+
+func main() {
+	s := S1("Hello")
+	fmt.Println(s)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// Hello
+}
+
+func Example_type4() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"reflect"
+)
+
+func main() {
+	a := int32(12)
+	fmt.Println(reflect.TypeOf(a))
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
 func Example_var() {
 	src := `
 package main

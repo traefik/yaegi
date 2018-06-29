@@ -194,9 +194,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			n.findex = n.child[0].findex
 			// Propagate type
 			// TODO: Check that existing destination type matches source type
-			//log.Println(n.index, "Assign child1:", n.child[1].index, n.child[1].typ)
 			n.typ = n.child[0].typ
-			//n.run = setInt // Temporary, debug
 			if sym, level, ok := scope.lookup(n.child[0].ident); ok {
 				sym.typ = n.typ
 				n.level = level
@@ -312,9 +310,11 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 					n.child[1].val = n.typ
 					n.child[1].kind = BasicLit
 				}
-			}
-			// TODO: Should process according to child type, not kind.
-			if n.child[0].kind == SelectorImport {
+			} else if n.child[0].isType() {
+				n.typ = n.child[0].typ
+				n.run = convert
+			} else if n.child[0].kind == SelectorImport {
+				// TODO: Should process according to child type, not kind.
 				n.fsize = n.child[0].fsize
 				rtype := n.child[0].val.(reflect.Value).Type()
 				if rtype.NumOut() > 0 {
@@ -408,7 +408,6 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				// Trigger frame indirection to handle nested functions
 				n.action = CallF
 			}
-			//log.Println(n.index, "callExpr:", n.child[0].ident, "frame index:", n.findex)
 
 		case CaseClause:
 			frameIndex.max++
