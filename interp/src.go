@@ -9,14 +9,6 @@ import (
 )
 
 func (interp *Interpreter) importSrcFile(path string) {
-	/*
-		//basedir := os.Getenv("HOME") + "/go/src/"
-		basedir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-		if err != nil {
-			log.Fatal(err)
-		}
-		dir := basedir + "/vendor/" + path
-	*/
 	dir := pkgDir(path)
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
@@ -30,7 +22,7 @@ func (interp *Interpreter) importSrcFile(path string) {
 		if len(name) > 8 && name[len(name)-8:] == "_test.go" {
 			continue
 		}
-		buf, err := ioutil.ReadFile(dir + "/" + name)
+		buf, err := ioutil.ReadFile(filepath.Join(dir, name))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -50,7 +42,7 @@ func pkgDir(path string) string {
 	if err != nil {
 		log.Fatal(err)
 	}
-	dir += "/vendor/" + path
+	dir = filepath.Join(dir, "vendor", path)
 	if _, err := os.Stat(dir); err == nil {
 		return dir
 	}
