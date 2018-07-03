@@ -194,6 +194,7 @@ const (
 	Lor
 	Lower
 	Mul
+	Negate
 	Not
 	NotEqual
 	Quotient
@@ -231,6 +232,7 @@ var actions = [...]string{
 	Lor:          "||",
 	Lower:        "<",
 	Mul:          "*",
+	Negate:       "-",
 	Not:          "!",
 	NotEqual:     "!=",
 	Quotient:     "/",
@@ -624,6 +626,8 @@ func (interp *Interpreter) Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 				action = Recv
 			case token.NOT:
 				action = Not
+			case token.SUB:
+				action = Negate
 			}
 			st.push(addChild(&root, anc, &index, kind, action))
 

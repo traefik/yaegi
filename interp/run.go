@@ -31,6 +31,7 @@ var builtin = [...]Builtin{
 	Lor:          lor,
 	Lower:        lower,
 	Mul:          mul,
+	Negate:       negate,
 	Not:          not,
 	NotEqual:     notEqual,
 	Quotient:     quotient,
@@ -515,6 +516,10 @@ func quotient(n *Node, f *Frame) {
 
 func remain(n *Node, f *Frame) {
 	f.data[n.findex] = value(n.child[0], f).(int) % value(n.child[1], f).(int)
+}
+
+func negate(n *Node, f *Frame) {
+	f.data[n.findex] = -value(n.child[0], f).(int)
 }
 
 func add(n *Node, f *Frame) {
