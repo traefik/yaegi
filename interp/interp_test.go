@@ -1396,6 +1396,25 @@ func main() {
 	// in foo hello 3
 }
 
+func Example_neg0() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	a := -1
+	fmt.Println(a)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// -1
+}
+
 func Example_plugin0() {
 	src := `
 package sample
