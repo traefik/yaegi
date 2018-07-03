@@ -60,8 +60,8 @@ func (n *Node) CfgDot(out io.WriteCloser) {
 
 // DotX returns an output stream to a dot(1) co-process where to write data in .dot format
 func DotX() io.WriteCloser {
-	//cmd := exec.Command("dotty", "-")
-	cmd := exec.Command("dot", "-T", "xlib")
+	cmd := exec.Command("dotty", "-")
+	//cmd := exec.Command("dot", "-T", "xlib")
 	dotin, err := cmd.StdinPipe()
 	if err != nil {
 		panic("dotty stdin error")

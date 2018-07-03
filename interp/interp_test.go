@@ -2227,6 +2227,49 @@ func main() {
 
 }
 
+func Example_server3() {
+	src := `
+package main
+
+import (
+	"net/http"
+)
+
+//var myHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) })
+//var myHandler = func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) }
+func myHandler(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) }
+
+func main() {
+	http.HandleFunc("/", myHandler)
+	http.ListenAndServe(":8080", nil)
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
+func Example_server4() {
+	src := `
+package main
+
+import (
+	"net/http"
+)
+
+func main() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Welcome to my website!"))
+	})
+
+	http.ListenAndServe(":8080", nil)
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
 func Example_sieve() {
 	src := `
 // A concurrent prime sieve
@@ -2328,6 +2371,25 @@ func main() {
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
+}
+
+func Example_src2() {
+	src := `
+package main
+
+import "github.com/containous/gi/_test/provider"
+
+func main() {
+	t := provider.T1{"myName"}
+	t.Info()
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// myName
 }
 
 func Example_str() {

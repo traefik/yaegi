@@ -153,17 +153,15 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 		case TypeSpec:
 			// Type analysis is performed recursively and no post-order processing
 			// needs to be done for types, so do not dive in subtree
-			typeName := n.child[0].ident
 			if n.child[1].kind == Ident {
 				// Create a type alias of an existing one
-				interp.types[typeName] = &Type{cat: AliasT, val: nodeType(interp, scope, n.child[1])}
+				n.typ = &Type{cat: AliasT, val: nodeType(interp, scope, n.child[1])}
 			} else {
 				// Define a new type
-				interp.types[typeName] = nodeType(interp, scope, n.child[1])
+				n.typ = nodeType(interp, scope, n.child[1])
 			}
-			//if canExport(typeName) {
-			//	(*exports)[funcName] = reflect.MakeFunc(n.child[2].typ.TypeOf(), n.wrapNode).Interface()
-			//}
+			interp.types[n.child[0].ident] = n.typ
+			// TODO: export type for use by runtime
 			return false
 
 		case ArrayType, BasicLit, ChanType, MapType, StructType:
@@ -401,6 +399,13 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 						n.fsize = l
 					}
 				}
+			} else if n.child[0].kind == SelectorSrc {
+				// Forward type of first returned value
+				// Multiple return values will be handled differently through AssignX.
+				if len(n.child[0].typ.ret) > 0 {
+					n.typ = n.child[0].typ.ret[0]
+					n.fsize = len(n.child[0].typ.ret)
+				}
 			}
 			// Reserve entries in frame to store results of call
 			frameIndex.max += n.fsize
@@ -590,7 +595,6 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 					if n.typ.cat == BinPkgT {
 						n.val = sym.pkgbin
 					} else if n.typ.cat == SrcPkgT {
-						log.Println(n.index, "ident SrcPkgT", n.ident)
 						n.val = sym.pkgsrc
 					}
 				}
@@ -758,6 +762,9 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 					n.val = node
 					n.run = nop
 					n.kind = SelectorSrc
+					n.typ = node.typ
+				} else {
+					log.Println(n.index, "selector unresolved:", n.child[0].ident+"."+name)
 				}
 			} else if fi := n.typ.fieldIndex(n.child[1].ident); fi >= 0 {
 				// Resolve struct field index
@@ -848,6 +855,8 @@ func (n *Node) isType() bool {
 	case Ident:
 		_, ok := n.interp.types[n.ident]
 		return ok
+	case Rvalue:
+		return n.typ.rtype.Kind() != reflect.Func
 	}
 	return false
 }

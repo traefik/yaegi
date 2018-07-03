@@ -608,7 +608,10 @@ func (interp *Interpreter) Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 			st.push(addChild(&root, anc, &index, TypeAssertExpr, TypeAssert))
 
 		case *ast.TypeSpec:
-			st.push(addChild(&root, anc, &index, TypeSpec, Nop))
+			n := addChild(&root, anc, &index, TypeSpec, Nop)
+			// Add type name to definitions
+			def[a.Name.Name] = n
+			st.push(n)
 
 		case *ast.UnaryExpr:
 			var kind = UnaryExpr
@@ -625,6 +628,7 @@ func (interp *Interpreter) Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 			st.push(addChild(&root, anc, &index, kind, action))
 
 		case *ast.ValueSpec:
+			// TODO: export package global var/const in def
 			var kind Kind
 			var action Action
 			if a.Values != nil {

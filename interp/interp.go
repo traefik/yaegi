@@ -113,7 +113,8 @@ func (i *Interpreter) ImportBin(pkg *map[string]*map[string]interface{}) {
 	}
 }
 
-// Eval evaluates Go code represented as a string
+// Eval evaluates Go code represented as a string. It returns a map on
+// current interpreted package exported symbols
 func (i *Interpreter) Eval(src string) (string, *NodeMap) {
 	// Parse source to AST
 	root, sdef := i.Ast(src, nil)
