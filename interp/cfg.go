@@ -424,7 +424,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			frameIndex.max++
 			n.findex = frameIndex.max
 			if n.child[0].typ == nil {
-				n.child[0].typ = interp.types[n.child[0].ident]
+				n.child[0].typ = nodeType(interp, scope, n.child[0])
 			}
 			// TODO: Check that composite litteral expr matches corresponding type
 			n.typ = n.child[0].typ
@@ -438,7 +438,8 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				// Handle object assign from sparse key / values
 				if len(n.child) > 1 && n.child[1].kind == KeyValueExpr {
 					n.run = compositeSparse
-					n.typ = interp.types[n.child[0].ident]
+					//n.typ = interp.types[n.child[0].ident]
+					n.typ = nodeType(interp, scope, n.child[0])
 					for _, c := range n.child[1:] {
 						c.findex = n.typ.fieldIndex(c.child[0].ident)
 					}
