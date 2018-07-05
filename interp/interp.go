@@ -16,6 +16,7 @@ type Node struct {
 	index  int           // node index (dot display)
 	findex int           // index of value in frame or frame size (func def, type def)
 	fsize  int           // number of entries in frame (call expressions)
+	flen   int           // frame length (function definition)
 	level  int           // number of frame indirections to access value
 	kind   Kind          // kind of node
 	typ    *Type         // type of value in frame, or nil

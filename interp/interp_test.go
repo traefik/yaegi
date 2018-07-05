@@ -378,6 +378,83 @@ func main() {
 	// ping
 }
 
+func Example_closure0() {
+	src := `
+package main
+
+type adder func(int, int) int
+
+func genAdd(k int) adder {
+	return func(i, j int) int {
+		return i + j
+	}
+}
+
+func main() {
+	f := genAdd(5)
+	println(f(3, 4))
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 7
+}
+
+func Example_closure1() {
+	src := `
+package main
+
+type adder func(int, int) int
+
+func genAdd(k int) adder {
+	return func(i, j int) int {
+		return i + j + k
+	}
+}
+
+func main() {
+	f := genAdd(5)
+	g := genAdd(8)
+	println(f(3, 4))
+	println(g(3, 4))
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 12
+	// 15
+}
+
+func Example_closure2() {
+	src := `
+package main
+
+func adder() func(int) int {
+	sum := 0
+	return func(x int) int {
+		sum = sum + x
+		return sum
+	}
+}
+
+func main() {
+	pos, neg := adder(), adder()
+	for i := 0; i < 10; i++ {
+		println(pos(i), neg(-2*i))
+	}
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
 func Example_const0() {
 	src := `
 package main

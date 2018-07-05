@@ -24,8 +24,9 @@ var builtin = [...]Builtin{
 	CompositeLit: arrayLit,
 	Dec:          nop,
 	Equal:        equal,
-	Greater:      greater,
+	GetFunc:      getFunc,
 	GetIndex:     getIndex,
+	Greater:      greater,
 	Inc:          inc,
 	Land:         land,
 	Lor:          lor,
@@ -57,13 +58,15 @@ var goBuiltin = map[string]Builtin{
 
 // Run a Go function
 func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int, fork bool, goroutine bool) {
-	// log.Println("run", def.index, def.child[1].ident, "allocate", def.findex)
+	//log.Println("run", def.index, def.child[1].ident, "allocate", def.flen)
 	// Allocate a new Frame to store local variables
 	anc := cf.anc
 	if fork {
 		anc = cf
+	} else if def.frame != nil {
+		anc = def.frame
 	}
-	f := Frame{anc: anc, data: make([]interface{}, def.findex)}
+	f := Frame{anc: anc, data: make([]interface{}, def.flen)}
 
 	// Assign receiver value, if defined (for methods)
 	if recv != nil {
@@ -119,11 +122,12 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 
 func value(n *Node, f *Frame) interface{} {
 	switch n.kind {
-	case BasicLit, FuncDecl, FuncLit, SelectorSrc:
+	case BasicLit, FuncDecl, SelectorSrc:
 		return n.val
 	case Rvalue:
 		return n.rval
 	default:
+		//log.Println(n.index, n.findex, n.level, f)
 		for level := n.level; level > 0; level-- {
 			f = f.anc
 		}
@@ -136,7 +140,7 @@ func value(n *Node, f *Frame) interface{} {
 
 func addrValue(n *Node, f *Frame) *interface{} {
 	switch n.kind {
-	case BasicLit, FuncDecl, FuncLit, Rvalue:
+	case BasicLit, FuncDecl, Rvalue:
 		return &n.val
 	default:
 		for level := n.level; level > 0; level-- {
@@ -471,6 +475,15 @@ func getIndexMap(n *Node, f *Frame) {
 		// Force a zero value if key is not present in map
 		f.data[n.findex] = n.child[0].typ.val.zero()
 	}
+}
+
+func getFunc(n *Node, f *Frame) {
+	node := *n
+	node.val = &node
+	frame := *f
+	node.frame = &frame
+	f.data[n.findex] = &node
+
 }
 
 func getMap(n *Node, f *Frame) {

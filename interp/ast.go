@@ -188,6 +188,7 @@ const (
 	Dec
 	Equal
 	Greater
+	GetFunc
 	GetIndex
 	Inc
 	Land
@@ -226,6 +227,7 @@ var actions = [...]string{
 	Dec:          "--",
 	Equal:        "==",
 	Greater:      ">",
+	GetFunc:      "getFunc",
 	GetIndex:     "getIndex",
 	Inc:          "++",
 	Land:         "&&",
@@ -500,7 +502,7 @@ func (interp *Interpreter) Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 			st.push(n)
 
 		case *ast.FuncLit:
-			n := addChild(&root, anc, &index, FuncLit, Nop)
+			n := addChild(&root, anc, &index, FuncLit, GetFunc)
 			addChild(&root, n, &index, FieldList, Nop)
 			addChild(&root, n, &index, Undef, Nop)
 			st.push(n)

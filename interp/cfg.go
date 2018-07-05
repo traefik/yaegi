@@ -533,7 +533,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			scope = scope.anc
 
 		case FuncDecl:
-			n.findex = frameIndex.max + 1
+			n.flen = frameIndex.max + 1
 			if len(n.child[0].child) > 0 {
 				// Store receiver frame location (used at run)
 				n.child[0].findex = n.child[0].child[0].child[0].findex
@@ -552,8 +552,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 		case FuncLit:
 			n.typ = n.child[2].typ
 			n.val = n
-			n.findex = -1
-			n.findex = frameIndex.max + 1
+			n.flen = frameIndex.max + 1
 			scope = scope.anc
 			frameIndex = frameIndex.anc
 			funcDef = true
@@ -867,7 +866,7 @@ func wireChild(n *Node) {
 	// Set start node, in subtree (propagated to ancestors by post-order processing)
 	for _, child := range n.child {
 		switch child.kind {
-		case ArrayType, ChanType, FuncDecl, MapType, BasicLit, FuncLit, Ident:
+		case ArrayType, ChanType, FuncDecl, MapType, BasicLit, Ident:
 			continue
 		default:
 			n.start = child.start
@@ -883,7 +882,7 @@ func wireChild(n *Node) {
 	// Chain subtree next to self
 	for i := len(n.child) - 1; i >= 0; i-- {
 		switch n.child[i].kind {
-		case ArrayType, ChanType, MapType, FuncDecl, FuncLit, BasicLit, Ident:
+		case ArrayType, ChanType, MapType, FuncDecl, BasicLit, Ident:
 			continue
 		case Break, Continue, ReturnStmt:
 			// tnext is already computed, no change
