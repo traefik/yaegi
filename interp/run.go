@@ -173,6 +173,11 @@ func convert(n *Node, f *Frame) {
 	f.data[n.findex] = value(n.child[1], f)
 }
 
+func convertBin(n *Node, f *Frame) {
+	// TODO: use closure generation to improve speed
+	f.data[n.findex] = reflect.ValueOf(value(n.child[1], f)).Convert(n.child[0].typ.TypeOf()).Interface()
+}
+
 // assignX implements multiple value assignement
 func assignX(n *Node, f *Frame) {
 	l := len(n.child) - 1
@@ -251,7 +256,7 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	if n.frame == nil {
 		n.frame = n.interp.Frame
 	}
-	frame := Frame{anc: n.frame, data: make([]interface{}, def.findex)}
+	frame := Frame{anc: n.frame, data: make([]interface{}, def.flen)}
 
 	// If fucnction is a method, set its receiver data in the frame
 	if len(def.child[0].child) > 0 {
@@ -457,6 +462,11 @@ func getPtrIndex(n *Node, f *Frame) {
 func getPtrIndexBin(n *Node, f *Frame) {
 	a := reflect.ValueOf(value(n.child[0], f)).Elem()
 	f.data[n.findex] = a.FieldByIndex(n.val.([]int)).Interface()
+}
+
+func getIndexBinMethod(n *Node, f *Frame) {
+	a := reflect.ValueOf(value(n.child[0], f))
+	f.data[n.findex] = a.MethodByName(n.child[1].ident)
 }
 
 func getIndexBin(n *Node, f *Frame) {

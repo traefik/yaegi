@@ -160,7 +160,9 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				// Define a new type
 				n.typ = nodeType(interp, scope, n.child[1])
 			}
+			// TODO: deprecate use of interp.types in favor of scope.sym
 			interp.types[n.child[0].ident] = n.typ
+			scope.sym[n.child[0].ident] = &Symbol{typ: n.typ}
 			// TODO: export type for use by runtime
 			return false
 
@@ -310,7 +312,11 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				}
 			} else if n.child[0].isType() {
 				n.typ = n.child[0].typ
-				n.run = convert
+				if n.typ.cat == AliasT {
+					n.run = convert
+				} else {
+					n.run = convertBin
+				}
 			} else if n.child[0].kind == SelectorImport {
 				// TODO: Should process according to child type, not kind.
 				n.fsize = n.child[0].fsize
@@ -705,6 +711,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			if n.typ == nil {
 				log.Fatal("typ should not be nil:", n.index, n.child[0])
 			}
+			//log.Println(n.index, n.child[0].ident+"."+n.child[1].ident, n.typ.cat)
 			if n.typ.cat == ValueT {
 				// Handle object defined in runtime
 				if method, ok := n.typ.rtype.MethodByName(n.child[1].ident); ok {
@@ -717,6 +724,9 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 						n.run = nop
 					}
 					n.fsize = method.Type.NumOut()
+				} else {
+					// Method can be only resolved from value at execution
+					n.run = getIndexBinMethod
 				}
 			} else if n.typ.cat == PtrT && n.typ.val.cat == ValueT {
 				// Handle pointer on object defined in runtime
