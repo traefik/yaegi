@@ -187,11 +187,17 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			if n.kind == Define || n.anc.kind == VarDecl {
 				// Force definition of assigned ident in current scope
 				frameIndex.max++
-				scope.sym[n.child[0].ident] = &Symbol{index: frameIndex.max}
+				name := n.child[0].ident
+				scope.sym[name] = &Symbol{index: frameIndex.max}
 				n.child[0].findex = frameIndex.max
 				n.child[0].typ = n.child[1].typ
+				if n.child[0].typ.cat == FuncT {
+					scope.sym[name].index = -1
+					scope.sym[name].node = n.child[1]
+				}
 			}
 			n.findex = n.child[0].findex
+			n.val = n.child[0].val
 			// Propagate type
 			// TODO: Check that existing destination type matches source type
 			n.typ = n.child[0].typ
