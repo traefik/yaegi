@@ -173,6 +173,11 @@ func convert(n *Node, f *Frame) {
 	f.data[n.findex] = value(n.child[1], f)
 }
 
+func convertFuncBin(n *Node, f *Frame) {
+	// TODO: use closure generation to improve speed
+	f.data[n.findex] = reflect.MakeFunc(n.child[0].typ.rtype.Elem(), n.child[1].wrapNode).Interface()
+}
+
 func convertBin(n *Node, f *Frame) {
 	// TODO: use closure generation to improve speed
 	f.data[n.findex] = reflect.ValueOf(value(n.child[1], f)).Convert(n.child[0].typ.TypeOf()).Interface()

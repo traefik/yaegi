@@ -191,7 +191,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				scope.sym[name] = &Symbol{index: frameIndex.max}
 				n.child[0].findex = frameIndex.max
 				n.child[0].typ = n.child[1].typ
-				if n.child[0].typ.cat == FuncT {
+				if n.child[1].action == GetFunc {
 					scope.sym[name].index = -1
 					scope.sym[name].node = n.child[1]
 				}
@@ -321,7 +321,13 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				if n.typ.cat == AliasT {
 					n.run = convert
 				} else {
-					n.run = convertBin
+					if n.child[1].typ.cat == FuncT {
+						// Convert type of an interpreter function to another binary type:
+						// generate a different callback wrapper
+						n.run = convertFuncBin
+					} else {
+						n.run = convertBin
+					}
 				}
 			} else if n.child[0].kind == SelectorImport {
 				// TODO: Should process according to child type, not kind.
@@ -334,6 +340,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				for i, c := range n.child[1:] {
 					// Wrap function defintion so it can be called from runtime
 					if c.kind == FuncLit {
+						log.Println(n.index, "FuncLit")
 						n.child[1+i].rval = reflect.MakeFunc(rtype.In(i), c.wrapNode)
 						n.child[1+i].kind = Rvalue
 					} else if c.ident == "nil" {
