@@ -340,7 +340,6 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				for i, c := range n.child[1:] {
 					// Wrap function defintion so it can be called from runtime
 					if c.kind == FuncLit {
-						log.Println(n.index, "FuncLit")
 						n.child[1+i].rval = reflect.MakeFunc(rtype.In(i), c.wrapNode)
 						n.child[1+i].kind = Rvalue
 					} else if c.ident == "nil" {

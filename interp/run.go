@@ -498,7 +498,7 @@ func getFunc(n *Node, f *Frame) {
 	frame := *f
 	node.frame = &frame
 	f.data[n.findex] = &node
-
+	n.interp.Frame = &frame // Temporary, store context for futur call from runtime
 }
 
 func getMap(n *Node, f *Frame) {
