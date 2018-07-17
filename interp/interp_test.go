@@ -455,6 +455,37 @@ func main() {
 
 }
 
+func Example_closure3() {
+	src := `
+package main
+
+type T1 struct {
+	Name string
+}
+
+func (t *T1) genAdd(k int) func(int) int {
+	return func(i int) int {
+		println(t.Name)
+		return i + k
+	}
+}
+
+var t = &T1{"test"}
+
+func main() {
+	f := t.genAdd(4)
+	println(f(5))
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// test
+	// 9
+}
+
 func Example_const0() {
 	src := `
 package main
@@ -2279,8 +2310,8 @@ type Middleware struct {
 }
 
 func (m *Middleware) Handler(w http.ResponseWriter, r *http.Request) {
-	println("Hello")
-	log.Println(r.Header.Get("User-Agent"))
+	//println("Hello")
+	//log.Println(r.Header.Get("User-Agent"))
 	log.Println(w.Header())
 	fmt.Fprintln(w, "Welcome to my website", m.Name)
 }
@@ -2331,9 +2362,9 @@ import (
 	"net/http"
 )
 
+//func myHandler(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) }
 //var myHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) })
-//var myHandler = func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) }
-func myHandler(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) }
+var myHandler = func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) }
 
 func main() {
 	http.HandleFunc("/", myHandler)
@@ -2359,6 +2390,63 @@ func main() {
 	})
 
 	http.ListenAndServe(":8080", nil)
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
+func Example_server5() {
+	src := `
+package main
+
+import (
+	"net/http"
+)
+
+var myHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("hello world"))
+})
+
+func main() {
+	http.ListenAndServe(":8080", myHandler)
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+}
+
+func Example_server6() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"net/http"
+)
+
+var myHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("hello world"))
+})
+
+type T1 struct {
+	Name string
+}
+
+func (t *T1) Handler(h http.Handler) http.Handler {
+	fmt.Println("#1", t.Name)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("#2", t.Name)
+		h.ServeHTTP(w, r)
+	})
+}
+
+func main() {
+	t := &T1{"myName"}
+	handler := t.Handler(myHandler)
+	http.ListenAndServe(":8080", handler)
 }`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
@@ -2486,6 +2574,24 @@ func main() {
 
 	// Output:
 	// myName
+}
+
+func Example_src3() {
+	src := `
+package main
+
+import "github.com/containous/gi/_test/provider"
+
+func main() {
+	provider.Bar()
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// Hello from Foo
 }
 
 func Example_str() {

@@ -60,6 +60,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 	var exports *SymMap
 	var expval *ValueMap
 	var iotaValue int
+	var srcPkg *NodeMap
 
 	// Fill root scope with initial symbol definitions
 	for name, node := range *sdef {
@@ -84,6 +85,10 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 
 		case File:
 			pkgName := n.child[0].ident
+			srcPkg = interp.srcPkg[pkgName]
+			if srcPkg == nil {
+				srcPkg = &NodeMap{}
+			}
 			if pkg, ok := interp.Exports[pkgName]; ok {
 				exports = pkg
 				expval = interp.Expval[pkgName]
@@ -617,6 +622,11 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 					}
 				}
 				n.recv = n
+			} else if node, ok := (*srcPkg)[n.ident]; ok {
+				n.val = node
+				n.typ = node.typ
+				n.kind = node.kind
+				n.findex = node.findex
 			} else {
 				frameIndex.max++
 				scope.sym[n.ident] = &Symbol{index: frameIndex.max}
