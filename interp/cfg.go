@@ -598,7 +598,9 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			n.child[0].run = callGoRoutine
 
 		case Ident:
-			if n.ident == "false" {
+			if n.anc.kind == File || (n.anc.kind == SelectorExpr && n.anc.child[0] != n) {
+				// skip symbol creation/lookup for idents used as key
+			} else if n.ident == "false" {
 				n.val = false
 				n.typ = defaultTypes["bool"]
 				n.kind = BasicLit
@@ -628,6 +630,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				n.kind = node.kind
 				n.findex = node.findex
 			} else {
+				//log.Println(n.index, n.ident, n.anc.kind, "unresolved, create new")
 				frameIndex.max++
 				scope.sym[n.ident] = &Symbol{index: frameIndex.max}
 				n.findex = frameIndex.max
