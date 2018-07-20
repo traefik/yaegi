@@ -2,6 +2,10 @@ package provider
 
 import "fmt"
 
+const (
+	SomeString = "constant string"
+)
+
 type T1 struct {
 	Name string
 }

@@ -262,13 +262,8 @@ func (a Action) String() string {
 
 // Ast parses src string containing Go code and generates the corresponding AST.
 // The AST root node is returned.
-func (interp *Interpreter) Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
-	var def NodeMap
-	if pre == nil {
-		def = make(map[string]*Node)
-	} else {
-		def = *pre
-	}
+func (interp *Interpreter) Ast(src string) (*Node, *NodeMap) {
+	def := NodeMap{}
 	fset := token.NewFileSet() // positions are relative to fset
 	f, err := parser.ParseFile(fset, "sample.go", src, 0)
 	if err != nil {
@@ -280,6 +275,7 @@ func (interp *Interpreter) Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 	var st nodestack
 	var nbAssign int
 	var typeSpec bool
+	var pkgName string
 
 	addChild := func(root **Node, anc *Node, index *int, kind Kind, action Action) *Node {
 		*index++
@@ -467,6 +463,7 @@ func (interp *Interpreter) Ast(src string, pre *NodeMap) (*Node, *NodeMap) {
 			st.push(addChild(&root, anc, &index, FieldList, Nop))
 
 		case *ast.File:
+			pkgName = a.Name.Name
 			st.push(addChild(&root, anc, &index, File, Nop))
 
 		case *ast.ForStmt:

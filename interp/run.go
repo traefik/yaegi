@@ -2,6 +2,7 @@ package interp
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"time"
 )
@@ -127,7 +128,7 @@ func value(n *Node, f *Frame) interface{} {
 	case Rvalue:
 		return n.rval
 	default:
-		//log.Println(n.index, n.findex, n.level, f)
+		//log.Println(n.index, n.ident, n.findex, n.level, f)
 		for level := n.level; level > 0; level-- {
 			f = f.anc
 		}
@@ -139,6 +140,7 @@ func value(n *Node, f *Frame) interface{} {
 }
 
 func addrValue(n *Node, f *Frame) *interface{} {
+	log.Println(n.index, n.ident, n.kind, n.level, n.findex)
 	switch n.kind {
 	case BasicLit, FuncDecl, Rvalue:
 		return &n.val
@@ -392,6 +394,7 @@ func callBin(n *Node, f *Frame) {
 		}
 	}
 	fun := value(n.child[0], f).(reflect.Value)
+	log.Println("in:", in)
 	v := fun.Call(in)
 	for i := 0; i < n.fsize; i++ {
 		f.data[n.findex+i] = v[i].Interface()
@@ -717,6 +720,7 @@ func slice(n *Node, f *Frame) {
 
 // slice expression, no low value
 func slice0(n *Node, f *Frame) {
+	log.Println(n.index, n.child[0].ident, value(n.child[0], f))
 	a := value(n.child[0], f).([]interface{})
 	switch len(n.child) {
 	case 1:

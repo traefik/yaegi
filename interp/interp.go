@@ -118,7 +118,7 @@ func (i *Interpreter) ImportBin(pkg *map[string]*map[string]interface{}) {
 // current interpreted package exported symbols
 func (i *Interpreter) Eval(src string) (string, *NodeMap) {
 	// Parse source to AST
-	root, sdef := i.Ast(src, nil)
+	root, sdef := i.Ast(src)
 	if i.AstDot {
 		root.AstDot(DotX())
 	}

@@ -41,10 +41,16 @@ func (s *Scope) lookup(ident string) (*Symbol, int, bool) {
 	return nil, 0, false
 }
 
-// FrameIndex type defines metadata for Tracking frame index for variables in function context
+// FrameIndex type stores informations to allocate frame space for variables
 type FrameIndex struct {
 	anc *FrameIndex // Ancestor upper frame
 	max int         // The highest index in frame
+}
+
+// PkgContext type stores current state of a package during compiling
+type PkgContext struct {
+	frameIndex *FrameIndex
+	nodeMap    *NodeMap
 }
 
 // Cfg generates a control flow graph (CFG) from AST (wiring successors in AST)
@@ -66,6 +72,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 	for name, node := range *sdef {
 		scope.sym[name] = &Symbol{node: node, index: -1}
 	}
+	log.Println(interp.srcPkg["provider"])
 
 	root.Walk(func(n *Node) bool {
 		// Pre-order processing
@@ -600,6 +607,8 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 		case Ident:
 			if n.anc.kind == File || (n.anc.kind == SelectorExpr && n.anc.child[0] != n) {
 				// skip symbol creation/lookup for idents used as key
+			} else if n.ident == "nil" {
+				n.kind = BasicLit
 			} else if n.ident == "false" {
 				n.val = false
 				n.typ = defaultTypes["bool"]
@@ -630,10 +639,28 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				n.kind = node.kind
 				n.findex = node.findex
 			} else {
-				//log.Println(n.index, n.ident, n.anc.kind, "unresolved, create new")
-				frameIndex.max++
-				scope.sym[n.ident] = &Symbol{index: frameIndex.max}
-				n.findex = frameIndex.max
+				if n.ident == "_" || n.anc.kind == Define || n.anc.kind == DefineX || n.anc.kind == Field || n.anc.kind == RangeStmt || n.anc.kind == ValueSpec {
+					// Create a new local symbol for func argument or local var definition
+					frameIndex.max++
+					scope.sym[n.ident] = &Symbol{index: frameIndex.max}
+					n.findex = frameIndex.max
+				} else {
+					// symbol may be defined globally elsewhere later, add an entry at pkg level
+					symFrameIndex := frameIndex
+					symScope := scope
+					level := 0
+					for symFrameIndex.anc != nil {
+						level++
+						symScope = symScope.anc
+						symFrameIndex = symFrameIndex.anc
+					}
+					symFrameIndex.max++
+					symScope.sym[n.ident] = &Symbol{index: symFrameIndex.max}
+					(*sdef)[n.ident] = n
+					n.findex = symFrameIndex.max
+					n.level = level
+					log.Println(n.index, n.ident, n.anc.kind, "unresolved, create new at pkg level", n.findex, level)
+				}
 			}
 
 		case If0: // if cond {}
@@ -869,6 +896,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			}
 		}
 	})
+	log.Println(sdef)
 	return initNodes
 }
 
