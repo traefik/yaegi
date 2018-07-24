@@ -1839,11 +1839,11 @@ package main
 
 import "fmt"
 
+func r2() (int, int) { return 1, 2 }
+
 func main() {
 	fmt.Println(r2())
 }
-
-func r2() (int, int) { return 1, 2 }
 `
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
@@ -2592,6 +2592,21 @@ func main() {
 
 	// Output:
 	// Hello from Foo
+}
+
+func Example_src4() {
+	src := `
+package main
+
+import "github.com/containous/gi/_test/provider"
+
+func main() {
+	provider.F1()
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
 }
 
 func Example_str() {

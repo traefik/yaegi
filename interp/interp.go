@@ -2,6 +2,7 @@
 package interp
 
 import (
+	"log"
 	"reflect"
 )
 
@@ -19,6 +20,7 @@ type Node struct {
 	flen   int           // frame length (function definition)
 	level  int           // number of frame indirections to access value
 	kind   Kind          // kind of node
+	sym    *Symbol       // associated symbol
 	typ    *Type         // type of value in frame, or nil
 	recv   *Node         // method receiver node for call, or nil
 	frame  *Frame        // frame pointer, only used for script callbacks from runtime (wrapNode)
@@ -40,6 +42,8 @@ type NodeMap map[string]*Node
 
 // PkgSrcMap stores package source nodes
 type PkgSrcMap map[string]*NodeMap
+
+type PkgCtxMap map[string]PkgContext
 
 // SymMap stores executable symbols indexed by name
 type SymMap map[string]interface{}
@@ -66,7 +70,7 @@ type Interpreter struct {
 	Opt
 	Frame   *Frame
 	types   TypeMap
-	srcPkg  PkgSrcMap
+	context PkgCtxMap
 	binPkg  PkgMap
 	Exports PkgMap
 	Expval  PkgValueMap
@@ -91,7 +95,7 @@ func NewInterpreter(opt Opt) *Interpreter {
 	return &Interpreter{
 		Opt:     opt,
 		types:   defaultTypes,
-		srcPkg:  make(PkgSrcMap),
+		context: make(PkgCtxMap),
 		binPkg:  make(PkgMap),
 		Exports: make(PkgMap),
 		Expval:  make(PkgValueMap),
@@ -116,16 +120,17 @@ func (i *Interpreter) ImportBin(pkg *map[string]*map[string]interface{}) {
 
 // Eval evaluates Go code represented as a string. It returns a map on
 // current interpreted package exported symbols
-func (i *Interpreter) Eval(src string) (string, *NodeMap) {
+func (i *Interpreter) Eval(src string) string {
 	// Parse source to AST
-	root, sdef := i.Ast(src)
+	pkgName, root := i.Ast(src)
+	log.Println(pkgName)
 	if i.AstDot {
 		root.AstDot(DotX())
 	}
 
 	// Annotate AST with CFG infos
-	initNodes := i.Cfg(root, sdef)
-	if entry, ok := (*sdef)[i.Entry]; ok {
+	initNodes := i.Cfg(root)
+	if entry, ok := i.context[pkgName].NodeMap[i.Entry]; ok {
 		initNodes = append(initNodes, entry)
 	}
 
@@ -141,5 +146,5 @@ func (i *Interpreter) Eval(src string) (string, *NodeMap) {
 			Run(n, i.Frame, nil, nil, nil, nil, true, false)
 		}
 	}
-	return root.child[0].ident, sdef
+	return root.child[0].ident
 }

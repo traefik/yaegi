@@ -261,9 +261,8 @@ func (a Action) String() string {
 // of CFG, in order to accomodate forward type declarations
 
 // Ast parses src string containing Go code and generates the corresponding AST.
-// The AST root node is returned.
-func (interp *Interpreter) Ast(src string) (*Node, *NodeMap) {
-	def := NodeMap{}
+// The package name and the AST root node are returned.
+func (interp *Interpreter) Ast(src string) (string, *Node) {
 	fset := token.NewFileSet() // positions are relative to fset
 	f, err := parser.ParseFile(fset, "sample.go", src, 0)
 	if err != nil {
@@ -494,8 +493,6 @@ func (interp *Interpreter) Ast(src string) (*Node, *NodeMap) {
 				// function is not a method, create an empty receiver list
 				addChild(&root, n, &index, FieldList, Nop)
 			}
-			// Add func name to definitions
-			def[a.Name.Name] = n
 			st.push(n)
 
 		case *ast.FuncLit:
@@ -609,10 +606,7 @@ func (interp *Interpreter) Ast(src string) (*Node, *NodeMap) {
 			st.push(addChild(&root, anc, &index, TypeAssertExpr, TypeAssert))
 
 		case *ast.TypeSpec:
-			n := addChild(&root, anc, &index, TypeSpec, Nop)
-			// Add type name to definitions
-			def[a.Name.Name] = n
-			st.push(n)
+			st.push(addChild(&root, anc, &index, TypeSpec, Nop))
 
 		case *ast.UnaryExpr:
 			var kind = UnaryExpr
@@ -657,7 +651,7 @@ func (interp *Interpreter) Ast(src string) (*Node, *NodeMap) {
 		}
 		return true
 	})
-	return root, &def
+	return pkgName, root
 }
 
 type nodestack []*Node

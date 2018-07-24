@@ -13,7 +13,6 @@ type Symbol struct {
 	node   *Node       // Node value if index is negative
 	index  int         // index of value in frame or -1
 	pkgbin *SymMap     // Map of package symbols if typ.cat is BinPkgT, or nil
-	pkgsrc *NodeMap    // Map of package symbols if typ.cat is SrcPkgT, or nil
 	bin    interface{} // Symbol from imported bin package if typ.cat is BinT, or nil
 }
 
@@ -50,14 +49,14 @@ type FrameIndex struct {
 // PkgContext type stores current state of a package during compiling
 type PkgContext struct {
 	frameIndex *FrameIndex
-	nodeMap    *NodeMap
+	NodeMap
 }
 
 // Cfg generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
 // Following this pass, the CFG is ready to run
-func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
+func (interp *Interpreter) Cfg(root *Node) []*Node {
 	scope := &Scope{sym: map[string]*Symbol{}}
 	frameIndex := &FrameIndex{}
 	var loop, loopRestart *Node
@@ -66,13 +65,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 	var exports *SymMap
 	var expval *ValueMap
 	var iotaValue int
-	var srcPkg *NodeMap
-
-	// Fill root scope with initial symbol definitions
-	for name, node := range *sdef {
-		scope.sym[name] = &Symbol{node: node, index: -1}
-	}
-	log.Println(interp.srcPkg["provider"])
+	var pkgName string
 
 	root.Walk(func(n *Node) bool {
 		// Pre-order processing
@@ -91,10 +84,9 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			scope = scope.push(0)
 
 		case File:
-			pkgName := n.child[0].ident
-			srcPkg = interp.srcPkg[pkgName]
-			if srcPkg == nil {
-				srcPkg = &NodeMap{}
+			pkgName = n.child[0].ident
+			if _, ok := interp.context[pkgName]; !ok {
+				interp.context[pkgName] = PkgContext{NodeMap: NodeMap{}}
 			}
 			if pkg, ok := interp.Exports[pkgName]; ok {
 				exports = pkg
@@ -174,6 +166,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			}
 			// TODO: deprecate use of interp.types in favor of scope.sym
 			interp.types[n.child[0].ident] = n.typ
+			interp.context[pkgName].NodeMap[n.child[0].ident] = n
 			scope.sym[n.child[0].ident] = &Symbol{typ: n.typ}
 			// TODO: export type for use by runtime
 			return false
@@ -427,6 +420,8 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 							n.typ = interp.types[def.child[2].child[j].child[0].child[0].ident]
 						}
 						n.fsize = l
+					} else {
+						log.Println(n.index, "call to unknown def")
 					}
 				}
 			} else if n.child[0].kind == SelectorSrc {
@@ -578,6 +573,9 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			n.typ = n.child[2].typ
 			n.val = n
 			scope.sym[funcName].typ = n.typ
+			scope.sym[funcName].node = n
+			scope.sym[funcName].index = -1
+			interp.context[pkgName].NodeMap[funcName] = n
 
 		case FuncLit:
 			n.typ = n.child[2].typ
@@ -628,12 +626,12 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				} else if n.typ != nil {
 					if n.typ.cat == BinPkgT {
 						n.val = sym.pkgbin
-					} else if n.typ.cat == SrcPkgT {
-						n.val = sym.pkgsrc
 					}
+				} else {
+					n.sym = sym
 				}
 				n.recv = n
-			} else if node, ok := (*srcPkg)[n.ident]; ok {
+			} else if node, ok := interp.context[pkgName].NodeMap[n.ident]; ok {
 				n.val = node
 				n.typ = node.typ
 				n.kind = node.kind
@@ -649,17 +647,20 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 					symFrameIndex := frameIndex
 					symScope := scope
 					level := 0
+					// Back to package level scope
 					for symFrameIndex.anc != nil {
 						level++
-						symScope = symScope.anc
 						symFrameIndex = symFrameIndex.anc
+					}
+					for symScope.anc != nil {
+						symScope = symScope.anc
 					}
 					symFrameIndex.max++
 					symScope.sym[n.ident] = &Symbol{index: symFrameIndex.max}
-					(*sdef)[n.ident] = n
+					interp.context[pkgName].NodeMap[n.ident] = n
 					n.findex = symFrameIndex.max
 					n.level = level
-					log.Println(n.index, n.ident, n.anc.kind, "unresolved, create new at pkg level", n.findex, level)
+					n.sym = symScope.sym[n.ident]
 				}
 			}
 
@@ -719,7 +720,7 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			} else {
 				// TODO: make sure we do not import a src package more than once
 				interp.importSrcFile(ipath)
-				scope.sym[name] = &Symbol{typ: &Type{cat: SrcPkgT}, pkgsrc: interp.srcPkg[name]}
+				scope.sym[name] = &Symbol{typ: &Type{cat: SrcPkgT}}
 			}
 
 		case KeyValueExpr:
@@ -818,15 +819,13 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 				n.run = nop
 			} else if n.typ.cat == SrcPkgT {
 				// Resolve source package symbol
-				pkgSrc := n.child[0].val.(*NodeMap)
-				name := n.child[1].ident
-				if node, ok := (*pkgSrc)[name]; ok {
+				if node, ok := interp.context[n.child[0].ident].NodeMap[n.child[1].ident]; ok {
 					n.val = node
 					n.run = nop
 					n.kind = SelectorSrc
 					n.typ = node.typ
 				} else {
-					log.Println(n.index, "selector unresolved:", n.child[0].ident+"."+name)
+					log.Println(n.index, "selector unresolved:", n.child[0].ident+"."+n.child[1].ident)
 				}
 			} else if fi := n.typ.fieldIndex(n.child[1].ident); fi >= 0 {
 				// Resolve struct field index
@@ -896,7 +895,6 @@ func (interp *Interpreter) Cfg(root *Node, sdef *NodeMap) []*Node {
 			}
 		}
 	})
-	log.Println(sdef)
 	return initNodes
 }
 

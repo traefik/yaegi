@@ -26,13 +26,9 @@ func (interp *Interpreter) importSrcFile(path string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		pkgName, sdef := interp.Eval(string(buf))
-		if interp.srcPkg[pkgName] == nil {
-			s := make(NodeMap)
-			interp.srcPkg[pkgName] = &s
-		}
-		for name, node := range *sdef {
-			(*interp.srcPkg[pkgName])[name] = node
+		pkgName := interp.Eval(string(buf))
+		if _, ok := interp.context[pkgName]; !ok {
+			interp.context[pkgName] = PkgContext{NodeMap: NodeMap{}}
 		}
 	}
 }
