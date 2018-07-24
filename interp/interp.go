@@ -2,7 +2,6 @@
 package interp
 
 import (
-	"log"
 	"reflect"
 )
 
@@ -39,9 +38,6 @@ type Frame struct {
 
 // NodeMap defines a Map of symbols (const, variables and functions) indexed by names
 type NodeMap map[string]*Node
-
-// PkgSrcMap stores package source nodes
-type PkgSrcMap map[string]*NodeMap
 
 type PkgCtxMap map[string]PkgContext
 
@@ -123,7 +119,6 @@ func (i *Interpreter) ImportBin(pkg *map[string]*map[string]interface{}) {
 func (i *Interpreter) Eval(src string) string {
 	// Parse source to AST
 	pkgName, root := i.Ast(src)
-	log.Println(pkgName)
 	if i.AstDot {
 		root.AstDot(DotX())
 	}

@@ -194,11 +194,16 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 		t.val = nodeType(interp, scope, n.child[1])
 	case SelectorExpr:
 		pkgName, typeName := n.child[0].ident, n.child[1].ident
-		if pkg, _, ok := scope.lookup(pkgName); ok {
-			if typ, ok := (*pkg.pkgbin)[typeName]; ok {
+		// TODO: handle pkgsrc types
+		if pkg, ok := interp.binPkg[pkgName]; ok {
+			if typ, ok := (*pkg)[typeName]; ok {
 				t.cat = ValueT
 				t.rtype = reflect.TypeOf(typ).Elem()
+			} else {
+				log.Println("unknown type", pkgName+"."+typeName)
 			}
+		} else {
+			log.Println("unknown package", pkgName)
 		}
 	case StarExpr:
 		t.cat = PtrT

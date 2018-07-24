@@ -9,11 +9,11 @@ import (
 
 // Symbol type defines symbol values entities
 type Symbol struct {
-	typ    *Type       // Type of value
-	node   *Node       // Node value if index is negative
-	index  int         // index of value in frame or -1
-	pkgbin *SymMap     // Map of package symbols if typ.cat is BinPkgT, or nil
-	bin    interface{} // Symbol from imported bin package if typ.cat is BinT, or nil
+	typ   *Type       // Type of value
+	node  *Node       // Node value if index is negative
+	index int         // index of value in frame or -1
+	bin   interface{} // Symbol from imported bin package if typ.cat is BinT, or nil
+	path  string      // package path if typ.cat is SrcPkgT or BinPkgT
 }
 
 // Scope type stores the list of visible symbols at current scope level
@@ -623,10 +623,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
 				if n.findex < 0 {
 					n.val = sym.node
-				} else if n.typ != nil {
-					if n.typ.cat == BinPkgT {
-						n.val = sym.pkgbin
-					}
 				} else {
 					n.sym = sym
 				}
@@ -715,12 +711,12 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						scope.sym[n] = &Symbol{typ: &Type{cat: BinT}, bin: s}
 					}
 				} else {
-					scope.sym[name] = &Symbol{typ: &Type{cat: BinPkgT}, pkgbin: pkg}
+					scope.sym[name] = &Symbol{typ: &Type{cat: BinPkgT}, path: ipath}
 				}
 			} else {
 				// TODO: make sure we do not import a src package more than once
 				interp.importSrcFile(ipath)
-				scope.sym[name] = &Symbol{typ: &Type{cat: SrcPkgT}}
+				scope.sym[name] = &Symbol{typ: &Type{cat: SrcPkgT}, path: ipath}
 			}
 
 		case KeyValueExpr:
@@ -797,7 +793,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else if n.typ.cat == BinPkgT {
 				// Resolve binary package symbol
 				name := n.child[1].ident
-				pkgSym := n.child[0].val.(*SymMap)
+				pkgSym := interp.binPkg[n.child[0].sym.path]
 				if s, ok := (*pkgSym)[name]; ok {
 					n.kind = SelectorImport
 					n.val = reflect.ValueOf(s)
