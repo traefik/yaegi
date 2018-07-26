@@ -48,14 +48,6 @@ var builtin = [...]Builtin{
 	TypeAssert:   typeAssert,
 }
 
-var goBuiltin = map[string]Builtin{
-	"append":  _append,
-	"len":     _len,
-	"make":    _make,
-	"println": _println,
-	"sleep":   sleep,
-}
-
 // Run a Go function
 func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int, fork bool, goroutine bool) {
 	//log.Println("run", def.index, def.child[1].ident, "allocate", def.flen)
@@ -322,7 +314,6 @@ func call(n *Node, f *Frame) {
 		recv = n.child[0].recv
 		rseq = n.child[0].child[1].val.([]int)
 	}
-	//log.Println(n.index, "call", n.child[0].ident, value(n.child[0], f))
 	fn := value(n.child[0], f).(*Node)
 	var ret []int
 	if len(fn.child[2].child) > 1 {
@@ -338,7 +329,6 @@ func call(n *Node, f *Frame) {
 
 // Same as call(), but execute function in a goroutine
 func callGoRoutine(n *Node, f *Frame) {
-	//println(n.index, "call", n.child[0].ident)
 	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
 	var recv *Node
 	var rseq []int

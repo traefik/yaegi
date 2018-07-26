@@ -112,32 +112,6 @@ type Type struct {
 	nindex   int           // node index (for debug only)
 }
 
-// TypeMap defines a map of Types indexed by type names
-type TypeMap map[string]*Type
-
-var defaultTypes TypeMap = map[string]*Type{
-	"bool":       &Type{cat: BoolT},
-	"byte":       &Type{cat: ByteT},
-	"complex64":  &Type{cat: Complex64T},
-	"complex128": &Type{cat: Complex128T},
-	"error":      &Type{cat: ErrorT},
-	"float32":    &Type{cat: Float32T},
-	"float64":    &Type{cat: Float64T},
-	"int":        &Type{cat: IntT},
-	"int8":       &Type{cat: Int8T},
-	"int16":      &Type{cat: Int16T},
-	"int32":      &Type{cat: Int32T},
-	"int64":      &Type{cat: Int64T},
-	"rune":       &Type{cat: RuneT},
-	"string":     &Type{cat: StringT},
-	"uint":       &Type{cat: UintT},
-	"uint8":      &Type{cat: Uint8T},
-	"uint16":     &Type{cat: Uint16T},
-	"uint32":     &Type{cat: Uint32T},
-	"uint64":     &Type{cat: Uint64T},
-	"uintptr":    &Type{cat: UintptrT},
-}
-
 // return a type definition for the corresponding AST subtree
 func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 	if n.typ != nil {
@@ -182,7 +156,11 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 			}
 		}
 	case Ident:
-		t = interp.types[n.ident]
+		if sym, _, found := scope.lookup(n.ident); found {
+			t = sym.typ
+		} else {
+			log.Println("unknown type", n.ident)
+		}
 	case InterfaceType:
 		t.cat = InterfaceT
 		//for _, method := range n.child[0].child {

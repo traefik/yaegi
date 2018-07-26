@@ -1031,6 +1031,39 @@ func main() {
 	// 0 1 2 3
 }
 
+func Example_iota0() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	const (
+		Foo = iota
+		Bar
+		Baz
+	)
+
+	const (
+		Asm = iota
+		C
+		Java
+		Go
+	)
+
+	fmt.Println(Foo, Bar, Baz)
+	fmt.Println(Asm, C, Java, Go)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 0 1 2
+	// 0 1 2 3
+}
+
 func Example_ioutil() {
 	src := `
 package main

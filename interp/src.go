@@ -26,10 +26,7 @@ func (interp *Interpreter) importSrcFile(path string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		pkgName := interp.Eval(string(buf))
-		if _, ok := interp.context[pkgName]; !ok {
-			interp.context[pkgName] = PkgContext{NodeMap: NodeMap{}}
-		}
+		interp.Eval(string(buf))
 	}
 }
 

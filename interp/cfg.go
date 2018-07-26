@@ -7,20 +7,36 @@ import (
 	"unicode"
 )
 
-// Symbol type defines symbol values entities
+type SymKind uint
+
+const (
+	Const SymKind = iota
+	Typ
+	Var
+	Func
+	Bin
+	Bltn
+)
+
+// A Symbol represents an interpreter object such as type, constant, var, func, builtin or binary object
 type Symbol struct {
-	typ   *Type       // Type of value
-	node  *Node       // Node value if index is negative
-	index int         // index of value in frame or -1
-	bin   interface{} // Symbol from imported bin package if typ.cat is BinT, or nil
-	path  string      // package path if typ.cat is SrcPkgT or BinPkgT
+	kind    SymKind
+	typ     *Type       // Type of value
+	node    *Node       // Node value if index is negative
+	index   int         // index of value in frame or -1
+	val     interface{} // default value
+	path    string      // package path if typ.cat is SrcPkgT or BinPkgT
+	builtin Builtin     // Builtin function or nil
 }
+
+// A SymMap stores symbols indexed by name
+type SymMap map[string]*Symbol
 
 // Scope type stores the list of visible symbols at current scope level
 type Scope struct {
-	anc   *Scope             // Ancestor upper scope
-	level int                // Frame level: number of frame indirections to access var
-	sym   map[string]*Symbol // Symbol table indexed by idents
+	anc   *Scope // Ancestor upper scope
+	level int    // Frame level: number of frame indirections to access var
+	sym   SymMap // Map of symbols defined in this current scope
 }
 
 // Create a new scope and chain it to the current one
@@ -40,16 +56,20 @@ func (s *Scope) lookup(ident string) (*Symbol, int, bool) {
 	return nil, 0, false
 }
 
+func (s *Scope) getType(ident string) *Type {
+	var t *Type
+	if sym, _, found := s.lookup(ident); found {
+		if sym.kind == Typ {
+			t = sym.typ
+		}
+	}
+	return t
+}
+
 // FrameIndex type stores informations to allocate frame space for variables
 type FrameIndex struct {
 	anc *FrameIndex // Ancestor upper frame
 	max int         // The highest index in frame
-}
-
-// PkgContext type stores current state of a package during compiling
-type PkgContext struct {
-	frameIndex *FrameIndex
-	NodeMap
 }
 
 // Cfg generates a control flow graph (CFG) from AST (wiring successors in AST)
@@ -57,12 +77,12 @@ type PkgContext struct {
 // variables. A list of nodes of init functions is returned.
 // Following this pass, the CFG is ready to run
 func (interp *Interpreter) Cfg(root *Node) []*Node {
-	scope := &Scope{sym: map[string]*Symbol{}}
+	scope := interp.universe
 	frameIndex := &FrameIndex{}
 	var loop, loopRestart *Node
 	var funcDef bool // True if a function is defined in the current frame context
 	var initNodes []*Node
-	var exports *SymMap
+	var exports *BinMap
 	var expval *ValueMap
 	var iotaValue int
 	var pkgName string
@@ -85,14 +105,15 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 		case File:
 			pkgName = n.child[0].ident
-			if _, ok := interp.context[pkgName]; !ok {
-				interp.context[pkgName] = PkgContext{NodeMap: NodeMap{}}
+			if _, ok := interp.scope[pkgName]; !ok {
+				interp.scope[pkgName] = scope.push(0)
 			}
+			scope = interp.scope[pkgName]
 			if pkg, ok := interp.Exports[pkgName]; ok {
 				exports = pkg
 				expval = interp.Expval[pkgName]
 			} else {
-				x := make(SymMap)
+				x := make(BinMap)
 				exports = &x
 				interp.Exports[pkgName] = exports
 				y := make(ValueMap)
@@ -129,11 +150,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 				if tname == "" {
 					tname = recv.child[1].child[0].ident
-					elemtype := interp.types[tname]
+					elemtype := scope.getType(tname)
 					t = &Type{cat: PtrT, val: elemtype}
 					elemtype.method = append(elemtype.method, n)
 				} else {
-					t = interp.types[tname]
+					t = scope.getType(tname)
 				}
 				t.method = append(t.method, n)
 			}
@@ -164,10 +185,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				// Define a new type
 				n.typ = nodeType(interp, scope, n.child[1])
 			}
-			// TODO: deprecate use of interp.types in favor of scope.sym
-			interp.types[n.child[0].ident] = n.typ
-			interp.context[pkgName].NodeMap[n.child[0].ident] = n
-			scope.sym[n.child[0].ident] = &Symbol{typ: n.typ}
+			scope.sym[n.child[0].ident] = &Symbol{kind: Typ, typ: n.typ}
 			// TODO: export type for use by runtime
 			return false
 
@@ -185,11 +203,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 		case ArrayType:
 			// TODO: move to pre-processing ? See when handling complex array type def
-			n.typ = &Type{cat: ArrayT, val: interp.types[n.child[1].ident]}
+			n.typ = &Type{cat: ArrayT, val: nodeType(interp, scope, n.child[1])}
 
 		case Define, AssignStmt:
 			wireChild(n)
-			if n.kind == Define || n.anc.kind == VarDecl {
+			if n.kind == Define || n.anc.kind == VarDecl || n.anc.kind == ConstDecl {
 				// Force definition of assigned ident in current scope
 				frameIndex.max++
 				name := n.child[0].ident
@@ -234,7 +252,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case IncDecStmt:
 			wireChild(n)
 			n.findex = n.child[0].findex
-			n.child[0].typ = interp.types["int"]
+			n.child[0].typ = scope.getType("int")
 			n.typ = n.child[0].typ
 			if sym, level, ok := scope.lookup(n.child[0].ident); ok {
 				sym.typ = n.typ
@@ -262,7 +280,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						types = funtype.ret
 					}
 				case TypeAssertExpr, IndexExpr:
-					types = append(types, n.child[l].child[1].typ, defaultTypes["error"])
+					types = append(types, n.child[l].child[1].typ, scope.getType("error"))
 				default:
 					log.Fatalln(n.index, "Assign expression unsupported:", n.child[l].kind)
 				}
@@ -311,17 +329,17 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			wireChild(n)
 			frameIndex.max++
 			n.findex = frameIndex.max
-			if builtin, ok := goBuiltin[n.child[0].ident]; ok {
-				n.run = builtin
+			if n.child[0].sym != nil && n.child[0].sym.kind == Bltn {
+				n.run = n.child[0].sym.builtin
 				n.child[0].typ = &Type{cat: BuiltinT}
 				if n.child[0].ident == "make" {
-					if n.typ = interp.types[n.child[1].ident]; n.typ == nil {
+					if n.typ = scope.getType(n.child[1].ident); n.typ == nil {
 						n.typ = nodeType(interp, scope, n.child[1])
 					}
 					n.child[1].val = n.typ
 					n.child[1].kind = BasicLit
 				}
-			} else if n.child[0].isType() {
+			} else if n.child[0].isType(scope) {
 				n.typ = n.child[0].typ
 				if n.typ.cat == AliasT {
 					n.run = convert
@@ -383,7 +401,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						if l == 1 {
 							// If def returns exactly one value, propagate its type in call node.
 							// Multiple return values will be handled differently through AssignX.
-							n.typ = interp.types[def.child[2].child[j].child[0].child[0].ident]
+							n.typ = scope.getType(def.child[2].child[j].child[0].child[0].ident)
 						}
 						n.fsize = l
 					}
@@ -401,8 +419,8 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				if sym.typ != nil && sym.typ.cat == BinT {
 					n.run = callBin
 					n.typ = &Type{cat: ValueT}
-					n.child[0].fsize = reflect.TypeOf(sym.bin).NumOut()
-					n.child[0].val = reflect.ValueOf(sym.bin)
+					n.child[0].fsize = reflect.TypeOf(sym.val).NumOut()
+					n.child[0].val = reflect.ValueOf(sym.val)
 					n.child[0].kind = BasicLit
 				} else if sym.typ != nil && sym.typ.cat == ValueT {
 					n.run = callDirectBin
@@ -417,7 +435,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						if l == 1 {
 							// If def returns exactly one value, propagate its type in call node.
 							// Multiple return values will be handled differently through AssignX.
-							n.typ = interp.types[def.child[2].child[j].child[0].child[0].ident]
+							n.typ = scope.getType(def.child[2].child[j].child[0].child[0].ident)
 						}
 						n.fsize = l
 					} else {
@@ -463,7 +481,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				// Handle object assign from sparse key / values
 				if len(n.child) > 1 && n.child[1].kind == KeyValueExpr {
 					n.run = compositeSparse
-					//n.typ = interp.types[n.child[0].ident]
 					n.typ = nodeType(interp, scope, n.child[0])
 					for _, c := range n.child[1:] {
 						c.findex = n.typ.fieldIndex(c.child[0].ident)
@@ -572,10 +589,10 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			}
 			n.typ = n.child[2].typ
 			n.val = n
-			scope.sym[funcName].typ = n.typ
-			scope.sym[funcName].node = n
-			scope.sym[funcName].index = -1
-			interp.context[pkgName].NodeMap[funcName] = n
+			interp.scope[pkgName].sym[funcName].index = -1
+			interp.scope[pkgName].sym[funcName].typ = n.typ
+			interp.scope[pkgName].sym[funcName].kind = Func
+			interp.scope[pkgName].sym[funcName].node = n
 
 		case FuncLit:
 			n.typ = n.child[2].typ
@@ -605,33 +622,22 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case Ident:
 			if n.anc.kind == File || (n.anc.kind == SelectorExpr && n.anc.child[0] != n) {
 				// skip symbol creation/lookup for idents used as key
-			} else if n.ident == "nil" {
-				n.kind = BasicLit
-			} else if n.ident == "false" {
-				n.val = false
-				n.typ = defaultTypes["bool"]
-				n.kind = BasicLit
-			} else if n.ident == "true" {
-				n.val = true
-				n.typ = defaultTypes["bool"]
-				n.kind = BasicLit
-			} else if n.ident == "iota" {
-				n.val = iotaValue
-				n.typ = defaultTypes["int"]
-				n.kind = BasicLit
 			} else if sym, level, ok := scope.lookup(n.ident); ok {
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
 				if n.findex < 0 {
 					n.val = sym.node
+					n.kind = sym.node.kind
 				} else {
 					n.sym = sym
+					if sym.val != nil {
+						n.val = sym.val
+						n.kind = BasicLit
+					} else if n.ident == "iota" {
+						n.val = iotaValue
+						n.kind = BasicLit
+					}
 				}
 				n.recv = n
-			} else if node, ok := interp.context[pkgName].NodeMap[n.ident]; ok {
-				n.val = node
-				n.typ = node.typ
-				n.kind = node.kind
-				n.findex = node.findex
 			} else {
 				if n.ident == "_" || n.anc.kind == Define || n.anc.kind == DefineX || n.anc.kind == Field || n.anc.kind == RangeStmt || n.anc.kind == ValueSpec {
 					// Create a new local symbol for func argument or local var definition
@@ -640,23 +646,28 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.findex = frameIndex.max
 				} else {
 					// symbol may be defined globally elsewhere later, add an entry at pkg level
-					symFrameIndex := frameIndex
-					symScope := scope
-					level := 0
-					// Back to package level scope
-					for symFrameIndex.anc != nil {
-						level++
-						symFrameIndex = symFrameIndex.anc
-					}
-					for symScope.anc != nil {
-						symScope = symScope.anc
-					}
-					symFrameIndex.max++
-					symScope.sym[n.ident] = &Symbol{index: symFrameIndex.max}
-					interp.context[pkgName].NodeMap[n.ident] = n
-					n.findex = symFrameIndex.max
-					n.level = level
-					n.sym = symScope.sym[n.ident]
+					//log.Println(n.index, n.ident, "create package level sym", n.anc.kind)
+					interp.scope[pkgName].sym[n.ident] = &Symbol{}
+					n.sym = interp.scope[pkgName].sym[n.ident]
+					/*
+						symFrameIndex := frameIndex
+						symScope := scope
+						level := 0
+						// Back to package level scope
+						for symFrameIndex.anc != nil {
+							level++
+							symFrameIndex = symFrameIndex.anc
+						}
+						for symScope.anc != nil {
+							symScope = symScope.anc
+						}
+						symFrameIndex.max++
+						symScope.sym[n.ident] = &Symbol{index: symFrameIndex.max}
+						//interp.context[pkgName].NodeMap[n.ident] = n
+						n.findex = symFrameIndex.max
+						n.level = level
+						n.sym = symScope.sym[n.ident]
+					*/
 				}
 			}
 
@@ -708,7 +719,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if pkg, ok := interp.binPkg[ipath]; ok {
 				if name == "." {
 					for n, s := range *pkg {
-						scope.sym[n] = &Symbol{typ: &Type{cat: BinT}, bin: s}
+						scope.sym[n] = &Symbol{typ: &Type{cat: BinT}, val: s}
 					}
 				} else {
 					scope.sym[name] = &Symbol{typ: &Type{cat: BinPkgT}, path: ipath}
@@ -815,11 +826,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				n.run = nop
 			} else if n.typ.cat == SrcPkgT {
 				// Resolve source package symbol
-				if node, ok := interp.context[n.child[0].ident].NodeMap[n.child[1].ident]; ok {
-					n.val = node
+				if sym, ok := interp.scope[n.child[0].ident].sym[n.child[1].ident]; ok {
+					n.val = sym.node
 					n.run = nop
 					n.kind = SelectorSrc
-					n.typ = node.typ
+					n.typ = sym.typ
 				} else {
 					log.Println(n.index, "selector unresolved:", n.child[0].ident+"."+n.child[1].ident)
 				}
@@ -876,14 +887,14 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 		case TypeAssertExpr:
 			if n.child[1].typ == nil {
-				n.child[1].typ = interp.types[n.child[1].ident]
+				n.child[1].typ = scope.getType(n.child[1].ident)
 			}
 			n.typ = n.child[1].typ
 
 		case ValueSpec:
 			l := len(n.child) - 1
 			if n.typ = n.child[l].typ; n.typ == nil {
-				n.typ = interp.types[n.child[l].ident]
+				n.typ = scope.getType(n.child[l].ident)
 			}
 			for _, c := range n.child[:l] {
 				c.typ = n.typ
@@ -905,13 +916,12 @@ func getDefault(n *Node) int {
 }
 
 // isType returns true if node refers to a type definition, false otherwise
-func (n *Node) isType() bool {
+func (n *Node) isType(scope *Scope) bool {
 	switch n.kind {
 	case ArrayType, ChanType, FuncType, MapType, StructType:
 		return true
 	case Ident:
-		_, ok := n.interp.types[n.ident]
-		return ok
+		return scope.getType(n.ident) != nil
 	case Rvalue:
 		return n.typ.rtype.Kind() != reflect.Func
 	}

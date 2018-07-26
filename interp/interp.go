@@ -1,4 +1,3 @@
-// Package interp implements a Go interpreter.
 package interp
 
 import (
@@ -39,13 +38,11 @@ type Frame struct {
 // NodeMap defines a Map of symbols (const, variables and functions) indexed by names
 type NodeMap map[string]*Node
 
-type PkgCtxMap map[string]PkgContext
-
-// SymMap stores executable symbols indexed by name
-type SymMap map[string]interface{}
+// BinMap stores executable symbols indexed by name
+type BinMap map[string]interface{}
 
 // PkgMap stores package executable symbols
-type PkgMap map[string]*SymMap
+type PkgMap map[string]*BinMap
 
 // ValueMap stores symbols as reflect values
 type ValueMap map[string]reflect.Value
@@ -64,12 +61,12 @@ type Opt struct {
 // Interpreter contains global resources and state
 type Interpreter struct {
 	Opt
-	Frame   *Frame
-	types   TypeMap
-	context PkgCtxMap
-	binPkg  PkgMap
-	Exports PkgMap
-	Expval  PkgValueMap
+	Frame    *Frame            // programe data storage during execution
+	universe *Scope            // Interpreter global level scope
+	scope    map[string]*Scope // Package level scopes, indexed by package name
+	binPkg   PkgMap            // imported binary packages
+	Exports  PkgMap            // exported symbols for use by runtime
+	Expval   PkgValueMap       // same as abobe (TODO: keep only one)
 }
 
 // Walk traverses AST n in depth first order, call cbin function
@@ -89,19 +86,62 @@ func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 // NewInterpreter creates and returns a new interpreter object
 func NewInterpreter(opt Opt) *Interpreter {
 	return &Interpreter{
-		Opt:     opt,
-		types:   defaultTypes,
-		context: make(PkgCtxMap),
-		binPkg:  make(PkgMap),
-		Exports: make(PkgMap),
-		Expval:  make(PkgValueMap),
+		Opt:      opt,
+		universe: initUniverse(),
+		scope:    map[string]*Scope{},
+		binPkg:   make(PkgMap),
+		Exports:  make(PkgMap),
+		Expval:   make(PkgValueMap),
 	}
+}
+
+func initUniverse() *Scope {
+	scope := &Scope{sym: SymMap{
+		// predefined Go types
+		"bool":       &Symbol{kind: Typ, typ: &Type{cat: BoolT}},
+		"byte":       &Symbol{kind: Typ, typ: &Type{cat: ByteT}},
+		"complex64":  &Symbol{kind: Typ, typ: &Type{cat: Complex64T}},
+		"complex128": &Symbol{kind: Typ, typ: &Type{cat: Complex128T}},
+		"error":      &Symbol{kind: Typ, typ: &Type{cat: ErrorT}},
+		"float32":    &Symbol{kind: Typ, typ: &Type{cat: Float32T}},
+		"float64":    &Symbol{kind: Typ, typ: &Type{cat: Float64T}},
+		"int":        &Symbol{kind: Typ, typ: &Type{cat: IntT}},
+		"int8":       &Symbol{kind: Typ, typ: &Type{cat: Int8T}},
+		"int16":      &Symbol{kind: Typ, typ: &Type{cat: Int16T}},
+		"int32":      &Symbol{kind: Typ, typ: &Type{cat: Int32T}},
+		"int64":      &Symbol{kind: Typ, typ: &Type{cat: Int64T}},
+		"rune":       &Symbol{kind: Typ, typ: &Type{cat: RuneT}},
+		"string":     &Symbol{kind: Typ, typ: &Type{cat: StringT}},
+		"uint":       &Symbol{kind: Typ, typ: &Type{cat: UintT}},
+		"uint8":      &Symbol{kind: Typ, typ: &Type{cat: Uint8T}},
+		"uint16":     &Symbol{kind: Typ, typ: &Type{cat: Uint16T}},
+		"uint32":     &Symbol{kind: Typ, typ: &Type{cat: Uint32T}},
+		"uint64":     &Symbol{kind: Typ, typ: &Type{cat: Uint64T}},
+		"uintptr":    &Symbol{kind: Typ, typ: &Type{cat: UintptrT}},
+
+		// predefined Go constants
+		"false": &Symbol{kind: Const, typ: &Type{cat: BoolT}, val: false},
+		"true":  &Symbol{kind: Const, typ: &Type{cat: BoolT}, val: true},
+		"iota":  &Symbol{kind: Const, typ: &Type{cat: IntT}},
+
+		// predefined Go zero value
+		"nil": &Symbol{},
+
+		// predefined Go builtins
+		"append":  &Symbol{kind: Bltn, builtin: _append},
+		"len":     &Symbol{kind: Bltn, builtin: _len},
+		"make":    &Symbol{kind: Bltn, builtin: _make},
+		"println": &Symbol{kind: Bltn, builtin: _println},
+		"sleep":   &Symbol{kind: Bltn, builtin: sleep}, // Temporary, for debug
+		// TODO: cap, close, complex, copy, delete, imag, new, panic, print, real, recover
+	}}
+	return scope
 }
 
 // AddImport registers a symbol from an imported package to be visible from the interpreter
 func (i *Interpreter) AddImport(pkg string, name string, sym interface{}) {
 	if i.binPkg[pkg] == nil {
-		s := make(SymMap)
+		s := make(BinMap)
 		i.binPkg[pkg] = &s
 	}
 	(*i.binPkg[pkg])[name] = sym
@@ -110,7 +150,7 @@ func (i *Interpreter) AddImport(pkg string, name string, sym interface{}) {
 // ImportBin registers symbols contained in pkg map
 func (i *Interpreter) ImportBin(pkg *map[string]*map[string]interface{}) {
 	for n, p := range *pkg {
-		i.binPkg[n] = (*SymMap)(p)
+		i.binPkg[n] = (*BinMap)(p)
 	}
 }
 
@@ -125,8 +165,8 @@ func (i *Interpreter) Eval(src string) string {
 
 	// Annotate AST with CFG infos
 	initNodes := i.Cfg(root)
-	if entry, ok := i.context[pkgName].NodeMap[i.Entry]; ok {
-		initNodes = append(initNodes, entry)
+	if sym := i.scope[pkgName].sym[i.Entry]; sym != nil {
+		initNodes = append(initNodes, sym.node)
 	}
 
 	if i.CfgDot {

@@ -77,7 +77,7 @@ func main() {
 type Plugin struct {
 	Pkgname, Typename string
 	ID                int
-	Syms              *interp.SymMap
+	Syms              *interp.BinMap
 }
 
 // Handler redirect http.Handler processing in the interpreter
