@@ -269,17 +269,16 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 		panic(err)
 	}
 
-	index := 0
 	var root, anc *Node
 	var st nodestack
 	var nbAssign int
 	var typeSpec bool
 	var pkgName string
 
-	addChild := func(root **Node, anc *Node, index *int, kind Kind, action Action) *Node {
-		*index++
+	addChild := func(root **Node, anc *Node, kind Kind, action Action) *Node {
+		interp.nindex++
 		var i interface{}
-		n := &Node{anc: anc, interp: interp, index: *index, kind: kind, action: action, val: &i, run: builtin[action]}
+		n := &Node{anc: anc, interp: interp, index: interp.nindex, kind: kind, action: action, val: &i, run: builtin[action]}
 		n.start = n
 		if anc == nil {
 			*root = n
@@ -293,8 +292,8 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 					newChild := []*Node{}
 					for i := 0; i < nbAssign; i++ {
 						// set new signle assign
-						*index++
-						na := &Node{anc: anc.anc, interp: interp, index: *index, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
+						interp.nindex++
+						na := &Node{anc: anc.anc, interp: interp, index: interp.nindex, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
 						na.start = na
 						newChild = append(newChild, na)
 						// Set single assign left hand side
@@ -314,13 +313,13 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 					typeNode := anc.child[nbAssign]
 					for i := 0; i < nbAssign; i++ {
 						// set new signle assign
-						*index++
-						na := &Node{anc: anc.anc, interp: interp, index: *index, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
+						interp.nindex++
+						na := &Node{anc: anc.anc, interp: interp, index: interp.nindex, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
 						na.start = na
 						newChild = append(newChild, na)
 						// set new type for this assignment
-						*index++
-						nt := &Node{anc: na, interp: interp, ident: typeNode.ident, index: *index, kind: typeNode.kind, action: typeNode.action, val: new(interface{}), run: typeNode.run}
+						interp.nindex++
+						nt := &Node{anc: na, interp: interp, ident: typeNode.ident, index: interp.nindex, kind: typeNode.kind, action: typeNode.action, val: new(interface{}), run: typeNode.run}
 						// Set single assign left hand side
 						anc.child[i].anc = na
 						na.child = append(na.child, anc.child[i])
@@ -346,7 +345,7 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 			anc = st.pop()
 
 		case *ast.ArrayType:
-			st.push(addChild(&root, anc, &index, ArrayType, Nop))
+			st.push(addChild(&root, anc, ArrayType, Nop))
 
 		case *ast.AssignStmt:
 			var action Action
@@ -367,10 +366,10 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 				action = Assign
 				nbAssign = len(a.Lhs)
 			}
-			st.push(addChild(&root, anc, &index, kind, action))
+			st.push(addChild(&root, anc, kind, action))
 
 		case *ast.BasicLit:
-			n := addChild(&root, anc, &index, BasicLit, Nop)
+			n := addChild(&root, anc, BasicLit, Nop)
 			n.ident = a.Value
 			switch a.Kind {
 			case token.CHAR:
@@ -419,10 +418,10 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 			case token.QUO:
 				action = Quotient
 			}
-			st.push(addChild(&root, anc, &index, kind, action))
+			st.push(addChild(&root, anc, kind, action))
 
 		case *ast.BlockStmt:
-			st.push(addChild(&root, anc, &index, BlockStmt, Nop))
+			st.push(addChild(&root, anc, BlockStmt, Nop))
 
 		case *ast.BranchStmt:
 			var kind Kind
@@ -432,38 +431,38 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 			case token.CONTINUE:
 				kind = Continue
 			}
-			st.push(addChild(&root, anc, &index, kind, Nop))
+			st.push(addChild(&root, anc, kind, Nop))
 
 		case *ast.CallExpr:
-			st.push(addChild(&root, anc, &index, CallExpr, Call))
+			st.push(addChild(&root, anc, CallExpr, Call))
 
 		case *ast.CaseClause:
-			st.push(addChild(&root, anc, &index, CaseClause, Case))
+			st.push(addChild(&root, anc, CaseClause, Case))
 
 		case *ast.ChanType:
-			st.push(addChild(&root, anc, &index, ChanType, Nop))
+			st.push(addChild(&root, anc, ChanType, Nop))
 
 		case *ast.CompositeLit:
-			st.push(addChild(&root, anc, &index, CompositeLitExpr, Nop))
+			st.push(addChild(&root, anc, CompositeLitExpr, Nop))
 
 		case *ast.DeclStmt:
-			st.push(addChild(&root, anc, &index, DeclStmt, Nop))
+			st.push(addChild(&root, anc, DeclStmt, Nop))
 
 		case *ast.Ellipsis:
-			st.push(addChild(&root, anc, &index, Ellipsis, Nop))
+			st.push(addChild(&root, anc, Ellipsis, Nop))
 
 		case *ast.ExprStmt:
-			st.push(addChild(&root, anc, &index, ExprStmt, Nop))
+			st.push(addChild(&root, anc, ExprStmt, Nop))
 
 		case *ast.Field:
-			st.push(addChild(&root, anc, &index, Field, Nop))
+			st.push(addChild(&root, anc, Field, Nop))
 
 		case *ast.FieldList:
-			st.push(addChild(&root, anc, &index, FieldList, Nop))
+			st.push(addChild(&root, anc, FieldList, Nop))
 
 		case *ast.File:
 			pkgName = a.Name.Name
-			st.push(addChild(&root, anc, &index, File, Nop))
+			st.push(addChild(&root, anc, File, Nop))
 
 		case *ast.ForStmt:
 			// Disambiguate variants of FOR statements with a node kind per variant
@@ -485,24 +484,24 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 					kind = For4
 				}
 			}
-			st.push(addChild(&root, anc, &index, kind, Nop))
+			st.push(addChild(&root, anc, kind, Nop))
 
 		case *ast.FuncDecl:
-			n := addChild(&root, anc, &index, FuncDecl, Nop)
+			n := addChild(&root, anc, FuncDecl, Nop)
 			if a.Recv == nil {
 				// function is not a method, create an empty receiver list
-				addChild(&root, n, &index, FieldList, Nop)
+				addChild(&root, n, FieldList, Nop)
 			}
 			st.push(n)
 
 		case *ast.FuncLit:
-			n := addChild(&root, anc, &index, FuncLit, GetFunc)
-			addChild(&root, n, &index, FieldList, Nop)
-			addChild(&root, n, &index, Undef, Nop)
+			n := addChild(&root, anc, FuncLit, GetFunc)
+			addChild(&root, n, FieldList, Nop)
+			addChild(&root, n, Undef, Nop)
 			st.push(n)
 
 		case *ast.FuncType:
-			st.push(addChild(&root, anc, &index, FuncType, Nop))
+			st.push(addChild(&root, anc, FuncType, Nop))
 
 		case *ast.GenDecl:
 			var kind Kind
@@ -516,13 +515,13 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 			case token.VAR:
 				kind = VarDecl
 			}
-			st.push(addChild(&root, anc, &index, kind, Nop))
+			st.push(addChild(&root, anc, kind, Nop))
 
 		case *ast.GoStmt:
-			st.push(addChild(&root, anc, &index, GoStmt, Nop))
+			st.push(addChild(&root, anc, GoStmt, Nop))
 
 		case *ast.Ident:
-			n := addChild(&root, anc, &index, Ident, Nop)
+			n := addChild(&root, anc, Ident, Nop)
 			n.ident = a.Name
 			st.push(n)
 
@@ -538,10 +537,10 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 			} else {
 				kind = If3
 			}
-			st.push(addChild(&root, anc, &index, kind, Nop))
+			st.push(addChild(&root, anc, kind, Nop))
 
 		case *ast.ImportSpec:
-			st.push(addChild(&root, anc, &index, ImportSpec, Nop))
+			st.push(addChild(&root, anc, ImportSpec, Nop))
 
 		case *ast.IncDecStmt:
 			var action Action
@@ -551,62 +550,62 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 			case token.DEC:
 				action = Dec
 			}
-			st.push(addChild(&root, anc, &index, IncDecStmt, action))
+			st.push(addChild(&root, anc, IncDecStmt, action))
 
 		case *ast.IndexExpr:
-			st.push(addChild(&root, anc, &index, IndexExpr, GetIndex))
+			st.push(addChild(&root, anc, IndexExpr, GetIndex))
 
 		case *ast.InterfaceType:
-			st.push(addChild(&root, anc, &index, InterfaceType, Nop))
+			st.push(addChild(&root, anc, InterfaceType, Nop))
 
 		case *ast.KeyValueExpr:
-			st.push(addChild(&root, anc, &index, KeyValueExpr, Nop))
+			st.push(addChild(&root, anc, KeyValueExpr, Nop))
 
 		case *ast.MapType:
-			st.push(addChild(&root, anc, &index, MapType, Nop))
+			st.push(addChild(&root, anc, MapType, Nop))
 
 		case *ast.ParenExpr:
-			st.push(addChild(&root, anc, &index, ParenExpr, Nop))
+			st.push(addChild(&root, anc, ParenExpr, Nop))
 
 		case *ast.RangeStmt:
 			// Insert a missing ForRangeStmt for AST correctness
-			n := addChild(&root, anc, &index, ForRangeStmt, Nop)
-			st.push(addChild(&root, n, &index, RangeStmt, Range))
+			n := addChild(&root, anc, ForRangeStmt, Nop)
+			st.push(addChild(&root, n, RangeStmt, Range))
 
 		case *ast.ReturnStmt:
-			st.push(addChild(&root, anc, &index, ReturnStmt, Return))
+			st.push(addChild(&root, anc, ReturnStmt, Return))
 
 		case *ast.SelectorExpr:
-			st.push(addChild(&root, anc, &index, SelectorExpr, GetIndex))
+			st.push(addChild(&root, anc, SelectorExpr, GetIndex))
 
 		case *ast.SendStmt:
-			st.push(addChild(&root, anc, &index, SendStmt, Send))
+			st.push(addChild(&root, anc, SendStmt, Send))
 
 		case *ast.SliceExpr:
 			if a.Low == nil {
-				st.push(addChild(&root, anc, &index, SliceExpr, Slice0))
+				st.push(addChild(&root, anc, SliceExpr, Slice0))
 			} else {
-				st.push(addChild(&root, anc, &index, SliceExpr, Slice))
+				st.push(addChild(&root, anc, SliceExpr, Slice))
 			}
 
 		case *ast.StarExpr:
-			st.push(addChild(&root, anc, &index, StarExpr, Star))
+			st.push(addChild(&root, anc, StarExpr, Star))
 
 		case *ast.StructType:
-			st.push(addChild(&root, anc, &index, StructType, Nop))
+			st.push(addChild(&root, anc, StructType, Nop))
 
 		case *ast.SwitchStmt:
 			if a.Init == nil {
-				st.push(addChild(&root, anc, &index, Switch0, Nop))
+				st.push(addChild(&root, anc, Switch0, Nop))
 			} else {
-				st.push(addChild(&root, anc, &index, Switch1, Nop))
+				st.push(addChild(&root, anc, Switch1, Nop))
 			}
 
 		case *ast.TypeAssertExpr:
-			st.push(addChild(&root, anc, &index, TypeAssertExpr, TypeAssert))
+			st.push(addChild(&root, anc, TypeAssertExpr, TypeAssert))
 
 		case *ast.TypeSpec:
-			st.push(addChild(&root, anc, &index, TypeSpec, Nop))
+			st.push(addChild(&root, anc, TypeSpec, Nop))
 
 		case *ast.UnaryExpr:
 			var kind = UnaryExpr
@@ -622,7 +621,7 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 			case token.SUB:
 				action = Negate
 			}
-			st.push(addChild(&root, anc, &index, kind, action))
+			st.push(addChild(&root, anc, kind, action))
 
 		case *ast.ValueSpec:
 			// TODO: export package global var/const in def
@@ -643,11 +642,11 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 			} else {
 				kind, action = ValueSpec, Assign0
 			}
-			st.push(addChild(&root, anc, &index, kind, action))
+			st.push(addChild(&root, anc, kind, action))
 
 		default:
 			fmt.Printf("Unknown kind for %T\n", a)
-			st.push(addChild(&root, anc, &index, Undef, Nop))
+			st.push(addChild(&root, anc, Undef, Nop))
 		}
 		return true
 	})

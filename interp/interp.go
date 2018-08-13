@@ -62,8 +62,10 @@ type Opt struct {
 type Interpreter struct {
 	Opt
 	Frame    *Frame            // programe data storage during execution
-	universe *Scope            // Interpreter global level scope
-	scope    map[string]*Scope // Package level scopes, indexed by package name
+	fsize    int               // global interpreter frame size
+	nindex   int               // next node index
+	universe *Scope            // interpreter global level scope
+	scope    map[string]*Scope // package level scopes, indexed by package name
 	binPkg   PkgMap            // imported binary packages
 	Exports  PkgMap            // exported symbols for use by runtime
 	Expval   PkgValueMap       // same as abobe (TODO: keep only one)
@@ -152,6 +154,9 @@ func (i *Interpreter) ImportBin(pkg *map[string]*map[string]interface{}) {
 	for n, p := range *pkg {
 		i.binPkg[n] = (*BinMap)(p)
 	}
+}
+
+func (i *Interpreter) resizeFrame() {
 }
 
 // Eval evaluates Go code represented as a string. It returns a map on
