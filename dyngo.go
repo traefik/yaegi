@@ -1,6 +1,6 @@
 package main
 
-//go:generate go generate github.com/containous/gi/export
+//go:generate go generate github.com/containous/dyngo/export
 
 import (
 	"flag"
@@ -11,8 +11,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/containous/gi/export"
-	"github.com/containous/gi/interp"
+	"github.com/containous/dyngo/export"
+	"github.com/containous/dyngo/interp"
 )
 
 func main() {
