@@ -2635,11 +2635,14 @@ import "github.com/containous/gi/_test/provider"
 
 func main() {
 	provider.F1()
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.ImportBin(export.Pkg)
 	i.Eval(src)
 
+	// Output:
+	// SomeString: constant string
 }
 
 func Example_str() {

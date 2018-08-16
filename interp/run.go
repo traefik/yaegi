@@ -396,12 +396,10 @@ func callBin(n *Node, f *Frame) {
 			in[i] = value(c, f).(reflect.Value)
 			c.frame = f
 		} else {
-			//log.Println(value(c, f), c.sym, c.level)
 			in[i] = reflect.ValueOf(value(c, f))
 		}
 	}
 	fun := value(n.child[0], f).(reflect.Value)
-	//log.Println(n.index, "in:", in)
 	v := fun.Call(in)
 	for i := 0; i < n.fsize; i++ {
 		f.data[n.findex+i] = v[i].Interface()

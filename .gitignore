@@ -2,7 +2,7 @@
 .*.swp
 *.dot
 cmd/goexports/goexports
-gi
+dyngo
 _gi_c/*.o
 _gi_c/gi
 _gi_c/loop2

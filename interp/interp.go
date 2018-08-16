@@ -94,11 +94,12 @@ func NewInterpreter(opt Opt) *Interpreter {
 		binPkg:   make(PkgMap),
 		Exports:  make(PkgMap),
 		Expval:   make(PkgValueMap),
+		Frame:    &Frame{data: []interface{}{}},
 	}
 }
 
 func initUniverse() *Scope {
-	scope := &Scope{sym: SymMap{
+	scope := &Scope{global: true, sym: SymMap{
 		// predefined Go types
 		"bool":       &Symbol{kind: Typ, typ: &Type{cat: BoolT}},
 		"byte":       &Symbol{kind: Typ, typ: &Type{cat: ByteT}},
@@ -157,6 +158,9 @@ func (i *Interpreter) ImportBin(pkg *map[string]*map[string]interface{}) {
 }
 
 func (i *Interpreter) resizeFrame() {
+	f := &Frame{data: make([]interface{}, i.fsize)}
+	copy(f.data, i.Frame.data)
+	i.Frame = f
 }
 
 // Eval evaluates Go code represented as a string. It returns a map on
@@ -180,7 +184,8 @@ func (i *Interpreter) Eval(src string) string {
 
 	// Execute CFG
 	if !i.NoRun {
-		i.Frame = &Frame{data: make([]interface{}, root.fsize)}
+		i.fsize++
+		i.resizeFrame()
 		runCfg(root.start, i.Frame)
 		for _, n := range initNodes {
 			Run(n, i.Frame, nil, nil, nil, nil, true, false)
