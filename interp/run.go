@@ -2,6 +2,7 @@ package interp
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"time"
 )
@@ -261,6 +262,10 @@ func _println(n *Node, f *Frame) {
 		}
 	}
 	fmt.Println("")
+}
+
+func _panic(n *Node, f *Frame) {
+	log.Panic("in _panic")
 }
 
 // wrapNode wraps a call to an interpreter node in a function that can be called from runtime
