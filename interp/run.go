@@ -124,6 +124,9 @@ func value(n *Node, f *Frame) interface{} {
 			if n.sym.index < 0 {
 				return value(n.sym.node, f)
 			}
+			if n.sym.global {
+				return n.interp.Frame.data[n.sym.index]
+			}
 			for level := n.level; level > 0; level-- {
 				f = f.anc
 			}
@@ -147,6 +150,9 @@ func addrValue(n *Node, f *Frame) *interface{} {
 		if n.sym != nil {
 			if n.sym.index < 0 {
 				return addrValue(n.sym.node, f)
+			}
+			if n.sym.global {
+				return &n.interp.Frame.data[n.sym.index]
 			}
 			for level := n.level; level > 0; level-- {
 				f = f.anc
@@ -216,6 +222,7 @@ func assign(n *Node, f *Frame) {
 func assign0(n *Node, f *Frame) {
 	l := len(n.child) - 1
 	z := n.typ.zero()
+	//log.Println(n.index, "in assign0", l, z, n.typ)
 	for _, c := range n.child[:l] {
 		*addrValue(c, f) = z
 	}
@@ -271,6 +278,7 @@ func _panic(n *Node, f *Frame) {
 // wrapNode wraps a call to an interpreter node in a function that can be called from runtime
 func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	def := n.val.(*Node)
+	//log.Println(n.index, "in wrapNode", def.index, n.frame)
 	var result []reflect.Value
 	if n.frame == nil {
 		n.frame = n.interp.Frame
@@ -401,10 +409,12 @@ func callBin(n *Node, f *Frame) {
 			in[i] = value(c, f).(reflect.Value)
 			c.frame = f
 		} else {
+			//log.Println(n.index, c.index, c.ident, c.level, c.findex, f)
 			in[i] = reflect.ValueOf(value(c, f))
 		}
 	}
 	fun := value(n.child[0], f).(reflect.Value)
+	//log.Println(n.index, "in callBin", in)
 	v := fun.Call(in)
 	for i := 0; i < n.fsize; i++ {
 		f.data[n.findex+i] = v[i].Interface()
@@ -511,7 +521,7 @@ func getFunc(n *Node, f *Frame) {
 	frame := *f
 	node.frame = &frame
 	f.data[n.findex] = &node
-	n.interp.Frame = &frame // Temporary, store context for futur call from runtime
+	n.frame = &frame
 }
 
 func getMap(n *Node, f *Frame) {
@@ -730,7 +740,6 @@ func slice(n *Node, f *Frame) {
 
 // slice expression, no low value
 func slice0(n *Node, f *Frame) {
-	//log.Println(n.index, n.child[0].ident, value(n.child[0], f))
 	a := value(n.child[0], f).([]interface{})
 	switch len(n.child) {
 	case 1:

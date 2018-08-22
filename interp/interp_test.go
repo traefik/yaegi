@@ -80,6 +80,25 @@ func main() {
 	// 4
 }
 
+func Example_a12() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	var buf [12]int
+	fmt.Println(buf[0])
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.ImportBin(export.Pkg)
+	i.Eval(src)
+
+	// Output:
+	// 0
+}
+
 func Example_a2() {
 	src := `
 package main

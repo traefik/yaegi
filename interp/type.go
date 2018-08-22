@@ -106,6 +106,7 @@ type Type struct {
 	arg      []*Type       // Argument types if FuncT or nil
 	ret      []*Type       // Return types if FuncT or nil
 	method   []*Node       // Associated methods or nil
+	size     int           // Size of array if ArrayT
 	rtype    reflect.Type  // Reflection type if ValueT, or nil
 	rzero    reflect.Value // Reflection zero settable value, or nil
 	variadic bool          // true if type is variadic
@@ -121,7 +122,13 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 	switch n.kind {
 	case ArrayType:
 		t.cat = ArrayT
-		t.val = nodeType(interp, scope, n.child[0])
+		if len(n.child) > 1 {
+			// An array size is defined
+			t.size = n.child[0].val.(int)
+			t.val = nodeType(interp, scope, n.child[1])
+		} else {
+			t.val = nodeType(interp, scope, n.child[0])
+		}
 	case BasicLit:
 		switch n.val.(type) {
 		case bool:
@@ -172,17 +179,20 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 		t.val = nodeType(interp, scope, n.child[1])
 	case SelectorExpr:
 		pkgName, typeName := n.child[0].ident, n.child[1].ident
-		// TODO: handle pkgsrc types
-		if pkg, ok := interp.binPkg[pkgName]; ok {
-			if typ, ok := (*pkg)[typeName]; ok {
-				t.cat = ValueT
-				t.rtype = reflect.TypeOf(typ).Elem()
-			} else {
-				log.Println("unknown type", pkgName+"."+typeName)
+		if sym, _, found := scope.lookup(pkgName); found {
+			if sym.typ != nil && sym.typ.cat == BinPkgT {
+				pkg := interp.binPkg[sym.path]
+				if typ, ok := (*pkg)[typeName]; ok {
+					t.cat = ValueT
+					t.rtype = reflect.TypeOf(typ).Elem()
+				} else {
+					log.Println("unknown type", pkgName+"."+typeName)
+				}
 			}
 		} else {
-			log.Println("unknown package", pkgName)
+			log.Panicln("unknown package", pkgName)
 		}
+		// TODO: handle pkgsrc types
 	case StarExpr:
 		t.cat = PtrT
 		t.val = nodeType(interp, scope, n.child[0])
@@ -237,6 +247,16 @@ func (t *Type) zero() interface{} {
 	switch t.cat {
 	case AliasT:
 		return t.val.zero()
+	case ArrayT:
+		if t.size > 0 {
+			z := make([]interface{}, t.size)
+			for i := 0; i < t.size; i++ {
+				z[i] = t.val.zero()
+			}
+			return z
+		} else {
+			return []interface{}{t.val.zero}
+		}
 	case StructT:
 		z := make([]interface{}, len(t.field))
 		for i, f := range t.field {

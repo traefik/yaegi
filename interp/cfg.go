@@ -27,6 +27,7 @@ type Symbol struct {
 	val     interface{} // default value (used for constants)
 	path    string      // package path if typ.cat is SrcPkgT or BinPkgT
 	builtin Builtin     // Builtin function or nil
+	global  bool        // true if symbol is defined in global space
 }
 
 // A SymMap stores symbols indexed by name
@@ -223,7 +224,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					} else {
 						interp.fsize++
 						scope.size = interp.fsize
-						scope.sym[name] = &Symbol{index: scope.size}
+						scope.sym[name] = &Symbol{index: scope.size, global: true}
 						n.child[0].findex = scope.size
 					}
 				} else {
@@ -310,7 +311,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					} else {
 						scope.size++
 					}
-					scope.sym[c.ident] = &Symbol{index: scope.size, typ: types[i]}
+					scope.sym[c.ident] = &Symbol{index: scope.size, typ: types[i], global: scope.global}
 					c.findex = scope.size
 				}
 			}
@@ -477,7 +478,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						}
 						n.fsize = l
 					} else {
-						log.Println(n.index, "call to unknown def")
+						log.Println(n.index, "call to unknown def", n.child[0].ident)
 					}
 				}
 			} else if n.child[0].kind == SelectorSrc {
@@ -681,6 +682,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.anc.kind == File || (n.anc.kind == SelectorExpr && n.anc.child[0] != n) {
 				// skip symbol creation/lookup for idents used as key
 			} else if sym, level, ok := scope.lookup(n.ident); ok {
+				//log.Println(n.index, "found", n.ident)
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
 				if n.findex < 0 {
 					n.val = sym.node
@@ -697,6 +699,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 				n.recv = n
 			} else {
+				//log.Println(n.index, "not found", n.ident)
 				if n.ident == "_" || n.anc.kind == Define || n.anc.kind == DefineX || n.anc.kind == Field || n.anc.kind == RangeStmt || n.anc.kind == ValueSpec {
 					// Create a new local symbol for func argument or local var definition
 					if scope.global {
@@ -705,16 +708,17 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					} else {
 						scope.size++
 					}
-					scope.sym[n.ident] = &Symbol{index: scope.size}
+					scope.sym[n.ident] = &Symbol{index: scope.size, global: scope.global}
 					n.findex = scope.size
 				} else {
 					// symbol may be defined globally elsewhere later, add an entry at pkg level
 					interp.fsize++
 					interp.scope[pkgName].size = interp.fsize
-					interp.scope[pkgName].sym[n.ident] = &Symbol{index: interp.fsize}
+					interp.scope[pkgName].sym[n.ident] = &Symbol{index: interp.fsize, global: true}
 					n.sym = interp.scope[pkgName].sym[n.ident]
 					n.level = scope.level
 					n.findex = interp.fsize
+					//log.Println(n.index, "define pkg sym", pkgName, n.ident, n.level, n.findex)
 				}
 			}
 

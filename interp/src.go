@@ -22,6 +22,7 @@ func (interp *Interpreter) importSrcFile(path string) {
 		if len(name) > 8 && name[len(name)-8:] == "_test.go" {
 			continue
 		}
+		//log.Println("src", name)
 		buf, err := ioutil.ReadFile(filepath.Join(dir, name))
 		if err != nil {
 			log.Fatal(err)
