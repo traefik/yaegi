@@ -414,7 +414,7 @@ func callBin(n *Node, f *Frame) {
 		}
 	}
 	fun := value(n.child[0], f).(reflect.Value)
-	//log.Println(n.index, "in callBin", in)
+	log.Println(n.index, "in callBin", in)
 	v := fun.Call(in)
 	for i := 0; i < n.fsize; i++ {
 		f.data[n.findex+i] = v[i].Interface()
@@ -741,6 +741,7 @@ func slice(n *Node, f *Frame) {
 // slice expression, no low value
 func slice0(n *Node, f *Frame) {
 	a := value(n.child[0], f).([]interface{})
+	//a := value(n.child[0], f).([]byte)
 	switch len(n.child) {
 	case 1:
 		f.data[n.findex] = a[:]

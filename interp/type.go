@@ -249,11 +249,7 @@ func (t *Type) zero() interface{} {
 		return t.val.zero()
 	case ArrayT:
 		if t.size > 0 {
-			z := make([]interface{}, t.size)
-			for i := 0; i < t.size; i++ {
-				z[i] = t.val.zero()
-			}
-			return z
+			return reflect.MakeSlice(reflect.SliceOf(reflect.TypeOf(t.val.zero())), t.size, t.size).Interface()
 		} else {
 			return []interface{}{t.val.zero}
 		}
