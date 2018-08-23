@@ -251,7 +251,7 @@ func (t *Type) zero() interface{} {
 		if t.size > 0 {
 			return reflect.MakeSlice(reflect.SliceOf(reflect.TypeOf(t.val.zero())), t.size, t.size).Interface()
 		} else {
-			return []interface{}{t.val.zero}
+			return reflect.Zero(reflect.SliceOf(reflect.TypeOf(t.val.zero()))).Interface()
 		}
 	case StructT:
 		z := make([]interface{}, len(t.field))
