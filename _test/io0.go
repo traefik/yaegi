@@ -9,7 +9,7 @@ import (
 func main() {
 	var buf [16]byte
 	fmt.Println(buf)
-	//io.ReadFull(rand.Reader, buf[:])
-	io.ReadFull(rand.Reader, buf)
+	io.ReadFull(rand.Reader, buf[:])
+	//io.ReadFull(rand.Reader, buf)
 	fmt.Println(buf)
 }

@@ -2,6 +2,8 @@ package interp
 
 import (
 	"reflect"
+
+	"github.com/containous/dyngo/stdlib"
 )
 
 // Node structure for AST and CFG
@@ -50,6 +52,10 @@ type ValueMap map[string]reflect.Value
 // PkgValueMap stores package value maps
 type PkgValueMap map[string]*ValueMap
 
+type LibValueMap map[string]map[string]reflect.Value
+
+type LibTypeMap map[string]map[string]reflect.Type
+
 // Opt stores interpreter options
 type Opt struct {
 	AstDot bool   // display AST graph (debug)
@@ -66,9 +72,10 @@ type Interpreter struct {
 	nindex   int               // next node index
 	universe *Scope            // interpreter global level scope
 	scope    map[string]*Scope // package level scopes, indexed by package name
-	binPkg   PkgMap            // imported binary packages
-	Exports  PkgMap            // exported symbols for use by runtime
-	Expval   PkgValueMap       // same as abobe (TODO: keep only one)
+	binValue LibValueMap
+	binType  LibTypeMap
+	Exports  PkgMap      // exported symbols for use by runtime
+	Expval   PkgValueMap // same as abobe (TODO: keep only one)
 }
 
 // Walk traverses AST n in depth first order, call cbin function
@@ -91,9 +98,10 @@ func NewInterpreter(opt Opt) *Interpreter {
 		Opt:      opt,
 		universe: initUniverse(),
 		scope:    map[string]*Scope{},
-		binPkg:   make(PkgMap),
 		Exports:  make(PkgMap),
 		Expval:   make(PkgValueMap),
+		binValue: LibValueMap(stdlib.Value),
+		binType:  LibTypeMap(stdlib.Type),
 		Frame:    &Frame{data: []interface{}{}},
 	}
 }
@@ -140,22 +148,6 @@ func initUniverse() *Scope {
 		// TODO: cap, close, complex, copy, delete, imag, new, print, real, recover
 	}}
 	return scope
-}
-
-// AddImport registers a symbol from an imported package to be visible from the interpreter
-func (i *Interpreter) AddImport(pkg string, name string, sym interface{}) {
-	if i.binPkg[pkg] == nil {
-		s := make(BinMap)
-		i.binPkg[pkg] = &s
-	}
-	(*i.binPkg[pkg])[name] = sym
-}
-
-// ImportBin registers symbols contained in pkg map
-func (i *Interpreter) ImportBin(pkg *map[string]*map[string]interface{}) {
-	for n, p := range *pkg {
-		i.binPkg[n] = (*BinMap)(p)
-	}
 }
 
 func (i *Interpreter) resizeFrame() {

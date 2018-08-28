@@ -420,6 +420,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 			} else if n.child[0].kind == SelectorExpr {
 				if n.child[0].typ.cat == ValueT {
+					//log.Println(n.index, "selector callBinMethod", n.child[0].typ.rtype)
 					n.run = callBinMethod
 					// TODO: handle multiple return value (_test/time2.go)
 					n.child[0].kind = BasicLit // Temporary hack for force value() to return n.val at run
@@ -456,10 +457,12 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 			} else if sym, _, _ := scope.lookup(n.child[0].ident); sym != nil {
 				if sym.typ != nil && sym.typ.cat == BinT {
+					//log.Println(n.index, "BinT", n.child[0].ident)
 					n.run = callBin
 					n.typ = &Type{cat: ValueT}
-					n.child[0].fsize = reflect.TypeOf(sym.val).NumOut()
-					n.child[0].val = reflect.ValueOf(sym.val)
+					r := sym.val.(reflect.Value)
+					n.child[0].fsize = r.Type().NumOut()
+					n.child[0].val = r
 					n.child[0].kind = BasicLit
 				} else if sym.typ != nil && sym.typ.cat == ValueT {
 					n.run = callDirectBin
@@ -767,9 +770,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				ipath = n.child[0].val.(string)
 				name = path.Base(ipath)
 			}
-			if pkg, ok := interp.binPkg[ipath]; ok {
+			if pkg, ok := interp.binValue[ipath]; ok {
 				if name == "." {
-					for n, s := range *pkg {
+					for n, s := range pkg {
 						scope.sym[n] = &Symbol{typ: &Type{cat: BinT}, val: s}
 					}
 				} else {
@@ -849,6 +852,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					if method.Func.IsValid() {
 						n.rval = method.Func
 						n.run = nop
+						//log.Println(n.index, "select method", n.rval, method.Index)
 					} else {
 						n.val = method.Index
 						//n.run = getIndexBinMethod
@@ -875,11 +879,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else if n.typ.cat == BinPkgT {
 				// Resolve binary package symbol
 				name := n.child[1].ident
-				pkgSym := interp.binPkg[n.child[0].sym.path]
-				if s, ok := (*pkgSym)[name]; ok {
+				pkgSym := interp.binValue[n.child[0].sym.path]
+				if s, ok := pkgSym[name]; ok {
 					n.kind = SelectorImport
-					n.val = reflect.ValueOf(s)
-					if typ := reflect.TypeOf(s); typ.Kind() == reflect.Func {
+					n.val = s
+					if typ := s.Type(); typ.Kind() == reflect.Func {
 						n.typ = &Type{cat: ValueT, rtype: typ}
 						n.fsize = typ.NumOut()
 						//} else if typ.Kind() == reflect.Ptr {

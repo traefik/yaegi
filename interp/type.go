@@ -181,10 +181,10 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 		pkgName, typeName := n.child[0].ident, n.child[1].ident
 		if sym, _, found := scope.lookup(pkgName); found {
 			if sym.typ != nil && sym.typ.cat == BinPkgT {
-				pkg := interp.binPkg[sym.path]
-				if typ, ok := (*pkg)[typeName]; ok {
+				pkg := interp.binType[sym.path]
+				if typ, ok := pkg[typeName]; ok {
 					t.cat = ValueT
-					t.rtype = reflect.TypeOf(typ).Elem()
+					t.rtype = typ
 				} else {
 					log.Println("unknown type", pkgName+"."+typeName)
 				}

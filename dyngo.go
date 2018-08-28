@@ -1,6 +1,6 @@
 package main
 
-//go:generate go generate github.com/containous/dyngo/export
+//go:generate go generate github.com/containous/dyngo/stdlib
 
 import (
 	"flag"
@@ -11,7 +11,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/containous/dyngo/export"
 	"github.com/containous/dyngo/interp"
 )
 
@@ -44,10 +43,7 @@ func main() {
 		s = strings.Replace(s, "#!", "//", 1)
 	}
 	i := interp.NewInterpreter(opt)
-	i.ImportBin(export.Pkg)
 	i.Eval(string(s))
-	//samp := *i.Exports["sample"]
-	//log.Println("exports:", samp)
 
 	/*
 		// To run test/plugin1.go or test/plugin2.go
