@@ -90,6 +90,7 @@ func init() {
 		"IPNet":               reflect.TypeOf((*net.IPNet)(nil)).Elem(),
 		"Interface":           reflect.TypeOf((*net.Interface)(nil)).Elem(),
 		"InvalidAddrError":    reflect.TypeOf((*net.InvalidAddrError)(nil)).Elem(),
+		"ListenConfig":        reflect.TypeOf((*net.ListenConfig)(nil)).Elem(),
 		"Listener":            reflect.TypeOf((*net.Listener)(nil)).Elem(),
 		"MX":                  reflect.TypeOf((*net.MX)(nil)).Elem(),
 		"NS":                  reflect.TypeOf((*net.NS)(nil)).Elem(),

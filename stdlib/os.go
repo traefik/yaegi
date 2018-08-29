@@ -58,6 +58,7 @@ func init() {
 		"ModeDevice":        reflect.ValueOf(os.ModeDevice),
 		"ModeDir":           reflect.ValueOf(os.ModeDir),
 		"ModeExclusive":     reflect.ValueOf(os.ModeExclusive),
+		"ModeIrregular":     reflect.ValueOf(os.ModeIrregular),
 		"ModeNamedPipe":     reflect.ValueOf(os.ModeNamedPipe),
 		"ModePerm":          reflect.ValueOf(os.ModePerm),
 		"ModeSetgid":        reflect.ValueOf(os.ModeSetgid),
@@ -100,6 +101,7 @@ func init() {
 		"TempDir":           reflect.ValueOf(os.TempDir),
 		"Truncate":          reflect.ValueOf(os.Truncate),
 		"Unsetenv":          reflect.ValueOf(os.Unsetenv),
+		"UserCacheDir":      reflect.ValueOf(os.UserCacheDir),
 	}
 	Type["os"] = map[string]reflect.Type{
 		"File":         reflect.TypeOf((*os.File)(nil)).Elem(),

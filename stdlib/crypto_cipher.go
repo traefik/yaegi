@@ -16,6 +16,7 @@ func init() {
 		"NewCTR":              reflect.ValueOf(cipher.NewCTR),
 		"NewGCM":              reflect.ValueOf(cipher.NewGCM),
 		"NewGCMWithNonceSize": reflect.ValueOf(cipher.NewGCMWithNonceSize),
+		"NewGCMWithTagSize":   reflect.ValueOf(cipher.NewGCMWithTagSize),
 		"NewOFB":              reflect.ValueOf(cipher.NewOFB),
 	}
 	Type["crypto/cipher"] = map[string]reflect.Type{

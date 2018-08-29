@@ -431,36 +431,26 @@ func callBinInterfaceMethod(n *Node, f *Frame) {
 func callBinMethod(n *Node, f *Frame) {
 	fun := n.child[0].rval
 	in := make([]reflect.Value, len(n.child))
-	in[0] = reflect.ValueOf(value(n.child[0].child[0], f))
-	//log.Println(n.index, "in0", in[0])
+	val := value(n.child[0].child[0], f)
+	switch val.(type) {
+	case reflect.Value:
+		in[0] = val.(reflect.Value)
+	default:
+		in[0] = reflect.ValueOf(val)
+	}
 	for i, c := range n.child[1:] {
-		//log.Println(value(c, f))
 		if c.kind == Rvalue {
 			in[i+1] = value(c, f).(reflect.Value)
 			c.frame = f
 		} else {
-			//log.Println("get reflect value")
 			in[i+1] = reflect.ValueOf(value(c, f))
 		}
 	}
 	//log.Println(n.index, "in callBinMethod", n.ident, in, in[0].MethodByName(n.child[0].child[1].ident).Type())
-	/*
-		if !fun.IsValid() {
-			fun = in[0].MethodByName(n.child[0].child[1].ident)
-			in = in[1:]
-			log.Println(n.index, "invalid fun", fun)
-		}
-	*/
-	//name := n.child[0].child[1].ident
-	//fun = in[0].Method(4)
-	//log.Println(n.index, name, in[0], fun, fun.Type())
-	fun = in[0].MethodByName(n.child[0].child[1].ident)
 	if !fun.IsValid() {
-		log.Println(n.index, fun)
-		fun = in[0].Elem().MethodByName(n.child[0].child[1].ident)
+		fun = in[0].MethodByName(n.child[0].child[1].ident)
+		in = in[1:]
 	}
-	in = in[1:]
-	//log.Println(in)
 	v := fun.Call(in)
 	for i := 0; i < n.fsize; i++ {
 		f.data[n.findex+i] = v[i].Interface()

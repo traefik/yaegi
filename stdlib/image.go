@@ -38,8 +38,8 @@ func init() {
 		"YCbCrSubsampleRatio422": reflect.ValueOf(image.YCbCrSubsampleRatio422),
 		"YCbCrSubsampleRatio440": reflect.ValueOf(image.YCbCrSubsampleRatio440),
 		"YCbCrSubsampleRatio444": reflect.ValueOf(image.YCbCrSubsampleRatio444),
-		"ZP": reflect.ValueOf(image.ZP),
-		"ZR": reflect.ValueOf(image.ZR),
+		"ZP":                     reflect.ValueOf(image.ZP),
+		"ZR":                     reflect.ValueOf(image.ZR),
 	}
 	Type["image"] = map[string]reflect.Type{
 		"Alpha":               reflect.TypeOf((*image.Alpha)(nil)).Elem(),

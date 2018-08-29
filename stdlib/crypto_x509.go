@@ -9,10 +9,10 @@ import (
 
 func init() {
 	Value["crypto/x509"] = map[string]reflect.Value{
-		"CANotAuthorizedForExtKeyUsage": reflect.ValueOf(x509.CANotAuthorizedForExtKeyUsage),
-		"CANotAuthorizedForThisName":    reflect.ValueOf(x509.CANotAuthorizedForThisName),
-		"CreateCertificate":             reflect.ValueOf(x509.CreateCertificate),
-		"CreateCertificateRequest":      reflect.ValueOf(x509.CreateCertificateRequest),
+		"CANotAuthorizedForExtKeyUsage":             reflect.ValueOf(x509.CANotAuthorizedForExtKeyUsage),
+		"CANotAuthorizedForThisName":                reflect.ValueOf(x509.CANotAuthorizedForThisName),
+		"CreateCertificate":                         reflect.ValueOf(x509.CreateCertificate),
+		"CreateCertificateRequest":                  reflect.ValueOf(x509.CreateCertificateRequest),
 		"DSA":                                       reflect.ValueOf(x509.DSA),
 		"DSAWithSHA1":                               reflect.ValueOf(x509.DSAWithSHA1),
 		"DSAWithSHA256":                             reflect.ValueOf(x509.DSAWithSHA256),

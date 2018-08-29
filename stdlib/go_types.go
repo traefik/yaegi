@@ -56,6 +56,7 @@ func init() {
 		"NewField":                reflect.ValueOf(types.NewField),
 		"NewFunc":                 reflect.ValueOf(types.NewFunc),
 		"NewInterface":            reflect.ValueOf(types.NewInterface),
+		"NewInterfaceType":        reflect.ValueOf(types.NewInterfaceType),
 		"NewLabel":                reflect.ValueOf(types.NewLabel),
 		"NewMap":                  reflect.ValueOf(types.NewMap),
 		"NewMethodSet":            reflect.ValueOf(types.NewMethodSet),

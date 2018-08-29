@@ -851,6 +851,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				if method, ok := n.typ.rtype.MethodByName(n.child[1].ident); ok {
 					if method.Func.IsValid() {
 						n.rval = method.Func
+						n.typ.rtype = method.Func.Type()
 						n.run = nop
 						//log.Println(n.index, "select method", n.rval, method.Index)
 					} else {

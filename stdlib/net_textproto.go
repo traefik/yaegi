@@ -10,12 +10,12 @@ import (
 func init() {
 	Value["net/textproto"] = map[string]reflect.Value{
 		"CanonicalMIMEHeaderKey": reflect.ValueOf(textproto.CanonicalMIMEHeaderKey),
-		"Dial":       reflect.ValueOf(textproto.Dial),
-		"NewConn":    reflect.ValueOf(textproto.NewConn),
-		"NewReader":  reflect.ValueOf(textproto.NewReader),
-		"NewWriter":  reflect.ValueOf(textproto.NewWriter),
-		"TrimBytes":  reflect.ValueOf(textproto.TrimBytes),
-		"TrimString": reflect.ValueOf(textproto.TrimString),
+		"Dial":                   reflect.ValueOf(textproto.Dial),
+		"NewConn":                reflect.ValueOf(textproto.NewConn),
+		"NewReader":              reflect.ValueOf(textproto.NewReader),
+		"NewWriter":              reflect.ValueOf(textproto.NewWriter),
+		"TrimBytes":              reflect.ValueOf(textproto.TrimBytes),
+		"TrimString":             reflect.ValueOf(textproto.TrimString),
 	}
 	Type["net/textproto"] = map[string]reflect.Type{
 		"Conn":          reflect.TypeOf((*textproto.Conn)(nil)).Elem(),

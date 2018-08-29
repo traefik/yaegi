@@ -9,7 +9,7 @@ import (
 
 func init() {
 	Value["database/sql/driver"] = map[string]reflect.Value{
-		"Bool": reflect.ValueOf(driver.Bool),
+		"Bool":                      reflect.ValueOf(driver.Bool),
 		"DefaultParameterConverter": reflect.ValueOf(driver.DefaultParameterConverter),
 		"ErrBadConn":                reflect.ValueOf(driver.ErrBadConn),
 		"ErrRemoveArgument":         reflect.ValueOf(driver.ErrRemoveArgument),
