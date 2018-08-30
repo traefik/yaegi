@@ -849,6 +849,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.typ == nil {
 				log.Fatal("typ should not be nil:", n.index, n.child[0])
 			}
+			//log.Println(n.index, "selector", n.child[0].ident+"."+n.child[1].ident)
 			if n.typ.cat == ValueT {
 				// Handle object defined in runtime
 				if method, ok := n.typ.rtype.MethodByName(n.child[1].ident); ok {
@@ -867,13 +868,16 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.run = getIndexBinMethod
 				}
 			} else if n.typ.cat == PtrT && n.typ.val.cat == ValueT {
-				log.Println(n.index, "ptr bin")
 				// Handle pointer on object defined in runtime
 				if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
 					n.typ = &Type{cat: ValueT, rtype: field.Type}
 					n.val = field.Index
 					n.run = getPtrIndexBin
 				} else if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
+					n.val = method.Func
+					n.fsize = method.Type.NumOut()
+					n.run = nop
+				} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
 					n.val = method.Func
 					n.fsize = method.Type.NumOut()
 					n.run = nop
@@ -884,9 +888,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				// Resolve binary package symbol: a type or a value
 				name := n.child[1].ident
 				pkg := n.child[0].sym.path
-				log.Println(n.index, "selector", pkg, name, n.child[0].ident, n.child[0].sym)
 				if s, ok := interp.binValue[pkg][name]; ok {
-					log.Println(n.index, "found bin value selector")
 					n.kind = SelectorImport
 					n.val = s
 					if typ := s.Type(); typ.Kind() == reflect.Func {
@@ -902,7 +904,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					}
 					n.run = nop
 				} else if s, ok := interp.binType[pkg][name]; ok {
-					log.Println(n.index, "found type value selector", s.Kind())
 					//n.kind = SelectorImport
 					n.kind = Rtype
 					n.typ = &Type{cat: ValueT, rtype: s}
@@ -1010,16 +1011,11 @@ func getDefault(n *Node) int {
 
 // isType returns true if node refers to a type definition, false otherwise
 func (n *Node) isType(scope *Scope) bool {
-	log.Println(n.index, "isType", n.kind)
 	switch n.kind {
 	case ArrayType, ChanType, FuncType, MapType, StructType, Rtype:
 		return true
 	case Ident:
 		return scope.getType(n.ident) != nil
-		//case Rvalue:
-		//	log.Println(n.index, n.ident, n.typ.rtype, n.typ.rtype.Kind(), n.rval)
-		//return n.typ.rtype.Kind() != reflect.Func
-		//	return !n.rval.IsValid()
 	}
 	return false
 }
