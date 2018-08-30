@@ -394,7 +394,16 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else if n.child[0].kind == SelectorImport {
 				// TODO: Should process according to child type, not kind.
 				n.fsize = n.child[0].fsize
-				rtype := n.child[0].val.(reflect.Value).Type()
+				var rtype reflect.Type
+				switch t := n.child[0].val.(type) {
+				case reflect.Type:
+					rtype = n.child[0].val.(reflect.Type)
+				case reflect.Value:
+					rtype = n.child[0].val.(reflect.Value).Type()
+				default:
+					log.Printf("unexpected type %T\n", t)
+				}
+				//rtype := n.child[0].val.(reflect.Value).Type()
 				if rtype.NumOut() > 0 {
 					n.typ = &Type{cat: ValueT, rtype: rtype.Out(0)}
 				}
@@ -420,7 +429,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 			} else if n.child[0].kind == SelectorExpr {
 				if n.child[0].typ.cat == ValueT {
-					//log.Println(n.index, "selector callBinMethod", n.child[0].typ.rtype)
 					n.run = callBinMethod
 					// TODO: handle multiple return value (_test/time2.go)
 					n.child[0].kind = BasicLit // Temporary hack for force value() to return n.val at run
@@ -457,7 +465,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 			} else if sym, _, _ := scope.lookup(n.child[0].ident); sym != nil {
 				if sym.typ != nil && sym.typ.cat == BinT {
-					//log.Println(n.index, "BinT", n.child[0].ident)
 					n.run = callBin
 					n.typ = &Type{cat: ValueT}
 					r := sym.val.(reflect.Value)
@@ -685,7 +692,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.anc.kind == File || (n.anc.kind == SelectorExpr && n.anc.child[0] != n) {
 				// skip symbol creation/lookup for idents used as key
 			} else if sym, level, ok := scope.lookup(n.ident); ok {
-				//log.Println(n.index, "found", n.ident)
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
 				if n.findex < 0 {
 					n.val = sym.node
@@ -702,7 +708,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 				n.recv = n
 			} else {
-				//log.Println(n.index, "not found", n.ident)
 				if n.ident == "_" || n.anc.kind == Define || n.anc.kind == DefineX || n.anc.kind == Field || n.anc.kind == RangeStmt || n.anc.kind == ValueSpec {
 					// Create a new local symbol for func argument or local var definition
 					if scope.global {
@@ -721,7 +726,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.sym = interp.scope[pkgName].sym[n.ident]
 					n.level = scope.level
 					n.findex = interp.fsize
-					//log.Println(n.index, "define pkg sym", pkgName, n.ident, n.level, n.findex)
 				}
 			}
 
@@ -845,7 +849,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.typ == nil {
 				log.Fatal("typ should not be nil:", n.index, n.child[0])
 			}
-			//log.Println(n.index, n.child[0].ident+"."+n.child[1].ident, n.typ.cat)
 			if n.typ.cat == ValueT {
 				// Handle object defined in runtime
 				if method, ok := n.typ.rtype.MethodByName(n.child[1].ident); ok {
@@ -853,7 +856,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						n.rval = method.Func
 						n.typ.rtype = method.Func.Type()
 						n.run = nop
-						//log.Println(n.index, "select method", n.rval, method.Index)
 					} else {
 						n.val = method.Index
 						//n.run = getIndexBinMethod
@@ -865,8 +867,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.run = getIndexBinMethod
 				}
 			} else if n.typ.cat == PtrT && n.typ.val.cat == ValueT {
+				log.Println(n.index, "ptr bin")
 				// Handle pointer on object defined in runtime
-				if field, ok := n.typ.val.rtype.Elem().FieldByName(n.child[1].ident); ok {
+				if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
 					n.typ = &Type{cat: ValueT, rtype: field.Type}
 					n.val = field.Index
 					n.run = getPtrIndexBin
@@ -878,10 +881,12 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					log.Println(n.index, "selector unresolved")
 				}
 			} else if n.typ.cat == BinPkgT {
-				// Resolve binary package symbol
+				// Resolve binary package symbol: a type or a value
 				name := n.child[1].ident
-				pkgSym := interp.binValue[n.child[0].sym.path]
-				if s, ok := pkgSym[name]; ok {
+				pkg := n.child[0].sym.path
+				log.Println(n.index, "selector", pkg, name, n.child[0].ident, n.child[0].sym)
+				if s, ok := interp.binValue[pkg][name]; ok {
+					log.Println(n.index, "found bin value selector")
 					n.kind = SelectorImport
 					n.val = s
 					if typ := s.Type(); typ.Kind() == reflect.Func {
@@ -896,6 +901,18 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						n.kind = Rvalue
 					}
 					n.run = nop
+				} else if s, ok := interp.binType[pkg][name]; ok {
+					log.Println(n.index, "found type value selector", s.Kind())
+					//n.kind = SelectorImport
+					n.kind = Rtype
+					n.typ = &Type{cat: ValueT, rtype: s}
+					n.run = nop
+					if s.Kind() == reflect.Func {
+						n.fsize = s.NumOut()
+						//} else if typ.Kind() == reflect.Ptr {
+						// a symbol of kind pointer must be dereferenced to access type
+						//	n.typ = &Type{cat: ValueT, rtype: typ.Elem(), rzero: n.val.(reflect.Value).Elem()}
+					}
 				}
 			} else if n.typ.cat == ArrayT {
 				n.typ = n.typ.val
@@ -993,13 +1010,16 @@ func getDefault(n *Node) int {
 
 // isType returns true if node refers to a type definition, false otherwise
 func (n *Node) isType(scope *Scope) bool {
+	log.Println(n.index, "isType", n.kind)
 	switch n.kind {
-	case ArrayType, ChanType, FuncType, MapType, StructType:
+	case ArrayType, ChanType, FuncType, MapType, StructType, Rtype:
 		return true
 	case Ident:
 		return scope.getType(n.ident) != nil
-	case Rvalue:
-		return n.typ.rtype.Kind() != reflect.Func
+		//case Rvalue:
+		//	log.Println(n.index, n.ident, n.typ.rtype, n.typ.rtype.Kind(), n.rval)
+		//return n.typ.rtype.Kind() != reflect.Func
+		//	return !n.rval.IsValid()
 	}
 	return false
 }

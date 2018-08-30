@@ -377,7 +377,7 @@ func (t *Type) TypeOf() reflect.Type {
 		}
 		return reflect.StructOf(fields)
 	case ValueT:
-		return t.rtype.Elem()
+		return t.rtype
 	default:
 		return reflect.TypeOf(t.zero())
 	}

@@ -70,6 +70,7 @@ const (
 	RangeStmt
 	ReturnStmt
 	Rvalue
+	Rtype
 	SelectorExpr
 	SelectorImport
 	SelectorSrc
@@ -144,6 +145,7 @@ var kinds = [...]string{
 	RangeStmt:        "RangeStmt",
 	ReturnStmt:       "ReturnStmt",
 	Rvalue:           "Rvalue",
+	Rtype:            "Rtype",
 	SelectorExpr:     "SelectorExpr",
 	SelectorImport:   "SelectorImport",
 	SelectorSrc:      "SelectorSrc",

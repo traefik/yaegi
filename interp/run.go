@@ -191,7 +191,7 @@ func convert(n *Node, f *Frame) {
 
 func convertFuncBin(n *Node, f *Frame) {
 	// TODO: use closure generation to improve speed
-	f.data[n.findex] = reflect.MakeFunc(n.child[0].typ.rtype.Elem(), n.child[1].wrapNode).Interface()
+	f.data[n.findex] = reflect.MakeFunc(n.child[0].typ.rtype, n.child[1].wrapNode).Interface()
 }
 
 func convertBin(n *Node, f *Frame) {
@@ -446,7 +446,7 @@ func callBinMethod(n *Node, f *Frame) {
 			in[i+1] = reflect.ValueOf(value(c, f))
 		}
 	}
-	//log.Println(n.index, "in callBinMethod", n.ident, in, in[0].MethodByName(n.child[0].child[1].ident).Type())
+	//log.Println(n.index, "in callBinMethod", n.ident, in)
 	if !fun.IsValid() {
 		fun = in[0].MethodByName(n.child[0].child[1].ident)
 		in = in[1:]
