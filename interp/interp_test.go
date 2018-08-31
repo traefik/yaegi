@@ -90,6 +90,30 @@ func main() {
 
 }
 
+func Example_a13() {
+	src := `
+package main
+
+type T1 struct {
+	num []int
+}
+
+func main() {
+	a := T1{[]int{1, 3, 5}}
+	for i, v := range a.num {
+		println(i, v)
+	}
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
+	// Output:
+	// 0 1
+	// 1 3
+	// 2 5
+}
+
 func Example_a2() {
 	src := `
 package main
@@ -1002,7 +1026,7 @@ import (
 func main() {
 	var buf [4]byte
 	//fmt.Println(buf)
-	s := base64.RawStdEncoding.EncodeToString(buf[:])
+	s := base64.RawStdEncoding.EncodeToString(buf)
 	//fmt.Println(base64.RawStdEncoding)
 	fmt.Println(s)
 }`
@@ -1527,6 +1551,36 @@ func main() {
 
 	// Output:
 	// in foo hello 3
+}
+
+func Example_method8() {
+	src := `
+package main
+
+type Sample struct {
+	Name string
+	Foo  []string
+}
+
+func (s *Sample) foo(j int) {
+	for i, v := range s.Foo {
+		println(i, v)
+	}
+}
+
+var samples = []Sample{
+	Sample{"hello", []string{"world"}},
+}
+
+func main() {
+	samples[0].foo(3)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
+	// Output:
+	// 0 world
 }
 
 func Example_neg0() {

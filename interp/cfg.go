@@ -820,7 +820,8 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.typ = n.child[0].typ
 
 		case RangeStmt:
-			n.start = n
+			n.start = n.child[2].start
+			n.child[2].tnext = n
 			n.child[3].tnext = n
 			n.tnext = n.child[3].start
 			if scope.global {
