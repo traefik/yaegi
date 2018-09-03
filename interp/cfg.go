@@ -930,6 +930,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					log.Println(n.index, "selector unresolved:", n.child[0].ident+"."+n.child[1].ident)
 				}
 			} else if fi := n.typ.fieldIndex(n.child[1].ident); fi >= 0 {
+				//log.Println(n.index, "selector field", fi)
 				// Resolve struct field index
 				if n.typ.cat == PtrT {
 					n.run = getPtrIndex
@@ -985,6 +986,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				n.child[1].typ = scope.getType(n.child[1].ident)
 			}
 			n.typ = n.child[1].typ
+
+		case UnaryExpr:
+			wireChild(n)
 
 		case ValueSpec:
 			l := len(n.child) - 1
