@@ -391,7 +391,7 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 
 		case *ast.BinaryExpr:
 			kind := Kind(BinaryExpr)
-			action := Action(Nop)
+			action := Nop
 			switch a.Op {
 			case token.ADD:
 				action = Add

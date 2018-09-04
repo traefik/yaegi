@@ -762,3 +762,19 @@ func sleep(n *Node, f *Frame) {
 	duration := time.Duration(value(n.child[1], f).(int))
 	time.Sleep(duration * time.Millisecond)
 }
+
+func isNil(n *Node, f *Frame) {
+	if n.child[0].kind == Rvalue {
+		f.data[n.findex] = value(n.child[0], f).(reflect.Value).IsNil()
+	} else {
+		f.data[n.findex] = value(n.child[0], f) == nil
+	}
+}
+
+func isNotNil(n *Node, f *Frame) {
+	if n.child[0].kind == Rvalue {
+		f.data[n.findex] = !value(n.child[0], f).(reflect.Value).IsNil()
+	} else {
+		f.data[n.findex] = value(n.child[0], f) != nil
+	}
+}

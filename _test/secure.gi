@@ -25,6 +25,7 @@ func main() {
 		BrowserXssFilter:      true,
 		ContentSecurityPolicy: "script-src $NONCE",
 		PublicKey:             `pin-sha256="base64+primary=="; pin-sha256="base64+backup=="; max-age=5184000; includeSubdomains; report-uri="https://www.example.com/hpkp-report"`,
+		//IsDevelopment: true,
 	})
 
 	app := secureMiddleware.Handler(myHandler)

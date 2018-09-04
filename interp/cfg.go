@@ -326,6 +326,16 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			}
 			n.findex = scope.size
 			n.typ = n.child[0].typ
+			nilSym := interp.universe.sym["nil"]
+			if n.action == NotEqual {
+				if n.child[0].sym == nilSym || n.child[1].sym == nilSym {
+					n.run = isNotNil
+				}
+			} else if n.action == Equal {
+				if n.child[0].sym == nilSym || n.child[1].sym == nilSym {
+					n.run = isNil
+				}
+			}
 
 		case IndexExpr:
 			wireChild(n)
