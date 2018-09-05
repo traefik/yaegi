@@ -236,14 +236,10 @@ var zeroValues = [...]interface{}{
 	Uint32T:     uint32(0),
 	Uint64T:     uint64(0),
 	UintptrT:    uintptr(0),
-	ValueT:      nil,
 }
 
-// zero instantiates and return a zero value object for the givent type t
+// zero instantiates and return a zero value object for the given type
 func (t *Type) zero() interface{} {
-	if t.cat >= Cat(len(zeroValues)) {
-		return nil
-	}
 	switch t.cat {
 	case AliasT:
 		return t.val.zero()
@@ -260,7 +256,7 @@ func (t *Type) zero() interface{} {
 		}
 		return z
 	case ValueT:
-		return t.rzero
+		return reflect.New(t.rtype).Elem().Interface()
 	default:
 		return zeroValues[t.cat]
 	}

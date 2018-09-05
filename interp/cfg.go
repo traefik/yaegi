@@ -424,6 +424,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						n.child[1+i].rval = reflect.MakeFunc(rtype.In(i), c.wrapNode)
 						n.child[1+i].kind = Rvalue
 					} else if c.ident == "nil" {
+						log.Println(n.index, "in call SelectorImport nil", rtype)
 						n.child[1+i].rval = reflect.New(rtype.In(i)).Elem()
 						n.child[1+i].kind = Rvalue
 					} else if c.typ != nil && c.typ.cat == FuncT {
@@ -714,6 +715,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					} else if n.ident == "iota" {
 						n.val = iotaValue
 						n.kind = BasicLit
+					} else if n.ident == "nil" {
+						n.kind = BasicLit
+						n.val = nil
 					}
 				}
 				n.recv = n

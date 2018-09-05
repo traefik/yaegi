@@ -405,12 +405,20 @@ func callDirectBin(n *Node, f *Frame) {
 func callBin(n *Node, f *Frame) {
 	in := make([]reflect.Value, len(n.child)-1)
 	for i, c := range n.child[1:] {
+		v := value(c, f)
 		if c.kind == Rvalue {
-			in[i] = value(c, f).(reflect.Value)
+			if v == nil {
+				in[i] = reflect.New(c.typ.rtype).Elem()
+			} else {
+				in[i] = v.(reflect.Value)
+			}
 			c.frame = f
 		} else {
-			//log.Println(n.index, c.index, c.ident, c.level, c.findex, f)
-			in[i] = reflect.ValueOf(value(c, f))
+			if v == nil {
+				in[i] = reflect.ValueOf(c.typ.zero())
+			} else {
+				in[i] = reflect.ValueOf(v)
+			}
 		}
 	}
 	fun := value(n.child[0], f).(reflect.Value)
