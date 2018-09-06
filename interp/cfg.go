@@ -389,6 +389,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.child[1].kind = BasicLit
 				}
 			} else if n.child[0].isType(scope) {
+				// Call expression is in fact a type conversion expression
 				n.typ = n.child[0].typ
 				if n.typ.cat == AliasT {
 					n.run = convert
@@ -424,7 +425,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						n.child[1+i].rval = reflect.MakeFunc(rtype.In(i), c.wrapNode)
 						n.child[1+i].kind = Rvalue
 					} else if c.ident == "nil" {
-						log.Println(n.index, "in call SelectorImport nil", rtype)
 						n.child[1+i].rval = reflect.New(rtype.In(i)).Elem()
 						n.child[1+i].kind = Rvalue
 					} else if c.typ != nil && c.typ.cat == FuncT {
@@ -1003,6 +1003,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 		case UnaryExpr:
 			wireChild(n)
+			n.typ = n.child[0].typ
 
 		case ValueSpec:
 			l := len(n.child) - 1
