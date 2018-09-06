@@ -215,7 +215,11 @@ func indirectAssign(n *Node, f *Frame) {
 
 // assign implements single value assignement
 func assign(n *Node, f *Frame) {
+	//log.Println(n.index, "assign", n.child[0].ident, n.child[0].typ)
 	*addrValue(n, f) = value(n.child[1], f)
+	if n.child[0].typ == nil {
+		log.Println(n.child[1].typ, reflect.TypeOf(value(n.child[1], f)).Kind())
+	}
 }
 
 // assign0 implements assignement of zero value
@@ -406,11 +410,19 @@ func callBin(n *Node, f *Frame) {
 	in := make([]reflect.Value, len(n.child)-1)
 	for i, c := range n.child[1:] {
 		v := value(c, f)
-		if c.kind == Rvalue {
+		if c.typ == nil {
+			// FIXME: Temporary attempt to fix undefined type which should not occur at exec
+			c.typ = c.sym.typ
+		}
+		if c.typ.cat == ValueT {
 			if v == nil {
 				in[i] = reflect.New(c.typ.rtype).Elem()
 			} else {
-				in[i] = v.(reflect.Value)
+				if w, ok := v.(reflect.Value); ok {
+					in[i] = w
+				} else {
+					in[i] = reflect.ValueOf(v)
+				}
 			}
 			c.frame = f
 		} else {
