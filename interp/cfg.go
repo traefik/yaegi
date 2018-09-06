@@ -466,9 +466,12 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					}
 				} else {
 					// Resolve method and receiver path, store them in node static value for run
-					if methodDecl := n.child[0].val.(*Node); len(methodDecl.child[2].child) > 1 {
+					methodDecl := n.child[0].val.(*Node)
+					if len(methodDecl.child[2].child) > 1 {
 						// Allocate frame for method return values (if any)
 						n.fsize = len(methodDecl.child[2].child[1].child)
+						n.typ = methodDecl.typ.ret[0]
+						// TODO: handle multiple return values
 					} else {
 						n.fsize = 0
 					}
@@ -864,7 +867,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.typ == nil {
 				log.Fatal("typ should not be nil:", n.index, n.child[0])
 			}
-			//log.Println(n.index, "selector", n.child[0].ident+"."+n.child[1].ident)
+			//log.Println(n.index, "selector", n.child[0].ident+"."+n.child[1].ident, n.typ.cat)
 			if n.typ.cat == ValueT {
 				// Handle object defined in runtime
 				if method, ok := n.typ.rtype.MethodByName(n.child[1].ident); ok {
