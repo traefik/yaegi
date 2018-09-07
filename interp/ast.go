@@ -630,7 +630,6 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 			var action Action
 			if a.Values != nil {
 				if len(a.Names) == 1 && len(a.Values) > 1 {
-					kind, action = AssignXStmt, AssignX
 					if anc.kind == ConstDecl || anc.kind == VarDecl {
 						kind = DefineX
 					} else {
