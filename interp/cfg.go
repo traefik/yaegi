@@ -215,7 +215,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 		case Define, AssignStmt:
 			wireChild(n)
-			if n.kind == Define || n.anc.kind == VarDecl || n.anc.kind == ConstDecl {
+			if n.kind == Define {
 				// Force definition of assigned ident in current scope
 				name := n.child[0].ident
 				if scope.global {
@@ -746,6 +746,10 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.sym = interp.scope[pkgName].sym[n.ident]
 					n.level = scope.level
 					n.findex = interp.fsize
+					// Record undefined symbols for delayed resolution processing
+					if n.anc.kind != FuncDecl && !(n.anc.kind == KeyValueExpr && n.anc.child[0] == n) {
+						log.Println(n.index, "pre-create unresolved symbol", n.ident, n.anc.kind)
+					}
 				}
 			}
 

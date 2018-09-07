@@ -626,21 +626,31 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 			st.push(addChild(&root, anc, kind, action))
 
 		case *ast.ValueSpec:
-			// TODO: export package global var/const in def
 			var kind Kind
 			var action Action
 			if a.Values != nil {
 				if len(a.Names) == 1 && len(a.Values) > 1 {
 					kind, action = AssignXStmt, AssignX
+					if anc.kind == ConstDecl || anc.kind == VarDecl {
+						kind = DefineX
+					} else {
+						kind = AssignXStmt
+					}
+					action = AssignX
 				} else {
-					kind, action = AssignStmt, Assign
+					if anc.kind == ConstDecl || anc.kind == VarDecl {
+						kind = Define
+					} else {
+						kind = AssignStmt
+					}
+					action = Assign
 					nbAssign = len(a.Names)
 				}
 				if a.Type != nil {
 					typeSpec = true
 				}
 			} else if anc.kind == ConstDecl {
-				kind, action = AssignStmt, Assign
+				kind, action = Define, Assign
 			} else {
 				kind, action = ValueSpec, Assign0
 			}
