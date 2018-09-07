@@ -381,7 +381,10 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.child[0].sym != nil && n.child[0].sym.kind == Bltn {
 				n.run = n.child[0].sym.builtin
 				n.child[0].typ = &Type{cat: BuiltinT}
-				if n.child[0].ident == "make" {
+				switch n.child[0].ident {
+				case "len":
+					n.typ = scope.getType("int")
+				case "make":
 					if n.typ = scope.getType(n.child[1].ident); n.typ == nil {
 						n.typ = nodeType(interp, scope, n.child[1])
 					}
@@ -1004,7 +1007,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			}
 			n.typ = n.child[1].typ
 
-		case UnaryExpr:
+		case SliceExpr, UnaryExpr:
 			wireChild(n)
 			n.typ = n.child[0].typ
 
