@@ -218,24 +218,28 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.kind == Define {
 				// Force definition of assigned ident in current scope
 				name := n.child[0].ident
+				n.child[0].val = n.child[1].val
+				n.child[0].typ = n.child[1].typ
 				if scope.global {
 					if sym, _, ok := scope.lookup(name); ok {
 						n.child[0].findex = sym.index
 					} else {
 						interp.fsize++
 						scope.size = interp.fsize
-						scope.sym[name] = &Symbol{index: scope.size, global: true}
+						scope.sym[name] = &Symbol{index: scope.size, global: true, kind: Var}
 						n.child[0].findex = scope.size
 					}
 				} else {
 					scope.size++
-					scope.sym[name] = &Symbol{index: scope.size}
+					scope.sym[name] = &Symbol{index: scope.size, kind: Var}
 					n.child[0].findex = scope.size
 				}
-				n.child[0].typ = n.child[1].typ
 				if n.child[1].action == GetFunc {
 					scope.sym[name].index = -1
 					scope.sym[name].node = n.child[1]
+				}
+				if n.child[1].kind == BasicLit {
+					scope.sym[name].val = n.child[1].val
 				}
 			}
 			n.findex = n.child[0].findex
@@ -311,7 +315,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					} else {
 						scope.size++
 					}
-					scope.sym[c.ident] = &Symbol{index: scope.size, typ: types[i], global: scope.global}
+					scope.sym[c.ident] = &Symbol{index: scope.size, typ: types[i], global: scope.global, kind: Var}
 					c.findex = scope.size
 				}
 			}
@@ -715,7 +719,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.kind = sym.node.kind
 				} else {
 					n.sym = sym
-					if sym.val != nil {
+					if sym.kind == Const && sym.val != nil {
 						n.val = sym.val
 						n.kind = BasicLit
 					} else if n.ident == "iota" {
@@ -736,13 +740,13 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					} else {
 						scope.size++
 					}
-					scope.sym[n.ident] = &Symbol{index: scope.size, global: scope.global}
+					scope.sym[n.ident] = &Symbol{index: scope.size, global: scope.global, kind: Var}
 					n.findex = scope.size
 				} else {
 					// symbol may be defined globally elsewhere later, add an entry at pkg level
 					interp.fsize++
 					interp.scope[pkgName].size = interp.fsize
-					interp.scope[pkgName].sym[n.ident] = &Symbol{index: interp.fsize, global: true}
+					interp.scope[pkgName].sym[n.ident] = &Symbol{index: interp.fsize, global: true, kind: Var}
 					n.sym = interp.scope[pkgName].sym[n.ident]
 					n.level = scope.level
 					n.findex = interp.fsize

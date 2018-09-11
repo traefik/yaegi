@@ -124,8 +124,17 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 		t.cat = ArrayT
 		if len(n.child) > 1 {
 			// An array size is defined
-			t.size = n.child[0].val.(int)
+			var ok bool
+			if t.size, ok = n.child[0].val.(int); !ok {
+				if sym, _, ok := scope.lookup(n.child[0].ident); ok {
+					// Resolve symbol to get size value
+					if sym.typ.cat == IntT {
+						t.size = sym.val.(int)
+					}
+				}
+			}
 			t.val = nodeType(interp, scope, n.child[1])
+			log.Println(n.index, t.val.cat, t.size)
 		} else {
 			t.val = nodeType(interp, scope, n.child[0])
 		}

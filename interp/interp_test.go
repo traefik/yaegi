@@ -114,6 +114,26 @@ func main() {
 	// 2 5
 }
 
+func Example_a14() {
+	src := `
+package main
+
+import "fmt"
+
+const size = 12
+
+func main() {
+	var buf [size]int
+	fmt.Println(buf)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
+	// Output:
+	// [0 0 0 0 0 0 0 0 0 0 0 0]
+}
+
 func Example_a2() {
 	src := `
 package main
@@ -332,6 +352,20 @@ func main() {
 
 	// Output:
 	// false true
+}
+
+func Example_bool0() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println(true)
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
 }
 
 func Example_chan0() {
@@ -944,6 +978,24 @@ func main() {
 	// Hello 42
 }
 
+func Example_inc() {
+	src := `
+package main
+
+func main() {
+	i := 2
+	//i++
+	i = i + 1
+	println(i)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
+	// Output:
+	// 3
+}
+
 func Example_init0() {
 	src := `
 package main
@@ -1026,7 +1078,7 @@ import (
 func main() {
 	var buf [4]byte
 	//fmt.Println(buf)
-	s := base64.RawStdEncoding.EncodeToString(buf)
+	s := base64.RawStdEncoding.EncodeToString(buf[:])
 	//fmt.Println(base64.RawStdEncoding)
 	fmt.Println(s)
 }`
@@ -2869,6 +2921,28 @@ func main() {
 
 	// Output:
 	// 7 8
+}
+
+func Example_struct7() {
+	src := `
+package main
+
+type Opt struct {
+	b bool
+}
+
+type T struct {
+	i   int
+	opt Opt
+}
+
+func main() {
+	a := T{}
+	println(a.i, a.opt.b)
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
 }
 
 func Example_switch() {
