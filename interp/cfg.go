@@ -4,6 +4,7 @@ import (
 	"log"
 	"path"
 	"reflect"
+	"strconv"
 	"unicode"
 )
 
@@ -17,6 +18,21 @@ const (
 	Bin
 	Bltn
 )
+
+var symKinds = [...]string{
+	Const: "Const",
+	Var:   "Var",
+	Func:  "Func",
+	Bin:   "Bin",
+	Bltn:  "Bltn",
+}
+
+func (k SymKind) String() string {
+	if k < SymKind(len(symKinds)) {
+		return symKinds[k]
+	}
+	return "SymKind(" + strconv.Itoa(int(k)) + ")"
+}
 
 // A Symbol represents an interpreter object such as type, constant, var, func, builtin or binary object
 type Symbol struct {

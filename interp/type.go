@@ -99,26 +99,28 @@ type StructField struct {
 
 // Type defines the internal representation of types in the interpreter
 type Type struct {
-	cat      Cat           // Type category
-	field    []StructField // Array of struct fields if StrucT or nil
-	key      *Type         // Type of key element if MapT or nil
-	val      *Type         // Type of value element if ChanT, MapT, PtrT, AliasT or ArrayT
-	arg      []*Type       // Argument types if FuncT or nil
-	ret      []*Type       // Return types if FuncT or nil
-	method   []*Node       // Associated methods or nil
-	size     int           // Size of array if ArrayT
-	rtype    reflect.Type  // Reflection type if ValueT, or nil
-	rzero    reflect.Value // Reflection zero settable value, or nil
-	variadic bool          // true if type is variadic
-	nindex   int           // node index (for debug only)
+	cat        Cat           // Type category
+	field      []StructField // Array of struct fields if StrucT or nil
+	key        *Type         // Type of key element if MapT or nil
+	val        *Type         // Type of value element if ChanT, MapT, PtrT, AliasT or ArrayT
+	arg        []*Type       // Argument types if FuncT or nil
+	ret        []*Type       // Return types if FuncT or nil
+	method     []*Node       // Associated methods or nil
+	size       int           // Size of array if ArrayT
+	rtype      reflect.Type  // Reflection type if ValueT, or nil
+	rzero      reflect.Value // Reflection zero settable value, or nil
+	variadic   bool          // true if type is variadic
+	incomplete bool          // true if type must be parsed again
+	node       *Node         // root AST node of type definition
+	scope      *Scope
 }
 
 // return a type definition for the corresponding AST subtree
 func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
-	if n.typ != nil {
+	if n.typ != nil && !n.typ.incomplete {
 		return n.typ
 	}
-	var t = &Type{nindex: n.index}
+	var t = &Type{node: n, scope: scope}
 	switch n.kind {
 	case ArrayType:
 		t.cat = ArrayT
@@ -128,15 +130,24 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 			if t.size, ok = n.child[0].val.(int); !ok {
 				if sym, _, ok := scope.lookup(n.child[0].ident); ok {
 					// Resolve symbol to get size value
-					if sym.typ.cat == IntT {
+					if sym.typ != nil && sym.typ.cat == IntT {
 						t.size = sym.val.(int)
+					} else {
+						t.incomplete = true
 					}
+				} else {
+					t.incomplete = true
 				}
 			}
 			t.val = nodeType(interp, scope, n.child[1])
-			log.Println(n.index, t.val.cat, t.size)
+			if t.val.incomplete {
+				t.incomplete = true
+			}
 		} else {
 			t.val = nodeType(interp, scope, n.child[0])
+			if t.val.incomplete {
+				t.incomplete = true
+			}
 		}
 	case BasicLit:
 		switch n.val.(type) {
@@ -158,6 +169,9 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 	case ChanType:
 		t.cat = ChanT
 		t.val = nodeType(interp, scope, n.child[0])
+		if t.val.incomplete {
+			t.incomplete = true
+		}
 	case Ellipsis:
 		t = nodeType(interp, scope, n.child[0])
 		t.variadic = true
@@ -175,7 +189,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 		if sym, _, found := scope.lookup(n.ident); found {
 			t = sym.typ
 		} else {
-			log.Println("unknown type", n.ident)
+			t.incomplete = true
 		}
 	case InterfaceType:
 		t.cat = InterfaceT
@@ -186,6 +200,9 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 		t.cat = MapT
 		t.key = nodeType(interp, scope, n.child[0])
 		t.val = nodeType(interp, scope, n.child[1])
+		if t.key.incomplete || t.val.incomplete {
+			t.incomplete = true
+		}
 	case SelectorExpr:
 		pkgName, typeName := n.child[0].ident, n.child[1].ident
 		if sym, _, found := scope.lookup(pkgName); found {
@@ -195,7 +212,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 					t.cat = ValueT
 					t.rtype = typ
 				} else {
-					log.Println("unknown type", pkgName+"."+typeName)
+					t.incomplete = true
 				}
 			}
 		} else {
@@ -209,10 +226,17 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 		t.cat = StructT
 		for _, c := range n.child[0].child {
 			if len(c.child) == 1 {
-				t.field = append(t.field, StructField{typ: nodeType(interp, scope, c.child[0])})
+				typ := nodeType(interp, scope, c.child[0])
+				if typ.incomplete {
+					t.incomplete = true
+				}
+				t.field = append(t.field, StructField{typ: typ})
 			} else {
 				l := len(c.child)
 				typ := nodeType(interp, scope, c.child[l-1])
+				if typ.incomplete {
+					t.incomplete = true
+				}
 				for _, d := range c.child[:l-1] {
 					t.field = append(t.field, StructField{name: d.ident, typ: typ})
 				}
@@ -247,8 +271,17 @@ var zeroValues = [...]interface{}{
 	UintptrT:    uintptr(0),
 }
 
-// zero instantiates and return a zero value object for the given type
+// zero instantiates and return a zero value object for the given type during execution
 func (t *Type) zero() interface{} {
+	if t.incomplete {
+		// Re-parse type at execution in lazy mode. Hopefully missing info is now present
+		t = nodeType(t.node.interp, t.scope, t.node)
+		t.node.typ = t
+		if t.incomplete {
+			log.Panic("incomplete type")
+		}
+	}
+
 	switch t.cat {
 	case AliasT:
 		return t.val.zero()
