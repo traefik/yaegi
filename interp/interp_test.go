@@ -2647,7 +2647,7 @@ func Example_src2() {
 	src := `
 package main
 
-import "github.com/containous/gi/_test/provider"
+import "github.com/containous/dyngo/_test/provider"
 
 func main() {
 	t := provider.T1{"myName"}
@@ -2665,7 +2665,7 @@ func Example_src3() {
 	src := `
 package main
 
-import "github.com/containous/gi/_test/provider"
+import "github.com/containous/dyngo/_test/provider"
 
 func main() {
 	provider.Bar()
@@ -2682,7 +2682,7 @@ func Example_src4() {
 	src := `
 package main
 
-import "github.com/containous/gi/_test/provider"
+import "github.com/containous/dyngo/_test/provider"
 
 func main() {
 	provider.F1()
