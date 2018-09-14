@@ -136,7 +136,7 @@ func initUniverse() *Scope {
 		"iota":  &Symbol{kind: Const, typ: &Type{cat: IntT}},
 
 		// predefined Go zero value
-		"nil": &Symbol{},
+		"nil": &Symbol{typ: &Type{cat: Unset}},
 
 		// predefined Go builtins
 		"append":  &Symbol{kind: Bltn, builtin: _append},

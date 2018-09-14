@@ -425,7 +425,11 @@ func callBin(n *Node, f *Frame) {
 			if v == nil {
 				in[i] = reflect.ValueOf(c.typ.zero())
 			} else {
-				in[i] = reflect.ValueOf(v)
+				if w, ok := v.(reflect.Value); ok {
+					in[i] = w
+				} else {
+					in[i] = reflect.ValueOf(v)
+				}
 			}
 		}
 	}
