@@ -19,6 +19,9 @@ func (interp *Interpreter) importSrcFile(path string) {
 	initNodes := []*Node{}
 	rootNodes := []*Node{}
 
+	var root *Node
+	var pkgName string
+
 	// Parse source files
 	for _, file := range files {
 		name := file.Name()
@@ -35,11 +38,19 @@ func (interp *Interpreter) importSrcFile(path string) {
 			log.Fatal(err)
 		}
 
-		_, root := interp.Ast(string(buf))
+		pkgName, root = interp.Ast(string(buf))
 		initNodes = append(initNodes, interp.Cfg(root)...)
 		rootNodes = append(rootNodes, root)
 		if interp.AstDot {
 			root.AstDot(DotX())
+		}
+	}
+
+	// Fix nodes with unresolved symbols due to out of order parsing
+	for _, nodes := range *(interp.unresolved[pkgName]) {
+		for _, n := range nodes {
+			n.typ = n.sym.typ
+			n.val = n.sym.val
 		}
 	}
 

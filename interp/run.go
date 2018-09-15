@@ -405,11 +405,6 @@ func callBin(n *Node, f *Frame) {
 	in := make([]reflect.Value, len(n.child)-1)
 	for i, c := range n.child[1:] {
 		v := value(c, f)
-		if c.typ == nil {
-			log.Println(n.index, "unset type", c.index, c.ident)
-			// FIXME: Temporary attempt to fix undefined type which should not occur at exec
-			c.typ = c.sym.typ
-		}
 		if c.typ.cat == ValueT {
 			if v == nil {
 				in[i] = reflect.New(c.typ.rtype).Elem()

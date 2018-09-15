@@ -108,6 +108,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 	var initNodes []*Node
 	var exports *BinMap
 	var expval *ValueMap
+	var unresolved *UnresolvedMap
 	var iotaValue int
 	var pkgName string
 
@@ -137,6 +138,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if pkg, ok := interp.Exports[pkgName]; ok {
 				exports = pkg
 				expval = interp.Expval[pkgName]
+				unresolved = interp.unresolved[pkgName]
 			} else {
 				x := make(BinMap)
 				exports = &x
@@ -144,6 +146,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				y := make(ValueMap)
 				expval = &y
 				interp.Expval[pkgName] = expval
+				z := make(UnresolvedMap)
+				unresolved = &z
+				interp.unresolved[pkgName] = unresolved
 			}
 
 		case For0, ForRangeStmt:
@@ -768,7 +773,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.findex = interp.fsize
 					// Record undefined symbols for delayed resolution processing
 					if n.anc.kind != FuncDecl && !(n.anc.kind == KeyValueExpr && n.anc.child[0] == n) {
-						log.Println(n.index, "pre-create unresolved symbol", n.ident, n.anc.kind)
+						(*unresolved)[n.ident] = append((*unresolved)[n.ident], n)
 					}
 				}
 			}
