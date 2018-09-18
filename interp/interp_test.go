@@ -1635,6 +1635,25 @@ func main() {
 	// 0 world
 }
 
+func Example_method9() {
+	src := `
+package main
+
+type Coord struct {
+	x, y int
+}
+
+func main() {
+	o := Coord{3, 4}
+	println(o.dist())
+}
+
+func (c Coord) dist() int { return c.x*c.x + c.y*c.y }`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
+}
+
 func Example_neg0() {
 	src := `
 package main
@@ -2018,6 +2037,37 @@ func main() {
 
 	// Output:
 	// hello
+}
+
+func Example_run11() {
+	src := `
+package main
+
+func main() {
+	println(f())
+}
+
+func f() (int, int) { return 2, 3 }`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
+}
+
+func Example_run12() {
+	src := `
+package main
+
+func f(a int) (int, int) {
+	return a + 1, a + 2
+}
+
+func main() {
+	a, b := f(3)
+	println(a, b)
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
 }
 
 func Example_run4() {
@@ -3180,10 +3230,13 @@ import (
 func main() {
 	a := int32(12)
 	fmt.Println(reflect.TypeOf(a))
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.Eval(src)
 
+	// Output:
+	// int32
 }
 
 func Example_var() {
