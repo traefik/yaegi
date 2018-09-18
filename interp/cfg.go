@@ -97,6 +97,17 @@ func (s *Scope) getType(ident string) *Type {
 	return t
 }
 
+// Inc increments the size of the scope data frame and returns the new size
+func (scope *Scope) inc(interp *Interpreter) int {
+	if scope.global {
+		interp.fsize++
+		scope.size = interp.fsize
+	} else {
+		scope.size++
+	}
+	return scope.size
+}
+
 // Cfg generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
@@ -239,21 +250,18 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.kind == Define {
 				// Force definition of assigned ident in current scope
 				name := n.child[0].ident
+				scope.inc(interp)
 				n.child[0].val = n.child[1].val
 				n.child[0].typ = n.child[1].typ
+				n.child[0].findex = scope.size
 				if scope.global {
 					if sym, _, ok := scope.lookup(name); ok {
 						n.child[0].findex = sym.index
 					} else {
-						interp.fsize++
-						scope.size = interp.fsize
 						scope.sym[name] = &Symbol{index: scope.size, global: true, kind: Var}
-						n.child[0].findex = scope.size
 					}
 				} else {
-					scope.size++
 					scope.sym[name] = &Symbol{index: scope.size, kind: Var}
-					n.child[0].findex = scope.size
 				}
 				if n.child[1].action == GetFunc {
 					scope.sym[name].index = -1
@@ -330,26 +338,18 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 				// Force definition of assigned idents in current scope
 				for i, c := range n.child[:l] {
-					if scope.global {
-						interp.fsize++
-						scope.size = interp.fsize
-					} else {
-						scope.size++
+					//log.Println(c.ident, i, types)
+					c.findex = scope.inc(interp)
+					scope.sym[c.ident] = &Symbol{index: scope.size, global: scope.global, kind: Var}
+					if i < len(types) {
+						scope.sym[c.ident].typ = types[i]
 					}
-					scope.sym[c.ident] = &Symbol{index: scope.size, typ: types[i], global: scope.global, kind: Var}
-					c.findex = scope.size
 				}
 			}
 
 		case BinaryExpr:
 			wireChild(n)
-			if scope.global {
-				interp.fsize++
-				scope.size = interp.fsize
-			} else {
-				scope.size++
-			}
-			n.findex = scope.size
+			n.findex = scope.inc(interp)
 			n.typ = n.child[0].typ
 			nilSym := interp.universe.sym["nil"]
 			if n.action == NotEqual {
@@ -364,13 +364,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 		case IndexExpr:
 			wireChild(n)
-			if scope.global {
-				interp.fsize++
-				scope.size = interp.fsize
-			} else {
-				scope.size++
-			}
-			n.findex = scope.size
+			n.findex = scope.inc(interp)
 			n.typ = n.child[0].typ.val
 			n.recv = n
 			if n.child[0].typ.cat == MapT {
@@ -396,13 +390,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 		case CallExpr:
 			wireChild(n)
-			if scope.global {
-				interp.fsize++
-				scope.size = interp.fsize
-			} else {
-				scope.size++
-			}
-			n.findex = scope.size
+			n.findex = scope.inc(interp)
 			if n.child[0].sym != nil && n.child[0].sym.kind == Bltn {
 				n.run = n.child[0].sym.builtin
 				n.child[0].typ = &Type{cat: BuiltinT}
@@ -494,14 +482,21 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					}
 				} else {
 					// Resolve method and receiver path, store them in node static value for run
-					methodDecl := n.child[0].val.(*Node)
-					if len(methodDecl.child[2].child) > 1 {
-						// Allocate frame for method return values (if any)
-						n.fsize = len(methodDecl.child[2].child[1].child)
-						n.typ = methodDecl.typ.ret[0]
-						// TODO: handle multiple return values
+					if methodDecl, ok := n.child[0].val.(*Node); ok {
+						if len(methodDecl.child[2].child) > 1 {
+							// Allocate frame for method return values (if any)
+							n.fsize = len(methodDecl.child[2].child[1].child)
+							n.typ = methodDecl.typ.ret[0]
+							// TODO: handle multiple return values
+						} else {
+							n.fsize = 0
+						}
 					} else {
-						n.fsize = 0
+						method := n.child[0].child[1].ident
+						_, _, ok := scope.lookup(n.child[0].child[1].ident)
+						(*unresolved)[method] = append((*unresolved)[method], n)
+						log.Println(n.index, "could not resolve forward method declaration", method, ok, unresolved, n.kind)
+
 					}
 					n.child[0].findex = -1 // To force reading value from node instead of frame (methods)
 				}
@@ -541,6 +536,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.fsize = len(n.child[0].typ.ret)
 				}
 			}
+			//////////////////// Reserve 1 entry to store all returns
 			// Reserve entries in frame to store results of call
 			scope.size += n.fsize
 			if scope.global {
@@ -555,24 +551,12 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			}
 
 		case CaseClause:
-			if scope.global {
-				interp.fsize++
-				scope.size = interp.fsize
-			} else {
-				scope.size++
-			}
-			n.findex = scope.size
+			n.findex = scope.inc(interp)
 			n.tnext = n.child[len(n.child)-1].start
 
 		case CompositeLitExpr:
 			wireChild(n)
-			if scope.global {
-				interp.fsize++
-				scope.size = interp.fsize
-			} else {
-				scope.size++
-			}
-			n.findex = scope.size
+			n.findex = scope.inc(interp)
 			if n.child[0].typ == nil {
 				n.child[0].typ = nodeType(interp, scope, n.child[0])
 			}
@@ -606,13 +590,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			l := len(n.child) - 1
 			n.typ = nodeType(interp, scope, n.child[l])
 			if l == 0 {
-				if scope.global {
-					interp.fsize++
-					scope.size = interp.fsize
-				} else {
-					scope.size++
-				}
-				n.findex = scope.size
+				n.findex = scope.inc(interp)
 			} else {
 				for _, f := range n.child[:l] {
 					scope.sym[f.ident].typ = n.typ
@@ -706,6 +684,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			interp.scope[pkgName].sym[funcName].kind = Func
 			interp.scope[pkgName].sym[funcName].node = n
 
+			// Handle forward function declaration
+			for _, nod := range (*unresolved)[funcName] {
+				log.Println("fixing unresolved", funcName, nod.index)
+			}
+
 		case FuncLit:
 			n.typ = n.child[2].typ
 			n.val = n
@@ -755,14 +738,8 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else {
 				if n.ident == "_" || n.anc.kind == Define || n.anc.kind == DefineX || n.anc.kind == Field || n.anc.kind == RangeStmt || n.anc.kind == ValueSpec {
 					// Create a new local symbol for func argument or local var definition
-					if scope.global {
-						interp.fsize++
-						scope.size = interp.fsize
-					} else {
-						scope.size++
-					}
+					n.findex = scope.inc(interp)
 					scope.sym[n.ident] = &Symbol{index: scope.size, global: scope.global, kind: Var}
-					n.findex = scope.size
 				} else {
 					// symbol may be defined globally elsewhere later, add an entry at pkg level
 					interp.fsize++
@@ -845,13 +822,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.child[0].tnext = n.child[1].start
 			n.child[0].fnext = n
 			n.child[1].tnext = n
-			if scope.global {
-				interp.fsize++
-				scope.size = interp.fsize
-			} else {
-				scope.size++
-			}
-			n.findex = scope.size
+			n.findex = scope.inc(interp)
 			n.typ = n.child[0].typ
 
 		case LorExpr:
@@ -859,13 +830,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.child[0].tnext = n
 			n.child[0].fnext = n.child[1].start
 			n.child[1].tnext = n
-			if scope.global {
-				interp.fsize++
-				scope.size = interp.fsize
-			} else {
-				scope.size++
-			}
-			n.findex = scope.size
+			n.findex = scope.inc(interp)
 			n.typ = n.child[0].typ
 
 		case RangeStmt:
@@ -873,13 +838,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.child[2].tnext = n
 			n.child[3].tnext = n
 			n.tnext = n.child[3].start
-			if scope.global {
-				interp.fsize++
-				scope.size = interp.fsize
-			} else {
-				scope.size++
-			}
-			n.findex = scope.size
+			n.findex = scope.inc(interp)
 
 		case ReturnStmt:
 			wireChild(n)
@@ -887,13 +846,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 		case SelectorExpr:
 			wireChild(n)
-			if scope.global {
-				interp.fsize++
-				scope.size = interp.fsize
-			} else {
-				scope.size++
-			}
-			n.findex = scope.size
+			n.findex = scope.inc(interp)
 			n.typ = n.child[0].typ
 			n.recv = n.child[0].recv
 			if n.typ == nil {
