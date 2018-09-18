@@ -11,7 +11,7 @@ type Cat uint
 
 // Types for go language
 const (
-	Unset Cat = iota
+	UnsetT Cat = iota
 	AliasT
 	ArrayT
 	BinT
@@ -48,7 +48,7 @@ const (
 )
 
 var cats = [...]string{
-	Unset:       "Unset",
+	UnsetT:      "UnsetT",
 	AliasT:      "AliasT",
 	ArrayT:      "ArrayT",
 	BinT:        "BinT",
@@ -108,7 +108,6 @@ type Type struct {
 	method     []*Node       // Associated methods or nil
 	size       int           // Size of array if ArrayT
 	rtype      reflect.Type  // Reflection type if ValueT, or nil
-	rzero      reflect.Value // Reflection zero settable value, or nil
 	variadic   bool          // true if type is variadic
 	incomplete bool          // true if type must be parsed again
 	node       *Node         // root AST node of type definition
