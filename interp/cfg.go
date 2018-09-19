@@ -241,10 +241,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			wireChild(n)
 			n.typ = &Type{cat: PtrT, val: n.child[0].typ}
 
-		case ArrayType:
-			// TODO: move to pre-processing ? See when handling complex array type def
-			n.typ = &Type{cat: ArrayT, val: nodeType(interp, scope, n.child[1])}
-
 		case Define, AssignStmt:
 			wireChild(n)
 			if n.kind == Define {
@@ -536,7 +532,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.fsize = len(n.child[0].typ.ret)
 				}
 			}
-			//////////////////// Reserve 1 entry to store all returns
 			// Reserve entries in frame to store results of call
 			scope.size += n.fsize
 			if scope.global {
@@ -545,6 +540,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else {
 				scope.size += n.fsize
 			}
+
 			if funcDef {
 				// Trigger frame indirection to handle nested functions
 				n.action = CallF
@@ -679,7 +675,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			}
 			n.typ = n.child[2].typ
 			n.val = n
-			interp.scope[pkgName].sym[funcName].index = -1
+			interp.scope[pkgName].sym[funcName].index = -1 // to force value to n.val
 			interp.scope[pkgName].sym[funcName].typ = n.typ
 			interp.scope[pkgName].sym[funcName].kind = Func
 			interp.scope[pkgName].sym[funcName].node = n
