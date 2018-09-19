@@ -2,7 +2,6 @@ package interp
 
 import (
 	"log"
-	"path"
 	"reflect"
 	"strconv"
 	"unicode"
@@ -36,14 +35,15 @@ func (k SymKind) String() string {
 
 // A Symbol represents an interpreter object such as type, constant, var, func, builtin or binary object
 type Symbol struct {
-	kind    SymKind
-	typ     *Type       // Type of value
-	node    *Node       // Node value if index is negative
-	index   int         // index of value in frame or -1
-	val     interface{} // default value (used for constants)
-	path    string      // package path if typ.cat is SrcPkgT or BinPkgT
-	builtin Builtin     // Builtin function or nil
-	global  bool        // true if symbol is defined in global space
+	kind     SymKind
+	typ      *Type       // Type of value
+	node     *Node       // Node value if index is negative
+	index    int         // index of value in frame or -1
+	val      interface{} // default value (used for constants)
+	path     string      // package path if typ.cat is SrcPkgT or BinPkgT
+	builtin  Builtin     // Builtin function or nil
+	global   bool        // true if symbol is defined in global space
+	constant bool        // true if symbol value is constant
 }
 
 // A SymMap stores symbols indexed by name
@@ -145,20 +145,18 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				interp.scope[pkgName] = scope.push(0)
 			}
 			scope = interp.scope[pkgName]
+			log.Println("scope:", scope)
 			scope.size = interp.fsize
 			if pkg, ok := interp.Exports[pkgName]; ok {
 				exports = pkg
 				expval = interp.Expval[pkgName]
 				unresolved = interp.unresolved[pkgName]
 			} else {
-				x := make(BinMap)
-				exports = &x
+				exports = &BinMap{}
 				interp.Exports[pkgName] = exports
-				y := make(ValueMap)
-				expval = &y
+				expval = &ValueMap{}
 				interp.Expval[pkgName] = expval
-				z := make(UnresolvedMap)
-				unresolved = &z
+				unresolved = &UnresolvedMap{}
 				interp.unresolved[pkgName] = unresolved
 			}
 
@@ -216,17 +214,19 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			scope = scope.push(0)
 
 		case TypeSpec:
-			// Type analysis is performed recursively and no post-order processing
-			// needs to be done for types, so do not dive in subtree
-			if n.child[1].kind == Ident {
-				// Create a type alias of an existing one
-				n.typ = &Type{cat: AliasT, val: nodeType(interp, scope, n.child[1])}
-			} else {
-				// Define a new type
-				n.typ = nodeType(interp, scope, n.child[1])
-			}
-			scope.sym[n.child[0].ident] = &Symbol{kind: Typ, typ: n.typ}
-			// TODO: export type for use by runtime
+			/*
+				// Type analysis is performed recursively and no post-order processing
+				// needs to be done for types, so do not dive in subtree
+				if n.child[1].kind == Ident {
+					// Create a type alias of an existing one
+					n.typ = &Type{cat: AliasT, val: nodeType(interp, scope, n.child[1])}
+				} else {
+					// Define a new type
+					n.typ = nodeType(interp, scope, n.child[1])
+				}
+				scope.sym[n.child[0].ident] = &Symbol{kind: Typ, typ: n.typ}
+				// TODO: export type for use by runtime
+			*/
 			return false
 
 		case ArrayType, BasicLit, ChanType, MapType, StructType:
@@ -787,29 +787,30 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			fbody.tnext = n
 			scope = scope.pop()
 
-		case ImportSpec:
-			var name, ipath string
-			if len(n.child) == 2 {
-				ipath = n.child[1].val.(string)
-				name = n.child[0].ident
-			} else {
-				ipath = n.child[0].val.(string)
-				name = path.Base(ipath)
-			}
-			if pkg, ok := interp.binValue[ipath]; ok {
-				if name == "." {
-					for n, s := range pkg {
-						scope.sym[n] = &Symbol{typ: &Type{cat: BinT}, val: s}
+			/*
+				case ImportSpec:
+					var name, ipath string
+					if len(n.child) == 2 {
+						ipath = n.child[1].val.(string)
+						name = n.child[0].ident
+					} else {
+						ipath = n.child[0].val.(string)
+						name = path.Base(ipath)
 					}
-				} else {
-					scope.sym[name] = &Symbol{typ: &Type{cat: BinPkgT}, path: ipath}
-				}
-			} else {
-				// TODO: make sure we do not import a src package more than once
-				interp.importSrcFile(ipath)
-				scope.sym[name] = &Symbol{typ: &Type{cat: SrcPkgT}, path: ipath}
-			}
-
+					if pkg, ok := interp.binValue[ipath]; ok {
+						if name == "." {
+							for n, s := range pkg {
+								scope.sym[n] = &Symbol{typ: &Type{cat: BinT}, val: s}
+							}
+						} else {
+							scope.sym[name] = &Symbol{typ: &Type{cat: BinPkgT}, path: ipath}
+						}
+					} else {
+						// TODO: make sure we do not import a src package more than once
+						interp.importSrcFile(ipath)
+						scope.sym[name] = &Symbol{typ: &Type{cat: SrcPkgT}, path: ipath}
+					}
+			*/
 		case KeyValueExpr:
 			wireChild(n)
 

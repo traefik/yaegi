@@ -166,6 +166,8 @@ func (i *Interpreter) Eval(src string) string {
 		root.AstDot(DotX())
 	}
 
+	i.Gta(root)
+
 	// Annotate AST with CFG infos
 	initNodes := i.Cfg(root)
 	if sym := i.scope[pkgName].sym[i.Entry]; sym != nil {

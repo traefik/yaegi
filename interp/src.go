@@ -39,14 +39,20 @@ func (interp *Interpreter) importSrcFile(path string) {
 		}
 
 		pkgName, root = interp.Ast(string(buf))
-		initNodes = append(initNodes, interp.Cfg(root)...)
 		rootNodes = append(rootNodes, root)
 		if interp.AstDot {
 			root.AstDot(DotX())
 		}
+		interp.Gta(root)
+	}
+
+	// Generate control flow graphs
+	for _, root := range rootNodes {
+		initNodes = append(initNodes, interp.Cfg(root)...)
 	}
 
 	// Fix nodes with unresolved symbols due to out of order parsing
+	log.Println("unresolved:", *(interp.unresolved[pkgName]))
 	for _, nodes := range *(interp.unresolved[pkgName]) {
 		for _, n := range nodes {
 			n.typ = n.sym.typ

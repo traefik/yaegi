@@ -554,6 +554,28 @@ func main() {
 
 }
 
+func Example_const1() {
+	src := `
+package main
+
+type T struct {
+	a int
+	b string
+}
+
+var t = T{1, "hello"}
+
+func main() {
+	println(t.a, t.b)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
+	// Output:
+	// 1 hello
+}
+
 func Example_cont() {
 	src := `
 package main
@@ -2047,10 +2069,13 @@ func main() {
 	println(f())
 }
 
-func f() (int, int) { return 2, 3 }`
+func f() (int, int) { return 2, 3 }
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.Eval(src)
 
+	// Output:
+	// 2 3
 }
 
 func Example_run12() {
@@ -2064,10 +2089,33 @@ func f(a int) (int, int) {
 func main() {
 	a, b := f(3)
 	println(a, b)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.Eval(src)
 
+	// Output:
+	// 4 5
+}
+
+func Example_run13() {
+	src := `
+package main
+
+func main() {
+	a, b := f(3)
+	println(a, b)
+}
+
+func f(a int) (int, int) {
+	return a + 1, a + 2
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
+	// Output:
+	// 4 5
 }
 
 func Example_run4() {
@@ -3237,6 +3285,52 @@ func main() {
 
 	// Output:
 	// int32
+}
+
+func Example_type5() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"reflect"
+)
+
+type T int
+
+func main() {
+	a := T(12)
+	fmt.Println(reflect.TypeOf(a))
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
+	// Output:
+	// int
+}
+
+func Example_type6() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"reflect"
+)
+
+func main() {
+	a := T(12)
+	fmt.Println(reflect.TypeOf(a))
+}
+
+type T int
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
+	// Output:
+	// int
 }
 
 func Example_var() {

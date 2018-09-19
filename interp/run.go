@@ -693,7 +693,8 @@ func compositeSparse(n *Node, f *Frame) {
 }
 
 func _range(n *Node, f *Frame) {
-	i, index := 0, n.child[0].findex
+	i := 0
+	index := n.child[0].findex
 	if f.data[index] != nil {
 		i = f.data[index].(int) + 1
 	}
