@@ -540,7 +540,6 @@ func Example_const0() {
 	src := `
 package main
 
-//const a = 1
 const (
 	a = iota
 	b
@@ -548,10 +547,13 @@ const (
 
 func main() {
 	println(a, b)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.Eval(src)
 
+	// Output:
+	// 0 1
 }
 
 func Example_const1() {

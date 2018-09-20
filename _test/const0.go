@@ -1,6 +1,5 @@
 package main
 
-//const a = 1
 const (
 	a = iota
 	b
@@ -9,3 +8,6 @@ const (
 func main() {
 	println(a, b)
 }
+
+// Output:
+// 0 1
