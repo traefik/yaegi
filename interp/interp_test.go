@@ -578,6 +578,38 @@ func main() {
 	// 1 hello
 }
 
+func Example_const2() {
+	src := `
+package main
+
+func main() {
+	println(a)
+}
+
+const a = "hello"
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
+	// Output:
+	// hello
+}
+
+func Example_const3() {
+	src := `
+package main
+
+const a, b, c int = 1, 2, 3
+
+func main() { println(a, b, c) }
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
+	// Output:
+	// 1 2 3
+}
+
 func Example_cont() {
 	src := `
 package main

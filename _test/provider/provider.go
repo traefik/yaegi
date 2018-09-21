@@ -4,7 +4,8 @@ import "fmt"
 
 const (
 	SomeString = "constant string"
-	SomeInt    = 1
+
+//	SomeInt    = 1
 )
 
 type T1 struct {

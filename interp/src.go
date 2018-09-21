@@ -20,7 +20,7 @@ func (interp *Interpreter) importSrcFile(path string) {
 	rootNodes := []*Node{}
 
 	var root *Node
-	var pkgName string
+	//var pkgName string
 
 	// Parse source files
 	for _, file := range files {
@@ -38,7 +38,7 @@ func (interp *Interpreter) importSrcFile(path string) {
 			log.Fatal(err)
 		}
 
-		pkgName, root = interp.Ast(string(buf))
+		_, root = interp.Ast(string(buf))
 		rootNodes = append(rootNodes, root)
 		if interp.AstDot {
 			root.AstDot(DotX())
@@ -49,15 +49,6 @@ func (interp *Interpreter) importSrcFile(path string) {
 	// Generate control flow graphs
 	for _, root := range rootNodes {
 		initNodes = append(initNodes, interp.Cfg(root)...)
-	}
-
-	// Fix nodes with unresolved symbols due to out of order parsing
-	log.Println("unresolved:", *(interp.unresolved[pkgName]))
-	for _, nodes := range *(interp.unresolved[pkgName]) {
-		for _, n := range nodes {
-			n.typ = n.sym.typ
-			n.val = n.sym.val
-		}
 	}
 
 	if interp.NoRun {

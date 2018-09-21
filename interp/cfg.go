@@ -119,7 +119,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 	var initNodes []*Node
 	var exports *BinMap
 	var expval *ValueMap
-	var unresolved *UnresolvedMap
 	var iotaValue int
 	var pkgName string
 
@@ -145,19 +144,15 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				interp.scope[pkgName] = scope.push(0)
 			}
 			scope = interp.scope[pkgName]
-			log.Println("scope:", scope)
 			scope.size = interp.fsize
 			if pkg, ok := interp.Exports[pkgName]; ok {
 				exports = pkg
 				expval = interp.Expval[pkgName]
-				unresolved = interp.unresolved[pkgName]
 			} else {
 				exports = &BinMap{}
 				interp.Exports[pkgName] = exports
 				expval = &ValueMap{}
 				interp.Expval[pkgName] = expval
-				unresolved = &UnresolvedMap{}
-				interp.unresolved[pkgName] = unresolved
 			}
 
 		case For0, ForRangeStmt:
@@ -214,19 +209,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			scope = scope.push(0)
 
 		case TypeSpec:
-			/*
-				// Type analysis is performed recursively and no post-order processing
-				// needs to be done for types, so do not dive in subtree
-				if n.child[1].kind == Ident {
-					// Create a type alias of an existing one
-					n.typ = &Type{cat: AliasT, val: nodeType(interp, scope, n.child[1])}
-				} else {
-					// Define a new type
-					n.typ = nodeType(interp, scope, n.child[1])
-				}
-				scope.sym[n.child[0].ident] = &Symbol{kind: Typ, typ: n.typ}
-				// TODO: export type for use by runtime
-			*/
 			return false
 
 		case ArrayType, BasicLit, ChanType, MapType, StructType:
@@ -478,21 +460,14 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					}
 				} else {
 					// Resolve method and receiver path, store them in node static value for run
-					if methodDecl, ok := n.child[0].val.(*Node); ok {
-						if len(methodDecl.child[2].child) > 1 {
-							// Allocate frame for method return values (if any)
-							n.fsize = len(methodDecl.child[2].child[1].child)
-							n.typ = methodDecl.typ.ret[0]
-							// TODO: handle multiple return values
-						} else {
-							n.fsize = 0
-						}
+					methodDecl := n.child[0].val.(*Node)
+					if len(methodDecl.child[2].child) > 1 {
+						// Allocate frame for method return values (if any)
+						n.fsize = len(methodDecl.child[2].child[1].child)
+						n.typ = methodDecl.typ.ret[0]
+						// TODO: handle multiple return values
 					} else {
-						method := n.child[0].child[1].ident
-						_, _, ok := scope.lookup(n.child[0].child[1].ident)
-						(*unresolved)[method] = append((*unresolved)[method], n)
-						log.Println(n.index, "could not resolve forward method declaration", method, ok, unresolved, n.kind)
-
+						n.fsize = 0
 					}
 					n.child[0].findex = -1 // To force reading value from node instead of frame (methods)
 				}
@@ -521,7 +496,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						}
 						n.fsize = l
 					} else {
-						log.Println(n.index, "call to unknown def", n.child[0].ident)
+						log.Println(n.index, "call to unknown def", n.child[0].ident, sym.typ)
 					}
 				}
 			} else if n.child[0].kind == SelectorSrc {
@@ -680,11 +655,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			interp.scope[pkgName].sym[funcName].kind = Func
 			interp.scope[pkgName].sym[funcName].node = n
 
-			// Handle forward function declaration
-			for _, nod := range (*unresolved)[funcName] {
-				log.Println("fixing unresolved", funcName, nod.index)
-			}
-
 		case FuncLit:
 			n.typ = n.child[2].typ
 			n.val = n
@@ -712,6 +682,10 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case Ident:
 			if n.anc.kind == File || (n.anc.kind == SelectorExpr && n.anc.child[0] != n) {
 				// skip symbol creation/lookup for idents used as key
+			} else if l := len(n.anc.child); n.anc.kind == Field && l > 1 && n.anc.child[l-1] != n {
+				// Create a new local symbol for func argument
+				n.findex = scope.inc(interp)
+				scope.sym[n.ident] = &Symbol{index: scope.size, kind: Var}
 			} else if sym, level, ok := scope.lookup(n.ident); ok {
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
 				if n.findex < 0 {
@@ -732,22 +706,12 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 				n.recv = n
 			} else {
-				if n.ident == "_" || n.anc.kind == Define || n.anc.kind == DefineX || n.anc.kind == Field || n.anc.kind == RangeStmt || n.anc.kind == ValueSpec {
+				if n.ident == "_" || n.anc.kind == Define || n.anc.kind == DefineX || n.anc.kind == RangeStmt || n.anc.kind == ValueSpec {
 					// Create a new local symbol for func argument or local var definition
 					n.findex = scope.inc(interp)
 					scope.sym[n.ident] = &Symbol{index: scope.size, global: scope.global, kind: Var}
 				} else {
-					// symbol may be defined globally elsewhere later, add an entry at pkg level
-					interp.fsize++
-					interp.scope[pkgName].size = interp.fsize
-					interp.scope[pkgName].sym[n.ident] = &Symbol{index: interp.fsize, global: true, kind: Var}
-					n.sym = interp.scope[pkgName].sym[n.ident]
-					n.level = scope.level
-					n.findex = interp.fsize
-					// Record undefined symbols for delayed resolution processing
-					if n.anc.kind != FuncDecl && !(n.anc.kind == KeyValueExpr && n.anc.child[0] == n) {
-						(*unresolved)[n.ident] = append((*unresolved)[n.ident], n)
-					}
+					log.Println(n.index, "unresolved global symbol", n.ident)
 				}
 			}
 

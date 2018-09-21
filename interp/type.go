@@ -119,8 +119,15 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 	if n.typ != nil && !n.typ.incomplete {
 		return n.typ
 	}
+
 	var t = &Type{node: n, scope: scope}
+
 	switch n.kind {
+	case Address, StarExpr:
+		t.cat = PtrT
+		t.val = nodeType(interp, scope, n.child[0])
+		t.incomplete = t.val.incomplete
+
 	case ArrayType:
 		t.cat = ArrayT
 		if len(n.child) > 1 {
@@ -139,15 +146,12 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 				}
 			}
 			t.val = nodeType(interp, scope, n.child[1])
-			if t.val.incomplete {
-				t.incomplete = true
-			}
+			t.incomplete = t.incomplete || t.val.incomplete
 		} else {
 			t.val = nodeType(interp, scope, n.child[0])
-			if t.val.incomplete {
-				t.incomplete = true
-			}
+			t.incomplete = t.val.incomplete
 		}
+
 	case BasicLit:
 		switch n.val.(type) {
 		case bool:
@@ -165,43 +169,53 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 		default:
 			log.Panicf("Missing support for basic type %T, node %v\n", n.val, n.index)
 		}
+
 	case ChanType:
 		t.cat = ChanT
 		t.val = nodeType(interp, scope, n.child[0])
-		if t.val.incomplete {
-			t.incomplete = true
-		}
+		t.incomplete = t.val.incomplete
+
+	case CompositeLitExpr:
+		t = nodeType(interp, scope, n.child[0])
+
 	case Ellipsis:
 		t = nodeType(interp, scope, n.child[0])
 		t.variadic = true
+
 	case FuncType:
 		t.cat = FuncT
 		for _, arg := range n.child[0].child {
-			t.arg = append(t.arg, nodeType(interp, scope, arg.child[len(arg.child)-1]))
+			typ := nodeType(interp, scope, arg.child[len(arg.child)-1])
+			t.arg = append(t.arg, typ)
+			t.incomplete = t.incomplete || typ.incomplete
 		}
 		if len(n.child) == 2 {
 			for _, ret := range n.child[1].child {
-				t.ret = append(t.ret, nodeType(interp, scope, ret.child[len(ret.child)-1]))
+				typ := nodeType(interp, scope, ret.child[len(ret.child)-1])
+				t.ret = append(t.ret, typ)
+				t.incomplete = t.incomplete || typ.incomplete
 			}
 		}
+
 	case Ident:
 		if sym, _, found := scope.lookup(n.ident); found {
 			t = sym.typ
 		} else {
 			t.incomplete = true
 		}
+
 	case InterfaceType:
 		t.cat = InterfaceT
 		//for _, method := range n.child[0].child {
 		//	t.method = append(t.method, nodeType(interp, scope, method))
 		//}
+
 	case MapType:
 		t.cat = MapT
 		t.key = nodeType(interp, scope, n.child[0])
 		t.val = nodeType(interp, scope, n.child[1])
-		if t.key.incomplete || t.val.incomplete {
-			t.incomplete = true
-		}
+		t.incomplete = t.key.incomplete || t.val.incomplete
+
 	case SelectorExpr:
 		pkgName, typeName := n.child[0].ident, n.child[1].ident
 		if sym, _, found := scope.lookup(pkgName); found {
@@ -218,32 +232,28 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 			log.Panicln("unknown package", pkgName)
 		}
 		// TODO: handle pkgsrc types
-	case StarExpr:
-		t.cat = PtrT
-		t.val = nodeType(interp, scope, n.child[0])
+
 	case StructType:
 		t.cat = StructT
 		for _, c := range n.child[0].child {
 			if len(c.child) == 1 {
 				typ := nodeType(interp, scope, c.child[0])
-				if typ.incomplete {
-					t.incomplete = true
-				}
 				t.field = append(t.field, StructField{typ: typ})
+				t.incomplete = t.incomplete || typ.incomplete
 			} else {
 				l := len(c.child)
 				typ := nodeType(interp, scope, c.child[l-1])
-				if typ.incomplete {
-					t.incomplete = true
-				}
+				t.incomplete = t.incomplete || typ.incomplete
 				for _, d := range c.child[:l-1] {
 					t.field = append(t.field, StructField{name: d.ident, typ: typ})
 				}
 			}
 		}
+
 	default:
 		log.Panicln("type definition not implemented for node", n.index, n.kind)
 	}
+
 	return t
 }
 
@@ -284,20 +294,24 @@ func (t *Type) zero() interface{} {
 	switch t.cat {
 	case AliasT:
 		return t.val.zero()
+
 	case ArrayT:
 		if t.size > 0 {
 			return reflect.MakeSlice(reflect.SliceOf(reflect.TypeOf(t.val.zero())), t.size, t.size).Interface()
 		} else {
 			return reflect.Zero(reflect.SliceOf(reflect.TypeOf(t.val.zero()))).Interface()
 		}
+
 	case StructT:
 		z := make([]interface{}, len(t.field))
 		for i, f := range t.field {
 			z[i] = f.typ.zero()
 		}
 		return z
+
 	case ValueT:
 		return reflect.New(t.rtype).Elem().Interface()
+
 	default:
 		return zeroValues[t.cat]
 	}
@@ -385,11 +399,14 @@ func (t *Type) TypeOf() reflect.Type {
 	switch t.cat {
 	case ArrayT:
 		return reflect.SliceOf(t.val.TypeOf())
+
 	case ChanT:
 		return reflect.ChanOf(reflect.BothDir, t.val.TypeOf())
+
 	case ErrorT:
 		var e = new(error)
 		return reflect.TypeOf(e).Elem()
+
 	case FuncT:
 		in := make([]reflect.Type, len(t.arg))
 		out := make([]reflect.Type, len(t.ret))
@@ -400,10 +417,13 @@ func (t *Type) TypeOf() reflect.Type {
 			out[i] = v.TypeOf()
 		}
 		return reflect.FuncOf(in, out, false)
+
 	case MapT:
 		return reflect.MapOf(t.key.TypeOf(), t.val.TypeOf())
+
 	case PtrT:
 		return reflect.PtrTo(t.val.TypeOf())
+
 	case StructT:
 		var fields = []reflect.StructField{}
 		for _, f := range t.field {
@@ -413,8 +433,10 @@ func (t *Type) TypeOf() reflect.Type {
 			fields = append(fields, reflect.StructField{Name: f.name, Type: f.typ.TypeOf()})
 		}
 		return reflect.StructOf(fields)
+
 	case ValueT:
 		return t.rtype
+
 	default:
 		return reflect.TypeOf(t.zero())
 	}

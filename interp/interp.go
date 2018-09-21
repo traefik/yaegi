@@ -53,8 +53,6 @@ type LibValueMap map[string]map[string]reflect.Value
 
 type LibTypeMap map[string]map[string]reflect.Type
 
-type UnresolvedMap map[string][]*Node
-
 // Opt stores interpreter options
 type Opt struct {
 	AstDot bool   // display AST graph (debug)
@@ -66,16 +64,15 @@ type Opt struct {
 // Interpreter contains global resources and state
 type Interpreter struct {
 	Opt
-	Frame      *Frame            // programe data storage during execution
-	fsize      int               // global interpreter frame size
-	nindex     int               // next node index
-	universe   *Scope            // interpreter global level scope
-	scope      map[string]*Scope // package level scopes, indexed by package name
-	binValue   LibValueMap
-	binType    LibTypeMap
-	unresolved map[string]*UnresolvedMap
-	Exports    PkgMap      // exported symbols for use by runtime
-	Expval     PkgValueMap // same as abobe (TODO: keep only one)
+	Frame    *Frame            // programe data storage during execution
+	fsize    int               // global interpreter frame size
+	nindex   int               // next node index
+	universe *Scope            // interpreter global level scope
+	scope    map[string]*Scope // package level scopes, indexed by package name
+	binValue LibValueMap
+	binType  LibTypeMap
+	Exports  PkgMap      // exported symbols for use by runtime
+	Expval   PkgValueMap // same as abobe (TODO: keep only one)
 }
 
 // Walk traverses AST n in depth first order, call cbin function
@@ -95,15 +92,14 @@ func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 // NewInterpreter creates and returns a new interpreter object
 func NewInterpreter(opt Opt) *Interpreter {
 	return &Interpreter{
-		Opt:        opt,
-		universe:   initUniverse(),
-		scope:      map[string]*Scope{},
-		Exports:    make(PkgMap),
-		Expval:     make(PkgValueMap),
-		binValue:   LibValueMap(stdlib.Value),
-		binType:    LibTypeMap(stdlib.Type),
-		unresolved: make(map[string]*UnresolvedMap),
-		Frame:      &Frame{data: []interface{}{}},
+		Opt:      opt,
+		universe: initUniverse(),
+		scope:    map[string]*Scope{},
+		Exports:  make(PkgMap),
+		Expval:   make(PkgValueMap),
+		binValue: LibValueMap(stdlib.Value),
+		binType:  LibTypeMap(stdlib.Type),
+		Frame:    &Frame{data: []interface{}{}},
 	}
 }
 
@@ -166,6 +162,7 @@ func (i *Interpreter) Eval(src string) string {
 		root.AstDot(DotX())
 	}
 
+	// Global type analysis
 	i.Gta(root)
 
 	// Annotate AST with CFG infos
@@ -176,14 +173,6 @@ func (i *Interpreter) Eval(src string) string {
 
 	if i.CfgDot {
 		root.CfgDot(DotX())
-	}
-
-	// Fix nodes with unresolved symbols due to out of order parsing
-	for _, nodes := range *(i.unresolved[pkgName]) {
-		for _, n := range nodes {
-			n.typ = n.sym.typ
-			n.val = n.sym.val
-		}
 	}
 
 	// Execute CFG

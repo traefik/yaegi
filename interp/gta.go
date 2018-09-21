@@ -1,7 +1,6 @@
 package interp
 
 import (
-	"log"
 	"path"
 )
 
@@ -15,8 +14,25 @@ func (interp *Interpreter) Gta(root *Node) {
 	scope := interp.universe
 
 	root.Walk(func(n *Node) bool {
-		log.Println(n.index, n.kind)
 		switch n.kind {
+		case Define:
+			if len(n.child) > 1 {
+				scope.sym[n.child[0].ident] = &Symbol{
+					kind:   Var,
+					global: scope.global,
+					index:  scope.inc(interp),
+					typ:    nodeType(interp, scope, n.child[1]),
+				}
+			} else {
+				scope.sym[n.child[0].ident] = &Symbol{
+					kind:   Var,
+					global: scope.global,
+					index:  scope.inc(interp),
+					typ:    nodeType(interp, scope, n.anc.child[0].child[1]),
+				}
+			}
+			return false
+
 		case File:
 			pkgName = n.child[0].ident
 			if _, ok := interp.scope[pkgName]; !ok {
@@ -67,5 +83,4 @@ func (interp *Interpreter) Gta(root *Node) {
 		}
 		return true
 	}, nil)
-	log.Println(interp.scope[pkgName])
 }
