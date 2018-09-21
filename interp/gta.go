@@ -48,13 +48,20 @@ func (interp *Interpreter) Gta(root *Node) {
 					typeName = receiver.child[1].ident
 				}
 				if typeName == "" {
+					// The receiver is a pointer, retrieve typeName from indirection
 					typeName = receiver.child[1].child[0].ident
 					elemtype := scope.getType(typeName)
+					if elemtype == nil {
+						// Add type if necessary, so method can be registered
+						scope.sym[typeName] = &Symbol{kind: Typ, typ: &Type{}}
+						elemtype = scope.sym[typeName].typ
+					}
 					receiverType = &Type{cat: PtrT, val: elemtype}
 					elemtype.method = append(elemtype.method, n)
 				} else {
 					receiverType = scope.getType(typeName)
 					if receiverType == nil {
+						// Add type if necessary, so method can be registered
 						scope.sym[typeName] = &Symbol{kind: Typ, typ: &Type{}}
 						receiverType = scope.sym[typeName].typ
 					}
