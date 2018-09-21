@@ -37,25 +37,29 @@ func (interp *Interpreter) Gta(root *Node) {
 			scope.sym[n.child[1].ident] = &Symbol{kind: Func, typ: n.typ, node: n}
 			if len(n.child[0].child) > 0 {
 				// function is a method, add it to the related type
-				var t *Type
+				var receiverType *Type
 				var typeName string
 				n.ident = n.child[1].ident
-				recv := n.child[0].child[0]
-				if len(recv.child) < 2 {
+				receiver := n.child[0].child[0]
+				if len(receiver.child) < 2 {
 					// Receiver var name is skipped in method declaration (fix that in AST ?)
-					typeName = recv.child[0].ident
+					typeName = receiver.child[0].ident
 				} else {
-					typeName = recv.child[1].ident
+					typeName = receiver.child[1].ident
 				}
 				if typeName == "" {
-					typeName = recv.child[1].child[0].ident
+					typeName = receiver.child[1].child[0].ident
 					elemtype := scope.getType(typeName)
-					t = &Type{cat: PtrT, val: elemtype}
+					receiverType = &Type{cat: PtrT, val: elemtype}
 					elemtype.method = append(elemtype.method, n)
 				} else {
-					t = scope.getType(typeName)
+					receiverType = scope.getType(typeName)
+					if receiverType == nil {
+						scope.sym[typeName] = &Symbol{kind: Typ, typ: &Type{}}
+						receiverType = scope.sym[typeName].typ
+					}
 				}
-				t.method = append(t.method, n)
+				receiverType.method = append(receiverType.method, n)
 			}
 			return false
 
@@ -92,6 +96,8 @@ func (interp *Interpreter) Gta(root *Node) {
 			// Type may already be declared for a receiver in a method function
 			if scope.sym[typeName] == nil {
 				scope.sym[typeName] = &Symbol{kind: Typ}
+			} else {
+				n.typ.method = append(n.typ.method, scope.sym[typeName].typ.method...)
 			}
 			scope.sym[typeName].typ = n.typ
 			return false

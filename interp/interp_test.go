@@ -1477,6 +1477,28 @@ func main() {
 	// in foo hello 3
 }
 
+func Example_method10() {
+	src := `
+package main
+
+func main() {
+	o := Coord{3, 4}
+	println(o.dist())
+}
+
+func (c Coord) dist() int { return c.x*c.x + c.y*c.y }
+
+type Coord struct {
+	x, y int
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
+	// Output:
+	// 25
+}
+
 func Example_method2() {
 	src := `
 package main
