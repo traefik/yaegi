@@ -169,28 +169,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.child[1].ident == "init" {
 				initNodes = append(initNodes, n)
 			}
-			if len(n.child[0].child) > 0 {
-				// function is a method, add it to the related type
-				var t *Type
-				var tname string
-				n.ident = n.child[1].ident
-				recv := n.child[0].child[0]
-				if len(recv.child) < 2 {
-					// Receiver var name is skipped in method declaration (fix that in AST ?)
-					tname = recv.child[0].ident
-				} else {
-					tname = recv.child[1].ident
-				}
-				if tname == "" {
-					tname = recv.child[1].child[0].ident
-					elemtype := scope.getType(tname)
-					t = &Type{cat: PtrT, val: elemtype}
-					elemtype.method = append(elemtype.method, n)
-				} else {
-					t = scope.getType(tname)
-				}
-				t.method = append(t.method, n)
-			}
 			if len(n.child[2].child) == 2 {
 				// allocate entries for return values at start of frame
 				scope.size += len(n.child[2].child[1].child)
@@ -459,15 +437,20 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						n.fsize = l
 					}
 				} else {
-					// Resolve method and receiver path, store them in node static value for run
-					methodDecl := n.child[0].val.(*Node)
-					if len(methodDecl.child[2].child) > 1 {
-						// Allocate frame for method return values (if any)
-						n.fsize = len(methodDecl.child[2].child[1].child)
-						n.typ = methodDecl.typ.ret[0]
-						// TODO: handle multiple return values
+					// Get method and receiver path, store them in node static value for run
+					if methodDecl, ok := n.child[0].val.(*Node); ok {
+						// method is already resolved, use it
+						if len(methodDecl.child[2].child) > 1 {
+							// Allocate frame for method return values (if any)
+							n.fsize = len(methodDecl.child[2].child[1].child)
+							n.typ = methodDecl.typ.ret[0]
+							// TODO: handle multiple return values
+						} else {
+							n.fsize = 0
+						}
 					} else {
-						n.fsize = 0
+						log.Println(n.index, "resolve method")
+						// method must be resolved here due to declaration after use
 					}
 					n.child[0].findex = -1 // To force reading value from node instead of frame (methods)
 				}

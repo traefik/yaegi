@@ -16,20 +16,12 @@ func (interp *Interpreter) Gta(root *Node) {
 	root.Walk(func(n *Node) bool {
 		switch n.kind {
 		case Define:
+			varName := n.child[0].ident
+			scope.sym[varName] = &Symbol{kind: Var, global: true, index: scope.inc(interp)}
 			if len(n.child) > 1 {
-				scope.sym[n.child[0].ident] = &Symbol{
-					kind:   Var,
-					global: scope.global,
-					index:  scope.inc(interp),
-					typ:    nodeType(interp, scope, n.child[1]),
-				}
+				scope.sym[varName].typ = nodeType(interp, scope, n.child[1])
 			} else {
-				scope.sym[n.child[0].ident] = &Symbol{
-					kind:   Var,
-					global: scope.global,
-					index:  scope.inc(interp),
-					typ:    nodeType(interp, scope, n.anc.child[0].child[1]),
-				}
+				scope.sym[varName].typ = nodeType(interp, scope, n.anc.child[0].child[1])
 			}
 			return false
 
@@ -41,10 +33,29 @@ func (interp *Interpreter) Gta(root *Node) {
 			scope = interp.scope[pkgName]
 
 		case FuncDecl:
-			scope.sym[n.child[1].ident] = &Symbol{
-				kind: Func,
-				typ:  nodeType(interp, scope, n.child[2]),
-				node: n,
+			n.typ = nodeType(interp, scope, n.child[2])
+			scope.sym[n.child[1].ident] = &Symbol{kind: Func, typ: n.typ, node: n}
+			if len(n.child[0].child) > 0 {
+				// function is a method, add it to the related type
+				var t *Type
+				var typeName string
+				n.ident = n.child[1].ident
+				recv := n.child[0].child[0]
+				if len(recv.child) < 2 {
+					// Receiver var name is skipped in method declaration (fix that in AST ?)
+					typeName = recv.child[0].ident
+				} else {
+					typeName = recv.child[1].ident
+				}
+				if typeName == "" {
+					typeName = recv.child[1].child[0].ident
+					elemtype := scope.getType(typeName)
+					t = &Type{cat: PtrT, val: elemtype}
+					elemtype.method = append(elemtype.method, n)
+				} else {
+					t = scope.getType(typeName)
+				}
+				t.method = append(t.method, n)
 			}
 			return false
 
@@ -72,12 +83,17 @@ func (interp *Interpreter) Gta(root *Node) {
 			}
 
 		case TypeSpec:
+			typeName := n.child[0].ident
 			if n.child[1].kind == Ident {
 				n.typ = &Type{cat: AliasT, val: nodeType(interp, scope, n.child[1])}
 			} else {
 				n.typ = nodeType(interp, scope, n.child[1])
 			}
-			scope.sym[n.child[0].ident] = &Symbol{kind: Typ, typ: n.typ}
+			// Type may already be declared for a receiver in a method function
+			if scope.sym[typeName] == nil {
+				scope.sym[typeName] = &Symbol{kind: Typ}
+			}
+			scope.sym[typeName].typ = n.typ
 			return false
 
 		}

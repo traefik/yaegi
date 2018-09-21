@@ -1704,10 +1704,13 @@ func main() {
 	println(o.dist())
 }
 
-func (c Coord) dist() int { return c.x*c.x + c.y*c.y }`
+func (c Coord) dist() int { return c.x*c.x + c.y*c.y }
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.Eval(src)
 
+	// Output:
+	// 25
 }
 
 func Example_neg0() {
