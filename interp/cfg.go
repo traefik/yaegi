@@ -663,7 +663,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.child[0].run = callGoRoutine
 
 		case Ident:
-			if n.anc.kind == File || (n.anc.kind == SelectorExpr && n.anc.child[0] != n) {
+			if n.anc.kind == File || (n.anc.kind == SelectorExpr && n.anc.child[0] != n) || (n.anc.kind == KeyValueExpr && n.anc.child[0] == n) {
 				// skip symbol creation/lookup for idents used as key
 			} else if l := len(n.anc.child); n.anc.kind == Field && l > 1 && n.anc.child[l-1] != n {
 				// Create a new local symbol for func argument

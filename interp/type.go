@@ -137,7 +137,9 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 				if sym, _, ok := scope.lookup(n.child[0].ident); ok {
 					// Resolve symbol to get size value
 					if sym.typ != nil && sym.typ.cat == IntT {
-						t.size = sym.val.(int)
+						if t.size, ok = sym.val.(int); !ok {
+							t.incomplete = true
+						}
 					} else {
 						t.incomplete = true
 					}
@@ -170,13 +172,13 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 			log.Panicf("Missing support for basic type %T, node %v\n", n.val, n.index)
 		}
 
+	case CallExpr, CompositeLitExpr:
+		t = nodeType(interp, scope, n.child[0])
+
 	case ChanType:
 		t.cat = ChanT
 		t.val = nodeType(interp, scope, n.child[0])
 		t.incomplete = t.val.incomplete
-
-	case CompositeLitExpr:
-		t = nodeType(interp, scope, n.child[0])
 
 	case Ellipsis:
 		t = nodeType(interp, scope, n.child[0])

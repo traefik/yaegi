@@ -5,10 +5,9 @@ import (
 )
 
 // Gta performs a global types analysis on the AST, registering types,
-// variables and functions at package level, prior to CFG. All function
-// bodies are skipped.
-// GTA is necessary to handle out of order declarations and multiple
-// source files packages.
+// variables and functions symbols at package level, prior to CFG.
+// All function bodies are skipped. GTA is necessary to handle out of
+// order declarations and multiple source files packages.
 func (interp *Interpreter) Gta(root *Node) {
 	var pkgName string
 	scope := interp.universe
