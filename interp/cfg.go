@@ -187,6 +187,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			scope = scope.push(0)
 
 		case TypeSpec:
+			// processing already done in GTA pass
 			return false
 
 		case ArrayType, BasicLit, ChanType, MapType, StructType:
@@ -734,30 +735,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			fbody.tnext = n
 			scope = scope.pop()
 
-			/*
-				case ImportSpec:
-					var name, ipath string
-					if len(n.child) == 2 {
-						ipath = n.child[1].val.(string)
-						name = n.child[0].ident
-					} else {
-						ipath = n.child[0].val.(string)
-						name = path.Base(ipath)
-					}
-					if pkg, ok := interp.binValue[ipath]; ok {
-						if name == "." {
-							for n, s := range pkg {
-								scope.sym[n] = &Symbol{typ: &Type{cat: BinT}, val: s}
-							}
-						} else {
-							scope.sym[name] = &Symbol{typ: &Type{cat: BinPkgT}, path: ipath}
-						}
-					} else {
-						// TODO: make sure we do not import a src package more than once
-						interp.importSrcFile(ipath)
-						scope.sym[name] = &Symbol{typ: &Type{cat: SrcPkgT}, path: ipath}
-					}
-			*/
 		case KeyValueExpr:
 			wireChild(n)
 
