@@ -113,61 +113,61 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 
 // Functions set to run during execution of CFG
 
-func value(n *Node, f *Frame) interface{} {
-	switch n.kind {
-	case BasicLit, FuncDecl, SelectorSrc:
-		return n.val
-	case Rvalue:
-		return n.rval
-	default:
-		if n.sym != nil {
-			if n.sym.index < 0 {
-				return value(n.sym.node, f)
-			}
-			if n.sym.global {
-				return n.interp.Frame.data[n.sym.index]
-			}
-			for level := n.level; level > 0; level-- {
-				f = f.anc
-			}
-			return f.data[n.sym.index]
-		}
-		for level := n.level; level > 0; level-- {
-			f = f.anc
-		}
-		if n.findex < 0 {
-			return n.val
-		}
-		return f.data[n.findex]
-	}
-}
-
-func addrValue(n *Node, f *Frame) *interface{} {
-	switch n.kind {
-	case BasicLit, FuncDecl, Rvalue:
-		return &n.val
-	default:
-		if n.sym != nil {
-			if n.sym.index < 0 {
-				return addrValue(n.sym.node, f)
-			}
-			if n.sym.global {
-				return &n.interp.Frame.data[n.sym.index]
-			}
-			for level := n.level; level > 0; level-- {
-				f = f.anc
-			}
-			return &f.data[n.sym.index]
-		}
-		for level := n.level; level > 0; level-- {
-			f = f.anc
-		}
-		if n.findex < 0 {
-			return &n.val
-		}
-		return &f.data[n.findex]
-	}
-}
+//func value(n *Node, f *Frame) interface{} {
+//	switch n.kind {
+//	case BasicLit, FuncDecl, SelectorSrc:
+//		return n.val
+//	case Rvalue:
+//		return n.rval
+//	default:
+//		if n.sym != nil {
+//			if n.sym.index < 0 {
+//				return value(n.sym.node, f)
+//			}
+//			if n.sym.global {
+//				return n.interp.Frame.data[n.sym.index]
+//			}
+//			for level := n.level; level > 0; level-- {
+//				f = f.anc
+//			}
+//			return f.data[n.sym.index]
+//		}
+//		for level := n.level; level > 0; level-- {
+//			f = f.anc
+//		}
+//		if n.findex < 0 {
+//			return n.val
+//		}
+//		return f.data[n.findex]
+//	}
+//}
+//
+//func addrValue(n *Node, f *Frame) *interface{} {
+//	switch n.kind {
+//	case BasicLit, FuncDecl, Rvalue:
+//		return &n.val
+//	default:
+//		if n.sym != nil {
+//			if n.sym.index < 0 {
+//				return addrValue(n.sym.node, f)
+//			}
+//			if n.sym.global {
+//				return &n.interp.Frame.data[n.sym.index]
+//			}
+//			for level := n.level; level > 0; level-- {
+//				f = f.anc
+//			}
+//			return &f.data[n.sym.index]
+//		}
+//		for level := n.level; level > 0; level-- {
+//			f = f.anc
+//		}
+//		if n.findex < 0 {
+//			return &n.val
+//		}
+//		return &f.data[n.findex]
+//	}
+//}
 
 // Run by walking the CFG and running node builtin at each step
 func runCfg(n *Node, f *Frame) {
@@ -204,7 +204,7 @@ func assignX(n *Node, f *Frame) {
 	l := len(n.child) - 1
 	b := n.child[l].findex
 	for i, c := range n.child[:l] {
-		*addrValue(c, f) = f.data[b+i]
+		*c.pvalue(f) = f.data[b+i]
 	}
 }
 
@@ -215,7 +215,7 @@ func indirectAssign(n *Node, f *Frame) {
 
 // assign implements single value assignement
 func assign(n *Node, f *Frame) {
-	*addrValue(n, f) = n.child[1].value(f)
+	*n.pvalue(f) = n.child[1].value(f)
 }
 
 // assign0 implements assignement of zero value
@@ -223,7 +223,7 @@ func assign0(n *Node, f *Frame) {
 	l := len(n.child) - 1
 	z := n.typ.zero()
 	for _, c := range n.child[:l] {
-		*addrValue(c, f) = z
+		*c.pvalue(f) = z
 	}
 }
 
@@ -248,7 +248,7 @@ func not(n *Node, f *Frame) {
 }
 
 func addr(n *Node, f *Frame) {
-	f.data[n.findex] = addrValue(n.child[0], f)
+	f.data[n.findex] = n.child[0].pvalue(f)
 }
 
 func deref(n *Node, f *Frame) {
@@ -614,7 +614,7 @@ func indirectInc(n *Node, f *Frame) {
 }
 
 func inc(n *Node, f *Frame) {
-	*addrValue(n, f) = n.child[0].value(f).(int) + 1
+	*n.pvalue(f) = n.child[0].value(f).(int) + 1
 }
 
 func greater(n *Node, f *Frame) {
