@@ -925,6 +925,12 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			}
 		}
 	})
+
+	root.Walk(func(n *Node) bool {
+		n.value = genValue(n)
+		return true
+	}, nil)
+
 	return initNodes
 }
 
@@ -986,4 +992,56 @@ func canExport(name string) bool {
 		return true
 	}
 	return false
+}
+
+func genValue(n *Node) func(*Frame) interface{} {
+	switch n.kind {
+	case BasicLit, FuncDecl, SelectorSrc:
+		return func(f *Frame) interface{} { return n.val }
+	case Rvalue:
+		return func(f *Frame) interface{} { return n.rval }
+	default:
+		if n.sym != nil {
+			if n.sym.index < 0 {
+				return genValue(n.sym.node)
+			}
+			if n.sym.global {
+				return func(f *Frame) interface{} { return n.interp.Frame.data[n.sym.index] }
+			}
+			switch n.level {
+			case 0:
+				return func(f *Frame) interface{} { return f.data[n.sym.index] }
+			case 1:
+				return func(f *Frame) interface{} { return f.anc.data[n.sym.index] }
+			case 2:
+				return func(f *Frame) interface{} { return f.anc.anc.data[n.sym.index] }
+			default:
+				return func(f *Frame) interface{} {
+					for level := n.level; level > 0; level-- {
+						f = f.anc
+					}
+					return f.data[n.sym.index]
+				}
+			}
+		}
+		if n.findex < 0 {
+			return func(f *Frame) interface{} { return n.val }
+		}
+		switch n.level {
+		case 0:
+			return func(f *Frame) interface{} { return f.data[n.findex] }
+		case 1:
+			return func(f *Frame) interface{} { return f.anc.data[n.findex] }
+		case 2:
+			return func(f *Frame) interface{} { return f.anc.anc.data[n.findex] }
+		default:
+			return func(f *Frame) interface{} {
+				for level := n.level; level > 0; level-- {
+					f = f.anc
+				}
+				return f.data[n.findex]
+			}
+		}
+	}
+	return nil
 }
