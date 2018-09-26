@@ -661,7 +661,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case GoStmt:
 			wireChild(n)
 			// TODO: should error if call expression refers to a builtin
-			n.child[0].run = callGoRoutine
+			//n.child[0].run = callGoRoutine
 
 		case Ident:
 			if n.anc.kind == File || (n.anc.kind == SelectorExpr && n.anc.child[0] != n) || (n.anc.kind == KeyValueExpr && n.anc.child[0] == n) {

@@ -252,9 +252,6 @@ func _println(n *Node) Builtin {
 	}
 }
 
-//func _panic(n *Node, f *Frame) {
-//	log.Panic("in _panic")
-//}
 func _panic(n *Node) Builtin {
 	return func(f *Frame) { log.Panic("in _panic") }
 }
@@ -297,103 +294,30 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	return result
 }
 
-//func call(n *Node, f *Frame) {
-//	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
-//	var recv *Node
-//	var rseq []int
-//	var forkFrame bool
-//
-//	if n.action == CallF {
-//		forkFrame = true
-//	}
-//
-//	if n.child[0].kind == SelectorExpr && n.child[0].typ.cat != SrcPkgT {
-//		recv = n.child[0].recv
-//		rseq = n.child[0].child[1].val.([]int)
-//	}
-//	fn := n.child[0].value(f).(*Node)
-//	var ret []int
-//	if len(fn.child[2].child) > 1 {
-//		if fieldList := fn.child[2].child[1]; fieldList != nil {
-//			ret = make([]int, len(fieldList.child))
-//			for i := range fieldList.child {
-//				ret[i] = n.findex + i
-//			}
-//		}
-//	}
-//	Run(fn, f, recv, rseq, n.child[1:], ret, forkFrame, false)
-//}
 func call(n *Node) Builtin {
-	return func(f *Frame) {
-		var recv *Node
-		var rseq []int
-		var forkFrame bool
+	var recv *Node
+	var rseq []int
+	var forkFrame bool
+	var ret []int
+	var goroutine bool
 
-		if n.action == CallF {
-			forkFrame = true
-		}
-
-		if n.child[0].kind == SelectorExpr && n.child[0].typ.cat != SrcPkgT {
-			recv = n.child[0].recv
-			rseq = n.child[0].child[1].val.([]int)
-		}
-		fn := n.child[0].value(f).(*Node)
-		var ret []int
-		if len(fn.child[2].child) > 1 {
-			if fieldList := fn.child[2].child[1]; fieldList != nil {
-				ret = make([]int, len(fieldList.child))
-				for i := range fieldList.child {
-					ret[i] = n.findex + i
-				}
-			}
-		}
-		Run(fn, f, recv, rseq, n.child[1:], ret, forkFrame, false)
+	if n.action == CallF {
+		forkFrame = true
 	}
-}
 
-// Same as call(), but execute function in a goroutine
-//func callGoRoutine(n *Node, f *Frame) {
-//	// TODO: method detection should be done at CFG, and handled in a separate callMethod()
-//	var recv *Node
-//	var rseq []int
-//	var forkFrame bool
-//
-//	if n.action == CallF {
-//		forkFrame = true
-//	}
-//
-//	if n.child[0].kind == SelectorExpr {
-//		recv = n.child[0].recv
-//		rseq = n.child[0].child[1].val.([]int)
-//	}
-//	fn := n.child[0].value(f).(*Node)
-//	var ret []int
-//	if len(fn.child[2].child) > 1 {
-//		if fieldList := fn.child[2].child[1]; fieldList != nil {
-//			ret = make([]int, len(fieldList.child))
-//			for i := range fieldList.child {
-//				ret[i] = n.findex + i
-//			}
-//		}
-//	}
-//	Run(fn, f, recv, rseq, n.child[1:], ret, forkFrame, true)
-//}
-func callGoRoutine(n *Node) Builtin {
+	if n.anc.kind == GoStmt {
+		goroutine = true
+	}
+
+	if n.child[0].kind == SelectorExpr && n.child[0].typ.cat != SrcPkgT {
+		recv = n.child[0].recv
+		rseq = n.child[0].child[1].val.([]int)
+	}
+
+	value := n.child[0].value
+
 	return func(f *Frame) {
-		var recv *Node
-		var rseq []int
-		var forkFrame bool
-
-		if n.action == CallF {
-			forkFrame = true
-		}
-
-		if n.child[0].kind == SelectorExpr {
-			recv = n.child[0].recv
-			rseq = n.child[0].child[1].val.([]int)
-		}
-		fn := n.child[0].value(f).(*Node)
-		var ret []int
+		fn := value(f).(*Node)
 		if len(fn.child[2].child) > 1 {
 			if fieldList := fn.child[2].child[1]; fieldList != nil {
 				ret = make([]int, len(fieldList.child))
@@ -402,7 +326,7 @@ func callGoRoutine(n *Node) Builtin {
 				}
 			}
 		}
-		Run(fn, f, recv, rseq, n.child[1:], ret, forkFrame, true)
+		Run(fn, f, recv, rseq, n.child[1:], ret, forkFrame, goroutine)
 	}
 }
 
