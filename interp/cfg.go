@@ -956,7 +956,7 @@ func (n *Node) isType(scope *Scope) bool {
 	return false
 }
 
-// Wire AST nodes for CFG in subtree
+// wireChild wires AST nodes for CFG in subtree
 func wireChild(n *Node) {
 	// Set start node, in subtree (propagated to ancestors by post-order processing)
 	for _, child := range n.child {
@@ -995,104 +995,91 @@ func canExport(name string) bool {
 	return false
 }
 
+func valueGenerator(n *Node, i int) func(*Frame) interface{} {
+	switch n.level {
+	case 0:
+		return func(f *Frame) interface{} { return f.data[i] }
+	case 1:
+		return func(f *Frame) interface{} { return f.anc.data[i] }
+	case 2:
+		return func(f *Frame) interface{} { return f.anc.anc.data[i] }
+	default:
+		return func(f *Frame) interface{} {
+			for level := n.level; level > 0; level-- {
+				f = f.anc
+			}
+			return f.data[i]
+		}
+	}
+}
+
 func genValue(n *Node) func(*Frame) interface{} {
 	switch n.kind {
 	case BasicLit, FuncDecl, SelectorSrc:
-		return func(f *Frame) interface{} { return n.val }
+		v := n.val
+		return func(f *Frame) interface{} { return v }
 	case Rvalue:
-		return func(f *Frame) interface{} { return n.rval }
+		v := n.rval
+		return func(f *Frame) interface{} { return v }
 	default:
 		if n.sym != nil {
 			if n.sym.index < 0 {
 				return genValue(n.sym.node)
 			}
+			i := n.sym.index
 			if n.sym.global {
-				return func(f *Frame) interface{} { return n.interp.Frame.data[n.sym.index] }
+				return func(f *Frame) interface{} { return n.interp.Frame.data[i] }
 			}
-			switch n.level {
-			case 0:
-				return func(f *Frame) interface{} { return f.data[n.sym.index] }
-			case 1:
-				return func(f *Frame) interface{} { return f.anc.data[n.sym.index] }
-			case 2:
-				return func(f *Frame) interface{} { return f.anc.anc.data[n.sym.index] }
-			default:
-				return func(f *Frame) interface{} {
-					for level := n.level; level > 0; level-- {
-						f = f.anc
-					}
-					return f.data[n.sym.index]
-				}
-			}
+			return valueGenerator(n, i)
 		}
 		if n.findex < 0 {
-			return func(f *Frame) interface{} { return n.val }
+			v := n.val
+			return func(f *Frame) interface{} { return v }
 		}
-		switch n.level {
-		case 0:
-			return func(f *Frame) interface{} { return f.data[n.findex] }
-		case 1:
-			return func(f *Frame) interface{} { return f.anc.data[n.findex] }
-		case 2:
-			return func(f *Frame) interface{} { return f.anc.anc.data[n.findex] }
-		default:
-			return func(f *Frame) interface{} {
-				for level := n.level; level > 0; level-- {
-					f = f.anc
-				}
-				return f.data[n.findex]
-			}
-		}
+		return valueGenerator(n, n.findex)
 	}
 	return nil
+}
+
+func pvalueGenerator(n *Node, i int) func(*Frame) *interface{} {
+	switch n.level {
+	case 0:
+		return func(f *Frame) *interface{} { return &f.data[i] }
+	case 1:
+		return func(f *Frame) *interface{} { return &f.anc.data[i] }
+	case 2:
+		return func(f *Frame) *interface{} { return &f.anc.anc.data[i] }
+	default:
+		return func(f *Frame) *interface{} {
+			for level := n.level; level > 0; level-- {
+				f = f.anc
+			}
+			return &f.data[i]
+		}
+	}
 }
 
 func genPvalue(n *Node) func(*Frame) *interface{} {
 	switch n.kind {
 	case BasicLit, FuncDecl, Rvalue:
-		return func(f *Frame) *interface{} { return &n.val }
+		v := &n.val
+		return func(f *Frame) *interface{} { return v }
 	default:
 		if n.sym != nil {
 			if n.sym.index < 0 {
 				return genPvalue(n.sym.node)
 			}
+			i := n.sym.index
 			if n.sym.global {
-				return func(f *Frame) *interface{} { return &n.interp.Frame.data[n.sym.index] }
+				return func(f *Frame) *interface{} { return &n.interp.Frame.data[i] }
 			}
-			switch n.level {
-			case 0:
-				return func(f *Frame) *interface{} { return &f.data[n.sym.index] }
-			case 1:
-				return func(f *Frame) *interface{} { return &f.anc.data[n.sym.index] }
-			case 2:
-				return func(f *Frame) *interface{} { return &f.anc.anc.data[n.sym.index] }
-			default:
-				return func(f *Frame) *interface{} {
-					for level := n.level; level > 0; level-- {
-						f = f.anc
-					}
-					return &f.data[n.sym.index]
-				}
-			}
+			return pvalueGenerator(n, i)
 		}
 		if n.findex < 0 {
-			return func(f *Frame) *interface{} { return &n.val }
+			v := &n.val
+			return func(f *Frame) *interface{} { return v }
 		}
-		switch n.level {
-		case 0:
-			return func(f *Frame) *interface{} { return &f.data[n.findex] }
-		case 1:
-			return func(f *Frame) *interface{} { return &f.anc.data[n.findex] }
-		case 2:
-			return func(f *Frame) *interface{} { return &f.anc.anc.data[n.findex] }
-		default:
-			return func(f *Frame) *interface{} {
-				for level := n.level; level > 0; level-- {
-					f = f.anc
-				}
-				return &f.data[n.findex]
-			}
-		}
+		return pvalueGenerator(n, n.findex)
 	}
 	return nil
 }
