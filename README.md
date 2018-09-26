@@ -35,8 +35,6 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [ ] named output variables (test/ret1.gi)
 - [ ] defer
 - [ ] ellipsis
-- [ ] method calls from runtime to interpreter
-- [ ] forward declarations
 
 ### Done
 - [X] basic literals
@@ -70,6 +68,8 @@ When developping/debugging, I'm running `gi` on a single script, using `-a` and 
 - [X] variadic functions
 - [X] constants
 - [X] iota
+- [X] forward declarations
+- [X] method calls from runtime to interpreter
 
 ## Developpement plan
 

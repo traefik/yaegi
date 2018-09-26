@@ -115,62 +115,6 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 
 // Functions set to run during execution of CFG
 
-//func value(n *Node, f *Frame) interface{} {
-//	switch n.kind {
-//	case BasicLit, FuncDecl, SelectorSrc:
-//		return n.val
-//	case Rvalue:
-//		return n.rval
-//	default:
-//		if n.sym != nil {
-//			if n.sym.index < 0 {
-//				return value(n.sym.node, f)
-//			}
-//			if n.sym.global {
-//				return n.interp.Frame.data[n.sym.index]
-//			}
-//			for level := n.level; level > 0; level-- {
-//				f = f.anc
-//			}
-//			return f.data[n.sym.index]
-//		}
-//		for level := n.level; level > 0; level-- {
-//			f = f.anc
-//		}
-//		if n.findex < 0 {
-//			return n.val
-//		}
-//		return f.data[n.findex]
-//	}
-//}
-//
-//func addrValue(n *Node, f *Frame) *interface{} {
-//	switch n.kind {
-//	case BasicLit, FuncDecl, Rvalue:
-//		return &n.val
-//	default:
-//		if n.sym != nil {
-//			if n.sym.index < 0 {
-//				return addrValue(n.sym.node, f)
-//			}
-//			if n.sym.global {
-//				return &n.interp.Frame.data[n.sym.index]
-//			}
-//			for level := n.level; level > 0; level-- {
-//				f = f.anc
-//			}
-//			return &f.data[n.sym.index]
-//		}
-//		for level := n.level; level > 0; level-- {
-//			f = f.anc
-//		}
-//		if n.findex < 0 {
-//			return &n.val
-//		}
-//		return &f.data[n.findex]
-//	}
-//}
-
 // Run by walking the CFG and running node builtin at each step
 func runCfg(n *Node, f *Frame) {
 	for n != nil {
@@ -183,70 +127,51 @@ func runCfg(n *Node, f *Frame) {
 	}
 }
 
-//func typeAssert(n *Node, f *Frame) {
-//	f.data[n.findex] = n.child[0].value(f)
-//}
 func typeAssert(n *Node) Builtin {
-	return func(f *Frame) { f.data[n.findex] = n.child[0].value(f) }
+	value := n.child[0].value
+	i := n.findex
+	return func(f *Frame) { f.data[i] = value(f) }
 }
 
-//func convert(n *Node, f *Frame) {
-//	f.data[n.findex] = n.child[1].value(f)
-//}
 func convert(n *Node) Builtin {
-	return func(f *Frame) { f.data[n.findex] = n.child[1].value(f) }
+	value := n.child[1].value
+	i := n.findex
+	return func(f *Frame) { f.data[i] = value(f) }
 }
 
-//func convertFuncBin(n *Node, f *Frame) {
-//	// TODO: use closure generation to improve speed
-//	f.data[n.findex] = reflect.MakeFunc(n.child[0].typ.rtype, n.child[1].wrapNode).Interface()
-//}
 func convertFuncBin(n *Node) Builtin {
-	return func(f *Frame) {
-		f.data[n.findex] = reflect.MakeFunc(n.child[0].typ.rtype, n.child[1].wrapNode).Interface()
-	}
+	i := n.findex
+	fun := reflect.MakeFunc(n.child[0].typ.rtype, n.child[1].wrapNode).Interface()
+	return func(f *Frame) { f.data[i] = fun }
 }
 
-//func convertBin(n *Node, f *Frame) {
-//	// TODO: use closure generation to improve speed
-//	f.data[n.findex] = reflect.ValueOf(n.child[1].value(f)).Convert(n.child[0].typ.TypeOf()).Interface()
-//}
 func convertBin(n *Node) Builtin {
-	return func(f *Frame) {
-		f.data[n.findex] = reflect.ValueOf(n.child[1].value(f)).Convert(n.child[0].typ.TypeOf()).Interface()
-	}
+	i := n.findex
+	value := n.child[1].value
+	typ := n.child[0].typ.TypeOf()
+	return func(f *Frame) { f.data[i] = reflect.ValueOf(value(f)).Convert(typ).Interface() }
 }
 
 // assignX implements multiple value assignement
-//func assignX(n *Node, f *Frame) {
-//	l := len(n.child) - 1
-//	b := n.child[l].findex
-//	for i, c := range n.child[:l] {
-//		*c.pvalue(f) = f.data[b+i]
-//	}
-//}
 func assignX(n *Node) Builtin {
+	l := len(n.child) - 1
+	b := n.child[l].findex
+	s := n.child[:l]
 	return func(f *Frame) {
-		l := len(n.child) - 1
-		b := n.child[l].findex
-		for i, c := range n.child[:l] {
+		for i, c := range s {
 			*c.pvalue(f) = f.data[b+i]
 		}
 	}
 }
 
 // Indirect assign
-//func indirectAssign(n *Node, f *Frame) {
-//	*(f.data[n.findex].(*interface{})) = n.child[1].value(f)
-//}
 func indirectAssign(n *Node) Builtin {
-	return func(f *Frame) { *(f.data[n.findex].(*interface{})) = n.child[1].value(f) }
+	i := n.findex
+	value := n.child[1].value
+	return func(f *Frame) { *(f.data[i].(*interface{})) = value(f) }
 }
 
 // assign implements single value assignement
-//func assign(n *Node, f *Frame) {
-//	*n.pvalue(f) = n.child[1].value(f)
-//}
 func assign(n *Node) Builtin {
 	pvalue := n.pvalue
 	value := n.child[1].value
@@ -254,96 +179,65 @@ func assign(n *Node) Builtin {
 }
 
 // assign0 implements assignement of zero value
-//func assign0(n *Node, f *Frame) {
-//	l := len(n.child) - 1
-//	z := n.typ.zero()
-//	for _, c := range n.child[:l] {
-//		*c.pvalue(f) = z
-//	}
-//}
 func assign0(n *Node) Builtin {
+	l := len(n.child) - 1
+	z := n.typ.zero()
+	s := n.child[:l]
 	return func(f *Frame) {
-		l := len(n.child) - 1
-		z := n.typ.zero()
-		for _, c := range n.child[:l] {
+		for _, c := range s {
 			*c.pvalue(f) = z
 		}
 	}
 }
 
-//func assignField(n *Node, f *Frame) {
-//	(*f.data[n.findex].(*interface{})) = n.child[1].value(f)
-//}
 func assignField(n *Node) Builtin {
-	return func(f *Frame) { (*f.data[n.findex].(*interface{})) = n.child[1].value(f) }
+	i := n.findex
+	value := n.child[1].value
+	return func(f *Frame) { (*f.data[i].(*interface{})) = value(f) }
 }
 
-//func assignPtrField(n *Node, f *Frame) {
-//	(*f.data[n.findex].(*interface{})) = n.child[1].value(f)
-//}
 func assignPtrField(n *Node) Builtin {
-	return func(f *Frame) { (*f.data[n.findex].(*interface{})) = n.child[1].value(f) }
+	i := n.findex
+	value := n.child[1].value
+	return func(f *Frame) { (*f.data[i].(*interface{})) = value(f) }
 }
 
-//func assignMap(n *Node, f *Frame) {
-//	f.data[n.findex].(map[interface{}]interface{})[n.child[0].child[1].value(f)] = n.child[1].value(f)
-//}
 func assignMap(n *Node) Builtin {
-	return func(f *Frame) {
-		f.data[n.findex].(map[interface{}]interface{})[n.child[0].child[1].value(f)] = n.child[1].value(f)
-	}
+	i := n.findex
+	value0 := n.child[0].child[1].value
+	value1 := n.child[1].value
+	return func(f *Frame) { f.data[i].(map[interface{}]interface{})[value0(f)] = value1(f) }
 }
 
-//func and(n *Node, f *Frame) {
-//	f.data[n.findex] = n.child[0].value(f).(int) & n.child[1].value(f).(int)
-//}
 func and(n *Node) Builtin {
+	i := n.findex
 	value0 := n.child[0].value
 	value1 := n.child[1].value
-	i := n.findex
 	return func(f *Frame) { f.data[i] = value0(f).(int) & value1(f).(int) }
 }
 
-//func not(n *Node, f *Frame) {
-//	f.data[n.findex] = !n.child[0].value(f).(bool)
-//}
 func not(n *Node) Builtin {
-	return func(f *Frame) { f.data[n.findex] = !n.child[0].value(f).(bool) }
+	i := n.findex
+	value := n.child[0].value
+	return func(f *Frame) { f.data[i] = !value(f).(bool) }
 }
 
-//func addr(n *Node, f *Frame) {
-//	f.data[n.findex] = n.child[0].pvalue(f)
-//}
 func addr(n *Node) Builtin {
-	pvalue := n.child[0].pvalue
 	i := n.findex
+	pvalue := n.child[0].pvalue
 	return func(f *Frame) { f.data[i] = pvalue(f) }
 }
 
-//func deref(n *Node, f *Frame) {
-//	f.data[n.findex] = *(n.child[0].value(f).(*interface{}))
-//}
 func deref(n *Node) Builtin {
-	return func(f *Frame) { f.data[n.findex] = *(n.child[0].value(f).(*interface{})) }
+	i := n.findex
+	value := n.child[0].value
+	return func(f *Frame) { f.data[i] = *(value(f).(*interface{})) }
 }
 
-//func _println(n *Node, f *Frame) {
-//	for i, m := range n.child[1:] {
-//		if i > 0 {
-//			fmt.Printf(" ")
-//		}
-//		fmt.Printf("%v", m.value(f))
-//
-//		// Handle multiple results of a function call argmument
-//		for j := 1; j < m.fsize; j++ {
-//			fmt.Printf(" %v", f.data[m.findex+j])
-//		}
-//	}
-//	fmt.Println("")
-//}
 func _println(n *Node) Builtin {
+	child := n.child[1:]
 	return func(f *Frame) {
-		for i, m := range n.child[1:] {
+		for i, m := range child {
 			if i > 0 {
 				fmt.Printf(" ")
 			}
