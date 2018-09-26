@@ -36,14 +36,14 @@ func (k SymKind) String() string {
 // A Symbol represents an interpreter object such as type, constant, var, func, builtin or binary object
 type Symbol struct {
 	kind     SymKind
-	typ      *Type       // Type of value
-	node     *Node       // Node value if index is negative
-	index    int         // index of value in frame or -1
-	val      interface{} // default value (used for constants)
-	path     string      // package path if typ.cat is SrcPkgT or BinPkgT
-	builtin  Builtin     // Builtin function or nil
-	global   bool        // true if symbol is defined in global space
-	constant bool        // true if symbol value is constant
+	typ      *Type            // Type of value
+	node     *Node            // Node value if index is negative
+	index    int              // index of value in frame or -1
+	val      interface{}      // default value (used for constants)
+	path     string           // package path if typ.cat is SrcPkgT or BinPkgT
+	builtin  BuiltinGenerator // Builtin function or nil
+	global   bool             // true if symbol is defined in global space
+	constant bool             // true if symbol value is constant
 }
 
 // A SymMap stores symbols indexed by name
@@ -930,7 +930,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		n.value = genValue(n)
 		n.pvalue = genPvalue(n)
 		return true
-	}, nil)
+	}, func(n *Node) {
+		if n.run != nil {
+			n.exec = n.run(n)
+		}
+	})
 
 	return initNodes
 }

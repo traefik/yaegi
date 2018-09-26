@@ -25,9 +25,10 @@ type Node struct {
 	recv   *Node                       // method receiver node for call, or nil
 	frame  *Frame                      // frame pointer, only used for script callbacks from runtime (wrapNode)
 	action Action                      // action
-	value  func(f *Frame) interface{}  // function which returns node value during execution
-	pvalue func(f *Frame) *interface{} // function which returns pointer on node value
-	run    Builtin                     // function to run at CFG execution
+	value  func(f *Frame) interface{}  // generated function which returns node value during execution
+	pvalue func(f *Frame) *interface{} // generated function which returns pointer on node value during execution
+	exec   func(f *Frame)              // generated function to execute
+	run    BuiltinGenerator            // generator function to produce above exec
 	val    interface{}                 // static generic value (CFG execution)
 	rval   reflect.Value               // reflection value to let runtime access interpreter (CFG)
 	ident  string                      // set if node is a var or func
