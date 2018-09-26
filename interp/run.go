@@ -908,7 +908,7 @@ func getPtrIndexSeq(n *Node) Builtin {
 //}
 func getIndexSeq(n *Node) Builtin {
 	return func(f *Frame) {
-		a := (*n.child[0].value(f).(*interface{})).([]interface{})
+		a := n.child[0].value(f).([]interface{})
 		seq := n.child[1].value(f).([]int)
 		l := len(seq) - 1
 		for _, i := range seq[:l] {
