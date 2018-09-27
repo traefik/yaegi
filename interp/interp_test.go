@@ -134,6 +134,23 @@ func main() {
 	// [0 0 0 0 0 0 0 0 0 0 0 0]
 }
 
+func Example_a15() {
+	src := `
+package main
+
+import "fmt"
+
+const size = 12
+
+func main() {
+	var buf [size]int
+	fmt.Println(buf[:])
+}`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
+}
+
 func Example_a2() {
 	src := `
 package main
@@ -909,7 +926,7 @@ func f() {
 
 func main() {
 	go f()
-	sleep(100)
+	//sleep(100)
 	println("in main")
 }`
 	i := NewInterpreter(Opt{Entry: "main"})
@@ -2775,20 +2792,6 @@ func main() {
 	// 19
 	// 23
 	// 29
-}
-
-func Example_sleep() {
-	src := `
-package main
-
-func main() {
-	println("sleep")
-	sleep(1000)
-	println("bye")
-}`
-	i := NewInterpreter(Opt{Entry: "main"})
-	i.Eval(src)
-
 }
 
 func Example_src0() {

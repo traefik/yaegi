@@ -6,6 +6,6 @@ func f() {
 
 func main() {
 	go f()
-	sleep(100)
+	//sleep(100)
 	println("in main")
 }

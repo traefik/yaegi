@@ -144,7 +144,6 @@ func initUniverse() *Scope {
 		"make":    &Symbol{kind: Bltn, builtin: _make},
 		"panic":   &Symbol{kind: Bltn, builtin: _panic},
 		"println": &Symbol{kind: Bltn, builtin: _println},
-		"sleep":   &Symbol{kind: Bltn, builtin: sleep}, // Temporary, for debug
 		// TODO: cap, close, complex, copy, delete, imag, new, print, real, recover
 	}}
 	return scope

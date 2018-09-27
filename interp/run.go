@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"reflect"
-	"time"
 )
 
 // Builtin type defines functions which run at CFG execution
@@ -951,14 +950,6 @@ func slice0(n *Node) Builtin {
 		case 3:
 			f.data[n.findex] = a[0:n.child[1].value(f).(int):n.child[2].value(f).(int)]
 		}
-	}
-}
-
-// Temporary, for debugging purppose
-func sleep(n *Node) Builtin {
-	return func(f *Frame) {
-		duration := time.Duration(n.child[1].value(f).(int))
-		time.Sleep(duration * time.Millisecond)
 	}
 }
 
