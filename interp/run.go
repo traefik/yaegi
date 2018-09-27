@@ -883,70 +883,48 @@ func _append(n *Node) Builtin {
 	return func(f *Frame) { f.data[i] = append(value0(f).([]interface{}), value1(f)) }
 }
 
-//func _len(n *Node, f *Frame) {
-//	a := n.child[1].value(f).([]interface{})
-//	f.data[n.findex] = len(a)
-//}
 func _len(n *Node) Builtin {
 	i := n.findex
 	value := n.child[1].value
 	return func(f *Frame) { f.data[i] = len(value(f).([]interface{})) }
 }
 
-// Allocates and initializes a slice, a map or a chan.
-//func _make(n *Node, f *Frame) {
-//	typ := n.child[1].value(f).(*Type)
-//	switch typ.cat {
-//	case ArrayT:
-//		f.data[n.findex] = make([]interface{}, n.child[2].value(f).(int))
-//	case ChanT:
-//		f.data[n.findex] = make(chan interface{})
-//	case MapT:
-//		f.data[n.findex] = make(map[interface{}]interface{})
-//	}
-//}
+// _make allocates and initializes a slice, a map or a chan.
 func _make(n *Node) Builtin {
+	i := n.findex
+	value0 := n.child[1].value
+	var value1 func(*Frame) interface{}
+	if len(n.child) > 2 {
+		value1 = n.child[2].value
+	}
 	return func(f *Frame) {
-		typ := n.child[1].value(f).(*Type)
+		typ := value0(f).(*Type)
 		switch typ.cat {
 		case ArrayT:
-			f.data[n.findex] = make([]interface{}, n.child[2].value(f).(int))
+			f.data[i] = make([]interface{}, value1(f).(int))
 		case ChanT:
-			f.data[n.findex] = make(chan interface{})
+			f.data[i] = make(chan interface{})
 		case MapT:
-			f.data[n.findex] = make(map[interface{}]interface{})
+			f.data[i] = make(map[interface{}]interface{})
 		}
 	}
 }
 
-// Read from a channel
-//func recv(n *Node, f *Frame) {
-//	f.data[n.findex] = <-n.child[0].value(f).(chan interface{})
-//}
+// recv reads from a channel
 func recv(n *Node) Builtin {
-	return func(f *Frame) { f.data[n.findex] = <-n.child[0].value(f).(chan interface{}) }
+	i := n.findex
+	value := n.child[0].value
+	return func(f *Frame) { f.data[i] = <-value(f).(chan interface{}) }
 }
 
 // Write to a channel
-//func send(n *Node, f *Frame) {
-//	n.child[0].value(f).(chan interface{}) <- n.child[1].value(f)
-//}
 func send(n *Node) Builtin {
-	return func(f *Frame) { n.child[0].value(f).(chan interface{}) <- n.child[1].value(f) }
+	value0 := n.child[0].value
+	value1 := n.child[1].value
+	return func(f *Frame) { value0(f).(chan interface{}) <- value1(f) }
 }
 
 // slice expression
-//func slice(n *Node, f *Frame) {
-//	a := n.child[0].value(f).([]interface{})
-//	switch len(n.child) {
-//	case 2:
-//		f.data[n.findex] = a[n.child[1].value(f).(int):]
-//	case 3:
-//		f.data[n.findex] = a[n.child[1].value(f).(int):n.child[2].value(f).(int)]
-//	case 4:
-//		f.data[n.findex] = a[n.child[1].value(f).(int):n.child[2].value(f).(int):n.child[3].value(f).(int)]
-//	}
-//}
 func slice(n *Node) Builtin {
 	return func(f *Frame) {
 		a := n.child[0].value(f).([]interface{})
@@ -962,17 +940,6 @@ func slice(n *Node) Builtin {
 }
 
 // slice expression, no low value
-//func slice0(n *Node, f *Frame) {
-//	a := n.child[0].value(f).([]interface{})
-//	switch len(n.child) {
-//	case 1:
-//		f.data[n.findex] = a[:]
-//	case 2:
-//		f.data[n.findex] = a[0:n.child[1].value(f).(int)]
-//	case 3:
-//		f.data[n.findex] = a[0:n.child[1].value(f).(int):n.child[2].value(f).(int)]
-//	}
-//}
 func slice0(n *Node) Builtin {
 	return func(f *Frame) {
 		a := n.child[0].value(f).([]interface{})
@@ -988,10 +955,6 @@ func slice0(n *Node) Builtin {
 }
 
 // Temporary, for debugging purppose
-//func sleep(n *Node, f *Frame) {
-//	duration := time.Duration(n.child[1].value(f).(int))
-//	time.Sleep(duration * time.Millisecond)
-//}
 func sleep(n *Node) Builtin {
 	return func(f *Frame) {
 		duration := time.Duration(n.child[1].value(f).(int))
@@ -999,36 +962,22 @@ func sleep(n *Node) Builtin {
 	}
 }
 
-//func isNil(n *Node, f *Frame) {
-//	if n.child[0].kind == Rvalue {
-//		f.data[n.findex] = n.child[0].value(f).(reflect.Value).IsNil()
-//	} else {
-//		f.data[n.findex] = n.child[0].value(f) == nil
-//	}
-//}
 func isNil(n *Node) Builtin {
-	return func(f *Frame) {
-		if n.child[0].kind == Rvalue {
-			f.data[n.findex] = n.child[0].value(f).(reflect.Value).IsNil()
-		} else {
-			f.data[n.findex] = n.child[0].value(f) == nil
-		}
+	i := n.findex
+	value := n.child[0].value
+	if n.child[0].kind == Rvalue {
+		return func(f *Frame) { f.data[i] = value(f).(reflect.Value).IsNil() }
+	} else {
+		return func(f *Frame) { f.data[i] = value(f) == nil }
 	}
 }
 
-//func isNotNil(n *Node, f *Frame) {
-//	if n.child[0].kind == Rvalue {
-//		f.data[n.findex] = !n.child[0].value(f).(reflect.Value).IsNil()
-//	} else {
-//		f.data[n.findex] = n.child[0].value(f) != nil
-//	}
-//}
 func isNotNil(n *Node) Builtin {
-	return func(f *Frame) {
-		if n.child[0].kind == Rvalue {
-			f.data[n.findex] = !n.child[0].value(f).(reflect.Value).IsNil()
-		} else {
-			f.data[n.findex] = n.child[0].value(f) != nil
-		}
+	i := n.findex
+	value := n.child[0].value
+	if n.child[0].kind == Rvalue {
+		return func(f *Frame) { f.data[i] = !value(f).(reflect.Value).IsNil() }
+	} else {
+		return func(f *Frame) { f.data[i] = value(f) != nil }
 	}
 }
