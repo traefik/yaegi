@@ -791,59 +791,35 @@ func _return(n *Node) Builtin {
 	}
 }
 
-// create an array of litteral values
-//func arrayLit(n *Node, f *Frame) {
-//	a := make([]interface{}, len(n.child)-1)
-//	for i, c := range n.child[1:] {
-//		a[i] = c.value(f)
-//	}
-//	f.data[n.findex] = a
-//}
 func arrayLit(n *Node) Builtin {
+	ind := n.findex
+	l := len(n.child) - 1
+	child := n.child[1:]
 	return func(f *Frame) {
-		a := make([]interface{}, len(n.child)-1)
-		for i, c := range n.child[1:] {
+		a := make([]interface{}, l)
+		for i, c := range child {
 			a[i] = c.value(f)
 		}
-		f.data[n.findex] = a
+		f.data[ind] = a
 	}
 }
 
-// Create a map of litteral values
-//func mapLit(n *Node, f *Frame) {
-//	m := make(map[interface{}]interface{})
-//	for _, c := range n.child[1:] {
-//		m[c.child[0].value(f)] = c.child[1].value(f)
-//	}
-//	f.data[n.findex] = m
-//}
 func mapLit(n *Node) Builtin {
+	i := n.findex
 	return func(f *Frame) {
 		m := make(map[interface{}]interface{})
 		for _, c := range n.child[1:] {
 			m[c.child[0].value(f)] = c.child[1].value(f)
 		}
-		f.data[n.findex] = m
+		f.data[i] = m
 	}
 }
 
-// Create a struct object
-//func compositeLit(n *Node, f *Frame) {
-//	l := len(n.typ.field)
-//	a := n.typ.zero().([]interface{})
-//	for i := 0; i < l; i++ {
-//		if i < len(n.child[1:]) {
-//			c := n.child[i+1]
-//			a[i] = c.value(f)
-//		} else {
-//			a[i] = n.typ.field[i].typ.zero()
-//		}
-//	}
-//	f.data[n.findex] = a
-//}
+// compositeLit creates a struct object
 func compositeLit(n *Node) Builtin {
+	ind := n.findex
+	l := len(n.typ.field)
 	return func(f *Frame) {
-		l := len(n.typ.field)
 		a := n.typ.zero().([]interface{})
 		for i := 0; i < l; i++ {
 			if i < len(n.child[1:]) {
@@ -853,80 +829,58 @@ func compositeLit(n *Node) Builtin {
 				a[i] = n.typ.field[i].typ.zero()
 			}
 		}
-		f.data[n.findex] = a
+		f.data[ind] = a
 	}
 }
 
-// Create a struct Object, filling fields from sparse key-values
-//func compositeSparse(n *Node, f *Frame) {
-//	a := n.typ.zero().([]interface{})
-//	for _, c := range n.child[1:] {
-//		// index from key was pre-computed during CFG
-//		a[c.findex] = c.child[1].value(f)
-//	}
-//	f.data[n.findex] = a
-//}
+// compositeSparse creates a struct Object, filling fields from sparse key-values
 func compositeSparse(n *Node) Builtin {
+	i := n.findex
+	child := n.child[1:]
 	return func(f *Frame) {
 		a := n.typ.zero().([]interface{})
-		for _, c := range n.child[1:] {
+		for _, c := range child {
 			// index from key was pre-computed during CFG
 			a[c.findex] = c.child[1].value(f)
 		}
-		f.data[n.findex] = a
+		f.data[i] = a
 	}
 }
 
-//func _range(n *Node, f *Frame) {
-//	i := 0
-//	index := n.child[0].findex
-//	if f.data[index] != nil {
-//		i = f.data[index].(int) + 1
-//	}
-//	a := n.child[2].value(f).([]interface{})
-//	if i >= len(a) {
-//		f.data[n.findex] = false
-//		return
-//	}
-//	f.data[index] = i
-//	f.data[n.child[1].findex] = a[i]
-//	f.data[n.findex] = true
-//}
 func _range(n *Node) Builtin {
+	ind := n.findex
+	index0 := n.child[0].findex
+	index1 := n.child[1].findex
+	value := n.child[2].value
 	return func(f *Frame) {
 		i := 0
-		index := n.child[0].findex
-		if f.data[index] != nil {
-			i = f.data[index].(int) + 1
+		if f.data[index0] != nil {
+			i = f.data[index0].(int) + 1
 		}
-		a := n.child[2].value(f).([]interface{})
+		a := value(f).([]interface{})
 		if i >= len(a) {
-			f.data[n.findex] = false
+			f.data[ind] = false
 			return
 		}
-		f.data[index] = i
-		f.data[n.child[1].findex] = a[i]
-		f.data[n.findex] = true
+		f.data[index0] = i
+		f.data[index1] = a[i]
+		f.data[ind] = true
 	}
 }
 
-//func _case(n *Node, f *Frame) {
-//	f.data[n.findex] = n.anc.anc.child[0].value(f) == n.child[0].value(f)
-//}
 func _case(n *Node) Builtin {
-	return func(f *Frame) { f.data[n.findex] = n.anc.anc.child[0].value(f) == n.child[0].value(f) }
+	i := n.findex
+	value0 := n.anc.anc.child[0].value
+	value1 := n.child[0].value
+	return func(f *Frame) { f.data[i] = value0(f) == value1(f) }
 }
 
 // TODO: handle variable number of arguments to append
-//func _append(n *Node, f *Frame) {
-//	a := n.child[1].value(f).([]interface{})
-//	f.data[n.findex] = append(a, n.child[2].value(f))
-//}
 func _append(n *Node) Builtin {
-	return func(f *Frame) {
-		a := n.child[1].value(f).([]interface{})
-		f.data[n.findex] = append(a, n.child[2].value(f))
-	}
+	i := n.findex
+	value0 := n.child[1].value
+	value1 := n.child[2].value
+	return func(f *Frame) { f.data[i] = append(value0(f).([]interface{}), value1(f)) }
 }
 
 //func _len(n *Node, f *Frame) {
@@ -934,10 +888,9 @@ func _append(n *Node) Builtin {
 //	f.data[n.findex] = len(a)
 //}
 func _len(n *Node) Builtin {
-	return func(f *Frame) {
-		a := n.child[1].value(f).([]interface{})
-		f.data[n.findex] = len(a)
-	}
+	i := n.findex
+	value := n.child[1].value
+	return func(f *Frame) { f.data[i] = len(value(f).([]interface{})) }
 }
 
 // Allocates and initializes a slice, a map or a chan.
