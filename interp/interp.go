@@ -27,7 +27,7 @@ type Node struct {
 	action Action                      // action
 	value  func(f *Frame) interface{}  // generated function which returns node value during execution
 	pvalue func(f *Frame) *interface{} // generated function which returns pointer on node value during execution
-	exec   func(f *Frame)              // generated function to execute
+	exec   Builtin                     // generated function to execute
 	run    BuiltinGenerator            // generator function to produce above exec
 	val    interface{}                 // static generic value (CFG execution)
 	rval   reflect.Value               // reflection value to let runtime access interpreter (CFG)
