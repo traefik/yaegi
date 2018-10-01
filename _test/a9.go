@@ -2,7 +2,10 @@ package main
 
 import "fmt"
 
-var samples = []int{}
+var (
+	samples = []int{}
+	b       = 1
+)
 
 func main() {
 	samples = append(samples, 1)

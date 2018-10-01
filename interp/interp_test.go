@@ -292,7 +292,10 @@ package main
 
 import "fmt"
 
-var samples = []int{}
+var (
+	samples = []int{}
+	b       = 1
+)
 
 func main() {
 	samples = append(samples, 1)
@@ -914,6 +917,24 @@ func main() {
 
 	// Output:
 	// 18
+}
+
+func Example_fun4() {
+	src := `
+package main
+
+func f() {}
+
+func main() {
+	f()
+	println("ok")
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"})
+	i.Eval(src)
+
+	// Output:
+	// ok
 }
 
 func Example_goroutine() {

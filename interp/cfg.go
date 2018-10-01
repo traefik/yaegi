@@ -331,7 +331,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 		case BlockStmt:
 			wireChild(n)
-			n.findex = n.child[len(n.child)-1].findex
+			if len(n.child) > 0 {
+				n.findex = n.child[len(n.child)-1].findex
+			}
 			scope = scope.pop()
 
 		case ConstDecl:
@@ -450,7 +452,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 							n.fsize = 0
 						}
 					} else {
-						log.Println(n.index, "resolve method")
+						log.Println(n.index, "unresolve call")
 						// method must be resolved here due to declaration after use
 					}
 					n.child[0].findex = -1 // To force reading value from node instead of frame (methods)
