@@ -396,7 +396,7 @@ func call(n *Node) Builtin {
 		goroutine = true
 	}
 
-	if n.child[0].kind == SelectorExpr && n.child[0].typ.cat != SrcPkgT {
+	if n.child[0].kind == SelectorExpr && n.child[0].typ.cat != SrcPkgT && n.child[0].typ.cat != BinPkgT {
 		recv = n.child[0].recv
 		rseq = n.child[0].child[1].val.([]int)
 	}
