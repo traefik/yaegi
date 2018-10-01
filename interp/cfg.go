@@ -673,6 +673,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else if sym, level, ok := scope.lookup(n.ident); ok {
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
 				if n.findex < 0 {
+					//log.Println(n.index, n.ident, sym.node.index, sym.node.kind)
 					n.val = sym.node
 					n.kind = sym.node.kind
 				} else {
@@ -930,11 +931,18 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		n.value = genValue(n)
 		n.pvalue = genPvalue(n)
 		return true
-	}, func(n *Node) {
-		if n.run != nil {
-			n.exec = n.run(n)
+	}, nil)
+
+	root.Walk(func(n *Node) bool {
+		if n.kind == FuncType && len(n.anc.child) == 4 {
+			getExec(n.anc.child[3].start)
 		}
-	})
+		if n.kind == VarDecl || n.kind == ConstDecl {
+			getExec(n.start)
+			return false
+		}
+		return true
+	}, nil)
 
 	return initNodes
 }
@@ -965,7 +973,7 @@ func wireChild(n *Node) {
 	// Set start node, in subtree (propagated to ancestors by post-order processing)
 	for _, child := range n.child {
 		switch child.kind {
-		case ArrayType, ChanType, FuncDecl, MapType, BasicLit, Ident:
+		case ArrayType, ChanType, FuncDecl, ImportDecl, MapType, BasicLit, Ident, TypeDecl:
 			continue
 		default:
 			n.start = child.start
@@ -981,7 +989,7 @@ func wireChild(n *Node) {
 	// Chain subtree next to self
 	for i := len(n.child) - 1; i >= 0; i-- {
 		switch n.child[i].kind {
-		case ArrayType, ChanType, MapType, FuncDecl, BasicLit, Ident:
+		case ArrayType, ChanType, ImportDecl, MapType, FuncDecl, BasicLit, Ident, TypeDecl:
 			continue
 		case Break, Continue, ReturnStmt:
 			// tnext is already computed, no change
@@ -997,6 +1005,47 @@ func canExport(name string) bool {
 		return true
 	}
 	return false
+}
+
+func getExec(n *Node) Builtin {
+	if n == nil {
+		return nil
+	}
+	if n.exec != nil {
+		return n.exec
+	}
+	seen := map[*Node]bool{}
+	var get func(n *Node) Builtin
+
+	get = func(n *Node) Builtin {
+		if n == nil {
+			return nil
+		}
+		if n.exec != nil {
+			return n.exec
+		}
+		seen[n] = true
+		if n.tnext != nil && n.tnext.exec == nil {
+			if seen[n.tnext] {
+				m := n.tnext
+				n.tnext.exec = func(f *Frame) Builtin { return m.exec(f) }
+			} else {
+				n.tnext.exec = get(n.tnext)
+			}
+		}
+		if n.fnext != nil && n.fnext.exec == nil {
+			if seen[n.fnext] {
+				m := n.fnext
+				n.fnext.exec = func(f *Frame) Builtin { return m.exec(f) }
+			} else {
+				n.fnext.exec = get(n.fnext)
+			}
+		}
+		n.exec = n.run(n)
+		return n.exec
+	}
+
+	return get(n)
 }
 
 func valueGenerator(n *Node, i int) func(*Frame) interface{} {
@@ -1032,7 +1081,9 @@ func genValue(n *Node) func(*Frame) interface{} {
 			}
 			i := n.sym.index
 			if n.sym.global {
-				return func(f *Frame) interface{} { return n.interp.Frame.data[i] }
+				return func(f *Frame) interface{} {
+					return n.interp.Frame.data[i]
+				}
 			}
 			return valueGenerator(n, i)
 		}
