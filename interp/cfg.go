@@ -675,7 +675,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else if sym, level, ok := scope.lookup(n.ident); ok {
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
 				if n.findex < 0 {
-					//log.Println(n.index, n.ident, sym.node.index, sym.node.kind)
 					n.val = sym.node
 					n.kind = sym.node.kind
 				} else {
@@ -935,7 +934,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		return true
 	}, nil)
 
-	root.Walk(func(n *Node) bool {
+	return initNodes
+}
+
+func genRun(n *Node) {
+	n.Walk(func(n *Node) bool {
 		if n.kind == FuncType && len(n.anc.child) == 4 {
 			getExec(n.anc.child[3].start)
 		}
@@ -945,8 +948,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		}
 		return true
 	}, nil)
-
-	return initNodes
 }
 
 // Find default case clause index of a switch statement, if any

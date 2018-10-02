@@ -57,6 +57,7 @@ func (interp *Interpreter) importSrcFile(path string) {
 
 	// Once all package sources have been parsed, execute entry points then init functions
 	for _, n := range rootNodes {
+		genRun(n)
 		interp.fsize++
 		interp.resizeFrame()
 		runCfg(n.start, interp.Frame)

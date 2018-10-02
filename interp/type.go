@@ -289,7 +289,7 @@ func (t *Type) zero() interface{} {
 		t = nodeType(t.node.interp, t.scope, t.node)
 		t.node.typ = t
 		if t.incomplete {
-			log.Panic("incomplete type")
+			log.Panicln("incomplete type", t.node.index)
 		}
 	}
 

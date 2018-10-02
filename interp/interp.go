@@ -179,6 +179,7 @@ func (i *Interpreter) Eval(src string) string {
 
 	// Execute CFG
 	if !i.NoRun {
+		genRun(root)
 		i.fsize++
 		i.resizeFrame()
 		runCfg(root.start, i.Frame)
