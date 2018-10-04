@@ -8,36 +8,37 @@ import (
 
 // Node structure for AST and CFG
 type Node struct {
-	child  []*Node                     // child subtrees (AST)
-	anc    *Node                       // ancestor (AST)
-	start  *Node                       // entry point in subtree (CFG)
-	tnext  *Node                       // true branch successor (CFG)
-	fnext  *Node                       // false branch successor (CFG)
-	interp *Interpreter                // interpreter context
-	index  int                         // node index (dot display)
-	findex int                         // index of value in frame or frame size (func def, type def)
-	fsize  int                         // number of entries in frame (call expressions)
-	flen   int                         // frame length (function definition)
-	level  int                         // number of frame indirections to access value
-	kind   Kind                        // kind of node
-	sym    *Symbol                     // associated symbol
-	typ    *Type                       // type of value in frame, or nil
-	recv   *Node                       // method receiver node for call, or nil
-	frame  *Frame                      // frame pointer, only used for script callbacks from runtime (wrapNode)
-	action Action                      // action
-	value  func(f *Frame) interface{}  // generated function which returns node value during execution
-	pvalue func(f *Frame) *interface{} // generated function which returns pointer on node value during execution
-	exec   Builtin                     // generated function to execute
-	run    BuiltinGenerator            // generator function to produce above exec
-	val    interface{}                 // static generic value (CFG execution)
-	rval   reflect.Value               // reflection value to let runtime access interpreter (CFG)
-	ident  string                      // set if node is a var or func
+	child  []*Node      // child subtrees (AST)
+	anc    *Node        // ancestor (AST)
+	start  *Node        // entry point in subtree (CFG)
+	tnext  *Node        // true branch successor (CFG)
+	fnext  *Node        // false branch successor (CFG)
+	interp *Interpreter // interpreter context
+	index  int          // node index (dot display)
+	findex int          // index of value in frame or frame size (func def, type def)
+	fsize  int          // number of entries in frame (call expressions)
+	flen   int          // frame length (function definition)
+	level  int          // number of frame indirections to access value
+	kind   Kind         // kind of node
+	sym    *Symbol      // associated symbol
+	typ    *Type        // type of value in frame, or nil
+	recv   *Node        // method receiver node for call, or nil
+	frame  *Frame       // frame pointer, only used for script callbacks from runtime (wrapNode)
+	action Action       // action
+	//value  func(f *Frame) interface{} // generated function which returns node value during execution
+	value func(f *Frame) reflect.Value // generated function which returns node value during execution
+	//pvalue func(f *Frame) *interface{} // generated function which returns pointer on node value during execution
+	exec  Builtin          // generated function to execute
+	run   BuiltinGenerator // generator function to produce above exec
+	val   interface{}      // static generic value (CFG execution)
+	rval  reflect.Value    // reflection value to let runtime access interpreter (CFG)
+	ident string           // set if node is a var or func
 }
 
 // Frame contains values for the current execution level
 type Frame struct {
-	anc  *Frame        // ancestor frame (global space)
-	data []interface{} // values
+	anc  *Frame          // ancestor frame (global space)
+	data []reflect.Value // values
 }
 
 // BinMap stores executable symbols indexed by name
@@ -102,7 +103,7 @@ func NewInterpreter(opt Opt) *Interpreter {
 		Expval:   make(PkgValueMap),
 		binValue: LibValueMap(stdlib.Value),
 		binType:  LibTypeMap(stdlib.Type),
-		Frame:    &Frame{data: []interface{}{}},
+		Frame:    &Frame{data: []reflect.Value{}},
 	}
 }
 
@@ -150,7 +151,7 @@ func initUniverse() *Scope {
 }
 
 func (i *Interpreter) resizeFrame() {
-	f := &Frame{data: make([]interface{}, i.fsize)}
+	f := &Frame{data: make([]reflect.Value, i.fsize)}
 	copy(f.data, i.Frame.data)
 	i.Frame = f
 }

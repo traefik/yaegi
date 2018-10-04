@@ -164,11 +164,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			scope = scope.push(0)
 
 		case FuncDecl, FuncLit:
-			// Add a frame indirection level as we enter in a func
-			scope = scope.push(1)
 			if n.child[1].ident == "init" {
 				initNodes = append(initNodes, n)
 			}
+			// Add a frame indirection level as we enter in a func
+			scope = scope.push(1)
 			if len(n.child[2].child) == 2 {
 				// allocate entries for return values at start of frame
 				scope.size += len(n.child[2].child[1].child)
@@ -307,16 +307,22 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case BinaryExpr:
 			wireChild(n)
 			n.findex = scope.inc(interp)
-			n.typ = n.child[0].typ
 			nilSym := interp.universe.sym["nil"]
-			if n.action == NotEqual {
+			switch n.action {
+			case NotEqual:
+				n.typ = scope.getType("bool")
 				if n.child[0].sym == nilSym || n.child[1].sym == nilSym {
 					n.run = isNotNil
 				}
-			} else if n.action == Equal {
+			case Equal:
+				n.typ = scope.getType("bool")
 				if n.child[0].sym == nilSym || n.child[1].sym == nilSym {
 					n.run = isNil
 				}
+			case Greater, Lower:
+				n.typ = scope.getType("bool")
+			default:
+				n.typ = n.child[0].typ
 			}
 
 		case IndexExpr:
@@ -930,7 +936,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 	root.Walk(func(n *Node) bool {
 		n.value = genValue(n)
-		n.pvalue = genPvalue(n)
+		//n.pvalue = genPvalue(n)
 		return true
 	}, nil)
 
@@ -941,6 +947,7 @@ func genRun(n *Node) {
 	n.Walk(func(n *Node) bool {
 		if n.kind == FuncType && len(n.anc.child) == 4 {
 			getExec(n.anc.child[3].start)
+			//frameTypes(n.anc)
 		}
 		if n.kind == VarDecl || n.kind == ConstDecl {
 			getExec(n.start)
@@ -1051,16 +1058,16 @@ func getExec(n *Node) Builtin {
 	return get(n)
 }
 
-func valueGenerator(n *Node, i int) func(*Frame) interface{} {
+func valueGenerator(n *Node, i int) func(*Frame) reflect.Value {
 	switch n.level {
 	case 0:
-		return func(f *Frame) interface{} { return f.data[i] }
+		return func(f *Frame) reflect.Value { return f.data[i] }
 	case 1:
-		return func(f *Frame) interface{} { return f.anc.data[i] }
+		return func(f *Frame) reflect.Value { return f.anc.data[i] }
 	case 2:
-		return func(f *Frame) interface{} { return f.anc.anc.data[i] }
+		return func(f *Frame) reflect.Value { return f.anc.anc.data[i] }
 	default:
-		return func(f *Frame) interface{} {
+		return func(f *Frame) reflect.Value {
 			for level := n.level; level > 0; level-- {
 				f = f.anc
 			}
@@ -1069,14 +1076,15 @@ func valueGenerator(n *Node, i int) func(*Frame) interface{} {
 	}
 }
 
-func genValue(n *Node) func(*Frame) interface{} {
+func genValue(n *Node) func(*Frame) reflect.Value {
 	switch n.kind {
 	case BasicLit, FuncDecl, SelectorSrc:
-		v := n.val
-		return func(f *Frame) interface{} { return v }
+		//v := n.val
+		v := reflect.ValueOf(n.val)
+		return func(f *Frame) reflect.Value { return v }
 	case Rvalue:
 		v := n.rval
-		return func(f *Frame) interface{} { return v }
+		return func(f *Frame) reflect.Value { return v }
 	default:
 		if n.sym != nil {
 			if n.sym.index < 0 {
@@ -1084,21 +1092,41 @@ func genValue(n *Node) func(*Frame) interface{} {
 			}
 			i := n.sym.index
 			if n.sym.global {
-				return func(f *Frame) interface{} {
+				return func(f *Frame) reflect.Value {
 					return n.interp.Frame.data[i]
 				}
 			}
 			return valueGenerator(n, i)
 		}
 		if n.findex < 0 {
-			v := n.val
-			return func(f *Frame) interface{} { return v }
+			//v := n.val
+			v := reflect.ValueOf(n.val)
+			return func(f *Frame) reflect.Value { return v }
 		}
 		return valueGenerator(n, n.findex)
 	}
 	return nil
 }
 
+func frameTypes(node *Node) []*Type {
+	ft := make([]*Type, node.flen)
+
+	node.child[3].Walk(func(n *Node) bool {
+		if n.typ == nil || n.level > 0 || n.kind == BasicLit || n.kind == SelectorSrc {
+			return true
+		}
+		if ft[n.findex] == nil || true {
+			ft[n.findex] = n.typ
+		} else {
+			// TODO: Check that type is identical
+		}
+		return true
+	}, nil)
+
+	return ft
+}
+
+/*
 func pvalueGenerator(n *Node, i int) func(*Frame) *interface{} {
 	switch n.level {
 	case 0:
@@ -1141,3 +1169,4 @@ func genPvalue(n *Node) func(*Frame) *interface{} {
 	}
 	return nil
 }
+*/
