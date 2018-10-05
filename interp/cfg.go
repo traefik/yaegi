@@ -934,11 +934,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		}
 	})
 
-	root.Walk(func(n *Node) bool {
-		n.value = genValue(n)
-		//n.pvalue = genPvalue(n)
-		return true
-	}, nil)
+	//root.Walk(func(n *Node) bool {
+	//	n.value = genValue(n)
+	//	//n.pvalue = genPvalue(n)
+	//	return true
+	//}, nil)
 
 	return initNodes
 }
@@ -1106,6 +1106,28 @@ func genValue(n *Node) func(*Frame) reflect.Value {
 		return valueGenerator(n, n.findex)
 	}
 	return nil
+}
+
+// Experimental, temporary & incomplete
+func getValue(n *Node) (int, reflect.Value, bool) {
+	var index int
+	var val reflect.Value
+	var isReflect bool
+	switch n.kind {
+	case BasicLit:
+		val = reflect.ValueOf(n.val)
+	default:
+		if n.sym != nil {
+			index = n.sym.index
+			isReflect = true
+		} else if n.findex < 0 {
+			val = reflect.ValueOf(n.val)
+		} else {
+			index = n.findex
+			isReflect = true
+		}
+	}
+	return index, val, isReflect
 }
 
 func frameTypes(node *Node) []*Type {

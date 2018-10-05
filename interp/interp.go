@@ -26,7 +26,7 @@ type Node struct {
 	frame  *Frame       // frame pointer, only used for script callbacks from runtime (wrapNode)
 	action Action       // action
 	//value  func(f *Frame) interface{} // generated function which returns node value during execution
-	value func(f *Frame) reflect.Value // generated function which returns node value during execution
+	//value func(f *Frame) reflect.Value // generated function which returns node value during execution
 	//pvalue func(f *Frame) *interface{} // generated function which returns pointer on node value during execution
 	exec  Builtin          // generated function to execute
 	run   BuiltinGenerator // generator function to produce above exec
