@@ -45,6 +45,7 @@ const (
 	Uint64T
 	UintptrT
 	ValueT
+	MaxT
 )
 
 var cats = [...]string{
@@ -259,31 +260,33 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 	return t
 }
 
-var zeroValues = [...]interface{}{
-	BoolT:       false,
-	ByteT:       byte(0),
-	Complex64T:  complex64(0),
-	Complex128T: complex128(0),
-	ErrorT:      error(nil),
-	Float32T:    float32(0),
-	Float64T:    float64(0),
-	IntT:        int(0),
-	Int8T:       int8(0),
-	Int16T:      int16(0),
-	Int32T:      int32(0),
-	Int64T:      int64(0),
-	RuneT:       rune(0),
-	StringT:     "",
-	UintT:       uint(0),
-	Uint8T:      uint8(0),
-	Uint16T:     uint16(0),
-	Uint32T:     uint32(0),
-	Uint64T:     uint64(0),
-	UintptrT:    uintptr(0),
+var zeroValues [MaxT]reflect.Value
+
+func init() {
+	zeroValues[BoolT] = reflect.ValueOf(false)
+	zeroValues[ByteT] = reflect.ValueOf(byte(0))
+	zeroValues[Complex64T] = reflect.ValueOf(complex64(0))
+	zeroValues[Complex128T] = reflect.ValueOf(complex128(0))
+	zeroValues[ErrorT] = reflect.ValueOf(error(nil))
+	zeroValues[Float32T] = reflect.ValueOf(float32(0))
+	zeroValues[Float64T] = reflect.ValueOf(float64(0))
+	zeroValues[IntT] = reflect.ValueOf(int(0))
+	zeroValues[Int8T] = reflect.ValueOf(int8(0))
+	zeroValues[Int16T] = reflect.ValueOf(int16(0))
+	zeroValues[Int32T] = reflect.ValueOf(int32(0))
+	zeroValues[Int64T] = reflect.ValueOf(int64(0))
+	zeroValues[RuneT] = reflect.ValueOf(rune(0))
+	zeroValues[StringT] = reflect.ValueOf("")
+	zeroValues[UintT] = reflect.ValueOf(uint(0))
+	zeroValues[Uint8T] = reflect.ValueOf(uint8(0))
+	zeroValues[Uint16T] = reflect.ValueOf(uint16(0))
+	zeroValues[Uint32T] = reflect.ValueOf(uint32(0))
+	zeroValues[Uint64T] = reflect.ValueOf(uint64(0))
+	zeroValues[UintptrT] = reflect.ValueOf(uintptr(0))
 }
 
 // zero instantiates and return a zero value object for the given type during execution
-func (t *Type) zero() interface{} {
+func (t *Type) zero() reflect.Value {
 	if t.incomplete {
 		// Re-parse type at execution in lazy mode. Hopefully missing info is now present
 		t = nodeType(t.node.interp, t.scope, t.node)
@@ -305,20 +308,20 @@ func (t *Type) zero() interface{} {
 		//}
 		//return a
 		if t.size > 0 {
-			return reflect.MakeSlice(reflect.SliceOf(reflect.TypeOf(t.val.zero())), t.size, t.size).Interface()
+			return reflect.MakeSlice(reflect.SliceOf(reflect.TypeOf(t.val.zero())), t.size, t.size)
 		} else {
-			return reflect.Zero(reflect.SliceOf(reflect.TypeOf(t.val.zero()))).Interface()
+			return reflect.Zero(reflect.SliceOf(reflect.TypeOf(t.val.zero())))
 		}
 
 	case StructT:
-		z := make([]interface{}, len(t.field))
-		for i, f := range t.field {
-			z[i] = f.typ.zero()
-		}
-		return z
+		//z := make([]interface{}, len(t.field))
+		//for i, f := range t.field {
+		//	z[i] = f.typ.zero()
+		//}
+		return reflect.New(t.TypeOf()).Elem()
 
 	case ValueT:
-		return reflect.New(t.rtype).Elem().Interface()
+		return reflect.New(t.rtype).Elem()
 
 	default:
 		return zeroValues[t.cat]
@@ -446,6 +449,7 @@ func (t *Type) TypeOf() reflect.Type {
 		return t.rtype
 
 	default:
-		return reflect.TypeOf(t.zero())
+		//return reflect.TypeOf(t.zero())
+		return t.zero().Type()
 	}
 }
