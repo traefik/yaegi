@@ -233,16 +233,19 @@ func assign0(n *Node) Builtin {
 	}
 }
 
-func assignField(n *Node) Builtin {
-	//i := n.findex
-	//value := n.child[1].value
-	next := getExec(n.tnext)
-
-	return func(f *Frame) Builtin {
-		//(*f.data[i].(*interface{})) = value(f)
-		return next
-	}
-}
+//func assignField(n *Node) Builtin {
+//	i := n.findex
+//	value := genValue(n.child[1])
+//	next := getExec(n.tnext)
+//
+//	log.Println(n.index, "gen assignField")
+//	return func(f *Frame) Builtin {
+//		//(*f.data[i].(*interface{})) = value(f)
+//		f.data[i].Set(value(f))
+//		log.Println(n.index, "in assignField", f.data[i], value(f), i, f.data, f.data[2], f.data[3])
+//		return next
+//	}
+//}
 
 func assignPtrField(n *Node) Builtin {
 	//i := n.findex

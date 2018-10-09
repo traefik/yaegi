@@ -246,10 +246,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					// Handle the case where the receiver is a pointer to an object
 					n.child[0].run = getPtrIndexAddr
 					n.run = assignPtrField
-				} else {
-					n.child[0].run = getIndexAddr
-					n.run = assignField
 				}
+				//else {
+				//n.child[0].run = getIndexAddr
+				//n.run = assignField
+				//}
 			} else if n.child[0].action == Star {
 				n.findex = n.child[0].child[0].findex
 				n.run = indirectAssign
