@@ -1163,17 +1163,20 @@ func compositeLit(n *Node) Builtin {
 
 // compositeSparse creates a struct Object, filling fields from sparse key-values
 func compositeSparse(n *Node) Builtin {
-	//i := n.findex
-	//child := n.child[1:]
+	ind := n.findex
 	next := getExec(n.tnext)
+	child := n.child[1:]
+	values := make(map[int]func(*Frame) reflect.Value)
+	for _, c := range child {
+		values[c.findex] = genValue(c.child[1])
+	}
 
 	return func(f *Frame) Builtin {
-		//a := n.typ.zero().([]interface{})
-		//for _, c := range child {
-		//	// index from key was pre-computed during CFG
-		//	a[c.findex] = c.child[1].value(f)
-		//}
-		//f.data[i] = a
+		a := n.typ.zero()
+		for i, v := range values {
+			a.Field(i).Set(v(f))
+		}
+		f.data[ind] = a
 		return next
 	}
 }
