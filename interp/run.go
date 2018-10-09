@@ -732,6 +732,7 @@ func getIndexBin(n *Node) Builtin {
 	}
 }
 
+/*
 func getIndex(n *Node) Builtin {
 	//i := n.findex
 	//value0 := n.child[0].value
@@ -741,6 +742,19 @@ func getIndex(n *Node) Builtin {
 	return func(f *Frame) Builtin {
 		//a := value0(f).([]interface{})
 		//f.data[i] = a[value1(f).(int)]
+		return next
+	}
+}
+*/
+
+func getIndex(n *Node) Builtin {
+	i := n.findex
+	next := getExec(n.tnext)
+	fi := n.child[1].val.(int)
+	value := genValue(n.child[0])
+
+	return func(f *Frame) Builtin {
+		f.data[i] = value(f).Field(fi)
 		return next
 	}
 }
@@ -1126,21 +1140,20 @@ func mapLit(n *Node) Builtin {
 
 // compositeLit creates a struct object
 func compositeLit(n *Node) Builtin {
-	//ind := n.findex
-	//l := len(n.typ.field)
+	ind := n.findex
 	next := getExec(n.tnext)
+	child := n.child[1:]
+	values := make([]func(*Frame) reflect.Value, len(child))
+	for i, c := range child {
+		values[i] = genValue(c)
+	}
 
 	return func(f *Frame) Builtin {
-		//a := n.typ.zero().([]interface{})
-		//for i := 0; i < l; i++ {
-		//	if i < len(n.child[1:]) {
-		//		c := n.child[i+1]
-		//		a[i] = c.value(f)
-		//	} else {
-		//		a[i] = n.typ.field[i].typ.zero()
-		//	}
-		//}
-		//f.data[ind] = a
+		a := n.typ.zero()
+		for i, v := range values {
+			a.Field(i).Set(v(f))
+		}
+		f.data[ind] = a
 		return next
 	}
 }

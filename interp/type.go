@@ -314,10 +314,6 @@ func (t *Type) zero() reflect.Value {
 		}
 
 	case StructT:
-		//z := make([]interface{}, len(t.field))
-		//for i, f := range t.field {
-		//	z[i] = f.typ.zero()
-		//}
 		return reflect.New(t.TypeOf()).Elem()
 
 	case ValueT:
@@ -405,6 +401,13 @@ func ptrTo(t *Type) *Type {
 	return &Type{cat: PtrT, val: t}
 }
 
+func exportName(s string) string {
+	if canExport(s) {
+		return s
+	}
+	return "X" + s
+}
+
 // TypeOf returns the reflection type of dynamic interpreter type t.
 func (t *Type) TypeOf() reflect.Type {
 	switch t.cat {
@@ -438,10 +441,8 @@ func (t *Type) TypeOf() reflect.Type {
 	case StructT:
 		var fields = []reflect.StructField{}
 		for _, f := range t.field {
-			if !canExport(f.name) {
-				continue
-			}
-			fields = append(fields, reflect.StructField{Name: f.name, Type: f.typ.TypeOf()})
+			field := reflect.StructField{Name: exportName(f.name), Type: f.typ.TypeOf()}
+			fields = append(fields, field)
 		}
 		return reflect.StructOf(fields)
 
