@@ -532,6 +532,7 @@ func callDirectBin(n *Node) Builtin {
 func callBin(n *Node) Builtin {
 	next := getExec(n.tnext)
 	child := n.child[1:]
+	l := len(child)
 	value := genValue(n.child[0])
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
@@ -539,39 +540,11 @@ func callBin(n *Node) Builtin {
 	}
 
 	return func(f *Frame) Builtin {
-		in := make([]reflect.Value, len(n.child)-1)
-		for i, c := range child {
-			v := values[i](f)
-			if c.typ.cat == ValueT {
-				//if v == nil {
-				if v.IsNil() {
-					in[i] = reflect.New(c.typ.rtype).Elem()
-				} else {
-					//if w, ok := v.(reflect.Value); ok {
-					//	in[i] = w
-					//} else {
-					//	in[i] = reflect.ValueOf(v)
-					//}
-					in[i] = v
-				}
-				c.frame = f
-			} else {
-				//if v == nil {
-				if v.IsNil() {
-					in[i] = reflect.ValueOf(c.typ.zero())
-				} else {
-					//if w, ok := v.(reflect.Value); ok {
-					//	in[i] = w
-					//} else {
-					//	in[i] = reflect.ValueOf(v)
-					//}
-					in[i] = v
-				}
-			}
+		in := make([]reflect.Value, l)
+		for i, v := range values {
+			in[i] = v(f)
 		}
-		fun := value(f)
-		//log.Println(n.index, "in callBin", in)
-		v := fun.Call(in)
+		v := value(f).Call(in)
 		for i := 0; i < n.fsize; i++ {
 			f.data[n.findex+i] = v[i]
 		}

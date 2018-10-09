@@ -1080,8 +1080,12 @@ func valueGenerator(n *Node, i int) func(*Frame) reflect.Value {
 func genValue(n *Node) func(*Frame) reflect.Value {
 	switch n.kind {
 	case BasicLit, FuncDecl, SelectorSrc:
-		//v := n.val
-		v := reflect.ValueOf(n.val)
+		var v reflect.Value
+		if w, ok := n.val.(reflect.Value); ok {
+			v = w
+		} else {
+			v = reflect.ValueOf(n.val)
+		}
 		return func(f *Frame) reflect.Value { return v }
 	case Rvalue:
 		v := n.rval
@@ -1100,8 +1104,12 @@ func genValue(n *Node) func(*Frame) reflect.Value {
 			return valueGenerator(n, i)
 		}
 		if n.findex < 0 {
-			//v := n.val
-			v := reflect.ValueOf(n.val)
+			var v reflect.Value
+			if w, ok := n.val.(reflect.Value); ok {
+				v = w
+			} else {
+				v = reflect.ValueOf(n.val)
+			}
 			return func(f *Frame) reflect.Value { return v }
 		}
 		return valueGenerator(n, n.findex)
