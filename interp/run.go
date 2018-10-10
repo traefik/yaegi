@@ -1170,26 +1170,32 @@ func compositeSparse(n *Node) Builtin {
 }
 
 func _range(n *Node) Builtin {
-	//ind := n.findex
-	//index0 := n.child[0].findex
-	//index1 := n.child[1].findex
-	//value := n.child[2].value
-	//fnext := getExec(n.fnext)
+	ind := n.findex
+	index0 := n.child[0].findex
+	index1 := n.child[1].findex
+	typ := n.child[2].typ.val.TypeOf()
+	value := genValue(n.child[2])
+	fnext := getExec(n.fnext)
 	tnext := getExec(n.tnext)
 
 	return func(f *Frame) Builtin {
-		//i := 0
-		//if f.data[index0] != nil {
-		//	i = f.data[index0].(int) + 1
-		//}
-		//a := value(f).([]interface{})
-		//if i >= len(a) {
-		//	f.data[ind] = false
-		//	return fnext
-		//}
-		//f.data[index0] = i
-		//f.data[index1] = a[i]
-		//f.data[ind] = true
+		i := int64(0)
+		i0 := f.data[index0]
+		if i0.IsValid() {
+			i = i0.Int() + 1
+		} else {
+			f.data[index0] = reflect.New(reflect.TypeOf(i)).Elem()
+			f.data[index1] = reflect.New(typ).Elem()
+			f.data[ind] = reflect.New(reflect.TypeOf(false)).Elem()
+		}
+		a := value(f)
+		if i >= int64(a.Len()) {
+			f.data[ind].SetBool(false)
+			return fnext
+		}
+		f.data[index0].SetInt(i)
+		f.data[index1].Set(a.Index(int(i)))
+		f.data[ind].SetBool(true)
 		return tnext
 	}
 }
