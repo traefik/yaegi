@@ -1096,18 +1096,21 @@ func _return(n *Node) Builtin {
 }
 
 func arrayLit(n *Node) Builtin {
-	//ind := n.findex
-	//l := len(n.child) - 1
-	//child := n.child[1:]
+	ind := n.findex
 	next := getExec(n.tnext)
+	child := n.child[1:]
+	zero := n.typ.zero
+	values := make([]func(*Frame) reflect.Value, len(child))
+	for i, c := range child {
+		values[i] = genValue(c)
+	}
 
 	return func(f *Frame) Builtin {
-		log.Println(n.index, "in arrayLit")
-		//a := make([]interface{}, l)
-		//for i, c := range child {
-		//	a[i] = c.value(f)
-		//}
-		//f.data[ind] = a
+		a := zero()
+		for i, v := range values {
+			a.Index(i).Set(v(f))
+		}
+		f.data[ind] = a
 		return next
 	}
 }
