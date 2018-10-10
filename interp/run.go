@@ -1179,22 +1179,22 @@ func _range(n *Node) Builtin {
 	tnext := getExec(n.tnext)
 
 	return func(f *Frame) Builtin {
-		i := int64(0)
+		i := 0
 		i0 := f.data[index0]
 		if i0.IsValid() {
-			i = i0.Int() + 1
+			i = int(i0.Int()) + 1
 		} else {
 			f.data[index0] = reflect.New(reflect.TypeOf(i)).Elem()
 			f.data[index1] = reflect.New(typ).Elem()
 			f.data[ind] = reflect.New(reflect.TypeOf(false)).Elem()
 		}
 		a := value(f)
-		if i >= int64(a.Len()) {
+		if i >= a.Len() {
 			f.data[ind].SetBool(false)
 			return fnext
 		}
-		f.data[index0].SetInt(i)
-		f.data[index1].Set(a.Index(int(i)))
+		f.data[index0].SetInt(int64(i))
+		f.data[index1].Set(a.Index(i))
 		f.data[ind].SetBool(true)
 		return tnext
 	}
@@ -1219,13 +1219,13 @@ func _case(n *Node) Builtin {
 
 // TODO: handle variable number of arguments to append
 func _append(n *Node) Builtin {
-	//i := n.findex
-	//value0 := n.child[1].value
-	//value1 := n.child[2].value
+	i := n.findex
+	value0 := genValue(n.child[1])
+	value1 := genValue(n.child[2])
 	next := getExec(n.tnext)
 
 	return func(f *Frame) Builtin {
-		//f.data[i] = append(value0(f).([]interface{}), value1(f))
+		f.data[i] = reflect.Append(value0(f), value1(f))
 		return next
 	}
 }
