@@ -241,7 +241,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 		for _, c := range n.child[0].child {
 			if len(c.child) == 1 {
 				typ := nodeType(interp, scope, c.child[0])
-				t.field = append(t.field, StructField{typ: typ})
+				t.field = append(t.field, StructField{name: c.child[0].ident, typ: typ})
 				t.incomplete = t.incomplete || typ.incomplete
 			} else {
 				l := len(c.child)
@@ -345,16 +345,17 @@ func (t *Type) fieldIndex(name string) int {
 	return -1
 }
 
-// lookupField return a list of indices, i.e. a path to access a field in a struct object
+// lookupField returns a list of indices, i.e. a path to access a field in a struct object
 func (t *Type) lookupField(name string) []int {
 	var index []int
 	if fi := t.fieldIndex(name); fi < 0 {
 		for i, f := range t.field {
-			if f.name == "" {
-				if index2 := f.typ.lookupField(name); len(index2) > 0 {
-					index = append([]int{i}, index2...)
-					break
-				}
+			if f.typ.cat != StructT {
+				continue
+			}
+			if index2 := f.typ.lookupField(name); len(index2) > 0 {
+				index = append([]int{i}, index2...)
+				break
 			}
 		}
 	} else {

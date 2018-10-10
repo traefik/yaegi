@@ -780,19 +780,13 @@ func getMap(n *Node) Builtin {
 }
 
 func getIndexSeq(n *Node) Builtin {
-	//ind := n.findex
-	//value0 := n.child[0].value
-	//value1 := n.child[1].value
+	i := n.findex
+	value := genValue(n.child[0])
+	index := n.child[1].val.([]int)
 	next := getExec(n.tnext)
 
 	return func(f *Frame) Builtin {
-		//a := value0(f).([]interface{})
-		//seq := value1(f).([]int)
-		//l := len(seq) - 1
-		//for _, i := range seq[:l] {
-		//	a = a[i].([]interface{})
-		//}
-		//f.data[ind] = a[seq[l]]
+		f.data[i] = value(f).FieldByIndex(index)
 		return next
 	}
 }
