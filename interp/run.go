@@ -1222,12 +1222,12 @@ func _append(n *Node) Builtin {
 }
 
 func _len(n *Node) Builtin {
-	//i := n.findex
-	//value := n.child[1].value
+	i := n.findex
+	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
 	return func(f *Frame) Builtin {
-		//f.data[i] = len(value(f).([]interface{}))
+		f.data[i].SetInt(int64(value(f).Len()))
 		return next
 	}
 }
