@@ -1285,38 +1285,67 @@ func send(n *Node) Builtin {
 
 // slice expression
 func slice(n *Node) Builtin {
+	i := n.findex
 	next := getExec(n.tnext)
+	value0 := genValue(n.child[0])
+	value1 := genValue(n.child[1])
 
-	return func(f *Frame) Builtin {
-		//a := n.child[0].value(f).([]interface{})
-		//switch len(n.child) {
-		//case 2:
-		//	f.data[n.findex] = a[n.child[1].value(f).(int):]
-		//case 3:
-		//	f.data[n.findex] = a[n.child[1].value(f).(int):n.child[2].value(f).(int)]
-		//case 4:
-		//	f.data[n.findex] = a[n.child[1].value(f).(int):n.child[2].value(f).(int):n.child[3].value(f).(int)]
-		//}
-		return next
+	switch len(n.child) {
+	case 2:
+		return func(f *Frame) Builtin {
+			a := value0(f)
+			f.data[i] = a.Slice(int(value1(f).Int()), a.Len())
+			return next
+		}
+	case 3:
+		value2 := genValue(n.child[2])
+		return func(f *Frame) Builtin {
+			a := value0(f)
+			f.data[i] = a.Slice(int(value1(f).Int()), int(value2(f).Int()))
+			return next
+		}
+	case 4:
+		value2 := genValue(n.child[2])
+		value3 := genValue(n.child[3])
+		return func(f *Frame) Builtin {
+			a := value0(f)
+			f.data[i] = a.Slice3(int(value1(f).Int()), int(value2(f).Int()), int(value3(f).Int()))
+			return next
+		}
 	}
+	return nil
 }
 
 // slice expression, no low value
 func slice0(n *Node) Builtin {
+	i := n.findex
 	next := getExec(n.tnext)
+	value0 := genValue(n.child[0])
 
-	return func(f *Frame) Builtin {
-		//a := n.child[0].value(f).([]interface{})
-		//switch len(n.child) {
-		//case 1:
-		//	f.data[n.findex] = a[:]
-		//case 2:
-		//	f.data[n.findex] = a[0:n.child[1].value(f).(int)]
-		//case 3:
-		//	f.data[n.findex] = a[0:n.child[1].value(f).(int):n.child[2].value(f).(int)]
-		//}
-		return next
+	switch len(n.child) {
+	case 1:
+		return func(f *Frame) Builtin {
+			a := value0(f)
+			f.data[i] = a.Slice(0, a.Len())
+			return next
+		}
+	case 2:
+		value1 := genValue(n.child[1])
+		return func(f *Frame) Builtin {
+			a := value0(f)
+			f.data[i] = a.Slice(0, int(value1(f).Int()))
+			return next
+		}
+	case 3:
+		value1 := genValue(n.child[1])
+		value2 := genValue(n.child[2])
+		return func(f *Frame) Builtin {
+			a := value0(f)
+			f.data[i] = a.Slice3(0, int(value1(f).Int()), int(value2(f).Int()))
+			return next
+		}
 	}
+	return nil
 }
 
 func isNil(n *Node) Builtin {
