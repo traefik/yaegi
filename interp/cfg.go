@@ -334,6 +334,8 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.child[0].typ.cat == MapT {
 				scope.size++ // Reserve an entry for getIndexMap 2nd return value
 				n.run = getIndexMap
+			} else if n.child[0].typ.cat == ArrayT {
+				n.run = getIndexArray
 			}
 
 		case BlockStmt:
@@ -1146,7 +1148,7 @@ func frameTypes(node *Node) []*Type {
 		if n.typ == nil || n.level > 0 || n.kind == BasicLit || n.kind == SelectorSrc {
 			return true
 		}
-		if ft[n.findex] == nil || true {
+		if ft[n.findex] == nil {
 			ft[n.findex] = n.typ
 		} else {
 			// TODO: Check that type is identical

@@ -66,6 +66,7 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 			continue
 		}
 		f.data[i] = reflect.New(t.TypeOf()).Elem()
+		//f.data[i] = t.zero()
 	}
 
 	// Assign receiver value, if defined (for methods)
@@ -220,15 +221,19 @@ func assign(n *Node) Builtin {
 
 // assign0 implements assignement of zero value
 func assign0(n *Node) Builtin {
-	//l := len(n.child) - 1
-	//z := n.typ.zero()
-	//s := n.child[:l]
+	l := len(n.child) - 1
+	zero := n.typ.zero
+	s := n.child[:l]
 	next := getExec(n.tnext)
+	values := make([]func(*Frame) reflect.Value, l)
+	for i, c := range s {
+		values[i] = genValue(c)
+	}
 
 	return func(f *Frame) Builtin {
-		//for _, c := range s {
-		//	*c.pvalue(f) = z
-		//}
+		for _, v := range values {
+			v(f).Set(zero())
+		}
 		return next
 	}
 }
@@ -735,6 +740,18 @@ func getIndex(n *Node) Builtin {
 	}
 }
 
+func getIndexArray(n *Node) Builtin {
+	i := n.findex
+	next := getExec(n.tnext)
+	value0 := genValue(n.child[0])
+	value1 := genValue(n.child[1])
+
+	return func(f *Frame) Builtin {
+		f.data[i] = value0(f).Index(int(value1(f).Int()))
+		return next
+	}
+}
+
 func getIndexMap(n *Node) Builtin {
 	//i := n.findex
 	//i1 := i + 1
@@ -1085,6 +1102,7 @@ func arrayLit(n *Node) Builtin {
 	next := getExec(n.tnext)
 
 	return func(f *Frame) Builtin {
+		log.Println(n.index, "in arrayLit")
 		//a := make([]interface{}, l)
 		//for i, c := range child {
 		//	a[i] = c.value(f)
