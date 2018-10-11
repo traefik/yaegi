@@ -752,20 +752,15 @@ func getIndexArray(n *Node) Builtin {
 	}
 }
 
+// TODO: handle possible 2 return value ok bool
 func getIndexMap(n *Node) Builtin {
-	//i := n.findex
-	//i1 := i + 1
-	//value0 := n.child[0].value
-	//value1 := n.child[1].value
-	//z := n.child[0].typ.val.zero()
+	i := n.findex
+	value0 := genValue(n.child[0]) // map
+	value1 := genValue(n.child[1]) // index
 	next := getExec(n.tnext)
 
 	return func(f *Frame) Builtin {
-		//m := value0(f).(map[interface{}]interface{})
-		//if f.data[i], f.data[i1] = m[value1(f)]; !f.data[i1].(bool) {
-		//	// Force a zero value if key is not present in map
-		//	f.data[i] = z
-		//}
+		f.data[i] = value0(f).MapIndex(value1(f))
 		return next
 	}
 }
@@ -1286,12 +1281,12 @@ func send(n *Node) Builtin {
 	}
 }
 
-// slice expression
+// slice expression: array[low:high:max]
 func slice(n *Node) Builtin {
 	i := n.findex
 	next := getExec(n.tnext)
-	value0 := genValue(n.child[0])
-	value1 := genValue(n.child[1])
+	value0 := genValue(n.child[0]) // array
+	value1 := genValue(n.child[1]) // low (if 2 or 3 args) or high (if 1 arg)
 
 	switch len(n.child) {
 	case 2:
@@ -1301,7 +1296,7 @@ func slice(n *Node) Builtin {
 			return next
 		}
 	case 3:
-		value2 := genValue(n.child[2])
+		value2 := genValue(n.child[2]) // max
 		return func(f *Frame) Builtin {
 			a := value0(f)
 			f.data[i] = a.Slice(int(value1(f).Int()), int(value2(f).Int()))
@@ -1319,7 +1314,7 @@ func slice(n *Node) Builtin {
 	return nil
 }
 
-// slice expression, no low value
+// slice expression, no low value: array[:high:max]
 func slice0(n *Node) Builtin {
 	i := n.findex
 	next := getExec(n.tnext)
