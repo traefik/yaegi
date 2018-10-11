@@ -752,7 +752,7 @@ func getIndexArray(n *Node) Builtin {
 	}
 }
 
-// TODO: handle possible 2 return value ok bool
+// getIndexMap retrieves map value from index
 func getIndexMap(n *Node) Builtin {
 	i := n.findex
 	value0 := genValue(n.child[0]) // map
@@ -761,6 +761,21 @@ func getIndexMap(n *Node) Builtin {
 
 	return func(f *Frame) Builtin {
 		f.data[i] = value0(f).MapIndex(value1(f))
+		return next
+	}
+}
+
+// getIndexMap2 retrieves map value from index and set status
+func getIndexMap2(n *Node) Builtin {
+	i := n.findex
+	value0 := genValue(n.child[0])     // map
+	value1 := genValue(n.child[1])     // index
+	value2 := genValue(n.anc.child[1]) // status
+	next := getExec(n.tnext)
+
+	return func(f *Frame) Builtin {
+		f.data[i] = value0(f).MapIndex(value1(f))
+		value2(f).SetBool(f.data[i].IsValid())
 		return next
 	}
 }

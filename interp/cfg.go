@@ -241,6 +241,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.child[0].action == GetIndex {
 				if n.child[0].child[0].typ.cat == MapT {
 					n.run = assignMap
+					n.child[0].run = nop // skip getIndexMap
 				} else if n.child[0].child[0].typ.cat == PtrT {
 					// Handle the case where the receiver is a pointer to an object
 					n.child[0].run = getPtrIndexAddr
@@ -288,8 +289,15 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					} else {
 						types = funtype.ret
 					}
-				case TypeAssertExpr, IndexExpr:
+
+				case IndexExpr:
+					types = append(types, n.child[l].child[0].typ.val, scope.getType("bool"))
+					n.child[l].run = getIndexMap2
+					n.run = nop
+
+				case TypeAssertExpr:
 					types = append(types, n.child[l].child[1].typ, scope.getType("error"))
+
 				default:
 					log.Fatalln(n.index, "Assign expression unsupported:", n.child[l].kind)
 				}
