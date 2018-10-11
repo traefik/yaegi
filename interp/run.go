@@ -1177,7 +1177,6 @@ func compositeSparse(n *Node) Builtin {
 }
 
 func _range(n *Node) Builtin {
-	ind := n.findex
 	index0 := n.child[0].findex
 	index1 := n.child[1].findex
 	typ := n.child[2].typ.val.TypeOf()
@@ -1193,18 +1192,19 @@ func _range(n *Node) Builtin {
 		} else {
 			f.data[index0] = reflect.New(reflect.TypeOf(i)).Elem()
 			f.data[index1] = reflect.New(typ).Elem()
-			f.data[ind] = reflect.New(reflect.TypeOf(false)).Elem()
 		}
 		a := value(f)
 		if i >= a.Len() {
-			f.data[ind].SetBool(false)
 			return fnext
 		}
 		f.data[index0].SetInt(int64(i))
 		f.data[index1].Set(a.Index(i))
-		f.data[ind].SetBool(true)
 		return tnext
 	}
+}
+
+func rangeMap(n *Node) Builtin {
+	return nil
 }
 
 func _case(n *Node) Builtin {

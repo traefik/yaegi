@@ -247,10 +247,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.child[0].run = getPtrIndexAddr
 					n.run = assignPtrField
 				}
-				//else {
-				//n.child[0].run = getIndexAddr
-				//n.run = assignField
-				//}
 			} else if n.child[0].action == Star {
 				n.findex = n.child[0].child[0].findex
 				n.run = indirectAssign
@@ -778,6 +774,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.child[3].tnext = n
 			n.tnext = n.child[3].start
 			n.findex = scope.inc(interp)
+			if n.child[2].typ.cat == MapT {
+				log.Println(n.index, "range MapT")
+			}
 
 		case ReturnStmt:
 			wireChild(n)
