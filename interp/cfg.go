@@ -240,7 +240,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			// If LHS is an indirection, get reference instead of value, to allow setting
 			if n.child[0].action == GetIndex {
 				if n.child[0].child[0].typ.cat == MapT {
-					n.child[0].run = getMap
 					n.run = assignMap
 				} else if n.child[0].child[0].typ.cat == PtrT {
 					// Handle the case where the receiver is a pointer to an object

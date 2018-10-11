@@ -263,13 +263,13 @@ func assignPtrField(n *Node) Builtin {
 }
 
 func assignMap(n *Node) Builtin {
-	//i := n.findex
-	//value0 := n.child[0].child[1].value
-	//value1 := n.child[1].value
+	value := genValue(n.child[0].child[0])  // map
+	value0 := genValue(n.child[0].child[1]) // key
+	value1 := genValue(n.child[1])          // value
 	next := getExec(n.tnext)
 
 	return func(f *Frame) Builtin {
-		//f.data[i].(map[interface{}]interface{})[value0(f)] = value1(f)
+		value(f).SetMapIndex(value0(f), value1(f))
 		return next
 	}
 }
@@ -781,17 +781,6 @@ func getFunc(n *Node) Builtin {
 		node.frame = &frame
 		//f.data[i] = &node
 		n.frame = &frame
-		return next
-	}
-}
-
-func getMap(n *Node) Builtin {
-	//i := n.findex
-	//value := n.child[0].value
-	next := getExec(n.tnext)
-
-	return func(f *Frame) Builtin {
-		//f.data[i] = value(f).(map[interface{}]interface{})
 		return next
 	}
 }
