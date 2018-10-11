@@ -66,7 +66,6 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 			continue
 		}
 		f.data[i] = reflect.New(t.TypeOf()).Elem()
-		//f.data[i] = t.zero()
 	}
 
 	// Assign receiver value, if defined (for methods)
@@ -287,7 +286,7 @@ func and(n *Node) Builtin {
 	}
 }
 
-/*
+/* Optimized version of and()
 func and(n *Node) Builtin {
 	i := n.findex
 	i0, v0, r0 := getValue(n.child[0])
@@ -323,6 +322,7 @@ func and(n *Node) Builtin {
 	}
 }
 */
+
 func not(n *Node) Builtin {
 	i := n.findex
 	value := genValue(n.child[0])
@@ -1116,15 +1116,23 @@ func arrayLit(n *Node) Builtin {
 }
 
 func mapLit(n *Node) Builtin {
-	//i := n.findex
+	ind := n.findex
 	next := getExec(n.tnext)
+	child := n.child[1:]
+	typ := n.typ.TypeOf()
+	keys := make([]func(*Frame) reflect.Value, len(child))
+	values := make([]func(*Frame) reflect.Value, len(child))
+	for i, c := range child {
+		keys[i] = genValue(c.child[0])
+		values[i] = genValue(c.child[1])
+	}
 
 	return func(f *Frame) Builtin {
-		//m := make(map[interface{}]interface{})
-		//for _, c := range n.child[1:] {
-		//	m[c.child[0].value(f)] = c.child[1].value(f)
-		//}
-		//f.data[i] = m
+		m := reflect.MakeMap(typ)
+		for i, k := range keys {
+			m.SetMapIndex(k(f), values[i](f))
+		}
+		f.data[ind] = m
 		return next
 	}
 }
