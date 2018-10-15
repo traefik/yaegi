@@ -630,7 +630,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case ForRangeStmt:
 			loop, loopRestart = nil, nil
 			n.start = n.child[0].start
-			n.findex = n.child[0].findex
+			//n.findex = n.child[0].findex
 			n.child[0].fnext = n
 			scope = scope.pop()
 
@@ -770,13 +770,18 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.typ = n.child[0].typ
 
 		case RangeStmt:
-			n.start = n.child[0]
-			n.child[0].tnext = n.child[2].start
-			n.child[2].tnext = n
-			n.child[3].tnext = n
-			n.tnext = n.child[3].start
+			n.start = n.child[2]                // Get array or map object
+			n.child[2].tnext = n.child[0].start // then go to iterator init
+			n.child[0].tnext = n                // then go to range function
+			n.tnext = n.child[3].start          // then go to range body
+			n.child[3].tnext = n                // then body go to range function (loop)
 			if n.child[2].typ.cat == MapT {
-				log.Println(n.index, "range MapT")
+				scope.sym[n.child[0].ident].typ = n.child[2].typ.key
+				n.child[0].typ = n.child[2].typ.key
+				n.child[0].run = rangeMapInit
+				n.findex = scope.inc(interp) // To store arrays of map keys
+				n.typ = &Type{cat: ArrayT, val: n.child[2].typ.key}
+				scope.inc(interp) // to store index of keys
 			} else {
 				scope.sym[n.child[0].ident].typ = scope.getType("int")
 				n.child[0].typ = scope.getType("int")

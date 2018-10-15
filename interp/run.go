@@ -1187,10 +1187,9 @@ func rangeInit(n *Node) Builtin {
 }
 
 func _range(n *Node) Builtin {
-	index0 := n.child[0].findex
-	index1 := n.child[1].findex
-	//typ := n.child[2].typ.val.TypeOf()
-	value := genValue(n.child[2])
+	index0 := n.child[0].findex   // array index location in frame
+	index1 := n.child[1].findex   // array value location in frame
+	value := genValue(n.child[2]) // array
 	fnext := getExec(n.fnext)
 	tnext := getExec(n.tnext)
 
@@ -1203,6 +1202,21 @@ func _range(n *Node) Builtin {
 			return fnext
 		}
 		f.data[index1].Set(a.Index(i))
+		return tnext
+	}
+}
+
+func rangeMapInit(n *Node) Builtin {
+	tnext := getExec(n.tnext)
+	//value := genValue(n.anc.child[2])
+	ikeys := n.anc.findex
+	iikeys := ikeys + 1
+	//i := n.findex
+
+	return func(f *Frame) Builtin {
+		log.Println(n.index, "in rangeMapInit, next", n.tnext.index)
+		//f.data[ikeys] = value(f).MapKeys()
+		f.data[iikeys] = reflect.New(reflect.TypeOf(0)).Elem()
 		return tnext
 	}
 }
