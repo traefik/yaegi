@@ -240,16 +240,16 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			// If LHS is an indirection, get reference instead of value, to allow setting
 			if n.child[0].action == GetIndex {
 				if n.child[0].child[0].typ.cat == MapT {
-					n.run = assignMap
-					n.child[0].run = nop // skip getIndexMap
+					n.gen = assignMap
+					n.child[0].gen = nop // skip getIndexMap
 				} else if n.child[0].child[0].typ.cat == PtrT {
 					// Handle the case where the receiver is a pointer to an object
-					n.child[0].run = getPtrIndexAddr
-					n.run = assignPtrField
+					n.child[0].gen = getPtrIndexAddr
+					n.gen = assignPtrField
 				}
 			} else if n.child[0].action == Star {
 				n.findex = n.child[0].child[0].findex
-				n.run = indirectAssign
+				n.gen = indirectAssign
 			}
 			if n.anc.kind == ConstDecl {
 				iotaValue++
@@ -266,7 +266,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			}
 			if n.child[0].action == Star {
 				n.findex = n.child[0].child[0].findex
-				n.run = indirectInc
+				n.gen = indirectInc
 			}
 
 		case DefineX, AssignXStmt:
@@ -288,8 +288,8 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 				case IndexExpr:
 					types = append(types, n.child[l].child[0].typ.val, scope.getType("bool"))
-					n.child[l].run = getIndexMap2
-					n.run = nop
+					n.child[l].gen = getIndexMap2
+					n.gen = nop
 
 				case TypeAssertExpr:
 					types = append(types, n.child[l].child[1].typ, scope.getType("error"))
@@ -316,12 +316,12 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			case NotEqual:
 				n.typ = scope.getType("bool")
 				if n.child[0].sym == nilSym || n.child[1].sym == nilSym {
-					n.run = isNotNil
+					n.gen = isNotNil
 				}
 			case Equal:
 				n.typ = scope.getType("bool")
 				if n.child[0].sym == nilSym || n.child[1].sym == nilSym {
-					n.run = isNil
+					n.gen = isNil
 				}
 			case Greater, Lower:
 				n.typ = scope.getType("bool")
@@ -336,9 +336,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.recv = n
 			if n.child[0].typ.cat == MapT {
 				scope.size++ // Reserve an entry for getIndexMap 2nd return value
-				n.run = getIndexMap
+				n.gen = getIndexMap
 			} else if n.child[0].typ.cat == ArrayT {
-				n.run = getIndexArray
+				n.gen = getIndexArray
 			}
 
 		case BlockStmt:
@@ -363,7 +363,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			wireChild(n)
 			n.findex = scope.inc(interp)
 			if n.child[0].sym != nil && n.child[0].sym.kind == Bltn {
-				n.run = n.child[0].sym.builtin
+				n.gen = n.child[0].sym.builtin
 				n.child[0].typ = &Type{cat: BuiltinT}
 				switch n.child[0].ident {
 				case "len":
@@ -379,14 +379,14 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				// Call expression is in fact a type conversion expression
 				n.typ = n.child[0].typ
 				if n.typ.cat == AliasT {
-					n.run = convert
+					n.gen = convert
 				} else {
 					if n.child[1].typ.cat == FuncT {
 						// Convert type of an interpreter function to another binary type:
 						// generate a different callback wrapper
-						n.run = convertFuncBin
+						n.gen = convertFuncBin
 					} else {
-						n.run = convertBin
+						n.gen = convertBin
 					}
 				}
 			} else if n.child[0].kind == SelectorImport {
@@ -421,19 +421,19 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 				// TODO: handle multiple return value
 				if len(n.child) == 2 && n.child[1].fsize > 1 {
-					n.run = callBinX
+					n.gen = callBinX
 				} else {
-					n.run = callBin
+					n.gen = callBin
 				}
 			} else if n.child[0].kind == SelectorExpr {
 				if n.child[0].typ.cat == ValueT {
-					n.run = callBinMethod
+					n.gen = callBinMethod
 					// TODO: handle multiple return value (_test/time2.go)
 					n.child[0].kind = BasicLit // Temporary hack for force value() to return n.val at run
 					n.typ = &Type{cat: ValueT, rtype: n.child[0].typ.rtype}
 					n.fsize = n.child[0].fsize
 				} else if n.child[0].typ.cat == PtrT && n.child[0].typ.val.cat == ValueT {
-					n.run = callBinMethod
+					n.gen = callBinMethod
 					n.child[0].kind = BasicLit // Temporary hack for force value() to return n.val at run
 					n.fsize = n.child[0].fsize
 					// TODO: handle type ?
@@ -471,14 +471,14 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 			} else if sym, _, _ := scope.lookup(n.child[0].ident); sym != nil {
 				if sym.typ != nil && sym.typ.cat == BinT {
-					n.run = callBin
+					n.gen = callBin
 					n.typ = &Type{cat: ValueT}
 					r := sym.val.(reflect.Value)
 					n.child[0].fsize = r.Type().NumOut()
 					n.child[0].val = r
 					n.child[0].kind = BasicLit
 				} else if sym.typ != nil && sym.typ.cat == ValueT {
-					n.run = callDirectBin
+					n.gen = callDirectBin
 					n.typ = &Type{cat: ValueT}
 				} else {
 					n.val = sym.node
@@ -533,14 +533,14 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.typ = n.child[0].typ
 			switch n.typ.cat {
 			case ArrayT:
-				n.run = arrayLit
+				n.gen = arrayLit
 			case MapT:
-				n.run = mapLit
+				n.gen = mapLit
 			case StructT:
-				n.action, n.run = CompositeLit, compositeLit
+				n.action, n.gen = CompositeLit, compositeLit
 				// Handle object assign from sparse key / values
 				if len(n.child) > 1 && n.child[1].kind == KeyValueExpr {
-					n.run = compositeSparse
+					n.gen = compositeSparse
 					n.typ = nodeType(interp, scope, n.child[0])
 					for _, c := range n.child[1:] {
 						c.findex = n.typ.fieldIndex(c.child[0].ident)
@@ -675,7 +675,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case GoStmt:
 			wireChild(n)
 			// TODO: should error if call expression refers to a builtin
-			//n.child[0].run = callGoRoutine
+			//n.child[0].gen = callGoRoutine
 
 		case Ident:
 			if n.anc.kind == File || (n.anc.kind == SelectorExpr && n.anc.child[0] != n) || (n.anc.kind == KeyValueExpr && n.anc.child[0] == n) {
@@ -778,14 +778,14 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.child[2].typ.cat == MapT {
 				scope.sym[n.child[0].ident].typ = n.child[2].typ.key
 				n.child[0].typ = n.child[2].typ.key
-				n.child[0].run = rangeMapInit
+				n.child[0].gen = rangeMapInit
 				n.findex = scope.inc(interp) // To store arrays of map keys
 				n.typ = &Type{cat: ArrayT, val: n.child[2].typ.key}
 				scope.inc(interp) // to store index of keys
 			} else {
 				scope.sym[n.child[0].ident].typ = scope.getType("int")
 				n.child[0].typ = scope.getType("int")
-				n.child[0].run = rangeInit
+				n.child[0].gen = rangeInit
 			}
 			vtype := n.child[2].typ.val
 			scope.sym[n.child[1].ident].typ = vtype
@@ -810,31 +810,31 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					if method.Func.IsValid() {
 						n.rval = method.Func
 						n.typ.rtype = method.Func.Type()
-						n.run = nop
+						n.gen = nop
 					} else {
 						n.val = method.Index
-						//n.run = getIndexBinMethod
-						n.run = nop
+						//n.gen = getIndexBinMethod
+						n.gen = nop
 					}
 					n.fsize = method.Type.NumOut()
 				} else {
 					// Method can be only resolved from value at execution
-					n.run = getIndexBinMethod
+					n.gen = getIndexBinMethod
 				}
 			} else if n.typ.cat == PtrT && n.typ.val.cat == ValueT {
 				// Handle pointer on object defined in runtime
 				if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
 					n.typ = &Type{cat: ValueT, rtype: field.Type}
 					n.val = field.Index
-					n.run = getPtrIndexBin
+					n.gen = getPtrIndexBin
 				} else if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
 					n.val = method.Func
 					n.fsize = method.Type.NumOut()
-					n.run = nop
+					n.gen = nop
 				} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
 					n.val = method.Func
 					n.fsize = method.Type.NumOut()
-					n.run = nop
+					n.gen = nop
 				} else {
 					log.Println(n.index, "selector unresolved")
 				}
@@ -856,12 +856,12 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						n.rval = n.val.(reflect.Value)
 						n.kind = Rvalue
 					}
-					n.run = nop
+					n.gen = nop
 				} else if s, ok := interp.binType[pkg][name]; ok {
 					//n.kind = SelectorImport
 					n.kind = Rtype
 					n.typ = &Type{cat: ValueT, rtype: s}
-					n.run = nop
+					n.gen = nop
 					if s.Kind() == reflect.Func {
 						n.fsize = s.NumOut()
 						//} else if typ.Kind() == reflect.Ptr {
@@ -871,12 +871,12 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 			} else if n.typ.cat == ArrayT {
 				n.typ = n.typ.val
-				n.run = nop
+				n.gen = nop
 			} else if n.typ.cat == SrcPkgT {
 				// Resolve source package symbol
 				if sym, ok := interp.scope[n.child[0].ident].sym[n.child[1].ident]; ok {
 					n.val = sym.node
-					n.run = nop
+					n.gen = nop
 					n.kind = SelectorSrc
 					n.typ = sym.typ
 				} else {
@@ -886,14 +886,14 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				//log.Println(n.index, "selector field", fi)
 				// Resolve struct field index
 				if n.typ.cat == PtrT {
-					n.run = getPtrIndex
+					n.gen = getPtrIndex
 				}
 				n.typ = n.typ.fieldType(fi)
 				n.child[1].kind = BasicLit
 				n.child[1].val = fi
 			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
 				// Handle method
-				n.run = nop
+				n.gen = nop
 				n.val = m
 				n.child[1].val = lind
 				n.typ = m.typ
@@ -902,10 +902,10 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
 					n.child[1].kind = BasicLit
 					n.child[1].val = ti
-					n.run = getIndexSeq
+					n.gen = getIndexSeq
 				} else {
 					log.Println(n.index, "Selector not found:", n.child[1].ident)
-					n.run = nop
+					n.gen = nop
 					//panic("Field not found in selector")
 				}
 			}
@@ -968,11 +968,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 func genRun(n *Node) {
 	n.Walk(func(n *Node) bool {
 		if n.kind == FuncType && len(n.anc.child) == 4 {
-			getExec(n.anc.child[3].start)
+			setExec(n.anc.child[3].start)
 			//frameTypes(n.anc)
 		}
 		if n.kind == VarDecl || n.kind == ConstDecl {
-			getExec(n.start)
+			setExec(n.start)
 			return false
 		}
 		return true
@@ -1043,18 +1043,23 @@ func getExec(n *Node) Builtin {
 	if n == nil {
 		return nil
 	}
+	if n.exec == nil {
+		setExec(n)
+	}
+	return n.exec
+}
+
+// setExec recursively sets the node exec builtin function
+func setExec(n *Node) {
 	if n.exec != nil {
-		return n.exec
+		return
 	}
 	seen := map[*Node]bool{}
-	var get func(n *Node) Builtin
+	var set func(n *Node)
 
-	get = func(n *Node) Builtin {
-		if n == nil {
-			return nil
-		}
-		if n.exec != nil {
-			return n.exec
+	set = func(n *Node) {
+		if n == nil || n.exec != nil {
+			return
 		}
 		seen[n] = true
 		if n.tnext != nil && n.tnext.exec == nil {
@@ -1062,7 +1067,7 @@ func getExec(n *Node) Builtin {
 				m := n.tnext
 				n.tnext.exec = func(f *Frame) Builtin { return m.exec(f) }
 			} else {
-				n.tnext.exec = get(n.tnext)
+				set(n.tnext)
 			}
 		}
 		if n.fnext != nil && n.fnext.exec == nil {
@@ -1070,14 +1075,13 @@ func getExec(n *Node) Builtin {
 				m := n.fnext
 				n.fnext.exec = func(f *Frame) Builtin { return m.exec(f) }
 			} else {
-				n.fnext.exec = get(n.fnext)
+				set(n.fnext)
 			}
 		}
-		n.exec = n.run(n)
-		return n.exec
+		n.gen(n)
 	}
 
-	return get(n)
+	set(n)
 }
 
 func valueGenerator(n *Node, i int) func(*Frame) reflect.Value {

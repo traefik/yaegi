@@ -280,7 +280,7 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 	addChild := func(root **Node, anc *Node, kind Kind, action Action) *Node {
 		interp.nindex++
 		var i interface{}
-		n := &Node{anc: anc, interp: interp, index: interp.nindex, kind: kind, action: action, val: &i, run: builtin[action]}
+		n := &Node{anc: anc, interp: interp, index: interp.nindex, kind: kind, action: action, val: &i, gen: builtin[action]}
 		n.start = n
 		if anc == nil {
 			*root = n
@@ -295,7 +295,7 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 					for i := 0; i < nbAssign; i++ {
 						// set new signle assign
 						interp.nindex++
-						na := &Node{anc: anc.anc, interp: interp, index: interp.nindex, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
+						na := &Node{anc: anc.anc, interp: interp, index: interp.nindex, kind: anc.kind, action: anc.action, val: new(interface{}), gen: anc.gen}
 						na.start = na
 						newChild = append(newChild, na)
 						// Set single assign left hand side
@@ -316,12 +316,12 @@ func (interp *Interpreter) Ast(src string) (string, *Node) {
 					for i := 0; i < nbAssign; i++ {
 						// set new signle assign
 						interp.nindex++
-						na := &Node{anc: anc.anc, interp: interp, index: interp.nindex, kind: anc.kind, action: anc.action, val: new(interface{}), run: anc.run}
+						na := &Node{anc: anc.anc, interp: interp, index: interp.nindex, kind: anc.kind, action: anc.action, val: new(interface{}), gen: anc.gen}
 						na.start = na
 						newChild = append(newChild, na)
 						// set new type for this assignment
 						interp.nindex++
-						nt := &Node{anc: na, interp: interp, ident: typeNode.ident, index: interp.nindex, kind: typeNode.kind, action: typeNode.action, val: new(interface{}), run: typeNode.run}
+						nt := &Node{anc: na, interp: interp, ident: typeNode.ident, index: interp.nindex, kind: typeNode.kind, action: typeNode.action, val: new(interface{}), gen: typeNode.gen}
 						// Set single assign left hand side
 						anc.child[i].anc = na
 						na.child = append(na.child, anc.child[i])

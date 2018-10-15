@@ -9,7 +9,7 @@ import (
 // Builtin type defines functions which run at CFG execution
 type Builtin func(f *Frame) Builtin
 
-type BuiltinGenerator func(n *Node) Builtin
+type BuiltinGenerator func(n *Node)
 
 var builtin = [...]BuiltinGenerator{
 	Nop:          nop,
@@ -129,53 +129,53 @@ func runCfg(n *Node, f *Frame) {
 	}
 }
 
-func typeAssert(n *Node) Builtin {
+func typeAssert(n *Node) {
 	value := genValue(n.child[0])
 	i := n.findex
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i] = value(f)
 		return next
 	}
 }
 
-func convert(n *Node) Builtin {
+func convert(n *Node) {
 	value := genValue(n.child[1])
 	i := n.findex
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i] = value(f)
 		return next
 	}
 }
 
-func convertFuncBin(n *Node) Builtin {
+func convertFuncBin(n *Node) {
 	i := n.findex
 	fun := reflect.MakeFunc(n.child[0].typ.rtype, n.child[1].wrapNode)
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i] = fun
 		return next
 	}
 }
 
-func convertBin(n *Node) Builtin {
+func convertBin(n *Node) {
 	i := n.findex
 	value := genValue(n.child[1])
 	typ := n.child[0].typ.TypeOf()
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i] = reflect.ValueOf(value(f)).Convert(typ)
 		return next
 	}
 }
 
 // assignX implements multiple value assignement
-func assignX(n *Node) Builtin {
+func assignX(n *Node) {
 	l := len(n.child) - 1
 	b := n.child[l].findex
 	s := n.child[:l]
@@ -185,7 +185,7 @@ func assignX(n *Node) Builtin {
 		values[i] = genValue(c)
 	}
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		for i, value := range values {
 			value(f).Set(f.data[b+i])
 		}
@@ -194,12 +194,12 @@ func assignX(n *Node) Builtin {
 }
 
 // Indirect assign
-func indirectAssign(n *Node) Builtin {
+func indirectAssign(n *Node) {
 	i := n.findex
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		//*(f.data[i].(*interface{})) = value(f)
 		f.data[i].Elem().Set(value(f))
 		return next
@@ -207,19 +207,19 @@ func indirectAssign(n *Node) Builtin {
 }
 
 // assign implements single value assignement
-func assign(n *Node) Builtin {
+func assign(n *Node) {
 	value := genValue(n)
 	value1 := genValue(n.child[1])
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		value(f).Set(value1(f))
 		return next
 	}
 }
 
 // assign0 implements assignement of zero value
-func assign0(n *Node) Builtin {
+func assign0(n *Node) {
 	l := len(n.child) - 1
 	zero := n.typ.zero
 	s := n.child[:l]
@@ -229,7 +229,7 @@ func assign0(n *Node) Builtin {
 		values[i] = genValue(c)
 	}
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		for _, v := range values {
 			v(f).Set(zero())
 		}
@@ -251,36 +251,36 @@ func assign0(n *Node) Builtin {
 //	}
 //}
 
-func assignPtrField(n *Node) Builtin {
+func assignPtrField(n *Node) {
 	//i := n.findex
 	//value := n.child[1].value
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		//(*f.data[i].(*interface{})) = value(f)
 		return next
 	}
 }
 
-func assignMap(n *Node) Builtin {
+func assignMap(n *Node) {
 	value := genValue(n.child[0].child[0])  // map
 	value0 := genValue(n.child[0].child[1]) // key
 	value1 := genValue(n.child[1])          // value
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		value(f).SetMapIndex(value0(f), value1(f))
 		return next
 	}
 }
 
-func and(n *Node) Builtin {
+func and(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i].SetInt(value0(f).Int() & value1(f).Int())
 		return next
 	}
@@ -323,14 +323,20 @@ func and(n *Node) Builtin {
 }
 */
 
-func not(n *Node) Builtin {
+func not(n *Node) {
 	i := n.findex
 	value := genValue(n.child[0])
 	tnext := getExec(n.tnext)
 
-	if n.fnext != nil {
+	if n.fnext == nil {
+		n.exec = func(f *Frame) Builtin {
+			f.data[i].SetBool(!value(f).Bool())
+			return tnext
+		}
+	} else {
 		fnext := getExec(n.fnext)
-		return func(f *Frame) Builtin {
+
+		n.exec = func(f *Frame) Builtin {
 			r := !value(f).Bool()
 			f.data[i].SetBool(r)
 			if r {
@@ -339,36 +345,31 @@ func not(n *Node) Builtin {
 			return fnext
 		}
 	}
-
-	return func(f *Frame) Builtin {
-		f.data[i].SetBool(!value(f).Bool())
-		return tnext
-	}
 }
 
-func addr(n *Node) Builtin {
+func addr(n *Node) {
 	i := n.findex
 	value := genValue(n.child[0])
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i] = value(f).Addr()
 		return next
 	}
 }
 
-func deref(n *Node) Builtin {
+func deref(n *Node) {
 	i := n.findex
 	value := genValue(n.child[0])
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i] = value(f).Elem()
 		return next
 	}
 }
 
-func _println(n *Node) Builtin {
+func _println(n *Node) {
 	child := n.child[1:]
 	next := getExec(n.tnext)
 	values := make([]func(*Frame) reflect.Value, len(child))
@@ -376,7 +377,7 @@ func _println(n *Node) Builtin {
 		values[i] = genValue(c)
 	}
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		for i, value := range values {
 			if i > 0 {
 				fmt.Printf(" ")
@@ -393,10 +394,10 @@ func _println(n *Node) Builtin {
 	}
 }
 
-func _panic(n *Node) Builtin {
+func _panic(n *Node) {
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		log.Panic("in _panic")
 		return next
 	}
@@ -441,7 +442,7 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 }
 
 // FIXME: handle case where func return a boolean
-func call(n *Node) Builtin {
+func call(n *Node) {
 	var recv *Node
 	var rseq []int
 	var forkFrame bool
@@ -464,7 +465,7 @@ func call(n *Node) Builtin {
 	//value := n.child[0].value
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		//fn := value(f).(*Node)
 		fn := n.val.(*Node)
 		if len(fn.child[2].child) > 1 {
@@ -482,11 +483,11 @@ func call(n *Node) Builtin {
 
 // Same as callBin, but for handling f(g()) where g returns multiple values
 // FIXME: handle case where func return a boolean
-func callBinX(n *Node) Builtin {
+func callBinX(n *Node) {
 	next := getExec(n.tnext)
 	value := genValue(n.child[0])
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		l := n.child[1].fsize
 		b := n.child[1].findex
 		in := make([]reflect.Value, l)
@@ -504,7 +505,7 @@ func callBinX(n *Node) Builtin {
 
 // Call a function from a bin import, accessible through reflect
 // FIXME: handle case where func return a boolean
-func callDirectBin(n *Node) Builtin {
+func callDirectBin(n *Node) {
 	next := getExec(n.tnext)
 	child := n.child[1:]
 	value := genValue(n.child[0])
@@ -513,7 +514,7 @@ func callDirectBin(n *Node) Builtin {
 		values[i] = genValue(c)
 	}
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		in := make([]reflect.Value, len(n.child)-1)
 		for i, v := range values {
 			if child[i].kind == Rvalue {
@@ -534,7 +535,7 @@ func callDirectBin(n *Node) Builtin {
 
 // FIXME: handle case where func return a boolean
 // Call a function from a bin import, accessible through reflect
-func callBin(n *Node) Builtin {
+func callBin(n *Node) {
 	next := getExec(n.tnext)
 	child := n.child[1:]
 	l := len(child)
@@ -544,7 +545,7 @@ func callBin(n *Node) Builtin {
 		values[i] = genValue(c)
 	}
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		in := make([]reflect.Value, l)
 		for i, v := range values {
 			in[i] = v(f)
@@ -564,7 +565,7 @@ func callBinInterfaceMethod(n *Node, f *Frame) {}
 
 // Call a method on an object returned by a bin import function, through reflect
 // FIXME: handle case where func return a boolean
-func callBinMethod(n *Node) Builtin {
+func callBinMethod(n *Node) {
 	next := getExec(n.tnext)
 	child := n.child[1:]
 	values := make([]func(*Frame) reflect.Value, len(child))
@@ -573,7 +574,7 @@ func callBinMethod(n *Node) Builtin {
 	}
 	rvalue := genValue(n.child[0].child[0])
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		fun := n.child[0].rval
 		in := make([]reflect.Value, len(n.child))
 		//val := n.child[0].child[0].value(f)
@@ -630,39 +631,39 @@ func callBinMethod(n *Node) Builtin {
 //	}
 //}
 
-func getPtrIndexAddr(n *Node) Builtin {
+func getPtrIndexAddr(n *Node) {
 	//i := n.findex
 	//value0 := n.child[0].value
 	//value1 := n.child[1].value
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		//a := (*value0(f).(*interface{})).([]interface{})
 		//f.data[i] = &a[value1(f).(int)]
 		return next
 	}
 }
 
-func getIndexAddr(n *Node) Builtin {
+func getIndexAddr(n *Node) {
 	//i := n.findex
 	//value0 := n.child[0].value
 	//value1 := n.child[1].value
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		//a := value0(f).([]interface{})
 		//f.data[i] = &a[value1(f).(int)]
 		return next
 	}
 }
 
-func getPtrIndex(n *Node) Builtin {
+func getPtrIndex(n *Node) {
 	//i := n.findex
 	//value0 := n.child[0].value
 	//value1 := n.child[1].value
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		// if error, fallback to getIndex, to make receiver methods work both with pointers and objects
 		//if a, ok := value0(f).(*interface{}); ok {
 		//	f.data[i] = (*a).([]interface{})[value1(f).(int)]
@@ -674,39 +675,39 @@ func getPtrIndex(n *Node) Builtin {
 	}
 }
 
-func getPtrIndexBin(n *Node) Builtin {
+func getPtrIndexBin(n *Node) {
 	//i := n.findex
 	//fi := n.val.([]int)
 	//value := n.child[0].value
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		//a := reflect.ValueOf(value(f)).Elem()
 		//f.data[i] = a.FieldByIndex(fi).Interface()
 		return next
 	}
 }
 
-func getIndexBinMethod(n *Node) Builtin {
+func getIndexBinMethod(n *Node) {
 	//i := n.findex
 	//value := n.child[0].value
 	//ident := n.child[1].ident
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		//a := reflect.ValueOf(value(f))
 		//f.data[i] = a.MethodByName(ident)
 		return next
 	}
 }
 
-func getIndexBin(n *Node) Builtin {
+func getIndexBin(n *Node) {
 	i := n.findex
 	fi := n.val.([]int)
 	value := genValue(n.child[0])
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		a := reflect.ValueOf(value(f))
 		f.data[i] = a.FieldByIndex(fi)
 		return next
@@ -728,63 +729,63 @@ func getIndex(n *Node) Builtin {
 }
 */
 
-func getIndex(n *Node) Builtin {
+func getIndex(n *Node) {
 	i := n.findex
 	next := getExec(n.tnext)
 	fi := n.child[1].val.(int)
 	value := genValue(n.child[0])
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i] = value(f).Field(fi)
 		return next
 	}
 }
 
-func getIndexArray(n *Node) Builtin {
+func getIndexArray(n *Node) {
 	i := n.findex
 	next := getExec(n.tnext)
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i] = value0(f).Index(int(value1(f).Int()))
 		return next
 	}
 }
 
 // getIndexMap retrieves map value from index
-func getIndexMap(n *Node) Builtin {
+func getIndexMap(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0]) // map
 	value1 := genValue(n.child[1]) // index
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i] = value0(f).MapIndex(value1(f))
 		return next
 	}
 }
 
 // getIndexMap2 retrieves map value from index and set status
-func getIndexMap2(n *Node) Builtin {
+func getIndexMap2(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0])     // map
 	value1 := genValue(n.child[1])     // index
 	value2 := genValue(n.anc.child[1]) // status
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i] = value0(f).MapIndex(value1(f))
 		value2(f).SetBool(f.data[i].IsValid())
 		return next
 	}
 }
 
-func getFunc(n *Node) Builtin {
+func getFunc(n *Node) {
 	//i := n.findex
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		node := *n
 		node.val = &node
 		frame := *f
@@ -795,13 +796,13 @@ func getFunc(n *Node) Builtin {
 	}
 }
 
-func getIndexSeq(n *Node) Builtin {
+func getIndexSeq(n *Node) {
 	i := n.findex
 	value := genValue(n.child[0])
 	index := n.child[1].val.([]int)
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i] = value(f).FieldByIndex(index)
 		return next
 	}
@@ -816,86 +817,92 @@ func getIndexSeq(n *Node) Builtin {
 //	return a[seq[l]]
 //}
 
-func mul(n *Node) Builtin {
+func mul(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i].SetInt(value0(f).Int() * value1(f).Int())
 		return next
 	}
 }
 
-func quotient(n *Node) Builtin {
+func quotient(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i].SetInt(value0(f).Int() / value1(f).Int())
 		return next
 	}
 }
 
-func remain(n *Node) Builtin {
+func remain(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i].SetInt(value0(f).Int() % value1(f).Int())
 		return next
 	}
 }
 
-func negate(n *Node) Builtin {
+func negate(n *Node) {
 	i := n.findex
 	value := genValue(n.child[0])
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i].SetInt(-value(f).Int())
 		return next
 	}
 }
 
-func add(n *Node) Builtin {
+func add(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i].SetInt(value0(f).Int() + value1(f).Int())
 		return next
 	}
 }
 
-func sub(n *Node) Builtin {
+func sub(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i].SetInt(value0(f).Int() - value1(f).Int())
 		return next
 	}
 }
 
-func equal(n *Node) Builtin {
+func equal(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	tnext := getExec(n.tnext)
 
-	if n.fnext != nil {
+	if n.fnext == nil {
+		n.exec = func(f *Frame) Builtin {
+			f.data[i].SetBool(value0(f).Int() == value1(f).Int())
+			return tnext
+		}
+	} else {
 		fnext := getExec(n.fnext)
-		return func(f *Frame) Builtin {
+
+		n.exec = func(f *Frame) Builtin {
 			r := value0(f).Int() == value1(f).Int()
 			f.data[i].SetBool(r)
 			if r {
@@ -904,22 +911,23 @@ func equal(n *Node) Builtin {
 			return fnext
 		}
 	}
-
-	return func(f *Frame) Builtin {
-		f.data[i].SetBool(value0(f).Int() == value1(f).Int())
-		return tnext
-	}
 }
 
-func notEqual(n *Node) Builtin {
+func notEqual(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	tnext := getExec(n.tnext)
 
-	if n.fnext != nil {
+	if n.fnext == nil {
+		n.exec = func(f *Frame) Builtin {
+			f.data[i].SetBool(value0(f).Int() != value1(f).Int())
+			return tnext
+		}
+	} else {
 		fnext := getExec(n.fnext)
-		return func(f *Frame) Builtin {
+
+		n.exec = func(f *Frame) Builtin {
 			r := value0(f).Int() != value1(f).Int()
 			f.data[i].SetBool(r)
 			if r {
@@ -928,44 +936,45 @@ func notEqual(n *Node) Builtin {
 			return fnext
 		}
 	}
-
-	return func(f *Frame) Builtin {
-		f.data[i].SetBool(value0(f).Int() != value1(f).Int())
-		return tnext
-	}
 }
 
-func indirectInc(n *Node) Builtin {
+func indirectInc(n *Node) {
 	//i := n.findex
 	//value := n.child[0].value
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		//*(f.data[i].(*interface{})) = value(f).(int) + 1
 		return next
 	}
 }
 
-func inc(n *Node) Builtin {
+func inc(n *Node) {
 	value := genValue(n)
 	value0 := genValue(n.child[0])
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		value(f).SetInt(value0(f).Int() + 1)
 		return next
 	}
 }
 
-func greater(n *Node) Builtin {
+func greater(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	tnext := getExec(n.tnext)
 
-	if n.fnext != nil {
+	if n.fnext == nil {
+		n.exec = func(f *Frame) Builtin {
+			f.data[i].SetBool(value0(f).Int() > value1(f).Int())
+			return tnext
+		}
+	} else {
 		fnext := getExec(n.fnext)
-		return func(f *Frame) Builtin {
+
+		n.exec = func(f *Frame) Builtin {
 			r := value0(f).Int() > value1(f).Int()
 			f.data[i].SetBool(r)
 			if r {
@@ -974,23 +983,28 @@ func greater(n *Node) Builtin {
 			return fnext
 		}
 	}
-
-	return func(f *Frame) Builtin {
-		f.data[i].SetBool(value0(f).Int() > value1(f).Int())
-		return tnext
-	}
 }
 
 // TODO: avoid always forced execution of 2nd expression member
-func land(n *Node) Builtin {
+func land(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	tnext := getExec(n.tnext)
 
-	if n.fnext != nil {
+	if n.fnext == nil {
+		n.exec = func(f *Frame) Builtin {
+			var v bool
+			if v = value0(f).Bool(); v {
+				v = value1(f).Bool()
+			}
+			f.data[i].SetBool(v)
+			return tnext
+		}
+	} else {
 		fnext := getExec(n.fnext)
-		return func(f *Frame) Builtin {
+
+		n.exec = func(f *Frame) Builtin {
 			var v bool
 			if v = value0(f).Bool(); v {
 				v = value1(f).Bool()
@@ -1002,27 +1016,28 @@ func land(n *Node) Builtin {
 			return fnext
 		}
 	}
-
-	return func(f *Frame) Builtin {
-		var v bool
-		if v = value0(f).Bool(); v {
-			v = value1(f).Bool()
-		}
-		f.data[i].SetBool(v)
-		return tnext
-	}
 }
 
 // TODO: avoid always forced execution of 2nd expression member
-func lor(n *Node) Builtin {
+func lor(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	tnext := getExec(n.tnext)
 
-	if n.fnext != nil {
+	if n.fnext == nil {
+		n.exec = func(f *Frame) Builtin {
+			var v bool
+			if v = value0(f).Bool(); !v {
+				v = value1(f).Bool()
+			}
+			f.data[i].SetBool(v)
+			return tnext
+		}
+	} else {
 		fnext := getExec(n.fnext)
-		return func(f *Frame) Builtin {
+
+		n.exec = func(f *Frame) Builtin {
 			var v bool
 			if v = value0(f).Bool(); !v {
 				v = value1(f).Bool()
@@ -1034,26 +1049,23 @@ func lor(n *Node) Builtin {
 			return fnext
 		}
 	}
-
-	return func(f *Frame) Builtin {
-		var v bool
-		if v = value0(f).Bool(); !v {
-			v = value1(f).Bool()
-		}
-		f.data[i].SetBool(v)
-		return tnext
-	}
 }
 
-func lower(n *Node) Builtin {
+func lower(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	tnext := getExec(n.tnext)
 
-	if n.fnext != nil {
+	if n.fnext == nil {
+		n.exec = func(f *Frame) Builtin {
+			f.data[i].SetBool(value0(f).Int() < value1(f).Int())
+			return tnext
+		}
+	} else {
 		fnext := getExec(n.fnext)
-		return func(f *Frame) Builtin {
+
+		n.exec = func(f *Frame) Builtin {
 			r := value0(f).Int() < value1(f).Int()
 			f.data[i].SetBool(r)
 			if r {
@@ -1062,23 +1074,18 @@ func lower(n *Node) Builtin {
 			return fnext
 		}
 	}
-
-	return func(f *Frame) Builtin {
-		f.data[i].SetBool(value0(f).Int() < value1(f).Int())
-		return tnext
-	}
 }
 
-func nop(n *Node) Builtin {
+func nop(n *Node) {
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		return next
 	}
 }
 
 // TODO: optimize return according to nb of child
-func _return(n *Node) Builtin {
+func _return(n *Node) {
 	child := n.child
 	next := getExec(n.tnext)
 	values := make([]func(*Frame) reflect.Value, len(child))
@@ -1086,7 +1093,7 @@ func _return(n *Node) Builtin {
 		values[i] = genValue(c)
 	}
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		for i, value := range values {
 			f.data[i] = value(f)
 		}
@@ -1094,7 +1101,7 @@ func _return(n *Node) Builtin {
 	}
 }
 
-func arrayLit(n *Node) Builtin {
+func arrayLit(n *Node) {
 	ind := n.findex
 	next := getExec(n.tnext)
 	child := n.child[1:]
@@ -1104,7 +1111,7 @@ func arrayLit(n *Node) Builtin {
 		values[i] = genValue(c)
 	}
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		a := zero()
 		for i, v := range values {
 			a.Index(i).Set(v(f))
@@ -1114,7 +1121,7 @@ func arrayLit(n *Node) Builtin {
 	}
 }
 
-func mapLit(n *Node) Builtin {
+func mapLit(n *Node) {
 	ind := n.findex
 	next := getExec(n.tnext)
 	child := n.child[1:]
@@ -1126,7 +1133,7 @@ func mapLit(n *Node) Builtin {
 		values[i] = genValue(c.child[1])
 	}
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		m := reflect.MakeMap(typ)
 		for i, k := range keys {
 			m.SetMapIndex(k(f), values[i](f))
@@ -1137,7 +1144,7 @@ func mapLit(n *Node) Builtin {
 }
 
 // compositeLit creates a struct object
-func compositeLit(n *Node) Builtin {
+func compositeLit(n *Node) {
 	ind := n.findex
 	next := getExec(n.tnext)
 	child := n.child[1:]
@@ -1146,7 +1153,7 @@ func compositeLit(n *Node) Builtin {
 		values[i] = genValue(c)
 	}
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		a := n.typ.zero()
 		for i, v := range values {
 			a.Field(i).Set(v(f))
@@ -1157,7 +1164,7 @@ func compositeLit(n *Node) Builtin {
 }
 
 // compositeSparse creates a struct Object, filling fields from sparse key-values
-func compositeSparse(n *Node) Builtin {
+func compositeSparse(n *Node) {
 	ind := n.findex
 	next := getExec(n.tnext)
 	child := n.child[1:]
@@ -1166,7 +1173,7 @@ func compositeSparse(n *Node) Builtin {
 		values[c.findex] = genValue(c.child[1])
 	}
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		a := n.typ.zero()
 		for i, v := range values {
 			a.Field(i).Set(v(f))
@@ -1176,24 +1183,24 @@ func compositeSparse(n *Node) Builtin {
 	}
 }
 
-func rangeInit(n *Node) Builtin {
+func rangeInit(n *Node) {
 	tnext := getExec(n.tnext)
 	i := n.findex
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i].SetInt(-1)
 		return tnext
 	}
 }
 
-func _range(n *Node) Builtin {
+func _range(n *Node) {
 	index0 := n.child[0].findex   // array index location in frame
 	index1 := n.child[1].findex   // array value location in frame
 	value := genValue(n.child[2]) // array
 	fnext := getExec(n.fnext)
 	tnext := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		a := value(f)
 		v0 := f.data[index0]
 		v0.SetInt(v0.Int() + 1)
@@ -1206,14 +1213,14 @@ func _range(n *Node) Builtin {
 	}
 }
 
-func rangeMapInit(n *Node) Builtin {
+func rangeMapInit(n *Node) {
 	tnext := getExec(n.tnext)
 	//value := genValue(n.anc.child[2])
 	ikeys := n.anc.findex
 	iikeys := ikeys + 1
 	//i := n.findex
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		log.Println(n.index, "in rangeMapInit, next", n.tnext.index)
 		//f.data[ikeys] = value(f).MapKeys()
 		f.data[iikeys] = reflect.New(reflect.TypeOf(0)).Elem()
@@ -1221,18 +1228,18 @@ func rangeMapInit(n *Node) Builtin {
 	}
 }
 
-func rangeMap(n *Node) Builtin {
-	return nil
+func rangeMap(n *Node) {
+	return
 }
 
-func _case(n *Node) Builtin {
+func _case(n *Node) {
 	i := n.findex
 	value0 := genValue(n.anc.anc.child[0])
 	value1 := genValue(n.child[0])
 	tnext := getExec(n.tnext)
 	fnext := getExec(n.fnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		r := value0(f).Interface() == value1(f).Interface()
 		f.data[i].SetBool(r)
 		if r {
@@ -1243,31 +1250,31 @@ func _case(n *Node) Builtin {
 }
 
 // TODO: handle variable number of arguments to append
-func _append(n *Node) Builtin {
+func _append(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[1])
 	value1 := genValue(n.child[2])
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i] = reflect.Append(value0(f), value1(f))
 		return next
 	}
 }
 
-func _len(n *Node) Builtin {
+func _len(n *Node) {
 	i := n.findex
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i].SetInt(int64(value(f).Len()))
 		return next
 	}
 }
 
 // _make allocates and initializes a slice, a map or a chan.
-func _make(n *Node) Builtin {
+func _make(n *Node) {
 	//i := n.findex
 	//value0 := n.child[1].value
 	//var value1 func(*Frame) interface{}
@@ -1276,7 +1283,7 @@ func _make(n *Node) Builtin {
 	//}
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		//typ := value0(f).(*Type)
 		//switch typ.cat {
 		//case ArrayT:
@@ -1291,31 +1298,31 @@ func _make(n *Node) Builtin {
 }
 
 // recv reads from a channel
-func recv(n *Node) Builtin {
+func recv(n *Node) {
 	//i := n.findex
 	//value := n.child[0].value
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		//f.data[i] = <-value(f).(chan interface{})
 		return next
 	}
 }
 
 // Write to a channel
-func send(n *Node) Builtin {
+func send(n *Node) {
 	//value0 := n.child[0].value
 	//value1 := n.child[1].value
 	next := getExec(n.tnext)
 
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		//value0(f).(chan interface{}) <- value1(f)
 		return next
 	}
 }
 
 // slice expression: array[low:high:max]
-func slice(n *Node) Builtin {
+func slice(n *Node) {
 	i := n.findex
 	next := getExec(n.tnext)
 	value0 := genValue(n.child[0]) // array
@@ -1323,14 +1330,15 @@ func slice(n *Node) Builtin {
 
 	switch len(n.child) {
 	case 2:
-		return func(f *Frame) Builtin {
+		n.exec = func(f *Frame) Builtin {
 			a := value0(f)
 			f.data[i] = a.Slice(int(value1(f).Int()), a.Len())
 			return next
 		}
 	case 3:
 		value2 := genValue(n.child[2]) // max
-		return func(f *Frame) Builtin {
+
+		n.exec = func(f *Frame) Builtin {
 			a := value0(f)
 			f.data[i] = a.Slice(int(value1(f).Int()), int(value2(f).Int()))
 			return next
@@ -1338,31 +1346,31 @@ func slice(n *Node) Builtin {
 	case 4:
 		value2 := genValue(n.child[2])
 		value3 := genValue(n.child[3])
-		return func(f *Frame) Builtin {
+
+		n.exec = func(f *Frame) Builtin {
 			a := value0(f)
 			f.data[i] = a.Slice3(int(value1(f).Int()), int(value2(f).Int()), int(value3(f).Int()))
 			return next
 		}
 	}
-	return nil
 }
 
 // slice expression, no low value: array[:high:max]
-func slice0(n *Node) Builtin {
+func slice0(n *Node) {
 	i := n.findex
 	next := getExec(n.tnext)
 	value0 := genValue(n.child[0])
 
 	switch len(n.child) {
 	case 1:
-		return func(f *Frame) Builtin {
+		n.exec = func(f *Frame) Builtin {
 			a := value0(f)
 			f.data[i] = a.Slice(0, a.Len())
 			return next
 		}
 	case 2:
 		value1 := genValue(n.child[1])
-		return func(f *Frame) Builtin {
+		n.exec = func(f *Frame) Builtin {
 			a := value0(f)
 			f.data[i] = a.Slice(0, int(value1(f).Int()))
 			return next
@@ -1370,16 +1378,15 @@ func slice0(n *Node) Builtin {
 	case 3:
 		value1 := genValue(n.child[1])
 		value2 := genValue(n.child[2])
-		return func(f *Frame) Builtin {
+		n.exec = func(f *Frame) Builtin {
 			a := value0(f)
 			f.data[i] = a.Slice3(0, int(value1(f).Int()), int(value2(f).Int()))
 			return next
 		}
 	}
-	return nil
 }
 
-func isNil(n *Node) Builtin {
+func isNil(n *Node) {
 	i := n.findex
 	value := genValue(n.child[0])
 	next := getExec(n.tnext)
@@ -1395,13 +1402,13 @@ func isNil(n *Node) Builtin {
 	//		return next
 	//	}
 	//}
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i].SetBool(value(f).IsNil())
 		return next
 	}
 }
 
-func isNotNil(n *Node) Builtin {
+func isNotNil(n *Node) {
 	i := n.findex
 	value := genValue(n.child[0])
 	next := getExec(n.tnext)
@@ -1417,7 +1424,7 @@ func isNotNil(n *Node) Builtin {
 	//		return next
 	//	}
 	//}
-	return func(f *Frame) Builtin {
+	n.exec = func(f *Frame) Builtin {
 		f.data[i].SetBool(!value(f).IsNil())
 		return next
 	}

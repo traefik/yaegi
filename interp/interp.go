@@ -29,7 +29,7 @@ type Node struct {
 	//value func(f *Frame) reflect.Value // generated function which returns node value during execution
 	//pvalue func(f *Frame) *interface{} // generated function which returns pointer on node value during execution
 	exec  Builtin          // generated function to execute
-	run   BuiltinGenerator // generator function to produce above exec
+	gen   BuiltinGenerator // generator function to produce above exec
 	val   interface{}      // static generic value (CFG execution)
 	rval  reflect.Value    // reflection value to let runtime access interpreter (CFG)
 	ident string           // set if node is a var or func
