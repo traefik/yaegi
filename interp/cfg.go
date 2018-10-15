@@ -708,6 +708,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					// Create a new local symbol for func argument or local var definition
 					n.findex = scope.inc(interp)
 					scope.sym[n.ident] = &Symbol{index: scope.size, global: scope.global, kind: Var}
+					n.sym = scope.sym[n.ident]
 				} else {
 					log.Println(n.index, "unresolved global symbol", n.ident)
 				}
@@ -769,14 +770,21 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.typ = n.child[0].typ
 
 		case RangeStmt:
-			n.start = n.child[2].start
+			n.start = n.child[0]
+			n.child[0].tnext = n.child[2].start
 			n.child[2].tnext = n
 			n.child[3].tnext = n
 			n.tnext = n.child[3].start
-			n.findex = scope.inc(interp)
 			if n.child[2].typ.cat == MapT {
 				log.Println(n.index, "range MapT")
+			} else {
+				scope.sym[n.child[0].ident].typ = scope.getType("int")
+				n.child[0].typ = scope.getType("int")
+				n.child[0].run = rangeInit
 			}
+			vtype := n.child[2].typ.val
+			scope.sym[n.child[1].ident].typ = vtype
+			n.child[1].typ = vtype
 
 		case ReturnStmt:
 			wireChild(n)
