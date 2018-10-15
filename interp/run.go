@@ -1183,15 +1183,16 @@ func compositeSparse(n *Node) {
 	}
 }
 
-func rangeInit(n *Node) {
-	tnext := getExec(n.tnext)
-	i := n.findex
+func empty(n *Node) {}
 
-	n.exec = func(f *Frame) Builtin {
-		f.data[i].SetInt(-1)
-		return tnext
-	}
-}
+//tnext := getExec(n.tnext)
+//i := n.findex
+
+//n.exec = func(f *Frame) Builtin {
+//	f.data[i].SetInt(-1)
+//	return tnext
+//}
+//}
 
 func _range(n *Node) {
 	index0 := n.child[0].findex   // array index location in frame
@@ -1211,26 +1212,59 @@ func _range(n *Node) {
 		f.data[index1].Set(a.Index(i))
 		return tnext
 	}
-}
 
-func rangeMapInit(n *Node) {
-	tnext := getExec(n.tnext)
-	//value := genValue(n.anc.child[2])
-	ikeys := n.anc.findex
-	iikeys := ikeys + 1
-	//i := n.findex
-
-	n.exec = func(f *Frame) Builtin {
-		log.Println(n.index, "in rangeMapInit, next", n.tnext.index)
-		//f.data[ikeys] = value(f).MapKeys()
-		f.data[iikeys] = reflect.New(reflect.TypeOf(0)).Elem()
-		return tnext
+	// Init sequence
+	next := n.exec
+	n.child[0].exec = func(f *Frame) Builtin {
+		f.data[index0].SetInt(-1)
+		return next
 	}
 }
 
 func rangeMap(n *Node) {
-	return
+	index0 := n.child[0].findex   // array index location in frame
+	index1 := n.child[1].findex   // array value location in frame
+	value := genValue(n.child[2]) // array
+	fnext := getExec(n.fnext)
+	tnext := getExec(n.tnext)
+	// TODO: move i and keys to frame
+	var i int
+	var keys []reflect.Value
+
+	n.exec = func(f *Frame) Builtin {
+		a := value(f)
+		i++
+		if i >= a.Len() {
+			return fnext
+		}
+		f.data[index0].Set(keys[i])
+		f.data[index1].Set(a.MapIndex(keys[i]))
+		return tnext
+	}
+
+	// Init sequence
+	next := n.exec
+	n.child[0].exec = func(f *Frame) Builtin {
+		keys = value(f).MapKeys()
+		i = -1
+		return next
+	}
 }
+
+//func rangeMapInit(n *Node) {
+//	tnext := getExec(n.tnext)
+//	//value := genValue(n.anc.child[2])
+//	ikeys := n.anc.findex
+//	iikeys := ikeys + 1
+//	//i := n.findex
+//
+//	n.exec = func(f *Frame) Builtin {
+//		log.Println(n.index, "in rangeMapInit, next", n.tnext.index)
+//		//f.data[ikeys] = value(f).MapKeys()
+//		f.data[iikeys] = reflect.New(reflect.TypeOf(0)).Elem()
+//		return tnext
+//	}
+//}
 
 func _case(n *Node) {
 	i := n.findex

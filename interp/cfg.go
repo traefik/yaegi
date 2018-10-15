@@ -775,17 +775,15 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.child[0].tnext = n                // then go to range function
 			n.tnext = n.child[3].start          // then go to range body
 			n.child[3].tnext = n                // then body go to range function (loop)
+			n.child[0].gen = empty              // filled later by generator
 			if n.child[2].typ.cat == MapT {
 				scope.sym[n.child[0].ident].typ = n.child[2].typ.key
 				n.child[0].typ = n.child[2].typ.key
-				n.child[0].gen = rangeMapInit
-				n.findex = scope.inc(interp) // To store arrays of map keys
 				n.typ = &Type{cat: ArrayT, val: n.child[2].typ.key}
-				scope.inc(interp) // to store index of keys
+				n.gen = rangeMap
 			} else {
 				scope.sym[n.child[0].ident].typ = scope.getType("int")
 				n.child[0].typ = scope.getType("int")
-				n.child[0].gen = rangeInit
 			}
 			vtype := n.child[2].typ.val
 			scope.sym[n.child[1].ident].typ = vtype
