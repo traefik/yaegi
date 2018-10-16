@@ -775,7 +775,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.child[0].tnext = n                // then go to range function
 			n.tnext = n.child[3].start          // then go to range body
 			n.child[3].tnext = n                // then body go to range function (loop)
-			n.child[0].gen = empty              // filled later by generator
+			n.child[0].gen = empty              // init filled later by generator
 			if n.child[2].typ.cat == MapT {
 				scope.sym[n.child[0].ident].typ = n.child[2].typ.key
 				n.child[0].typ = n.child[2].typ.key

@@ -337,9 +337,7 @@ func not(n *Node) {
 		fnext := getExec(n.fnext)
 
 		n.exec = func(f *Frame) Builtin {
-			r := !value(f).Bool()
-			f.data[i].SetBool(r)
-			if r {
+			if !value(f).Bool() {
 				return tnext
 			}
 			return fnext
@@ -903,9 +901,7 @@ func equal(n *Node) {
 		fnext := getExec(n.fnext)
 
 		n.exec = func(f *Frame) Builtin {
-			r := value0(f).Int() == value1(f).Int()
-			f.data[i].SetBool(r)
-			if r {
+			if value0(f).Int() == value1(f).Int() {
 				return tnext
 			}
 			return fnext
@@ -928,9 +924,7 @@ func notEqual(n *Node) {
 		fnext := getExec(n.fnext)
 
 		n.exec = func(f *Frame) Builtin {
-			r := value0(f).Int() != value1(f).Int()
-			f.data[i].SetBool(r)
-			if r {
+			if value0(f).Int() != value1(f).Int() {
 				return tnext
 			}
 			return fnext
@@ -975,9 +969,7 @@ func greater(n *Node) {
 		fnext := getExec(n.fnext)
 
 		n.exec = func(f *Frame) Builtin {
-			r := value0(f).Int() > value1(f).Int()
-			f.data[i].SetBool(r)
-			if r {
+			if value0(f).Int() > value1(f).Int() {
 				return tnext
 			}
 			return fnext
@@ -1066,9 +1058,7 @@ func lower(n *Node) {
 		fnext := getExec(n.fnext)
 
 		n.exec = func(f *Frame) Builtin {
-			r := value0(f).Int() < value1(f).Int()
-			f.data[i].SetBool(r)
-			if r {
+			if value0(f).Int() < value1(f).Int() {
 				return tnext
 			}
 			return fnext
@@ -1185,15 +1175,6 @@ func compositeSparse(n *Node) {
 
 func empty(n *Node) {}
 
-//tnext := getExec(n.tnext)
-//i := n.findex
-
-//n.exec = func(f *Frame) Builtin {
-//	f.data[i].SetInt(-1)
-//	return tnext
-//}
-//}
-
 func _range(n *Node) {
 	index0 := n.child[0].findex   // array index location in frame
 	index1 := n.child[1].findex   // array value location in frame
@@ -1251,32 +1232,15 @@ func rangeMap(n *Node) {
 	}
 }
 
-//func rangeMapInit(n *Node) {
-//	tnext := getExec(n.tnext)
-//	//value := genValue(n.anc.child[2])
-//	ikeys := n.anc.findex
-//	iikeys := ikeys + 1
-//	//i := n.findex
-//
-//	n.exec = func(f *Frame) Builtin {
-//		log.Println(n.index, "in rangeMapInit, next", n.tnext.index)
-//		//f.data[ikeys] = value(f).MapKeys()
-//		f.data[iikeys] = reflect.New(reflect.TypeOf(0)).Elem()
-//		return tnext
-//	}
-//}
-
 func _case(n *Node) {
-	i := n.findex
+	//i := n.findex
 	value0 := genValue(n.anc.anc.child[0])
 	value1 := genValue(n.child[0])
 	tnext := getExec(n.tnext)
 	fnext := getExec(n.fnext)
 
 	n.exec = func(f *Frame) Builtin {
-		r := value0(f).Interface() == value1(f).Interface()
-		f.data[i].SetBool(r)
-		if r {
+		if value0(f).Interface() == value1(f).Interface() {
 			return tnext
 		}
 		return fnext
