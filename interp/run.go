@@ -1260,6 +1260,17 @@ func _append(n *Node) {
 	}
 }
 
+func _cap(n *Node) {
+	i := n.findex
+	value := genValue(n.child[1])
+	next := getExec(n.tnext)
+
+	n.exec = func(f *Frame) Builtin {
+		f.data[i].SetInt(int64(value(f).Cap()))
+		return next
+	}
+}
+
 func _len(n *Node) {
 	i := n.findex
 	value := genValue(n.child[1])
@@ -1273,48 +1284,81 @@ func _len(n *Node) {
 
 // _make allocates and initializes a slice, a map or a chan.
 func _make(n *Node) {
-	//i := n.findex
-	//value0 := n.child[1].value
-	//var value1 func(*Frame) interface{}
-	//if len(n.child) > 2 {
-	//	value1 = n.child[2].value
-	//}
+	i := n.findex
 	next := getExec(n.tnext)
+	typ := n.child[1].typ.TypeOf()
 
-	n.exec = func(f *Frame) Builtin {
-		//typ := value0(f).(*Type)
-		//switch typ.cat {
-		//case ArrayT:
-		//	f.data[i] = make([]interface{}, value1(f).(int))
-		//case ChanT:
-		//	f.data[i] = make(chan interface{})
-		//case MapT:
-		//	f.data[i] = make(map[interface{}]interface{})
-		//}
-		return next
+	switch n.child[1].typ.cat {
+	case ArrayT:
+		value := genValue(n.child[2])
+
+		switch len(n.child) {
+		case 3:
+			n.exec = func(f *Frame) Builtin {
+				len := int(value(f).Int())
+				f.data[i] = reflect.MakeSlice(typ, len, len)
+				return next
+			}
+		case 4:
+			value1 := genValue(n.child[3])
+			n.exec = func(f *Frame) Builtin {
+				f.data[i] = reflect.MakeSlice(typ, int(value(f).Int()), int(value1(f).Int()))
+				return next
+			}
+		}
+
+	case ChanT:
+		switch len(n.child) {
+		case 2:
+			n.exec = func(f *Frame) Builtin {
+				f.data[i] = reflect.MakeChan(typ, 0)
+				return next
+			}
+		case 3:
+			value := genValue(n.child[2])
+			n.exec = func(f *Frame) Builtin {
+				f.data[i] = reflect.MakeChan(typ, int(value(f).Int()))
+				return next
+			}
+		}
+
+	case MapT:
+		switch len(n.child) {
+		case 2:
+			n.exec = func(f *Frame) Builtin {
+				f.data[i] = reflect.MakeMap(typ)
+				return next
+			}
+		case 3:
+			value := genValue(n.child[2])
+			n.exec = func(f *Frame) Builtin {
+				f.data[i] = reflect.MakeMapWithSize(typ, int(value(f).Int()))
+				return next
+			}
+		}
 	}
 }
 
 // recv reads from a channel
 func recv(n *Node) {
-	//i := n.findex
-	//value := n.child[0].value
+	i := n.findex
+	value := genValue(n.child[0])
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
-		//f.data[i] = <-value(f).(chan interface{})
+		f.data[i], _ = value(f).Recv()
 		return next
 	}
 }
 
 // Write to a channel
 func send(n *Node) {
-	//value0 := n.child[0].value
-	//value1 := n.child[1].value
 	next := getExec(n.tnext)
+	value0 := genValue(n.child[0])
+	value1 := genValue(n.child[1])
 
 	n.exec = func(f *Frame) Builtin {
-		//value0(f).(chan interface{}) <- value1(f)
+		value0(f).Send(value1(f))
 		return next
 	}
 }
@@ -1387,43 +1431,43 @@ func slice0(n *Node) {
 func isNil(n *Node) {
 	i := n.findex
 	value := genValue(n.child[0])
-	next := getExec(n.tnext)
+	tnext := getExec(n.tnext)
 
-	//if n.child[0].kind == Rvalue {
-	//	return func(f *Frame) Builtin {
-	//		f.data[i] = value(f).(reflect.Value).IsNil()
-	//		return next
-	//	}
-	//} else {
-	//	return func(f *Frame) Builtin {
-	//		f.data[i] = value(f) == nil
-	//		return next
-	//	}
-	//}
-	n.exec = func(f *Frame) Builtin {
-		f.data[i].SetBool(value(f).IsNil())
-		return next
+	if n.fnext == nil {
+		n.exec = func(f *Frame) Builtin {
+			f.data[i].SetBool(value(f).IsNil())
+			return tnext
+		}
+	} else {
+		fnext := getExec(n.fnext)
+
+		n.exec = func(f *Frame) Builtin {
+			if value(f).IsNil() {
+				return tnext
+			}
+			return fnext
+		}
 	}
 }
 
 func isNotNil(n *Node) {
 	i := n.findex
 	value := genValue(n.child[0])
-	next := getExec(n.tnext)
+	tnext := getExec(n.tnext)
 
-	//if n.child[0].kind == Rvalue {
-	//	return func(f *Frame) Builtin {
-	//		f.data[i] = !value(f).(reflect.Value).IsNil()
-	//		return next
-	//	}
-	//} else {
-	//	return func(f *Frame) Builtin {
-	//		f.data[i] = value(f) != nil
-	//		return next
-	//	}
-	//}
-	n.exec = func(f *Frame) Builtin {
-		f.data[i].SetBool(!value(f).IsNil())
-		return next
+	if n.fnext == nil {
+		n.exec = func(f *Frame) Builtin {
+			f.data[i].SetBool(!value(f).IsNil())
+			return tnext
+		}
+	} else {
+		fnext := getExec(n.fnext)
+
+		n.exec = func(f *Frame) Builtin {
+			if value(f).IsNil() {
+				return fnext
+			}
+			return tnext
+		}
 	}
 }

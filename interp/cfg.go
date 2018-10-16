@@ -366,7 +366,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				n.gen = n.child[0].sym.builtin
 				n.child[0].typ = &Type{cat: BuiltinT}
 				switch n.child[0].ident {
-				case "len":
+				case "cap", "len":
 					n.typ = scope.getType("int")
 				case "make":
 					if n.typ = scope.getType(n.child[1].ident); n.typ == nil {
@@ -779,7 +779,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.child[2].typ.cat == MapT {
 				scope.sym[n.child[0].ident].typ = n.child[2].typ.key
 				n.child[0].typ = n.child[2].typ.key
-				n.typ = &Type{cat: ArrayT, val: n.child[2].typ.key}
+				//n.typ = &Type{cat: ArrayT, val: n.child[2].typ.key}
 				n.gen = rangeMap
 			} else {
 				scope.sym[n.child[0].ident].typ = scope.getType("int")
@@ -1048,6 +1048,7 @@ func getExec(n *Node) Builtin {
 }
 
 // setExec recursively sets the node exec builtin function
+// it does nothing if exec is already defined
 func setExec(n *Node) {
 	if n.exec != nil {
 		return
