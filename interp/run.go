@@ -452,7 +452,7 @@ func call(n *Node) {
 	//var recv *Node
 	//var rseq []int
 	//var forkFrame bool
-	//var goroutine bool
+	goroutine := n.anc.kind == GoStmt
 
 	//if n.action == CallF {
 	//	forkFrame = true
@@ -500,11 +500,15 @@ func call(n *Node) {
 		}
 
 		// Execute function body
-		runCfg(def.child[3].start, &nf)
+		if goroutine {
+			go runCfg(def.child[3].start, &nf)
+		} else {
 
-		// Propagate return values to caller frame
-		for i, r := range ret {
-			f.data[r] = nf.data[i]
+			runCfg(def.child[3].start, &nf)
+			// Propagate return values to caller frame
+			for i, r := range ret {
+				f.data[r] = nf.data[i]
+			}
 		}
 		return next
 	}
@@ -1382,7 +1386,9 @@ func recv(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
+		log.Println("before recv")
 		f.data[i], _ = value(f).Recv()
+		log.Println("after recv")
 		return next
 	}
 }
@@ -1394,7 +1400,9 @@ func send(n *Node) {
 	value1 := genValue(n.child[1])
 
 	n.exec = func(f *Frame) Builtin {
+		log.Println("before send")
 		value0(f).Send(value1(f))
+		log.Println("after send")
 		return next
 	}
 }
