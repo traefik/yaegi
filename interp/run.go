@@ -820,7 +820,7 @@ func getIndexMap2(n *Node) {
 }
 
 func getFunc(n *Node) {
-	//i := n.findex
+	i := n.findex
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
@@ -828,7 +828,7 @@ func getFunc(n *Node) {
 		node.val = &node
 		frame := *f
 		node.frame = &frame
-		//f.data[i] = &node
+		f.data[i] = reflect.ValueOf(&node)
 		n.frame = &frame
 		return next
 	}
