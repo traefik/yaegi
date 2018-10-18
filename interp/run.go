@@ -486,17 +486,16 @@ func call(n *Node) {
 		def := value(f).Interface().(*Node)
 		nf := Frame{anc: f, data: make([]reflect.Value, def.flen)}
 
-		// Assign input parameters
-		paramIndex := def.child[2].child[0].val.([]int)
-		for i, v := range values {
-			nf.data[paramIndex[i]] = v(f)
-		}
-
-		// Init local frame values (not already assigned)
+		// Init local frame values
 		for i, t := range def.types {
-			if t != nil && !nf.data[i].IsValid() {
+			if t != nil {
 				nf.data[i] = reflect.New(t).Elem()
 			}
+		}
+		// copy input parameters from caller
+		paramIndex := def.child[2].child[0].val.([]int)
+		for i, v := range values {
+			nf.data[paramIndex[i]].Set(v(f))
 		}
 
 		// Execute function body
@@ -1386,9 +1385,7 @@ func recv(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
-		log.Println("before recv")
 		f.data[i], _ = value(f).Recv()
-		log.Println("after recv")
 		return next
 	}
 }
@@ -1400,9 +1397,7 @@ func send(n *Node) {
 	value1 := genValue(n.child[1])
 
 	n.exec = func(f *Frame) Builtin {
-		log.Println("before send")
 		value0(f).Send(value1(f))
-		log.Println("after send")
 		return next
 	}
 }

@@ -192,6 +192,7 @@ const (
 	Greater
 	GetFunc
 	GetIndex
+	//Go
 	Inc
 	Land
 	Lor
@@ -231,25 +232,26 @@ var actions = [...]string{
 	Greater:      ">",
 	GetFunc:      "getFunc",
 	GetIndex:     "getIndex",
-	Inc:          "++",
-	Land:         "&&",
-	Lor:          "||",
-	Lower:        "<",
-	Mul:          "*",
-	Negate:       "-",
-	Not:          "!",
-	NotEqual:     "!=",
-	Quotient:     "/",
-	Range:        "range",
-	Recv:         "<-",
-	Remain:       "%",
-	Return:       "return",
-	Send:         "<-",
-	Slice:        "slice",
-	Slice0:       "slice0",
-	Star:         "*",
-	Sub:          "-",
-	TypeAssert:   "TypeAssert",
+	//Go:           "go",
+	Inc:        "++",
+	Land:       "&&",
+	Lor:        "||",
+	Lower:      "<",
+	Mul:        "*",
+	Negate:     "-",
+	Not:        "!",
+	NotEqual:   "!=",
+	Quotient:   "/",
+	Range:      "range",
+	Recv:       "<-",
+	Remain:     "%",
+	Return:     "return",
+	Send:       "<-",
+	Slice:      "slice",
+	Slice0:     "slice0",
+	Star:       "*",
+	Sub:        "-",
+	TypeAssert: "TypeAssert",
 }
 
 func (a Action) String() string {

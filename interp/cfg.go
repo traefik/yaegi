@@ -237,7 +237,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				n.gen = nop
 				n.child[1].findex = n.child[0].findex // Set recv address to LHS
 				n.child[0].typ = n.child[1].typ.val
-				//n.typ = n.child[0].typ
+				n.typ = n.child[0].typ
 			}
 			if sym, level, ok := scope.lookup(n.child[0].ident); ok {
 				sym.typ = n.typ
