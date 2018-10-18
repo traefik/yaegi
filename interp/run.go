@@ -50,7 +50,16 @@ var builtin = [...]BuiltinGenerator{
 	TypeAssert:   typeAssert,
 }
 
-// Run a Go function
+func run0(def *Node, cf *Frame) {
+	f := Frame{anc: cf.anc, data: make([]reflect.Value, def.flen)}
+	for i, t := range def.types {
+		if t != nil {
+			f.data[i] = reflect.New(t).Elem()
+		}
+	}
+	runCfg(def.child[3].start, &f)
+}
+
 func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int, fork bool, goroutine bool) {
 	//log.Println("run", def.index, def.child[1].ident, "allocate", def.flen)
 	// Allocate a new Frame to store local variables
@@ -61,11 +70,10 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 		anc = def.frame
 	}
 	f := Frame{anc: anc, data: make([]reflect.Value, def.flen)}
-	for i, t := range frameTypes(def) {
-		if t == nil {
-			continue
+	for i, t := range def.types {
+		if t != nil {
+			f.data[i] = reflect.New(t).Elem()
 		}
-		f.data[i] = reflect.New(t.TypeOf()).Elem()
 	}
 
 	// Assign receiver value, if defined (for methods)
@@ -93,6 +101,7 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 			//f.data[paramIndex[i]] = variadic
 			break
 		} else {
+			log.Println(def.index, i, arg.index)
 			//f.data[paramIndex[i]] = arg.value(cf)
 			i++
 			// Handle multiple results of a function call argmument
@@ -121,11 +130,10 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 
 // Functions set to run during execution of CFG
 
-// Run by walking the CFG and running node builtin at each step
+// runCfg executes a node AST by walking its CFG and running node builtin at each step
 func runCfg(n *Node, f *Frame) {
-	r := n.exec
-	for r != nil {
-		r = r(f)
+	for exec := n.exec; exec != nil; {
+		exec = exec(f)
 	}
 }
 
@@ -441,40 +449,63 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 
 // FIXME: handle case where func return a boolean
 func call(n *Node) {
-	var recv *Node
-	var rseq []int
-	var forkFrame bool
-	var ret []int
-	var goroutine bool
+	//var recv *Node
+	//var rseq []int
+	//var forkFrame bool
+	//var goroutine bool
 
-	if n.action == CallF {
-		forkFrame = true
-	}
+	//if n.action == CallF {
+	//	forkFrame = true
+	//}
 
-	if n.anc.kind == GoStmt {
-		goroutine = true
-	}
+	//if n.anc.kind == GoStmt {
+	//	goroutine = true
+	//}
 
-	if n.child[0].kind == SelectorExpr && n.child[0].typ.cat != SrcPkgT && n.child[0].typ.cat != BinPkgT {
-		recv = n.child[0].recv
-		rseq = n.child[0].child[1].val.([]int)
-	}
+	//if n.child[0].kind == SelectorExpr && n.child[0].typ.cat != SrcPkgT && n.child[0].typ.cat != BinPkgT {
+	//	recv = n.child[0].recv
+	//	rseq = n.child[0].child[1].val.([]int)
+	//}
 
-	//value := n.child[0].value
 	next := getExec(n.tnext)
+	value := genValue(n.child[0])
+	child := n.child[1:]
+	// compute input argument value functions
+	values := make([]func(*Frame) reflect.Value, len(child))
+	for i, c := range child {
+		values[i] = genValue(c)
+	}
+
+	// compute frame indexes for return values
+	ret := make([]int, len(n.child[0].typ.ret))
+	for i := range n.child[0].typ.ret {
+		ret[i] = n.findex + i
+	}
 
 	n.exec = func(f *Frame) Builtin {
-		//fn := value(f).(*Node)
-		fn := n.val.(*Node)
-		if len(fn.child[2].child) > 1 {
-			if fieldList := fn.child[2].child[1]; fieldList != nil {
-				ret = make([]int, len(fieldList.child))
-				for i := range fieldList.child {
-					ret[i] = n.findex + i
-				}
+		def := value(f).Interface().(*Node)
+		nf := Frame{anc: f, data: make([]reflect.Value, def.flen)}
+
+		// Assign input parameters
+		paramIndex := def.child[2].child[0].val.([]int)
+		for i, v := range values {
+			nf.data[paramIndex[i]] = v(f)
+		}
+
+		// Init local frame values (not already assigned)
+		for i, t := range def.types {
+			if t != nil && !nf.data[i].IsValid() {
+				nf.data[i] = reflect.New(t).Elem()
 			}
 		}
-		Run(fn, f, recv, rseq, n.child[1:], ret, forkFrame, goroutine)
+
+		// Execute function body
+		runCfg(def.child[3].start, &nf)
+
+		// Propagate return values to caller frame
+		for i, r := range ret {
+			f.data[r] = nf.data[i]
+		}
 		return next
 	}
 }
@@ -636,6 +667,7 @@ func getPtrIndexAddr(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
+		log.Println(n.index, "in getPtrIndexAddr")
 		//a := (*value0(f).(*interface{})).([]interface{})
 		//f.data[i] = &a[value1(f).(int)]
 		return next
@@ -649,6 +681,7 @@ func getIndexAddr(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
+		log.Println(n.index, "in getIndexAddr")
 		//a := value0(f).([]interface{})
 		//f.data[i] = &a[value1(f).(int)]
 		return next
@@ -662,6 +695,7 @@ func getPtrIndex(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
+		log.Println(n.index, "in getPtrIndex")
 		// if error, fallback to getIndex, to make receiver methods work both with pointers and objects
 		//if a, ok := value0(f).(*interface{}); ok {
 		//	f.data[i] = (*a).([]interface{})[value1(f).(int)]
@@ -680,6 +714,7 @@ func getPtrIndexBin(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
+		log.Println(n.index, "in getPtrIndexBin")
 		//a := reflect.ValueOf(value(f)).Elem()
 		//f.data[i] = a.FieldByIndex(fi).Interface()
 		return next
@@ -693,6 +728,7 @@ func getIndexBinMethod(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
+		log.Println(n.index, "in getIndexBinMethod")
 		//a := reflect.ValueOf(value(f))
 		//f.data[i] = a.MethodByName(ident)
 		return next

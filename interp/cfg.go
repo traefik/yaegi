@@ -652,6 +652,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			interp.scope[pkgName].sym[funcName].typ = n.typ
 			interp.scope[pkgName].sym[funcName].kind = Func
 			interp.scope[pkgName].sym[funcName].node = n
+			n.types = frameTypes(n)
 
 		case FuncLit:
 			n.typ = n.child[2].typ
@@ -659,6 +660,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.flen = scope.size + 1
 			scope = scope.pop()
 			funcDef = true
+			n.types = frameTypes(n)
 
 		case FuncType:
 			n.typ = nodeType(interp, scope, n)
@@ -1163,15 +1165,16 @@ func getValue(n *Node) (int, reflect.Value, bool) {
 	return index, val, isReflect
 }
 
-func frameTypes(node *Node) []*Type {
-	ft := make([]*Type, node.flen)
+// frameTypes return a slice of frame types for FuncDecl or FuncLit nodes
+func frameTypes(node *Node) []reflect.Type {
+	ft := make([]reflect.Type, node.flen)
 
 	node.child[3].Walk(func(n *Node) bool {
 		if n.typ == nil || n.level > 0 || n.kind == BasicLit || n.kind == SelectorSrc {
 			return true
 		}
 		if ft[n.findex] == nil {
-			ft[n.findex] = n.typ
+			ft[n.findex] = n.typ.TypeOf()
 		} else {
 			// TODO: Check that type is identical
 		}

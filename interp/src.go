@@ -64,7 +64,7 @@ func (interp *Interpreter) importSrcFile(path string) {
 	}
 
 	for _, n := range initNodes {
-		Run(n, interp.Frame, nil, nil, nil, nil, true, false)
+		run0(n, interp.Frame)
 	}
 }
 
