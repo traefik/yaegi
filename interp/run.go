@@ -1145,13 +1145,26 @@ func arrayLit(n *Node) {
 		values[i] = genValue(c)
 	}
 
-	n.exec = func(f *Frame) Builtin {
-		a := zero()
-		for i, v := range values {
-			a.Index(i).Set(v(f))
+	if n.typ.size > 0 {
+		// Fixed size array
+		n.exec = func(f *Frame) Builtin {
+			a := zero()
+			for i, v := range values {
+				a.Index(i).Set(v(f))
+			}
+			f.data[ind] = a
+			return next
 		}
-		f.data[ind] = a
-		return next
+	} else {
+		// Slice
+		n.exec = func(f *Frame) Builtin {
+			a := zero()
+			for _, v := range values {
+				a = reflect.Append(a, v(f))
+			}
+			f.data[ind] = a
+			return next
+		}
 	}
 }
 
