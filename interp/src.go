@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 )
 
 func (interp *Interpreter) importSrcFile(path string) {
@@ -60,6 +61,12 @@ func (interp *Interpreter) importSrcFile(path string) {
 		genRun(n)
 		interp.fsize++
 		interp.resizeFrame()
+		// Allocate frame values
+		for i, t := range root.types {
+			if t != nil {
+				interp.Frame.data[i] = reflect.New(t).Elem()
+			}
+		}
 		runCfg(n.start, interp.Frame)
 	}
 

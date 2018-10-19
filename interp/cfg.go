@@ -576,6 +576,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			wireChild(n)
 			scope = scope.pop()
 			n.fsize = scope.size + 1
+			n.types = frameTypes(n, n.fsize)
 
 		case For0: // for {}
 			body := n.child[0]
@@ -658,7 +659,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			interp.scope[pkgName].sym[funcName].typ = n.typ
 			interp.scope[pkgName].sym[funcName].kind = Func
 			interp.scope[pkgName].sym[funcName].node = n
-			n.types = frameTypes(n)
+			n.types = frameTypes(n.child[3], n.flen)
 
 		case FuncLit:
 			n.typ = n.child[2].typ
@@ -666,7 +667,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.flen = scope.size + 1
 			scope = scope.pop()
 			funcDef = true
-			n.types = frameTypes(n)
+			n.types = frameTypes(n.child[3], n.flen)
 
 		case FuncType:
 			n.typ = nodeType(interp, scope, n)
@@ -975,7 +976,6 @@ func genRun(n *Node) {
 	n.Walk(func(n *Node) bool {
 		if n.kind == FuncType && len(n.anc.child) == 4 {
 			setExec(n.anc.child[3].start)
-			//frameTypes(n.anc)
 		}
 		if n.kind == VarDecl || n.kind == ConstDecl {
 			setExec(n.start)
@@ -1172,10 +1172,13 @@ func getValue(n *Node) (int, reflect.Value, bool) {
 }
 
 // frameTypes return a slice of frame types for FuncDecl or FuncLit nodes
-func frameTypes(node *Node) []reflect.Type {
-	ft := make([]reflect.Type, node.flen)
+func frameTypes(node *Node, size int) []reflect.Type {
+	ft := make([]reflect.Type, size)
 
-	node.child[3].Walk(func(n *Node) bool {
+	node.Walk(func(n *Node) bool {
+		if n.kind == FuncDecl || n.kind == ImportDecl || n.kind == TypeDecl {
+			return false
+		}
 		if n.typ == nil || n.level > 0 || n.kind == BasicLit || n.kind == SelectorSrc {
 			return true
 		}

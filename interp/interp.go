@@ -182,6 +182,12 @@ func (i *Interpreter) Eval(src string) string {
 		genRun(root)
 		i.fsize++
 		i.resizeFrame()
+		// Allocate frame values
+		for j, t := range root.types {
+			if t != nil {
+				i.Frame.data[j] = reflect.New(t).Elem()
+			}
+		}
 		runCfg(root.start, i.Frame)
 		for _, n := range initNodes {
 			run0(n, i.Frame)
