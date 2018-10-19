@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"reflect"
 )
 
 func (interp *Interpreter) importSrcFile(path string) {
@@ -59,19 +58,13 @@ func (interp *Interpreter) importSrcFile(path string) {
 	// Once all package sources have been parsed, execute entry points then init functions
 	for _, n := range rootNodes {
 		genRun(n)
-		interp.fsize++
+		//interp.fsize++
 		interp.resizeFrame()
-		// Allocate frame values
-		for i, t := range root.types {
-			if t != nil {
-				interp.Frame.data[i] = reflect.New(t).Elem()
-			}
-		}
-		runCfg(n.start, interp.Frame)
+		interp.run(n, nil)
 	}
 
 	for _, n := range initNodes {
-		run0(n, interp.Frame)
+		interp.run(n, interp.Frame)
 	}
 }
 

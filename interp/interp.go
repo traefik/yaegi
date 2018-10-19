@@ -149,6 +149,7 @@ func initUniverse() *Scope {
 	return scope
 }
 
+// resizeFrame resizes the global frame of interpeter
 func (i *Interpreter) resizeFrame() {
 	f := &Frame{data: make([]reflect.Value, i.fsize)}
 	copy(f.data, i.Frame.data)
@@ -180,17 +181,12 @@ func (i *Interpreter) Eval(src string) string {
 	// Execute CFG
 	if !i.NoRun {
 		genRun(root)
-		i.fsize++
+		//i.fsize++
 		i.resizeFrame()
-		// Allocate frame values
-		for j, t := range root.types {
-			if t != nil {
-				i.Frame.data[j] = reflect.New(t).Elem()
-			}
-		}
-		runCfg(root.start, i.Frame)
+		i.run(root, nil)
+
 		for _, n := range initNodes {
-			run0(n, i.Frame)
+			i.run(n, i.Frame)
 		}
 	}
 	return root.child[0].ident

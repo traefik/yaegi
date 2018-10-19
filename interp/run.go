@@ -50,14 +50,19 @@ var builtin = [...]BuiltinGenerator{
 	TypeAssert:   typeAssert,
 }
 
-func run0(def *Node, cf *Frame) {
-	f := Frame{anc: cf.anc, data: make([]reflect.Value, def.flen)}
-	for i, t := range def.types {
+func (interp *Interpreter) run(n *Node, cf *Frame) {
+	var f *Frame
+	if cf == nil {
+		f = interp.Frame
+	} else {
+		f = &Frame{anc: cf, data: make([]reflect.Value, n.flen)}
+	}
+	for i, t := range n.types {
 		if t != nil {
 			f.data[i] = reflect.New(t).Elem()
 		}
 	}
-	runCfg(def.child[3].start, &f)
+	runCfg(n.start, f)
 }
 
 func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int, fork bool, goroutine bool) {

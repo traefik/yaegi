@@ -655,6 +655,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			}
 			n.typ = n.child[2].typ
 			n.val = n
+			n.start = n.child[3].start
 			interp.scope[pkgName].sym[funcName].index = -1 // to force value to n.val
 			interp.scope[pkgName].sym[funcName].typ = n.typ
 			interp.scope[pkgName].sym[funcName].kind = Func
@@ -668,6 +669,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			scope = scope.pop()
 			funcDef = true
 			n.types = frameTypes(n.child[3], n.flen)
+			n.start = n.child[3].start
 
 		case FuncType:
 			n.typ = nodeType(interp, scope, n)
