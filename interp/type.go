@@ -300,21 +300,6 @@ func (t *Type) zero() reflect.Value {
 	case AliasT:
 		return t.val.zero()
 
-	//case ArrayT:
-	//	//a := make([]interface{}, t.size)
-	//	//z := t.val.zero()
-	//	//for i := 0; i < t.size; i++ {
-	//	//	a[i] = z
-	//	//}
-	//	//return a
-	//	if t.size > 0 {
-	//		log.Println("#1 zero array", t.size)
-	//		return reflect.New(t.TypeOf()).Elem()
-	//		//return reflect.MakeSlice(reflect.SliceOf(reflect.TypeOf(t.val.zero())), t.size, t.size)
-	//	} else {
-	//		return reflect.Zero(reflect.SliceOf(reflect.TypeOf(t.val.zero())))
-	//	}
-
 	case ArrayT, StructT:
 		return reflect.New(t.TypeOf()).Elem()
 
@@ -457,7 +442,6 @@ func (t *Type) TypeOf() reflect.Type {
 		return t.rtype
 
 	default:
-		//return reflect.TypeOf(t.zero())
 		return t.zero().Type()
 	}
 }

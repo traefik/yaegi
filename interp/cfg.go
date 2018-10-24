@@ -221,6 +221,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					scope.sym[name] = &Symbol{index: scope.size, kind: Var}
 				}
 				if n.child[1].action == GetFunc {
+					log.Println(n.index, "assign getFunc")
 					scope.sym[name].index = -1
 					scope.sym[name].node = n.child[1]
 				}
@@ -488,19 +489,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.typ = &Type{cat: ValueT}
 				} else {
 					n.val = sym.node
-					if def := n.val.(*Node); def != nil {
-						// Reserve as many frame entries as nb of ret values for called function
-						// node frame index should point to the first entry
-						j := len(def.child[2].child) - 1
-						l := len(def.child[2].child[j].child) // Number of return values for def
-						if l == 1 {
-							// If def returns exactly one value, propagate its type in call node.
-							// Multiple return values will be handled differently through AssignX.
-							n.typ = scope.getType(def.child[2].child[j].child[0].child[0].ident)
-						}
-						n.fsize = l
-					} else {
-						log.Println(n.index, "call to unknown def", n.child[0].ident, sym.typ)
+					n.fsize = len(sym.typ.ret)
+					if n.fsize == 1 {
+						// If called func returns exactly one value, propagate its type in call node.
+						// Multiple return values will be handled differently through AssignX.
+						n.typ = sym.typ.ret[0]
 					}
 				}
 			} else if n.child[0].kind == SelectorSrc {
@@ -569,6 +562,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else {
 				for _, f := range n.child[:l] {
 					scope.sym[f.ident].typ = n.typ
+					f.typ = n.typ
 				}
 			}
 
@@ -660,7 +654,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			interp.scope[pkgName].sym[funcName].typ = n.typ
 			interp.scope[pkgName].sym[funcName].kind = Func
 			interp.scope[pkgName].sym[funcName].node = n
-			n.types = frameTypes(n.child[3], n.flen)
+			n.types = frameTypes(n, n.flen)
 
 		case FuncLit:
 			n.typ = n.child[2].typ
@@ -668,8 +662,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.flen = scope.size + 1
 			scope = scope.pop()
 			funcDef = true
-			n.types = frameTypes(n.child[3], n.flen)
-			n.start = n.child[3].start
+			n.types = frameTypes(n, n.flen)
 
 		case FuncType:
 			n.typ = nodeType(interp, scope, n)
@@ -965,12 +958,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		}
 	})
 
-	//root.Walk(func(n *Node) bool {
-	//	n.value = genValue(n)
-	//	//n.pvalue = genPvalue(n)
-	//	return true
-	//}, nil)
-
 	return initNodes
 }
 
@@ -1098,7 +1085,10 @@ func valueGenerator(n *Node, i int) func(*Frame) reflect.Value {
 	case 0:
 		return func(f *Frame) reflect.Value { return f.data[i] }
 	case 1:
-		return func(f *Frame) reflect.Value { return f.anc.data[i] }
+		return func(f *Frame) reflect.Value {
+			//log.Println(n.index, i, f.anc.data[i])
+			return f.anc.data[i]
+		}
 	case 2:
 		return func(f *Frame) reflect.Value { return f.anc.anc.data[i] }
 	default:
@@ -1178,14 +1168,18 @@ func frameTypes(node *Node, size int) []reflect.Type {
 	ft := make([]reflect.Type, size)
 
 	node.Walk(func(n *Node) bool {
-		if n.kind == FuncDecl || n.kind == ImportDecl || n.kind == TypeDecl {
-			return false
+		if n.kind == FuncDecl || n.kind == ImportDecl || n.kind == TypeDecl || n.kind == FuncLit {
+			return n == node // Do not dive in substree, except if this the entry point
 		}
 		if n.typ == nil || n.level > 0 || n.kind == BasicLit || n.kind == SelectorSrc {
 			return true
 		}
 		if ft[n.findex] == nil {
-			ft[n.findex] = n.typ.TypeOf()
+			if n.typ.cat == FuncT {
+				ft[n.findex] = reflect.TypeOf(n)
+			} else {
+				ft[n.findex] = n.typ.TypeOf()
+			}
 		} else {
 			// TODO: Check that type is identical
 		}

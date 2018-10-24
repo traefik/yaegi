@@ -65,6 +65,7 @@ func (interp *Interpreter) run(n *Node, cf *Frame) {
 	runCfg(n.start, f)
 }
 
+/*
 func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int, fork bool, goroutine bool) {
 	//log.Println("run", def.index, def.child[1].ident, "allocate", def.flen)
 	// Allocate a new Frame to store local variables
@@ -132,6 +133,7 @@ func Run(def *Node, cf *Frame, recv *Node, rseq []int, args []*Node, rets []int,
 		}
 	}
 }
+*/
 
 // Functions set to run during execution of CFG
 
@@ -456,16 +458,8 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 func call(n *Node) {
 	//var recv *Node
 	//var rseq []int
-	//var forkFrame bool
+	//forkFrame := n.action == CallF // add a frame indirection for closure
 	goroutine := n.anc.kind == GoStmt
-
-	//if n.action == CallF {
-	//	forkFrame = true
-	//}
-
-	//if n.anc.kind == GoStmt {
-	//	goroutine = true
-	//}
 
 	//if n.child[0].kind == SelectorExpr && n.child[0].typ.cat != SrcPkgT && n.child[0].typ.cat != BinPkgT {
 	//	recv = n.child[0].recv
@@ -487,8 +481,15 @@ func call(n *Node) {
 		ret[i] = n.findex + i
 	}
 
+	//log.Println(n.index, "call", forkFrame)
+
 	n.exec = func(f *Frame) Builtin {
 		def := value(f).Interface().(*Node)
+		//anc := f.anc
+		//if forkFrame {
+		//	anc = f
+		//}
+		//nf := Frame{anc: anc, data: make([]reflect.Value, def.flen)}
 		nf := Frame{anc: f, data: make([]reflect.Value, def.flen)}
 
 		// Init local frame values
@@ -507,7 +508,6 @@ func call(n *Node) {
 		if goroutine {
 			go runCfg(def.child[3].start, &nf)
 		} else {
-
 			runCfg(def.child[3].start, &nf)
 			// Propagate return values to caller frame
 			for i, r := range ret {
