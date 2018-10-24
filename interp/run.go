@@ -485,12 +485,12 @@ func call(n *Node) {
 
 	n.exec = func(f *Frame) Builtin {
 		def := value(f).Interface().(*Node)
-		//anc := f.anc
-		//if forkFrame {
-		//	anc = f
-		//}
-		//nf := Frame{anc: anc, data: make([]reflect.Value, def.flen)}
-		nf := Frame{anc: f, data: make([]reflect.Value, def.flen)}
+		anc := f
+		if def.frame != nil {
+			// Get closure frame context (if any)
+			anc = def.frame
+		}
+		nf := Frame{anc: anc, data: make([]reflect.Value, def.flen)}
 
 		// Init local frame values
 		for i, t := range def.types {
@@ -832,8 +832,8 @@ func getFunc(n *Node) {
 		node.val = &node
 		frame := *f
 		node.frame = &frame
+		//n.frame = &frame
 		f.data[i] = reflect.ValueOf(&node)
-		n.frame = &frame
 		return next
 	}
 }

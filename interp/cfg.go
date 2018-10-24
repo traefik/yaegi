@@ -679,7 +679,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case GoStmt:
 			wireChild(n)
 			// TODO: should error if call expression refers to a builtin
-			//n.child[0].gen = callGoRoutine
 
 		case Ident:
 			if n.anc.kind == File || (n.anc.kind == SelectorExpr && n.anc.child[0] != n) || (n.anc.kind == KeyValueExpr && n.anc.child[0] == n) {
@@ -783,7 +782,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.child[2].typ.cat == MapT {
 				scope.sym[n.child[0].ident].typ = n.child[2].typ.key
 				n.child[0].typ = n.child[2].typ.key
-				//n.typ = &Type{cat: ArrayT, val: n.child[2].typ.key}
 				n.gen = rangeMap
 			} else {
 				scope.sym[n.child[0].ident].typ = scope.getType("int")

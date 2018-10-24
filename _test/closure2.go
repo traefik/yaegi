@@ -11,6 +11,7 @@ func adder() func(int) int {
 func main() {
 	pos, neg := adder(), adder()
 	for i := 0; i < 10; i++ {
-		println(pos(i), neg(-2*i))
+		println(pos(i), neg(0-2*i))
+
 	}
 }
