@@ -461,18 +461,22 @@ func call(n *Node) {
 	//forkFrame := n.action == CallF // add a frame indirection for closure
 	goroutine := n.anc.kind == GoStmt
 
-	//if n.child[0].kind == SelectorExpr && n.child[0].typ.cat != SrcPkgT && n.child[0].typ.cat != BinPkgT {
-	//	recv = n.child[0].recv
-	//	rseq = n.child[0].child[1].val.([]int)
-	//}
+	var values []func(*Frame) reflect.Value
+	var recv *Node
+	//var rseq []int
+	if n.child[0].kind == SelectorExpr && n.child[0].typ.cat != SrcPkgT && n.child[0].typ.cat != BinPkgT {
+		// compute method object receiver
+		recv = n.child[0].recv
+		//rseq = n.child[0].child[1].val.([]int)
+		values = append(values, genValue(recv))
+	}
 
 	next := getExec(n.tnext)
 	value := genValue(n.child[0])
 	child := n.child[1:]
 	// compute input argument value functions
-	values := make([]func(*Frame) reflect.Value, len(child))
-	for i, c := range child {
-		values[i] = genValue(c)
+	for _, c := range child {
+		values = append(values, genValue(c))
 	}
 
 	// compute frame indexes for return values
@@ -499,9 +503,8 @@ func call(n *Node) {
 			}
 		}
 		// copy input parameters from caller
-		paramIndex := def.child[2].child[0].val.([]int)
 		for i, v := range values {
-			nf.data[paramIndex[i]].Set(v(f))
+			nf.data[def.framepos[i]].Set(v(f))
 		}
 
 		// Execute function body

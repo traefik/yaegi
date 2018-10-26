@@ -638,8 +638,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case FuncDecl:
 			n.flen = scope.size + 1
 			if len(n.child[0].child) > 0 {
-				// Store receiver frame location (used at run)
-				n.child[0].findex = n.child[0].child[0].child[0].findex
+				// Method: restore receiver frame location (used at run)
+				list := []int{n.child[0].child[0].child[0].findex}
+				n.framepos = append(list, n.child[2].framepos...)
 			}
 			scope = scope.pop()
 			funcName := n.child[1].ident
@@ -663,17 +664,16 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			scope = scope.pop()
 			funcDef = true
 			n.types = frameTypes(n, n.flen)
+			n.framepos = n.child[2].framepos
 
 		case FuncType:
 			n.typ = nodeType(interp, scope, n)
-			// Store list of parameter frame indices in params val
-			var list []int
+			// Store list of parameter frame indices in framepos
 			for _, c := range n.child[0].child {
 				for _, f := range c.child[:len(c.child)-1] {
-					list = append(list, f.findex)
+					n.framepos = append(n.framepos, f.findex)
 				}
 			}
-			n.child[0].val = list
 			// TODO: do the same for return values
 
 		case GoStmt:
@@ -1169,7 +1169,7 @@ func frameTypes(node *Node, size int) []reflect.Type {
 		if n.kind == FuncDecl || n.kind == ImportDecl || n.kind == TypeDecl || n.kind == FuncLit {
 			return n == node // Do not dive in substree, except if this the entry point
 		}
-		if n.typ == nil || n.level > 0 || n.kind == BasicLit || n.kind == SelectorSrc {
+		if n.findex < 0 || n.typ == nil || n.level > 0 || n.kind == BasicLit || n.kind == SelectorSrc {
 			return true
 		}
 		if ft[n.findex] == nil {
@@ -1186,48 +1186,3 @@ func frameTypes(node *Node, size int) []reflect.Type {
 
 	return ft
 }
-
-/*
-func pvalueGenerator(n *Node, i int) func(*Frame) *interface{} {
-	switch n.level {
-	case 0:
-		return func(f *Frame) *interface{} { return &f.data[i] }
-	case 1:
-		return func(f *Frame) *interface{} { return &f.anc.data[i] }
-	case 2:
-		return func(f *Frame) *interface{} { return &f.anc.anc.data[i] }
-	default:
-		return func(f *Frame) *interface{} {
-			for level := n.level; level > 0; level-- {
-				f = f.anc
-			}
-			return &f.data[i]
-		}
-	}
-}
-
-func genPvalue(n *Node) func(*Frame) *interface{} {
-	switch n.kind {
-	case BasicLit, FuncDecl, Rvalue:
-		v := &n.val
-		return func(f *Frame) *interface{} { return v }
-	default:
-		if n.sym != nil {
-			if n.sym.index < 0 {
-				return genPvalue(n.sym.node)
-			}
-			i := n.sym.index
-			if n.sym.global {
-				return func(f *Frame) *interface{} { return &n.interp.Frame.data[i] }
-			}
-			return pvalueGenerator(n, i)
-		}
-		if n.findex < 0 {
-			v := &n.val
-			return func(f *Frame) *interface{} { return v }
-		}
-		return pvalueGenerator(n, n.findex)
-	}
-	return nil
-}
-*/
