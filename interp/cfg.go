@@ -639,9 +639,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.flen = scope.size + 1
 			if len(n.child[0].child) > 0 {
 				// Method: restore receiver frame location (used at run)
-				list := []int{n.child[0].child[0].child[0].findex}
-				n.framepos = append(list, n.child[2].framepos...)
+				n.framepos = append(n.framepos, n.child[0].child[0].child[0].findex)
 			}
+			n.framepos = append(n.framepos, n.child[2].framepos...)
 			scope = scope.pop()
 			funcName := n.child[1].ident
 			if canExport(funcName) {

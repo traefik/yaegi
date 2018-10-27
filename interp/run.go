@@ -432,10 +432,9 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	}
 
 	// Unwrap input arguments from their reflect value and store them in the frame
-	paramIndex := def.child[2].child[0].val.([]int)
 	i := 0
 	for _, arg := range in {
-		frame.data[paramIndex[i]] = arg
+		frame.data[def.framepos[i]] = arg
 		i++
 	}
 
