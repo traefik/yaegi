@@ -184,7 +184,6 @@ const (
 	Add
 	And
 	Call
-	CallF
 	Case
 	CompositeLit
 	Dec
@@ -224,7 +223,6 @@ var actions = [...]string{
 	Add:          "+",
 	And:          "&",
 	Call:         "call",
-	CallF:        "call",
 	Case:         "case",
 	CompositeLit: "compositeLit",
 	Dec:          "--",

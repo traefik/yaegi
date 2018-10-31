@@ -21,7 +21,6 @@ var builtin = [...]BuiltinGenerator{
 	Add:          add,
 	And:          and,
 	Call:         call,
-	CallF:        call,
 	Case:         _case,
 	CompositeLit: arrayLit,
 	Dec:          nop,
@@ -453,21 +452,64 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	return result
 }
 
-// FIXME: handle case where func return a boolean
-func call(n *Node) {
-	//var recv *Node
-	//var rseq []int
-	//forkFrame := n.action == CallF // add a frame indirection for closure
+func call2(n *Node) {
+	next := getExec(n.tnext)
+	value := genValue(n.child[0])
+	child := n.child[1:]
 	goroutine := n.anc.kind == GoStmt
 
+	// Compute input argument value functions
 	var values []func(*Frame) reflect.Value
-	var recv *Node
+	for _, c := range child {
+		values = append(values, genValue(c))
+	}
+
+	// compute frame indexes for return values
+	ret := make([]int, len(n.child[0].typ.ret))
+	for i := range n.child[0].typ.ret {
+		ret[i] = n.findex + i
+	}
+
+	n.exec = func(f *Frame) Builtin {
+		def := value(f).Interface().(*Node)
+		in := make([]reflect.Value, len(child))
+		if def.frame != nil {
+			f = def.frame
+		}
+		for i, v := range values {
+			in[i] = v(f)
+		}
+		out := def.fun(f, in, goroutine)
+		log.Println(n.index, "out:", out, ret, f.data)
+		// Propagate return values to caller frame
+		for i, r := range ret {
+			log.Println(n.index, out[i], r)
+			f.data[r] = out[i]
+		}
+		return next
+	}
+}
+
+// FIXME: handle case where func return a boolean
+func call(n *Node) {
+	goroutine := n.anc.kind == GoStmt
+	var values []func(*Frame) reflect.Value
+	//var recv *Node
 	//var rseq []int
-	if n.child[0].kind == SelectorExpr && n.child[0].typ.cat != SrcPkgT && n.child[0].typ.cat != BinPkgT {
-		// compute method object receiver
-		recv = n.child[0].recv
-		//rseq = n.child[0].child[1].val.([]int)
-		values = append(values, genValue(recv))
+
+	//if n.child[0].kind == SelectorExpr && n.child[0].typ.cat != SrcPkgT && n.child[0].typ.cat != BinPkgT {
+	//	// compute method object receiver
+	//	recv = n.child[0].recv
+	//	//rseq = n.child[0].child[1].val.([]int)
+	//	log.Println(n.index, "recv typ", recv.typ.cat, n.child[0].typ.cat)
+	//	//if recv.typ.cat == StructT {
+	//	//	values = append(values, genValuePtr(recv))
+	//	//} else {
+	//	values = append(values, genValue(recv))
+	//	//}
+	//}
+	if n.child[0].recv != nil {
+		values = append(values, genValue(n.child[0].recv))
 	}
 
 	next := getExec(n.tnext)
@@ -488,6 +530,7 @@ func call(n *Node) {
 
 	n.exec = func(f *Frame) Builtin {
 		def := value(f).Interface().(*Node)
+		log.Println(n.index, "def.recv:", def)
 		anc := f
 		if def.frame != nil {
 			// Get closure frame context (if any)
@@ -503,6 +546,7 @@ func call(n *Node) {
 		}
 		// copy input parameters from caller
 		for i, v := range values {
+			//log.Println(n.index, i, def.framepos[i], nf.data[def.framepos[i]].Kind(), v(f).Kind())
 			nf.data[def.framepos[i]].Set(v(f))
 		}
 
@@ -699,10 +743,12 @@ func getIndexAddr(n *Node) {
 }
 
 func getPtrIndex(n *Node) {
-	//i := n.findex
+	i := n.findex
 	//value0 := n.child[0].value
 	//value1 := n.child[1].value
 	next := getExec(n.tnext)
+	fi := n.child[1].val.(int)
+	value := genValue(n.child[0])
 
 	n.exec = func(f *Frame) Builtin {
 		log.Println(n.index, "in getPtrIndex")
@@ -713,6 +759,7 @@ func getPtrIndex(n *Node) {
 		//	a := value0(f).([]interface{})
 		//	f.data[i] = a[value1(f).(int)]
 		//}
+		f.data[i] = value(f).Elem().Field(fi)
 		return next
 	}
 }
@@ -828,13 +875,13 @@ func getIndexMap2(n *Node) {
 func getFunc(n *Node) {
 	i := n.findex
 	next := getExec(n.tnext)
+	genFun(n)
 
 	n.exec = func(f *Frame) Builtin {
+		frame := *f
 		node := *n
 		node.val = &node
-		frame := *f
 		node.frame = &frame
-		//n.frame = &frame
 		f.data[i] = reflect.ValueOf(&node)
 		return next
 	}

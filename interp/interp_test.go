@@ -510,8 +510,10 @@ package main
 type adder func(int, int) int
 
 func genAdd(k int) adder {
+	println("k:", k)
 	return func(i, j int) int {
-		return i + j
+		println("#1 k:", k)
+		return i + j + k
 	}
 }
 
@@ -524,7 +526,7 @@ func main() {
 	i.Eval(src)
 
 	// Output:
-	// 7
+	// 12
 }
 
 func Example_closure1() {
@@ -569,7 +571,8 @@ func adder() func(int) int {
 func main() {
 	pos, neg := adder(), adder()
 	for i := 0; i < 10; i++ {
-		println(pos(i), neg(-2*i))
+		println(pos(i), neg(0-2*i))
+
 	}
 }`
 	i := NewInterpreter(Opt{Entry: "main"})
@@ -3234,10 +3237,13 @@ type T struct {
 func main() {
 	a := T{}
 	println(a.i, a.opt.b)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"})
 	i.Eval(src)
 
+	// Output:
+	// 0 false
 }
 
 func Example_struct8() {
@@ -3263,9 +3269,7 @@ func f(i int) int { return i * i }
 
 func main() {
 	a := T{5, 7, T2{8, T3{9}}}
-	//println(a.f, a.g, a.T2.h, a.T2.T3.k)
-	//fmt.Println(a.T2)
-	println(a.h)
+	println(a.f, a.g, a.T2.h, a.T2.T3.k)
 }
 `
 	i := NewInterpreter(Opt{Entry: "main"})

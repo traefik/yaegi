@@ -115,7 +115,6 @@ func (scope *Scope) inc(interp *Interpreter) int {
 func (interp *Interpreter) Cfg(root *Node) []*Node {
 	scope := interp.universe
 	var loop, loopRestart *Node
-	var funcDef bool // True if a function is defined in the current frame context
 	var initNodes []*Node
 	var exports *BinMap
 	var expval *ValueMap
@@ -173,7 +172,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				// allocate entries for return values at start of frame
 				scope.size += len(n.child[2].child[1].child)
 			}
-			funcDef = false
 
 		case If0, If1, If2, If3:
 			scope = scope.push(0)
@@ -369,7 +367,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case CallExpr:
 			wireChild(n)
 			n.findex = scope.inc(interp)
+			log.Println(n.index, "call", n.child[0].typ)
 			if n.child[0].sym != nil && n.child[0].sym.kind == Bltn {
+				// Call an internal go builtin
 				n.gen = n.child[0].sym.builtin
 				n.child[0].typ = &Type{cat: BuiltinT}
 				switch n.child[0].ident {
@@ -383,7 +383,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.child[1].kind = BasicLit
 				}
 			} else if n.child[0].isType(scope) {
-				// Call expression is in fact a type conversion expression
+				// Type conversion expression
 				n.typ = n.child[0].typ
 				if n.typ.cat == AliasT {
 					n.gen = convert
@@ -396,113 +396,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						n.gen = convertBin
 					}
 				}
-			} else if n.child[0].kind == SelectorImport {
-				// TODO: Should process according to child type, not kind.
-				n.fsize = n.child[0].fsize
-				var rtype reflect.Type
-				switch t := n.child[0].val.(type) {
-				case reflect.Type:
-					rtype = n.child[0].val.(reflect.Type)
-				case reflect.Value:
-					rtype = n.child[0].val.(reflect.Value).Type()
-				default:
-					log.Printf("unexpected type %T\n", t)
-				}
-				//rtype := n.child[0].val.(reflect.Value).Type()
-				if rtype.NumOut() > 0 {
-					n.typ = &Type{cat: ValueT, rtype: rtype.Out(0)}
-				}
-				n.child[0].kind = BasicLit
-				for i, c := range n.child[1:] {
-					// Wrap function defintion so it can be called from runtime
-					if c.kind == FuncLit {
-						n.child[1+i].rval = reflect.MakeFunc(rtype.In(i), c.wrapNode)
-						n.child[1+i].kind = Rvalue
-					} else if c.ident == "nil" {
-						n.child[1+i].rval = reflect.New(rtype.In(i)).Elem()
-						n.child[1+i].kind = Rvalue
-					} else if c.typ != nil && c.typ.cat == FuncT {
-						n.child[1+i].rval = reflect.MakeFunc(rtype.In(i), c.wrapNode)
-						n.child[1+i].kind = Rvalue
-					}
-				}
-				// TODO: handle multiple return value
-				if len(n.child) == 2 && n.child[1].fsize > 1 {
-					n.gen = callBinX
-				} else {
-					n.gen = callBin
-				}
-			} else if n.child[0].kind == SelectorExpr {
-				if n.child[0].typ.cat == ValueT {
-					n.gen = callBinMethod
-					// TODO: handle multiple return value (_test/time2.go)
-					n.child[0].kind = BasicLit // Temporary hack for force value() to return n.val at run
-					n.typ = &Type{cat: ValueT, rtype: n.child[0].typ.rtype}
-					n.fsize = n.child[0].fsize
-				} else if n.child[0].typ.cat == PtrT && n.child[0].typ.val.cat == ValueT {
-					n.gen = callBinMethod
-					n.child[0].kind = BasicLit // Temporary hack for force value() to return n.val at run
-					n.fsize = n.child[0].fsize
-					// TODO: handle type ?
-				} else if n.child[0].typ.cat == SrcPkgT {
-					n.val = n.child[0].val
-					if def := n.val.(*Node); def != nil {
-						// Reserve as many frame entries as nb of ret values for called function
-						// node frame index should point to the first entry
-						j := len(def.child[2].child) - 1
-						l := len(def.child[2].child[j].child) // Number of return values for def
-						if l == 1 {
-							// If def returns exactly one value, propagate its type in call node.
-							// Multiple return values will be handled differently through AssignX.
-							n.typ = scope.getType(def.child[2].child[j].child[0].child[0].ident)
-						}
-						n.fsize = l
-					}
-				} else {
-					// Get method and receiver path, store them in node static value for run
-					if methodDecl, ok := n.child[0].val.(*Node); ok {
-						// method is already resolved, use it
-						if len(methodDecl.child[2].child) > 1 {
-							// Allocate frame for method return values (if any)
-							n.fsize = len(methodDecl.child[2].child[1].child)
-							n.typ = methodDecl.typ.ret[0]
-							// TODO: handle multiple return values
-						} else {
-							n.fsize = 0
-						}
-					} else {
-						log.Println(n.index, "unresolve call")
-						// method must be resolved here due to declaration after use
-					}
-					n.child[0].findex = -1 // To force reading value from node instead of frame (methods)
-				}
-			} else if sym, _, _ := scope.lookup(n.child[0].ident); sym != nil {
-				if sym.typ != nil && sym.typ.cat == BinT {
-					n.gen = callBin
-					n.typ = &Type{cat: ValueT}
-					r := sym.val.(reflect.Value)
-					n.child[0].fsize = r.Type().NumOut()
-					n.child[0].val = r
-					n.child[0].kind = BasicLit
-				} else if sym.typ != nil && sym.typ.cat == ValueT {
-					n.gen = callDirectBin
-					n.typ = &Type{cat: ValueT}
-				} else {
-					n.val = sym.node
-					n.fsize = len(sym.typ.ret)
-					if n.fsize == 1 {
-						// If called func returns exactly one value, propagate its type in call node.
-						// Multiple return values will be handled differently through AssignX.
-						n.typ = sym.typ.ret[0]
-					}
-				}
-			} else if n.child[0].kind == SelectorSrc {
-				// Forward type of first returned value
-				// Multiple return values will be handled differently through AssignX.
-				if len(n.child[0].typ.ret) > 0 {
-					n.typ = n.child[0].typ.ret[0]
-					n.fsize = len(n.child[0].typ.ret)
-				}
+			} else if n.child[0].typ.cat == ValueT {
+				log.Println(n.index, "callBin", n.child[0].val)
+				n.gen = callBin
 			}
 			// Reserve entries in frame to store results of call
 			scope.size += n.fsize
@@ -512,11 +408,117 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else {
 				scope.size += n.fsize
 			}
+			n.recv = n.child[0].recv
 
-			if funcDef {
-				// Trigger frame indirection to handle nested functions
-				n.action = CallF
-			}
+			/*
+				else if n.child[0].kind == SelectorImport {
+					// TODO: Should process according to child type, not kind.
+					n.fsize = n.child[0].fsize
+					var rtype reflect.Type
+					switch t := n.child[0].val.(type) {
+					case reflect.Type:
+						rtype = n.child[0].val.(reflect.Type)
+					case reflect.Value:
+						rtype = n.child[0].val.(reflect.Value).Type()
+					default:
+						log.Printf("unexpected type %T\n", t)
+					}
+					if rtype.NumOut() > 0 {
+						n.typ = &Type{cat: ValueT, rtype: rtype.Out(0)}
+					}
+					n.child[0].kind = BasicLit
+					for i, c := range n.child[1:] {
+						// Wrap function defintion so it can be called from runtime
+						if c.kind == FuncLit {
+							n.child[1+i].rval = reflect.MakeFunc(rtype.In(i), c.wrapNode)
+							n.child[1+i].kind = Rvalue
+						} else if c.ident == "nil" {
+							n.child[1+i].rval = reflect.New(rtype.In(i)).Elem()
+							n.child[1+i].kind = Rvalue
+						} else if c.typ != nil && c.typ.cat == FuncT {
+							n.child[1+i].rval = reflect.MakeFunc(rtype.In(i), c.wrapNode)
+							n.child[1+i].kind = Rvalue
+						}
+					}
+					// TODO: handle multiple return value
+					if len(n.child) == 2 && n.child[1].fsize > 1 {
+						n.gen = callBinX
+					} else {
+						n.gen = callBin
+					}
+				} else if n.child[0].kind == SelectorExpr {
+					if n.child[0].typ.cat == ValueT {
+						n.gen = callBinMethod
+						// TODO: handle multiple return value (_test/time2.go)
+						n.child[0].kind = BasicLit // Temporary hack for force value() to return n.val at run
+						n.typ = &Type{cat: ValueT, rtype: n.child[0].typ.rtype}
+						n.fsize = n.child[0].fsize
+					} else if n.child[0].typ.cat == PtrT && n.child[0].typ.val.cat == ValueT {
+						n.gen = callBinMethod
+						n.child[0].kind = BasicLit // Temporary hack for force value() to return n.val at run
+						n.fsize = n.child[0].fsize
+						// TODO: handle type ?
+					} else if n.child[0].typ.cat == SrcPkgT {
+						n.val = n.child[0].val
+						if def := n.val.(*Node); def != nil {
+							// Reserve as many frame entries as nb of ret values for called function
+							// node frame index should point to the first entry
+							j := len(def.child[2].child) - 1
+							l := len(def.child[2].child[j].child) // Number of return values for def
+							if l == 1 {
+								// If def returns exactly one value, propagate its type in call node.
+								// Multiple return values will be handled differently through AssignX.
+								n.typ = scope.getType(def.child[2].child[j].child[0].child[0].ident)
+							}
+							n.fsize = l
+						}
+					} else {
+						// Get method and receiver path, store them in node static value for run
+						if methodDecl, ok := n.child[0].val.(*Node); ok {
+							// method is already resolved, use it
+							if len(methodDecl.child[2].child) > 1 {
+								// Allocate frame for method return values (if any)
+								n.fsize = len(methodDecl.child[2].child[1].child)
+								n.typ = methodDecl.typ.ret[0]
+								// TODO: handle multiple return values
+							} else {
+								n.fsize = 0
+							}
+						} else {
+							log.Println(n.index, "unresolve call")
+							// method must be resolved here due to declaration after use
+						}
+						n.child[0].findex = -1 // To force reading value from node instead of frame (methods)
+					}
+				} else if sym, _, _ := scope.lookup(n.child[0].ident); sym != nil {
+					if sym.typ != nil && sym.typ.cat == BinT {
+						n.gen = callBin
+						n.typ = &Type{cat: ValueT}
+						r := sym.val.(reflect.Value)
+						n.child[0].fsize = r.Type().NumOut()
+						n.child[0].val = r
+						n.child[0].kind = BasicLit
+					} else if sym.typ != nil && sym.typ.cat == ValueT {
+						n.gen = callDirectBin
+						n.typ = &Type{cat: ValueT}
+					} else {
+						n.val = sym.node
+						n.fsize = len(sym.typ.ret)
+						if n.fsize == 1 {
+							// If called func returns exactly one value, propagate its type in call node.
+							// Multiple return values will be handled differently through AssignX.
+							n.typ = sym.typ.ret[0]
+						}
+					}
+				} else if n.child[0].kind == SelectorSrc {
+					// Forward type of first returned value
+					// Multiple return values will be handled differently through AssignX.
+					if len(n.child[0].typ.ret) > 0 {
+						n.typ = n.child[0].typ.ret[0]
+						n.fsize = len(n.child[0].typ.ret)
+					}
+				}
+			*/
 
 		case CaseClause:
 			n.findex = scope.inc(interp)
@@ -656,13 +658,13 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			interp.scope[pkgName].sym[funcName].kind = Func
 			interp.scope[pkgName].sym[funcName].node = n
 			n.types = frameTypes(n, n.flen)
+			genFun(n)
 
 		case FuncLit:
 			n.typ = n.child[2].typ
 			n.val = n
 			n.flen = scope.size + 1
 			scope = scope.pop()
-			funcDef = true
 			n.types = frameTypes(n, n.flen)
 			n.framepos = n.child[2].framepos
 
@@ -682,12 +684,13 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 		case Ident:
 			if n.anc.kind == File || (n.anc.kind == SelectorExpr && n.anc.child[0] != n) || (n.anc.kind == KeyValueExpr && n.anc.child[0] == n) {
-				// skip symbol creation/lookup for idents used as key
+				// Skip symbol creation/lookup for idents used as key
 			} else if l := len(n.anc.child); n.anc.kind == Field && l > 1 && n.anc.child[l-1] != n {
 				// Create a new local symbol for func argument
 				n.findex = scope.inc(interp)
 				scope.sym[n.ident] = &Symbol{index: scope.size, kind: Var}
 			} else if sym, level, ok := scope.lookup(n.ident); ok {
+				// Found symbol, populate node info
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
 				if n.findex < 0 {
 					n.val = sym.node
@@ -705,7 +708,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						n.val = nil
 					}
 				}
-				n.recv = n
 			} else {
 				if n.ident == "_" || n.anc.kind == Define || n.anc.kind == DefineX || n.anc.kind == RangeStmt || n.anc.kind == ValueSpec {
 					// Create a new local symbol for func argument or local var definition
@@ -803,7 +805,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.typ == nil {
 				log.Fatal("typ should not be nil:", n.index, n.child[0])
 			}
-			//log.Println(n.index, "selector", n.child[0].ident+"."+n.child[1].ident, n.typ.cat)
+			log.Println(n.index, "selector", n.child[0].ident+"."+n.child[1].ident, n.typ.cat)
 			if n.typ.cat == ValueT {
 				// Handle object defined in runtime
 				if method, ok := n.typ.rtype.MethodByName(n.child[1].ident); ok {
@@ -843,30 +845,19 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				name := n.child[1].ident
 				pkg := n.child[0].sym.path
 				if s, ok := interp.binValue[pkg][name]; ok {
-					n.kind = SelectorImport
-					n.val = s
-					if typ := s.Type(); typ.Kind() == reflect.Func {
-						n.typ = &Type{cat: ValueT, rtype: typ}
-						n.fsize = typ.NumOut()
-						//} else if typ.Kind() == reflect.Ptr {
-						// a symbol of kind pointer must be dereferenced to access type
-						//	n.typ = &Type{cat: ValueT, rtype: typ.Elem(), rzero: n.val.(reflect.Value).Elem()}
-					} else {
-						n.typ = &Type{cat: ValueT, rtype: typ}
-						n.rval = n.val.(reflect.Value)
-						n.kind = Rvalue
+					n.kind = Rvalue
+					n.rval = s
+					n.typ = &Type{cat: ValueT, rtype: s.Type()}
+					if s.Kind() == reflect.Func {
+						n.fsize = n.typ.rtype.NumOut()
 					}
 					n.gen = nop
 				} else if s, ok := interp.binType[pkg][name]; ok {
-					//n.kind = SelectorImport
 					n.kind = Rtype
 					n.typ = &Type{cat: ValueT, rtype: s}
 					n.gen = nop
 					if s.Kind() == reflect.Func {
 						n.fsize = s.NumOut()
-						//} else if typ.Kind() == reflect.Ptr {
-						// a symbol of kind pointer must be dereferenced to access type
-						//	n.typ = &Type{cat: ValueT, rtype: typ.Elem(), rzero: n.val.(reflect.Value).Elem()}
 					}
 				}
 			} else if n.typ.cat == ArrayT {
@@ -894,9 +885,12 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
 				// Handle method
 				n.gen = nop
+				//n.kind = BasicLit
 				n.val = m
 				n.child[1].val = lind
 				n.typ = m.typ
+				n.recv = n.child[0]
+				log.Println(n.index, "method recv", m.index, n.recv.index, lind)
 			} else {
 				// Handle promoted field in embedded struct
 				if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
@@ -1099,6 +1093,11 @@ func valueGenerator(n *Node, i int) func(*Frame) reflect.Value {
 	}
 }
 
+func genValuePtr(n *Node) func(*Frame) reflect.Value {
+	v := genValue(n)
+	return func(f *Frame) reflect.Value { return v(f).Addr() }
+}
+
 func genValue(n *Node) func(*Frame) reflect.Value {
 	switch n.kind {
 	case BasicLit, FuncDecl, SelectorSrc:
@@ -1137,6 +1136,35 @@ func genValue(n *Node) func(*Frame) reflect.Value {
 		return valueGenerator(n, n.findex)
 	}
 	return nil
+}
+
+func genFun(n *Node) {
+	start := n.child[3].start
+	framepos := n.framepos
+	flen := n.flen
+	types := n.types
+	nout := len(n.typ.ret)
+
+	n.fun = func(f *Frame, in []reflect.Value, goroutine bool) []reflect.Value {
+		// Allocate local frame
+		nf := Frame{anc: f, data: make([]reflect.Value, flen)}
+		for i, t := range types {
+			if t != nil {
+				nf.data[i] = reflect.New(t).Elem()
+			}
+		}
+		// Copy input parameters from caller frame to local
+		for i, pos := range framepos {
+			nf.data[pos].Set(in[i])
+		}
+		if goroutine {
+			go runCfg(start, &nf)
+		} else {
+			runCfg(start, &nf)
+		}
+		// Propagate return values to caller
+		return nf.data[:nout]
+	}
 }
 
 // Experimental, temporary & incomplete

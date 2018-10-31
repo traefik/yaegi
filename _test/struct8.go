@@ -19,9 +19,7 @@ func f(i int) int { return i * i }
 
 func main() {
 	a := T{5, 7, T2{8, T3{9}}}
-	//println(a.f, a.g, a.T2.h, a.T2.T3.k)
-	//fmt.Println(a.T2)
-	println(a.h)
+	println(a.f, a.g, a.T2.h, a.T2.T3.k)
 }
 
 // Output:

@@ -3,8 +3,9 @@ package main
 import "github.com/containous/dyngo/_test/provider"
 
 func main() {
-	provider.F1()
+	f := provider.Bar
+	f()
 }
 
 // Output:
-// SomeString: constant string
+// Hello from Foo
