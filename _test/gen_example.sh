@@ -12,7 +12,7 @@ do
 	END {
 		print "func Example_'${file%.*}'() {"
 		print "src := `" src "`"
-		print "i := NewInterpreter(Opt{Entry: \"main\"})"
+		print "i := NewInterpreter(Opt{Entry: \"main\"}, \"'$file'\")"
 		print "i.Eval(src)"
 		print out
 		print "}"

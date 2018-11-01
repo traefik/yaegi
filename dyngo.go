@@ -27,11 +27,13 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 	log.SetFlags(log.Lshortfile)
+	name := "-"
 
 	var b []byte
 	var err error
 	if len(args) > 0 && args[0] != "-" {
 		b, err = ioutil.ReadFile(args[0])
+		name = args[0]
 	} else {
 		b, err = ioutil.ReadAll(os.Stdin)
 	}
@@ -42,7 +44,7 @@ func main() {
 	if s[:2] == "#!" {
 		s = strings.Replace(s, "#!", "//", 1)
 	}
-	i := interp.NewInterpreter(opt)
+	i := interp.NewInterpreter(opt, name)
 	i.Eval(string(s))
 
 	/*

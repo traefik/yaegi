@@ -367,7 +367,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case CallExpr:
 			wireChild(n)
 			n.findex = scope.inc(interp)
-			log.Println(n.index, "call", n.child[0].typ)
+			log.Println(n.index, "call child[0].typ", n.child[0].typ)
 			if n.child[0].sym != nil && n.child[0].sym.kind == Bltn {
 				// Call an internal go builtin
 				n.gen = n.child[0].sym.builtin

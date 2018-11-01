@@ -32,16 +32,16 @@ func (interp *Interpreter) importSrcFile(path string) {
 			continue
 		}
 
-		//log.Println("src", name)
-		buf, err := ioutil.ReadFile(filepath.Join(dir, name))
+		name = filepath.Join(dir, name)
+		buf, err := ioutil.ReadFile(name)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		_, root = interp.Ast(string(buf))
+		_, root = interp.Ast(string(buf), name)
 		rootNodes = append(rootNodes, root)
 		if interp.AstDot {
-			root.AstDot(DotX())
+			root.AstDot(DotX(), name)
 		}
 		interp.Gta(root)
 	}

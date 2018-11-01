@@ -264,9 +264,9 @@ func (a Action) String() string {
 
 // Ast parses src string containing Go code and generates the corresponding AST.
 // The package name and the AST root node are returned.
-func (interp *Interpreter) Ast(src string) (string, *Node) {
+func (interp *Interpreter) Ast(src, name string) (string, *Node) {
 	fset := token.NewFileSet() // positions are relative to fset
-	f, err := parser.ParseFile(fset, "sample.go", src, 0)
+	f, err := parser.ParseFile(fset, name, src, 0)
 	if err != nil {
 		panic(err)
 	}

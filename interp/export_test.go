@@ -6,7 +6,7 @@ func Example_export() {
 func Exported() { println("Hello from Exported") }
 `
 
-	i := NewInterpreter(Opt{})
+	i := NewInterpreter(Opt{}, "export_test")
 	i.Eval(src)
 	f := (*i.Exports["tst"])["Exported"].(func())
 	f()

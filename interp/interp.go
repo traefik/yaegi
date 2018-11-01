@@ -68,6 +68,7 @@ type Opt struct {
 // Interpreter contains global resources and state
 type Interpreter struct {
 	Opt
+	Name     string            // program name
 	Frame    *Frame            // programe data storage during execution
 	fsize    int               // global interpreter frame size
 	nindex   int               // next node index
@@ -94,8 +95,9 @@ func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 }
 
 // NewInterpreter creates and returns a new interpreter object
-func NewInterpreter(opt Opt) *Interpreter {
+func NewInterpreter(opt Opt, name string) *Interpreter {
 	return &Interpreter{
+		Name:     name,
 		Opt:      opt,
 		universe: initUniverse(),
 		scope:    map[string]*Scope{},
@@ -162,9 +164,9 @@ func (i *Interpreter) resizeFrame() {
 // current interpreted package exported symbols
 func (i *Interpreter) Eval(src string) string {
 	// Parse source to AST
-	pkgName, root := i.Ast(src)
+	pkgName, root := i.Ast(src, i.Name)
 	if i.AstDot {
-		root.AstDot(DotX())
+		root.AstDot(DotX(), i.Name)
 	}
 
 	// Global type analysis
