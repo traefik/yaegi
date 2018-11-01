@@ -231,13 +231,16 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.val = n.child[0].val
 			// Propagate type
 			// TODO: Check that existing destination type matches source type
-			n.typ = n.child[0].typ
 			if n.child[1].action == Recv {
+				// Assign by reading from a receiving channel
 				n.gen = nop
 				n.child[1].findex = n.child[0].findex // Set recv address to LHS
 				n.child[0].typ = n.child[1].typ.val
-				n.typ = n.child[0].typ
+			} else if n.child[1].action == Call {
+				// Assign from a function call
+				n.child[0].typ = n.child[1].child[0].typ.ret[0]
 			}
+			n.typ = n.child[0].typ
 			if sym, level, ok := scope.lookup(n.child[0].ident); ok {
 				sym.typ = n.typ
 				n.level = level
