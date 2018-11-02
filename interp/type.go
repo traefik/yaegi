@@ -94,8 +94,9 @@ func (c Cat) String() string {
 
 // StructField type defines a field in a struct
 type StructField struct {
-	name string
-	typ  *Type
+	name  string
+	embed bool
+	typ   *Type
 }
 
 // Type defines the internal representation of types in the interpreter
@@ -112,7 +113,7 @@ type Type struct {
 	variadic   bool          // true if type is variadic
 	incomplete bool          // true if type must be parsed again
 	node       *Node         // root AST node of type definition
-	scope      *Scope
+	scope      *Scope        // type declaration scope (in case of re-parse incomplete type)
 }
 
 // return a type definition for the corresponding AST subtree
@@ -241,7 +242,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 		for _, c := range n.child[0].child {
 			if len(c.child) == 1 {
 				typ := nodeType(interp, scope, c.child[0])
-				t.field = append(t.field, StructField{name: c.child[0].ident, typ: typ})
+				t.field = append(t.field, StructField{name: c.child[0].ident, embed: true, typ: typ})
 				t.incomplete = t.incomplete || typ.incomplete
 			} else {
 				l := len(c.child)
@@ -371,7 +372,7 @@ func (t *Type) lookupMethod(name string) (*Node, []int) {
 	var index []int
 	if m := t.getMethod(name); m == nil {
 		for i, f := range t.field {
-			if f.name == "" {
+			if f.embed {
 				if m, index2 := f.typ.lookupMethod(name); m != nil {
 					index = append([]int{i}, index2...)
 					return m, index

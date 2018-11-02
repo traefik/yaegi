@@ -493,6 +493,7 @@ func call2(n *Node) {
 // FIXME: handle case where func return a boolean
 func call(n *Node) {
 	goroutine := n.anc.kind == GoStmt
+	method := n.child[0].recv != nil
 	var values []func(*Frame) reflect.Value
 	//var recv *Node
 	//var rseq []int
@@ -508,8 +509,10 @@ func call(n *Node) {
 	//	values = append(values, genValue(recv))
 	//	//}
 	//}
-	if n.child[0].recv != nil {
-		values = append(values, genValue(n.child[0].recv))
+
+	// Compute method receiver value
+	if method {
+		values = append(values, genValueRecv(n.child[0]))
 	}
 
 	next := getExec(n.tnext)
@@ -526,14 +529,12 @@ func call(n *Node) {
 		ret[i] = n.findex + i
 	}
 
-	//log.Println(n.index, "call", forkFrame)
-
 	n.exec = func(f *Frame) Builtin {
 		def := value(f).Interface().(*Node)
-		log.Println(n.index, "def.recv:", def)
+		log.Println(n.index, "def:", def)
 		anc := f
+		// Get closure frame context (if any)
 		if def.frame != nil {
-			// Get closure frame context (if any)
 			anc = def.frame
 		}
 		nf := Frame{anc: anc, data: make([]reflect.Value, def.flen)}
@@ -546,7 +547,7 @@ func call(n *Node) {
 		}
 		// copy input parameters from caller
 		for i, v := range values {
-			//log.Println(n.index, i, def.framepos[i], nf.data[def.framepos[i]].Kind(), v(f).Kind())
+			log.Println(n.index, i, def.framepos[i], nf.data[def.framepos[i]].Kind(), v(f).Kind())
 			nf.data[def.framepos[i]].Set(v(f))
 		}
 
@@ -1094,7 +1095,6 @@ func land(n *Node) {
 			if v = value0(f).Bool(); v {
 				v = value1(f).Bool()
 			}
-			f.data[i].SetBool(v)
 			if v {
 				return tnext
 			}

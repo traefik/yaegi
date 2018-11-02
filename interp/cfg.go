@@ -236,9 +236,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				n.gen = nop
 				n.child[1].findex = n.child[0].findex // Set recv address to LHS
 				n.child[0].typ = n.child[1].typ.val
-			} else if n.child[1].action == Call {
-				// Assign from a function call
-				n.child[0].typ = n.child[1].child[0].typ.ret[0]
 			}
 			n.typ = n.child[0].typ
 			if sym, level, ok := scope.lookup(n.child[0].ident); ok {
@@ -370,7 +367,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case CallExpr:
 			wireChild(n)
 			n.findex = scope.inc(interp)
-			log.Println(n.index, "call child[0].typ", n.child[0].typ)
 			if n.child[0].sym != nil && n.child[0].sym.kind == Bltn {
 				// Call an internal go builtin
 				n.gen = n.child[0].sym.builtin
@@ -400,8 +396,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					}
 				}
 			} else if n.child[0].typ.cat == ValueT {
-				log.Println(n.index, "callBin", n.child[0].val)
 				n.gen = callBin
+			} else {
+				if typ := n.child[0].typ; len(typ.ret) > 0 {
+					n.typ = n.child[0].typ.ret[0]
+				}
 			}
 			// Reserve entries in frame to store results of call
 			scope.size += n.fsize
@@ -888,7 +887,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
 				// Handle method
 				n.gen = nop
-				//n.kind = BasicLit
+				n.kind = BasicLit
 				n.val = m
 				n.child[1].val = lind
 				n.typ = m.typ
@@ -1093,6 +1092,23 @@ func valueGenerator(n *Node, i int) func(*Frame) reflect.Value {
 			}
 			return f.data[i]
 		}
+	}
+}
+
+func genValueRecv(n *Node) func(*Frame) reflect.Value {
+	v := genValue(n.recv)
+	fi := n.child[1].val.([]int)
+
+	if len(fi) == 0 {
+		return v
+	}
+
+	return func(f *Frame) reflect.Value {
+		r := v(f)
+		if r.Kind() == reflect.Ptr {
+			r = r.Elem()
+		}
+		return r.FieldByIndex(fi)
 	}
 }
 

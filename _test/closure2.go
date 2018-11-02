@@ -12,6 +12,5 @@ func main() {
 	pos, neg := adder(), adder()
 	for i := 0; i < 10; i++ {
 		println(pos(i), neg(0-2*i))
-
 	}
 }
