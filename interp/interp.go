@@ -22,7 +22,7 @@ type Node struct {
 	kind     Kind             // kind of node
 	sym      *Symbol          // associated symbol
 	typ      *Type            // type of value in frame, or nil
-	recv     *Node            // method receiver node for call, or nil
+	recv     *Receiver        // method receiver node for call, or nil
 	frame    *Frame           // frame pointer, only used for script callbacks from runtime (wrapNode)
 	types    []reflect.Type   // frame types, used by function litterals only
 	framepos []int            // frame positions of function parameters
@@ -33,6 +33,12 @@ type Node struct {
 	val      interface{}   // static generic value (CFG execution)
 	rval     reflect.Value // reflection value to let runtime access interpreter (CFG)
 	ident    string        // set if node is a var or func
+}
+
+// Receiver stores method receiver object access path
+type Receiver struct {
+	node  *Node
+	index []int
 }
 
 // Frame contains values for the current execution level

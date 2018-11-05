@@ -38,6 +38,7 @@ type Symbol struct {
 	kind     SymKind
 	typ      *Type            // Type of value
 	node     *Node            // Node value if index is negative
+	recv     *Receiver        // receiver node value, if sym refers to a method
 	index    int              // index of value in frame or -1
 	val      interface{}      // default value (used for constants)
 	path     string           // package path if typ.cat is SrcPkgT or BinPkgT
@@ -208,6 +209,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				scope.inc(interp)
 				n.child[0].val = n.child[1].val
 				n.child[0].typ = n.child[1].typ
+				n.child[0].recv = n.child[1].recv
 				n.child[0].findex = scope.size
 				if scope.global {
 					if sym, _, ok := scope.lookup(name); ok {
@@ -240,6 +242,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.typ = n.child[0].typ
 			if sym, level, ok := scope.lookup(n.child[0].ident); ok {
 				sym.typ = n.typ
+				sym.recv = n.child[1].recv
 				n.level = level
 			}
 			// If LHS is an indirection, get reference instead of value, to allow setting
@@ -338,7 +341,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			wireChild(n)
 			n.findex = scope.inc(interp)
 			n.typ = n.child[0].typ.val
-			n.recv = n
+			n.recv = &Receiver{node: n}
 			if n.child[0].typ.cat == MapT {
 				scope.size++ // Reserve an entry for getIndexMap 2nd return value
 				n.gen = getIndexMap
@@ -710,6 +713,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						n.val = nil
 					}
 				}
+				n.recv = n.sym.recv
 			} else {
 				if n.ident == "_" || n.anc.kind == Define || n.anc.kind == DefineX || n.anc.kind == RangeStmt || n.anc.kind == ValueSpec {
 					// Create a new local symbol for func argument or local var definition
@@ -807,7 +811,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.typ == nil {
 				log.Fatal("typ should not be nil:", n.index, n.child[0])
 			}
-			log.Println(n.index, "selector", n.child[0].ident+"."+n.child[1].ident, n.typ.cat)
+			//log.Println(n.index, "selector", n.child[0].ident+"."+n.child[1].ident, n.typ.cat)
 			if n.typ.cat == ValueT {
 				// Handle object defined in runtime
 				if method, ok := n.typ.rtype.MethodByName(n.child[1].ident); ok {
@@ -889,10 +893,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				n.gen = nop
 				n.kind = BasicLit
 				n.val = m
-				n.child[1].val = lind
+				//n.child[1].val = lind
 				n.typ = m.typ
-				n.recv = n.child[0]
-				log.Println(n.index, "method recv", m.index, n.recv.index, lind)
+				n.recv = &Receiver{node: n.child[0], index: lind}
 			} else {
 				// Handle promoted field in embedded struct
 				if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
@@ -1096,8 +1099,8 @@ func valueGenerator(n *Node, i int) func(*Frame) reflect.Value {
 }
 
 func genValueRecv(n *Node) func(*Frame) reflect.Value {
-	v := genValue(n.recv)
-	fi := n.child[1].val.([]int)
+	v := genValue(n.recv.node)
+	fi := n.recv.index
 
 	if len(fi) == 0 {
 		return v

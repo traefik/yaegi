@@ -603,7 +603,6 @@ func main() {
 	pos, neg := adder(), adder()
 	for i := 0; i < 10; i++ {
 		println(pos(i), neg(0-2*i))
-
 	}
 }`
 	i := NewInterpreter(Opt{Entry: "main"}, "closure2.go")
@@ -1793,6 +1792,34 @@ func main() {
 }
 `
 	i := NewInterpreter(Opt{Entry: "main"}, "method12.go")
+	i.Eval(src)
+
+	// Output:
+	// 25
+}
+
+func Example_method13() {
+	src := `
+package main
+
+type Coord struct {
+	x, y int
+}
+
+func (c Coord) dist() int { return c.x*c.x + c.y*c.y }
+
+type Point struct {
+	Coord
+	z int
+}
+
+func main() {
+	o := Point{Coord{3, 4}, 5}
+	f := o.dist
+	println(f())
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "method13.go")
 	i.Eval(src)
 
 	// Output:

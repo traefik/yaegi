@@ -531,7 +531,6 @@ func call(n *Node) {
 
 	n.exec = func(f *Frame) Builtin {
 		def := value(f).Interface().(*Node)
-		log.Println(n.index, "def:", def)
 		anc := f
 		// Get closure frame context (if any)
 		if def.frame != nil {
@@ -547,7 +546,7 @@ func call(n *Node) {
 		}
 		// copy input parameters from caller
 		for i, v := range values {
-			log.Println(n.index, i, def.framepos[i], nf.data[def.framepos[i]].Kind(), v(f).Kind())
+			//log.Println(n.index, i, def.framepos[i], nf.data[def.framepos[i]].Kind(), v(f).Kind())
 			nf.data[def.framepos[i]].Set(v(f))
 		}
 
