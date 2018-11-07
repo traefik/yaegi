@@ -546,7 +546,7 @@ func call(n *Node) {
 		}
 		// copy input parameters from caller
 		for i, v := range values {
-			//log.Println(n.index, i, def.framepos[i], nf.data[def.framepos[i]].Kind(), v(f).Kind())
+			log.Println(n.index, i, def.framepos[i], nf.data[def.framepos[i]].Kind(), v(f).Kind())
 			nf.data[def.framepos[i]].Set(v(f))
 		}
 
@@ -751,7 +751,6 @@ func getPtrIndex(n *Node) {
 	value := genValue(n.child[0])
 
 	n.exec = func(f *Frame) Builtin {
-		log.Println(n.index, "in getPtrIndex")
 		// if error, fallback to getIndex, to make receiver methods work both with pointers and objects
 		//if a, ok := value0(f).(*interface{}); ok {
 		//	f.data[i] = (*a).([]interface{})[value1(f).(int)]

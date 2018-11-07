@@ -413,7 +413,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else {
 				scope.size += n.fsize
 			}
-			n.recv = n.child[0].recv
 
 			/*
 				else if n.child[0].kind == SelectorImport {
@@ -713,7 +712,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						n.val = nil
 					}
 				}
-				n.recv = n.sym.recv
+				if n.sym != nil {
+					n.recv = n.sym.recv
+				}
 			} else {
 				if n.ident == "_" || n.anc.kind == Define || n.anc.kind == DefineX || n.anc.kind == RangeStmt || n.anc.kind == ValueSpec {
 					// Create a new local symbol for func argument or local var definition
