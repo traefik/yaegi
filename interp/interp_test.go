@@ -1824,6 +1824,50 @@ func main() {
 	// 25
 }
 
+func Example_method14() {
+	src := `
+package main
+
+func main() {
+	o := Coord{3, 4}
+	println(o.dist())
+}
+
+func (c *Coord) dist() int { return c.x*c.x + c.y*c.y }
+
+type Coord struct {
+	x, y int
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "method14.go")
+	i.Eval(src)
+
+	// Output:
+	// 25
+}
+
+func Example_method15() {
+	src := `
+package main
+
+type Coord struct {
+	x, y int
+}
+
+func (c Coord) dist() int { return c.x*c.x + c.y*c.y }
+
+func main() {
+	o := &Coord{3, 4}
+	println(o.dist())
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "method15.go")
+	i.Eval(src)
+
+	// Output:
+	// 25
+}
+
 func Example_method2() {
 	src := `
 package main

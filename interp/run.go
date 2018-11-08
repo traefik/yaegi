@@ -495,6 +495,7 @@ func call(n *Node) {
 	goroutine := n.anc.kind == GoStmt
 	method := n.child[0].recv != nil
 	var values []func(*Frame) reflect.Value
+	//var recv func(*Frame) reflect.Value
 	//var recv *Node
 	//var rseq []int
 
@@ -512,7 +513,9 @@ func call(n *Node) {
 
 	// Compute method receiver value
 	if method {
+		//recv = genValueRecv(n.child[0])
 		values = append(values, genValueRecv(n.child[0]))
+		// if receiver type is not a ptr, trigger possible convert at runtime
 	}
 
 	next := getExec(n.tnext)
@@ -544,10 +547,26 @@ func call(n *Node) {
 				nf.data[i] = reflect.New(t).Elem()
 			}
 		}
+
 		// copy input parameters from caller
 		for i, v := range values {
-			log.Println(n.index, i, def.framepos[i], nf.data[def.framepos[i]].Kind(), v(f).Kind())
-			nf.data[def.framepos[i]].Set(v(f))
+			dest := nf.data[def.framepos[i]]
+			src := v(f)
+			if method && i == 0 {
+				// Accomodate to receiver type
+				ks, kd := src.Kind(), dest.Kind()
+				if ks != kd {
+					if kd == reflect.Ptr {
+						dest.Set(src.Addr())
+					} else {
+						dest.Set(src.Elem())
+					}
+				} else {
+					dest.Set(src)
+				}
+			} else {
+				dest.Set(src)
+			}
 		}
 
 		// Execute function body
