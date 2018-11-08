@@ -15,8 +15,7 @@ var t = &T1{"test"}
 
 func main() {
 	f := t.genAdd(4)
-	//g := f(4)
-	println(g(5))
+	println(f(5))
 }
 
 // Output:
