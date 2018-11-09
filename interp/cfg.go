@@ -185,7 +185,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			}
 			scope = scope.push(0)
 
-		case TypeSpec:
+		case ImportSpec, TypeSpec:
 			// processing already done in GTA pass
 			return false
 
@@ -708,6 +708,17 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					} else if n.ident == "nil" {
 						n.kind = BasicLit
 						n.val = nil
+					} else if sym.kind == Bin {
+						if sym.val == nil {
+							n.kind = Rtype
+						} else {
+							n.kind = Rvalue
+						}
+						n.typ = sym.typ
+						if n.typ.rtype.Kind() == reflect.Func {
+							n.fsize = n.typ.rtype.NumOut()
+						}
+						n.rval = sym.val.(reflect.Value)
 					}
 				}
 				if n.sym != nil {

@@ -78,10 +78,13 @@ func (interp *Interpreter) Gta(root *Node) {
 				ipath = n.child[0].val.(string)
 				name = path.Base(ipath)
 			}
-			if pkg, ok := interp.binValue[ipath]; ok {
+			if values, ok := interp.binValue[ipath]; ok {
 				if name == "." {
-					for n, s := range pkg {
-						scope.sym[n] = &Symbol{typ: &Type{cat: BinT}, val: s}
+					for n, v := range values {
+						scope.sym[n] = &Symbol{kind: Bin, typ: &Type{cat: ValueT, rtype: v.Type()}, val: v}
+					}
+					for n, t := range interp.binType[ipath] {
+						scope.sym[n] = &Symbol{kind: Bin, typ: &Type{cat: ValueT, rtype: t}}
 					}
 				} else {
 					scope.sym[name] = &Symbol{typ: &Type{cat: BinPkgT}, path: ipath}
@@ -107,7 +110,6 @@ func (interp *Interpreter) Gta(root *Node) {
 			}
 			scope.sym[typeName].typ = n.typ
 			return false
-
 		}
 		return true
 	}, nil)
