@@ -495,7 +495,6 @@ func call(n *Node) {
 	goroutine := n.anc.kind == GoStmt
 	method := n.child[0].recv != nil
 	var values []func(*Frame) reflect.Value
-	//var recv func(*Frame) reflect.Value
 	//var recv *Node
 	//var rseq []int
 
@@ -513,9 +512,7 @@ func call(n *Node) {
 
 	// Compute method receiver value
 	if method {
-		//recv = genValueRecv(n.child[0])
 		values = append(values, genValueRecv(n.child[0]))
-		// if receiver type is not a ptr, trigger possible convert at runtime
 	}
 
 	next := getExec(n.tnext)
@@ -548,7 +545,7 @@ func call(n *Node) {
 			}
 		}
 
-		// copy input parameters from caller
+		// Copy input parameters from caller
 		for i, v := range values {
 			dest := nf.data[def.framepos[i]]
 			src := v(f)

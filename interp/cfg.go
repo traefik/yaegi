@@ -221,7 +221,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					scope.sym[name] = &Symbol{index: scope.size, kind: Var}
 				}
 				if n.child[1].action == GetFunc {
-					log.Println(n.index, "assign getFunc")
 					scope.sym[name].index = -1
 					scope.sym[name].node = n.child[1]
 				}
@@ -307,7 +306,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 				// Force definition of assigned idents in current scope
 				for i, c := range n.child[:l] {
-					//log.Println(c.ident, i, types)
 					c.findex = scope.inc(interp)
 					scope.sym[c.ident] = &Symbol{index: scope.size, global: scope.global, kind: Var}
 					if i < len(types) {
@@ -881,26 +879,24 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					log.Println(n.index, "selector unresolved:", n.child[0].ident+"."+n.child[1].ident)
 				}
 			} else if fi := n.typ.fieldIndex(n.child[1].ident); fi >= 0 {
-				//log.Println(n.index, "selector field", fi)
 				// Resolve struct field index
 				if n.typ.cat == PtrT {
 					n.gen = getPtrIndex
 				}
 				n.typ = n.typ.fieldType(fi)
-				n.child[1].kind = BasicLit
+				n.child[1].findex = -1
 				n.child[1].val = fi
 			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
 				// Handle method
 				n.gen = nop
-				n.kind = BasicLit
+				n.findex = -1
 				n.val = m
-				//n.child[1].val = lind
 				n.typ = m.typ
 				n.recv = &Receiver{node: n.child[0], index: lind}
 			} else {
 				// Handle promoted field in embedded struct
 				if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
-					n.child[1].kind = BasicLit
+					n.child[1].findex = -1
 					n.child[1].val = ti
 					n.gen = getIndexSeq
 				} else {
@@ -1084,7 +1080,6 @@ func valueGenerator(n *Node, i int) func(*Frame) reflect.Value {
 		return func(f *Frame) reflect.Value { return f.data[i] }
 	case 1:
 		return func(f *Frame) reflect.Value {
-			//log.Println(n.index, i, f.anc.data[i])
 			return f.anc.data[i]
 		}
 	case 2:
