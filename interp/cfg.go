@@ -560,9 +560,15 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			// Otherwise, just point to corresponding location in frame, resolved in
 			// ident child.
 			l := len(n.child) - 1
-			n.typ = nodeType(interp, scope, n.child[l])
+			n.typ = nodeType(interp, scope.anc, n.child[l])
 			if l == 0 {
-				n.findex = scope.inc(interp)
+				if n.anc.anc.kind == FuncDecl {
+					// Receiver with implicit var decl
+					scope.sym[n.child[0].ident].typ = n.typ
+					n.child[0].typ = n.typ
+				} else {
+					n.findex = scope.inc(interp)
+				}
 			} else {
 				for _, f := range n.child[:l] {
 					scope.sym[f.ident].typ = n.typ
@@ -685,9 +691,10 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			// TODO: should error if call expression refers to a builtin
 
 		case Ident:
-			if n.anc.kind == File || (n.anc.kind == SelectorExpr && n.anc.child[0] != n) || (n.anc.kind == KeyValueExpr && n.anc.child[0] == n) {
+			if isKey(n) {
 				// Skip symbol creation/lookup for idents used as key
-			} else if l := len(n.anc.child); n.anc.kind == Field && l > 1 && n.anc.child[l-1] != n {
+				//} else if l := len(n.anc.child); n.anc.kind == Field && l > 1 && n.anc.child[l-1] != n {
+			} else if isFuncArg(n) {
 				// Create a new local symbol for func argument
 				n.findex = scope.inc(interp)
 				scope.sym[n.ident] = &Symbol{index: scope.size, kind: Var}
@@ -1030,6 +1037,26 @@ func wireChild(n *Node) {
 		}
 		break
 	}
+}
+
+func isKey(n *Node) bool {
+	return n.anc.kind == File ||
+		(n.anc.kind == SelectorExpr && n.anc.child[0] != n) ||
+		(n.anc.kind == KeyValueExpr && n.anc.child[0] == n)
+}
+
+func isFuncArg(n *Node) bool {
+	if n.anc.kind != Field {
+		return false
+	}
+	l := len(n.anc.child)
+	if l == 1 && n.anc.anc.anc.kind == FuncDecl {
+		return true
+	}
+	if l > 1 && n.anc.child[l-1] != n {
+		return true
+	}
+	return false
 }
 
 func canExport(name string) bool {
