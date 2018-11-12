@@ -57,7 +57,7 @@ func (interp *Interpreter) run(n *Node, cf *Frame) {
 		f = &Frame{anc: cf, data: make([]reflect.Value, n.flen)}
 	}
 	for i, t := range n.types {
-		if t != nil {
+		if t != nil && i < len(f.data) {
 			f.data[i] = reflect.New(t).Elem()
 		}
 	}
@@ -201,7 +201,10 @@ func assignX(n *Node) {
 
 	n.exec = func(f *Frame) Builtin {
 		for i, value := range values {
-			value(f).Set(f.data[b+i])
+			log.Println(n.index, "in assignX", i, value(f), f.data[b+i], b)
+			if f.data[b+i].IsValid() {
+				value(f).Set(f.data[b+i])
+			}
 		}
 		return next
 	}
@@ -227,6 +230,7 @@ func assign(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
+		log.Println(n.index, "in assign")
 		value(f).Set(value1(f))
 		return next
 	}
@@ -643,14 +647,17 @@ func callBin(n *Node) {
 	for i, c := range child {
 		values[i] = genValue(c)
 	}
+	fsize := n.child[0].fsize
 
 	n.exec = func(f *Frame) Builtin {
 		in := make([]reflect.Value, l)
 		for i, v := range values {
 			in[i] = v(f)
 		}
+		//log.Println(n.index, "callbin", value(f).Type())
 		v := value(f).Call(in)
-		for i := 0; i < n.fsize; i++ {
+		//log.Println(n.index, "callBin, res:", v, fsize, n.findex)
+		for i := 0; i < fsize; i++ {
 			f.data[n.findex+i] = v[i]
 		}
 		return next

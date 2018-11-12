@@ -445,7 +445,7 @@ func (interp *Interpreter) Ast(src, name string) (string, *Node) {
 			st.push(addChild(&root, anc, ChanType, Nop))
 
 		case *ast.CompositeLit:
-			st.push(addChild(&root, anc, CompositeLitExpr, Nop))
+			st.push(addChild(&root, anc, CompositeLitExpr, CompositeLit))
 
 		case *ast.DeclStmt:
 			st.push(addChild(&root, anc, DeclStmt, Nop))
