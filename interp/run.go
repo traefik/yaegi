@@ -231,7 +231,6 @@ func assign(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
-		log.Println(n.index, "in assign")
 		value(f).Set(value1(f))
 		return next
 	}
