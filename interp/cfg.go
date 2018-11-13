@@ -690,11 +690,18 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case Ident:
 			if isKey(n) {
 				// Skip symbol creation/lookup for idents used as key
-			} else if isFuncArg(n) || isNewDefine(n) {
-				// Create a new symbol in current scope, type to be set by parent node
+			} else if isFuncArg(n) {
 				n.findex = scope.inc(interp)
 				scope.sym[n.ident] = &Symbol{index: scope.size, kind: Var, global: scope.global}
 				n.sym = scope.sym[n.ident]
+			} else if isNewDefine(n) {
+				// Create a new symbol in current scope, type to be set by parent node
+				// Note that global symbol should already be defined (gta)
+				if _, _, ok := scope.lookup(n.ident); !ok && !scope.global {
+					n.findex = scope.inc(interp)
+					scope.sym[n.ident] = &Symbol{index: scope.size, kind: Var, global: scope.global}
+					n.sym = scope.sym[n.ident]
+				}
 			} else if sym, level, ok := scope.lookup(n.ident); ok {
 				// Found symbol, populate node info
 				n.typ, n.findex, n.level = sym.typ, sym.index, level

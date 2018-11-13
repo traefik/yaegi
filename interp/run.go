@@ -61,6 +61,7 @@ func (interp *Interpreter) run(n *Node, cf *Frame) {
 			f.data[i] = reflect.New(t).Elem()
 		}
 	}
+	//log.Println(n.index, "run", n.start.index)
 	runCfg(n.start, f)
 }
 

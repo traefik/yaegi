@@ -1549,11 +1549,8 @@ func Example_map3() {
 package main
 
 func main() {
-	//dict := map[string]string{}
-	dict := map[string]string{"bidule": "machin", "truc": "bidule"}
-	//println(dict)
-	//dict["truc"] = "machin"
-	//println(dict)
+	dict := map[string]string{}
+	dict["truc"] = "machin"
 	println(dict["truc"])
 }
 `
@@ -2435,6 +2432,24 @@ func main() {
 
 	// Output:
 	// 1 2
+}
+
+func Example_ret4() {
+	src := `
+package main
+
+func r() int { return 1 }
+
+func main() {
+	a := r()
+	println(a)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "ret4.go")
+	i.Eval(src)
+
+	// Output:
+	// 1
 }
 
 func Example_run0() {
