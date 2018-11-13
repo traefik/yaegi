@@ -201,7 +201,7 @@ func assignX(n *Node) {
 
 	n.exec = func(f *Frame) Builtin {
 		for i, value := range values {
-			log.Println(n.index, "in assignX", i, value(f), f.data[b+i], b)
+			//log.Println(n.index, "in assignX", i, value(f), f.data[b+i], b)
 			if f.data[b+i].IsValid() {
 				value(f).Set(f.data[b+i])
 			}
@@ -801,15 +801,13 @@ func getPtrIndexBin(n *Node) {
 }
 
 func getIndexBinMethod(n *Node) {
-	//i := n.findex
-	//value := n.child[0].value
-	//ident := n.child[1].ident
+	i := n.findex
+	m := n.val.(int)
+	value := genValue(n.child[0])
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
-		log.Println(n.index, "in getIndexBinMethod")
-		//a := reflect.ValueOf(value(f))
-		//f.data[i] = a.MethodByName(ident)
+		f.data[i] = value(f).Method(m)
 		return next
 	}
 }

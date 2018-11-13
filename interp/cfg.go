@@ -206,22 +206,10 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			name := n.child[0].ident
 			sym, level, _ := scope.lookup(name)
 			if n.kind == Define {
-				// Force definition of assigned ident in current scope
-				//scope.inc(interp)
 				n.child[0].val = n.child[1].val
 				n.child[0].typ = n.child[1].typ
 				n.child[0].recv = n.child[1].recv
 				n.child[0].findex = sym.index
-				//n.child[0].findex = scope.size
-				//if scope.global {
-				//	if sym, _, ok := scope.lookup(name); ok {
-				//		n.child[0].findex = sym.index
-				//	} else {
-				//		scope.sym[name] = &Symbol{index: scope.size, global: true, kind: Var}
-				//	}
-				//} else {
-				//	scope.sym[name] = &Symbol{index: scope.size, kind: Var}
-				//}
 				if n.child[1].action == GetFunc {
 					scope.sym[name].index = -1
 					scope.sym[name].node = n.child[1]
@@ -288,8 +276,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case DefineX, AssignXStmt:
 			wireChild(n)
 			l := len(n.child) - 1
-			//if n.kind == DefineX {
-			// retrieve assigned value types from call signature
 			var types []*Type
 			switch n.child[l].kind {
 			case CallExpr:
@@ -298,10 +284,8 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					for i := 0; i < funtype.rtype.NumOut(); i++ {
 						types = append(types, &Type{cat: ValueT, rtype: funtype.rtype.Out(i)})
 					}
-					log.Println(n.index, "assignX", types[0].rtype, types[1].rtype)
 				} else {
 					types = funtype.ret
-					log.Println(n.index, "funtype", types[0].cat, types[1].cat)
 				}
 
 			case IndexExpr:
@@ -315,7 +299,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			default:
 				log.Fatalln(n.index, "Assign expression unsupported:", n.child[l].kind)
 			}
-			// Force definition of assigned idents in current scope
 			for i, c := range n.child[:l] {
 				sym, _, ok := scope.lookup(c.ident)
 				if !ok {
@@ -323,15 +306,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 				sym.typ = types[i]
 				c.typ = sym.typ
-				log.Println(n.index, c.ident, c.findex, c.typ.cat)
-				//c.findex = scope.inc(interp)
-				//scope.sym[c.ident] = &Symbol{index: scope.size, global: scope.global, kind: Var}
-				//if i < len(types) {
-				//	log.Println(n.index, c.ident, c.findex, types[i].cat)
-				//	scope.sym[c.ident].typ = types[i]
-				//}
 			}
-			//}
 
 		case BinaryExpr:
 			wireChild(n)
@@ -425,7 +400,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 			}
 			// Reserve entries in frame to store results of call
-			//scope.size += n.fsize
 			if scope.global {
 				interp.fsize += n.fsize
 				scope.size = interp.fsize
@@ -757,18 +731,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else {
 				log.Println(n.index, "unresolved symbol", n.ident)
 			}
-			//else {
-			//if n.ident == "_" || n.anc.kind == Define || n.anc.kind == DefineX || n.anc.kind == RangeStmt || n.anc.kind == ValueSpec {
-			//	// Create a new local symbol for func argument or local var definition
-			//	// Symbol type will be set in parent node
-			//	n.findex = scope.inc(interp)
-			//	scope.sym[n.ident] = &Symbol{index: scope.size, global: scope.global, kind: Var}
-			//	n.sym = scope.sym[n.ident]
-			//	log.Println(n.index, "defined ", n.ident, n.findex)
-			//} else {
-			//	log.Println(n.index, "unresolved global symbol", n.ident)
-			//}
-			//}
 
 		case If0: // if cond {}
 			cond, tbody := n.child[0], n.child[1]
@@ -866,13 +828,14 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						n.gen = nop
 					} else {
 						n.val = method.Index
-						//n.gen = getIndexBinMethod
-						n.gen = nop
+						n.gen = getIndexBinMethod
 					}
 					n.fsize = method.Type.NumOut()
 				} else {
 					// Method can be only resolved from value at execution
-					n.gen = getIndexBinMethod
+					log.Println(n.index, "could not solve method")
+					n.gen = nop
+					//n.gen = getIndexBinMethod
 				}
 			} else if n.typ.cat == PtrT && n.typ.val.cat == ValueT {
 				// Handle pointer on object defined in runtime
