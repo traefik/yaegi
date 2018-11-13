@@ -200,6 +200,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case Address:
 			wireChild(n)
 			n.typ = &Type{cat: PtrT, val: n.child[0].typ}
+			n.findex = scope.inc(interp)
 
 		case Define, AssignStmt:
 			wireChild(n)
@@ -243,16 +244,17 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				if n.child[0].child[0].typ.cat == MapT {
 					n.gen = assignMap
 					n.child[0].gen = nop // skip getIndexMap
-				} else if n.child[0].child[0].typ.cat == PtrT {
-					// Handle the case where the receiver is a pointer to an object
-					n.child[0].gen = getPtrIndexAddr
-					n.gen = assignPtrField
 				}
-			} else if n.child[0].action == Star {
-				n.findex = n.child[0].child[0].findex
-				n.level = n.child[0].child[0].level
-				n.gen = indirectAssign
 			}
+			//} else if n.child[0].child[0].typ.cat == PtrT {
+			//	// Handle the case where the receiver is a pointer to an object
+			//	n.child[0].gen = getPtrIndexAddr
+			//	n.gen = assignPtrField
+			//} else if n.child[0].action == Star {
+			//		n.findex = n.child[0].child[0].findex
+			//		n.level = n.child[0].child[0].level
+			//		n.gen = indirectAssign
+			//	}
 			if n.anc.kind == ConstDecl {
 				iotaValue++
 			}
@@ -267,11 +269,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				sym.typ = n.typ
 				n.level = level
 			}
-			if n.child[0].action == Star {
-				n.findex = n.child[0].child[0].findex
-				n.level = n.child[0].child[0].level
-				n.gen = indirectInc
-			}
+			//if n.child[0].action == Star {
+			//	n.findex = n.child[0].child[0].findex
+			//	n.level = n.child[0].child[0].level
+			//	n.gen = indirectInc
+			//}
 
 		case DefineX, AssignXStmt:
 			wireChild(n)
@@ -922,6 +924,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 			}
 
+		case StarExpr:
+			wireChild(n)
+			n.typ = n.child[0].typ.val
+			n.findex = scope.inc(interp)
+
 		case Switch0:
 			n.start = n.child[1].start
 			// Chain case clauses
@@ -955,6 +962,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case SliceExpr, UnaryExpr:
 			wireChild(n)
 			n.typ = n.child[0].typ
+			log.Println(n.index, n.action)
 			if n.action == Negate {
 				n.findex = scope.inc(interp)
 			}

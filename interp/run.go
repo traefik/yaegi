@@ -211,18 +211,18 @@ func assignX(n *Node) {
 	}
 }
 
-// Indirect assign
-func indirectAssign(n *Node) {
-	i := n.findex
-	value := genValue(n.child[1])
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		//*(f.data[i].(*interface{})) = value(f)
-		f.data[i].Elem().Set(value(f))
-		return next
-	}
-}
+//func indirectAssign(n *Node) {
+//	i := n.findex
+//	value := genValue(n.child[1])
+//	next := getExec(n.tnext)
+//
+//	n.exec = func(f *Frame) Builtin {
+//		//*(f.data[i].(*interface{})) = value(f)
+//		log.Println(n.index, "in IndirectAssign")
+//		f.data[i].Elem().Set(value(f))
+//		return next
+//	}
+//}
 
 // assign implements single value assignement
 func assign(n *Node) {
@@ -269,16 +269,16 @@ func assign0(n *Node) {
 //	}
 //}
 
-func assignPtrField(n *Node) {
-	//i := n.findex
-	//value := n.child[1].value
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		//(*f.data[i].(*interface{})) = value(f)
-		return next
-	}
-}
+//func assignPtrField(n *Node) {
+//	//i := n.findex
+//	//value := n.child[1].value
+//	next := getExec(n.tnext)
+//
+//	n.exec = func(f *Frame) Builtin {
+//		//(*f.data[i].(*interface{})) = value(f)
+//		return next
+//	}
+//}
 
 func assignMap(n *Node) {
 	value := genValue(n.child[0].child[0])  // map
@@ -287,6 +287,7 @@ func assignMap(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
+		log.Println(n.index, "in assignMap")
 		value(f).SetMapIndex(value0(f), value1(f))
 		return next
 	}
@@ -369,6 +370,7 @@ func addr(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
+		log.Println(n.index, "addr", i)
 		f.data[i] = value(f).Addr()
 		return next
 	}
@@ -380,6 +382,7 @@ func deref(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
+		log.Println(n.index, "deref", i)
 		f.data[i] = value(f).Elem()
 		return next
 	}
@@ -737,19 +740,19 @@ func callBinMethod(n *Node) {
 //	}
 //}
 
-func getPtrIndexAddr(n *Node) {
-	//i := n.findex
-	//value0 := n.child[0].value
-	//value1 := n.child[1].value
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		log.Println(n.index, "in getPtrIndexAddr")
-		//a := (*value0(f).(*interface{})).([]interface{})
-		//f.data[i] = &a[value1(f).(int)]
-		return next
-	}
-}
+//func getPtrIndexAddr(n *Node) {
+//	//i := n.findex
+//	//value0 := n.child[0].value
+//	//value1 := n.child[1].value
+//	next := getExec(n.tnext)
+//
+//	n.exec = func(f *Frame) Builtin {
+//		log.Println(n.index, "in getPtrIndexAddr")
+//		//a := (*value0(f).(*interface{})).([]interface{})
+//		//f.data[i] = &a[value1(f).(int)]
+//		return next
+//	}
+//}
 
 func getIndexAddr(n *Node) {
 	//i := n.findex

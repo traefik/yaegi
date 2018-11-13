@@ -1,7 +1,7 @@
 package main
 
 func main() {
-	dict := map[string]string{"bidule": "machin", "truc": "chouette"}
+	dict := map[string]string{"bidule": "machin"}
 	for k, v := range dict {
 		println(k, v)
 	}
@@ -9,4 +9,3 @@ func main() {
 
 // Output:
 // bidule machin
-// truc chouette
