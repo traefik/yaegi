@@ -287,7 +287,6 @@ func assignMap(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
-		log.Println(n.index, "in assignMap")
 		value(f).SetMapIndex(value0(f), value1(f))
 		return next
 	}
@@ -459,43 +458,43 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	return result
 }
 
-func call2(n *Node) {
-	next := getExec(n.tnext)
-	value := genValue(n.child[0])
-	child := n.child[1:]
-	goroutine := n.anc.kind == GoStmt
-
-	// Compute input argument value functions
-	var values []func(*Frame) reflect.Value
-	for _, c := range child {
-		values = append(values, genValue(c))
-	}
-
-	// compute frame indexes for return values
-	ret := make([]int, len(n.child[0].typ.ret))
-	for i := range n.child[0].typ.ret {
-		ret[i] = n.findex + i
-	}
-
-	n.exec = func(f *Frame) Builtin {
-		def := value(f).Interface().(*Node)
-		in := make([]reflect.Value, len(child))
-		if def.frame != nil {
-			f = def.frame
-		}
-		for i, v := range values {
-			in[i] = v(f)
-		}
-		out := def.fun(f, in, goroutine)
-		log.Println(n.index, "out:", out, ret, f.data)
-		// Propagate return values to caller frame
-		for i, r := range ret {
-			log.Println(n.index, out[i], r)
-			f.data[r] = out[i]
-		}
-		return next
-	}
-}
+//func call2(n *Node) {
+//	next := getExec(n.tnext)
+//	value := genValue(n.child[0])
+//	child := n.child[1:]
+//	goroutine := n.anc.kind == GoStmt
+//
+//	// Compute input argument value functions
+//	var values []func(*Frame) reflect.Value
+//	for _, c := range child {
+//		values = append(values, genValue(c))
+//	}
+//
+//	// compute frame indexes for return values
+//	ret := make([]int, len(n.child[0].typ.ret))
+//	for i := range n.child[0].typ.ret {
+//		ret[i] = n.findex + i
+//	}
+//
+//	n.exec = func(f *Frame) Builtin {
+//		def := value(f).Interface().(*Node)
+//		in := make([]reflect.Value, len(child))
+//		if def.frame != nil {
+//			f = def.frame
+//		}
+//		for i, v := range values {
+//			in[i] = v(f)
+//		}
+//		out := def.fun(f, in, goroutine)
+//		log.Println(n.index, "out:", out, ret, f.data)
+//		// Propagate return values to caller frame
+//		for i, r := range ret {
+//			log.Println(n.index, out[i], r)
+//			f.data[r] = out[i]
+//		}
+//		return next
+//	}
+//}
 
 // FIXME: handle case where func return a boolean
 func call(n *Node) {
@@ -527,7 +526,14 @@ func call(n *Node) {
 	child := n.child[1:]
 	// compute input argument value functions
 	for _, c := range child {
-		values = append(values, genValue(c))
+		if isRegularCall(c) {
+			for i := range c.child[0].typ.ret {
+				ind := c.findex + i
+				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
+			}
+		} else {
+			values = append(values, genValue(c))
+		}
 	}
 
 	// compute frame indexes for return values
@@ -579,6 +585,7 @@ func call(n *Node) {
 		} else {
 			runCfg(def.child[3].start, &nf)
 			// Propagate return values to caller frame
+			//log.Println(n.index, "call rets:", ret, nf.data[:len(ret)])
 			for i, r := range ret {
 				f.data[r] = nf.data[i]
 			}
@@ -589,25 +596,25 @@ func call(n *Node) {
 
 // Same as callBin, but for handling f(g()) where g returns multiple values
 // FIXME: handle case where func return a boolean
-func callBinX(n *Node) {
-	next := getExec(n.tnext)
-	value := genValue(n.child[0])
-
-	n.exec = func(f *Frame) Builtin {
-		l := n.child[1].fsize
-		b := n.child[1].findex
-		in := make([]reflect.Value, l)
-		for i := 0; i < l; i++ {
-			in[i] = reflect.ValueOf(f.data[b+i])
-		}
-		fun := value(f)
-		v := fun.Call(in)
-		for i := 0; i < n.fsize; i++ {
-			f.data[n.findex+i] = v[i]
-		}
-		return next
-	}
-}
+//func callBinX(n *Node) {
+//	next := getExec(n.tnext)
+//	value := genValue(n.child[0])
+//
+//	n.exec = func(f *Frame) Builtin {
+//		l := n.child[1].fsize
+//		b := n.child[1].findex
+//		in := make([]reflect.Value, l)
+//		for i := 0; i < l; i++ {
+//			in[i] = reflect.ValueOf(f.data[b+i])
+//		}
+//		fun := value(f)
+//		v := fun.Call(in)
+//		for i := 0; i < n.fsize; i++ {
+//			f.data[n.findex+i] = v[i]
+//		}
+//		return next
+//	}
+//}
 
 // Call a function from a bin import, accessible through reflect
 // FIXME: handle case where func return a boolean
@@ -644,12 +651,20 @@ func callDirectBin(n *Node) {
 func callBin(n *Node) {
 	next := getExec(n.tnext)
 	child := n.child[1:]
-	l := len(child)
 	value := genValue(n.child[0])
-	values := make([]func(*Frame) reflect.Value, len(child))
-	for i, c := range child {
-		values[i] = genValue(c)
+	//values := make([]func(*Frame) reflect.Value, len(child))
+	var values []func(*Frame) reflect.Value
+	for _, c := range child {
+		if isRegularCall(c) {
+			for i := range c.child[0].typ.ret {
+				ind := c.findex + i
+				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
+			}
+		} else {
+			values = append(values, genValue(c))
+		}
 	}
+	l := len(values)
 	fsize := n.child[0].fsize
 
 	n.exec = func(f *Frame) Builtin {
@@ -657,7 +672,7 @@ func callBin(n *Node) {
 		for i, v := range values {
 			in[i] = v(f)
 		}
-		//log.Println(n.index, "callbin", value(f).Type())
+		//log.Println(n.index, "callbin", value(f).Type(), in)
 		v := value(f).Call(in)
 		//log.Println(n.index, "callBin, res:", v, fsize, n.findex)
 		for i := 0; i < fsize; i++ {
@@ -683,6 +698,7 @@ func callBinMethod(n *Node) {
 	}
 	rvalue := genValue(n.child[0].child[0])
 
+	log.Println(n.index, "in callBinMethod")
 	n.exec = func(f *Frame) Builtin {
 		fun := n.child[0].rval
 		in := make([]reflect.Value, len(n.child))

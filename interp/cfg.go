@@ -364,8 +364,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case CallExpr:
 			wireChild(n)
 			n.findex = scope.inc(interp)
-			if n.child[0].sym != nil && n.child[0].sym.kind == Bltn {
-				// Call an internal go builtin
+			if isBuiltinCall(n) {
 				n.gen = n.child[0].sym.builtin
 				n.child[0].typ = &Type{cat: BuiltinT}
 				switch n.child[0].ident {
@@ -392,7 +391,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 						n.gen = convertBin
 					}
 				}
-			} else if n.child[0].typ.cat == ValueT {
+			} else if isBinCall(n) {
 				n.gen = callBin
 				n.fsize = n.child[0].fsize
 			} else {
@@ -1085,6 +1084,18 @@ func isFuncArg(n *Node) bool {
 		return true
 	}
 	return false
+}
+
+func isBuiltinCall(n *Node) bool {
+	return n.kind == CallExpr && n.child[0].sym != nil && n.child[0].sym.kind == Bltn
+}
+
+func isBinCall(n *Node) bool {
+	return n.kind == CallExpr && n.child[0].typ.cat == ValueT
+}
+
+func isRegularCall(n *Node) bool {
+	return n.kind == CallExpr && n.child[0].typ.cat != ValueT && (n.child[0].sym == nil || n.child[0].sym.kind != Bltn)
 }
 
 func canExport(name string) bool {
