@@ -184,7 +184,7 @@ func convertBin(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
-		f.data[i] = reflect.ValueOf(value(f)).Convert(typ)
+		f.data[i] = value(f).Convert(typ)
 		return next
 	}
 }
