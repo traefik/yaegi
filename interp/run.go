@@ -1223,7 +1223,7 @@ func _return(n *Node) {
 }
 
 func arrayLit(n *Node) {
-	ind := n.findex
+	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child[1:]
 	zero := n.typ.zero
@@ -1239,7 +1239,7 @@ func arrayLit(n *Node) {
 			for i, v := range values {
 				a.Index(i).Set(v(f))
 			}
-			f.data[ind] = a
+			value(f).Set(a)
 			return next
 		}
 	} else {
@@ -1249,14 +1249,14 @@ func arrayLit(n *Node) {
 			for _, v := range values {
 				a = reflect.Append(a, v(f))
 			}
-			f.data[ind] = a
+			value(f).Set(a)
 			return next
 		}
 	}
 }
 
 func mapLit(n *Node) {
-	ind := n.findex
+	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child[1:]
 	typ := n.typ.TypeOf()
@@ -1272,14 +1272,14 @@ func mapLit(n *Node) {
 		for i, k := range keys {
 			m.SetMapIndex(k(f), values[i](f))
 		}
-		f.data[ind] = m
+		value(f).Set(m)
 		return next
 	}
 }
 
 // compositeLit creates a struct object
 func compositeLit(n *Node) {
-	ind := n.findex
+	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child[1:]
 	values := make([]func(*Frame) reflect.Value, len(child))
@@ -1292,14 +1292,14 @@ func compositeLit(n *Node) {
 		for i, v := range values {
 			a.Field(i).Set(v(f))
 		}
-		f.data[ind] = a
+		value(f).Set(a)
 		return next
 	}
 }
 
 // compositeSparse creates a struct Object, filling fields from sparse key-values
 func compositeSparse(n *Node) {
-	ind := n.findex
+	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child[1:]
 	values := make(map[int]func(*Frame) reflect.Value)
@@ -1312,7 +1312,7 @@ func compositeSparse(n *Node) {
 		for i, v := range values {
 			a.Field(i).Set(v(f))
 		}
-		f.data[ind] = a
+		value(f).Set(a)
 		return next
 	}
 }

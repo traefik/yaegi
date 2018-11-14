@@ -231,6 +231,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else if n.child[1].action == CompositeLit {
 				n.gen = nop
 				n.child[1].findex = n.child[0].findex
+				n.child[1].level = level
 			}
 			n.typ = n.child[0].typ
 			if sym != nil {
@@ -698,7 +699,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else if isNewDefine(n) {
 				// Create a new symbol in current scope, type to be set by parent node
 				// Note that global symbol should already be defined (gta)
-				if _, _, ok := scope.lookup(n.ident); !ok && !scope.global {
+				if _, _, ok := scope.lookup(n.ident); !ok || !scope.global {
 					n.findex = scope.inc(interp)
 					scope.sym[n.ident] = &Symbol{index: scope.size, kind: Var, global: scope.global}
 					n.sym = scope.sym[n.ident]
