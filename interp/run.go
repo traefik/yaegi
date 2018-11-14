@@ -236,7 +236,7 @@ func assign(n *Node) {
 	}
 }
 
-// assign0 implements assignement of zero value
+// assign0 implements assignement of zero value, as in a var statement
 func assign0(n *Node) {
 	l := len(n.child) - 1
 	zero := n.typ.zero

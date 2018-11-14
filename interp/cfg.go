@@ -20,6 +20,7 @@ const (
 
 var symKinds = [...]string{
 	Const: "Const",
+	Typ:   "Typ",
 	Var:   "Var",
 	Func:  "Func",
 	Bin:   "Bin",
@@ -1067,7 +1068,7 @@ func isNewDefine(n *Node) bool {
 	if n.anc.kind == RangeStmt && (n.anc.child[0] == n || n.anc.child[1] == n) {
 		return true
 	}
-	if n.anc.kind == ValueSpec {
+	if n.anc.kind == ValueSpec && n.anc.child[0] == n {
 		return true
 	}
 	return false
