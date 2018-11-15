@@ -521,6 +521,7 @@ func call(n *Node) {
 		values = append(values, genValueRecv(n.child[0]))
 	}
 
+	variadic := variadicPos(n)
 	next := getExec(n.tnext)
 	value := genValue(n.child[0])
 	child := n.child[1:]
@@ -550,6 +551,7 @@ func call(n *Node) {
 			anc = def.frame
 		}
 		nf := Frame{anc: anc, data: make([]reflect.Value, def.flen)}
+		var vararg reflect.Value
 
 		// Init local frame values
 		for i, t := range def.types {
@@ -558,11 +560,18 @@ func call(n *Node) {
 			}
 		}
 
+		// Init variadic argument vector
+		if variadic >= 0 {
+			fi := def.framepos[variadic]
+			nf.data[fi] = reflect.New(reflect.SliceOf(def.types[fi])).Elem()
+			vararg = nf.data[fi]
+		}
+
 		// Copy input parameters from caller
 		for i, v := range values {
-			dest := nf.data[def.framepos[i]]
 			src := v(f)
 			if method && i == 0 {
+				dest := nf.data[def.framepos[i]]
 				// Accomodate to receiver type
 				ks, kd := src.Kind(), dest.Kind()
 				if ks != kd {
@@ -574,8 +583,10 @@ func call(n *Node) {
 				} else {
 					dest.Set(src)
 				}
+			} else if variadic >= 0 && i >= variadic {
+				vararg.Set(reflect.Append(vararg, src))
 			} else {
-				dest.Set(src)
+				nf.data[def.framepos[i]].Set(src)
 			}
 		}
 

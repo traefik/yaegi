@@ -1100,6 +1100,17 @@ func isRegularCall(n *Node) bool {
 	return n.kind == CallExpr && n.child[0].typ.cat != ValueT && (n.child[0].sym == nil || n.child[0].sym.kind != Bltn)
 }
 
+func variadicPos(n *Node) int {
+	if len(n.child[0].typ.arg) == 0 {
+		return -1
+	}
+	last := len(n.child[0].typ.arg) - 1
+	if n.child[0].typ.arg[last].variadic {
+		return last
+	}
+	return -1
+}
+
 func canExport(name string) bool {
 	if r := []rune(name); len(r) > 0 && unicode.IsUpper(r[0]) {
 		return true
