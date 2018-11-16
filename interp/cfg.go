@@ -266,11 +266,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				sym.typ = n.typ
 				n.level = level
 			}
-			//if n.child[0].action == Star {
-			//	n.findex = n.child[0].child[0].findex
-			//	n.level = n.child[0].child[0].level
-			//	n.gen = indirectInc
-			//}
 
 		case DefineX, AssignXStmt:
 			wireChild(n)
