@@ -213,11 +213,15 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				n.child[0].recv = n.child[1].recv
 				n.child[0].findex = sym.index
 				if n.child[1].action == GetFunc {
-					scope.sym[name].index = -1
-					scope.sym[name].node = n.child[1]
+					sym.index = -1
+					sym.node = n.child[1]
 				}
 				if n.child[1].kind == BasicLit {
-					scope.sym[name].val = n.child[1].val
+					sym.val = n.child[1].val
+				} else if n.child[1].kind == CallExpr {
+					// propagate call return value type
+					n.child[0].typ = getReturnedType(n.child[1].child[0])
+					sym.typ = n.child[0].typ
 				}
 			}
 			n.findex = n.child[0].findex
@@ -729,6 +733,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 							n.kind = Rvalue
 						}
 						n.typ = sym.typ
+						log.Println(n.index, "ident", n.ident, n.typ.rtype)
 						if n.typ.rtype.Kind() == reflect.Func {
 							n.fsize = n.typ.rtype.NumOut()
 						}
@@ -832,20 +837,14 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.typ.cat == ValueT {
 				// Handle object defined in runtime
 				if method, ok := n.typ.rtype.MethodByName(n.child[1].ident); ok {
-					if method.Func.IsValid() {
-						n.rval = method.Func
-						n.typ.rtype = method.Func.Type()
-						n.gen = nop
-					} else {
-						n.val = method.Index
-						n.gen = getIndexBinMethod
-					}
+					n.val = method.Index
+					n.gen = getIndexBinMethod
+					n.typ = &Type{cat: ValueT, rtype: method.Type}
 					n.fsize = method.Type.NumOut()
 				} else {
 					// Method can be only resolved from value at execution
 					log.Println(n.index, "could not solve method")
 					n.gen = nop
-					//n.gen = getIndexBinMethod
 				}
 			} else if n.typ.cat == PtrT && n.typ.val.cat == ValueT {
 				// Handle pointer on object defined in runtime
@@ -912,17 +911,15 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				n.val = m
 				n.typ = m.typ
 				n.recv = &Receiver{node: n.child[0], index: lind}
-			} else {
+			} else if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
 				// Handle promoted field in embedded struct
-				if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
-					n.child[1].findex = -1
-					n.child[1].val = ti
-					n.gen = getIndexSeq
-				} else {
-					log.Println(n.index, "Selector not found:", n.child[1].ident)
-					n.gen = nop
-					//panic("Field not found in selector")
-				}
+				n.child[1].findex = -1
+				n.child[1].val = ti
+				n.gen = getIndexSeq
+			} else {
+				log.Println(n.index, "Selector not found:", n.child[1].ident)
+				n.gen = nop
+				//panic("Field not found in selector")
 			}
 
 		case StarExpr:
@@ -1295,6 +1292,13 @@ func getValue(n *Node) (int, reflect.Value, bool) {
 		}
 	}
 	return index, val, isReflect
+}
+
+func getReturnedType(n *Node) *Type {
+	if n.typ.cat == ValueT {
+		return &Type{cat: ValueT, rtype: n.typ.rtype.Out(0)}
+	}
+	return n.typ.ret[0]
 }
 
 // frameTypes return a slice of frame types for FuncDecl or FuncLit nodes

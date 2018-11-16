@@ -663,7 +663,6 @@ func callBin(n *Node) {
 	next := getExec(n.tnext)
 	child := n.child[1:]
 	value := genValue(n.child[0])
-	//values := make([]func(*Frame) reflect.Value, len(child))
 	var values []func(*Frame) reflect.Value
 	for _, c := range child {
 		if isRegularCall(c) {
