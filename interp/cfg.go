@@ -205,62 +205,53 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 		case Define, AssignStmt:
 			wireChild(n)
-			name := n.child[0].ident
-			sym, level, _ := scope.lookup(name)
+			dest, src := n.child[0], n.child[1]
+			sym, level, _ := scope.lookup(dest.ident)
 			if n.kind == Define {
-				n.child[0].val = n.child[1].val
-				n.child[0].typ = n.child[1].typ
-				n.child[0].recv = n.child[1].recv
-				n.child[0].findex = sym.index
-				if n.child[1].action == GetFunc {
+				dest.val = src.val
+				dest.typ = src.typ
+				dest.recv = src.recv
+				dest.findex = sym.index
+				if src.action == GetFunc {
 					sym.index = -1
-					sym.node = n.child[1]
+					sym.node = src
 				}
-				if n.child[1].kind == BasicLit {
-					sym.val = n.child[1].val
-				} else if n.child[1].kind == CallExpr {
+				if src.kind == BasicLit {
+					sym.val = src.val
+				} else if isRegularCall(src) || isBinCall(src) {
 					// propagate call return value type
-					n.child[0].typ = getReturnedType(n.child[1].child[0])
-					sym.typ = n.child[0].typ
+					dest.typ = getReturnedType(src.child[0])
+					sym.typ = dest.typ
 				}
 			}
-			n.findex = n.child[0].findex
-			n.val = n.child[0].val
+			n.findex = dest.findex
+			n.val = dest.val
 			// Propagate type
 			// TODO: Check that existing destination type matches source type
 			if n.child[1].action == Recv {
 				// Assign by reading from a receiving channel
 				n.gen = nop
-				n.child[1].findex = n.child[0].findex // Set recv address to LHS
-				n.child[0].typ = n.child[1].typ.val
+				src.findex = dest.findex // Set recv address to LHS
+				dest.typ = src.typ.val
 			} else if n.child[1].action == CompositeLit {
 				n.gen = nop
-				n.child[1].findex = n.child[0].findex
-				n.child[1].level = level
+				src.findex = dest.findex
+				src.level = level
 			}
-			n.typ = n.child[0].typ
+			n.typ = dest.typ
 			if sym != nil {
 				sym.typ = n.typ
-				sym.recv = n.child[1].recv
+				sym.recv = src.recv
 			}
 			n.level = level
-			//log.Println(n.index, "assign", n.child[0].ident, n.typ.cat, n.findex, n.level)
+			//log.Println(n.index, "assign", dest.ident, n.typ.cat, n.findex, n.level)
 			// If LHS is an indirection, get reference instead of value, to allow setting
-			if n.child[0].action == GetIndex {
-				if n.child[0].child[0].typ.cat == MapT {
+			if dest.action == GetIndex {
+				if dest.child[0].typ.cat == MapT {
 					n.gen = assignMap
-					n.child[0].gen = nop // skip getIndexMap
+					dest.gen = nop // skip getIndexMap
 				}
 			}
-			//} else if n.child[0].child[0].typ.cat == PtrT {
-			//	// Handle the case where the receiver is a pointer to an object
-			//	n.child[0].gen = getPtrIndexAddr
-			//	n.gen = assignPtrField
-			//} else if n.child[0].action == Star {
-			//		n.findex = n.child[0].child[0].findex
-			//		n.level = n.child[0].child[0].level
-			//		n.gen = indirectAssign
-			//	}
 			if n.anc.kind == ConstDecl {
 				iotaValue++
 			}
@@ -733,7 +724,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 							n.kind = Rvalue
 						}
 						n.typ = sym.typ
-						log.Println(n.index, "ident", n.ident, n.typ.rtype)
 						if n.typ.rtype.Kind() == reflect.Func {
 							n.fsize = n.typ.rtype.NumOut()
 						}
@@ -1090,11 +1080,12 @@ func isBuiltinCall(n *Node) bool {
 }
 
 func isBinCall(n *Node) bool {
-	return n.kind == CallExpr && n.child[0].typ.cat == ValueT
+	return n.kind == CallExpr && n.child[0].typ.cat == ValueT &&
+		n.child[0].typ.rtype.Kind() == reflect.Func
 }
 
 func isRegularCall(n *Node) bool {
-	return n.kind == CallExpr && n.child[0].typ.cat != ValueT && (n.child[0].sym == nil || n.child[0].sym.kind != Bltn)
+	return n.kind == CallExpr && n.child[0].typ.cat == FuncT
 }
 
 func variadicPos(n *Node) int {
@@ -1295,7 +1286,10 @@ func getValue(n *Node) (int, reflect.Value, bool) {
 }
 
 func getReturnedType(n *Node) *Type {
-	if n.typ.cat == ValueT {
+	switch n.typ.cat {
+	case BuiltinT:
+		return n.anc.typ
+	case ValueT:
 		return &Type{cat: ValueT, rtype: n.typ.rtype.Out(0)}
 	}
 	return n.typ.ret[0]

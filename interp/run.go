@@ -211,19 +211,6 @@ func assignX(n *Node) {
 	}
 }
 
-//func indirectAssign(n *Node) {
-//	i := n.findex
-//	value := genValue(n.child[1])
-//	next := getExec(n.tnext)
-//
-//	n.exec = func(f *Frame) Builtin {
-//		//*(f.data[i].(*interface{})) = value(f)
-//		log.Println(n.index, "in IndirectAssign")
-//		f.data[i].Elem().Set(value(f))
-//		return next
-//	}
-//}
-
 // assign implements single value assignement
 func assign(n *Node) {
 	value := genValue(n)
@@ -254,31 +241,6 @@ func assign0(n *Node) {
 		return next
 	}
 }
-
-//func assignField(n *Node) Builtin {
-//	i := n.findex
-//	value := genValue(n.child[1])
-//	next := getExec(n.tnext)
-//
-//	log.Println(n.index, "gen assignField")
-//	return func(f *Frame) Builtin {
-//		//(*f.data[i].(*interface{})) = value(f)
-//		f.data[i].Set(value(f))
-//		log.Println(n.index, "in assignField", f.data[i], value(f), i, f.data, f.data[2], f.data[3])
-//		return next
-//	}
-//}
-
-//func assignPtrField(n *Node) {
-//	//i := n.findex
-//	//value := n.child[1].value
-//	next := getExec(n.tnext)
-//
-//	n.exec = func(f *Frame) Builtin {
-//		//(*f.data[i].(*interface{})) = value(f)
-//		return next
-//	}
-//}
 
 func assignMap(n *Node) {
 	value := genValue(n.child[0].child[0])  // map
@@ -458,44 +420,6 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	return result
 }
 
-//func call2(n *Node) {
-//	next := getExec(n.tnext)
-//	value := genValue(n.child[0])
-//	child := n.child[1:]
-//	goroutine := n.anc.kind == GoStmt
-//
-//	// Compute input argument value functions
-//	var values []func(*Frame) reflect.Value
-//	for _, c := range child {
-//		values = append(values, genValue(c))
-//	}
-//
-//	// compute frame indexes for return values
-//	ret := make([]int, len(n.child[0].typ.ret))
-//	for i := range n.child[0].typ.ret {
-//		ret[i] = n.findex + i
-//	}
-//
-//	n.exec = func(f *Frame) Builtin {
-//		def := value(f).Interface().(*Node)
-//		in := make([]reflect.Value, len(child))
-//		if def.frame != nil {
-//			f = def.frame
-//		}
-//		for i, v := range values {
-//			in[i] = v(f)
-//		}
-//		out := def.fun(f, in, goroutine)
-//		log.Println(n.index, "out:", out, ret, f.data)
-//		// Propagate return values to caller frame
-//		for i, r := range ret {
-//			log.Println(n.index, out[i], r)
-//			f.data[r] = out[i]
-//		}
-//		return next
-//	}
-//}
-
 // FIXME: handle case where func return a boolean
 func call(n *Node) {
 	goroutine := n.anc.kind == GoStmt
@@ -629,33 +553,33 @@ func call(n *Node) {
 
 // Call a function from a bin import, accessible through reflect
 // FIXME: handle case where func return a boolean
-func callDirectBin(n *Node) {
-	next := getExec(n.tnext)
-	child := n.child[1:]
-	value := genValue(n.child[0])
-	values := make([]func(*Frame) reflect.Value, len(child))
-	for i, c := range child {
-		values[i] = genValue(c)
-	}
-
-	n.exec = func(f *Frame) Builtin {
-		in := make([]reflect.Value, len(n.child)-1)
-		for i, v := range values {
-			if child[i].kind == Rvalue {
-				in[i] = v(f)
-				child[i].frame = f
-			} else {
-				in[i] = v(f)
-			}
-		}
-		fun := value(f)
-		v := fun.Call(in)
-		for i := 0; i < n.fsize; i++ {
-			f.data[n.findex+i] = v[i]
-		}
-		return next
-	}
-}
+//func callDirectBin(n *Node) {
+//	next := getExec(n.tnext)
+//	child := n.child[1:]
+//	value := genValue(n.child[0])
+//	values := make([]func(*Frame) reflect.Value, len(child))
+//	for i, c := range child {
+//		values[i] = genValue(c)
+//	}
+//
+//	n.exec = func(f *Frame) Builtin {
+//		in := make([]reflect.Value, len(n.child)-1)
+//		for i, v := range values {
+//			if child[i].kind == Rvalue {
+//				in[i] = v(f)
+//				child[i].frame = f
+//			} else {
+//				in[i] = v(f)
+//			}
+//		}
+//		fun := value(f)
+//		v := fun.Call(in)
+//		for i := 0; i < n.fsize; i++ {
+//			f.data[n.findex+i] = v[i]
+//		}
+//		return next
+//	}
+//}
 
 // FIXME: handle case where func return a boolean
 // Call a function from a bin import, accessible through reflect
@@ -695,53 +619,53 @@ func callBin(n *Node) {
 // Call a method defined by an interface type on an object returned by a bin import, through reflect.
 // In that case, the method func value can be resolved only at execution from the actual value
 // of node, not during CFG.
-func callBinInterfaceMethod(n *Node, f *Frame) {}
-
-// Call a method on an object returned by a bin import function, through reflect
-// FIXME: handle case where func return a boolean
-func callBinMethod(n *Node) {
-	next := getExec(n.tnext)
-	child := n.child[1:]
-	values := make([]func(*Frame) reflect.Value, len(child))
-	for i, c := range child {
-		values[i] = genValue(c)
-	}
-	rvalue := genValue(n.child[0].child[0])
-
-	log.Println(n.index, "in callBinMethod")
-	n.exec = func(f *Frame) Builtin {
-		fun := n.child[0].rval
-		in := make([]reflect.Value, len(n.child))
-		//val := n.child[0].child[0].value(f)
-		//switch val.(type) {
-		//case reflect.Value:
-		//	in[0] = val.(reflect.Value)
-		//default:
-		//	in[0] = reflect.ValueOf(val)
-		//}
-		in[0] = rvalue(f)
-		for i, c := range n.child[1:] {
-			if c.kind == Rvalue {
-				//in[i+1] = c.value(f).(reflect.Value)
-				in[i+1] = values[i](f)
-				c.frame = f
-			} else {
-				//in[i+1] = reflect.ValueOf(c.value(f))
-				in[i+1] = values[i](f)
-			}
-		}
-		//log.Println(n.index, "in callBinMethod", n.ident, in)
-		if !fun.IsValid() {
-			fun = in[0].MethodByName(n.child[0].child[1].ident)
-			in = in[1:]
-		}
-		v := fun.Call(in)
-		for i := 0; i < n.fsize; i++ {
-			f.data[n.findex+i] = v[i]
-		}
-		return next
-	}
-}
+//func callBinInterfaceMethod(n *Node, f *Frame) {}
+//
+//// Call a method on an object returned by a bin import function, through reflect
+//// FIXME: handle case where func return a boolean
+//func callBinMethod(n *Node) {
+//	next := getExec(n.tnext)
+//	child := n.child[1:]
+//	values := make([]func(*Frame) reflect.Value, len(child))
+//	for i, c := range child {
+//		values[i] = genValue(c)
+//	}
+//	rvalue := genValue(n.child[0].child[0])
+//
+//	log.Println(n.index, "in callBinMethod")
+//	n.exec = func(f *Frame) Builtin {
+//		fun := n.child[0].rval
+//		in := make([]reflect.Value, len(n.child))
+//		//val := n.child[0].child[0].value(f)
+//		//switch val.(type) {
+//		//case reflect.Value:
+//		//	in[0] = val.(reflect.Value)
+//		//default:
+//		//	in[0] = reflect.ValueOf(val)
+//		//}
+//		in[0] = rvalue(f)
+//		for i, c := range n.child[1:] {
+//			if c.kind == Rvalue {
+//				//in[i+1] = c.value(f).(reflect.Value)
+//				in[i+1] = values[i](f)
+//				c.frame = f
+//			} else {
+//				//in[i+1] = reflect.ValueOf(c.value(f))
+//				in[i+1] = values[i](f)
+//			}
+//		}
+//		//log.Println(n.index, "in callBinMethod", n.ident, in)
+//		if !fun.IsValid() {
+//			fun = in[0].MethodByName(n.child[0].child[1].ident)
+//			in = in[1:]
+//		}
+//		v := fun.Call(in)
+//		for i := 0; i < n.fsize; i++ {
+//			f.data[n.findex+i] = v[i]
+//		}
+//		return next
+//	}
+//}
 
 // Same as callBinMethod, but for handling f(g()) where g returns multiple values
 // FIXME: handle case where func return a boolean
@@ -780,36 +704,13 @@ func callBinMethod(n *Node) {
 //	}
 //}
 
-func getIndexAddr(n *Node) {
-	//i := n.findex
-	//value0 := n.child[0].value
-	//value1 := n.child[1].value
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		log.Println(n.index, "in getIndexAddr")
-		//a := value0(f).([]interface{})
-		//f.data[i] = &a[value1(f).(int)]
-		return next
-	}
-}
-
 func getPtrIndex(n *Node) {
 	i := n.findex
-	//value0 := n.child[0].value
-	//value1 := n.child[1].value
 	next := getExec(n.tnext)
 	fi := n.child[1].val.(int)
 	value := genValue(n.child[0])
 
 	n.exec = func(f *Frame) Builtin {
-		// if error, fallback to getIndex, to make receiver methods work both with pointers and objects
-		//if a, ok := value0(f).(*interface{}); ok {
-		//	f.data[i] = (*a).([]interface{})[value1(f).(int)]
-		//} else {
-		//	a := value0(f).([]interface{})
-		//	f.data[i] = a[value1(f).(int)]
-		//}
 		f.data[i] = value(f).Elem().Field(fi)
 		return next
 	}
@@ -840,34 +741,6 @@ func getIndexBinMethod(n *Node) {
 		return next
 	}
 }
-
-func getIndexBin(n *Node) {
-	i := n.findex
-	fi := n.val.([]int)
-	value := genValue(n.child[0])
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		a := reflect.ValueOf(value(f))
-		f.data[i] = a.FieldByIndex(fi)
-		return next
-	}
-}
-
-/*
-func getIndex(n *Node) Builtin {
-	//i := n.findex
-	//value0 := n.child[0].value
-	//value1 := n.child[1].value
-	next := getExec(n.tnext)
-
-	return func(f *Frame) Builtin {
-		//a := value0(f).([]interface{})
-		//f.data[i] = a[value1(f).(int)]
-		return next
-	}
-}
-*/
 
 func getIndex(n *Node) {
 	i := n.findex
@@ -1071,17 +944,6 @@ func notEqual(n *Node) {
 			}
 			return fnext
 		}
-	}
-}
-
-func indirectInc(n *Node) {
-	//i := n.findex
-	//value := n.child[0].value
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		//*(f.data[i].(*interface{})) = value(f).(int) + 1
-		return next
 	}
 }
 
