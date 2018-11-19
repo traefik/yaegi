@@ -462,7 +462,6 @@ func call(n *Node) {
 				if variadic >= 0 && i >= variadic {
 					argType = n.child[0].typ.arg[variadic].TypeOf()
 				} else {
-					log.Println(n.index, i, n.child[0].typ.node.index)
 					argType = n.child[0].typ.arg[i].TypeOf()
 				}
 				if argType != nil && argType.Kind() != reflect.Interface {
@@ -614,16 +613,24 @@ func callBin(n *Node) {
 				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
 			}
 		} else {
-			if c.kind == BasicLit {
+			//log.Println(n.index, "callbin#0", c.kind, c.typ.cat)
+			var argType reflect.Type
+			if variadic >= 0 && i >= variadic {
+				argType = funcType.In(variadic).Elem()
+			} else {
+				argType = funcType.In(i)
+			}
+			if c.typ != nil && c.typ.cat == FuncT {
+				c.rval = reflect.MakeFunc(c.typ.TypeOf(), c.wrapNode)
+				c.kind = Rvalue
+			} else if c.kind == BasicLit {
 				// Convert literal value (untyped) to function argument type (if not an interface{})
-				var argType reflect.Type
-				if variadic >= 0 && i >= variadic {
-					argType = funcType.In(variadic).Elem()
-				} else {
-					argType = funcType.In(i)
-				}
+				//log.Println(n.index, "callbin#1", c.val, argType, argType.Kind(), reflect.ValueOf(c.val).IsValid())
 				if argType != nil && argType.Kind() != reflect.Interface {
 					c.val = reflect.ValueOf(c.val).Convert(argType)
+				}
+				if !reflect.ValueOf(c.val).IsValid() {
+					c.val = reflect.New(argType).Elem()
 				}
 			}
 			values = append(values, genValue(c))

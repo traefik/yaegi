@@ -949,7 +949,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case SliceExpr, UnaryExpr:
 			wireChild(n)
 			n.typ = n.child[0].typ
-			log.Println(n.index, n.action)
 			if n.action == Negate {
 				n.findex = scope.inc(interp)
 			}
