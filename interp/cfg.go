@@ -228,15 +228,19 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.val = dest.val
 			// Propagate type
 			// TODO: Check that existing destination type matches source type
-			if n.child[1].action == Recv {
+			if src.action == Recv {
 				// Assign by reading from a receiving channel
 				n.gen = nop
 				src.findex = dest.findex // Set recv address to LHS
 				dest.typ = src.typ.val
-			} else if n.child[1].action == CompositeLit {
+			} else if src.action == CompositeLit {
 				n.gen = nop
 				src.findex = dest.findex
 				src.level = level
+			} else if src.kind == BasicLit {
+				// TODO: perform constant folding and propagation here
+				// Convert literal value to destination type
+				src.val = reflect.ValueOf(src.val).Convert(dest.typ.TypeOf())
 			}
 			n.typ = dest.typ
 			if sym != nil {

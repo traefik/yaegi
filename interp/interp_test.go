@@ -3628,10 +3628,13 @@ func main() {
 	var m time.Month
 	m = 9
 	fmt.Println(m)
-}`
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"}, "time4.go")
 	i.Eval(src)
 
+	// Output:
+	// September
 }
 
 func Example_time5() {
@@ -3644,14 +3647,15 @@ import (
 )
 
 func main() {
-	//	t := time.Now()
-	t := time.Unix(1000000000, 0)
-	m := t.Minute()
-	fmt.Println(t, m)
-}`
+	t := time.Unix(1e9, 0)
+	fmt.Println(t.Minute())
+}
+`
 	i := NewInterpreter(Opt{Entry: "main"}, "time5.go")
 	i.Eval(src)
 
+	// Output:
+	// 46
 }
 
 func Example_type0() {

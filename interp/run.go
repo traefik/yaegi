@@ -588,13 +588,33 @@ func callBin(n *Node) {
 	child := n.child[1:]
 	value := genValue(n.child[0])
 	var values []func(*Frame) reflect.Value
-	for _, c := range child {
+	funcType := n.child[0].typ.rtype
+	variadicNum := -1
+	var variadicType reflect.Type
+
+	if funcType.IsVariadic() {
+		variadicNum = funcType.NumIn() - 1
+		variadicType = funcType.In(variadicNum).Elem()
+	}
+
+	for i, c := range child {
 		if isRegularCall(c) {
-			for i := range c.child[0].typ.ret {
-				ind := c.findex + i
+			// Handle nested function calls: pass returned values as arguments
+			for j := range c.child[0].typ.ret {
+				ind := c.findex + j
 				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
 			}
 		} else {
+			if c.kind == BasicLit {
+				// Convert literal value (untyped) to function argument type
+				if variadicNum >= 0 {
+					if i >= variadicNum && variadicType.Kind() != reflect.Interface {
+						c.val = reflect.ValueOf(c.val).Convert(variadicType)
+					}
+				} else if argType := funcType.In(i); argType.Kind() != reflect.Interface {
+					c.val = reflect.ValueOf(c.val).Convert(argType)
+				}
+			}
 			values = append(values, genValue(c))
 		}
 	}
