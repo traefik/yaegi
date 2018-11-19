@@ -188,15 +188,27 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 
 	case FuncType:
 		t.cat = FuncT
+		// Handle input parameters
 		for _, arg := range n.child[0].child {
-			typ := nodeType(interp, scope, arg.child[len(arg.child)-1])
+			cl := len(arg.child) - 1
+			typ := nodeType(interp, scope, arg.child[cl])
 			t.arg = append(t.arg, typ)
+			for i := 1; i < cl; i++ {
+				// Several arguments may be factorized on the same field type
+				t.arg = append(t.arg, typ)
+			}
 			t.incomplete = t.incomplete || typ.incomplete
 		}
 		if len(n.child) == 2 {
+			// Handle returned values
 			for _, ret := range n.child[1].child {
-				typ := nodeType(interp, scope, ret.child[len(ret.child)-1])
+				cl := len(ret.child) - 1
+				typ := nodeType(interp, scope, ret.child[cl])
 				t.ret = append(t.ret, typ)
+				for i := 1; i < cl; i++ {
+					// Several arguments may be factorized on the same field type
+					t.ret = append(t.ret, typ)
+				}
 				t.incomplete = t.incomplete || typ.incomplete
 			}
 		}

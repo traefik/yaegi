@@ -462,6 +462,7 @@ func call(n *Node) {
 				if variadic >= 0 && i >= variadic {
 					argType = n.child[0].typ.arg[variadic].TypeOf()
 				} else {
+					log.Println(n.index, i, n.child[0].typ.node.index)
 					argType = n.child[0].typ.arg[i].TypeOf()
 				}
 				if argType != nil && argType.Kind() != reflect.Interface {
