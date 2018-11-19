@@ -1121,6 +1121,25 @@ func main() {
 	// ok
 }
 
+func Example_fun5() {
+	src := `
+package main
+
+func f(i int64) {
+	println(i)
+}
+
+func main() {
+	f(34)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "fun5.go")
+	i.Eval(src)
+
+	// Output:
+	// 34
+}
+
 func Example_goroutine() {
 	src := `
 package main
@@ -3917,4 +3936,25 @@ func main() {
 
 	// Output:
 	// hello []
+}
+
+func Example_variadic1() {
+	src := `
+package main
+
+import "fmt"
+
+func f(s string, a ...int32) {
+	fmt.Println(s, a)
+}
+
+func main() {
+	f("hello", 1, 2, 3)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "variadic1.go")
+	i.Eval(src)
+
+	// Output:
+	// hello [1 2 3]
 }

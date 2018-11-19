@@ -450,13 +450,24 @@ func call(n *Node) {
 	value := genValue(n.child[0])
 	child := n.child[1:]
 	// compute input argument value functions
-	for _, c := range child {
+	for i, c := range child {
 		if isRegularCall(c) {
-			for i := range c.child[0].typ.ret {
-				ind := c.findex + i
+			for j := range c.child[0].typ.ret {
+				ind := c.findex + j
 				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
 			}
 		} else {
+			if c.kind == BasicLit {
+				var argType reflect.Type
+				if variadic >= 0 && i >= variadic {
+					argType = n.child[0].typ.arg[variadic].TypeOf()
+				} else {
+					argType = n.child[0].typ.arg[i].TypeOf()
+				}
+				if argType != nil && argType.Kind() != reflect.Interface {
+					c.val = reflect.ValueOf(c.val).Convert(argType)
+				}
+			}
 			values = append(values, genValue(c))
 		}
 	}
@@ -589,12 +600,9 @@ func callBin(n *Node) {
 	value := genValue(n.child[0])
 	var values []func(*Frame) reflect.Value
 	funcType := n.child[0].typ.rtype
-	variadicNum := -1
-	var variadicType reflect.Type
-
+	variadic := -1
 	if funcType.IsVariadic() {
-		variadicNum = funcType.NumIn() - 1
-		variadicType = funcType.In(variadicNum).Elem()
+		variadic = funcType.NumIn() - 1
 	}
 
 	for i, c := range child {
@@ -606,12 +614,14 @@ func callBin(n *Node) {
 			}
 		} else {
 			if c.kind == BasicLit {
-				// Convert literal value (untyped) to function argument type
-				if variadicNum >= 0 {
-					if i >= variadicNum && variadicType.Kind() != reflect.Interface {
-						c.val = reflect.ValueOf(c.val).Convert(variadicType)
-					}
-				} else if argType := funcType.In(i); argType.Kind() != reflect.Interface {
+				// Convert literal value (untyped) to function argument type (if not an interface{})
+				var argType reflect.Type
+				if variadic >= 0 && i >= variadic {
+					argType = funcType.In(variadic).Elem()
+				} else {
+					argType = funcType.In(i)
+				}
+				if argType != nil && argType.Kind() != reflect.Interface {
 					c.val = reflect.ValueOf(c.val).Convert(argType)
 				}
 			}
