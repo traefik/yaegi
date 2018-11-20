@@ -331,7 +331,6 @@ func addr(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
-		log.Println(n.index, "addr", i)
 		f.data[i] = value(f).Addr()
 		return next
 	}
@@ -343,7 +342,6 @@ func deref(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
-		log.Println(n.index, "deref", i)
 		f.data[i] = value(f).Elem()
 		return next
 	}
@@ -613,7 +611,6 @@ func callBin(n *Node) {
 				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
 			}
 		} else {
-			//log.Println(n.index, "callbin#0", c.kind, c.typ.cat)
 			var argType reflect.Type
 			if variadic >= 0 && i >= variadic {
 				argType = funcType.In(variadic).Elem()
@@ -625,7 +622,6 @@ func callBin(n *Node) {
 				c.kind = Rvalue
 			} else if c.kind == BasicLit {
 				// Convert literal value (untyped) to function argument type (if not an interface{})
-				//log.Println(n.index, "callbin#1", c.val, argType, argType.Kind(), reflect.ValueOf(c.val).IsValid())
 				if argType != nil && argType.Kind() != reflect.Interface {
 					c.val = reflect.ValueOf(c.val).Convert(argType)
 				}
@@ -755,15 +751,13 @@ func getPtrIndex(n *Node) {
 }
 
 func getPtrIndexBin(n *Node) {
-	//i := n.findex
-	//fi := n.val.([]int)
-	//value := n.child[0].value
+	i := n.findex
+	fi := n.val.([]int)
+	value := genValue(n.child[0])
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
-		log.Println(n.index, "in getPtrIndexBin")
-		//a := reflect.ValueOf(value(f)).Elem()
-		//f.data[i] = a.FieldByIndex(fi).Interface()
+		f.data[i] = value(f).Elem().FieldByIndex(fi)
 		return next
 	}
 }

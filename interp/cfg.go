@@ -830,9 +830,24 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.gen = getIndexBinMethod
 					n.typ = &Type{cat: ValueT, rtype: method.Type}
 					n.fsize = method.Type.NumOut()
+				} else if n.typ.rtype.Kind() == reflect.Ptr {
+					if field, ok := n.typ.rtype.Elem().FieldByName(n.child[1].ident); ok {
+						n.typ = &Type{cat: ValueT, rtype: field.Type}
+						n.val = field.Index
+						n.gen = getPtrIndexBin
+					} else {
+						log.Println(n.index, "could not solve field or method", n.child[0].ident+"."+n.child[1].ident)
+					}
+				} else if n.typ.rtype.Kind() == reflect.Struct {
+					if field, ok := n.typ.rtype.FieldByName(n.child[1].ident); ok {
+						n.typ = &Type{cat: ValueT, rtype: field.Type}
+						n.val = field.Index
+						n.gen = getIndexSeq
+					} else {
+						log.Println(n.index, "could not solve field or method", n.child[0].ident+"."+n.child[1].ident)
+					}
 				} else {
-					// Method can be only resolved from value at execution
-					log.Println(n.index, "could not solve method")
+					log.Println(n.index, "could not solve field or method", n.child[0].ident+"."+n.child[1].ident)
 					n.gen = nop
 				}
 			} else if n.typ.cat == PtrT && n.typ.val.cat == ValueT {

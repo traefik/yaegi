@@ -534,6 +534,33 @@ func main() {
 	// ping
 }
 
+func Example_cli0() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+)
+
+func main() {
+	resp, err := http.Get("http://localhost:8080/")
+	if err != nil {
+		log.Println(err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Println(string(body))
+}`
+	i := NewInterpreter(Opt{Entry: "main"}, "cli0.go")
+	i.Eval(src)
+
+}
+
 func Example_closure0() {
 	src := `
 package main
@@ -1469,6 +1496,34 @@ func main() {
 
 	// Output:
 	// open __NotExisting__: no such file or directory
+}
+
+func Example_ioutil0() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"log"
+	"strings"
+)
+
+func main() {
+	r := strings.NewReader("Go is a general-purpose language designed with systems programming in mind.")
+
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%s", b)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "ioutil0.go")
+	i.Eval(src)
+
+	// Output:
+	// Go is a general-purpose language designed with systems programming in mind.
 }
 
 func Example_l2() {
