@@ -345,6 +345,18 @@ func (t *Type) fieldIndex(name string) int {
 	return -1
 }
 
+// fieldSeq returns the field type from the list of field indexes
+func (t *Type) fieldSeq(seq []int) *Type {
+	ft := t
+	for _, i := range seq {
+		if ft.cat == PtrT {
+			ft = ft.val
+		}
+		ft = ft.field[i].typ
+	}
+	return ft
+}
+
 // lookupField returns a list of indices, i.e. a path to access a field in a struct object
 func (t *Type) lookupField(name string) []int {
 	var index []int

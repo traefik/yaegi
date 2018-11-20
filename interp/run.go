@@ -26,27 +26,27 @@ var builtin = [...]BuiltinGenerator{
 	Dec:          nop,
 	Equal:        equal,
 	GetFunc:      getFunc,
-	GetIndex:     getIndex,
-	Greater:      greater,
-	Inc:          inc,
-	Land:         land,
-	Lor:          lor,
-	Lower:        lower,
-	Mul:          mul,
-	Negate:       negate,
-	Not:          not,
-	NotEqual:     notEqual,
-	Quotient:     quotient,
-	Range:        _range,
-	Recv:         recv,
-	Remain:       remain,
-	Return:       _return,
-	Send:         send,
-	Slice:        slice,
-	Slice0:       slice0,
-	Star:         deref,
-	Sub:          sub,
-	TypeAssert:   typeAssert,
+	//GetIndex:     getIndex,
+	Greater:    greater,
+	Inc:        inc,
+	Land:       land,
+	Lor:        lor,
+	Lower:      lower,
+	Mul:        mul,
+	Negate:     negate,
+	Not:        not,
+	NotEqual:   notEqual,
+	Quotient:   quotient,
+	Range:      _range,
+	Recv:       recv,
+	Remain:     remain,
+	Return:     _return,
+	Send:       send,
+	Slice:      slice,
+	Slice0:     slice0,
+	Star:       deref,
+	Sub:        sub,
+	TypeAssert: typeAssert,
 }
 
 func (interp *Interpreter) run(n *Node, cf *Frame) {
@@ -750,18 +750,6 @@ func getPtrIndex(n *Node) {
 	}
 }
 
-func getPtrIndexBin(n *Node) {
-	i := n.findex
-	fi := n.val.([]int)
-	value := genValue(n.child[0])
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		f.data[i] = value(f).Elem().FieldByIndex(fi)
-		return next
-	}
-}
-
 func getIndexBinMethod(n *Node) {
 	i := n.findex
 	m := n.val.(int)
@@ -774,17 +762,17 @@ func getIndexBinMethod(n *Node) {
 	}
 }
 
-func getIndex(n *Node) {
-	i := n.findex
-	next := getExec(n.tnext)
-	fi := n.child[1].val.(int)
-	value := genValue(n.child[0])
-
-	n.exec = func(f *Frame) Builtin {
-		f.data[i] = value(f).Field(fi)
-		return next
-	}
-}
+//func getIndex(n *Node) {
+//	i := n.findex
+//	next := getExec(n.tnext)
+//	fi := n.child[1].val.(int)
+//	value := genValue(n.child[0])
+//
+//	n.exec = func(f *Frame) Builtin {
+//		f.data[i] = value(f).Field(fi)
+//		return next
+//	}
+//}
 
 func getIndexArray(n *Node) {
 	i := n.findex
@@ -844,7 +832,7 @@ func getFunc(n *Node) {
 func getIndexSeq(n *Node) {
 	i := n.findex
 	value := genValue(n.child[0])
-	index := n.child[1].val.([]int)
+	index := n.val.([]int)
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
@@ -852,6 +840,30 @@ func getIndexSeq(n *Node) {
 		return next
 	}
 }
+
+func getPtrIndexSeq(n *Node) {
+	i := n.findex
+	fi := n.val.([]int)
+	value := genValue(n.child[0])
+	next := getExec(n.tnext)
+
+	n.exec = func(f *Frame) Builtin {
+		f.data[i] = value(f).Elem().FieldByIndex(fi)
+		return next
+	}
+}
+
+//func getPtrIndexSeq(n *Node) {
+//	i := n.findex
+//	value := genValue(n.child[0])
+//	index := n.child[1].val.([]int)
+//	next := getExec(n.tnext)
+//
+//	n.exec = func(f *Frame) Builtin {
+//		f.data[i] = value(f).Elem().FieldByIndex(index)
+//		return next
+//	}
+//}
 
 //func valueSeq(n *Node, seq []int, f *Frame) interface{} {
 //	a := f.data[n.findex].([]interface{})

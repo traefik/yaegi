@@ -834,7 +834,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					if field, ok := n.typ.rtype.Elem().FieldByName(n.child[1].ident); ok {
 						n.typ = &Type{cat: ValueT, rtype: field.Type}
 						n.val = field.Index
-						n.gen = getPtrIndexBin
+						n.gen = getPtrIndexSeq
 					} else {
 						log.Println(n.index, "could not solve field or method", n.child[0].ident+"."+n.child[1].ident)
 					}
@@ -855,7 +855,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
 					n.typ = &Type{cat: ValueT, rtype: field.Type}
 					n.val = field.Index
-					n.gen = getPtrIndexBin
+					n.gen = getPtrIndexSeq
 				} else if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
 					n.val = method.Func
 					n.fsize = method.Type.NumOut()
@@ -900,14 +900,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				} else {
 					log.Println(n.index, "selector unresolved:", n.child[0].ident+"."+n.child[1].ident)
 				}
-			} else if fi := n.typ.fieldIndex(n.child[1].ident); fi >= 0 {
-				// Resolve struct field index
-				if n.typ.cat == PtrT {
-					n.gen = getPtrIndex
-				}
-				n.typ = n.typ.fieldType(fi)
-				n.child[1].findex = -1
-				n.child[1].val = fi
 			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
 				// Handle method
 				n.gen = nop
@@ -916,10 +908,14 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				n.typ = m.typ
 				n.recv = &Receiver{node: n.child[0], index: lind}
 			} else if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
-				// Handle promoted field in embedded struct
-				n.child[1].findex = -1
-				n.child[1].val = ti
-				n.gen = getIndexSeq
+				// Handle struct field
+				n.val = ti
+				if n.typ.cat == PtrT {
+					n.gen = getPtrIndexSeq
+				} else {
+					n.gen = getIndexSeq
+				}
+				n.typ = n.typ.fieldSeq(ti)
 			} else {
 				log.Println(n.index, "Selector not found:", n.child[1].ident)
 				n.gen = nop
