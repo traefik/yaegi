@@ -550,7 +550,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			interp.scope[pkgName].sym[funcName].kind = Func
 			interp.scope[pkgName].sym[funcName].node = n
 			n.types = frameTypes(n, n.flen)
-			genFun(n)
 
 		case FuncLit:
 			n.typ = n.child[2].typ
@@ -1131,35 +1130,6 @@ func genValue(n *Node) func(*Frame) reflect.Value {
 		return valueGenerator(n, n.findex)
 	}
 	return nil
-}
-
-func genFun(n *Node) {
-	start := n.child[3].start
-	framepos := n.framepos
-	flen := n.flen
-	types := n.types
-	nout := len(n.typ.ret)
-
-	n.fun = func(f *Frame, in []reflect.Value, goroutine bool) []reflect.Value {
-		// Allocate local frame
-		nf := Frame{anc: f, data: make([]reflect.Value, flen)}
-		for i, t := range types {
-			if t != nil {
-				nf.data[i] = reflect.New(t).Elem()
-			}
-		}
-		// Copy input parameters from caller frame to local
-		for i, pos := range framepos {
-			nf.data[pos].Set(in[i])
-		}
-		if goroutine {
-			go runCfg(start, &nf)
-		} else {
-			runCfg(start, &nf)
-		}
-		// Propagate return values to caller
-		return nf.data[:nout]
-	}
 }
 
 // Experimental, temporary & incomplete

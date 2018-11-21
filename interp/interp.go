@@ -29,10 +29,9 @@ type Node struct {
 	action   Action           // action
 	exec     Builtin          // generated function to execute
 	gen      BuiltinGenerator // generator function to produce above bltn
-	fun      func(*Frame, []reflect.Value, bool) []reflect.Value
-	val      interface{}   // static generic value (CFG execution)
-	rval     reflect.Value // reflection value to let runtime access interpreter (CFG)
-	ident    string        // set if node is a var or func
+	val      interface{}      // static generic value (CFG execution)
+	rval     reflect.Value    // reflection value to let runtime access interpreter (CFG)
+	ident    string           // set if node is a var or func
 }
 
 // Receiver stores method receiver object access path

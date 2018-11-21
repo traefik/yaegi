@@ -310,6 +310,49 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	return result
 }
 
+func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
+	method := n.recv != nil
+	var recv func(*Frame) reflect.Value
+
+	if method {
+		recv = genValueRecv(n)
+	}
+
+	return func(f *Frame) reflect.Value {
+		return reflect.MakeFunc(n.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
+			def := n.val.(*Node)
+			var result []reflect.Value
+			frame := Frame{anc: f, data: make([]reflect.Value, def.flen)}
+
+			// If fucnction is a method, set its receiver data in the frame
+			if method {
+				frame.data[def.child[0].findex] = recv(f)
+			}
+
+			// Unwrap input arguments from their reflect value and store them in the frame
+			i := 0
+			for _, arg := range in {
+				frame.data[def.framepos[i]] = arg
+				i++
+			}
+
+			// Interpreter code execution
+			runCfg(def.child[3].start, &frame)
+
+			// Wrap output results in reflect values and return them
+			if len(def.child[2].child) > 1 {
+				if fieldList := def.child[2].child[1]; fieldList != nil {
+					result = make([]reflect.Value, len(fieldList.child))
+					for i := range fieldList.child {
+						result[i] = reflect.ValueOf(frame.data[i])
+					}
+				}
+			}
+			return result
+		})
+	}
+}
+
 // FIXME: handle case where func return a boolean
 func call(n *Node) {
 	goroutine := n.anc.kind == GoStmt
@@ -442,10 +485,7 @@ func callBin(n *Node) {
 			} else {
 				argType = funcType.In(i)
 			}
-			if c.typ != nil && c.typ.cat == FuncT {
-				c.rval = reflect.MakeFunc(c.typ.TypeOf(), c.wrapNode)
-				c.kind = Rvalue
-			} else if c.kind == BasicLit {
+			if c.kind == BasicLit {
 				// Convert literal value (untyped) to function argument type (if not an interface{})
 				if argType != nil && argType.Kind() != reflect.Interface {
 					c.val = reflect.ValueOf(c.val).Convert(argType)
@@ -454,7 +494,14 @@ func callBin(n *Node) {
 					c.val = reflect.New(argType).Elem()
 				}
 			}
-			values = append(values, genValue(c))
+			//if c.typ == nil {
+			//	log.Panic(n.index, " child type nil ", c.index)
+			//}
+			if c.typ != nil && c.typ.cat == FuncT {
+				values = append(values, genNodeWrapper(c))
+			} else {
+				values = append(values, genValue(c))
+			}
 		}
 	}
 	l := len(values)
@@ -542,7 +589,6 @@ func getIndexMap2(n *Node) {
 func getFunc(n *Node) {
 	i := n.findex
 	next := getExec(n.tnext)
-	genFun(n)
 
 	n.exec = func(f *Frame) Builtin {
 		frame := *f
@@ -573,7 +619,6 @@ func getPtrIndexSeq(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
-		log.Println(n.index, "getPtrIndexSeq", value(f).Type())
 		f.data[i] = value(f).Elem().FieldByIndex(fi)
 		return next
 	}
