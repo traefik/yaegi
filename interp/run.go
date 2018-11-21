@@ -56,6 +56,7 @@ func (interp *Interpreter) run(n *Node, cf *Frame) {
 		f = &Frame{anc: cf, data: make([]reflect.Value, n.flen)}
 	}
 	for i, t := range n.types {
+		// TODO: nil types are forbidden and should be detected at compile time (CFG)
 		if t != nil && i < len(f.data) {
 			f.data[i] = reflect.New(t).Elem()
 		}
@@ -494,9 +495,7 @@ func callBin(n *Node) {
 					c.val = reflect.New(argType).Elem()
 				}
 			}
-			//if c.typ == nil {
-			//	log.Panic(n.index, " child type nil ", c.index)
-			//}
+			// TODO: nil types are forbidden and should be handled at compile time (CFG)
 			if c.typ != nil && c.typ.cat == FuncT {
 				values = append(values, genNodeWrapper(c))
 			} else {
@@ -507,18 +506,30 @@ func callBin(n *Node) {
 	l := len(values)
 	fsize := n.child[0].fsize
 
-	n.exec = func(f *Frame) Builtin {
-		in := make([]reflect.Value, l)
-		for i, v := range values {
-			in[i] = v(f)
+	if n.anc.kind == GoStmt {
+		// Execute function in a goroutine, discard results
+		n.exec = func(f *Frame) Builtin {
+			in := make([]reflect.Value, l)
+			for i, v := range values {
+				in[i] = v(f)
+			}
+			go value(f).Call(in)
+			return next
 		}
-		//log.Println(n.index, "callbin", value(f).Type(), in)
-		v := value(f).Call(in)
-		//log.Println(n.index, "callBin, res:", v, fsize, n.findex)
-		for i := 0; i < fsize; i++ {
-			f.data[n.findex+i] = v[i]
+	} else {
+		n.exec = func(f *Frame) Builtin {
+			in := make([]reflect.Value, l)
+			for i, v := range values {
+				in[i] = v(f)
+			}
+			//log.Println(n.index, "callbin", value(f).Type(), in)
+			v := value(f).Call(in)
+			//log.Println(n.index, "callBin, res:", v, fsize, n.findex)
+			for i := 0; i < fsize; i++ {
+				f.data[n.findex+i] = v[i]
+			}
+			return next
 		}
-		return next
 	}
 }
 
