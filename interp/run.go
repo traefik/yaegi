@@ -312,11 +312,10 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 }
 
 func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
-	method := n.recv != nil
-	var recv func(*Frame) reflect.Value
+	var receiver func(*Frame) reflect.Value
 
-	if method {
-		recv = genValueRecv(n)
+	if n.recv != nil {
+		receiver = genValueRecv(n)
 	}
 
 	return func(f *Frame) reflect.Value {
@@ -324,14 +323,14 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 			def := n.val.(*Node)
 			var result []reflect.Value
 			frame := Frame{anc: f, data: make([]reflect.Value, def.flen)}
+			i := 0
 
-			// If fucnction is a method, set its receiver data in the frame
-			if method {
-				frame.data[def.child[0].findex] = recv(f)
+			if receiver != nil {
+				frame.data[def.framepos[0]] = receiver(f)
+				i++
 			}
 
 			// Unwrap input arguments from their reflect value and store them in the frame
-			i := 0
 			for _, arg := range in {
 				frame.data[def.framepos[i]] = arg
 				i++
@@ -345,7 +344,7 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 				if fieldList := def.child[2].child[1]; fieldList != nil {
 					result = make([]reflect.Value, len(fieldList.child))
 					for i := range fieldList.child {
-						result[i] = reflect.ValueOf(frame.data[i])
+						result[i] = frame.data[i]
 					}
 				}
 			}
@@ -471,6 +470,10 @@ func callBin(n *Node) {
 	if funcType.IsVariadic() {
 		variadic = funcType.NumIn() - 1
 	}
+	receiverOffset := 0
+	if n.child[0].recv != nil {
+		receiverOffset = 1
+	}
 
 	for i, c := range child {
 		if isRegularCall(c) {
@@ -484,7 +487,7 @@ func callBin(n *Node) {
 			if variadic >= 0 && i >= variadic {
 				argType = funcType.In(variadic).Elem()
 			} else {
-				argType = funcType.In(i)
+				argType = funcType.In(i + receiverOffset)
 			}
 			if c.kind == BasicLit {
 				// Convert literal value (untyped) to function argument type (if not an interface{})

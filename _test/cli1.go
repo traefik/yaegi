@@ -19,19 +19,18 @@ func client() {
 	fmt.Println(string(body))
 }
 
-func server(c chan bool) {
+func server(ready chan bool) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Welcome to my website! ")
 	})
 
 	go http.ListenAndServe(":8080", nil)
-	c <- true
+	ready <- true
 }
 
 func main() {
-	ready := make(chan bool, 1)
+	ready := make(chan bool)
 	go server(ready)
-	a := <-ready
-	println(a)
+	<-ready
 	client()
 }

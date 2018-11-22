@@ -713,12 +713,15 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			}
 			//log.Println(n.index, "selector", n.child[0].ident+"."+n.child[1].ident, n.typ.cat)
 			if n.typ.cat == ValueT {
-				// Handle object defined in runtime
+				// Handle object defined in runtime, try to find field or method
+				// Search for method first, as it applies both to types T and *T
+				// Search for field must then be performed on type T only (not *T)
 				if method, ok := n.typ.rtype.MethodByName(n.child[1].ident); ok {
 					n.val = method.Index
 					n.gen = getIndexBinMethod
 					n.typ = &Type{cat: ValueT, rtype: method.Type}
 					n.fsize = method.Type.NumOut()
+					n.recv = &Receiver{node: n.child[0]}
 				} else if n.typ.rtype.Kind() == reflect.Ptr {
 					if field, ok := n.typ.rtype.Elem().FieldByName(n.child[1].ident); ok {
 						n.typ = &Type{cat: ValueT, rtype: field.Type}
@@ -747,12 +750,16 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.gen = getPtrIndexSeq
 				} else if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
 					n.val = method.Func
+					n.typ = &Type{cat: ValueT, rtype: method.Type}
 					n.fsize = method.Type.NumOut()
-					n.gen = nop
+					n.recv = &Receiver{node: n.child[0]}
+					n.gen = getIndexBinMethod
 				} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
 					n.val = method.Func
 					n.fsize = method.Type.NumOut()
-					n.gen = nop
+					n.gen = getIndexBinMethod
+					n.typ = &Type{cat: ValueT, rtype: method.Type}
+					n.recv = &Receiver{node: n.child[0]}
 				} else {
 					log.Println(n.index, "selector unresolved")
 				}
