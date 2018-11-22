@@ -186,6 +186,9 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 		t = nodeType(interp, scope, n.child[0])
 		t.variadic = true
 
+	case FuncLit:
+		t = nodeType(interp, scope, n.child[2])
+
 	case FuncType:
 		t.cat = FuncT
 		// Handle input parameters
