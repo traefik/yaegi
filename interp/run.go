@@ -56,7 +56,7 @@ func (interp *Interpreter) run(n *Node, cf *Frame) {
 		f = &Frame{anc: cf, data: make([]reflect.Value, n.flen)}
 	}
 	for i, t := range n.types {
-		// TODO: nil types are forbidden and should be detected at compile time (CFG)
+		// FIXME: nil types are forbidden and should be detected at compile time (CFG)
 		if t != nil && i < len(f.data) {
 			f.data[i] = reflect.New(t).Elem()
 		}
@@ -86,30 +86,13 @@ func typeAssert(n *Node) {
 }
 
 func convert(n *Node) {
-	value := genValue(n.child[1])
 	i := n.findex
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		f.data[i] = value(f)
-		return next
+	var value func(*Frame) reflect.Value
+	if n.child[1].typ.cat == FuncT {
+		value = genNodeWrapper(n.child[1])
+	} else {
+		value = genValue(n.child[1])
 	}
-}
-
-func convertFuncBin(n *Node) {
-	i := n.findex
-	fun := reflect.MakeFunc(n.child[0].typ.rtype, n.child[1].wrapNode)
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		f.data[i] = fun
-		return next
-	}
-}
-
-func convertBin(n *Node) {
-	i := n.findex
-	value := genValue(n.child[1])
 	typ := n.child[0].typ.TypeOf()
 	next := getExec(n.tnext)
 
@@ -249,6 +232,7 @@ func _println(n *Node) {
 	}
 
 	n.exec = func(f *Frame) Builtin {
+		log.Println(n.index, "in Println")
 		for i, value := range values {
 			if i > 0 {
 				fmt.Printf(" ")
@@ -312,6 +296,9 @@ func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 }
 
 func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
+	def := n.val.(*Node)
+	setExec(def.child[3].start)
+	start := def.child[3].start
 	var receiver func(*Frame) reflect.Value
 
 	if n.recv != nil {
@@ -320,7 +307,6 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 
 	return func(f *Frame) reflect.Value {
 		return reflect.MakeFunc(n.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
-			def := n.val.(*Node)
 			var result []reflect.Value
 			frame := Frame{anc: f, data: make([]reflect.Value, def.flen)}
 			i := 0
@@ -337,7 +323,7 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 			}
 
 			// Interpreter code execution
-			runCfg(def.child[3].start, &frame)
+			runCfg(start, &frame)
 
 			// Wrap output results in reflect values and return them
 			if len(def.child[2].child) > 1 {
@@ -483,22 +469,22 @@ func callBin(n *Node) {
 				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
 			}
 		} else {
-			var argType reflect.Type
-			if variadic >= 0 && i >= variadic {
-				argType = funcType.In(variadic).Elem()
-			} else {
-				argType = funcType.In(i + receiverOffset)
-			}
 			if c.kind == BasicLit {
 				// Convert literal value (untyped) to function argument type (if not an interface{})
+				var argType reflect.Type
+				if variadic >= 0 && i >= variadic {
+					argType = funcType.In(variadic).Elem()
+				} else {
+					argType = funcType.In(i + receiverOffset)
+				}
 				if argType != nil && argType.Kind() != reflect.Interface {
 					c.val = reflect.ValueOf(c.val).Convert(argType)
 				}
-				if !reflect.ValueOf(c.val).IsValid() {
-					c.val = reflect.New(argType).Elem()
+				if !reflect.ValueOf(c.val).IsValid() { //  Handle "nil"
+					c.val = reflect.Zero(argType)
 				}
 			}
-			// TODO: nil types are forbidden and should be handled at compile time (CFG)
+			// FIXME: nil types are forbidden and should be handled at compile time (CFG)
 			if c.typ != nil && c.typ.cat == FuncT {
 				values = append(values, genNodeWrapper(c))
 			} else {

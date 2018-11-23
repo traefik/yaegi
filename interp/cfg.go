@@ -376,17 +376,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else if n.child[0].isType(scope) {
 				// Type conversion expression
 				n.typ = n.child[0].typ
-				if n.typ.cat == AliasT {
-					n.gen = convert
-				} else {
-					if n.child[1].typ.cat == FuncT {
-						// Convert type of an interpreter function to another binary type:
-						// generate a different callback wrapper
-						n.gen = convertFuncBin
-					} else {
-						n.gen = convertBin
-					}
-				}
+				n.gen = convert
 			} else if isBinCall(n) {
 				n.gen = callBin
 				n.fsize = n.child[0].fsize
@@ -754,12 +744,14 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.fsize = method.Type.NumOut()
 					n.recv = &Receiver{node: n.child[0]}
 					n.gen = getIndexBinMethod
+					log.Println(n.index, "select method", n.child[0].ident+"."+n.child[1].ident)
 				} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
 					n.val = method.Func
 					n.fsize = method.Type.NumOut()
 					n.gen = getIndexBinMethod
 					n.typ = &Type{cat: ValueT, rtype: method.Type}
 					n.recv = &Receiver{node: n.child[0]}
+					log.Println(n.index, "select method", n.child[0].ident+"."+n.child[1].ident)
 				} else {
 					log.Println(n.index, "selector unresolved")
 				}
@@ -985,8 +977,7 @@ func isBuiltinCall(n *Node) bool {
 }
 
 func isBinCall(n *Node) bool {
-	return n.kind == CallExpr && n.child[0].typ.cat == ValueT &&
-		n.child[0].typ.rtype.Kind() == reflect.Func
+	return n.kind == CallExpr && n.child[0].typ.cat == ValueT && n.child[0].typ.rtype.Kind() == reflect.Func
 }
 
 func isRegularCall(n *Node) bool {
@@ -1166,7 +1157,11 @@ func getReturnedType(n *Node) *Type {
 	case BuiltinT:
 		return n.anc.typ
 	case ValueT:
-		return &Type{cat: ValueT, rtype: n.typ.rtype.Out(0)}
+		//log.Println(n.index, "getReturnedType", n.typ.rtype)
+		if n.typ.rtype.NumOut() > 0 {
+			return &Type{cat: ValueT, rtype: n.typ.rtype.Out(0)}
+		}
+		return &Type{cat: ValueT, rtype: n.typ.rtype}
 	}
 	return n.typ.ret[0]
 }
@@ -1179,7 +1174,7 @@ func frameTypes(node *Node, size int) []reflect.Type {
 		if n.kind == FuncDecl || n.kind == ImportDecl || n.kind == TypeDecl || n.kind == FuncLit {
 			return n == node // Do not dive in substree, except if this the entry point
 		}
-		if n.findex < 0 || n.typ == nil || n.level > 0 || n.kind == BasicLit || n.kind == SelectorSrc {
+		if n.findex < 0 || n.typ == nil || n.level > 0 || n.kind == BasicLit || n.kind == SelectorSrc || n.typ.cat == BinPkgT {
 			return true
 		}
 		if ft[n.findex] == nil {
