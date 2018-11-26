@@ -232,7 +232,6 @@ func _println(n *Node) {
 	}
 
 	n.exec = func(f *Frame) Builtin {
-		log.Println(n.index, "in Println")
 		for i, value := range values {
 			if i > 0 {
 				fmt.Printf(" ")

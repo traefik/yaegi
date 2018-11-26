@@ -137,6 +137,32 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			}
 
 		case BlockStmt:
+			// For range block: ensure that array or map type is propagated to iterators
+			// prior to process block
+			if n.anc.kind == RangeStmt {
+				if n.anc.child[2].typ.cat == ValueT {
+					typ := n.anc.child[2].typ.rtype
+					switch typ.Kind() {
+					case reflect.Map:
+						scope.sym[n.anc.child[0].ident].typ = &Type{cat: ValueT, rtype: typ.Key()}
+						scope.sym[n.anc.child[1].ident].typ = &Type{cat: ValueT, rtype: typ.Elem()}
+						n.anc.gen = rangeMap
+					}
+				} else if n.anc.child[2].typ.cat == MapT {
+					scope.sym[n.anc.child[0].ident].typ = n.anc.child[2].typ.key
+					n.anc.child[0].typ = n.anc.child[2].typ.key
+					n.anc.gen = rangeMap
+					vtype := n.anc.child[2].typ.val
+					scope.sym[n.anc.child[1].ident].typ = vtype
+					n.anc.child[1].typ = vtype
+				} else {
+					scope.sym[n.anc.child[0].ident].typ = scope.getType("int")
+					n.anc.child[0].typ = scope.getType("int")
+					vtype := n.anc.child[2].typ.val
+					scope.sym[n.anc.child[1].ident].typ = vtype
+					n.anc.child[1].typ = vtype
+				}
+			}
 			scope = scope.push(0)
 
 		case File:
@@ -177,6 +203,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 		case If0, If1, If2, If3:
 			scope = scope.push(0)
+
+		//case RangeStmt:
+		//	log.Println(n.index, "in RangeStmt", n.child[2].typ)
 
 		case Switch0:
 			// Make sure default clause is in last position
@@ -350,7 +379,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			wireChild(n)
 			iotaValue = 0
 
-		case DeclStmt, ExprStmt, VarDecl, ParenExpr, SendStmt:
+		case DeclStmt, ExprStmt, VarDecl, SendStmt:
 			wireChild(n)
 			n.findex = n.child[len(n.child)-1].findex
 
@@ -380,6 +409,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			} else if isBinCall(n) {
 				n.gen = callBin
 				n.fsize = n.child[0].fsize
+				if typ := n.child[0].typ.rtype; typ.NumOut() > 0 {
+					n.typ = &Type{cat: ValueT, rtype: typ.Out(0)}
+				}
 			} else {
 				if typ := n.child[0].typ; len(typ.ret) > 0 {
 					n.typ = n.child[0].typ.ret[0]
@@ -670,6 +702,11 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.findex = scope.inc(interp)
 			n.typ = n.child[0].typ
 
+		case ParenExpr:
+			wireChild(n)
+			n.findex = n.child[len(n.child)-1].findex
+			n.typ = n.child[len(n.child)-1].typ
+
 		case RangeStmt:
 			n.start = n.child[2]                // Get array or map object
 			n.child[2].tnext = n.child[0].start // then go to iterator init
@@ -677,17 +714,17 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.tnext = n.child[3].start          // then go to range body
 			n.child[3].tnext = n                // then body go to range function (loop)
 			n.child[0].gen = empty              // init filled later by generator
-			if n.child[2].typ.cat == MapT {
-				scope.sym[n.child[0].ident].typ = n.child[2].typ.key
-				n.child[0].typ = n.child[2].typ.key
-				n.gen = rangeMap
-			} else {
-				scope.sym[n.child[0].ident].typ = scope.getType("int")
-				n.child[0].typ = scope.getType("int")
-			}
-			vtype := n.child[2].typ.val
-			scope.sym[n.child[1].ident].typ = vtype
-			n.child[1].typ = vtype
+			//if n.child[2].typ.cat == MapT {
+			//	scope.sym[n.child[0].ident].typ = n.child[2].typ.key
+			//	n.child[0].typ = n.child[2].typ.key
+			//	n.gen = rangeMap
+			//} else {
+			//	scope.sym[n.child[0].ident].typ = scope.getType("int")
+			//	n.child[0].typ = scope.getType("int")
+			//}
+			//vtype := n.child[2].typ.val
+			//scope.sym[n.child[1].ident].typ = vtype
+			//n.child[1].typ = vtype
 
 		case ReturnStmt:
 			wireChild(n)
@@ -739,19 +776,17 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 					n.val = field.Index
 					n.gen = getPtrIndexSeq
 				} else if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
-					n.val = method.Func
+					n.val = method.Index
 					n.typ = &Type{cat: ValueT, rtype: method.Type}
 					n.fsize = method.Type.NumOut()
 					n.recv = &Receiver{node: n.child[0]}
 					n.gen = getIndexBinMethod
-					log.Println(n.index, "select method", n.child[0].ident+"."+n.child[1].ident)
 				} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
-					n.val = method.Func
+					n.val = method.Index
 					n.fsize = method.Type.NumOut()
 					n.gen = getIndexBinMethod
 					n.typ = &Type{cat: ValueT, rtype: method.Type}
 					n.recv = &Receiver{node: n.child[0]}
-					log.Println(n.index, "select method", n.child[0].ident+"."+n.child[1].ident)
 				} else {
 					log.Println(n.index, "selector unresolved")
 				}

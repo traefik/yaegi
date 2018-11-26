@@ -15,7 +15,8 @@ type Middleware struct {
 func (m *Middleware) Handler(w http.ResponseWriter, r *http.Request) {
 	//println("Hello")
 	log.Println(r.Header.Get("User-Agent"))
-	//log.Println(w.Header())
+	w.Header().Set("test", "ok")
+	log.Println(w.Header())
 	fmt.Fprintln(w, "Welcome to my website", m.Name)
 }
 
