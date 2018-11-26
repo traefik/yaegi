@@ -894,6 +894,7 @@ func arrayLit(n *Node) {
 	zero := n.typ.zero
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
+		// FIXME: do automatic type conversion for literal values
 		values[i] = genValue(c)
 	}
 
@@ -928,6 +929,7 @@ func mapLit(n *Node) {
 	keys := make([]func(*Frame) reflect.Value, len(child))
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
+		// FIXME: do automatic type conversion for literal values
 		keys[i] = genValue(c.child[0])
 		values[i] = genValue(c.child[1])
 	}
@@ -949,6 +951,7 @@ func compositeLit(n *Node) {
 	child := n.child[1:]
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
+		// FIXME: do automatic type conversion for literal values
 		values[i] = genValue(c)
 	}
 
@@ -969,6 +972,7 @@ func compositeSparse(n *Node) {
 	child := n.child[1:]
 	values := make(map[int]func(*Frame) reflect.Value)
 	for _, c := range child {
+		// FIXME: do automatic type conversion for literal values
 		values[c.findex] = genValue(c.child[1])
 	}
 

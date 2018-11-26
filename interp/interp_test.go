@@ -548,15 +548,58 @@ import (
 func main() {
 	resp, err := http.Get("http://localhost:8080/")
 	if err != nil {
-		log.Println(err)
+		log.Fatal(err)
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Println(err)
+		log.Fatal(err)
 	}
 	fmt.Println(string(body))
 }`
 	i := NewInterpreter(Opt{Entry: "main"}, "cli0.go")
+	i.Eval(src)
+
+}
+
+func Example_cli1() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+)
+
+func client() {
+	resp, err := http.Get("http://localhost:8080/")
+	if err != nil {
+		log.Fatal(err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(body))
+}
+
+func server(ready chan bool) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "Welcome to my website! ")
+	})
+
+	go http.ListenAndServe(":8080", nil)
+	ready <- true
+}
+
+func main() {
+	ready := make(chan bool)
+	go server(ready)
+	<-ready
+	client()
+}`
+	i := NewInterpreter(Opt{Entry: "main"}, "cli1.go")
 	i.Eval(src)
 
 }
@@ -3000,8 +3043,10 @@ type Middleware struct {
 	Name string
 }
 
+var version string = "1.0"
+
 func (m *Middleware) Handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome to my website", m.Name)
+	fmt.Fprintln(w, "Welcome to my website", m.Name, version)
 }
 
 func main() {
@@ -3032,7 +3077,8 @@ type Middleware struct {
 
 func (m *Middleware) Handler(w http.ResponseWriter, r *http.Request) {
 	//println("Hello")
-	//log.Println(r.Header.Get("User-Agent"))
+	log.Println(r.Header.Get("User-Agent"))
+	w.Header().Set("test", "ok")
 	log.Println(w.Header())
 	fmt.Fprintln(w, "Welcome to my website", m.Name)
 }
@@ -3082,8 +3128,10 @@ import (
 )
 
 //func myHandler(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) }
-//var myHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) })
-var myHandler = func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) }
+
+var myHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) })
+
+//var myHandler = func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) }
 
 func main() {
 	http.HandleFunc("/", myHandler)
@@ -4012,4 +4060,27 @@ func main() {
 
 	// Output:
 	// hello [1 2 3]
+}
+
+func Example_variadic2() {
+	src := `
+package main
+
+import "fmt"
+
+func f(a ...int) {
+	if len(a) > 2 {
+		fmt.Println(a[2])
+	}
+}
+
+func main() {
+	f(1, 2, 3, 4)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "variadic2.go")
+	i.Eval(src)
+
+	// Output:
+	// 3
 }

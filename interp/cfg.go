@@ -477,8 +477,12 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 			} else {
 				for _, f := range n.child[:l] {
-					scope.sym[f.ident].typ = n.typ
 					f.typ = n.typ
+					if n.typ.variadic {
+						scope.sym[f.ident].typ = &Type{cat: ArrayT, val: n.typ}
+					} else {
+						scope.sym[f.ident].typ = n.typ
+					}
 				}
 			}
 
