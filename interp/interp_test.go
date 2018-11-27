@@ -201,6 +201,27 @@ func main() {
 	// [0 0] 2 7
 }
 
+func Example_a18() {
+	src := `
+package main
+
+func main() {
+	a := []int64{1, 2, 3, 4}
+	for _, v := range a {
+		println(v)
+	}
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "a18.go")
+	i.Eval(src)
+
+	// Output:
+	// 1
+	// 2
+	// 3
+	// 4
+}
+
 func Example_a2() {
 	src := `
 package main
@@ -532,6 +553,26 @@ func main() {
 
 	// Output:
 	// ping
+}
+
+func Example_chan3() {
+	src := `
+package main
+
+func send(c chan<- int32) { c <- 123 }
+
+func main() {
+	channel := make(chan int32)
+	go send(channel)
+	msg := <-channel
+	println(msg)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "chan3.go")
+	i.Eval(src)
+
+	// Output:
+	// 123
 }
 
 func Example_cli0() {
@@ -1744,6 +1785,24 @@ func main() {
 
 	// Output:
 	// bidule machin
+}
+
+func Example_map7() {
+	src := `
+package main
+
+func main() {
+	dict := map[int32]int64{13: 733}
+	for k, v := range dict {
+		println(k, v)
+	}
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "map7.go")
+	i.Eval(src)
+
+	// Output:
+	// 13 733
 }
 
 func Example_math0() {
@@ -3459,6 +3518,27 @@ func main() {
 	// a.g.h 5
 }
 
+func Example_struct10() {
+	src := `
+package main
+
+type T struct {
+	f int
+	g int64
+}
+
+func main() {
+	a := T{g: 8}
+	println(a.f, a.g)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "struct10.go")
+	i.Eval(src)
+
+	// Output:
+	// 0 8
+}
+
 func Example_struct2() {
 	src := `
 package main
@@ -3639,6 +3719,27 @@ func main() {
 
 	// Output:
 	// 5 7 8 9
+}
+
+func Example_struct9() {
+	src := `
+package main
+
+type T struct {
+	f int
+	g int64
+}
+
+func main() {
+	a := T{7, 8}
+	println(a.f, a.g)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "struct9.go")
+	i.Eval(src)
+
+	// Output:
+	// 7 8
 }
 
 func Example_switch() {

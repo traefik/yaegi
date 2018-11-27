@@ -889,7 +889,7 @@ func arrayLit(n *Node) {
 	zero := n.typ.zero
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
-		// FIXME: do automatic type conversion for literal values
+		convertLiteralValue(c, n.typ.val.TypeOf())
 		values[i] = genValue(c)
 	}
 
@@ -924,7 +924,8 @@ func mapLit(n *Node) {
 	keys := make([]func(*Frame) reflect.Value, len(child))
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
-		// FIXME: do automatic type conversion for literal values
+		convertLiteralValue(c.child[0], n.typ.key.TypeOf())
+		convertLiteralValue(c.child[1], n.typ.val.TypeOf())
 		keys[i] = genValue(c.child[0])
 		values[i] = genValue(c.child[1])
 	}

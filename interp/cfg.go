@@ -718,17 +718,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.tnext = n.child[3].start          // then go to range body
 			n.child[3].tnext = n                // then body go to range function (loop)
 			n.child[0].gen = empty              // init filled later by generator
-			//if n.child[2].typ.cat == MapT {
-			//	scope.sym[n.child[0].ident].typ = n.child[2].typ.key
-			//	n.child[0].typ = n.child[2].typ.key
-			//	n.gen = rangeMap
-			//} else {
-			//	scope.sym[n.child[0].ident].typ = scope.getType("int")
-			//	n.child[0].typ = scope.getType("int")
-			//}
-			//vtype := n.child[2].typ.val
-			//scope.sym[n.child[1].ident].typ = vtype
-			//n.child[1].typ = vtype
 
 		case ReturnStmt:
 			wireChild(n)
@@ -1167,28 +1156,6 @@ func genValue(n *Node) func(*Frame) reflect.Value {
 		return valueGenerator(n, n.findex)
 	}
 	return nil
-}
-
-// Experimental, temporary & incomplete
-func getValue(n *Node) (int, reflect.Value, bool) {
-	var index int
-	var val reflect.Value
-	var isReflect bool
-	switch n.kind {
-	case BasicLit:
-		val = reflect.ValueOf(n.val)
-	default:
-		if n.sym != nil {
-			index = n.sym.index
-			isReflect = true
-		} else if n.findex < 0 {
-			val = reflect.ValueOf(n.val)
-		} else {
-			index = n.findex
-			isReflect = true
-		}
-	}
-	return index, val, isReflect
 }
 
 func getReturnedType(n *Node) *Type {
