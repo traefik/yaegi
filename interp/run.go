@@ -951,7 +951,13 @@ func compositeLit(n *Node) {
 	child := n.child[1:]
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
-		// FIXME: do automatic type conversion for literal values
+		if c.kind == BasicLit {
+			// Automatic type conversion for literal values
+			fieldType := n.typ.field[i].typ.TypeOf()
+			if fieldType != nil && fieldType.Kind() != reflect.Interface {
+				c.val = reflect.ValueOf(c.val).Convert(fieldType)
+			}
+		}
 		values[i] = genValue(c)
 	}
 
@@ -971,10 +977,13 @@ func compositeSparse(n *Node) {
 	next := getExec(n.tnext)
 	child := n.child[1:]
 	values := make(map[int]func(*Frame) reflect.Value)
-	for i, c := range child {
+	for _, c := range child {
 		if c.child[1].kind == BasicLit {
 			// Automatic type conversion for literal values
-			c.child[1].val = reflect.ValueOf(c.child[1].val).Convert(n.typ.field[c.findex].typ.TypeOf())
+			fieldType := n.typ.field[c.findex].typ.TypeOf()
+			if fieldType != nil && fieldType.Kind() != reflect.Interface {
+				c.child[1].val = reflect.ValueOf(c.child[1].val).Convert(fieldType)
+			}
 		}
 		values[c.findex] = genValue(c.child[1])
 	}
