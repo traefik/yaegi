@@ -971,8 +971,11 @@ func compositeSparse(n *Node) {
 	next := getExec(n.tnext)
 	child := n.child[1:]
 	values := make(map[int]func(*Frame) reflect.Value)
-	for _, c := range child {
-		// FIXME: do automatic type conversion for literal values
+	for i, c := range child {
+		if c.child[1].kind == BasicLit {
+			// Automatic type conversion for literal values
+			c.child[1].val = reflect.ValueOf(c.child[1].val).Convert(n.typ.field[c.findex].typ.TypeOf())
+		}
 		values[c.findex] = genValue(c.child[1])
 	}
 
