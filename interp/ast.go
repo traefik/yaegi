@@ -177,7 +177,6 @@ type Action uint
 const (
 	Nop Action = iota
 	Addr
-	ArrayLit
 	Assign
 	AssignX
 	Assign0
@@ -215,7 +214,6 @@ const (
 var actions = [...]string{
 	Nop:          "nop",
 	Addr:         "&",
-	ArrayLit:     "arrayLit",
 	Assign:       "=",
 	AssignX:      "X=",
 	Assign0:      "0=",

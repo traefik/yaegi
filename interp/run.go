@@ -14,7 +14,6 @@ type BuiltinGenerator func(n *Node)
 var builtin = [...]BuiltinGenerator{
 	Nop:          nop,
 	Addr:         addr,
-	ArrayLit:     arrayLit,
 	Assign:       assign,
 	AssignX:      assignX,
 	Assign0:      assign0,
@@ -367,9 +366,7 @@ func call(n *Node) {
 				} else {
 					argType = n.child[0].typ.arg[i].TypeOf()
 				}
-				if argType != nil && argType.Kind() != reflect.Interface {
-					c.val = reflect.ValueOf(c.val).Convert(argType)
-				}
+				convertLiteralValue(c, argType)
 			}
 			values = append(values, genValue(c))
 		}
@@ -476,9 +473,7 @@ func callBin(n *Node) {
 				} else {
 					argType = funcType.In(i + receiverOffset)
 				}
-				if argType != nil && argType.Kind() != reflect.Interface {
-					c.val = reflect.ValueOf(c.val).Convert(argType)
-				}
+				convertLiteralValue(c, argType)
 				if !reflect.ValueOf(c.val).IsValid() { //  Handle "nil"
 					c.val = reflect.Zero(argType)
 				}
@@ -951,13 +946,7 @@ func compositeLit(n *Node) {
 	child := n.child[1:]
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
-		if c.kind == BasicLit {
-			// Automatic type conversion for literal values
-			fieldType := n.typ.field[i].typ.TypeOf()
-			if fieldType != nil && fieldType.Kind() != reflect.Interface {
-				c.val = reflect.ValueOf(c.val).Convert(fieldType)
-			}
-		}
+		convertLiteralValue(c, n.typ.field[i].typ.TypeOf())
 		values[i] = genValue(c)
 	}
 
@@ -978,13 +967,7 @@ func compositeSparse(n *Node) {
 	child := n.child[1:]
 	values := make(map[int]func(*Frame) reflect.Value)
 	for _, c := range child {
-		if c.child[1].kind == BasicLit {
-			// Automatic type conversion for literal values
-			fieldType := n.typ.field[c.findex].typ.TypeOf()
-			if fieldType != nil && fieldType.Kind() != reflect.Interface {
-				c.child[1].val = reflect.ValueOf(c.child[1].val).Convert(fieldType)
-			}
-		}
+		convertLiteralValue(c.child[1], n.typ.field[c.findex].typ.TypeOf())
 		values[c.findex] = genValue(c.child[1])
 	}
 
@@ -1176,11 +1159,19 @@ func recv(n *Node) {
 	}
 }
 
+func convertLiteralValue(n *Node, t reflect.Type) {
+	if n.kind != BasicLit || t == nil || t.Kind() == reflect.Interface {
+		return
+	}
+	n.val = reflect.ValueOf(n.val).Convert(t)
+}
+
 // Write to a channel
 func send(n *Node) {
 	next := getExec(n.tnext)
-	value0 := genValue(n.child[0])
-	value1 := genValue(n.child[1])
+	value0 := genValue(n.child[0]) // channel
+	convertLiteralValue(n.child[1], n.child[0].typ.val.TypeOf())
+	value1 := genValue(n.child[1]) // value to send
 
 	n.exec = func(f *Frame) Builtin {
 		value0(f).Send(value1(f))
