@@ -16,7 +16,6 @@ var builtin = [...]BuiltinGenerator{
 	Addr:         addr,
 	Assign:       assign,
 	AssignX:      assignX,
-	Assign0:      assign0,
 	Add:          add,
 	And:          and,
 	Call:         call,
@@ -131,25 +130,6 @@ func assign(n *Node) {
 
 	n.exec = func(f *Frame) Builtin {
 		value(f).Set(value1(f))
-		return next
-	}
-}
-
-// assign0 implements assignement of zero value, as in a var statement
-func assign0(n *Node) {
-	l := len(n.child) - 1
-	zero := n.typ.zero
-	s := n.child[:l]
-	next := getExec(n.tnext)
-	values := make([]func(*Frame) reflect.Value, l)
-	for i, c := range s {
-		values[i] = genValue(c)
-	}
-
-	n.exec = func(f *Frame) Builtin {
-		for _, v := range values {
-			v(f).Set(zero())
-		}
 		return next
 	}
 }
@@ -886,7 +866,7 @@ func arrayLit(n *Node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child[1:]
-	zero := n.typ.zero
+	a := n.typ.zero()
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
 		convertLiteralValue(c, n.typ.val.TypeOf())
@@ -896,7 +876,6 @@ func arrayLit(n *Node) {
 	if n.typ.size > 0 {
 		// Fixed size array
 		n.exec = func(f *Frame) Builtin {
-			a := zero()
 			for i, v := range values {
 				a.Index(i).Set(v(f))
 			}
@@ -906,7 +885,6 @@ func arrayLit(n *Node) {
 	} else {
 		// Slice
 		n.exec = func(f *Frame) Builtin {
-			a := zero()
 			for _, v := range values {
 				a = reflect.Append(a, v(f))
 			}
@@ -945,6 +923,7 @@ func compositeLit(n *Node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child[1:]
+	a := n.typ.zero()
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
 		convertLiteralValue(c, n.typ.field[i].typ.TypeOf())
@@ -952,7 +931,6 @@ func compositeLit(n *Node) {
 	}
 
 	n.exec = func(f *Frame) Builtin {
-		a := n.typ.zero()
 		for i, v := range values {
 			a.Field(i).Set(v(f))
 		}
@@ -967,13 +945,13 @@ func compositeSparse(n *Node) {
 	next := getExec(n.tnext)
 	child := n.child[1:]
 	values := make(map[int]func(*Frame) reflect.Value)
+	a := n.typ.zero()
 	for _, c := range child {
 		convertLiteralValue(c.child[1], n.typ.field[c.findex].typ.TypeOf())
 		values[c.findex] = genValue(c.child[1])
 	}
 
 	n.exec = func(f *Frame) Builtin {
-		a := n.typ.zero()
 		for i, v := range values {
 			a.Field(i).Set(v(f))
 		}

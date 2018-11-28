@@ -222,6 +222,24 @@ func main() {
 	// 4
 }
 
+func Example_a19() {
+	src := `
+package main
+
+func main() {
+	var buf [bsize]byte
+	println(len(buf))
+}
+
+const bsize = 10
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "a19.go")
+	i.Eval(src)
+
+	// Output:
+	// 10
+}
+
 func Example_a2() {
 	src := `
 package main

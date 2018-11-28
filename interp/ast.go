@@ -179,7 +179,6 @@ const (
 	Addr
 	Assign
 	AssignX
-	Assign0
 	Add
 	And
 	Call
@@ -216,7 +215,6 @@ var actions = [...]string{
 	Addr:         "&",
 	Assign:       "=",
 	AssignX:      "X=",
-	Assign0:      "0=",
 	Add:          "+",
 	And:          "&",
 	Call:         "call",
@@ -622,8 +620,8 @@ func (interp *Interpreter) Ast(src, name string) (string, *Node) {
 			st.push(addChild(&root, anc, kind, action))
 
 		case *ast.ValueSpec:
-			var kind Kind
-			var action Action
+			kind := ValueSpec
+			action := Nop
 			if a.Values != nil {
 				if len(a.Names) == 1 && len(a.Values) > 1 {
 					if anc.kind == ConstDecl || anc.kind == VarDecl {
@@ -646,8 +644,6 @@ func (interp *Interpreter) Ast(src, name string) (string, *Node) {
 				}
 			} else if anc.kind == ConstDecl {
 				kind, action = Define, Assign
-			} else {
-				kind, action = ValueSpec, Assign0
 			}
 			st.push(addChild(&root, anc, kind, action))
 

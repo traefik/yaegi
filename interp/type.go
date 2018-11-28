@@ -116,7 +116,7 @@ type Type struct {
 	scope      *Scope        // type declaration scope (in case of re-parse incomplete type)
 }
 
-// return a type definition for the corresponding AST subtree
+// nodeType returns a type definition for the corresponding AST subtree
 func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 	if n.typ != nil && !n.typ.incomplete {
 		return n.typ
@@ -301,17 +301,21 @@ func init() {
 	zeroValues[UintptrT] = reflect.ValueOf(uintptr(0))
 }
 
-// zero instantiates and return a zero value object for the given type during execution
-func (t *Type) zero() reflect.Value {
+// if type is incomplete, re-parse it.
+func (t *Type) finalize() *Type {
 	if t.incomplete {
-		// Re-parse type at execution in lazy mode. Hopefully missing info is now present
 		t = nodeType(t.node.interp, t.scope, t.node)
 		t.node.typ = t
 		if t.incomplete {
 			log.Panicln("incomplete type", t.node.index)
 		}
 	}
+	return t
+}
 
+// zero instantiates and return a zero value object for the given type during execution
+func (t *Type) zero() reflect.Value {
+	t = t.finalize()
 	switch t.cat {
 	case AliasT:
 		return t.val.zero()
@@ -393,11 +397,11 @@ func (t *Type) getMethod(name string) *Node {
 // and the list of indices to access the right struct field, in case of a promoted method
 func (t *Type) lookupMethod(name string) (*Node, []int) {
 	if t.cat == PtrT {
-		m, index := t.val.lookupMethod(name)
-		return m, index
+		return t.val.lookupMethod(name)
 	}
 	var index []int
-	if m := t.getMethod(name); m == nil {
+	m := t.getMethod(name)
+	if m == nil {
 		for i, f := range t.field {
 			if f.embed {
 				if m, index2 := f.typ.lookupMethod(name); m != nil {
@@ -406,10 +410,8 @@ func (t *Type) lookupMethod(name string) (*Node, []int) {
 				}
 			}
 		}
-	} else {
-		return m, index
 	}
-	return nil, index
+	return m, index
 }
 
 // ptrTo returns the pointer type with element t.

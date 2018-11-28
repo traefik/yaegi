@@ -204,9 +204,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case If0, If1, If2, If3:
 			scope = scope.push(0)
 
-		//case RangeStmt:
-		//	log.Println(n.index, "in RangeStmt", n.child[2].typ)
-
 		case Switch0:
 			// Make sure default clause is in last position
 			c := n.child[1].child
@@ -490,7 +487,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			wireChild(n)
 			scope = scope.pop()
 			n.fsize = scope.size + 1
-			n.types = frameTypes(n, n.fsize)
 
 		case For0: // for {}
 			body := n.child[0]
@@ -575,14 +571,12 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			interp.scope[pkgName].sym[funcName].typ = n.typ
 			interp.scope[pkgName].sym[funcName].kind = Func
 			interp.scope[pkgName].sym[funcName].node = n
-			n.types = frameTypes(n, n.flen)
 
 		case FuncLit:
 			n.typ = n.child[2].typ
 			n.val = n
 			n.flen = scope.size + 1
 			scope = scope.pop()
-			n.types = frameTypes(n, n.flen)
 			n.framepos = n.child[2].framepos
 
 		case FuncType:
@@ -897,10 +891,16 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 func genRun(n *Node) {
 	n.Walk(func(n *Node) bool {
-		if n.kind == FuncType && len(n.anc.child) == 4 {
-			setExec(n.anc.child[3].start)
-		}
-		if n.kind == VarDecl || n.kind == ConstDecl {
+		switch n.kind {
+		case File:
+			n.types = frameTypes(n, n.fsize)
+		case FuncDecl, FuncLit:
+			n.types = frameTypes(n, n.flen)
+		case FuncType:
+			if len(n.anc.child) == 4 {
+				setExec(n.anc.child[3].start)
+			}
+		case ConstDecl, VarDecl:
 			setExec(n.start)
 			return false
 		}
@@ -1113,11 +1113,6 @@ func genValueRecv(n *Node) func(*Frame) reflect.Value {
 	}
 }
 
-func genValuePtr(n *Node) func(*Frame) reflect.Value {
-	v := genValue(n)
-	return func(f *Frame) reflect.Value { return v(f).Addr() }
-}
-
 func genValue(n *Node) func(*Frame) reflect.Value {
 	switch n.kind {
 	case BasicLit, FuncDecl, SelectorSrc:
@@ -1172,7 +1167,7 @@ func getReturnedType(n *Node) *Type {
 	return n.typ.ret[0]
 }
 
-// frameTypes return a slice of frame types for FuncDecl or FuncLit nodes
+// frameTypes returns a slice of frame types for FuncDecl or FuncLit nodes
 func frameTypes(node *Node, size int) []reflect.Type {
 	ft := make([]reflect.Type, size)
 
@@ -1184,6 +1179,9 @@ func frameTypes(node *Node, size int) []reflect.Type {
 			return true
 		}
 		if ft[n.findex] == nil {
+			if n.typ.incomplete {
+				n.typ = n.typ.finalize()
+			}
 			if n.typ.cat == FuncT {
 				ft[n.findex] = reflect.TypeOf(n)
 			} else {
