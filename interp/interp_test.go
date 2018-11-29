@@ -613,6 +613,26 @@ func main() {
 	// nok
 }
 
+func Example_bool3() {
+	src := `
+package main
+
+func main() {
+	m := map[int]bool{0: false, 1: true}
+	if m[0] {
+		println(0)
+	} else {
+		println(1)
+	}
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "bool3.go")
+	i.Eval(src)
+
+	// Output:
+	// 1
+}
+
 func Example_chan0() {
 	src := `
 package main

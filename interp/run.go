@@ -565,14 +565,24 @@ func getIndexArray(n *Node) {
 
 // getIndexMap retrieves map value from index
 func getIndexMap(n *Node) {
-	i := n.findex
 	value0 := genValue(n.child[0]) // map
 	value1 := genValue(n.child[1]) // index
-	next := getExec(n.tnext)
+	tnext := getExec(n.tnext)
 
-	n.exec = func(f *Frame) Builtin {
-		f.data[i] = value0(f).MapIndex(value1(f))
-		return next
+	if n.fnext != nil {
+		fnext := getExec(n.fnext)
+		n.exec = func(f *Frame) Builtin {
+			if value0(f).MapIndex(value1(f)).Bool() {
+				return tnext
+			}
+			return fnext
+		}
+	} else {
+		i := n.findex
+		n.exec = func(f *Frame) Builtin {
+			f.data[i] = value0(f).MapIndex(value1(f))
+			return tnext
+		}
 	}
 }
 
