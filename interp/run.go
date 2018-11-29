@@ -1188,13 +1188,23 @@ func _make(n *Node) {
 
 // recv reads from a channel
 func recv(n *Node) {
-	i := n.findex
 	value := genValue(n.child[0])
-	next := getExec(n.tnext)
+	tnext := getExec(n.tnext)
 
-	n.exec = func(f *Frame) Builtin {
-		f.data[i], _ = value(f).Recv()
-		return next
+	if n.fnext != nil {
+		fnext := getExec(n.fnext)
+		n.exec = func(f *Frame) Builtin {
+			if v, _ := value(f).Recv(); v.Bool() {
+				return tnext
+			}
+			return fnext
+		}
+	} else {
+		i := n.findex
+		n.exec = func(f *Frame) Builtin {
+			f.data[i], _ = value(f).Recv()
+			return tnext
+		}
 	}
 }
 

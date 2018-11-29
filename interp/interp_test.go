@@ -737,6 +737,29 @@ func main() {
 	// 123
 }
 
+func Example_chan4() {
+	src := `
+package main
+
+func send(c chan<- bool) { c <- false }
+
+func main() {
+	channel := make(chan bool)
+	go send(channel)
+	if <-channel {
+		println("ok")
+	} else {
+		println("nok")
+	}
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "chan4.go")
+	i.Eval(src)
+
+	// Output:
+	// nok
+}
+
 func Example_cli0() {
 	src := `
 package main
