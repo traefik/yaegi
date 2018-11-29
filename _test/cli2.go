@@ -21,7 +21,8 @@ func client() {
 
 func server(ready chan bool) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "Welcome to my website!")
+		var r1 *http.Request = r
+		fmt.Fprintln(w, "Welcome to my website!", r1)
 	})
 
 	go http.ListenAndServe(":8080", nil)
@@ -34,6 +35,3 @@ func main() {
 	<-ready
 	client()
 }
-
-// Output:
-// Welcome to my website!

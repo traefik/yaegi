@@ -300,6 +300,13 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 				i++
 			}
 
+			// Init local frame values
+			for i, t := range def.types {
+				if !frame.data[i].IsValid() && t != nil {
+					frame.data[i] = reflect.New(t).Elem()
+				}
+			}
+
 			// Interpreter code execution
 			runCfg(start, &frame)
 
