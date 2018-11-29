@@ -527,18 +527,6 @@ func callBin(n *Node) {
 	}
 }
 
-func getPtrIndex(n *Node) {
-	i := n.findex
-	next := getExec(n.tnext)
-	fi := n.child[1].val.(int)
-	value := genValue(n.child[0])
-
-	n.exec = func(f *Frame) Builtin {
-		f.data[i] = value(f).Elem().Field(fi)
-		return next
-	}
-}
-
 func getIndexBinMethod(n *Node) {
 	i := n.findex
 	m := n.val.(int)
@@ -551,15 +539,26 @@ func getIndexBinMethod(n *Node) {
 	}
 }
 
+// getIndexArray returns array value from index
 func getIndexArray(n *Node) {
-	i := n.findex
-	next := getExec(n.tnext)
+	tnext := getExec(n.tnext)
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 
-	n.exec = func(f *Frame) Builtin {
-		f.data[i] = value0(f).Index(int(value1(f).Int()))
-		return next
+	if n.fnext != nil {
+		fnext := getExec(n.fnext)
+		n.exec = func(f *Frame) Builtin {
+			if value0(f).Index(int(value1(f).Int())).Bool() {
+				return tnext
+			}
+			return fnext
+		}
+	} else {
+		i := n.findex
+		n.exec = func(f *Frame) Builtin {
+			f.data[i] = value0(f).Index(int(value1(f).Int()))
+			return tnext
+		}
 	}
 }
 

@@ -633,6 +633,26 @@ func main() {
 	// 1
 }
 
+func Example_bool4() {
+	src := `
+package main
+
+func main() {
+	m := []bool{false, true}
+	if m[0] {
+		println(0)
+	} else {
+		println(1)
+	}
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "bool4.go")
+	i.Eval(src)
+
+	// Output:
+	// 1
+}
+
 func Example_chan0() {
 	src := `
 package main
