@@ -285,32 +285,33 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 
 	return func(f *Frame) reflect.Value {
 		return reflect.MakeFunc(n.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
-			var result []reflect.Value
+			// Allocate and init local frame. All values to be settable and addressable.
 			frame := Frame{anc: f, data: make([]reflect.Value, def.flen)}
-			i := 0
-
-			if receiver != nil {
-				frame.data[def.framepos[0]] = receiver(f)
-				i++
-			}
-
-			// Unwrap input arguments from their reflect value and store them in the frame
-			for _, arg := range in {
-				frame.data[def.framepos[i]] = arg
-				i++
-			}
-
-			// Init local frame values
 			for i, t := range def.types {
-				if !frame.data[i].IsValid() && t != nil {
+				if t != nil {
 					frame.data[i] = reflect.New(t).Elem()
 				}
+			}
+
+			// Copy method receiver as first argument, if defined
+			i := 0
+			if receiver != nil {
+				frame.data[def.framepos[i]].Set(receiver(f))
+				i++
+			}
+
+			// Copy function input arguments in local frame
+			for _, arg := range in {
+				frame.data[def.framepos[i]].Set(arg)
+				i++
 			}
 
 			// Interpreter code execution
 			runCfg(start, &frame)
 
-			// Wrap output results in reflect values and return them
+			// Return output values in a result vector
+			var result []reflect.Value
+
 			if len(def.child[2].child) > 1 {
 				if fieldList := def.child[2].child[1]; fieldList != nil {
 					result = make([]reflect.Value, len(fieldList.child))
