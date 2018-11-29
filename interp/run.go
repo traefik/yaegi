@@ -437,10 +437,10 @@ func call(n *Node) {
 	}
 }
 
-// FIXME: handle case where func return a boolean
 // Call a function from a bin import, accessible through reflect
 func callBin(n *Node) {
-	next := getExec(n.tnext)
+	tnext := getExec(n.tnext)
+	fnext := getExec(n.fnext)
 	child := n.child[1:]
 	value := genValue(n.child[0])
 	var values []func(*Frame) reflect.Value
@@ -494,7 +494,20 @@ func callBin(n *Node) {
 				in[i] = v(f)
 			}
 			go value(f).Call(in)
-			return next
+			return tnext
+		}
+	} else if fnext != nil {
+		// Handle branching according to boolean result
+		n.exec = func(f *Frame) Builtin {
+			in := make([]reflect.Value, l)
+			for i, v := range values {
+				in[i] = v(f)
+			}
+			v = value(f).Call(in)
+			if v[0].Bool() {
+				return tnext
+			}
+			return fnext
 		}
 	} else {
 		n.exec = func(f *Frame) Builtin {
@@ -508,7 +521,7 @@ func callBin(n *Node) {
 			for i := 0; i < fsize; i++ {
 				f.data[n.findex+i] = v[i]
 			}
-			return next
+			return tnext
 		}
 	}
 }
