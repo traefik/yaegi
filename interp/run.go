@@ -685,14 +685,14 @@ func equal(n *Node) {
 
 	if n.fnext == nil {
 		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetBool(value0(f).Int() == value1(f).Int())
+			f.data[i].SetBool(value0(f).Interface() == value1(f).Interface())
 			return tnext
 		}
 	} else {
 		fnext := getExec(n.fnext)
 
 		n.exec = func(f *Frame) Builtin {
-			if value0(f).Int() == value1(f).Int() {
+			if value0(f).Interface() == value1(f).Interface() {
 				return tnext
 			}
 			return fnext
@@ -708,14 +708,14 @@ func notEqual(n *Node) {
 
 	if n.fnext == nil {
 		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetBool(value0(f).Int() != value1(f).Int())
+			f.data[i].SetBool(value0(f).Interface() != value1(f).Interface())
 			return tnext
 		}
 	} else {
 		fnext := getExec(n.fnext)
 
 		n.exec = func(f *Frame) Builtin {
-			if value0(f).Int() != value1(f).Int() {
+			if value0(f).Interface() != value1(f).Interface() {
 				return tnext
 			}
 			return fnext
