@@ -870,9 +870,8 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case SliceExpr, UnaryExpr:
 			wireChild(n)
 			n.typ = n.child[0].typ
-			if n.action == Negate {
-				n.findex = scope.inc(interp)
-			}
+			// TODO: avoid allocation if boolean branch op (i.e. '!' in an 'if' expr)
+			n.findex = scope.inc(interp)
 
 		case ValueSpec:
 			l := len(n.child) - 1
