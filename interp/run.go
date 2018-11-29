@@ -325,7 +325,6 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 	}
 }
 
-// FIXME: handle case where func return a boolean
 func call(n *Node) {
 	goroutine := n.anc.kind == GoStmt
 	method := n.child[0].recv != nil
@@ -335,9 +334,10 @@ func call(n *Node) {
 		values = append(values, genValueRecv(n.child[0]))
 	}
 	variadic := variadicPos(n)
-	next := getExec(n.tnext)
 	value := genValue(n.child[0])
 	child := n.child[1:]
+	tnext := getExec(n.tnext)
+	fnext := getExec(n.fnext)
 
 	// compute input argument value functions
 	for i, c := range child {
@@ -416,15 +416,24 @@ func call(n *Node) {
 		// Execute function body
 		if goroutine {
 			go runCfg(def.child[3].start, &nf)
+			return tnext
 		} else {
 			runCfg(def.child[3].start, &nf)
-			// Propagate return values to caller frame
-			//log.Println(n.index, "call rets:", ret, nf.data[:len(ret)])
-			for i, r := range ret {
-				f.data[r] = nf.data[i]
-			}
 		}
-		return next
+
+		// Handle branching according to boolean result
+		if fnext != nil {
+			if nf.data[0].Bool() {
+				return tnext
+			}
+			return fnext
+		}
+		// Propagate return values to caller frame
+		//log.Println(n.index, "call rets:", ret, nf.data[:len(ret)])
+		for i, r := range ret {
+			f.data[r] = nf.data[i]
+		}
+		return tnext
 	}
 }
 

@@ -431,6 +431,62 @@ func f2() bool {
 	// f2
 }
 
+func Example_and0() {
+	src := `
+package main
+
+func main() {
+	a, b := 1, 2
+
+	if f2() && f1() {
+		println(a, b)
+	}
+}
+
+func f1() bool {
+	println("f1")
+	return true
+}
+
+func f2() bool {
+	println("f2")
+	return false
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "and0.go")
+	i.Eval(src)
+
+	// Output:
+	// f2
+}
+
+func Example_and1() {
+	src := `
+package main
+
+func main() {
+	a := f2() && f1()
+	println(a)
+}
+
+func f1() bool {
+	println("f1")
+	return true
+}
+
+func f2() bool {
+	println("f2")
+	return false
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "and1.go")
+	i.Eval(src)
+
+	// Output:
+	// f2
+	// false
+}
+
 func Example_assign() {
 	src := `
 package main
