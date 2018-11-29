@@ -565,6 +565,54 @@ func main() {
 
 }
 
+func Example_bool1() {
+	src := `
+package main
+
+type T struct {
+	v bool
+}
+
+func main() {
+	a := T{}
+	if a.v {
+		println("ok")
+	} else {
+		println("nok")
+	}
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "bool1.go")
+	i.Eval(src)
+
+	// Output:
+	// nok
+}
+
+func Example_bool2() {
+	src := `
+package main
+
+type T struct {
+	v bool
+}
+
+func main() {
+	a := &T{}
+	if a.v {
+		println("ok")
+	} else {
+		println("nok")
+	}
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "bool2.go")
+	i.Eval(src)
+
+	// Output:
+	// nok
+}
+
 func Example_chan0() {
 	src := `
 package main

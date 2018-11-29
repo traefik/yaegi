@@ -237,6 +237,7 @@ func _panic(n *Node) {
 }
 
 // wrapNode wraps a call to an interpreter node in a function that can be called from runtime
+// FIXME: wrapNode is now redundant with genNodeWrapper(). it should be removed.
 func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
 	def := n.val.(*Node)
 	var result []reflect.Value
@@ -503,8 +504,8 @@ func callBin(n *Node) {
 			for i, v := range values {
 				in[i] = v(f)
 			}
-			v = value(f).Call(in)
-			if v[0].Bool() {
+			r := value(f).Call(in)
+			if r[0].Bool() {
 				return tnext
 			}
 			return fnext
@@ -516,10 +517,10 @@ func callBin(n *Node) {
 				in[i] = v(f)
 			}
 			//log.Println(n.index, "callbin", value(f).Type(), in)
-			v := value(f).Call(in)
+			r := value(f).Call(in)
 			//log.Println(n.index, "callBin, res:", v, fsize, n.findex)
 			for i := 0; i < fsize; i++ {
-				f.data[n.findex+i] = v[i]
+				f.data[n.findex+i] = r[i]
 			}
 			return tnext
 		}
@@ -605,26 +606,46 @@ func getFunc(n *Node) {
 }
 
 func getIndexSeq(n *Node) {
-	i := n.findex
 	value := genValue(n.child[0])
 	index := n.val.([]int)
-	next := getExec(n.tnext)
+	tnext := getExec(n.tnext)
 
-	n.exec = func(f *Frame) Builtin {
-		f.data[i] = value(f).FieldByIndex(index)
-		return next
+	if n.fnext != nil {
+		fnext := getExec(n.fnext)
+		n.exec = func(f *Frame) Builtin {
+			if value(f).FieldByIndex(index).Bool() {
+				return tnext
+			}
+			return fnext
+		}
+	} else {
+		i := n.findex
+		n.exec = func(f *Frame) Builtin {
+			f.data[i] = value(f).FieldByIndex(index)
+			return tnext
+		}
 	}
 }
 
 func getPtrIndexSeq(n *Node) {
-	i := n.findex
-	fi := n.val.([]int)
+	index := n.val.([]int)
 	value := genValue(n.child[0])
-	next := getExec(n.tnext)
+	tnext := getExec(n.tnext)
 
-	n.exec = func(f *Frame) Builtin {
-		f.data[i] = value(f).Elem().FieldByIndex(fi)
-		return next
+	if n.fnext != nil {
+		fnext := getExec(n.fnext)
+		n.exec = func(f *Frame) Builtin {
+			if value(f).Elem().FieldByIndex(index).Bool() {
+				return tnext
+			}
+			return fnext
+		}
+	} else {
+		i := n.findex
+		n.exec = func(f *Frame) Builtin {
+			f.data[i] = value(f).Elem().FieldByIndex(index)
+			return tnext
+		}
 	}
 }
 
