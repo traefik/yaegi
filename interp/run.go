@@ -1121,8 +1121,8 @@ func _make(n *Node) {
 	next := getExec(n.tnext)
 	typ := n.child[1].typ.TypeOf()
 
-	switch n.child[1].typ.cat {
-	case ArrayT:
+	switch typ.Kind() {
+	case reflect.Array, reflect.Slice:
 		value := genValue(n.child[2])
 
 		switch len(n.child) {
@@ -1140,7 +1140,7 @@ func _make(n *Node) {
 			}
 		}
 
-	case ChanT:
+	case reflect.Chan:
 		switch len(n.child) {
 		case 2:
 			n.exec = func(f *Frame) Builtin {
@@ -1155,7 +1155,7 @@ func _make(n *Node) {
 			}
 		}
 
-	case MapT:
+	case reflect.Map:
 		switch len(n.child) {
 		case 2:
 			n.exec = func(f *Frame) Builtin {

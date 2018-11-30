@@ -1932,6 +1932,27 @@ func main() {
 
 }
 
+func Example_make() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"net/http"
+)
+
+func main() {
+	h := make(http.Header)
+	fmt.Println("h:", h)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "make.go")
+	i.Eval(src)
+
+	// Output:
+	// h: map[]
+}
+
 func Example_map() {
 	src := `
 package main
