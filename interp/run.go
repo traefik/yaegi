@@ -113,7 +113,6 @@ func assignX(n *Node) {
 
 	n.exec = func(f *Frame) Builtin {
 		for i, value := range values {
-			//log.Println(n.index, "in assignX", i, value(f), f.data[b+i], b)
 			if f.data[b+i].IsValid() {
 				value(f).Set(f.data[b+i])
 			}
@@ -159,23 +158,22 @@ func and(n *Node) {
 }
 
 func not(n *Node) {
-	i := n.findex
 	value := genValue(n.child[0])
 	tnext := getExec(n.tnext)
 
-	if n.fnext == nil {
-		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetBool(!value(f).Bool())
-			return tnext
-		}
-	} else {
+	if n.fnext != nil {
 		fnext := getExec(n.fnext)
-
 		n.exec = func(f *Frame) Builtin {
 			if !value(f).Bool() {
 				return tnext
 			}
 			return fnext
+		}
+	} else {
+		i := n.findex
+		n.exec = func(f *Frame) Builtin {
+			f.data[i].SetBool(!value(f).Bool())
+			return tnext
 		}
 	}
 }
@@ -192,13 +190,23 @@ func addr(n *Node) {
 }
 
 func deref(n *Node) {
-	i := n.findex
 	value := genValue(n.child[0])
-	next := getExec(n.tnext)
+	tnext := getExec(n.tnext)
 
-	n.exec = func(f *Frame) Builtin {
-		f.data[i] = value(f).Elem()
-		return next
+	if n.fnext != nil {
+		fnext := getExec(n.fnext)
+		n.exec = func(f *Frame) Builtin {
+			if value(f).Elem().Bool() {
+				return tnext
+			}
+			return fnext
+		}
+	} else {
+		i := n.findex
+		n.exec = func(f *Frame) Builtin {
+			f.data[i] = value(f).Elem()
+			return tnext
+		}
 	}
 }
 
@@ -809,90 +817,68 @@ func greater(n *Node) {
 	}
 }
 
-// TODO: avoid always forced execution of 2nd expression member
 func land(n *Node) {
-	i := n.findex
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	tnext := getExec(n.tnext)
 
-	if n.fnext == nil {
-		n.exec = func(f *Frame) Builtin {
-			var v bool
-			if v = value0(f).Bool(); v {
-				v = value1(f).Bool()
-			}
-			f.data[i].SetBool(v)
-			return tnext
-		}
-	} else {
+	if n.fnext != nil {
 		fnext := getExec(n.fnext)
-
 		n.exec = func(f *Frame) Builtin {
-			var v bool
-			if v = value0(f).Bool(); v {
-				v = value1(f).Bool()
-			}
-			if v {
+			if value0(f).Bool() && value1(f).Bool() {
 				return tnext
 			}
 			return fnext
+		}
+	} else {
+		i := n.findex
+		n.exec = func(f *Frame) Builtin {
+			f.data[i].SetBool(value0(f).Bool() && value1(f).Bool())
+			return tnext
 		}
 	}
 }
 
-// TODO: avoid always forced execution of 2nd expression member
 func lor(n *Node) {
-	i := n.findex
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	tnext := getExec(n.tnext)
 
-	if n.fnext == nil {
-		n.exec = func(f *Frame) Builtin {
-			var v bool
-			if v = value0(f).Bool(); !v {
-				v = value1(f).Bool()
-			}
-			f.data[i].SetBool(v)
-			return tnext
-		}
-	} else {
+	if n.fnext != nil {
 		fnext := getExec(n.fnext)
-
 		n.exec = func(f *Frame) Builtin {
-			var v bool
-			if v = value0(f).Bool(); !v {
-				v = value1(f).Bool()
-			}
-			f.data[i].SetBool(v)
-			if v {
+			if value0(f).Bool() || value1(f).Bool() {
 				return tnext
 			}
 			return fnext
+		}
+	} else {
+		i := n.findex
+		n.exec = func(f *Frame) Builtin {
+			f.data[i].SetBool(value0(f).Bool() || value1(f).Bool())
+			return tnext
 		}
 	}
 }
 
 func lower(n *Node) {
-	i := n.findex
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	tnext := getExec(n.tnext)
 
-	if n.fnext == nil {
-		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetBool(value0(f).Int() < value1(f).Int())
-			return tnext
-		}
-	} else {
+	if n.fnext != nil {
 		fnext := getExec(n.fnext)
-
 		n.exec = func(f *Frame) Builtin {
 			if value0(f).Int() < value1(f).Int() {
 				return tnext
 			}
 			return fnext
+		}
+	} else {
+		i := n.findex
+		n.exec = func(f *Frame) Builtin {
+			f.data[i].SetBool(value0(f).Int() < value1(f).Int())
+			return tnext
 		}
 	}
 }
@@ -1294,44 +1280,42 @@ func slice0(n *Node) {
 }
 
 func isNil(n *Node) {
-	i := n.findex
 	value := genValue(n.child[0])
 	tnext := getExec(n.tnext)
 
-	if n.fnext == nil {
-		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetBool(value(f).IsNil())
-			return tnext
-		}
-	} else {
+	if n.fnext != nil {
 		fnext := getExec(n.fnext)
-
 		n.exec = func(f *Frame) Builtin {
 			if value(f).IsNil() {
 				return tnext
 			}
 			return fnext
 		}
+	} else {
+		i := n.findex
+		n.exec = func(f *Frame) Builtin {
+			f.data[i].SetBool(value(f).IsNil())
+			return tnext
+		}
 	}
 }
 
 func isNotNil(n *Node) {
-	i := n.findex
 	value := genValue(n.child[0])
 	tnext := getExec(n.tnext)
 
-	if n.fnext == nil {
-		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetBool(!value(f).IsNil())
-			return tnext
-		}
-	} else {
+	if n.fnext != nil {
 		fnext := getExec(n.fnext)
-
 		n.exec = func(f *Frame) Builtin {
 			if value(f).IsNil() {
 				return fnext
 			}
+			return tnext
+		}
+	} else {
+		i := n.findex
+		n.exec = func(f *Frame) Builtin {
+			f.data[i].SetBool(!value(f).IsNil())
 			return tnext
 		}
 	}

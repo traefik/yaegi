@@ -653,6 +653,28 @@ func main() {
 	// 1
 }
 
+func Example_bool5() {
+	src := `
+package main
+
+func main() {
+	var b bool
+	m := &b
+
+	if *m {
+		println(0)
+	} else {
+		println(1)
+	}
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "bool5.go")
+	i.Eval(src)
+
+	// Output:
+	// 1
+}
+
 func Example_chan0() {
 	src := `
 package main
@@ -4111,6 +4133,29 @@ func main() {
 
 	// Output:
 	// 46
+}
+
+func Example_time6() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+func main() {
+	t := &time.Time{}
+	t.UnmarshalText([]byte("1985-04-12T23:20:50.52Z"))
+
+	fmt.Println(t)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "time6.go")
+	i.Eval(src)
+
+	// Output:
+	// 1985-04-12 23:20:50.52 +0000 UTC
 }
 
 func Example_type0() {
