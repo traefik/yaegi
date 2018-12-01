@@ -77,9 +77,16 @@ func typeAssert(n *Node) {
 	i := n.findex
 	next := getExec(n.tnext)
 
-	n.exec = func(f *Frame) Builtin {
-		f.data[i] = value(f)
-		return next
+	if n.child[0].typ.cat == ValueT {
+		n.exec = func(f *Frame) Builtin {
+			f.data[i] = value(f).Elem()
+			return next
+		}
+	} else {
+		n.exec = func(f *Frame) Builtin {
+			f.data[i] = value(f)
+			return next
+		}
 	}
 }
 

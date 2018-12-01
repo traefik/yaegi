@@ -862,10 +862,12 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			scope = scope.pop()
 
 		case TypeAssertExpr:
+			// TODO: handle 2 return values variant
 			if n.child[1].typ == nil {
 				n.child[1].typ = scope.getType(n.child[1].ident)
 			}
 			n.typ = n.child[1].typ
+			n.findex = scope.inc(interp)
 
 		case SliceExpr, UnaryExpr:
 			wireChild(n)

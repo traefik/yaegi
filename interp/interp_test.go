@@ -1265,6 +1265,32 @@ func main() {
 	// 10
 }
 
+func Example_context() {
+	src := `
+package main
+
+import "context"
+
+func get(ctx context.Context, k string) string {
+	var r string
+	if v := ctx.Value(k); v != nil {
+		r = v.(string)
+	}
+	return r
+}
+
+func main() {
+	ctx := context.WithValue(context.Background(), "hello", "world")
+	println(get(ctx, "hello"))
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "context.go")
+	i.Eval(src)
+
+	// Output:
+	// world
+}
+
 func Example_export0() {
 	src := `
 package main
