@@ -1291,6 +1291,35 @@ func main() {
 	// world
 }
 
+func Example_context2() {
+	src := `
+package main
+
+import "context"
+
+func get(ctx context.Context, k string) string {
+	var r string
+	var ok bool
+	if v := ctx.Value(k); v != nil {
+		r, ok = v.(string)
+		println(ok)
+	}
+	return r
+}
+
+func main() {
+	ctx := context.WithValue(context.Background(), "hello", "world")
+	println(get(ctx, "hello"))
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "context2.go")
+	i.Eval(src)
+
+	// Output:
+	// true
+	// world
+}
+
 func Example_export0() {
 	src := `
 package main
@@ -4358,6 +4387,25 @@ type T int
 
 	// Output:
 	// int
+}
+
+func Example_type7() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	var i interface{} = "hello"
+	s, ok := i.(string)
+	fmt.Println(s, ok)
+}
+`
+	i := NewInterpreter(Opt{Entry: "main"}, "type7.go")
+	i.Eval(src)
+
+	// Output:
+	// hello
 }
 
 func Example_var() {

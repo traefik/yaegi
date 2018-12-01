@@ -90,6 +90,27 @@ func typeAssert(n *Node) {
 	}
 }
 
+func typeAssert2(n *Node) {
+	value := genValue(n.child[0])      // input value
+	value0 := genValue(n.anc.child[0]) // returned result
+	value1 := genValue(n.anc.child[1]) // returned status
+	next := getExec(n.tnext)
+
+	if n.child[0].typ.cat == ValueT {
+		n.exec = func(f *Frame) Builtin {
+			value0(f).Set(value(f).Elem())
+			value1(f).SetBool(true)
+			return next
+		}
+	} else {
+		n.exec = func(f *Frame) Builtin {
+			value0(f).Set(value(f))
+			value1(f).SetBool(true)
+			return next
+		}
+	}
+}
+
 func convert(n *Node) {
 	i := n.findex
 	var value func(*Frame) reflect.Value

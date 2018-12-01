@@ -318,7 +318,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				n.gen = nop
 
 			case TypeAssertExpr:
-				types = append(types, n.child[l].child[1].typ, scope.getType("error"))
+				types = append(types, n.child[l].child[1].typ, scope.getType("bool"))
+				n.child[l].gen = typeAssert2
+				n.gen = nop
 
 			default:
 				log.Fatalln(n.index, "Assign expression unsupported:", n.child[l].kind)
@@ -862,12 +864,13 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			scope = scope.pop()
 
 		case TypeAssertExpr:
-			// TODO: handle 2 return values variant
 			if n.child[1].typ == nil {
 				n.child[1].typ = scope.getType(n.child[1].ident)
 			}
-			n.typ = n.child[1].typ
-			n.findex = scope.inc(interp)
+			if n.anc.action != AssignX {
+				n.typ = n.child[1].typ
+				n.findex = scope.inc(interp)
+			}
 
 		case SliceExpr, UnaryExpr:
 			wireChild(n)
