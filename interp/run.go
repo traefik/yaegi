@@ -98,7 +98,9 @@ func typeAssert2(n *Node) {
 
 	if n.child[0].typ.cat == ValueT {
 		n.exec = func(f *Frame) Builtin {
-			value0(f).Set(value(f).Elem())
+			if value(f).IsValid() && !value(f).IsNil() {
+				value0(f).Set(value(f).Elem())
+			}
 			value1(f).SetBool(true)
 			return next
 		}

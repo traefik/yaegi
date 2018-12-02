@@ -142,11 +142,18 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			if n.anc.kind == RangeStmt {
 				if n.anc.child[2].typ.cat == ValueT {
 					typ := n.anc.child[2].typ.rtype
+
 					switch typ.Kind() {
 					case reflect.Map:
 						scope.sym[n.anc.child[0].ident].typ = &Type{cat: ValueT, rtype: typ.Key()}
 						scope.sym[n.anc.child[1].ident].typ = &Type{cat: ValueT, rtype: typ.Elem()}
 						n.anc.gen = rangeMap
+					case reflect.Array, reflect.Slice:
+						scope.sym[n.anc.child[0].ident].typ = scope.getType("int")
+						n.anc.child[0].typ = scope.getType("int")
+						vtype := &Type{cat: ValueT, rtype: typ.Elem()}
+						scope.sym[n.anc.child[1].ident].typ = vtype
+						n.anc.child[1].typ = vtype
 					}
 				} else if n.anc.child[2].typ.cat == MapT {
 					scope.sym[n.anc.child[0].ident].typ = n.anc.child[2].typ.key

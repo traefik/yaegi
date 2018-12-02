@@ -1346,6 +1346,44 @@ func (s *Sample) Test() {
 
 }
 
+func Example_factor() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"math/big"
+)
+
+func main() {
+	// 157 bit n = pq with p ~= 78 bits
+	n := big.NewInt(0)
+	n.SetString("273966616513101251352941655302036077733021013991", 10)
+
+	i := big.NewInt(0)
+	// Set i to be p - 10e6
+	i.SetString("496968652506233112158689", 10)
+
+	// Move temp big int out here so no possible GC thrashing
+	temp := big.NewInt(0)
+	// Avoid creating the new bigint each time
+	two := big.NewInt(2)
+	for {
+		// Check if the odd number is a divisor of n
+		temp.Mod(n, i)
+		if temp.Sign() == 0 {
+			fmt.Println(i)
+			break
+		}
+
+		i.Add(i, two)
+	}
+}`
+	i := NewInterpreter(Opt{Entry: "main"}, "factor.go")
+	i.Eval(src)
+
+}
+
 func Example_fib() {
 	src := `
 package main
@@ -1464,6 +1502,34 @@ func main() {
 	// 2
 	// 3
 	// 4
+}
+
+func Example_for3() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	//m := map[string][]string{
+	//	"hello": {"foo", "bar"},
+	//	"world": {"truc", "machin"},
+	//}
+	m := map[string][]string{
+		"hello": []string{"foo", "bar"},
+		"world": []string{"truc", "machin"},
+	}
+	//fmt.Println(m)
+	for key, values := range m {
+		//fmt.Println(key, values)
+		for _, value := range values {
+			fmt.Println(key, value)
+		}
+	}
+}`
+	i := NewInterpreter(Opt{Entry: "main"}, "for3.go")
+	i.Eval(src)
+
 }
 
 func Example_fun() {
@@ -4397,15 +4463,16 @@ import "fmt"
 
 func main() {
 	var i interface{} = "hello"
-	s, ok := i.(string)
-	fmt.Println(s, ok)
+	if s, ok := i.(string); ok {
+		fmt.Println(s, ok)
+	}
 }
 `
 	i := NewInterpreter(Opt{Entry: "main"}, "type7.go")
 	i.Eval(src)
 
 	// Output:
-	// hello
+	// hello true
 }
 
 func Example_var() {
