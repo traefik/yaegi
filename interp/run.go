@@ -641,6 +641,9 @@ func getIndexMap2(n *Node) {
 func getFunc(n *Node) {
 	i := n.findex
 	next := getExec(n.tnext)
+	if len(n.types) == 0 {
+		n.types = frameTypes(n, n.flen)
+	}
 
 	n.exec = func(f *Frame) Builtin {
 		frame := *f
