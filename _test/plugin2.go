@@ -12,11 +12,11 @@ type Sample struct{ Name string }
 var samples = []Sample{}
 
 func (s *Sample) Handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome to my website", s.Name)
+	fmt.Fprintln(w, "Welcome to my website", s.Name, version)
 }
 
 func NewSample(name string) int {
-	fmt.Println("in NewSample", version)
+	fmt.Println("in NewSample", name, version)
 	i := len(samples)
 	samples = append(samples, Sample{Name: name})
 	return i

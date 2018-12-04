@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"log"
 	"reflect"
 
 	"github.com/containous/dyngo/stdlib"
@@ -81,8 +82,6 @@ type Interpreter struct {
 	scope    map[string]*Scope // package level scopes, indexed by package name
 	binValue LibValueMap
 	binType  LibTypeMap
-	Exports  PkgMap      // exported symbols for use by runtime
-	Expval   PkgValueMap // same as abobe (TODO: keep only one)
 }
 
 // Walk traverses AST n in depth first order, call cbin function
@@ -106,8 +105,6 @@ func NewInterpreter(opt Opt, name string) *Interpreter {
 		Opt:      opt,
 		universe: initUniverse(),
 		scope:    map[string]*Scope{},
-		Exports:  make(PkgMap),
-		Expval:   make(PkgValueMap),
 		binValue: LibValueMap(stdlib.Value),
 		binType:  LibTypeMap(stdlib.Type),
 		Frame:    &Frame{data: []reflect.Value{}},
@@ -167,7 +164,8 @@ func (i *Interpreter) resizeFrame() {
 
 // Eval evaluates Go code represented as a string. It returns a map on
 // current interpreted package exported symbols
-func (i *Interpreter) Eval(src string) string {
+func (i *Interpreter) Eval(src string) error {
+	var err error
 	// Parse source to AST
 	pkgName, root := i.Ast(src, i.Name)
 	if i.AstDot {
@@ -198,5 +196,22 @@ func (i *Interpreter) Eval(src string) string {
 			i.run(n, i.Frame)
 		}
 	}
-	return root.child[0].ident
+	return err
+}
+
+// Export returns a value defined in the interpreter during execution
+// for use in the runtime
+func (i *Interpreter) Export(pkg, name string) reflect.Value {
+	sym := i.scope[pkg].sym[name]
+	var res reflect.Value
+	if sym == nil {
+		return res
+	}
+	switch sym.kind {
+	case Func:
+		log.Println("Export func", pkg+"."+name, sym.node.index)
+		wrapper := genNodeWrapper(sym.node)
+		res = wrapper(i.Frame)
+	}
+	return res
 }

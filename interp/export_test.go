@@ -8,7 +8,7 @@ func Exported() { println("Hello from Exported") }
 
 	i := NewInterpreter(Opt{}, "export_test")
 	i.Eval(src)
-	f := (*i.Exports["tst"])["Exported"].(func())
+	f := i.Export("tst", "Exported").Interface().(func())
 	f()
 
 	// Output:

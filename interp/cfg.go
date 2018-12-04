@@ -118,8 +118,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 	scope := interp.universe
 	var loop, loopRestart *Node
 	var initNodes []*Node
-	var exports *BinMap
-	var expval *ValueMap
 	var iotaValue int
 	var pkgName string
 
@@ -179,15 +177,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			}
 			scope = interp.scope[pkgName]
 			scope.size = interp.fsize
-			if pkg, ok := interp.Exports[pkgName]; ok {
-				exports = pkg
-				expval = interp.Expval[pkgName]
-			} else {
-				exports = &BinMap{}
-				interp.Exports[pkgName] = exports
-				expval = &ValueMap{}
-				interp.Expval[pkgName] = expval
-			}
 
 		case For0, ForRangeStmt:
 			loop, loopRestart = n, n.child[0]
@@ -556,7 +545,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case ForRangeStmt:
 			loop, loopRestart = nil, nil
 			n.start = n.child[0].start
-			//n.findex = n.child[0].findex
 			n.child[0].fnext = n
 			scope = scope.pop()
 
@@ -569,10 +557,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 			n.framepos = append(n.framepos, n.child[2].framepos...)
 			scope = scope.pop()
 			funcName := n.child[1].ident
-			if canExport(funcName) {
-				(*exports)[funcName] = reflect.MakeFunc(n.child[2].typ.TypeOf(), n.wrapNode).Interface()
-				(*expval)[funcName] = reflect.MakeFunc(n.child[2].typ.TypeOf(), n.wrapNode)
-			}
 			n.typ = n.child[2].typ
 			n.val = n
 			n.start = n.child[3].start
@@ -1184,7 +1168,7 @@ func frameTypes(node *Node, size int) []reflect.Type {
 
 	node.Walk(func(n *Node) bool {
 		if n.kind == FuncDecl || n.kind == ImportDecl || n.kind == TypeDecl || n.kind == FuncLit {
-			return n == node // Do not dive in substree, except if this the entry point
+			return n == node // Do not dive in substree, except if this is the entry point
 		}
 		if n.findex < 0 || n.typ == nil || n.level > 0 || n.kind == BasicLit || n.kind == SelectorSrc || n.typ.cat == BinPkgT {
 			return true

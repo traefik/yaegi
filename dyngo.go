@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"strings"
 
@@ -50,20 +49,22 @@ func main() {
 	/*
 		// To run test/plugin1.go or test/plugin2.go
 		p := &Plugin{"sample", "Middleware", 0, nil}
-		p.Syms = i.Exports[p.Pkgname]
-		ns := (*i.Expval[p.Pkgname])["NewSample"]
+		//p.Syms = i.Exports[p.Pkgname]
+		//ns := (*i.Expval[p.Pkgname])["NewSample"]
+		ns := i.Export("sample", "NewSample")
+		log.Println("ns:", ns)
 		rarg := []reflect.Value{reflect.ValueOf("test")}
 		res := ns.Call(rarg)
-		p.Id = res[0].Interface().(int)
+		p.Id = int(res[0].Int())
+		p.handler = i.Export("sample", "WrapHandler").Interface().(func(int, http.ResponseWriter, *http.Request))
 		log.Println("res:", res, p.Id)
 		http.HandleFunc("/", p.Handler)
 		http.ListenAndServe(":8080", nil)
 	*/
-
 	/*
 		// To run test.plugin0.go
 		log.Println("frame:", i.Frame)
-		p := &Plugin{"sample", "Middleware", i, nil}
+		p := &Plugin{"sample", "Middleware", 0, nil}
 		p.Syms = i.Exports[p.Pkgname]
 		log.Println("p.Syms:", p.Syms)
 		http.HandleFunc("/", p.Handler)
@@ -71,14 +72,16 @@ func main() {
 	*/
 }
 
+/*
 // Plugin struct stores metadata for external modules
 type Plugin struct {
 	Pkgname, Typename string
-	ID                int
-	Syms              *interp.BinMap
+	Id                int
+	handler           func(int, http.ResponseWriter, *http.Request)
 }
 
 // Handler redirect http.Handler processing in the interpreter
 func (p *Plugin) Handler(w http.ResponseWriter, r *http.Request) {
-	(*p.Syms)["WrapHandler"].(func(int, http.ResponseWriter, *http.Request))(p.ID, w, r)
+	p.handler(p.Id, w, r)
 }
+*/

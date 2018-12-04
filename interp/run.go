@@ -274,44 +274,6 @@ func _panic(n *Node) {
 	}
 }
 
-// wrapNode wraps a call to an interpreter node in a function that can be called from runtime
-// FIXME: wrapNode is now redundant with genNodeWrapper(). it should be removed.
-func (n *Node) wrapNode(in []reflect.Value) []reflect.Value {
-	def := n.val.(*Node)
-	var result []reflect.Value
-	if n.frame == nil {
-		n.frame = n.interp.Frame
-	}
-	log.Println(n.index, "in wrapNode", def.index, n.frame)
-	frame := Frame{anc: n.frame, data: make([]reflect.Value, def.flen)}
-
-	// If fucnction is a method, set its receiver data in the frame
-	if len(def.child[0].child) > 0 {
-		//frame.data[def.child[0].findex] = n.recv.node.value(n.frame)
-	}
-
-	// Unwrap input arguments from their reflect value and store them in the frame
-	i := 0
-	for _, arg := range in {
-		frame.data[def.framepos[i]] = arg
-		i++
-	}
-
-	// Interpreter code execution
-	runCfg(def.child[3].start, &frame)
-
-	// Wrap output results in reflect values and return them
-	if len(def.child[2].child) > 1 {
-		if fieldList := def.child[2].child[1]; fieldList != nil {
-			result = make([]reflect.Value, len(fieldList.child))
-			for i := range fieldList.child {
-				result[i] = reflect.ValueOf(frame.data[i])
-			}
-		}
-	}
-	return result
-}
-
 func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 	def := n.val.(*Node)
 	setExec(def.child[3].start)
