@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/containous/dyngo/interp"
+	"github.com/containous/dyngo/stdlib"
 )
 
 func main() {
@@ -44,6 +45,7 @@ func main() {
 		s = strings.Replace(s, "#!", "//", 1)
 	}
 	i := interp.NewInterpreter(opt, name)
+	i.Import(stdlib.Value, stdlib.Type)
 	i.Eval(string(s))
 
 	/*

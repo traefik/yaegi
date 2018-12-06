@@ -256,9 +256,9 @@ func (a Action) String() string {
 // Note: no type analysis is performed at this stage, it is done in pre-order processing
 // of CFG, in order to accomodate forward type declarations
 
-// Ast parses src string containing Go code and generates the corresponding AST.
+// ast parses src string containing Go code and generates the corresponding AST.
 // The package name and the AST root node are returned.
-func (interp *Interpreter) Ast(src, name string) (string, *Node) {
+func (interp *Interpreter) ast(src, name string) (string, *Node) {
 	fset := token.NewFileSet() // positions are relative to fset
 	f, err := parser.ParseFile(fset, name, src, 0)
 	if err != nil {

@@ -3,8 +3,6 @@ package interp
 import (
 	"log"
 	"reflect"
-
-	"github.com/containous/dyngo/stdlib"
 )
 
 // Node structure for AST and CFG
@@ -15,6 +13,7 @@ type Node struct {
 	tnext    *Node            // true branch successor (CFG)
 	fnext    *Node            // false branch successor (CFG)
 	interp   *Interpreter     // interpreter context
+	frame    *Frame           // frame pointer used for closures only (TODO: suppress this)
 	index    int              // node index (dot display)
 	findex   int              // index of value in frame or frame size (func def, type def)
 	fsize    int              // number of entries in frame (call expressions)
@@ -24,7 +23,6 @@ type Node struct {
 	sym      *Symbol          // associated symbol
 	typ      *Type            // type of value in frame, or nil
 	recv     *Receiver        // method receiver node for call, or nil
-	frame    *Frame           // frame pointer, only used for script callbacks from runtime (wrapNode)
 	types    []reflect.Type   // frame types, used by function litterals only
 	framepos []int            // frame positions of function parameters
 	action   Action           // action
@@ -47,18 +45,6 @@ type Frame struct {
 	data []reflect.Value // values
 }
 
-// BinMap stores executable symbols indexed by name
-type BinMap map[string]interface{}
-
-// PkgMap stores package executable symbols
-type PkgMap map[string]*BinMap
-
-// ValueMap stores symbols as reflect values
-type ValueMap map[string]reflect.Value
-
-// PkgValueMap stores package value maps
-type PkgValueMap map[string]*ValueMap
-
 type LibValueMap map[string]map[string]reflect.Value
 
 type LibTypeMap map[string]map[string]reflect.Type
@@ -80,8 +66,8 @@ type Interpreter struct {
 	nindex   int               // next node index
 	universe *Scope            // interpreter global level scope
 	scope    map[string]*Scope // package level scopes, indexed by package name
-	binValue LibValueMap
-	binType  LibTypeMap
+	binValue LibValueMap       // imported binary values from runtime
+	binType  LibTypeMap        // imported binary types from runtime
 }
 
 // Walk traverses AST n in depth first order, call cbin function
@@ -105,8 +91,10 @@ func NewInterpreter(opt Opt, name string) *Interpreter {
 		Opt:      opt,
 		universe: initUniverse(),
 		scope:    map[string]*Scope{},
-		binValue: LibValueMap(stdlib.Value),
-		binType:  LibTypeMap(stdlib.Type),
+		//binValue: LibValueMap(stdlib.Value),
+		//binType:  LibTypeMap(stdlib.Type),
+		binValue: LibValueMap{},
+		binType:  LibTypeMap{},
 		Frame:    &Frame{data: []reflect.Value{}},
 	}
 }
@@ -164,10 +152,10 @@ func (i *Interpreter) resizeFrame() {
 
 // Eval evaluates Go code represented as a string. It returns a map on
 // current interpreted package exported symbols
-func (i *Interpreter) Eval(src string) error {
+func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 	var err error
 	// Parse source to AST
-	pkgName, root := i.Ast(src, i.Name)
+	pkgName, root := i.ast(src, i.Name)
 	if i.AstDot {
 		root.AstDot(DotX(), i.Name)
 	}
@@ -185,6 +173,7 @@ func (i *Interpreter) Eval(src string) error {
 		root.CfgDot(DotX())
 	}
 
+	var res reflect.Value
 	// Execute CFG
 	if !i.NoRun {
 		genRun(root)
@@ -196,7 +185,7 @@ func (i *Interpreter) Eval(src string) error {
 			i.run(n, i.Frame)
 		}
 	}
-	return err
+	return res, err
 }
 
 // Export returns a value defined in the interpreter during execution
@@ -214,4 +203,15 @@ func (i *Interpreter) Export(pkg, name string) reflect.Value {
 		res = wrapper(i.Frame)
 	}
 	return res
+}
+
+// Import loads binary runtime symbols in the interpreter context so
+// they can be used in interpreted code
+func (i *Interpreter) Import(values LibValueMap, types LibTypeMap) {
+	for k, v := range values {
+		i.binValue[k] = v
+	}
+	for k, v := range types {
+		i.binType[k] = v
+	}
 }

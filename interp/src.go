@@ -38,7 +38,7 @@ func (interp *Interpreter) importSrcFile(path string) {
 			log.Fatal(err)
 		}
 
-		_, root = interp.Ast(string(buf), name)
+		_, root = interp.ast(string(buf), name)
 		rootNodes = append(rootNodes, root)
 		if interp.AstDot {
 			root.AstDot(DotX(), name)
