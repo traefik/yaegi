@@ -7,15 +7,17 @@ import (
 	"unicode"
 )
 
+// A SymKind represents the kind of symbol
 type SymKind uint
 
+// Symbol kinds for the go language
 const (
-	Const SymKind = iota
-	Typ
-	Var
-	Func
-	Bin
-	Bltn
+	Const SymKind = iota // Constant
+	Typ                  // Type
+	Var                  // Variable
+	Func                 // Function
+	Bin                  // Binary from runtime
+	Bltn                 // Builtin
 )
 
 var symKinds = [...]string{
@@ -100,14 +102,14 @@ func (s *Scope) getType(ident string) *Type {
 }
 
 // Inc increments the size of the scope data frame and returns the new size
-func (scope *Scope) inc(interp *Interpreter) int {
-	if scope.global {
+func (s *Scope) inc(interp *Interpreter) int {
+	if s.global {
 		interp.fsize++
-		scope.size = interp.fsize
+		s.size = interp.fsize
 	} else {
-		scope.size++
+		s.size++
 	}
-	return scope.size
+	return s.size
 }
 
 // Cfg generates a control flow graph (CFG) from AST (wiring successors in AST)
@@ -1155,7 +1157,6 @@ func genValue(n *Node) func(*Frame) reflect.Value {
 		}
 		return valueGenerator(n, n.findex)
 	}
-	return nil
 }
 
 func getReturnedType(n *Node) *Type {

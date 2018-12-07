@@ -9,6 +9,7 @@ import (
 // Builtin type defines functions which run at CFG execution
 type Builtin func(f *Frame) Builtin
 
+// BuiltinGenerator type defines a builtin generator function
 type BuiltinGenerator func(n *Node)
 
 var builtin = [...]BuiltinGenerator{
@@ -418,9 +419,8 @@ func call(n *Node) {
 		if goroutine {
 			go runCfg(def.child[3].start, &nf)
 			return tnext
-		} else {
-			runCfg(def.child[3].start, &nf)
 		}
+		runCfg(def.child[3].start, &nf)
 
 		// Handle branching according to boolean result
 		if fnext != nil {

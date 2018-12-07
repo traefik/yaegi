@@ -45,8 +45,10 @@ type Frame struct {
 	data []reflect.Value // values
 }
 
+// LibValueMap stores the map of extern values per package
 type LibValueMap map[string]map[string]reflect.Value
 
+// LibTypeMap stores the map of extern types per package
 type LibTypeMap map[string]map[string]reflect.Type
 
 // Opt stores interpreter options

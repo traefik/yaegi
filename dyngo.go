@@ -29,7 +29,8 @@ func main() {
 	args := flag.Args()
 	log.SetFlags(log.Lshortfile)
 	if len(args) > 0 {
-		if b, err := ioutil.ReadFile(args[0]); err != nil {
+		b, err := ioutil.ReadFile(args[0])
+		if err != nil {
 			log.Fatal("Could not read file: ", args[0])
 		}
 		s := string(b)

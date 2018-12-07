@@ -432,9 +432,8 @@ func (t *Type) TypeOf() reflect.Type {
 	case ArrayT:
 		if t.size > 0 {
 			return reflect.ArrayOf(t.size, t.val.TypeOf())
-		} else {
-			return reflect.SliceOf(t.val.TypeOf())
 		}
+		return reflect.SliceOf(t.val.TypeOf())
 
 	case BuiltinT:
 		return nil
