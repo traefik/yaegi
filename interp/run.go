@@ -55,7 +55,7 @@ func (interp *Interpreter) run(n *Node, cf *Frame) {
 	}
 	for i, t := range n.types {
 		// FIXME: nil types are forbidden and should be detected at compile time (CFG)
-		if t != nil && i < len(f.data) {
+		if t != nil && i < len(f.data) && !f.data[i].IsValid() {
 			f.data[i] = reflect.New(t).Elem()
 		}
 	}

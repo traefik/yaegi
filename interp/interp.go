@@ -165,8 +165,13 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 
 	// Annotate AST with CFG infos
 	initNodes := i.Cfg(root)
-	if sym := i.scope[pkgName].sym[i.Entry]; sym != nil {
-		initNodes = append(initNodes, sym.node)
+	if pkgName != "_" {
+		if sym := i.scope[pkgName].sym[i.Entry]; sym != nil {
+			initNodes = append(initNodes, sym.node)
+		}
+	} else {
+		root.types = frameTypes(root, i.fsize+1)
+		setExec(root.start)
 	}
 
 	if i.CfgDot {
@@ -184,6 +189,8 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 		for _, n := range initNodes {
 			i.run(n, i.Frame)
 		}
+		v := genValue(root)
+		res = v(i.Frame)
 	}
 	return res, err
 }

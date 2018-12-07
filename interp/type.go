@@ -436,6 +436,9 @@ func (t *Type) TypeOf() reflect.Type {
 			return reflect.SliceOf(t.val.TypeOf())
 		}
 
+	case BuiltinT:
+		return nil
+
 	case ChanT:
 		return reflect.ChanOf(reflect.BothDir, t.val.TypeOf())
 

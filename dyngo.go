@@ -3,6 +3,7 @@ package main
 //go:generate go generate github.com/containous/dyngo/stdlib
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -20,34 +21,40 @@ func main() {
 	flag.BoolVar(&opt.CfgDot, "c", false, "display CFG graph")
 	flag.BoolVar(&opt.NoRun, "n", false, "do not run")
 	flag.Usage = func() {
-		fmt.Println("Usage:", os.Args[0], "[options] [script|-]] [args]")
+		fmt.Println("Usage:", os.Args[0], "[options] [script] [args]")
 		fmt.Println("Options:")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 	args := flag.Args()
 	log.SetFlags(log.Lshortfile)
-	name := "-"
-
-	var b []byte
-	var err error
-	if len(args) > 0 && args[0] != "-" {
-		b, err = ioutil.ReadFile(args[0])
-		name = args[0]
+	if len(args) > 0 {
+		if b, err := ioutil.ReadFile(args[0]); err != nil {
+			log.Fatal("Could not read file: ", args[0])
+		}
+		s := string(b)
+		if s[:2] == "#!" {
+			// Allow executable go scripts, but fix them prior to parse
+			s = strings.Replace(s, "#!", "//", 1)
+		}
+		i := interp.NewInterpreter(opt, args[0])
+		i.Import(stdlib.Value, stdlib.Type)
+		i.Eval(string(s))
 	} else {
-		b, err = ioutil.ReadAll(os.Stdin)
+		i := interp.NewInterpreter(opt, "")
+		i.Import(stdlib.Value, stdlib.Type)
+		s := bufio.NewScanner(os.Stdin)
+		prompt := getPrompt()
+		prompt()
+		for s.Scan() {
+			if v, err := i.Eval(s.Text()); err != nil {
+				fmt.Println(err)
+			} else if v.IsValid() {
+				fmt.Println(v)
+			}
+			prompt()
+		}
 	}
-	if err != nil {
-		log.Fatal("Could not read file: ", args[0])
-	}
-	s := string(b)
-	if s[:2] == "#!" {
-		s = strings.Replace(s, "#!", "//", 1)
-	}
-	i := interp.NewInterpreter(opt, name)
-	i.Import(stdlib.Value, stdlib.Type)
-	i.Eval(string(s))
-
 	/*
 		// To run test/plugin1.go or test/plugin2.go
 		p := &Plugin{"sample", "Middleware", 0, nil}
@@ -87,3 +94,11 @@ func (p *Plugin) Handler(w http.ResponseWriter, r *http.Request) {
 	p.handler(p.Id, w, r)
 }
 */
+
+// getPrompt returns a function which prints a prompt only if stdin is a terminal
+func getPrompt() func() {
+	if stat, err := os.Stdin.Stat(); err == nil && stat.Mode()&os.ModeCharDevice != 0 {
+		return func() { fmt.Print("> ") }
+	}
+	return func() {}
+}

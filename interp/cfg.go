@@ -121,6 +121,16 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 	var iotaValue int
 	var pkgName string
 
+	if root.kind != File {
+		// Set default package namespace for incremental parse
+		pkgName = "_"
+		if _, ok := interp.scope[pkgName]; !ok {
+			interp.scope[pkgName] = scope.push(0)
+		}
+		scope = interp.scope[pkgName]
+		scope.size = interp.fsize
+	}
+
 	root.Walk(func(n *Node) bool {
 		// Pre-order processing
 		switch n.kind {
@@ -137,7 +147,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case BlockStmt:
 			// For range block: ensure that array or map type is propagated to iterators
 			// prior to process block
-			if n.anc.kind == RangeStmt {
+			if n.anc != nil && n.anc.kind == RangeStmt {
 				if n.anc.child[2].typ.cat == ValueT {
 					typ := n.anc.child[2].typ.rtype
 

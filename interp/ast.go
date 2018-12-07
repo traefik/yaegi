@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/scanner"
 	"go/token"
 	"strconv"
 )
@@ -253,12 +254,37 @@ func (a Action) String() string {
 	return "Action(" + strconv.Itoa(int(a)) + ")"
 }
 
+func firstToken(src string) token.Token {
+	var s scanner.Scanner
+	fset := token.NewFileSet()
+	file := fset.AddFile("", fset.Base(), len(src))
+	s.Init(file, []byte(src), nil, 0)
+
+	_, tok, _ := s.Scan()
+	return tok
+}
+
 // Note: no type analysis is performed at this stage, it is done in pre-order processing
 // of CFG, in order to accomodate forward type declarations
 
 // ast parses src string containing Go code and generates the corresponding AST.
 // The package name and the AST root node are returned.
 func (interp *Interpreter) ast(src, name string) (string, *Node) {
+	var inFunc bool
+
+	// Allow incremental parsing of declarations or statements, by inserting them in a pseudo
+	// file package or function.
+	// Those statements or declarations  will be always evaluated in the global scope
+	switch firstToken(src) {
+	case token.PACKAGE:
+		// nothing to do
+	case token.CONST, token.FUNC, token.IMPORT, token.TYPE, token.VAR:
+		src = "package _;" + src
+	default:
+		inFunc = true
+		src = "package _; func _() {" + src + "}"
+	}
+
 	fset := token.NewFileSet() // positions are relative to fset
 	f, err := parser.ParseFile(fset, name, src, 0)
 	if err != nil {
@@ -653,6 +679,12 @@ func (interp *Interpreter) ast(src, name string) (string, *Node) {
 		}
 		return true
 	})
+	if inFunc {
+		// Incremental parsing: statements were inserted in a pseudo function.
+		// Return function body as AST root, so its statements are evaluated in global scope
+		root.child[1].child[3].anc = nil
+		return "_", root.child[1].child[3]
+	}
 	return pkgName, root
 }
 
