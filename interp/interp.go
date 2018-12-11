@@ -93,8 +93,6 @@ func NewInterpreter(opt Opt, name string) *Interpreter {
 		Opt:      opt,
 		universe: initUniverse(),
 		scope:    map[string]*Scope{},
-		//binValue: LibValueMap(stdlib.Value),
-		//binType:  LibTypeMap(stdlib.Type),
 		binValue: LibValueMap{},
 		binType:  LibTypeMap{},
 		Frame:    &Frame{data: []reflect.Value{}},
@@ -193,6 +191,13 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 		}
 		v := genValue(root)
 		res = v(i.Frame)
+	}
+
+	// If result is an interpreter  node, wrap it in a runtime callable function
+	if res.IsValid() {
+		if n, ok := res.Interface().(*Node); ok {
+			res = genNodeWrapper(n)(i.Frame)
+		}
 	}
 	return res, err
 }

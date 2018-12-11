@@ -435,7 +435,7 @@ func (t *Type) TypeOf() reflect.Type {
 		}
 		return reflect.SliceOf(t.val.TypeOf())
 
-	case BuiltinT:
+	case BinPkgT, BuiltinT, InterfaceT, SrcPkgT:
 		return nil
 
 	case ChanT:
@@ -455,9 +455,6 @@ func (t *Type) TypeOf() reflect.Type {
 			out[i] = v.TypeOf()
 		}
 		return reflect.FuncOf(in, out, false)
-
-	case InterfaceT:
-		return nil
 
 	case MapT:
 		return reflect.MapOf(t.key.TypeOf(), t.val.TypeOf())
