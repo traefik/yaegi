@@ -78,6 +78,9 @@ func (interp *Interpreter) Gta(root *Node) {
 				ipath = n.child[0].val.(string)
 				name = path.Base(ipath)
 			}
+			if pkgName == "_" {
+				scope = interp.universe
+			}
 			if values, ok := interp.binValue[ipath]; ok {
 				if name == "." {
 					for n, v := range values {

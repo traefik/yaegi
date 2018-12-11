@@ -14,8 +14,8 @@ do
 	END {
 		print "func Example_'${file%.*}'() {"
 		print "src := `" src "`"
-		print "i := NewInterpreter(Opt{Entry: \"main\"}, \"'$file'\")"
-		print "i.Import(stdlib.Value, stdlib.Type)"
+		print "i := New(Opt{Entry: \"main\"})"
+		print "i.Use(stdlib.Value, stdlib.Type)"
 		print "i.Eval(src)"
 		print out
 		print "}"

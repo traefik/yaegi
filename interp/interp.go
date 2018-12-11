@@ -67,8 +67,24 @@ type Interpreter struct {
 	nindex   int               // next node index
 	universe *Scope            // interpreter global level scope
 	scope    map[string]*Scope // package level scopes, indexed by package name
-	binValue LibValueMap       // imported binary values from runtime
-	binType  LibTypeMap        // imported binary types from runtime
+	binValue LibValueMap       // runtime binary values used in interpreter
+	binType  LibTypeMap        // runtime binary types used in interpreter
+}
+
+var ExportValue = LibValueMap{}
+var ExportType = LibTypeMap{}
+
+func init() {
+	me := "github.com/containous/dyngo/interp"
+	ExportValue[me] = map[string]reflect.Value{
+		"New": reflect.ValueOf(New),
+	}
+	ExportType[me] = map[string]reflect.Type{
+		"Interpreter": reflect.TypeOf((*Interpreter)(nil)).Elem(),
+		"Opt":         reflect.TypeOf((*Opt)(nil)).Elem(),
+	}
+	ExportValue[me]["ExportType"] = reflect.ValueOf(ExportType)
+	ExportValue[me]["ExportValue"] = reflect.ValueOf(ExportValue)
 }
 
 // Walk traverses AST n in depth first order, call cbin function
@@ -85,10 +101,9 @@ func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 	}
 }
 
-// NewInterpreter creates and returns a new interpreter object
-func NewInterpreter(opt Opt, name string) *Interpreter {
+// New creates and returns a new interpreter object
+func New(opt Opt) *Interpreter {
 	return &Interpreter{
-		Name:     name,
 		Opt:      opt,
 		universe: initUniverse(),
 		scope:    map[string]*Scope{},
@@ -201,9 +216,9 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 	return res, err
 }
 
-// Import loads binary runtime symbols in the interpreter context so
+// Use loads binary runtime symbols in the interpreter context so
 // they can be used in interpreted code
-func (i *Interpreter) Import(values LibValueMap, types LibTypeMap) {
+func (i *Interpreter) Use(values LibValueMap, types LibTypeMap) {
 	for k, v := range values {
 		i.binValue[k] = v
 	}

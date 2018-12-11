@@ -24,7 +24,7 @@ func main() {
 	log.SetFlags(log.Lshortfile)
 	//i := interp.NewInterpreter(interp.Opt{AstDot: true}, "")
 	i := interp.NewInterpreter(interp.Opt{}, "")
-	i.Import(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value, stdlib.Type)
 
 	// Load plugin
 	_, err := i.Eval(`import "github.com/containous/dyngo/example/test_plugin/plugin"`)

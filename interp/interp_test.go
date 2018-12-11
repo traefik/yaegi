@@ -19,8 +19,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -50,8 +50,8 @@ func main() {
 	f(0)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a10.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -69,8 +69,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a11.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -90,8 +90,8 @@ func main() {
 	var buf [12]int
 	fmt.Println(buf[0])
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "a12.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -111,8 +111,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a13.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -134,8 +134,8 @@ func main() {
 	fmt.Println(buf)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a14.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -154,8 +154,8 @@ func main() {
 	var buf [size]int
 	fmt.Println(buf[:])
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "a15.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -177,8 +177,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a16.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -204,8 +204,8 @@ func main() {
 	fmt.Println(a, len(a), cap(a))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a17.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -223,8 +223,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a18.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -245,8 +245,8 @@ func main() {
 
 const bsize = 10
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a19.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -269,8 +269,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -292,8 +292,8 @@ func main() {
 	fmt.Println(a[2:])
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -311,8 +311,8 @@ func main() {
 	fmt.Println(a[2:4])
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -330,8 +330,8 @@ func main() {
 	fmt.Println(a[:4])
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a5.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -349,8 +349,8 @@ func main() {
 	fmt.Println(a[:])
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a6.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -368,8 +368,8 @@ func main() {
 	fmt.Println(len(a))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a7.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -389,8 +389,8 @@ func main() {
 	//a[1] = 2
 	fmt.Println(a)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "a8.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -412,8 +412,8 @@ func main() {
 	fmt.Println(samples)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "a9.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -444,8 +444,8 @@ func f2() bool {
 	return 1 == 0
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "and.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -475,8 +475,8 @@ func f2() bool {
 	return false
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "and0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -502,8 +502,8 @@ func f2() bool {
 	return false
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "and1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -520,8 +520,8 @@ func main() {
 	println(a, b)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "assign.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -539,8 +539,8 @@ func main() {
 	f("Hello")
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "bin.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -555,8 +555,8 @@ func main() {
 	f := println
 	f("Hello")
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "bltn.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -571,8 +571,8 @@ func main() {
 	fmt.Println(false, true)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "bool.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -588,8 +588,8 @@ import "fmt"
 func main() {
 	fmt.Println(true)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "bool0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -611,8 +611,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "bool1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -636,8 +636,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "bool2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -657,8 +657,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "bool3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -678,8 +678,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "bool4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -701,8 +701,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "bool5.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -724,8 +724,8 @@ func main() {
 	println(msg)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "chan0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -745,8 +745,8 @@ func main() {
 	println(msg)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "chan1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -768,8 +768,8 @@ func main() {
 	fmt.Println(msg)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "chan2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -789,8 +789,8 @@ func main() {
 	println(msg)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "chan3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -813,8 +813,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "chan4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -843,8 +843,8 @@ func main() {
 	}
 	fmt.Println(string(body))
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "cli0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -888,8 +888,8 @@ func main() {
 	client()
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "cli1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -935,8 +935,8 @@ func main() {
 	<-ready
 	client()
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "cli2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -958,8 +958,8 @@ func main() {
 	println(f(3, 4))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "closure0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -985,8 +985,8 @@ func main() {
 	println(g(3, 4))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "closure1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1013,8 +1013,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "closure2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1052,8 +1052,8 @@ func main() {
 	println(f(5))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "closure3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1083,8 +1083,8 @@ func main() {
 	println(f(5))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "closure4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1114,8 +1114,8 @@ func main() {
 	println(f(5))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "closure5.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1145,8 +1145,8 @@ func main() {
 	println(f(5))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "closure6.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1167,8 +1167,8 @@ func main() {
 	println(a, b)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "const0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1190,8 +1190,8 @@ func main() {
 	println(t.a, t.b)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "const1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1208,8 +1208,8 @@ func main() {
 
 const a = "hello"
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "const2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1224,8 +1224,8 @@ const a, b, c int = 1, 2, 3
 
 func main() { println(a, b, c) }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "const3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1245,8 +1245,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "cont.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1275,8 +1275,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "cont0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1308,8 +1308,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "cont1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1340,8 +1340,8 @@ func main() {
 	println(get(ctx, "hello"))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "context.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1369,8 +1369,8 @@ func main() {
 	println(get(ctx, "hello"))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "context2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1385,8 +1385,8 @@ package main
 func Test() {
 	println("Hello from test")
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "export0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -1400,8 +1400,8 @@ type Sample struct{ Name string }
 func (s *Sample) Test() {
 	println("Hello from test", s.Name)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "export1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -1439,8 +1439,8 @@ func main() {
 		i.Add(i, two)
 	}
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "factor.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -1461,8 +1461,8 @@ func main() {
 	println(fib(35))
 	//println(fib(10))
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "fib.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -1483,8 +1483,8 @@ func main() {
 	println(fib(4))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "fib0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1507,8 +1507,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "for0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1535,8 +1535,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "for1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1560,8 +1560,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "for2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1593,8 +1593,8 @@ func main() {
 		}
 	}
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "for3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -1609,8 +1609,8 @@ func main() {
 	println(f(4))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "fun.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1630,8 +1630,8 @@ func main() {
 	println(f(c))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "fun2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1651,8 +1651,8 @@ func main() {
 	println(f(2, 3, c))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "fun3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1670,8 +1670,8 @@ func main() {
 	println("ok")
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "fun4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1690,8 +1690,8 @@ func main() {
 	f(34)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "fun5.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1711,8 +1711,8 @@ func main() {
 	//sleep(100)
 	println("in main")
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "goroutine.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -1759,8 +1759,8 @@ func main() {
 		fmt.Printf("%d ", heap.Pop(h))
 	}
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "heap.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -1777,8 +1777,8 @@ func main() {
 
 func f() int { return 1 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "if.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1795,8 +1795,8 @@ func main() {
 	fmt.Println("Hello", 42)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "import0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1813,8 +1813,8 @@ func main() {
 	f.Println("Hello", 42)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "import1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1831,8 +1831,8 @@ func main() {
 	Println("Hello", 42)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "import2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1850,8 +1850,8 @@ func main() {
 	println(i)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "inc.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1874,8 +1874,8 @@ func main() {
 	println("Hello from main")
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "init0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -1902,8 +1902,8 @@ func main() {
 	println(a.count)
 	run(a, "truc")
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "interface0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -1925,8 +1925,8 @@ func main() {
 	//io.ReadFull(rand.Reader, buf)
 	fmt.Println(buf)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "io0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -1947,8 +1947,8 @@ func main() {
 	//fmt.Println(base64.RawStdEncoding)
 	fmt.Println(s)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "io1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -1977,8 +1977,8 @@ func main() {
 	fmt.Println(Asm, C, Java, Go)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "iota.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2010,8 +2010,8 @@ func main() {
 	fmt.Println(Asm, C, Java, Go)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "iota0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2035,8 +2035,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "ioutil.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2064,8 +2064,8 @@ func main() {
 	fmt.Printf("%s", b)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "ioutil0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2083,8 +2083,8 @@ func main() {
 		}
 	}
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "l2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -2103,8 +2103,8 @@ func main() {
 		}
 	}
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "l3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -2116,8 +2116,8 @@ package main
 func main()       { println(f(5)) }
 func f(i int) int { return i + 1 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "l4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2138,8 +2138,8 @@ func main() {
 		a = a + 1
 	}
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "l5.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -2158,8 +2158,8 @@ func main() {
 	fmt.Println("h:", h)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "make.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2178,8 +2178,8 @@ func main() {
 	println(dict["truc"])
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "map.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2196,8 +2196,8 @@ func main() {
 	println(dict["truc"])
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "map2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2214,8 +2214,8 @@ func main() {
 	println(dict["truc"])
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "map3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2233,8 +2233,8 @@ func main() {
 	println(dict["hello"])
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "map4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2254,8 +2254,8 @@ func main() {
 	fmt.Println(r, ok)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "map5.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2273,8 +2273,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "map6.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2292,8 +2292,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "map7.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2313,8 +2313,8 @@ func main() {
 	fmt.Println(math.Cos(math.Pi))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "math0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2336,8 +2336,8 @@ func main() {
 	println(o.dist())
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2375,8 +2375,8 @@ func main() {
 	Baz{}.Call()
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2403,8 +2403,8 @@ func main() {
 	s.foo(3)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2426,8 +2426,8 @@ type Coord struct {
 	x, y int
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method10.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2449,8 +2449,8 @@ type Coord struct {
 	x, y int
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method11.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2473,8 +2473,8 @@ func main() {
 	println(f())
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method12.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2502,8 +2502,8 @@ func main() {
 	println(f())
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method13.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2525,8 +2525,8 @@ type Coord struct {
 	x, y int
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method14.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2548,8 +2548,8 @@ func main() {
 	println(o.dist())
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method15.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2576,8 +2576,8 @@ func main() {
 	println(o.dist())
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2604,8 +2604,8 @@ func main() {
 	println(o.Coord.dist())
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2637,8 +2637,8 @@ func main() {
 	println(o.dist())
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2684,8 +2684,8 @@ func main() {
 	Bar{}.Call()
 	Baz{}.Call()
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "method5.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -2710,8 +2710,8 @@ func main() {
 	samples[0].foo(3)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method6.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2738,8 +2738,8 @@ func main() {
 	samples[0].foo(3)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method7.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2769,8 +2769,8 @@ func main() {
 	samples[0].foo(3)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method8.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2792,8 +2792,8 @@ func main() {
 
 func (c Coord) dist() int { return c.x*c.x + c.y*c.y }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "method9.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2811,8 +2811,8 @@ func main() {
 	fmt.Println(a)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "neg0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2839,8 +2839,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 //	http.HandleFunc("/", Handler)
 //	http.ListenAndServe(":8080", nil)
 //}`
-	i := NewInterpreter(Opt{Entry: "main"}, "plugin0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -2876,8 +2876,8 @@ func WrapHandler(i int, w http.ResponseWriter, r *http.Request) {
 //	http.HandleFunc("/", Handler)
 //	http.ListenAndServe(":8080", nil)
 //}`
-	i := NewInterpreter(Opt{Entry: "main"}, "plugin1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -2918,8 +2918,8 @@ func WrapHandler(i int, w http.ResponseWriter, r *http.Request) {
 //	http.HandleFunc("/", Handler)
 //	http.ListenAndServe(":8080", nil)
 //}`
-	i := NewInterpreter(Opt{Entry: "main"}, "plugin2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -2936,8 +2936,8 @@ func main() {
 	println(*b)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "ptr0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2954,8 +2954,8 @@ func main() {
 	println(*b)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "ptr1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2976,8 +2976,8 @@ func main() {
 	println(a)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "ptr2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -2998,8 +2998,8 @@ func main() {
 	println(a)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "ptr3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3024,8 +3024,8 @@ func main() {
 	println(a.val)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "ptr4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3045,8 +3045,8 @@ func main() {
 	println(a.val)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "ptr5.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3067,8 +3067,8 @@ func main() {
 	println(b.val)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "ptr5a.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3089,8 +3089,8 @@ func main() {
 	println(b.val)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "ptr6.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3104,8 +3104,8 @@ package main
 func f(i int) (o int) { o = i + 1; return }
 
 func main() { println(f(4)) }`
-	i := NewInterpreter(Opt{Entry: "main"}, "ret1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -3121,8 +3121,8 @@ func main() {
 	println(a, b)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "ret2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3141,8 +3141,8 @@ func main() {
 	fmt.Println(r2())
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "ret3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3160,8 +3160,8 @@ func main() {
 	println(a)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "ret4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3178,8 +3178,8 @@ func main() {
 	println(f())
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "run0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3198,8 +3198,8 @@ func main() {
 	println(g(f()))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "run1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3214,8 +3214,8 @@ func main() {
 	func() { println("hello") }()
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "run10.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3232,8 +3232,8 @@ func main() {
 
 func f() (int, int) { return 2, 3 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "run11.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3253,8 +3253,8 @@ func main() {
 	println(a, b)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "run12.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3274,8 +3274,8 @@ func f(a int) (int, int) {
 	return a + 1, a + 2
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "run13.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3294,8 +3294,8 @@ func test(f fn, v int) { f(v) }
 
 func main() { test(f1, 21) }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "run4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3315,8 +3315,8 @@ func main() {
 	test(f1, 21)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "run5.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3335,8 +3335,8 @@ func main() {
 	test(func(i int) { println("f1", i) }, 21)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "run6.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3356,8 +3356,8 @@ func main() {
 	test(func(i int) { println("f1", i, a) }, 21)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "run7.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3374,8 +3374,8 @@ func main() {
 	f(21)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "run8.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3393,8 +3393,8 @@ func main() {
 	println(b)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "run9.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3412,8 +3412,8 @@ func main() {
 	println(a)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "scope0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3434,8 +3434,8 @@ func main() {
 	println(b)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "scope1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3457,8 +3457,8 @@ func main() {
 	f()
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "scope2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3479,8 +3479,8 @@ func main() {
 	println(a)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "scope3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3504,8 +3504,8 @@ func main() {
 	println(a)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "scope4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3529,8 +3529,8 @@ func main() {
 	f()
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "scope5.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3555,8 +3555,8 @@ func main() {
 	f()
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "scope6.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3580,8 +3580,8 @@ func main() {
 	f()
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "scope7.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3608,8 +3608,8 @@ func main() {
 
 	http.ListenAndServe(":8080", nil)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "server.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -3634,8 +3634,8 @@ func main() {
 	http.HandleFunc("/", myHandler)
 	http.ListenAndServe(":8080", nil)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "server0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -3664,8 +3664,8 @@ func main() {
 	http.HandleFunc("/", m.Handler)
 	http.ListenAndServe(":8080", nil)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "server1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -3699,8 +3699,8 @@ func main() {
 	http.HandleFunc("/", m.Handler)
 	http.ListenAndServe(":8080", nil)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "server1a.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -3726,8 +3726,8 @@ func main() {
 	http.HandleFunc("/", myHandler)
 	http.ListenAndServe(":8080", nil)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "server2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -3750,8 +3750,8 @@ func main() {
 	http.HandleFunc("/", myHandler)
 	http.ListenAndServe(":8080", nil)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "server3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -3771,8 +3771,8 @@ func main() {
 
 	http.ListenAndServe(":8080", nil)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "server4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -3792,8 +3792,8 @@ var myHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.ListenAndServe(":8080", myHandler)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "server5.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -3828,8 +3828,8 @@ func main() {
 	handler := t.Handler(myHandler)
 	http.ListenAndServe(":8080", handler)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "server6.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -3872,8 +3872,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "sieve.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3899,8 +3899,8 @@ func main() {
 	provider.Sample()
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "src0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3916,8 +3916,8 @@ import "github.com/containous/provider2"
 func main() {
 	provider2.Sample()
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "src1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -3933,8 +3933,8 @@ func main() {
 	t.Info()
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "src2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3951,8 +3951,8 @@ func main() {
 	provider.Bar()
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "src3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3970,8 +3970,8 @@ func main() {
 	f()
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "src4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -3986,8 +3986,8 @@ func main() {
 	println("hello world")
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "str.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4008,8 +4008,8 @@ func main() {
 	println(a.f, a.g)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "struct.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4030,8 +4030,8 @@ func main() {
 	println(a.f, a.g)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "struct0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4053,8 +4053,8 @@ func main() {
 	println(a.f)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "struct0a.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4079,8 +4079,8 @@ func main() {
 	println("a.g.h", a.g.h)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "struct1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4101,8 +4101,8 @@ func main() {
 	println(a.f, a.g)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "struct10.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4123,8 +4123,8 @@ func main() {
 	println(a.f, a.g)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "struct2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4151,8 +4151,8 @@ func main() {
 	println(a.h.k)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "struct3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4185,8 +4185,8 @@ func main() {
 	println(a.f, a.g, a.h, a.k)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "struct4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4209,8 +4209,8 @@ func main() {
 	println(a.f, a.g)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "struct5.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4230,8 +4230,8 @@ func main() {
 	println(a.f, a.g)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "struct6.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4256,8 +4256,8 @@ func main() {
 	println(a.i, a.opt.b)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "struct7.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4290,8 +4290,8 @@ func main() {
 	println(a.f, a.g, a.T2.h, a.T2.T3.k)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "struct8.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4312,8 +4312,8 @@ func main() {
 	println(a.f, a.g)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "struct9.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4336,8 +4336,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "switch.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4356,8 +4356,8 @@ import (
 func main() {
 	fmt.Println(time.Now())
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "time0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -4376,8 +4376,8 @@ func main() {
 	m := t.Minute()
 	fmt.Println(t, m)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "time1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -4396,8 +4396,8 @@ func main() {
 	h, m, s := t.Clock()
 	fmt.Println(h, m, s)
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "time2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -4415,8 +4415,8 @@ func main() {
 	t := time.Now()
 	fmt.Println(t.Clock())
 }`
-	i := NewInterpreter(Opt{Entry: "main"}, "time3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 }
@@ -4436,8 +4436,8 @@ func main() {
 	fmt.Println(m)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "time4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4458,8 +4458,8 @@ func main() {
 	fmt.Println(t.Minute())
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "time5.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4482,8 +4482,8 @@ func main() {
 	fmt.Println(t)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "time6.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4501,8 +4501,8 @@ func main() {
 	println(a)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "type0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4521,8 +4521,8 @@ func main() {
 	fmt.Println(s)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "type1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4553,8 +4553,8 @@ func main() {
 	fmt.Println(t.time)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "type2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4574,8 +4574,8 @@ func main() {
 	fmt.Println(s)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "type3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4596,8 +4596,8 @@ func main() {
 	fmt.Println(reflect.TypeOf(a))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "type4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4620,8 +4620,8 @@ func main() {
 	fmt.Println(reflect.TypeOf(a))
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "type5.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4644,8 +4644,8 @@ func main() {
 
 type T int
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "type6.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4665,8 +4665,8 @@ func main() {
 	}
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "type7.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4682,8 +4682,8 @@ func main() {
 	println(a, b, c)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "var.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4699,8 +4699,8 @@ func main() {
 	println(a)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "var2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4716,8 +4716,8 @@ func main() {
 	println(a, b)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "var3.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4733,8 +4733,8 @@ func main() {
 	println(a, b)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "var4.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4755,8 +4755,8 @@ func main() {
 	f(1, 2, 3, 4)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "variadic.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4777,8 +4777,8 @@ func main() {
 	f("hello")
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "variadic0.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4799,8 +4799,8 @@ func main() {
 	f("hello", 1, 2, 3)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "variadic1.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
@@ -4823,8 +4823,8 @@ func main() {
 	f(1, 2, 3, 4)
 }
 `
-	i := NewInterpreter(Opt{Entry: "main"}, "variadic2.go")
-	i.Import(stdlib.Value, stdlib.Type)
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
 	i.Eval(src)
 
 	// Output:
