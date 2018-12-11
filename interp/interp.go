@@ -71,7 +71,10 @@ type Interpreter struct {
 	binType  LibTypeMap        // runtime binary types used in interpreter
 }
 
+// ExportValue exposes interpreter values
 var ExportValue = LibValueMap{}
+
+// ExportType exposes interpreter types
 var ExportType = LibTypeMap{}
 
 func init() {
