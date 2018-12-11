@@ -1,7 +1,6 @@
 package interp
 
 import (
-	"log"
 	"reflect"
 )
 
@@ -200,23 +199,6 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 		}
 	}
 	return res, err
-}
-
-// Export returns a value defined in the interpreter during execution
-// for use in the runtime
-func (i *Interpreter) Export(pkg, name string) reflect.Value {
-	sym := i.scope[pkg].sym[name]
-	var res reflect.Value
-	if sym == nil {
-		return res
-	}
-	switch sym.kind {
-	case Func:
-		log.Println("Export func", pkg+"."+name, sym.node.index)
-		wrapper := genNodeWrapper(sym.node)
-		res = wrapper(i.Frame)
-	}
-	return res
 }
 
 // Import loads binary runtime symbols in the interpreter context so

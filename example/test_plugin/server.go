@@ -10,9 +10,8 @@ import (
 
 // Plugin struct stores metadata for external modules
 type Plugin struct {
-	Pkgname, Typename string
-	Id                int
-	handler           func(http.ResponseWriter, *http.Request)
+	name    string
+	handler func(http.ResponseWriter, *http.Request)
 }
 
 // Handler redirect http.Handler processing in the interpreter
@@ -33,7 +32,7 @@ func main() {
 
 	handler, err := i.Eval(`plugin.NewSample("test")`)
 	log.Println("handler:", handler, "err:", err)
-	p := &Plugin{"sample", "Middleware", 0, nil}
+	p := &Plugin{"sample", nil}
 	p.handler = handler.Interface().(func(http.ResponseWriter, *http.Request))
 	http.HandleFunc("/", p.Handler)
 	http.ListenAndServe(":8080", nil)
