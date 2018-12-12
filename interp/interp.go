@@ -210,7 +210,7 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 		res = v(i.Frame)
 	}
 
-	// If result is an interpreter  node, wrap it in a runtime callable function
+	// If result is an interpreter node, wrap it in a runtime callable function
 	if res.IsValid() {
 		if n, ok := res.Interface().(*Node); ok {
 			res = genNodeWrapper(n)(i.Frame)

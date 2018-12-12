@@ -41,7 +41,9 @@ func main() {
 		i := interp.New(opt)
 		i.Use(stdlib.Value, stdlib.Type)
 		i.Use(interp.ExportValue, interp.ExportType)
-		i.Eval(string(s))
+		if _, err := i.Eval(string(s)); err != nil {
+			fmt.Println(err)
+		}
 	} else {
 		i := interp.New(opt)
 		i.Use(stdlib.Value, stdlib.Type)

@@ -22,8 +22,8 @@ func (p *Plugin) Handler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	// Init go interpreter
 	log.SetFlags(log.Lshortfile)
-	//i := interp.NewInterpreter(interp.Opt{AstDot: true}, "")
-	i := interp.NewInterpreter(interp.Opt{}, "")
+	i := interp.New(interp.Opt{AstDot: true})
+	//i := interp.New(interp.Opt{})
 	i.Use(stdlib.Value, stdlib.Type)
 
 	// Load plugin
