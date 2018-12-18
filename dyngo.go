@@ -17,8 +17,10 @@ import (
 
 func main() {
 	opt := interp.Opt{Entry: "main"}
+	var interactive bool
 	flag.BoolVar(&opt.AstDot, "a", false, "display AST graph")
 	flag.BoolVar(&opt.CfgDot, "c", false, "display CFG graph")
+	flag.BoolVar(&interactive, "i", false, "start an interactive REPL")
 	flag.BoolVar(&opt.NoRun, "n", false, "do not run")
 	flag.Usage = func() {
 		fmt.Println("Usage:", os.Args[0], "[options] [script] [args]")
@@ -44,21 +46,28 @@ func main() {
 		if _, err := i.Eval(string(s)); err != nil {
 			fmt.Println(err)
 		}
+		if interactive {
+			repl(i)
+		}
 	} else {
 		i := interp.New(opt)
 		i.Use(stdlib.Value, stdlib.Type)
 		i.Use(interp.ExportValue, interp.ExportType)
-		s := bufio.NewScanner(os.Stdin)
-		prompt := getPrompt()
-		prompt()
-		for s.Scan() {
-			if v, err := i.Eval(s.Text()); err != nil {
-				fmt.Println(err)
-			} else if v.IsValid() {
-				fmt.Println(v)
-			}
-			prompt()
+		repl(i)
+	}
+}
+
+func repl(i *interp.Interpreter) {
+	s := bufio.NewScanner(os.Stdin)
+	prompt := getPrompt()
+	prompt()
+	for s.Scan() {
+		if v, err := i.Eval(s.Text()); err != nil {
+			fmt.Println(err)
+		} else if v.IsValid() {
+			fmt.Println(v)
 		}
+		prompt()
 	}
 }
 
