@@ -817,8 +817,6 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				}
 			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
 				// Handle method
-				//n.gen = nop
-				//n.findex = -1
 				n.gen = getMethod
 				n.val = m
 				n.typ = m.typ

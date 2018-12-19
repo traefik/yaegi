@@ -269,12 +269,12 @@ func firstToken(src string) token.Token {
 
 // ast parses src string containing Go code and generates the corresponding AST.
 // The package name and the AST root node are returned.
-func (interp *Interpreter) ast(src, name string) (string, *Node) {
+func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 	var inFunc bool
 
 	// Allow incremental parsing of declarations or statements, by inserting them in a pseudo
 	// file package or function.
-	// Those statements or declarations  will be always evaluated in the global scope
+	// Those statements or declarations will be always evaluated in the global scope
 	switch firstToken(src) {
 	case token.PACKAGE:
 		// nothing to do
@@ -288,7 +288,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node) {
 	fset := token.NewFileSet() // positions are relative to fset
 	f, err := parser.ParseFile(fset, name, src, 0)
 	if err != nil {
-		panic(err)
+		return "", nil, err
 	}
 
 	var root, anc *Node
@@ -683,9 +683,9 @@ func (interp *Interpreter) ast(src, name string) (string, *Node) {
 		// Incremental parsing: statements were inserted in a pseudo function.
 		// Return function body as AST root, so its statements are evaluated in global scope
 		root.child[1].child[3].anc = nil
-		return "_", root.child[1].child[3]
+		return "_", root.child[1].child[3], nil
 	}
-	return pkgName, root
+	return pkgName, root, nil
 }
 
 type nodestack []*Node

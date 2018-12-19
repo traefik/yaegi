@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 )
 
-func (interp *Interpreter) importSrcFile(path string) {
+func (interp *Interpreter) importSrcFile(path string) error {
 	dir := pkgDir(path)
 
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	initNodes := []*Node{}
@@ -35,10 +35,13 @@ func (interp *Interpreter) importSrcFile(path string) {
 		name = filepath.Join(dir, name)
 		buf, err := ioutil.ReadFile(name)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
-		_, root = interp.ast(string(buf), name)
+		_, root, err = interp.ast(string(buf), name)
+		if err != nil {
+			return err
+		}
 		rootNodes = append(rootNodes, root)
 		if interp.AstDot {
 			root.AstDot(DotX(), name)
@@ -52,7 +55,7 @@ func (interp *Interpreter) importSrcFile(path string) {
 	}
 
 	if interp.NoRun {
-		return
+		return nil
 	}
 
 	// Once all package sources have been parsed, execute entry points then init functions
@@ -66,6 +69,7 @@ func (interp *Interpreter) importSrcFile(path string) {
 	for _, n := range initNodes {
 		interp.run(n, interp.Frame)
 	}
+	return nil
 }
 
 // pkgDir returns the abolute path in filesystem for a package given its name

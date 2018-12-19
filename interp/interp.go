@@ -170,9 +170,14 @@ func (i *Interpreter) resizeFrame() {
 // Eval evaluates Go code represented as a string. It returns a map on
 // current interpreted package exported symbols
 func (i *Interpreter) Eval(src string) (reflect.Value, error) {
-	var err error
+	var res reflect.Value
+
 	// Parse source to AST
-	pkgName, root := i.ast(src, i.Name)
+	pkgName, root, err := i.ast(src, i.Name)
+	if err != nil {
+		return res, err
+	}
+
 	if i.AstDot {
 		root.AstDot(DotX(), i.Name)
 	}
@@ -195,7 +200,6 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 		root.CfgDot(DotX())
 	}
 
-	var res reflect.Value
 	// Execute CFG
 	if !i.NoRun {
 		genRun(root)
