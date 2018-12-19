@@ -4,6 +4,7 @@
 cmd/goexports/goexports
 dyngo
 example/test_plugin/test_plugin
+example/inception/inception
 _gi_c/*.o
 _gi_c/gi
 _gi_c/loop2
