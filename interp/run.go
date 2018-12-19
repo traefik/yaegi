@@ -286,6 +286,9 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 	}
 
 	return func(f *Frame) reflect.Value {
+		if n.frame != nil { // Use closure context if defined
+			f = n.frame
+		}
 		return reflect.MakeFunc(n.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
 			// Allocate and init local frame. All values to be settable and addressable.
 			frame := Frame{anc: f, data: make([]reflect.Value, def.flen)}
@@ -611,6 +614,21 @@ func getFunc(n *Node) {
 		frame := *f
 		node := *n
 		node.val = &node
+		node.frame = &frame
+		f.data[i] = reflect.ValueOf(&node)
+		return next
+	}
+}
+
+func getMethod(n *Node) {
+	i := n.findex
+	next := getExec(n.tnext)
+
+	n.exec = func(f *Frame) Builtin {
+		frame := *f
+		node := *(n.val.(*Node))
+		node.val = &node
+		node.recv = n.recv
 		node.frame = &frame
 		f.data[i] = reflect.ValueOf(&node)
 		return next

@@ -8,32 +8,28 @@ import (
 	"github.com/containous/dyngo/stdlib"
 )
 
-// Plugin struct stores metadata for external modules
-type Plugin struct {
-	name    string
-	handler func(http.ResponseWriter, *http.Request)
-}
-
-// Handler redirect http.Handler processing in the interpreter
-func (p *Plugin) Handler(w http.ResponseWriter, r *http.Request) {
-	p.handler(w, r)
-}
+// This program starts an interpreter which loads a plugin to handle HTTP requests
 
 func main() {
+	log.SetFlags(log.Lshortfile) // Debug: print source file locations in log output
+
 	// Init go interpreter
-	log.SetFlags(log.Lshortfile)
-	i := interp.New(interp.Opt{AstDot: true})
-	//i := interp.New(interp.Opt{})
-	i.Use(stdlib.Value, stdlib.Type)
+	i := interp.New(interp.Opt{})
+	i.Use(stdlib.Value, stdlib.Type) // Use binary standard library
 
-	// Load plugin
+	// Load plugin from sources
 	_, err := i.Eval(`import "github.com/containous/dyngo/example/test_plugin/plugin"`)
-	log.Println("err:", err)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	handler, err := i.Eval(`plugin.NewSample("test")`)
-	log.Println("handler:", handler, "err:", err)
-	p := &Plugin{"sample", nil}
-	p.handler = handler.Interface().(func(http.ResponseWriter, *http.Request))
-	http.HandleFunc("/", p.Handler)
+	// Obtain a HTTP handler from the plugin
+	value, err := i.Eval(`plugin.NewSample("test")`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	handler := value.Interface().(func(http.ResponseWriter, *http.Request))
+
+	http.HandleFunc("/", handler)
 	http.ListenAndServe(":8080", nil)
 }
