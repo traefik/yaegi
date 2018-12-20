@@ -242,7 +242,7 @@ func (i *Interpreter) Use(values LibValueMap, types LibTypeMap) {
 // Results are printed on output.
 func (i *Interpreter) Repl(in, out *os.File) {
 	s := bufio.NewScanner(in)
-	prompt := getPrompt(in)
+	prompt := getPrompt(in, out)
 	prompt()
 	src := ""
 	for s.Scan() {
@@ -264,10 +264,10 @@ func (i *Interpreter) Repl(in, out *os.File) {
 	}
 }
 
-// getPrompt returns a function which prints a prompt only if stdin is a terminal
-func getPrompt(f *os.File) func() {
-	if stat, err := f.Stat(); err == nil && stat.Mode()&os.ModeCharDevice != 0 {
-		return func() { fmt.Print("> ") }
+// getPrompt returns a function which prints a prompt only if input is a terminal
+func getPrompt(in, out *os.File) func() {
+	if stat, err := in.Stat(); err == nil && stat.Mode()&os.ModeCharDevice != 0 {
+		return func() { fmt.Fprint(out, "> ") }
 	}
 	return func() {}
 }
