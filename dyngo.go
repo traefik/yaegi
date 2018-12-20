@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"go/scanner"
 	"io/ioutil"
 	"log"
 	"os"
@@ -61,12 +62,19 @@ func repl(i *interp.Interpreter) {
 	s := bufio.NewScanner(os.Stdin)
 	prompt := getPrompt()
 	prompt()
+	src := ""
 	for s.Scan() {
-		if v, err := i.Eval(s.Text()); err != nil {
+		src += s.Text() + "\n"
+		if v, err := i.Eval(src); err != nil {
+			switch err.(type) {
+			case scanner.ErrorList:
+				continue
+			}
 			fmt.Println(err)
 		} else if v.IsValid() {
 			fmt.Println(v)
 		}
+		src = ""
 		prompt()
 	}
 }
