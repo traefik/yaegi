@@ -3,10 +3,8 @@ package main
 //go:generate go generate github.com/containous/dyngo/stdlib
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
-	"go/scanner"
 	"io/ioutil"
 	"log"
 	"os"
@@ -48,41 +46,12 @@ func main() {
 			fmt.Println(err)
 		}
 		if interactive {
-			repl(i)
+			i.Repl(os.Stdin, os.Stdout)
 		}
 	} else {
 		i := interp.New(opt)
 		i.Use(stdlib.Value, stdlib.Type)
 		i.Use(interp.ExportValue, interp.ExportType)
-		repl(i)
+		i.Repl(os.Stdin, os.Stdout)
 	}
-}
-
-func repl(i *interp.Interpreter) {
-	s := bufio.NewScanner(os.Stdin)
-	prompt := getPrompt()
-	prompt()
-	src := ""
-	for s.Scan() {
-		src += s.Text() + "\n"
-		if v, err := i.Eval(src); err != nil {
-			switch err.(type) {
-			case scanner.ErrorList:
-				continue
-			}
-			fmt.Println(err)
-		} else if v.IsValid() {
-			fmt.Println(v)
-		}
-		src = ""
-		prompt()
-	}
-}
-
-// getPrompt returns a function which prints a prompt only if stdin is a terminal
-func getPrompt() func() {
-	if stat, err := os.Stdin.Stat(); err == nil && stat.Mode()&os.ModeCharDevice != 0 {
-		return func() { fmt.Print("> ") }
-	}
-	return func() {}
 }
