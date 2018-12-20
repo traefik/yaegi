@@ -1,6 +1,10 @@
 package interp
 
 import (
+	"bufio"
+	"fmt"
+	"go/scanner"
+	"os"
 	"reflect"
 )
 
@@ -232,4 +236,38 @@ func (i *Interpreter) Use(values LibValueMap, types LibTypeMap) {
 	for k, v := range types {
 		i.binType[k] = v
 	}
+}
+
+// Repl performs a Read-Eval-Print-Loop on input file descriptor.
+// Results are printed on output.
+func (i *Interpreter) Repl(in, out *os.File) {
+	s := bufio.NewScanner(in)
+	prompt := getPrompt(in)
+	prompt()
+	src := ""
+	for s.Scan() {
+		src += s.Text() + "\n"
+		if v, err := i.Eval(src); err != nil {
+			switch err.(type) {
+			case scanner.ErrorList:
+				// Early failure in the scanner: the source is incomplete
+				// and no AST could be produced, neither compiled / run.
+				// Get one more line, and retry
+				continue
+			}
+			fmt.Fprintln(out, err)
+		} else if v.IsValid() {
+			fmt.Fprintln(out, v)
+		}
+		src = ""
+		prompt()
+	}
+}
+
+// getPrompt returns a function which prints a prompt only if stdin is a terminal
+func getPrompt(f *os.File) func() {
+	if stat, err := f.Stat(); err == nil && stat.Mode()&os.ModeCharDevice != 0 {
+		return func() { fmt.Print("> ") }
+	}
+	return func() {}
 }
