@@ -38,7 +38,7 @@ var Type = map[string]map[string]reflect.Type{}
 //go:generate go run ../cmd/goexports/goexports.go os os/exec os/signal os/user
 //go:generate go run ../cmd/goexports/goexports.go path path/filepath reflect regexp regexp/syntax
 //go:generate go run ../cmd/goexports/goexports.go runtime runtime/debug
-//go:generate go run ../cmd/goexports/goexports.go sort strconv strings sync sync/atomic
+//go:generate go run ../cmd/goexports/goexports.go sort strconv strings sync sync/atomic syscall
 //go:generate go run ../cmd/goexports/goexports.go text/scanner text/tabwriter text/template text/template/parse
 //go:generate go run ../cmd/goexports/goexports.go time unsafe
 //go:generate go run ../cmd/goexports/goexports.go unicode unicode/utf16 unicode/utf8
