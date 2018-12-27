@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"go/scanner"
+	"go/token"
 	"os"
 	"reflect"
 )
@@ -23,6 +24,8 @@ type Node struct {
 	flen     int              // frame length (function definition)
 	level    int              // number of frame indirections to access value
 	kind     Kind             // kind of node
+	fset     *token.FileSet   // fileset to locate node in source code
+	pos      token.Pos        // position in source code, relative to fset
 	sym      *Symbol          // associated symbol
 	typ      *Type            // type of value in frame, or nil
 	recv     *Receiver        // method receiver node for call, or nil
