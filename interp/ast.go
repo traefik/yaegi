@@ -27,6 +27,7 @@ const (
 	CallExpr
 	CaseClause
 	ChanType
+	CommClause
 	CompositeLitExpr
 	ConstDecl
 	Continue
@@ -72,6 +73,7 @@ const (
 	ReturnStmt
 	Rvalue
 	Rtype
+	SelectStmt
 	SelectorExpr
 	SelectorImport
 	SelectorSrc
@@ -103,6 +105,7 @@ var kinds = [...]string{
 	CallExpr:         "CallExpr",
 	CaseClause:       "CaseClause",
 	ChanType:         "ChanType",
+	CommClause:       "CommClause",
 	CompositeLitExpr: "CompositeLitExpr",
 	ConstDecl:        "ConstDecl",
 	Continue:         "Continue",
@@ -147,6 +150,7 @@ var kinds = [...]string{
 	ReturnStmt:       "ReturnStmt",
 	Rvalue:           "Rvalue",
 	Rtype:            "Rtype",
+	SelectStmt:       "SelectStmt",
 	SelectorExpr:     "SelectorExpr",
 	SelectorImport:   "SelectorImport",
 	SelectorSrc:      "SelectorSrc",
@@ -470,6 +474,9 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 		case *ast.ChanType:
 			st.push(addChild(&root, anc, pos, ChanType, Nop))
 
+		case *ast.CommClause:
+			st.push(addChild(&root, anc, pos, CommClause, Nop))
+
 		case *ast.CompositeLit:
 			st.push(addChild(&root, anc, pos, CompositeLitExpr, CompositeLit))
 
@@ -603,6 +610,9 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 		case *ast.ReturnStmt:
 			st.push(addChild(&root, anc, pos, ReturnStmt, Return))
 
+		case *ast.SelectStmt:
+			st.push(addChild(&root, anc, pos, SelectStmt, Nop))
+
 		case *ast.SelectorExpr:
 			st.push(addChild(&root, anc, pos, SelectorExpr, GetIndex))
 
@@ -680,7 +690,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			st.push(addChild(&root, anc, pos, kind, action))
 
 		default:
-			err = AstError(fmt.Errorf("%T not implemented, line %s", a, fset.Position(pos)))
+			err = AstError(fmt.Errorf("ast: %T not implemented, line %s", a, fset.Position(pos)))
 			return false
 		}
 		return true
