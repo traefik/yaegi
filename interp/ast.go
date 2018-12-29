@@ -175,6 +175,7 @@ func (k Kind) String() string {
 	return "Kind(" + strconv.Itoa(int(k)) + ")"
 }
 
+// AstError represents an error during AST build stage
 type AstError error
 
 // Action defines the node action to perform at execution

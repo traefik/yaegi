@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-func (interp *Interpreter) importSrcFile(path string) error {
+func (i *Interpreter) importSrcFile(path string) error {
 	dir := pkgDir(path)
 
 	files, err := ioutil.ReadDir(dir)
@@ -38,36 +38,40 @@ func (interp *Interpreter) importSrcFile(path string) error {
 			return err
 		}
 
-		_, root, err = interp.ast(string(buf), name)
+		_, root, err = i.ast(string(buf), name)
 		if err != nil {
 			return err
 		}
 		rootNodes = append(rootNodes, root)
-		if interp.AstDot {
+		if i.AstDot {
 			root.AstDot(DotX(), name)
 		}
-		interp.Gta(root)
+		i.Gta(root)
 	}
 
 	// Generate control flow graphs
 	for _, root := range rootNodes {
-		initNodes = append(initNodes, interp.Cfg(root)...)
+		nodes, err := i.Cfg(root)
+		if err != nil {
+			return err
+		}
+		initNodes = append(initNodes, nodes...)
 	}
 
-	if interp.NoRun {
+	if i.NoRun {
 		return nil
 	}
 
 	// Once all package sources have been parsed, execute entry points then init functions
 	for _, n := range rootNodes {
 		genRun(n)
-		interp.fsize++
-		interp.resizeFrame()
-		interp.run(n, nil)
+		i.fsize++
+		i.resizeFrame()
+		i.run(n, nil)
 	}
 
 	for _, n := range initNodes {
-		interp.run(n, interp.Frame)
+		i.run(n, i.Frame)
 	}
 	return nil
 }

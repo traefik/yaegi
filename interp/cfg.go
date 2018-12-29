@@ -1,11 +1,15 @@
 package interp
 
 import (
+	"fmt"
 	"log"
 	"reflect"
 	"strconv"
 	"unicode"
 )
+
+// A CfgError represents an error during CFG build stage
+type CfgError error
 
 // A SymKind represents the kind of symbol
 type SymKind uint
@@ -116,12 +120,13 @@ func (s *Scope) inc(interp *Interpreter) int {
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
 // Following this pass, the CFG is ready to run
-func (interp *Interpreter) Cfg(root *Node) []*Node {
+func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 	scope := interp.universe
 	var loop, loopRestart *Node
 	var initNodes []*Node
 	var iotaValue int
 	var pkgName string
+	var err error
 
 	if root.kind != File {
 		// Set default package namespace for incremental parse
@@ -211,6 +216,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 		case If0, If1, If2, If3:
 			scope = scope.push(0)
+
+		case SelectStmt:
+			err = CfgError(fmt.Errorf("cfg: SelectStmt not implemented; %s", n.fset.Position(n.pos)))
 
 		case Switch0:
 			// Make sure default clause is in last position
@@ -892,7 +900,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		}
 	})
 
-	return initNodes
+	return initNodes, err
 }
 
 func genRun(n *Node) {
