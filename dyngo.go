@@ -40,6 +40,7 @@ func main() {
 			s = strings.Replace(s, "#!", "//", 1)
 		}
 		i := interp.New(opt)
+		i.Name = args[0]
 		i.Use(stdlib.Value, stdlib.Type)
 		i.Use(interp.ExportValue, interp.ExportType)
 		if _, err := i.Eval(string(s)); err != nil {
