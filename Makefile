@@ -1,0 +1,3 @@
+
+check:
+	golangci-lint run
