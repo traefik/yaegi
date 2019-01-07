@@ -265,7 +265,7 @@ func firstToken(src string) token.Token {
 }
 
 // Note: no type analysis is performed at this stage, it is done in pre-order processing
-// of CFG, in order to accomodate forward type declarations
+// of CFG, in order to accommodate forward type declarations
 
 // ast parses src string containing Go code and generates the corresponding AST.
 // The package name and the AST root node are returned.
@@ -359,7 +359,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 	}
 
 	// Populate our own private AST from Go parser AST.
-	// A stack of ancestor nodes is used to keep track of curent ancestor for each depth level
+	// A stack of ancestor nodes is used to keep track of current ancestor for each depth level
 	ast.Inspect(f, func(node ast.Node) bool {
 		anc = st.top()
 		switch a := node.(type) {

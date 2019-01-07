@@ -400,7 +400,7 @@ func call(n *Node) {
 			src := v(f)
 			if method && i == 0 {
 				dest := nf.data[def.framepos[i]]
-				// Accomodate to receiver type
+				// Accommodate to receiver type
 				ks, kd := src.Kind(), dest.Kind()
 				if ks != kd {
 					if kd == reflect.Ptr {
