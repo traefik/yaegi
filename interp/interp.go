@@ -194,6 +194,10 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 
 	// Annotate AST with CFG infos
 	initNodes, err := i.Cfg(root)
+	if err != nil {
+		return res, err
+	}
+
 	if pkgName != "_" {
 		if sym := i.scope[pkgName].sym[i.Entry]; sym != nil {
 			initNodes = append(initNodes, sym.node)

@@ -210,6 +210,7 @@ const (
 	Recv
 	Remain
 	Return
+	Select
 	Send
 	Slice
 	Slice0
@@ -246,7 +247,7 @@ var actions = [...]string{
 	Recv:         "<-",
 	Remain:       "%",
 	Return:       "return",
-	Send:         "<-",
+	Send:         "<~",
 	Slice:        "slice",
 	Slice0:       "slice0",
 	Star:         "*",

@@ -1227,6 +1227,66 @@ func send(n *Node) {
 	}
 }
 
+func clauseChanDir(n *Node) (*Node, *Node, *Node, reflect.SelectDir) {
+	dir := reflect.SelectDefault
+	var node, assigned, ok *Node
+	var stop bool
+
+	n.Walk(func(m *Node) bool {
+		if m.action == Recv {
+			dir = reflect.SelectRecv
+			node = m.child[0]
+			switch m.anc.action {
+			case Assign:
+				assigned = m.anc.child[0]
+			case AssignX:
+			}
+			stop = true
+			return false
+		}
+		return !stop
+	}, nil)
+	return node, assigned, ok, dir
+}
+
+func _select(n *Node) {
+	nbClause := len(n.child)
+	chans := make([]*Node, nbClause)
+	assigned := make([]*Node, nbClause)
+	ok := make([]*Node, nbClause)
+	clause := make([]Builtin, nbClause)
+	chanValues := make([]func(*Frame) reflect.Value, nbClause)
+	assignedValues := make([]func(*Frame) reflect.Value, nbClause)
+	okValues := make([]func(*Frame) reflect.Value, nbClause)
+	cases := make([]reflect.SelectCase, nbClause)
+
+	for i := 0; i < nbClause; i++ {
+		clause[i] = getExec(n.child[i].child[1].start)
+		chans[i], assigned[i], ok[i], cases[i].Dir = clauseChanDir(n.child[i])
+		chanValues[i] = genValue(chans[i])
+		if assigned[i] != nil {
+			assignedValues[i] = genValue(assigned[i])
+		}
+		if ok[i] != nil {
+			okValues[i] = genValue(ok[i])
+		}
+	}
+
+	n.exec = func(f *Frame) Builtin {
+		for i := range cases {
+			cases[i].Chan = chanValues[i](f)
+		}
+		i, v, s := reflect.Select(cases)
+		if assigned[i] != nil {
+			assignedValues[i](f).Set(v)
+		}
+		if ok[i] != nil {
+			okValues[i](f).SetBool(s)
+		}
+		return clause[i]
+	}
+}
+
 // slice expression: array[low:high:max]
 func slice(n *Node) {
 	i := n.findex

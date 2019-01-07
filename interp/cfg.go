@@ -217,8 +217,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case If0, If1, If2, If3:
 			scope = scope.push(0)
 
-		case SelectStmt:
-			err = CfgError(fmt.Errorf("cfg: SelectStmt not implemented; %s", n.fset.Position(n.pos)))
+		//case SelectStmt:
+		//	err = CfgError(fmt.Errorf("cfg: SelectStmt not implemented; %s", n.fset.Position(n.pos)))
 
 		case Switch0:
 			// Make sure default clause is in last position
@@ -338,8 +338,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.child[l].gen = typeAssert2
 				n.gen = nop
 
+			case UnaryExpr:
+				if n.child[l].action == Recv {
+					types = append(types, n.child[l].child[0].typ.val, scope.getType("bool"))
+				}
+
 			default:
-				log.Fatalln(n.index, "Assign expression unsupported:", n.child[l].kind)
+				err = CfgError(fmt.Errorf("cfg: unsupported assign expression %s", n.fset.Position(n.pos)))
+				return
 			}
 			for i, c := range n.child[:l] {
 				sym, _, ok := scope.lookup(c.ident)
@@ -444,6 +450,17 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case CaseClause:
 			n.findex = scope.inc(interp)
 			n.tnext = n.child[len(n.child)-1].start
+
+		case SelectStmt:
+			wireChild(n)
+			// Move action to block statement, so select node can be an exit point
+			n.child[0].gen = _select
+			n.start = n.child[0]
+
+		case CommClause:
+			wireChild(n)
+			n.start = n.child[1].start                // Skip chan operation, performed by select
+			n.child[len(n.child)-1].tnext = n.anc.anc // exit node is SelectStmt
 
 		case CompositeLitExpr:
 			wireChild(n)
