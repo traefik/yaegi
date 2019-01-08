@@ -1233,16 +1233,22 @@ func clauseChanDir(n *Node) (*Node, *Node, *Node, reflect.SelectDir) {
 	var stop bool
 
 	n.Walk(func(m *Node) bool {
-		if m.action == Recv {
+		switch m.action {
+		case Recv:
 			dir = reflect.SelectRecv
 			node = m.child[0]
 			switch m.anc.action {
 			case Assign:
 				assigned = m.anc.child[0]
 			case AssignX:
+				// TODO
 			}
 			stop = true
-			return false
+		case Send:
+			dir = reflect.SelectSend
+			node = m.child[0]
+			assigned = m.child[1]
+			stop = true
 		}
 		return !stop
 	}, nil)
@@ -1275,15 +1281,18 @@ func _select(n *Node) {
 	n.exec = func(f *Frame) Builtin {
 		for i := range cases {
 			cases[i].Chan = chanValues[i](f)
+			if cases[i].Dir == reflect.SelectSend {
+				cases[i].Send = assignedValues[i](f)
+			}
 		}
-		i, v, s := reflect.Select(cases)
-		if assigned[i] != nil {
-			assignedValues[i](f).Set(v)
+		j, v, s := reflect.Select(cases)
+		if cases[j].Dir == reflect.SelectRecv && assignedValues[j] != nil {
+			assignedValues[j](f).Set(v)
+			if ok[j] != nil {
+				okValues[j](f).SetBool(s)
+			}
 		}
-		if ok[i] != nil {
-			okValues[i](f).SetBool(s)
-		}
-		return clause[i]
+		return clause[j]
 	}
 }
 
