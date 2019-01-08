@@ -8,6 +8,3 @@ func main() {
 	msg, ok := <-channel
 	println(msg, ok)
 }
-
-// Output:
-// 123
