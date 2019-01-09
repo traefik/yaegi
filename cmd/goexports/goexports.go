@@ -121,7 +121,13 @@ func main() {
 			log.Fatal(err)
 		}
 
-		oFile := strings.Replace(pkg, "/", "_", -1) + ".go"
+		var oFile string
+		if pkg == "syscall" {
+			os, arch := os.Getenv("GOOS"), os.Getenv("GOARCH")
+			oFile = strings.Replace(pkg, "/", "_", -1) + "_" + os + "_" + arch + ".go"
+		} else {
+			oFile = strings.Replace(pkg, "/", "_", -1) + ".go"
+		}
 
 		err = ioutil.WriteFile(oFile, content, 0666)
 		if err != nil {
