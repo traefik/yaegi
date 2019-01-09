@@ -29,7 +29,7 @@ import (
 func init() {
 	Value["{{ .PkgName }}"] = map[string]reflect.Value{
 		{{range .Val -}}
-			{{if forceUint $.Pkg . -}}
+			{{if forceUint $.PkgName . -}}
 				"{{.}}": reflect.ValueOf(uint({{ $.Pkg }}.{{.}})),
 			{{else -}}
 				"{{.}}": reflect.ValueOf({{ $.Pkg }}.{{.}}),
