@@ -821,6 +821,61 @@ func main() {
 	// nok
 }
 
+func Example_chan5() {
+	src := `
+package main
+
+import "time"
+
+func main() {
+
+	// For our example we'll select across two channels.
+	c1 := make(chan string)
+	c2 := make(chan string)
+
+	// Each channel will receive a value after some amount
+	// of time, to simulate e.g. blocking RPC operations
+	// executing in concurrent goroutines.
+	go func() {
+		//time.Sleep(1 * time.Second)
+		time.Sleep(1e9)
+		c1 <- "one"
+	}()
+	go func() {
+		time.Sleep(2e9)
+		c2 <- "two"
+	}()
+
+	msg1 := <-c1
+	println(msg1)
+
+	msg2 := <-c2
+	println(msg2)
+}`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+}
+
+func Example_chan6() {
+	src := `
+package main
+
+func send(c chan<- int32) { c <- 123 }
+
+func main() {
+	channel := make(chan int32)
+	go send(channel)
+	msg, ok := <-channel
+	println(msg, ok)
+}`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+}
+
 func Example_cli0() {
 	src := `
 package main
@@ -3587,6 +3642,166 @@ func main() {
 	// Output:
 	// [1 2 3]
 	// [6 7]
+}
+
+func Example_select() {
+	src := `
+package main
+
+import "time"
+import "fmt"
+
+func main() {
+	c1 := make(chan string)
+	c2 := make(chan string)
+
+	go func() {
+		time.Sleep(1e9)
+		c1 <- "one"
+	}()
+	go func() {
+		time.Sleep(2e9)
+		c2 <- "two"
+	}()
+
+	for i := 0; i < 2; i++ {
+		fmt.Println("start for")
+		select {
+		case msg1 := <-c1:
+			fmt.Println("received", msg1)
+			fmt.Println("finish 1")
+		case msg2 := <-c2:
+			fmt.Println("received #2", msg2)
+		}
+		fmt.Println("end for")
+	}
+	fmt.Println("Bye")
+}`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+}
+
+func Example_select0() {
+	src := `
+package main
+
+import "time"
+
+func forever() {
+	select {} // block forever
+	println("end")
+}
+
+func main() {
+	go forever()
+	time.Sleep(1e9)
+	println("bye")
+}`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+}
+
+func Example_select1() {
+	src := `
+package main
+
+import "time"
+import "fmt"
+
+func main() {
+	c1 := make(chan string)
+	c2 := make(chan string)
+
+	go func() {
+		time.Sleep(1e9)
+		c1 <- "one"
+	}()
+	go func() {
+		time.Sleep(2e9)
+		c2 <- "two"
+	}()
+
+	for i := 0; i < 2; i++ {
+		fmt.Println("start for")
+		select {
+		case msg1 := <-c1:
+			fmt.Println("received", msg1)
+			fmt.Println("finish 1")
+		case msg2, ok := <-c2:
+			fmt.Println("received #2", msg2, ok)
+		}
+		fmt.Println("end for")
+	}
+	fmt.Println("Bye")
+}`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+}
+
+func Example_select2() {
+	src := `
+package main
+
+import (
+	"fmt"
+)
+
+func main() {
+	c1 := make(chan string)
+	c2 := make(chan string)
+
+	go func() {
+		toSend := "hello"
+		select {
+		case c2 <- toSend:
+			fmt.Println("Sent", toSend, "to c2")
+		}
+	}()
+
+	select {
+	case msg1 := <-c1:
+		fmt.Println("received from c1:", msg1)
+	case msg2 := <-c2:
+		fmt.Println("received from c2:", msg2)
+	}
+	fmt.Println("Bye")
+}
+`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+	// Output:
+	// Sent hello to c2
+	// received from c2: hello
+	// Bye
+}
+
+func Example_select3() {
+	src := `
+package main
+
+func main() {
+	select {
+	default:
+		println("no comm")
+	}
+	println("bye")
+}
+`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+	// Output:
+	// no comm
+	// bye
 }
 
 func Example_server() {

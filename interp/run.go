@@ -1227,6 +1227,85 @@ func send(n *Node) {
 	}
 }
 
+func clauseChanDir(n *Node) (*Node, *Node, *Node, reflect.SelectDir) {
+	dir := reflect.SelectDefault
+	var node, assigned, ok *Node
+	var stop bool
+
+	n.Walk(func(m *Node) bool {
+		switch m.action {
+		case Recv:
+			dir = reflect.SelectRecv
+			node = m.child[0]
+			switch m.anc.action {
+			case Assign:
+				assigned = m.anc.child[0]
+			case AssignX:
+				// TODO
+			}
+			stop = true
+		case Send:
+			dir = reflect.SelectSend
+			node = m.child[0]
+			assigned = m.child[1]
+			stop = true
+		}
+		return !stop
+	}, nil)
+	return node, assigned, ok, dir
+}
+
+func _select(n *Node) {
+	nbClause := len(n.child)
+	chans := make([]*Node, nbClause)
+	assigned := make([]*Node, nbClause)
+	ok := make([]*Node, nbClause)
+	clause := make([]Builtin, nbClause)
+	chanValues := make([]func(*Frame) reflect.Value, nbClause)
+	assignedValues := make([]func(*Frame) reflect.Value, nbClause)
+	okValues := make([]func(*Frame) reflect.Value, nbClause)
+	cases := make([]reflect.SelectCase, nbClause)
+
+	for i := 0; i < nbClause; i++ {
+		if len(n.child[i].child) > 1 {
+			clause[i] = getExec(n.child[i].child[1].start)
+			chans[i], assigned[i], ok[i], cases[i].Dir = clauseChanDir(n.child[i])
+			chanValues[i] = genValue(chans[i])
+			if assigned[i] != nil {
+				assignedValues[i] = genValue(assigned[i])
+			}
+			if ok[i] != nil {
+				okValues[i] = genValue(ok[i])
+			}
+		} else {
+			clause[i] = getExec(n.child[i].child[0].start)
+			cases[i].Dir = reflect.SelectDefault
+		}
+	}
+
+	n.exec = func(f *Frame) Builtin {
+		for i := range cases {
+			switch cases[i].Dir {
+			case reflect.SelectRecv:
+				cases[i].Chan = chanValues[i](f)
+			case reflect.SelectSend:
+				cases[i].Chan = chanValues[i](f)
+				cases[i].Send = assignedValues[i](f)
+			case reflect.SelectDefault:
+				// Keep zero values for comm clause
+			}
+		}
+		j, v, s := reflect.Select(cases)
+		if cases[j].Dir == reflect.SelectRecv && assignedValues[j] != nil {
+			assignedValues[j](f).Set(v)
+			if ok[j] != nil {
+				okValues[j](f).SetBool(s)
+			}
+		}
+		return clause[j]
+	}
+}
+
 // slice expression: array[low:high:max]
 func slice(n *Node) {
 	i := n.findex

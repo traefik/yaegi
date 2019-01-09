@@ -1,11 +1,15 @@
 package interp
 
 import (
+	"fmt"
 	"log"
 	"reflect"
 	"strconv"
 	"unicode"
 )
+
+// A CfgError represents an error during CFG build stage
+type CfgError error
 
 // A SymKind represents the kind of symbol
 type SymKind uint
@@ -116,12 +120,13 @@ func (s *Scope) inc(interp *Interpreter) int {
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
 // Following this pass, the CFG is ready to run
-func (interp *Interpreter) Cfg(root *Node) []*Node {
+func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 	scope := interp.universe
 	var loop, loopRestart *Node
 	var initNodes []*Node
 	var iotaValue int
 	var pkgName string
+	var err error
 
 	if root.kind != File {
 		// Set default package namespace for incremental parse
@@ -211,6 +216,9 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 
 		case If0, If1, If2, If3:
 			scope = scope.push(0)
+
+		//case SelectStmt:
+		//	err = CfgError(fmt.Errorf("cfg: SelectStmt not implemented; %s", n.fset.Position(n.pos)))
 
 		case Switch0:
 			// Make sure default clause is in last position
@@ -330,8 +338,14 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 				n.child[l].gen = typeAssert2
 				n.gen = nop
 
+			case UnaryExpr:
+				if n.child[l].action == Recv {
+					types = append(types, n.child[l].child[0].typ.val, scope.getType("bool"))
+				}
+
 			default:
-				log.Fatalln(n.index, "Assign expression unsupported:", n.child[l].kind)
+				err = CfgError(fmt.Errorf("cfg: unsupported assign expression %s", n.fset.Position(n.pos)))
+				return
 			}
 			for i, c := range n.child[:l] {
 				sym, _, ok := scope.lookup(c.ident)
@@ -436,6 +450,21 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		case CaseClause:
 			n.findex = scope.inc(interp)
 			n.tnext = n.child[len(n.child)-1].start
+
+		case SelectStmt:
+			wireChild(n)
+			// Move action to block statement, so select node can be an exit point
+			n.child[0].gen = _select
+			n.start = n.child[0]
+
+		case CommClause:
+			wireChild(n)
+			if len(n.child) > 1 {
+				n.start = n.child[1].start // Skip chan operation, performed by select
+			} else {
+				n.start = n.child[0].start // default clause
+			}
+			n.child[len(n.child)-1].tnext = n.anc.anc // exit node is SelectStmt
 
 		case CompositeLitExpr:
 			wireChild(n)
@@ -892,7 +921,7 @@ func (interp *Interpreter) Cfg(root *Node) []*Node {
 		}
 	})
 
-	return initNodes
+	return initNodes, err
 }
 
 func genRun(n *Node) {
