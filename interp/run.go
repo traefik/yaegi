@@ -1267,22 +1267,32 @@ func _select(n *Node) {
 	cases := make([]reflect.SelectCase, nbClause)
 
 	for i := 0; i < nbClause; i++ {
-		clause[i] = getExec(n.child[i].child[1].start)
-		chans[i], assigned[i], ok[i], cases[i].Dir = clauseChanDir(n.child[i])
-		chanValues[i] = genValue(chans[i])
-		if assigned[i] != nil {
-			assignedValues[i] = genValue(assigned[i])
-		}
-		if ok[i] != nil {
-			okValues[i] = genValue(ok[i])
+		if len(n.child[i].child) > 1 {
+			clause[i] = getExec(n.child[i].child[1].start)
+			chans[i], assigned[i], ok[i], cases[i].Dir = clauseChanDir(n.child[i])
+			chanValues[i] = genValue(chans[i])
+			if assigned[i] != nil {
+				assignedValues[i] = genValue(assigned[i])
+			}
+			if ok[i] != nil {
+				okValues[i] = genValue(ok[i])
+			}
+		} else {
+			clause[i] = getExec(n.child[i].child[0].start)
+			cases[i].Dir = reflect.SelectDefault
 		}
 	}
 
 	n.exec = func(f *Frame) Builtin {
 		for i := range cases {
-			cases[i].Chan = chanValues[i](f)
-			if cases[i].Dir == reflect.SelectSend {
+			switch cases[i].Dir {
+			case reflect.SelectRecv:
+				cases[i].Chan = chanValues[i](f)
+			case reflect.SelectSend:
+				cases[i].Chan = chanValues[i](f)
 				cases[i].Send = assignedValues[i](f)
+			case reflect.SelectDefault:
+				// Keep zero values for comm clause
 			}
 		}
 		j, v, s := reflect.Select(cases)

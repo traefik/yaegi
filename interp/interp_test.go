@@ -3783,6 +3783,27 @@ func main() {
 	// Bye
 }
 
+func Example_select3() {
+	src := `
+package main
+
+func main() {
+	select {
+	default:
+		println("no comm")
+	}
+	println("bye")
+}
+`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+	// Output:
+	// no comm
+	// bye
+}
+
 func Example_server() {
 	src := `
 package main

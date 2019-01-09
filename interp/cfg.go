@@ -459,7 +459,11 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case CommClause:
 			wireChild(n)
-			n.start = n.child[1].start                // Skip chan operation, performed by select
+			if len(n.child) > 1 {
+				n.start = n.child[1].start // Skip chan operation, performed by select
+			} else {
+				n.start = n.child[0].start // default clause
+			}
 			n.child[len(n.child)-1].tnext = n.anc.anc // exit node is SelectStmt
 
 		case CompositeLitExpr:
