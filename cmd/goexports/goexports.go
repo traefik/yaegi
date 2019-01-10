@@ -50,7 +50,6 @@ func genContent(dest, pkgName string) ([]byte, error) {
 		return nil, err
 	}
 
-	pkg := path.Base(pkgName)
 	typ := map[string]string{}
 	val := map[string]string{}
 	sc := p.Scope()
@@ -59,13 +58,14 @@ func genContent(dest, pkgName string) ([]byte, error) {
 		if !o.Exported() {
 			continue
 		}
+		pname := path.Base(pkgName) + "." + name
 		switch o := o.(type) {
 		case *types.Const:
-			val[name] = fixConst(pkg, name, o.Val())
+			val[name] = fixConst(pname, o.Val())
 		case *types.Func, *types.Var:
-			val[name] = pkg + "." + name
+			val[name] = pname
 		case *types.TypeName:
-			typ[name] = pkg + "." + name
+			typ[name] = pname
 		}
 	}
 
@@ -96,26 +96,25 @@ func genContent(dest, pkgName string) ([]byte, error) {
 }
 
 // fixConst checks untyped constant value, converting it if necessary to avoid overflow
-func fixConst(pkg, name string, val constant.Value) string {
-	res := pkg + "." + name
+func fixConst(name string, val constant.Value) string {
 	if val.Kind() == constant.Int {
 		str := val.ExactString()
 		i, err := strconv.ParseInt(str, 0, 64)
 		if err == nil {
 			if i == int64(int32(i)) {
-				return res
+				return name
 			} else if i == int64(uint32(i)) {
-				return "uint32(" + res + ")"
+				return "uint32(" + name + ")"
 			} else {
-				return "int64(" + res + ")"
+				return "int64(" + name + ")"
 			}
 		}
 		_, err = strconv.ParseUint(str, 0, 64)
 		if err == nil {
-			return "uint64(" + res + ")"
+			return "uint64(" + name + ")"
 		}
 	}
-	return res
+	return name
 }
 
 func main() {
