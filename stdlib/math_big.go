@@ -16,7 +16,7 @@ func init() {
 		"Jacobi":        reflect.ValueOf(big.Jacobi),
 		"MaxBase":       reflect.ValueOf(big.MaxBase),
 		"MaxExp":        reflect.ValueOf(big.MaxExp),
-		"MaxPrec":       reflect.ValueOf(big.MaxPrec),
+		"MaxPrec":       reflect.ValueOf(uint32(big.MaxPrec)),
 		"MinExp":        reflect.ValueOf(big.MinExp),
 		"NewFloat":      reflect.ValueOf(big.NewFloat),
 		"NewInt":        reflect.ValueOf(big.NewInt),
@@ -28,6 +28,7 @@ func init() {
 		"ToPositiveInf": reflect.ValueOf(big.ToPositiveInf),
 		"ToZero":        reflect.ValueOf(big.ToZero),
 	}
+
 	Type["math/big"] = map[string]reflect.Type{
 		"Accuracy":     reflect.TypeOf((*big.Accuracy)(nil)).Elem(),
 		"ErrNaN":       reflect.TypeOf((*big.ErrNaN)(nil)).Elem(),

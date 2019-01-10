@@ -29,6 +29,7 @@ func init() {
 		"Sscanf":   reflect.ValueOf(fmt.Sscanf),
 		"Sscanln":  reflect.ValueOf(fmt.Sscanln),
 	}
+
 	Type["fmt"] = map[string]reflect.Type{
 		"Formatter":  reflect.TypeOf((*fmt.Formatter)(nil)).Elem(),
 		"GoStringer": reflect.TypeOf((*fmt.GoStringer)(nil)).Elem(),

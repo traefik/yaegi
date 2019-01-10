@@ -15,6 +15,7 @@ func init() {
 		"PlainAuth":   reflect.ValueOf(smtp.PlainAuth),
 		"SendMail":    reflect.ValueOf(smtp.SendMail),
 	}
+
 	Type["net/smtp"] = map[string]reflect.Type{
 		"Auth":       reflect.TypeOf((*smtp.Auth)(nil)).Elem(),
 		"Client":     reflect.TypeOf((*smtp.Client)(nil)).Elem(),

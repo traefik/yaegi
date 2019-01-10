@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["unsafe"] = map[string]reflect.Value{}
+
 	Type["unsafe"] = map[string]reflect.Type{
 		"Pointer": reflect.TypeOf((*unsafe.Pointer)(nil)).Elem(),
 	}

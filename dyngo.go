@@ -1,6 +1,8 @@
 package main
 
+//go:generate go generate github.com/containous/dyngo/cmd/goexports
 //go:generate go generate github.com/containous/dyngo/stdlib
+//go:generate go generate github.com/containous/dyngo/stdlib/syscall
 
 import (
 	"flag"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/containous/dyngo/interp"
 	"github.com/containous/dyngo/stdlib"
+	"github.com/containous/dyngo/stdlib/syscall"
 )
 
 func main() {
@@ -51,6 +54,7 @@ func main() {
 	} else {
 		i := interp.New(opt)
 		i.Use(stdlib.Value, stdlib.Type)
+		i.Use(syscall.Value, syscall.Type)
 		i.Use(interp.ExportValue, interp.ExportType)
 		i.Repl(os.Stdin, os.Stdout)
 	}

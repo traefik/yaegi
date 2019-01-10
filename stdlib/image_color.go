@@ -30,6 +30,7 @@ func init() {
 		"YCbCrModel":   reflect.ValueOf(color.YCbCrModel),
 		"YCbCrToRGB":   reflect.ValueOf(color.YCbCrToRGB),
 	}
+
 	Type["image/color"] = map[string]reflect.Type{
 		"Alpha":   reflect.TypeOf((*color.Alpha)(nil)).Elem(),
 		"Alpha16": reflect.TypeOf((*color.Alpha16)(nil)).Elem(),

@@ -37,5 +37,6 @@ func init() {
 		"Tan":   reflect.ValueOf(cmplx.Tan),
 		"Tanh":  reflect.ValueOf(cmplx.Tanh),
 	}
+
 	Type["math/cmplx"] = map[string]reflect.Type{}
 }

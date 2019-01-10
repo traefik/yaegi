@@ -27,6 +27,7 @@ func init() {
 		"Strings":           reflect.ValueOf(sort.Strings),
 		"StringsAreSorted":  reflect.ValueOf(sort.StringsAreSorted),
 	}
+
 	Type["sort"] = map[string]reflect.Type{
 		"Float64Slice": reflect.TypeOf((*sort.Float64Slice)(nil)).Elem(),
 		"IntSlice":     reflect.TypeOf((*sort.IntSlice)(nil)).Elem(),

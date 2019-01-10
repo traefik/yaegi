@@ -37,6 +37,7 @@ func init() {
 		"Unmarshal":            reflect.ValueOf(asn1.Unmarshal),
 		"UnmarshalWithParams":  reflect.ValueOf(asn1.UnmarshalWithParams),
 	}
+
 	Type["encoding/asn1"] = map[string]reflect.Type{
 		"BitString":        reflect.TypeOf((*asn1.BitString)(nil)).Elem(),
 		"Enumerated":       reflect.TypeOf((*asn1.Enumerated)(nil)).Elem(),

@@ -44,6 +44,7 @@ func init() {
 		"Unquote":                  reflect.ValueOf(strconv.Unquote),
 		"UnquoteChar":              reflect.ValueOf(strconv.UnquoteChar),
 	}
+
 	Type["strconv"] = map[string]reflect.Type{
 		"NumError": reflect.TypeOf((*strconv.NumError)(nil)).Elem(),
 	}

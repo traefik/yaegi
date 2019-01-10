@@ -45,5 +45,6 @@ func init() {
 		"TrailingZeros8":  reflect.ValueOf(bits.TrailingZeros8),
 		"UintSize":        reflect.ValueOf(bits.UintSize),
 	}
+
 	Type["math/bits"] = map[string]reflect.Type{}
 }

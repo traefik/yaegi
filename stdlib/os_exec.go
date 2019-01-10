@@ -14,6 +14,7 @@ func init() {
 		"ErrNotFound":    reflect.ValueOf(exec.ErrNotFound),
 		"LookPath":       reflect.ValueOf(exec.LookPath),
 	}
+
 	Type["os/exec"] = map[string]reflect.Type{
 		"Cmd":       reflect.TypeOf((*exec.Cmd)(nil)).Elem(),
 		"Error":     reflect.TypeOf((*exec.Error)(nil)).Elem(),

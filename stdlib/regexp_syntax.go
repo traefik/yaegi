@@ -77,6 +77,7 @@ func init() {
 		"UnicodeGroups":            reflect.ValueOf(syntax.UnicodeGroups),
 		"WasDollar":                reflect.ValueOf(syntax.WasDollar),
 	}
+
 	Type["regexp/syntax"] = map[string]reflect.Type{
 		"EmptyOp":   reflect.TypeOf((*syntax.EmptyOp)(nil)).Elem(),
 		"Error":     reflect.TypeOf((*syntax.Error)(nil)).Elem(),

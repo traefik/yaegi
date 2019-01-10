@@ -40,6 +40,7 @@ func init() {
 		"Var":                        reflect.ValueOf(ast.Var),
 		"Walk":                       reflect.ValueOf(ast.Walk),
 	}
+
 	Type["go/ast"] = map[string]reflect.Type{
 		"ArrayType":      reflect.TypeOf((*ast.ArrayType)(nil)).Elem(),
 		"AssignStmt":     reflect.TypeOf((*ast.AssignStmt)(nil)).Elem(),

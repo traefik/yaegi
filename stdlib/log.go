@@ -33,6 +33,7 @@ func init() {
 		"SetOutput":     reflect.ValueOf(log.SetOutput),
 		"SetPrefix":     reflect.ValueOf(log.SetPrefix),
 	}
+
 	Type["log"] = map[string]reflect.Type{
 		"Logger": reflect.TypeOf((*log.Logger)(nil)).Elem(),
 	}

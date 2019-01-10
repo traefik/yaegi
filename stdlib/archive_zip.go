@@ -21,6 +21,7 @@ func init() {
 		"RegisterDecompressor": reflect.ValueOf(zip.RegisterDecompressor),
 		"Store":                reflect.ValueOf(zip.Store),
 	}
+
 	Type["archive/zip"] = map[string]reflect.Type{
 		"Compressor":   reflect.TypeOf((*zip.Compressor)(nil)).Elem(),
 		"Decompressor": reflect.TypeOf((*zip.Decompressor)(nil)).Elem(),

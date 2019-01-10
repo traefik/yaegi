@@ -274,6 +274,7 @@ func init() {
 		"Zp":                                 reflect.ValueOf(unicode.Zp),
 		"Zs":                                 reflect.ValueOf(unicode.Zs),
 	}
+
 	Type["unicode"] = map[string]reflect.Type{
 		"CaseRange":   reflect.TypeOf((*unicode.CaseRange)(nil)).Elem(),
 		"Range16":     reflect.TypeOf((*unicode.Range16)(nil)).Elem(),

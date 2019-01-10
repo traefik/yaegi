@@ -12,5 +12,6 @@ func init() {
 		"Plan9":   reflect.ValueOf(palette.Plan9),
 		"WebSafe": reflect.ValueOf(palette.WebSafe),
 	}
+
 	Type["image/color/palette"] = map[string]reflect.Type{}
 }

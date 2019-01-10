@@ -11,6 +11,7 @@ func init() {
 	Value["sync"] = map[string]reflect.Value{
 		"NewCond": reflect.ValueOf(sync.NewCond),
 	}
+
 	Type["sync"] = map[string]reflect.Type{
 		"Cond":      reflect.TypeOf((*sync.Cond)(nil)).Elem(),
 		"Locker":    reflect.TypeOf((*sync.Locker)(nil)).Elem(),

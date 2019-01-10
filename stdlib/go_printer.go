@@ -15,6 +15,7 @@ func init() {
 		"TabIndent": reflect.ValueOf(printer.TabIndent),
 		"UseSpaces": reflect.ValueOf(printer.UseSpaces),
 	}
+
 	Type["go/printer"] = map[string]reflect.Type{
 		"CommentedNode": reflect.TypeOf((*printer.CommentedNode)(nil)).Elem(),
 		"Config":        reflect.TypeOf((*printer.Config)(nil)).Elem(),

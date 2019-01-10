@@ -72,6 +72,7 @@ func init() {
 		"ResolveUnixAddr":            reflect.ValueOf(net.ResolveUnixAddr),
 		"SplitHostPort":              reflect.ValueOf(net.SplitHostPort),
 	}
+
 	Type["net"] = map[string]reflect.Type{
 		"Addr":                reflect.TypeOf((*net.Addr)(nil)).Elem(),
 		"AddrError":           reflect.TypeOf((*net.AddrError)(nil)).Elem(),

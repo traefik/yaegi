@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["encoding"] = map[string]reflect.Value{}
+
 	Type["encoding"] = map[string]reflect.Type{
 		"BinaryMarshaler":   reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem(),
 		"BinaryUnmarshaler": reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem(),

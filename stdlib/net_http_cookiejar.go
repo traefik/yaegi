@@ -11,6 +11,7 @@ func init() {
 	Value["net/http/cookiejar"] = map[string]reflect.Value{
 		"New": reflect.ValueOf(cookiejar.New),
 	}
+
 	Type["net/http/cookiejar"] = map[string]reflect.Type{
 		"Jar":              reflect.TypeOf((*cookiejar.Jar)(nil)).Elem(),
 		"Options":          reflect.TypeOf((*cookiejar.Options)(nil)).Elem(),

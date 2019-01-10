@@ -41,6 +41,7 @@ func init() {
 		"New":          reflect.ValueOf(syslog.New),
 		"NewLogger":    reflect.ValueOf(syslog.NewLogger),
 	}
+
 	Type["log/syslog"] = map[string]reflect.Type{
 		"Priority": reflect.TypeOf((*syslog.Priority)(nil)).Elem(),
 		"Writer":   reflect.TypeOf((*syslog.Writer)(nil)).Elem(),

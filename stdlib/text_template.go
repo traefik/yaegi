@@ -22,6 +22,7 @@ func init() {
 		"ParseGlob":        reflect.ValueOf(template.ParseGlob),
 		"URLQueryEscaper":  reflect.ValueOf(template.URLQueryEscaper),
 	}
+
 	Type["text/template"] = map[string]reflect.Type{
 		"ExecError": reflect.TypeOf((*template.ExecError)(nil)).Elem(),
 		"FuncMap":   reflect.TypeOf((*template.FuncMap)(nil)).Elem(),

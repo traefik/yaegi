@@ -26,6 +26,7 @@ func init() {
 		"OpenDB":               reflect.ValueOf(sql.OpenDB),
 		"Register":             reflect.ValueOf(sql.Register),
 	}
+
 	Type["database/sql"] = map[string]reflect.Type{
 		"ColumnType":     reflect.TypeOf((*sql.ColumnType)(nil)).Elem(),
 		"Conn":           reflect.TypeOf((*sql.Conn)(nil)).Elem(),

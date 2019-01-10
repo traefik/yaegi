@@ -13,6 +13,7 @@ func init() {
 		"NewCipher":          reflect.ValueOf(des.NewCipher),
 		"NewTripleDESCipher": reflect.ValueOf(des.NewTripleDESCipher),
 	}
+
 	Type["crypto/des"] = map[string]reflect.Type{
 		"KeySizeError": reflect.TypeOf((*des.KeySizeError)(nil)).Elem(),
 	}

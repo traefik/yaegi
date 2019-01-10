@@ -22,6 +22,7 @@ func init() {
 		"NewTokenDecoder": reflect.ValueOf(xml.NewTokenDecoder),
 		"Unmarshal":       reflect.ValueOf(xml.Unmarshal),
 	}
+
 	Type["encoding/xml"] = map[string]reflect.Type{
 		"Attr":                 reflect.TypeOf((*xml.Attr)(nil)).Elem(),
 		"CharData":             reflect.TypeOf((*xml.CharData)(nil)).Elem(),

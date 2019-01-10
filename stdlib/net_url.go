@@ -19,6 +19,7 @@ func init() {
 		"User":            reflect.ValueOf(url.User),
 		"UserPassword":    reflect.ValueOf(url.UserPassword),
 	}
+
 	Type["net/url"] = map[string]reflect.Type{
 		"Error":            reflect.TypeOf((*url.Error)(nil)).Elem(),
 		"EscapeError":      reflect.TypeOf((*url.EscapeError)(nil)).Elem(),

@@ -19,6 +19,7 @@ func init() {
 		"Sign":                reflect.ValueOf(dsa.Sign),
 		"Verify":              reflect.ValueOf(dsa.Verify),
 	}
+
 	Type["crypto/dsa"] = map[string]reflect.Type{
 		"ParameterSizes": reflect.TypeOf((*dsa.ParameterSizes)(nil)).Elem(),
 		"Parameters":     reflect.TypeOf((*dsa.Parameters)(nil)).Elem(),

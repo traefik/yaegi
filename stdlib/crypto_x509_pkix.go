@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["crypto/x509/pkix"] = map[string]reflect.Value{}
+
 	Type["crypto/x509/pkix"] = map[string]reflect.Type{
 		"AlgorithmIdentifier":          reflect.TypeOf((*pkix.AlgorithmIdentifier)(nil)).Elem(),
 		"AttributeTypeAndValue":        reflect.TypeOf((*pkix.AttributeTypeAndValue)(nil)).Elem(),

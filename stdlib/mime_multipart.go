@@ -13,6 +13,7 @@ func init() {
 		"NewReader":          reflect.ValueOf(multipart.NewReader),
 		"NewWriter":          reflect.ValueOf(multipart.NewWriter),
 	}
+
 	Type["mime/multipart"] = map[string]reflect.Type{
 		"File":       reflect.TypeOf((*multipart.File)(nil)).Elem(),
 		"FileHeader": reflect.TypeOf((*multipart.FileHeader)(nil)).Elem(),

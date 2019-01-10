@@ -19,6 +19,7 @@ func init() {
 		"NewGCMWithTagSize":   reflect.ValueOf(cipher.NewGCMWithTagSize),
 		"NewOFB":              reflect.ValueOf(cipher.NewOFB),
 	}
+
 	Type["crypto/cipher"] = map[string]reflect.Type{
 		"AEAD":         reflect.TypeOf((*cipher.AEAD)(nil)).Elem(),
 		"Block":        reflect.TypeOf((*cipher.Block)(nil)).Elem(),

@@ -18,5 +18,6 @@ func init() {
 		"TempFile":  reflect.ValueOf(ioutil.TempFile),
 		"WriteFile": reflect.ValueOf(ioutil.WriteFile),
 	}
+
 	Type["io/ioutil"] = map[string]reflect.Type{}
 }

@@ -34,6 +34,7 @@ func init() {
 		"ParseGlob":            reflect.ValueOf(template.ParseGlob),
 		"URLQueryEscaper":      reflect.ValueOf(template.URLQueryEscaper),
 	}
+
 	Type["html/template"] = map[string]reflect.Type{
 		"CSS":       reflect.TypeOf((*template.CSS)(nil)).Elem(),
 		"Error":     reflect.TypeOf((*template.Error)(nil)).Elem(),

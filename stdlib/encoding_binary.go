@@ -24,6 +24,7 @@ func init() {
 		"Varint":         reflect.ValueOf(binary.Varint),
 		"Write":          reflect.ValueOf(binary.Write),
 	}
+
 	Type["encoding/binary"] = map[string]reflect.Type{
 		"ByteOrder": reflect.TypeOf((*binary.ByteOrder)(nil)).Elem(),
 	}

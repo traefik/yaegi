@@ -18,6 +18,7 @@ func init() {
 		"NewString": reflect.ValueOf(expvar.NewString),
 		"Publish":   reflect.ValueOf(expvar.Publish),
 	}
+
 	Type["expvar"] = map[string]reflect.Type{
 		"Float":    reflect.TypeOf((*expvar.Float)(nil)).Elem(),
 		"Func":     reflect.TypeOf((*expvar.Func)(nil)).Elem(),

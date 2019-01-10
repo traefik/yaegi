@@ -20,6 +20,7 @@ func init() {
 		"NewWriterLevel":     reflect.ValueOf(gzip.NewWriterLevel),
 		"NoCompression":      reflect.ValueOf(gzip.NoCompression),
 	}
+
 	Type["compress/gzip"] = map[string]reflect.Type{
 		"Header": reflect.TypeOf((*gzip.Header)(nil)).Elem(),
 		"Reader": reflect.TypeOf((*gzip.Reader)(nil)).Elem(),

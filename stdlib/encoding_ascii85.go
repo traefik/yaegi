@@ -15,6 +15,7 @@ func init() {
 		"NewDecoder":    reflect.ValueOf(ascii85.NewDecoder),
 		"NewEncoder":    reflect.ValueOf(ascii85.NewEncoder),
 	}
+
 	Type["encoding/ascii85"] = map[string]reflect.Type{
 		"CorruptInputError": reflect.TypeOf((*ascii85.CorruptInputError)(nil)).Elem(),
 	}

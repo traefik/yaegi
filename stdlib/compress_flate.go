@@ -19,6 +19,7 @@ func init() {
 		"NewWriterDict":      reflect.ValueOf(flate.NewWriterDict),
 		"NoCompression":      reflect.ValueOf(flate.NoCompression),
 	}
+
 	Type["compress/flate"] = map[string]reflect.Type{
 		"CorruptInputError": reflect.TypeOf((*flate.CorruptInputError)(nil)).Elem(),
 		"InternalError":     reflect.TypeOf((*flate.InternalError)(nil)).Elem(),

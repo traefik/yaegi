@@ -12,5 +12,6 @@ func init() {
 		"Equal": reflect.ValueOf(hmac.Equal),
 		"New":   reflect.ValueOf(hmac.New),
 	}
+
 	Type["crypto/hmac"] = map[string]reflect.Type{}
 }

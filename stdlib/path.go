@@ -19,5 +19,6 @@ func init() {
 		"Match":         reflect.ValueOf(path.Match),
 		"Split":         reflect.ValueOf(path.Split),
 	}
+
 	Type["path"] = map[string]reflect.Type{}
 }

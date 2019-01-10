@@ -11,6 +11,7 @@ func init() {
 	Value["index/suffixarray"] = map[string]reflect.Value{
 		"New": reflect.ValueOf(suffixarray.New),
 	}
+
 	Type["index/suffixarray"] = map[string]reflect.Type{
 		"Index": reflect.TypeOf((*suffixarray.Index)(nil)).Elem(),
 	}

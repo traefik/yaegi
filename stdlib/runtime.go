@@ -47,6 +47,7 @@ func init() {
 		"UnlockOSThread":          reflect.ValueOf(runtime.UnlockOSThread),
 		"Version":                 reflect.ValueOf(runtime.Version),
 	}
+
 	Type["runtime"] = map[string]reflect.Type{
 		"BlockProfileRecord": reflect.TypeOf((*runtime.BlockProfileRecord)(nil)).Elem(),
 		"Error":              reflect.TypeOf((*runtime.Error)(nil)).Elem(),

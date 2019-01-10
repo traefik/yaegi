@@ -21,6 +21,7 @@ func init() {
 		"NewDecoder":     reflect.ValueOf(hex.NewDecoder),
 		"NewEncoder":     reflect.ValueOf(hex.NewEncoder),
 	}
+
 	Type["encoding/hex"] = map[string]reflect.Type{
 		"InvalidByteError": reflect.TypeOf((*hex.InvalidByteError)(nil)).Elem(),
 	}

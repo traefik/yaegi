@@ -18,6 +18,7 @@ func init() {
 		"MustCompilePOSIX": reflect.ValueOf(regexp.MustCompilePOSIX),
 		"QuoteMeta":        reflect.ValueOf(regexp.QuoteMeta),
 	}
+
 	Type["regexp"] = map[string]reflect.Type{
 		"Regexp": reflect.TypeOf((*regexp.Regexp)(nil)).Elem(),
 	}

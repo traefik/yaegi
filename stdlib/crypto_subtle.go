@@ -16,5 +16,6 @@ func init() {
 		"ConstantTimeLessOrEq": reflect.ValueOf(subtle.ConstantTimeLessOrEq),
 		"ConstantTimeSelect":   reflect.ValueOf(subtle.ConstantTimeSelect),
 	}
+
 	Type["crypto/subtle"] = map[string]reflect.Type{}
 }

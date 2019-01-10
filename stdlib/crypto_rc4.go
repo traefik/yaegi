@@ -11,6 +11,7 @@ func init() {
 	Value["crypto/rc4"] = map[string]reflect.Value{
 		"NewCipher": reflect.ValueOf(rc4.NewCipher),
 	}
+
 	Type["crypto/rc4"] = map[string]reflect.Type{
 		"Cipher":       reflect.TypeOf((*rc4.Cipher)(nil)).Elem(),
 		"KeySizeError": reflect.TypeOf((*rc4.KeySizeError)(nil)).Elem(),

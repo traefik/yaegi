@@ -16,6 +16,7 @@ func init() {
 		"NewTLSServer":       reflect.ValueOf(httptest.NewTLSServer),
 		"NewUnstartedServer": reflect.ValueOf(httptest.NewUnstartedServer),
 	}
+
 	Type["net/http/httptest"] = map[string]reflect.Type{
 		"ResponseRecorder": reflect.TypeOf((*httptest.ResponseRecorder)(nil)).Elem(),
 		"Server":           reflect.TypeOf((*httptest.Server)(nil)).Elem(),

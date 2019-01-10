@@ -29,6 +29,7 @@ func init() {
 		"Uint32":      reflect.ValueOf(rand.Uint32),
 		"Uint64":      reflect.ValueOf(rand.Uint64),
 	}
+
 	Type["math/rand"] = map[string]reflect.Type{
 		"Rand":     reflect.TypeOf((*rand.Rand)(nil)).Elem(),
 		"Source":   reflect.TypeOf((*rand.Source)(nil)).Elem(),

@@ -11,6 +11,7 @@ func init() {
 	Value["container/ring"] = map[string]reflect.Value{
 		"New": reflect.ValueOf(ring.New),
 	}
+
 	Type["container/ring"] = map[string]reflect.Type{
 		"Ring": reflect.TypeOf((*ring.Ring)(nil)).Elem(),
 	}

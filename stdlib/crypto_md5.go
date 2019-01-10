@@ -14,5 +14,6 @@ func init() {
 		"Size":      reflect.ValueOf(md5.Size),
 		"Sum":       reflect.ValueOf(md5.Sum),
 	}
+
 	Type["crypto/md5"] = map[string]reflect.Type{}
 }

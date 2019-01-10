@@ -17,6 +17,7 @@ func init() {
 		"P521":        reflect.ValueOf(elliptic.P521),
 		"Unmarshal":   reflect.ValueOf(elliptic.Unmarshal),
 	}
+
 	Type["crypto/elliptic"] = map[string]reflect.Type{
 		"Curve":       reflect.TypeOf((*elliptic.Curve)(nil)).Elem(),
 		"CurveParams": reflect.TypeOf((*elliptic.CurveParams)(nil)).Elem(),

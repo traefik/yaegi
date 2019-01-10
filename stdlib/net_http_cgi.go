@@ -13,6 +13,7 @@ func init() {
 		"RequestFromMap": reflect.ValueOf(cgi.RequestFromMap),
 		"Serve":          reflect.ValueOf(cgi.Serve),
 	}
+
 	Type["net/http/cgi"] = map[string]reflect.Type{
 		"Handler": reflect.TypeOf((*cgi.Handler)(nil)).Elem(),
 	}

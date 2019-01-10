@@ -20,6 +20,7 @@ func init() {
 		"IsLocalImport": reflect.ValueOf(build.IsLocalImport),
 		"ToolDir":       reflect.ValueOf(build.ToolDir),
 	}
+
 	Type["go/build"] = map[string]reflect.Type{
 		"Context":              reflect.TypeOf((*build.Context)(nil)).Elem(),
 		"ImportMode":           reflect.TypeOf((*build.ImportMode)(nil)).Elem(),

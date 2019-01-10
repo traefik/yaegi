@@ -103,6 +103,7 @@ func init() {
 		"WriteSignature":          reflect.ValueOf(types.WriteSignature),
 		"WriteType":               reflect.ValueOf(types.WriteType),
 	}
+
 	Type["go/types"] = map[string]reflect.Type{
 		"Array":         reflect.TypeOf((*types.Array)(nil)).Elem(),
 		"Basic":         reflect.TypeOf((*types.Basic)(nil)).Elem(),

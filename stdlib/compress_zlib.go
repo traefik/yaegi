@@ -23,6 +23,7 @@ func init() {
 		"NewWriterLevelDict": reflect.ValueOf(zlib.NewWriterLevelDict),
 		"NoCompression":      reflect.ValueOf(zlib.NoCompression),
 	}
+
 	Type["compress/zlib"] = map[string]reflect.Type{
 		"Resetter": reflect.TypeOf((*zlib.Resetter)(nil)).Elem(),
 		"Writer":   reflect.TypeOf((*zlib.Writer)(nil)).Elem(),

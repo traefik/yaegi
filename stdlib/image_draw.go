@@ -15,6 +15,7 @@ func init() {
 		"Over":           reflect.ValueOf(draw.Over),
 		"Src":            reflect.ValueOf(draw.Src),
 	}
+
 	Type["image/draw"] = map[string]reflect.Type{
 		"Drawer":    reflect.TypeOf((*draw.Drawer)(nil)).Elem(),
 		"Image":     reflect.TypeOf((*draw.Image)(nil)).Elem(),

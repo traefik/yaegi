@@ -17,6 +17,7 @@ func init() {
 		"Encode":             reflect.ValueOf(png.Encode),
 		"NoCompression":      reflect.ValueOf(png.NoCompression),
 	}
+
 	Type["image/png"] = map[string]reflect.Type{
 		"CompressionLevel":  reflect.TypeOf((*png.CompressionLevel)(nil)).Elem(),
 		"Encoder":           reflect.TypeOf((*png.Encoder)(nil)).Elem(),

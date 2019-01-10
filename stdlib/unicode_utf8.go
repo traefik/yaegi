@@ -28,5 +28,6 @@ func init() {
 		"ValidRune":              reflect.ValueOf(utf8.ValidRune),
 		"ValidString":            reflect.ValueOf(utf8.ValidString),
 	}
+
 	Type["unicode/utf8"] = map[string]reflect.Type{}
 }

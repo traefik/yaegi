@@ -41,6 +41,7 @@ func init() {
 		"ZP":                     reflect.ValueOf(image.ZP),
 		"ZR":                     reflect.ValueOf(image.ZR),
 	}
+
 	Type["image"] = map[string]reflect.Type{
 		"Alpha":               reflect.TypeOf((*image.Alpha)(nil)).Elem(),
 		"Alpha16":             reflect.TypeOf((*image.Alpha16)(nil)).Elem(),

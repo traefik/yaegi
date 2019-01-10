@@ -39,6 +39,7 @@ func init() {
 		"SwapUint64":            reflect.ValueOf(atomic.SwapUint64),
 		"SwapUintptr":           reflect.ValueOf(atomic.SwapUintptr),
 	}
+
 	Type["sync/atomic"] = map[string]reflect.Type{
 		"Value": reflect.TypeOf((*atomic.Value)(nil)).Elem(),
 	}

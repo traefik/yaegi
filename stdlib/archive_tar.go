@@ -35,6 +35,7 @@ func init() {
 		"TypeXGlobalHeader":  reflect.ValueOf(tar.TypeXGlobalHeader),
 		"TypeXHeader":        reflect.ValueOf(tar.TypeXHeader),
 	}
+
 	Type["archive/tar"] = map[string]reflect.Type{
 		"Format": reflect.TypeOf((*tar.Format)(nil)).Elem(),
 		"Header": reflect.TypeOf((*tar.Header)(nil)).Elem(),

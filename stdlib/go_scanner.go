@@ -12,6 +12,7 @@ func init() {
 		"PrintError":   reflect.ValueOf(scanner.PrintError),
 		"ScanComments": reflect.ValueOf(scanner.ScanComments),
 	}
+
 	Type["go/scanner"] = map[string]reflect.Type{
 		"Error":        reflect.TypeOf((*scanner.Error)(nil)).Elem(),
 		"ErrorHandler": reflect.TypeOf((*scanner.ErrorHandler)(nil)).Elem(),

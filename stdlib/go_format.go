@@ -12,5 +12,6 @@ func init() {
 		"Node":   reflect.ValueOf(format.Node),
 		"Source": reflect.ValueOf(format.Source),
 	}
+
 	Type["go/format"] = map[string]reflect.Type{}
 }
