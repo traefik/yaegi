@@ -101,11 +101,12 @@ func fixConst(name string, val constant.Value) string {
 		str := val.ExactString()
 		i, err := strconv.ParseInt(str, 0, 64)
 		if err == nil {
-			if i == int64(int32(i)) {
+			switch {
+			case i == int64(int32(i)):
 				return name
-			} else if i == int64(uint32(i)) {
+			case i == int64(uint32(i)):
 				return "uint32(" + name + ")"
-			} else {
+			default:
 				return "int64(" + name + ")"
 			}
 		}
