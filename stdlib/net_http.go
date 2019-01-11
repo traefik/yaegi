@@ -152,6 +152,7 @@ func init() {
 		"TimeoutHandler":                      reflect.ValueOf(http.TimeoutHandler),
 		"TrailerPrefix":                       reflect.ValueOf(http.TrailerPrefix),
 	}
+
 	Type["net/http"] = map[string]reflect.Type{
 		"Client":         reflect.TypeOf((*http.Client)(nil)).Elem(),
 		"CloseNotifier":  reflect.TypeOf((*http.CloseNotifier)(nil)).Elem(),

@@ -14,6 +14,7 @@ func init() {
 		"DefaultQuality": reflect.ValueOf(jpeg.DefaultQuality),
 		"Encode":         reflect.ValueOf(jpeg.Encode),
 	}
+
 	Type["image/jpeg"] = map[string]reflect.Type{
 		"FormatError":      reflect.TypeOf((*jpeg.FormatError)(nil)).Elem(),
 		"Options":          reflect.TypeOf((*jpeg.Options)(nil)).Elem(),

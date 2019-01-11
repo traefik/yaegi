@@ -18,6 +18,7 @@ func init() {
 		"StripEscape":         reflect.ValueOf(tabwriter.StripEscape),
 		"TabIndent":           reflect.ValueOf(tabwriter.TabIndent),
 	}
+
 	Type["text/tabwriter"] = map[string]reflect.Type{
 		"Writer": reflect.TypeOf((*tabwriter.Writer)(nil)).Elem(),
 	}

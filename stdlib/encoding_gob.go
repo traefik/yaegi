@@ -14,6 +14,7 @@ func init() {
 		"Register":     reflect.ValueOf(gob.Register),
 		"RegisterName": reflect.ValueOf(gob.RegisterName),
 	}
+
 	Type["encoding/gob"] = map[string]reflect.Type{
 		"CommonType": reflect.TypeOf((*gob.CommonType)(nil)).Elem(),
 		"Decoder":    reflect.TypeOf((*gob.Decoder)(nil)).Elem(),

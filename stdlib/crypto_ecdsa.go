@@ -13,6 +13,7 @@ func init() {
 		"Sign":        reflect.ValueOf(ecdsa.Sign),
 		"Verify":      reflect.ValueOf(ecdsa.Verify),
 	}
+
 	Type["crypto/ecdsa"] = map[string]reflect.Type{
 		"PrivateKey": reflect.TypeOf((*ecdsa.PrivateKey)(nil)).Elem(),
 		"PublicKey":  reflect.TypeOf((*ecdsa.PublicKey)(nil)).Elem(),

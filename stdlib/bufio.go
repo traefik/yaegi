@@ -29,6 +29,7 @@ func init() {
 		"ScanRunes":            reflect.ValueOf(bufio.ScanRunes),
 		"ScanWords":            reflect.ValueOf(bufio.ScanWords),
 	}
+
 	Type["bufio"] = map[string]reflect.Type{
 		"ReadWriter": reflect.TypeOf((*bufio.ReadWriter)(nil)).Elem(),
 		"Reader":     reflect.TypeOf((*bufio.Reader)(nil)).Elem(),

@@ -23,6 +23,7 @@ func init() {
 		"NewServerConn":             reflect.ValueOf(httputil.NewServerConn),
 		"NewSingleHostReverseProxy": reflect.ValueOf(httputil.NewSingleHostReverseProxy),
 	}
+
 	Type["net/http/httputil"] = map[string]reflect.Type{
 		"BufferPool":   reflect.TypeOf((*httputil.BufferPool)(nil)).Elem(),
 		"ClientConn":   reflect.TypeOf((*httputil.ClientConn)(nil)).Elem(),

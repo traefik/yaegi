@@ -16,5 +16,6 @@ func init() {
 		"New64":   reflect.ValueOf(fnv.New64),
 		"New64a":  reflect.ValueOf(fnv.New64a),
 	}
+
 	Type["hash/fnv"] = map[string]reflect.Type{}
 }

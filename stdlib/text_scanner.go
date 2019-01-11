@@ -14,7 +14,7 @@ func init() {
 		"EOF":            reflect.ValueOf(scanner.EOF),
 		"Float":          reflect.ValueOf(scanner.Float),
 		"GoTokens":       reflect.ValueOf(scanner.GoTokens),
-		"GoWhitespace":   reflect.ValueOf(scanner.GoWhitespace),
+		"GoWhitespace":   reflect.ValueOf(int64(scanner.GoWhitespace)),
 		"Ident":          reflect.ValueOf(scanner.Ident),
 		"Int":            reflect.ValueOf(scanner.Int),
 		"RawString":      reflect.ValueOf(scanner.RawString),
@@ -29,6 +29,7 @@ func init() {
 		"String":         reflect.ValueOf(scanner.String),
 		"TokenString":    reflect.ValueOf(scanner.TokenString),
 	}
+
 	Type["text/scanner"] = map[string]reflect.Type{
 		"Position": reflect.TypeOf((*scanner.Position)(nil)).Elem(),
 		"Scanner":  reflect.TypeOf((*scanner.Scanner)(nil)).Elem(),

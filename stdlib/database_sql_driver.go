@@ -20,6 +20,7 @@ func init() {
 		"ResultNoRows":              reflect.ValueOf(driver.ResultNoRows),
 		"String":                    reflect.ValueOf(driver.String),
 	}
+
 	Type["database/sql/driver"] = map[string]reflect.Type{
 		"ColumnConverter":                reflect.TypeOf((*driver.ColumnConverter)(nil)).Elem(),
 		"Conn":                           reflect.TypeOf((*driver.Conn)(nil)).Elem(),

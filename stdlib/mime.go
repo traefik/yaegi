@@ -18,6 +18,7 @@ func init() {
 		"QEncoding":                reflect.ValueOf(mime.QEncoding),
 		"TypeByExtension":          reflect.ValueOf(mime.TypeByExtension),
 	}
+
 	Type["mime"] = map[string]reflect.Type{
 		"WordDecoder": reflect.TypeOf((*mime.WordDecoder)(nil)).Elem(),
 		"WordEncoder": reflect.TypeOf((*mime.WordEncoder)(nil)).Elem(),

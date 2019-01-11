@@ -21,6 +21,7 @@ func init() {
 		"SpuriousErrors":    reflect.ValueOf(parser.SpuriousErrors),
 		"Trace":             reflect.ValueOf(parser.Trace),
 	}
+
 	Type["go/parser"] = map[string]reflect.Type{
 		"Mode": reflect.TypeOf((*parser.Mode)(nil)).Elem(),
 	}

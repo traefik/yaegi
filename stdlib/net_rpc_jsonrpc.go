@@ -15,5 +15,6 @@ func init() {
 		"NewServerCodec": reflect.ValueOf(jsonrpc.NewServerCodec),
 		"ServeConn":      reflect.ValueOf(jsonrpc.ServeConn),
 	}
+
 	Type["net/rpc/jsonrpc"] = map[string]reflect.Type{}
 }

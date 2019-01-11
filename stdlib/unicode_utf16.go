@@ -15,5 +15,6 @@ func init() {
 		"EncodeRune":  reflect.ValueOf(utf16.EncodeRune),
 		"IsSurrogate": reflect.ValueOf(utf16.IsSurrogate),
 	}
+
 	Type["unicode/utf16"] = map[string]reflect.Type{}
 }

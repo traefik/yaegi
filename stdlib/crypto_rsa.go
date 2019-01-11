@@ -26,6 +26,7 @@ func init() {
 		"VerifyPKCS1v15":            reflect.ValueOf(rsa.VerifyPKCS1v15),
 		"VerifyPSS":                 reflect.ValueOf(rsa.VerifyPSS),
 	}
+
 	Type["crypto/rsa"] = map[string]reflect.Type{
 		"CRTValue":               reflect.TypeOf((*rsa.CRTValue)(nil)).Elem(),
 		"OAEPOptions":            reflect.TypeOf((*rsa.OAEPOptions)(nil)).Elem(),

@@ -55,6 +55,7 @@ func init() {
 		"TrimSpace":      reflect.ValueOf(strings.TrimSpace),
 		"TrimSuffix":     reflect.ValueOf(strings.TrimSuffix),
 	}
+
 	Type["strings"] = map[string]reflect.Type{
 		"Builder":  reflect.TypeOf((*strings.Builder)(nil)).Elem(),
 		"Reader":   reflect.TypeOf((*strings.Reader)(nil)).Elem(),

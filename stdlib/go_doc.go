@@ -19,6 +19,7 @@ func init() {
 		"ToHTML":          reflect.ValueOf(doc.ToHTML),
 		"ToText":          reflect.ValueOf(doc.ToText),
 	}
+
 	Type["go/doc"] = map[string]reflect.Type{
 		"Example": reflect.TypeOf((*doc.Example)(nil)).Elem(),
 		"Filter":  reflect.TypeOf((*doc.Filter)(nil)).Elem(),

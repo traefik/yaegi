@@ -15,6 +15,7 @@ func init() {
 		"Push":   reflect.ValueOf(heap.Push),
 		"Remove": reflect.ValueOf(heap.Remove),
 	}
+
 	Type["container/heap"] = map[string]reflect.Type{
 		"Interface": reflect.TypeOf((*heap.Interface)(nil)).Elem(),
 	}

@@ -13,5 +13,6 @@ func init() {
 		"New":      reflect.ValueOf(adler32.New),
 		"Size":     reflect.ValueOf(adler32.Size),
 	}
+
 	Type["hash/adler32"] = map[string]reflect.Type{}
 }

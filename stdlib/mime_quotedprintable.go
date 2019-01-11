@@ -12,6 +12,7 @@ func init() {
 		"NewReader": reflect.ValueOf(quotedprintable.NewReader),
 		"NewWriter": reflect.ValueOf(quotedprintable.NewWriter),
 	}
+
 	Type["mime/quotedprintable"] = map[string]reflect.Type{
 		"Reader": reflect.TypeOf((*quotedprintable.Reader)(nil)).Elem(),
 		"Writer": reflect.TypeOf((*quotedprintable.Writer)(nil)).Elem(),

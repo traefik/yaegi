@@ -11,5 +11,6 @@ func init() {
 	Value["errors"] = map[string]reflect.Value{
 		"New": reflect.ValueOf(errors.New),
 	}
+
 	Type["errors"] = map[string]reflect.Type{}
 }

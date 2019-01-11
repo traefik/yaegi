@@ -10,35 +10,35 @@ var Type = map[string]map[string]reflect.Type{}
 
 // Provide access to go standard library (http://golang.org/pkg/)
 
-//go:generate go run ../cmd/goexports/goexports.go archive/tar archive/zip
-//go:generate go run ../cmd/goexports/goexports.go bufio bytes
-//go:generate go run ../cmd/goexports/goexports.go compress/bzip2 compress/flate compress/gzip compress/lzw compress/zlib
-//go:generate go run ../cmd/goexports/goexports.go container/heap container/list container/ring
-//go:generate go run ../cmd/goexports/goexports.go context crypto crypto/aes crypto/cipher crypto/des crypto/dsa
-//go:generate go run ../cmd/goexports/goexports.go crypto/ecdsa crypto/elliptic crypto/hmac crypto/md5 crypto/rand
-//go:generate go run ../cmd/goexports/goexports.go crypto/rc4 crypto/rsa crypto/sha1 crypto/sha256 crypto/sha512
-//go:generate go run ../cmd/goexports/goexports.go crypto/subtle crypto/tls crypto/x509 crypto/x509/pkix
-//go:generate go run ../cmd/goexports/goexports.go database/sql database/sql/driver
-//go:generate go run ../cmd/goexports/goexports.go encoding encoding/ascii85 encoding/asn1 encoding/base32
-//go:generate go run ../cmd/goexports/goexports.go encoding/base64 encoding/binary encoding/csv encoding/gob
-//go:generate go run ../cmd/goexports/goexports.go encoding/hex encoding/json encoding/pem encoding/xml
-//go:generate go run ../cmd/goexports/goexports.go errors expvar flag fmt
-//go:generate go run ../cmd/goexports/goexports.go go/ast go/build go/constant go/doc go/format go/importer
-//go:generate go run ../cmd/goexports/goexports.go go/parser go/printer go/scanner go/token go/types
-//go:generate go run ../cmd/goexports/goexports.go hash hash/adler32 hash/crc32 hash/crc64 hash/fnv
-//go:generate go run ../cmd/goexports/goexports.go html html/template
-//go:generate go run ../cmd/goexports/goexports.go image image/color image/color/palette
-//go:generate go run ../cmd/goexports/goexports.go image/draw image/gif image/jpeg image/png
-//go:generate go run ../cmd/goexports/goexports.go index/suffixarray io io/ioutil log log/syslog
-//go:generate go run ../cmd/goexports/goexports.go math math/big math/bits math/cmplx math/rand
-//go:generate go run ../cmd/goexports/goexports.go mime mime/multipart mime/quotedprintable
-//go:generate go run ../cmd/goexports/goexports.go net net/http net/http/cgi net/http/cookiejar net/http/fcgi
-//go:generate go run ../cmd/goexports/goexports.go net/http/httptest net/http/httptrace net/http/httputil
-//go:generate go run ../cmd/goexports/goexports.go net/mail net/rpc net/rpc/jsonrpc net/smtp net/textproto net/url
-//go:generate go run ../cmd/goexports/goexports.go os os/exec os/signal os/user
-//go:generate go run ../cmd/goexports/goexports.go path path/filepath reflect regexp regexp/syntax
-//go:generate go run ../cmd/goexports/goexports.go runtime runtime/debug
-//go:generate go run ../cmd/goexports/goexports.go sort strconv strings sync sync/atomic syscall
-//go:generate go run ../cmd/goexports/goexports.go text/scanner text/tabwriter text/template text/template/parse
-//go:generate go run ../cmd/goexports/goexports.go time unsafe
-//go:generate go run ../cmd/goexports/goexports.go unicode unicode/utf16 unicode/utf8
+//go:generate ../cmd/goexports/goexports archive/tar archive/zip
+//go:generate ../cmd/goexports/goexports bufio bytes
+//go:generate ../cmd/goexports/goexports compress/bzip2 compress/flate compress/gzip compress/lzw compress/zlib
+//go:generate ../cmd/goexports/goexports container/heap container/list container/ring
+//go:generate ../cmd/goexports/goexports context crypto crypto/aes crypto/cipher crypto/des crypto/dsa
+//go:generate ../cmd/goexports/goexports crypto/ecdsa crypto/elliptic crypto/hmac crypto/md5 crypto/rand
+//go:generate ../cmd/goexports/goexports crypto/rc4 crypto/rsa crypto/sha1 crypto/sha256 crypto/sha512
+//go:generate ../cmd/goexports/goexports crypto/subtle crypto/tls crypto/x509 crypto/x509/pkix
+//go:generate ../cmd/goexports/goexports database/sql database/sql/driver
+//go:generate ../cmd/goexports/goexports encoding encoding/ascii85 encoding/asn1 encoding/base32
+//go:generate ../cmd/goexports/goexports encoding/base64 encoding/binary encoding/csv encoding/gob
+//go:generate ../cmd/goexports/goexports encoding/hex encoding/json encoding/pem encoding/xml
+//go:generate ../cmd/goexports/goexports errors expvar flag fmt
+//go:generate ../cmd/goexports/goexports go/ast go/build go/constant go/doc go/format go/importer
+//go:generate ../cmd/goexports/goexports go/parser go/printer go/scanner go/token go/types
+//go:generate ../cmd/goexports/goexports hash hash/adler32 hash/crc32 hash/crc64 hash/fnv
+//go:generate ../cmd/goexports/goexports html html/template
+//go:generate ../cmd/goexports/goexports image image/color image/color/palette
+//go:generate ../cmd/goexports/goexports image/draw image/gif image/jpeg image/png
+//go:generate ../cmd/goexports/goexports index/suffixarray io io/ioutil log log/syslog
+//go:generate ../cmd/goexports/goexports math math/big math/bits math/cmplx math/rand
+//go:generate ../cmd/goexports/goexports mime mime/multipart mime/quotedprintable
+//go:generate ../cmd/goexports/goexports net net/http net/http/cgi net/http/cookiejar net/http/fcgi
+//go:generate ../cmd/goexports/goexports net/http/httptest net/http/httptrace net/http/httputil
+//go:generate ../cmd/goexports/goexports net/mail net/rpc net/rpc/jsonrpc net/smtp net/textproto net/url
+//go:generate ../cmd/goexports/goexports os os/exec os/signal os/user
+//go:generate ../cmd/goexports/goexports path path/filepath reflect regexp regexp/syntax
+//go:generate ../cmd/goexports/goexports runtime runtime/debug
+//go:generate ../cmd/goexports/goexports sort strconv strings sync sync/atomic
+//go:generate ../cmd/goexports/goexports text/scanner text/tabwriter text/template text/template/parse
+//go:generate ../cmd/goexports/goexports time unsafe
+//go:generate ../cmd/goexports/goexports unicode unicode/utf16 unicode/utf8

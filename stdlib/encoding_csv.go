@@ -16,6 +16,7 @@ func init() {
 		"NewReader":        reflect.ValueOf(csv.NewReader),
 		"NewWriter":        reflect.ValueOf(csv.NewWriter),
 	}
+
 	Type["encoding/csv"] = map[string]reflect.Type{
 		"ParseError": reflect.TypeOf((*csv.ParseError)(nil)).Elem(),
 		"Reader":     reflect.TypeOf((*csv.Reader)(nil)).Elem(),

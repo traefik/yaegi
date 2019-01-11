@@ -19,6 +19,7 @@ func init() {
 		"StdPadding":     reflect.ValueOf(base64.StdPadding),
 		"URLEncoding":    reflect.ValueOf(base64.URLEncoding),
 	}
+
 	Type["encoding/base64"] = map[string]reflect.Type{
 		"CorruptInputError": reflect.TypeOf((*base64.CorruptInputError)(nil)).Elem(),
 		"Encoding":          reflect.TypeOf((*base64.Encoding)(nil)).Elem(),

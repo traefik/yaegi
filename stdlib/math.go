@@ -62,16 +62,16 @@ func init() {
 		"MaxFloat64":             reflect.ValueOf(math.MaxFloat64),
 		"MaxInt16":               reflect.ValueOf(math.MaxInt16),
 		"MaxInt32":               reflect.ValueOf(math.MaxInt32),
-		"MaxInt64":               reflect.ValueOf(math.MaxInt64),
+		"MaxInt64":               reflect.ValueOf(int64(math.MaxInt64)),
 		"MaxInt8":                reflect.ValueOf(math.MaxInt8),
 		"MaxUint16":              reflect.ValueOf(math.MaxUint16),
-		"MaxUint32":              reflect.ValueOf(math.MaxUint32),
-		"MaxUint64":              reflect.ValueOf(uint(math.MaxUint64)),
+		"MaxUint32":              reflect.ValueOf(uint32(math.MaxUint32)),
+		"MaxUint64":              reflect.ValueOf(uint64(math.MaxUint64)),
 		"MaxUint8":               reflect.ValueOf(math.MaxUint8),
 		"Min":                    reflect.ValueOf(math.Min),
 		"MinInt16":               reflect.ValueOf(math.MinInt16),
 		"MinInt32":               reflect.ValueOf(math.MinInt32),
-		"MinInt64":               reflect.ValueOf(math.MinInt64),
+		"MinInt64":               reflect.ValueOf(int64(math.MinInt64)),
 		"MinInt8":                reflect.ValueOf(math.MinInt8),
 		"Mod":                    reflect.ValueOf(math.Mod),
 		"Modf":                   reflect.ValueOf(math.Modf),
@@ -103,5 +103,6 @@ func init() {
 		"Y1":                     reflect.ValueOf(math.Y1),
 		"Yn":                     reflect.ValueOf(math.Yn),
 	}
+
 	Type["math"] = map[string]reflect.Type{}
 }

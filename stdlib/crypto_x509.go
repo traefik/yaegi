@@ -92,6 +92,7 @@ func init() {
 		"UnknownPublicKeyAlgorithm":                 reflect.ValueOf(x509.UnknownPublicKeyAlgorithm),
 		"UnknownSignatureAlgorithm":                 reflect.ValueOf(x509.UnknownSignatureAlgorithm),
 	}
+
 	Type["crypto/x509"] = map[string]reflect.Type{
 		"CertPool":                   reflect.TypeOf((*x509.CertPool)(nil)).Elem(),
 		"Certificate":                reflect.TypeOf((*x509.Certificate)(nil)).Elem(),

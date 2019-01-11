@@ -56,7 +56,7 @@ func init() {
 		"ModeAppend":        reflect.ValueOf(os.ModeAppend),
 		"ModeCharDevice":    reflect.ValueOf(os.ModeCharDevice),
 		"ModeDevice":        reflect.ValueOf(os.ModeDevice),
-		"ModeDir":           reflect.ValueOf(os.ModeDir),
+		"ModeDir":           reflect.ValueOf(uint32(os.ModeDir)),
 		"ModeExclusive":     reflect.ValueOf(os.ModeExclusive),
 		"ModeIrregular":     reflect.ValueOf(os.ModeIrregular),
 		"ModeNamedPipe":     reflect.ValueOf(os.ModeNamedPipe),
@@ -67,7 +67,7 @@ func init() {
 		"ModeSticky":        reflect.ValueOf(os.ModeSticky),
 		"ModeSymlink":       reflect.ValueOf(os.ModeSymlink),
 		"ModeTemporary":     reflect.ValueOf(os.ModeTemporary),
-		"ModeType":          reflect.ValueOf(os.ModeType),
+		"ModeType":          reflect.ValueOf(uint32(os.ModeType)),
 		"NewFile":           reflect.ValueOf(os.NewFile),
 		"NewSyscallError":   reflect.ValueOf(os.NewSyscallError),
 		"O_APPEND":          reflect.ValueOf(os.O_APPEND),
@@ -103,6 +103,7 @@ func init() {
 		"Unsetenv":          reflect.ValueOf(os.Unsetenv),
 		"UserCacheDir":      reflect.ValueOf(os.UserCacheDir),
 	}
+
 	Type["os"] = map[string]reflect.Type{
 		"File":         reflect.TypeOf((*os.File)(nil)).Elem(),
 		"FileInfo":     reflect.TypeOf((*os.FileInfo)(nil)).Elem(),

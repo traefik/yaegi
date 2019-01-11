@@ -20,6 +20,7 @@ func init() {
 		"Stack":           reflect.ValueOf(debug.Stack),
 		"WriteHeapDump":   reflect.ValueOf(debug.WriteHeapDump),
 	}
+
 	Type["runtime/debug"] = map[string]reflect.Type{
 		"GCStats": reflect.TypeOf((*debug.GCStats)(nil)).Elem(),
 	}

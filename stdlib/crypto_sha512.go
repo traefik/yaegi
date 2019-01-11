@@ -23,5 +23,6 @@ func init() {
 		"Sum512_224": reflect.ValueOf(sha512.Sum512_224),
 		"Sum512_256": reflect.ValueOf(sha512.Sum512_256),
 	}
+
 	Type["crypto/sha512"] = map[string]reflect.Type{}
 }

@@ -97,6 +97,7 @@ func init() {
 		"XOR":            reflect.ValueOf(token.XOR),
 		"XOR_ASSIGN":     reflect.ValueOf(token.XOR_ASSIGN),
 	}
+
 	Type["go/token"] = map[string]reflect.Type{
 		"File":     reflect.TypeOf((*token.File)(nil)).Elem(),
 		"FileSet":  reflect.TypeOf((*token.FileSet)(nil)).Elem(),

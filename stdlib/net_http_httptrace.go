@@ -12,6 +12,7 @@ func init() {
 		"ContextClientTrace": reflect.ValueOf(httptrace.ContextClientTrace),
 		"WithClientTrace":    reflect.ValueOf(httptrace.WithClientTrace),
 	}
+
 	Type["net/http/httptrace"] = map[string]reflect.Type{
 		"ClientTrace":      reflect.TypeOf((*httptrace.ClientTrace)(nil)).Elem(),
 		"DNSDoneInfo":      reflect.TypeOf((*httptrace.DNSDoneInfo)(nil)).Elem(),

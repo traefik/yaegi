@@ -12,5 +12,6 @@ func init() {
 		"EscapeString":   reflect.ValueOf(html.EscapeString),
 		"UnescapeString": reflect.ValueOf(html.UnescapeString),
 	}
+
 	Type["html"] = map[string]reflect.Type{}
 }

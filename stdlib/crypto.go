@@ -30,6 +30,7 @@ func init() {
 		"SHA512_224":   reflect.ValueOf(crypto.SHA512_224),
 		"SHA512_256":   reflect.ValueOf(crypto.SHA512_256),
 	}
+
 	Type["crypto"] = map[string]reflect.Type{
 		"Decrypter":     reflect.TypeOf((*crypto.Decrypter)(nil)).Elem(),
 		"DecrypterOpts": reflect.TypeOf((*crypto.DecrypterOpts)(nil)).Elem(),

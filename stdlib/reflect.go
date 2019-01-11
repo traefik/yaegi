@@ -66,6 +66,7 @@ func init() {
 		"ValueOf":         reflect.ValueOf(reflect.ValueOf),
 		"Zero":            reflect.ValueOf(reflect.Zero),
 	}
+
 	Type["reflect"] = map[string]reflect.Type{
 		"ChanDir":      reflect.TypeOf((*reflect.ChanDir)(nil)).Elem(),
 		"Kind":         reflect.TypeOf((*reflect.Kind)(nil)).Elem(),

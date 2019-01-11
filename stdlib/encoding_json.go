@@ -19,6 +19,7 @@ func init() {
 		"Unmarshal":     reflect.ValueOf(json.Unmarshal),
 		"Valid":         reflect.ValueOf(json.Valid),
 	}
+
 	Type["encoding/json"] = map[string]reflect.Type{
 		"Decoder":               reflect.TypeOf((*json.Decoder)(nil)).Elem(),
 		"Delim":                 reflect.TypeOf((*json.Delim)(nil)).Elem(),

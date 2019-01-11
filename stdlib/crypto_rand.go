@@ -14,5 +14,6 @@ func init() {
 		"Read":   reflect.ValueOf(rand.Read),
 		"Reader": reflect.ValueOf(rand.Reader),
 	}
+
 	Type["crypto/rand"] = map[string]reflect.Type{}
 }

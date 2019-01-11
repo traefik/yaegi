@@ -32,6 +32,7 @@ func init() {
 		"NodeWith":       reflect.ValueOf(parse.NodeWith),
 		"Parse":          reflect.ValueOf(parse.Parse),
 	}
+
 	Type["text/template/parse"] = map[string]reflect.Type{
 		"ActionNode":     reflect.TypeOf((*parse.ActionNode)(nil)).Elem(),
 		"BoolNode":       reflect.TypeOf((*parse.BoolNode)(nil)).Elem(),

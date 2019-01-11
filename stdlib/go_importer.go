@@ -12,6 +12,7 @@ func init() {
 		"Default": reflect.ValueOf(importer.Default),
 		"For":     reflect.ValueOf(importer.For),
 	}
+
 	Type["go/importer"] = map[string]reflect.Type{
 		"Lookup": reflect.TypeOf((*importer.Lookup)(nil)).Elem(),
 	}

@@ -11,6 +11,7 @@ func init() {
 	Value["compress/bzip2"] = map[string]reflect.Value{
 		"NewReader": reflect.ValueOf(bzip2.NewReader),
 	}
+
 	Type["compress/bzip2"] = map[string]reflect.Type{
 		"StructuralError": reflect.TypeOf((*bzip2.StructuralError)(nil)).Elem(),
 	}

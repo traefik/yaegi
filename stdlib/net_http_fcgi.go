@@ -14,5 +14,6 @@ func init() {
 		"ProcessEnv":        reflect.ValueOf(fcgi.ProcessEnv),
 		"Serve":             reflect.ValueOf(fcgi.Serve),
 	}
+
 	Type["net/http/fcgi"] = map[string]reflect.Type{}
 }

@@ -13,6 +13,7 @@ func init() {
 		"Encode":         reflect.ValueOf(pem.Encode),
 		"EncodeToMemory": reflect.ValueOf(pem.EncodeToMemory),
 	}
+
 	Type["encoding/pem"] = map[string]reflect.Type{
 		"Block": reflect.TypeOf((*pem.Block)(nil)).Elem(),
 	}

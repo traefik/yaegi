@@ -14,6 +14,7 @@ func init() {
 		"NewReader": reflect.ValueOf(lzw.NewReader),
 		"NewWriter": reflect.ValueOf(lzw.NewWriter),
 	}
+
 	Type["compress/lzw"] = map[string]reflect.Type{
 		"Order": reflect.TypeOf((*lzw.Order)(nil)).Elem(),
 	}

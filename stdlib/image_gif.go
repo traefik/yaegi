@@ -18,6 +18,7 @@ func init() {
 		"Encode":             reflect.ValueOf(gif.Encode),
 		"EncodeAll":          reflect.ValueOf(gif.EncodeAll),
 	}
+
 	Type["image/gif"] = map[string]reflect.Type{
 		"GIF":     reflect.TypeOf((*gif.GIF)(nil)).Elem(),
 		"Options": reflect.TypeOf((*gif.Options)(nil)).Elem(),

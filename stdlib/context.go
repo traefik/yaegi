@@ -18,6 +18,7 @@ func init() {
 		"WithTimeout":      reflect.ValueOf(context.WithTimeout),
 		"WithValue":        reflect.ValueOf(context.WithValue),
 	}
+
 	Type["context"] = map[string]reflect.Type{
 		"CancelFunc": reflect.TypeOf((*context.CancelFunc)(nil)).Elem(),
 		"Context":    reflect.TypeOf((*context.Context)(nil)).Elem(),

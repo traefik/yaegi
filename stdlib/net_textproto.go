@@ -17,6 +17,7 @@ func init() {
 		"TrimBytes":              reflect.ValueOf(textproto.TrimBytes),
 		"TrimString":             reflect.ValueOf(textproto.TrimString),
 	}
+
 	Type["net/textproto"] = map[string]reflect.Type{
 		"Conn":          reflect.TypeOf((*textproto.Conn)(nil)).Elem(),
 		"Error":         reflect.TypeOf((*textproto.Error)(nil)).Elem(),

@@ -15,5 +15,6 @@ func init() {
 		"Reset":   reflect.ValueOf(signal.Reset),
 		"Stop":    reflect.ValueOf(signal.Stop),
 	}
+
 	Type["os/signal"] = map[string]reflect.Type{}
 }

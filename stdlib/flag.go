@@ -46,6 +46,7 @@ func init() {
 		"Visit":           reflect.ValueOf(flag.Visit),
 		"VisitAll":        reflect.ValueOf(flag.VisitAll),
 	}
+
 	Type["flag"] = map[string]reflect.Type{
 		"ErrorHandling": reflect.TypeOf((*flag.ErrorHandling)(nil)).Elem(),
 		"Flag":          reflect.TypeOf((*flag.Flag)(nil)).Elem(),

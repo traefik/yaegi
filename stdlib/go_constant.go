@@ -45,6 +45,7 @@ func init() {
 		"UnaryOp":         reflect.ValueOf(constant.UnaryOp),
 		"Unknown":         reflect.ValueOf(constant.Unknown),
 	}
+
 	Type["go/constant"] = map[string]reflect.Type{
 		"Kind":  reflect.TypeOf((*constant.Kind)(nil)).Elem(),
 		"Value": reflect.TypeOf((*constant.Value)(nil)).Elem(),

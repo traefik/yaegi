@@ -69,6 +69,7 @@ func init() {
 		"X25519":                                  reflect.ValueOf(tls.X25519),
 		"X509KeyPair":                             reflect.ValueOf(tls.X509KeyPair),
 	}
+
 	Type["crypto/tls"] = map[string]reflect.Type{
 		"Certificate":            reflect.TypeOf((*tls.Certificate)(nil)).Elem(),
 		"CertificateRequestInfo": reflect.TypeOf((*tls.CertificateRequestInfo)(nil)).Elem(),

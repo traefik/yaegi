@@ -17,6 +17,7 @@ func init() {
 		"StdEncoding": reflect.ValueOf(base32.StdEncoding),
 		"StdPadding":  reflect.ValueOf(base32.StdPadding),
 	}
+
 	Type["encoding/base32"] = map[string]reflect.Type{
 		"CorruptInputError": reflect.TypeOf((*base32.CorruptInputError)(nil)).Elem(),
 		"Encoding":          reflect.TypeOf((*base32.Encoding)(nil)).Elem(),

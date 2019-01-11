@@ -31,6 +31,7 @@ func init() {
 		"TeeReader":        reflect.ValueOf(io.TeeReader),
 		"WriteString":      reflect.ValueOf(io.WriteString),
 	}
+
 	Type["io"] = map[string]reflect.Type{
 		"ByteReader":      reflect.TypeOf((*io.ByteReader)(nil)).Elem(),
 		"ByteScanner":     reflect.TypeOf((*io.ByteScanner)(nil)).Elem(),

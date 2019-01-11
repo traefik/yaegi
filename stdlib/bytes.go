@@ -60,6 +60,7 @@ func init() {
 		"TrimSpace":       reflect.ValueOf(bytes.TrimSpace),
 		"TrimSuffix":      reflect.ValueOf(bytes.TrimSuffix),
 	}
+
 	Type["bytes"] = map[string]reflect.Type{
 		"Buffer": reflect.TypeOf((*bytes.Buffer)(nil)).Elem(),
 		"Reader": reflect.TypeOf((*bytes.Reader)(nil)).Elem(),

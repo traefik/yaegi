@@ -32,6 +32,7 @@ func init() {
 		"VolumeName":    reflect.ValueOf(filepath.VolumeName),
 		"Walk":          reflect.ValueOf(filepath.Walk),
 	}
+
 	Type["path/filepath"] = map[string]reflect.Type{
 		"WalkFunc": reflect.TypeOf((*filepath.WalkFunc)(nil)).Elem(),
 	}

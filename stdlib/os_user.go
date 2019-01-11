@@ -15,6 +15,7 @@ func init() {
 		"LookupGroupId": reflect.ValueOf(user.LookupGroupId),
 		"LookupId":      reflect.ValueOf(user.LookupId),
 	}
+
 	Type["os/user"] = map[string]reflect.Type{
 		"Group":               reflect.TypeOf((*user.Group)(nil)).Elem(),
 		"UnknownGroupError":   reflect.TypeOf((*user.UnknownGroupError)(nil)).Elem(),

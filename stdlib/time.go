@@ -19,7 +19,7 @@ func init() {
 		"February":               reflect.ValueOf(time.February),
 		"FixedZone":              reflect.ValueOf(time.FixedZone),
 		"Friday":                 reflect.ValueOf(time.Friday),
-		"Hour":                   reflect.ValueOf(time.Hour),
+		"Hour":                   reflect.ValueOf(int64(time.Hour)),
 		"January":                reflect.ValueOf(time.January),
 		"July":                   reflect.ValueOf(time.July),
 		"June":                   reflect.ValueOf(time.June),
@@ -31,7 +31,7 @@ func init() {
 		"May":                    reflect.ValueOf(time.May),
 		"Microsecond":            reflect.ValueOf(time.Microsecond),
 		"Millisecond":            reflect.ValueOf(time.Millisecond),
-		"Minute":                 reflect.ValueOf(time.Minute),
+		"Minute":                 reflect.ValueOf(int64(time.Minute)),
 		"Monday":                 reflect.ValueOf(time.Monday),
 		"Nanosecond":             reflect.ValueOf(time.Nanosecond),
 		"NewTicker":              reflect.ValueOf(time.NewTicker),
@@ -69,6 +69,7 @@ func init() {
 		"Until":                  reflect.ValueOf(time.Until),
 		"Wednesday":              reflect.ValueOf(time.Wednesday),
 	}
+
 	Type["time"] = map[string]reflect.Type{
 		"Duration":   reflect.TypeOf((*time.Duration)(nil)).Elem(),
 		"Location":   reflect.TypeOf((*time.Location)(nil)).Elem(),

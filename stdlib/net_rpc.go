@@ -27,6 +27,7 @@ func init() {
 		"ServeConn":          reflect.ValueOf(rpc.ServeConn),
 		"ServeRequest":       reflect.ValueOf(rpc.ServeRequest),
 	}
+
 	Type["net/rpc"] = map[string]reflect.Type{
 		"Call":        reflect.TypeOf((*rpc.Call)(nil)).Elem(),
 		"Client":      reflect.TypeOf((*rpc.Client)(nil)).Elem(),
