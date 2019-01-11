@@ -32,7 +32,7 @@ const (
 	ConstDecl
 	Continue
 	DeclStmt
-	Defer
+	DeferStmt
 	Define
 	DefineX
 	Ellipsis
@@ -110,7 +110,7 @@ var kinds = [...]string{
 	ConstDecl:        "ConstDecl",
 	Continue:         "Continue",
 	DeclStmt:         "DeclStmt",
-	Defer:            "Defer",
+	DeferStmt:        "DeferStmt",
 	Define:           "Define",
 	DefineX:          "DefineX",
 	Ellipsis:         "Ellipsis",
@@ -484,6 +484,9 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 
 		case *ast.DeclStmt:
 			st.push(addChild(&root, anc, pos, DeclStmt, Nop))
+
+		case *ast.DeferStmt:
+			st.push(addChild(&root, anc, pos, DeferStmt, Nop))
 
 		case *ast.Ellipsis:
 			st.push(addChild(&root, anc, pos, Ellipsis, Nop))
