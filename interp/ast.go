@@ -32,7 +32,7 @@ const (
 	ConstDecl
 	Continue
 	DeclStmt
-	Defer
+	DeferStmt
 	Define
 	DefineX
 	Ellipsis
@@ -110,7 +110,7 @@ var kinds = [...]string{
 	ConstDecl:        "ConstDecl",
 	Continue:         "Continue",
 	DeclStmt:         "DeclStmt",
-	Defer:            "Defer",
+	DeferStmt:        "DeferStmt",
 	Define:           "Define",
 	DefineX:          "DefineX",
 	Ellipsis:         "Ellipsis",
@@ -193,6 +193,7 @@ const (
 	Case
 	CompositeLit
 	Dec
+	Defer
 	Equal
 	Greater
 	GetFunc
@@ -230,6 +231,7 @@ var actions = [...]string{
 	Case:         "case",
 	CompositeLit: "compositeLit",
 	Dec:          "--",
+	Defer:        "defer",
 	Equal:        "==",
 	Greater:      ">",
 	GetFunc:      "getFunc",
@@ -484,6 +486,9 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 
 		case *ast.DeclStmt:
 			st.push(addChild(&root, anc, pos, DeclStmt, Nop))
+
+		case *ast.DeferStmt:
+			st.push(addChild(&root, anc, pos, DeferStmt, Defer))
 
 		case *ast.Ellipsis:
 			st.push(addChild(&root, anc, pos, Ellipsis, Nop))

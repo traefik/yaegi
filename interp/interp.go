@@ -47,8 +47,9 @@ type Receiver struct {
 
 // Frame contains values for the current execution level
 type Frame struct {
-	anc  *Frame          // ancestor frame (global space)
-	data []reflect.Value // values
+	anc      *Frame            // ancestor frame (global space)
+	data     []reflect.Value   // values
+	deferred [][]reflect.Value // defer stack
 }
 
 // LibValueMap stores the map of extern values per package
