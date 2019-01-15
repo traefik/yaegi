@@ -4,13 +4,13 @@ import "fmt"
 
 func main() {
 	println("hello")
-	defer fmt.Println("bye")
-	defer fmt.Println("au revoir")
+	defer func() {
+		fmt.Println("bye")
+	}()
 	println("world")
 }
 
 // Output:
 // hello
 // world
-// au revoir
 // bye

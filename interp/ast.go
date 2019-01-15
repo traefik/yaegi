@@ -193,6 +193,7 @@ const (
 	Case
 	CompositeLit
 	Dec
+	Defer
 	Equal
 	Greater
 	GetFunc
@@ -230,6 +231,7 @@ var actions = [...]string{
 	Case:         "case",
 	CompositeLit: "compositeLit",
 	Dec:          "--",
+	Defer:        "defer",
 	Equal:        "==",
 	Greater:      ">",
 	GetFunc:      "getFunc",
@@ -486,7 +488,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			st.push(addChild(&root, anc, pos, DeclStmt, Nop))
 
 		case *ast.DeferStmt:
-			st.push(addChild(&root, anc, pos, DeferStmt, Nop))
+			st.push(addChild(&root, anc, pos, DeferStmt, Defer))
 
 		case *ast.Ellipsis:
 			st.push(addChild(&root, anc, pos, Ellipsis, Nop))

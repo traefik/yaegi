@@ -23,6 +23,7 @@ var builtin = [...]BuiltinGenerator{
 	Case:         _case,
 	CompositeLit: arrayLit,
 	Dec:          nop,
+	Defer:        _defer,
 	Equal:        equal,
 	GetFunc:      getFunc,
 	Greater:      greater,
@@ -70,6 +71,9 @@ func (interp *Interpreter) run(n *Node, cf *Frame) {
 func runCfg(n *Node, f *Frame) {
 	for exec := n.exec; exec != nil; {
 		exec = exec(f)
+	}
+	for _, val := range f.deferred {
+		val[0].Call(val[1:])
 	}
 }
 
@@ -327,6 +331,27 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 			}
 			return result
 		})
+	}
+}
+
+func _defer(n *Node) {
+	tnext := getExec(n.tnext)
+	values := make([]func(*Frame) reflect.Value, len(n.child[0].child))
+	for i, c := range n.child[0].child {
+		if c.typ.cat == FuncT {
+			values[i] = genNodeWrapper(c)
+		} else {
+			values[i] = genValue(c)
+		}
+	}
+
+	n.exec = func(f *Frame) Builtin {
+		val := make([]reflect.Value, len(values))
+		for i, v := range values {
+			val[i] = v(f)
+		}
+		f.deferred = append([][]reflect.Value{val}, f.deferred...)
+		return tnext
 	}
 }
 

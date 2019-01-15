@@ -1433,6 +1433,80 @@ func main() {
 	// world
 }
 
+func Example_defer0() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	println("hello")
+	defer fmt.Println("bye")
+	defer fmt.Println("au revoir")
+	println("world")
+}
+`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+	// Output:
+	// hello
+	// world
+	// au revoir
+	// bye
+}
+
+func Example_defer1() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	println("hello")
+	defer func() {
+		fmt.Println("bye")
+	}()
+	println("world")
+}
+`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+	// Output:
+	// hello
+	// world
+	// bye
+}
+
+func Example_defer2() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	println("hello")
+	i := 12
+	defer func() {
+		fmt.Println("i:", i)
+	}()
+	i = 20
+	println("world")
+}
+`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+	// Output:
+	// hello
+	// world
+	// i: 20
+}
+
 func Example_export0() {
 	src := `
 package main
