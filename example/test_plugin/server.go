@@ -31,5 +31,8 @@ func main() {
 	handler := value.Interface().(func(http.ResponseWriter, *http.Request))
 
 	http.HandleFunc("/", handler)
-	http.ListenAndServe(":8080", nil)
+	err = http.ListenAndServe(":8080", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

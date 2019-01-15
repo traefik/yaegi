@@ -3,12 +3,13 @@ package interp
 import (
 	"fmt"
 	"io"
+	"log"
 	"os/exec"
 	"strings"
 )
 
 // AstDot displays an AST in graphviz dot(1) format using dotty(1) co-process
-func (n *Node) AstDot(out io.WriteCloser, name string) {
+func (n *Node) AstDot(out io.Writer, name string) {
 	fmt.Fprintf(out, "digraph ast {\n")
 	fmt.Fprintf(out, "labelloc=\"t\"\n")
 	fmt.Fprintf(out, "label=\"%s\"\n", name)
@@ -35,7 +36,7 @@ func (n *Node) AstDot(out io.WriteCloser, name string) {
 }
 
 // CfgDot displays a CFG in graphviz dot(1) format using dotty(1) co-process
-func (n *Node) CfgDot(out io.WriteCloser) {
+func (n *Node) CfgDot(out io.Writer) {
 	fmt.Fprintf(out, "digraph cfg {\n")
 	n.Walk(nil, func(n *Node) {
 		if n.kind == BasicLit || n.kind == Ident || n.tnext == nil {
@@ -64,8 +65,11 @@ func DotX() io.WriteCloser {
 	//cmd := exec.Command("dot", "-T", "xlib")
 	dotin, err := cmd.StdinPipe()
 	if err != nil {
-		panic("dotty stdin error")
+		log.Fatal(err)
 	}
-	cmd.Start()
+	err = cmd.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
 	return dotin
 }
