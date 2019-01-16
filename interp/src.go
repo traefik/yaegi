@@ -44,11 +44,12 @@ func (i *Interpreter) importSrcFile(path string) error {
 			return err
 		}
 		rootNodes = append(rootNodes, root)
+
 		if i.AstDot {
 			root.AstDot(DotX(), name)
 		}
-		err = i.Gta(root)
-		if err != nil {
+
+		if err = i.Gta(root); err != nil {
 			return err
 		}
 	}
@@ -88,9 +89,8 @@ func pkgDir(path string) (string, error) {
 	}
 
 	dir = filepath.Join(dir, "vendor", path)
-	_, err = os.Stat(dir)
-	if err == nil {
-		return dir, err
+	if _, err = os.Stat(dir); err == nil {
+		return dir, nil // found!
 	}
 
 	dir = filepath.Join(build.Default.GOPATH, "src", path)
