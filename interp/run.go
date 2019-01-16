@@ -2,7 +2,6 @@ package interp
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 )
 
@@ -69,11 +68,18 @@ func (interp *Interpreter) run(n *Node, cf *Frame) {
 
 // runCfg executes a node AST by walking its CFG and running node builtin at each step
 func runCfg(n *Node, f *Frame) {
+	defer func() {
+		f.recovered = recover()
+		for _, val := range f.deferred {
+			val[0].Call(val[1:])
+		}
+		if f.recovered != nil {
+			panic(f.recovered)
+		}
+	}()
+
 	for exec := n.exec; exec != nil; {
 		exec = exec(f)
-	}
-	for _, val := range f.deferred {
-		val[0].Call(val[1:])
 	}
 }
 
@@ -162,9 +168,17 @@ func assign(n *Node) {
 	value1 := genValue(n.child[1])
 	next := getExec(n.tnext)
 
-	n.exec = func(f *Frame) Builtin {
-		value(f).Set(value1(f))
-		return next
+	if n.child[0].typ.cat == InterfaceT {
+		valueAddr := genValueAddr(n)
+		n.exec = func(f *Frame) Builtin {
+			*(valueAddr(f)) = value1(f)
+			return next
+		}
+	} else {
+		n.exec = func(f *Frame) Builtin {
+			value(f).Set(value1(f))
+			return next
+		}
 	}
 }
 
@@ -270,12 +284,28 @@ func _println(n *Node) {
 	}
 }
 
-func _panic(n *Node) {
-	next := getExec(n.tnext)
+func _recover(n *Node) {
+	tnext := getExec(n.tnext)
+	i := n.findex
+	var err error
+	nilErr := reflect.ValueOf(&err).Elem()
 
 	n.exec = func(f *Frame) Builtin {
-		log.Panic("in _panic")
-		return next
+		if f.anc.recovered == nil {
+			f.data[i] = nilErr
+		} else {
+			f.data[i] = reflect.ValueOf(f.anc.recovered)
+			f.anc.recovered = nil
+		}
+		return tnext
+	}
+}
+
+func _panic(n *Node) {
+	value := genValue(n.child[1])
+
+	n.exec = func(f *Frame) Builtin {
+		panic(value(f))
 	}
 }
 

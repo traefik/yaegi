@@ -422,6 +422,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					}
 					n.child[1].val = n.typ
 					n.child[1].kind = BasicLit
+				case "recover":
+					n.typ = scope.getType("interface{}")
 				}
 			} else if n.child[0].isType(scope) {
 				// Type conversion expression
@@ -1184,6 +1186,15 @@ func genValue(n *Node) func(*Frame) reflect.Value {
 			return func(f *Frame) reflect.Value { return v }
 		}
 		return valueGenerator(n, n.findex)
+	}
+}
+
+func genValueAddr(n *Node) func(*Frame) *reflect.Value {
+	return func(f *Frame) *reflect.Value {
+		for level := n.level; level > 0; level-- {
+			f = f.anc
+		}
+		return &f.data[n.findex]
 	}
 }
 

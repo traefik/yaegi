@@ -3226,6 +3226,56 @@ func main() {
 	// 3
 }
 
+func Example_recover0() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	println("hello")
+	defer func() {
+		r := recover()
+		fmt.Println("recover:", r)
+	}()
+	println("world")
+}
+`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+	// Output:
+	// hello
+	// world
+	// recover: <nil>
+}
+
+func Example_recover1() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	println("hello")
+	defer func() {
+		r := recover()
+		fmt.Println("recover:", r)
+	}()
+	panic("test panic")
+	println("world")
+}
+`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+	// Output:
+	// hello
+	// recover: test panic
+}
+
 func Example_ret1() {
 	src := `
 package main
