@@ -46,7 +46,7 @@ func main() {
 		i.Name = args[0]
 		i.Use(stdlib.Value, stdlib.Type)
 		i.Use(interp.ExportValue, interp.ExportType)
-		if _, err := i.Eval(string(s)); err != nil {
+		if _, err := i.Eval(s); err != nil {
 			fmt.Println(err)
 		}
 		if interactive {
