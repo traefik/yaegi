@@ -155,8 +155,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			// For range block: ensure that array or map type is propagated to iterators
 			// prior to process block
 			if n.anc != nil && n.anc.kind == RangeStmt {
-				switch {
-				case n.anc.child[2].typ.cat == ValueT:
+				switch n.anc.child[2].typ.cat {
+				case ValueT:
 					typ := n.anc.child[2].typ.rtype
 
 					switch typ.Kind() {
@@ -171,7 +171,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 						scope.sym[n.anc.child[1].ident].typ = vtype
 						n.anc.child[1].typ = vtype
 					}
-				case n.anc.child[2].typ.cat == MapT:
+				case MapT:
 					scope.sym[n.anc.child[0].ident].typ = n.anc.child[2].typ.key
 					n.anc.child[0].typ = n.anc.child[2].typ.key
 					n.anc.gen = rangeMap

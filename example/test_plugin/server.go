@@ -18,8 +18,7 @@ func main() {
 	i.Use(stdlib.Value, stdlib.Type) // Use binary standard library
 
 	// Load plugin from sources
-	_, err := i.Eval(`import "github.com/containous/dyngo/example/test_plugin/plugin"`)
-	if err != nil {
+	if _, err := i.Eval(`import "github.com/containous/dyngo/example/test_plugin/plugin"`); err != nil {
 		log.Fatal(err)
 	}
 
@@ -31,8 +30,7 @@ func main() {
 	handler := value.Interface().(func(http.ResponseWriter, *http.Request))
 
 	http.HandleFunc("/", handler)
-	err = http.ListenAndServe(":8080", nil)
-	if err != nil {
+	if err = http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
 	}
 }
