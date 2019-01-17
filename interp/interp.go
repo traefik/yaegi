@@ -45,11 +45,12 @@ type Receiver struct {
 	index []int
 }
 
-// Frame contains values for the current execution level
+// Frame contains values for the current execution level (a function context)
 type Frame struct {
-	anc      *Frame            // ancestor frame (global space)
-	data     []reflect.Value   // values
-	deferred [][]reflect.Value // defer stack
+	anc       *Frame            // ancestor frame (global space)
+	data      []reflect.Value   // values
+	deferred  [][]reflect.Value // defer stack
+	recovered interface{}       // to handle panic recover
 }
 
 // LibValueMap stores the map of extern values per package
@@ -127,26 +128,27 @@ func New(opt Opt) *Interpreter {
 func initUniverse() *Scope {
 	scope := &Scope{global: true, sym: SymMap{
 		// predefined Go types
-		"bool":       &Symbol{kind: Typ, typ: &Type{cat: BoolT}},
-		"byte":       &Symbol{kind: Typ, typ: &Type{cat: ByteT}},
-		"complex64":  &Symbol{kind: Typ, typ: &Type{cat: Complex64T}},
-		"complex128": &Symbol{kind: Typ, typ: &Type{cat: Complex128T}},
-		"error":      &Symbol{kind: Typ, typ: &Type{cat: ErrorT}},
-		"float32":    &Symbol{kind: Typ, typ: &Type{cat: Float32T}},
-		"float64":    &Symbol{kind: Typ, typ: &Type{cat: Float64T}},
-		"int":        &Symbol{kind: Typ, typ: &Type{cat: IntT}},
-		"int8":       &Symbol{kind: Typ, typ: &Type{cat: Int8T}},
-		"int16":      &Symbol{kind: Typ, typ: &Type{cat: Int16T}},
-		"int32":      &Symbol{kind: Typ, typ: &Type{cat: Int32T}},
-		"int64":      &Symbol{kind: Typ, typ: &Type{cat: Int64T}},
-		"rune":       &Symbol{kind: Typ, typ: &Type{cat: RuneT}},
-		"string":     &Symbol{kind: Typ, typ: &Type{cat: StringT}},
-		"uint":       &Symbol{kind: Typ, typ: &Type{cat: UintT}},
-		"uint8":      &Symbol{kind: Typ, typ: &Type{cat: Uint8T}},
-		"uint16":     &Symbol{kind: Typ, typ: &Type{cat: Uint16T}},
-		"uint32":     &Symbol{kind: Typ, typ: &Type{cat: Uint32T}},
-		"uint64":     &Symbol{kind: Typ, typ: &Type{cat: Uint64T}},
-		"uintptr":    &Symbol{kind: Typ, typ: &Type{cat: UintptrT}},
+		"bool":        &Symbol{kind: Typ, typ: &Type{cat: BoolT}},
+		"byte":        &Symbol{kind: Typ, typ: &Type{cat: ByteT}},
+		"complex64":   &Symbol{kind: Typ, typ: &Type{cat: Complex64T}},
+		"complex128":  &Symbol{kind: Typ, typ: &Type{cat: Complex128T}},
+		"error":       &Symbol{kind: Typ, typ: &Type{cat: ErrorT}},
+		"float32":     &Symbol{kind: Typ, typ: &Type{cat: Float32T}},
+		"float64":     &Symbol{kind: Typ, typ: &Type{cat: Float64T}},
+		"int":         &Symbol{kind: Typ, typ: &Type{cat: IntT}},
+		"int8":        &Symbol{kind: Typ, typ: &Type{cat: Int8T}},
+		"int16":       &Symbol{kind: Typ, typ: &Type{cat: Int16T}},
+		"int32":       &Symbol{kind: Typ, typ: &Type{cat: Int32T}},
+		"int64":       &Symbol{kind: Typ, typ: &Type{cat: Int64T}},
+		"interface{}": &Symbol{kind: Typ, typ: &Type{cat: InterfaceT}},
+		"rune":        &Symbol{kind: Typ, typ: &Type{cat: RuneT}},
+		"string":      &Symbol{kind: Typ, typ: &Type{cat: StringT}},
+		"uint":        &Symbol{kind: Typ, typ: &Type{cat: UintT}},
+		"uint8":       &Symbol{kind: Typ, typ: &Type{cat: Uint8T}},
+		"uint16":      &Symbol{kind: Typ, typ: &Type{cat: Uint16T}},
+		"uint32":      &Symbol{kind: Typ, typ: &Type{cat: Uint32T}},
+		"uint64":      &Symbol{kind: Typ, typ: &Type{cat: Uint64T}},
+		"uintptr":     &Symbol{kind: Typ, typ: &Type{cat: UintptrT}},
 
 		// predefined Go constants
 		"false": &Symbol{kind: Const, typ: &Type{cat: BoolT}, val: false},
@@ -163,7 +165,8 @@ func initUniverse() *Scope {
 		"make":    &Symbol{kind: Bltn, builtin: _make},
 		"panic":   &Symbol{kind: Bltn, builtin: _panic},
 		"println": &Symbol{kind: Bltn, builtin: _println},
-		// TODO: close, complex, copy, delete, imag, new, print, real, recover
+		"recover": &Symbol{kind: Bltn, builtin: _recover},
+		// TODO: close, complex, copy, delete, imag, new, print, real
 	}}
 	return scope
 }
