@@ -423,7 +423,8 @@ func call(n *Node) {
 		// Copy input parameters from caller
 		for i, v := range values {
 			src := v(f)
-			if method && i == 0 {
+			switch {
+			case method && i == 0:
 				dest := nf.data[def.framepos[i]]
 				// Accommodate to receiver type
 				ks, kd := src.Kind(), dest.Kind()
@@ -436,9 +437,9 @@ func call(n *Node) {
 				} else {
 					dest.Set(src)
 				}
-			} else if variadic >= 0 && i >= variadic {
+			case variadic >= 0 && i >= variadic:
 				vararg.Set(reflect.Append(vararg, src))
-			} else {
+			default:
 				nf.data[def.framepos[i]].Set(src)
 			}
 		}
@@ -515,7 +516,8 @@ func callBin(n *Node) {
 	l := len(values)
 	fsize := n.child[0].fsize
 
-	if n.anc.kind == GoStmt {
+	switch {
+	case n.anc.kind == GoStmt:
 		// Execute function in a goroutine, discard results
 		n.exec = func(f *Frame) Builtin {
 			in := make([]reflect.Value, l)
@@ -525,7 +527,7 @@ func callBin(n *Node) {
 			go value(f).Call(in)
 			return tnext
 		}
-	} else if fnext != nil {
+	case fnext != nil:
 		// Handle branching according to boolean result
 		n.exec = func(f *Frame) Builtin {
 			in := make([]reflect.Value, l)
@@ -538,7 +540,7 @@ func callBin(n *Node) {
 			}
 			return fnext
 		}
-	} else {
+	default:
 		n.exec = func(f *Frame) Builtin {
 			in := make([]reflect.Value, l)
 			for i, v := range values {
@@ -1266,6 +1268,7 @@ func clauseChanDir(n *Node) (*Node, *Node, *Node, reflect.SelectDir) {
 			case Assign:
 				assigned = m.anc.child[0]
 			case AssignX:
+				ok = m.anc.child[1]
 				// TODO
 			}
 			stop = true

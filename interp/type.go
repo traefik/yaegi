@@ -331,14 +331,6 @@ func (t *Type) zero() reflect.Value {
 	}
 }
 
-// fieldType returns the field type of a struct or *struct type
-func (t *Type) fieldType(index int) *Type {
-	if t.cat == PtrT {
-		return t.val.fieldType(index)
-	}
-	return t.field[index].typ
-}
-
 // fieldIndex returns the field index from name in a struct, or -1 if not found
 func (t *Type) fieldIndex(name string) int {
 	if t.cat == PtrT {
@@ -404,19 +396,14 @@ func (t *Type) lookupMethod(name string) (*Node, []int) {
 	if m == nil {
 		for i, f := range t.field {
 			if f.embed {
-				if m, index2 := f.typ.lookupMethod(name); m != nil {
+				if n, index2 := f.typ.lookupMethod(name); n != nil {
 					index = append([]int{i}, index2...)
-					return m, index
+					return n, index
 				}
 			}
 		}
 	}
 	return m, index
-}
-
-// ptrTo returns the pointer type with element t.
-func ptrTo(t *Type) *Type {
-	return &Type{cat: PtrT, val: t}
 }
 
 func exportName(s string) string {

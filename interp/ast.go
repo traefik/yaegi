@@ -424,7 +424,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			st.push(n)
 
 		case *ast.BinaryExpr:
-			kind := Kind(BinaryExpr)
+			kind := BinaryExpr
 			action := Nop
 			switch a.Op {
 			case token.ADD:
@@ -516,13 +516,14 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 					kind = For0
 				}
 			} else {
-				if a.Init == nil && a.Post == nil {
+				switch {
+				case a.Init == nil && a.Post == nil:
 					kind = For1
-				} else if a.Init != nil && a.Post == nil {
+				case a.Init != nil && a.Post == nil:
 					kind = For2
-				} else if a.Init == nil && a.Post != nil {
+				case a.Init == nil && a.Post != nil:
 					kind = For3
-				} else {
+				default:
 					kind = For4
 				}
 			}
@@ -570,13 +571,14 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 		case *ast.IfStmt:
 			// Disambiguate variants of IF statements with a node kind per variant
 			var kind Kind
-			if a.Init == nil && a.Else == nil {
+			switch {
+			case a.Init == nil && a.Else == nil:
 				kind = If0
-			} else if a.Init == nil && a.Else != nil {
+			case a.Init == nil && a.Else != nil:
 				kind = If1
-			} else if a.Else == nil {
+			case a.Else == nil:
 				kind = If2
-			} else {
+			default:
 				kind = If3
 			}
 			st.push(addChild(&root, anc, pos, kind, Nop))
@@ -672,7 +674,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			kind := ValueSpec
 			action := Nop
 			if a.Values != nil {
-				if len(a.Names) == 1 && len(a.Values) > 1 {
+				if len(a.Names) > 1 && len(a.Values) == 1 {
 					if anc.kind == ConstDecl || anc.kind == VarDecl {
 						kind = DefineX
 					} else {

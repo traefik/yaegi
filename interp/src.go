@@ -3,13 +3,15 @@ package interp
 import (
 	"go/build"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 )
 
 func (i *Interpreter) importSrcFile(path string) error {
-	dir := pkgDir(path)
+	dir, err := pkgDir(path)
+	if err != nil {
+		return err
+	}
 
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
@@ -20,7 +22,6 @@ func (i *Interpreter) importSrcFile(path string) error {
 	rootNodes := []*Node{}
 
 	var root *Node
-	//var pkgName string
 
 	// Parse source files
 	for _, file := range files {
@@ -43,10 +44,14 @@ func (i *Interpreter) importSrcFile(path string) error {
 			return err
 		}
 		rootNodes = append(rootNodes, root)
+
 		if i.AstDot {
 			root.AstDot(DotX(), name)
 		}
-		i.Gta(root)
+
+		if err = i.Gta(root); err != nil {
+			return err
+		}
 	}
 
 	// Generate control flow graphs
@@ -77,21 +82,19 @@ func (i *Interpreter) importSrcFile(path string) error {
 }
 
 // pkgDir returns the abolute path in filesystem for a package given its name
-func pkgDir(path string) string {
+func pkgDir(path string) (string, error) {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
-		log.Fatal(err)
+		return dir, err
 	}
 
 	dir = filepath.Join(dir, "vendor", path)
-	if _, err := os.Stat(dir); err == nil {
-		return dir
+	if _, err = os.Stat(dir); err == nil {
+		return dir, nil // found!
 	}
 
 	dir = filepath.Join(build.Default.GOPATH, "src", path)
-	if _, err := os.Stat(dir); err != nil {
-		log.Fatal(err)
-	}
+	_, err = os.Stat(dir)
 
-	return dir
+	return dir, err
 }

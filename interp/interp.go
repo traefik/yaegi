@@ -191,7 +191,9 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 	}
 
 	// Global type analysis
-	i.Gta(root)
+	if err = i.Gta(root); err != nil {
+		return res, err
+	}
 
 	// Annotate AST with CFG infos
 	initNodes, err := i.Cfg(root)
@@ -262,8 +264,9 @@ func (i *Interpreter) Repl(in, out *os.File) {
 				// and no AST could be produced, neither compiled / run.
 				// Get one more line, and retry
 				continue
+			default:
+				fmt.Fprintln(out, err)
 			}
-			fmt.Fprintln(out, err)
 		} else if v.IsValid() {
 			fmt.Fprintln(out, v)
 		}

@@ -42,16 +42,16 @@ func (k SymKind) String() string {
 
 // A Symbol represents an interpreter object such as type, constant, var, func, builtin or binary object
 type Symbol struct {
-	kind     SymKind
-	typ      *Type            // Type of value
-	node     *Node            // Node value if index is negative
-	recv     *Receiver        // receiver node value, if sym refers to a method
-	index    int              // index of value in frame or -1
-	val      interface{}      // default value (used for constants)
-	path     string           // package path if typ.cat is SrcPkgT or BinPkgT
-	builtin  BuiltinGenerator // Builtin function or nil
-	global   bool             // true if symbol is defined in global space
-	constant bool             // true if symbol value is constant
+	kind    SymKind
+	typ     *Type            // Type of value
+	node    *Node            // Node value if index is negative
+	recv    *Receiver        // receiver node value, if sym refers to a method
+	index   int              // index of value in frame or -1
+	val     interface{}      // default value (used for constants)
+	path    string           // package path if typ.cat is SrcPkgT or BinPkgT
+	builtin BuiltinGenerator // Builtin function or nil
+	global  bool             // true if symbol is defined in global space
+	//constant bool             // true if symbol value is constant
 }
 
 // A SymMap stores symbols indexed by name
@@ -158,7 +158,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			// For range block: ensure that array or map type is propagated to iterators
 			// prior to process block
 			if n.anc != nil && n.anc.kind == RangeStmt {
-				if n.anc.child[2].typ.cat == ValueT {
+				switch n.anc.child[2].typ.cat {
+				case ValueT:
 					typ := n.anc.child[2].typ.rtype
 
 					switch typ.Kind() {
@@ -173,14 +174,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 						scope.sym[n.anc.child[1].ident].typ = vtype
 						n.anc.child[1].typ = vtype
 					}
-				} else if n.anc.child[2].typ.cat == MapT {
+				case MapT:
 					scope.sym[n.anc.child[0].ident].typ = n.anc.child[2].typ.key
 					n.anc.child[0].typ = n.anc.child[2].typ.key
 					n.anc.gen = rangeMap
 					vtype := n.anc.child[2].typ.val
 					scope.sym[n.anc.child[1].ident].typ = vtype
 					n.anc.child[1].typ = vtype
-				} else {
+				default:
 					scope.sym[n.anc.child[0].ident].typ = scope.getType("int")
 					n.anc.child[0].typ = scope.getType("int")
 					vtype := n.anc.child[2].typ.val
@@ -276,16 +277,17 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			n.val = dest.val
 			// Propagate type
 			// TODO: Check that existing destination type matches source type
-			if src.action == Recv {
+			switch {
+			case src.action == Recv:
 				// Assign by reading from a receiving channel
 				n.gen = nop
 				src.findex = dest.findex // Set recv address to LHS
 				dest.typ = src.typ.val
-			} else if src.action == CompositeLit {
+			case src.action == CompositeLit:
 				n.gen = nop
 				src.findex = dest.findex
 				src.level = level
-			} else if src.kind == BasicLit {
+			case src.kind == BasicLit:
 				// TODO: perform constant folding and propagation here
 				// Convert literal value to destination type
 				src.val = reflect.ValueOf(src.val).Convert(dest.typ.TypeOf())
@@ -354,6 +356,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				return
 			}
 			for i, c := range n.child[:l] {
+				if i == len(types) {
+					break // skip useless type symbol
+				}
 				sym, _, ok := scope.lookup(c.ident)
 				if !ok {
 					err = c.cfgError("undefined: %s", c.ident)
@@ -439,12 +444,11 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				if typ := n.child[0].typ.rtype; typ.NumOut() > 0 {
 					n.typ = &Type{cat: ValueT, rtype: typ.Out(0)}
 				}
-			} else {
-				if typ := n.child[0].typ; len(typ.ret) > 0 {
-					n.typ = n.child[0].typ.ret[0]
-					n.fsize = len(typ.ret)
-				}
+			} else if typ := n.child[0].typ; len(typ.ret) > 0 {
+				n.typ = n.child[0].typ.ret[0]
+				n.fsize = len(typ.ret)
 			}
+
 			// Reserve entries in frame to store results of call
 			if scope.global {
 				interp.fsize += n.fsize
@@ -656,16 +660,17 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					n.kind = sym.node.kind
 				} else {
 					n.sym = sym
-					if sym.kind == Const && sym.val != nil {
+					switch {
+					case sym.kind == Const && sym.val != nil:
 						n.val = sym.val
 						n.kind = BasicLit
-					} else if n.ident == "iota" {
+					case n.ident == "iota":
 						n.val = iotaValue
 						n.kind = BasicLit
-					} else if n.ident == "nil" {
+					case n.ident == "nil":
 						n.kind = BasicLit
 						n.val = nil
-					} else if sym.kind == Bin {
+					case sym.kind == Bin:
 						if sym.val == nil {
 							n.kind = Rtype
 						} else {
@@ -771,13 +776,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				// Handle object defined in runtime, try to find field or method
 				// Search for method first, as it applies both to types T and *T
 				// Search for field must then be performed on type T only (not *T)
-				if method, ok := n.typ.rtype.MethodByName(n.child[1].ident); ok {
+				switch method, ok := n.typ.rtype.MethodByName(n.child[1].ident); {
+				case ok:
 					n.val = method.Index
 					n.gen = getIndexBinMethod
 					n.typ = &Type{cat: ValueT, rtype: method.Type}
 					n.fsize = method.Type.NumOut()
 					n.recv = &Receiver{node: n.child[0]}
-				} else if n.typ.rtype.Kind() == reflect.Ptr {
+				case n.typ.rtype.Kind() == reflect.Ptr:
 					if field, ok := n.typ.rtype.Elem().FieldByName(n.child[1].ident); ok {
 						n.typ = &Type{cat: ValueT, rtype: field.Type}
 						n.val = field.Index
@@ -785,7 +791,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					} else {
 						err = n.cfgError("undefined field or method: %s", n.child[1].ident)
 					}
-				} else if n.typ.rtype.Kind() == reflect.Struct {
+				case n.typ.rtype.Kind() == reflect.Struct:
 					if field, ok := n.typ.rtype.FieldByName(n.child[1].ident); ok {
 						n.typ = &Type{cat: ValueT, rtype: field.Type}
 						n.val = field.Index
@@ -793,7 +799,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					} else {
 						err = n.cfgError("undefined field or method: %s", n.child[1].ident)
 					}
-				} else {
+				default:
 					err = n.cfgError("undefined field or method: %s", n.child[1].ident)
 					return
 				}
@@ -1231,9 +1237,8 @@ func frameTypes(node *Node, size int) []reflect.Type {
 			} else {
 				ft[n.findex] = n.typ.TypeOf()
 			}
-		} else {
-			// TODO: Check that type is identical
 		}
+		// TODO: Check that type is identical
 		return true
 	}, nil)
 
