@@ -674,7 +674,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			kind := ValueSpec
 			action := Nop
 			if a.Values != nil {
-				if len(a.Names) == 1 && len(a.Values) > 1 {
+				if len(a.Names) > 1 && len(a.Values) == 1 {
 					if anc.kind == ConstDecl || anc.kind == VarDecl {
 						kind = DefineX
 					} else {

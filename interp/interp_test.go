@@ -3297,6 +3297,24 @@ func main() {
 	// 1
 }
 
+func Example_ret5() {
+	src := `
+package main
+
+func r2() (int, int) { return 1, 2 }
+
+var a, b int = r2()
+
+func main() { println(a, b) }
+`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+	// Output:
+	// 1 2
+}
+
 func Example_run0() {
 	src := `
 package main
