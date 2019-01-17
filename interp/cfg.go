@@ -140,6 +140,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 	root.Walk(func(n *Node) bool {
 		// Pre-order processing
+		if err != nil {
+			return false
+		}
 		switch n.kind {
 		case Define, AssignStmt:
 			if l := len(n.child); n.anc.kind == ConstDecl && l == 1 {
@@ -240,6 +243,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		return true
 	}, func(n *Node) {
 		// Post-order processing
+		if err != nil {
+			return
+		}
 		switch n.kind {
 		case Address:
 			wireChild(n)
@@ -346,7 +352,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				}
 
 			default:
-				err = CfgError(fmt.Errorf("cfg: unsupported assign expression %s", n.fset.Position(n.pos)))
+				err = n.cfgError("unsupported assign expression")
 				return
 			}
 			for i, c := range n.child[:l] {
@@ -355,7 +361,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				}
 				sym, _, ok := scope.lookup(c.ident)
 				if !ok {
-					log.Panic("symbol not found", c.ident)
+					err = c.cfgError("undefined: %s", c.ident)
 				}
 				sym.typ = types[i]
 				c.typ = sym.typ
@@ -681,7 +687,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					n.recv = n.sym.recv
 				}
 			} else {
-				log.Println(n.index, "unresolved symbol", n.ident)
+				err = n.cfgError("undefined: %s", n.ident)
 			}
 
 		case If0: // if cond {}
@@ -762,7 +768,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			n.typ = n.child[0].typ
 			n.recv = n.child[0].recv
 			if n.typ == nil {
-				log.Fatal("typ should not be nil:", n.index, n.child[0])
+				err = n.cfgError("undefined type")
+				return
 			}
 			//log.Println(n.index, "selector", n.child[0].ident+"."+n.child[1].ident, n.typ.cat)
 			if n.typ.cat == ValueT {
@@ -782,7 +789,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 						n.val = field.Index
 						n.gen = getPtrIndexSeq
 					} else {
-						log.Println(n.index, "could not solve field or method", n.child[0].ident+"."+n.child[1].ident)
+						err = n.cfgError("undefined field or method: %s", n.child[1].ident)
 					}
 				case n.typ.rtype.Kind() == reflect.Struct:
 					if field, ok := n.typ.rtype.FieldByName(n.child[1].ident); ok {
@@ -790,11 +797,11 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 						n.val = field.Index
 						n.gen = getIndexSeq
 					} else {
-						log.Println(n.index, "could not solve field or method", n.child[0].ident+"."+n.child[1].ident)
+						err = n.cfgError("undefined field or method: %s", n.child[1].ident)
 					}
 				default:
-					log.Println(n.index, "could not solve field or method", n.child[0].ident+"."+n.child[1].ident)
-					n.gen = nop
+					err = n.cfgError("undefined field or method: %s", n.child[1].ident)
+					return
 				}
 			} else if n.typ.cat == PtrT && n.typ.val.cat == ValueT {
 				// Handle pointer on object defined in runtime
@@ -848,7 +855,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					n.kind = SelectorSrc
 					n.typ = sym.typ
 				} else {
-					log.Println(n.index, "selector unresolved:", n.child[0].ident+"."+n.child[1].ident)
+					err = n.cfgError("undefined selector: %s", n.child[1].ident)
 				}
 			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
 				// Handle method
@@ -866,9 +873,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				}
 				n.typ = n.typ.fieldSeq(ti)
 			} else {
-				log.Println(n.index, "Selector not found:", n.child[1].ident)
-				n.gen = nop
-				//panic("Field not found in selector")
+				err = n.cfgError("undefined selector: %s", n.child[1].ident)
 			}
 
 		case StarExpr:
@@ -928,6 +933,11 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 	})
 
 	return initNodes, err
+}
+
+func (n *Node) cfgError(format string, a ...interface{}) CfgError {
+	a = append([]interface{}{n.fset.Position(n.pos)}, a...)
+	return CfgError(fmt.Errorf("%s: "+format, a...))
 }
 
 func genRun(n *Node) {
