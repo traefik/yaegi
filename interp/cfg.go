@@ -350,6 +350,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				return
 			}
 			for i, c := range n.child[:l] {
+				if i == len(types) {
+					break // skip useless type symbol
+				}
 				sym, _, ok := scope.lookup(c.ident)
 				if !ok {
 					log.Panic("symbol not found", c.ident)
