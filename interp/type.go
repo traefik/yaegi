@@ -1,7 +1,6 @@
 package interp
 
 import (
-	"log"
 	"reflect"
 	"strconv"
 )
@@ -117,9 +116,11 @@ type Type struct {
 }
 
 // nodeType returns a type definition for the corresponding AST subtree
-func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
+func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
+	var err CfgError
+
 	if n.typ != nil && !n.typ.incomplete {
-		return n.typ
+		return n.typ, err
 	}
 
 	var t = &Type{node: n, scope: scope}
@@ -127,7 +128,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 	switch n.kind {
 	case Address, StarExpr:
 		t.cat = PtrT
-		t.val = nodeType(interp, scope, n.child[0])
+		t.val, err = nodeType(interp, scope, n.child[0])
 		t.incomplete = t.val.incomplete
 
 	case ArrayType:
@@ -149,10 +150,10 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 					t.incomplete = true
 				}
 			}
-			t.val = nodeType(interp, scope, n.child[1])
+			t.val, err = nodeType(interp, scope, n.child[1])
 			t.incomplete = t.incomplete || t.val.incomplete
 		} else {
-			t.val = nodeType(interp, scope, n.child[0])
+			t.val, err = nodeType(interp, scope, n.child[0])
 			t.incomplete = t.val.incomplete
 		}
 
@@ -171,30 +172,33 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 		case string:
 			t.cat = StringT
 		default:
-			log.Panicf("Missing support for basic type %T, node %v\n", n.val, n.index)
+			err = n.cfgError("missign support for type %T", n.val)
 		}
 
 	case CallExpr, CompositeLitExpr:
-		t = nodeType(interp, scope, n.child[0])
+		t, err = nodeType(interp, scope, n.child[0])
 
 	case ChanType:
 		t.cat = ChanT
-		t.val = nodeType(interp, scope, n.child[0])
+		t.val, err = nodeType(interp, scope, n.child[0])
 		t.incomplete = t.val.incomplete
 
 	case Ellipsis:
-		t = nodeType(interp, scope, n.child[0])
+		t, err = nodeType(interp, scope, n.child[0])
 		t.variadic = true
 
 	case FuncLit:
-		t = nodeType(interp, scope, n.child[2])
+		t, err = nodeType(interp, scope, n.child[2])
 
 	case FuncType:
 		t.cat = FuncT
 		// Handle input parameters
 		for _, arg := range n.child[0].child {
 			cl := len(arg.child) - 1
-			typ := nodeType(interp, scope, arg.child[cl])
+			typ, err := nodeType(interp, scope, arg.child[cl])
+			if err != nil {
+				return nil, err
+			}
 			t.arg = append(t.arg, typ)
 			for i := 1; i < cl; i++ {
 				// Several arguments may be factorized on the same field type
@@ -206,7 +210,10 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 			// Handle returned values
 			for _, ret := range n.child[1].child {
 				cl := len(ret.child) - 1
-				typ := nodeType(interp, scope, ret.child[cl])
+				typ, err := nodeType(interp, scope, ret.child[cl])
+				if err != nil {
+					return nil, err
+				}
 				t.ret = append(t.ret, typ)
 				for i := 1; i < cl; i++ {
 					// Several arguments may be factorized on the same field type
@@ -231,8 +238,12 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 
 	case MapType:
 		t.cat = MapT
-		t.key = nodeType(interp, scope, n.child[0])
-		t.val = nodeType(interp, scope, n.child[1])
+		if t.key, err = nodeType(interp, scope, n.child[0]); err != nil {
+			return nil, err
+		}
+		if t.val, err = nodeType(interp, scope, n.child[1]); err != nil {
+			return nil, err
+		}
 		t.incomplete = t.key.incomplete || t.val.incomplete
 
 	case SelectorExpr:
@@ -248,7 +259,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 				}
 			}
 		} else {
-			log.Panicln("unknown package", pkgName)
+			err = n.cfgError("undefined package: %s", pkgName)
 		}
 		// TODO: handle pkgsrc types
 
@@ -256,12 +267,18 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 		t.cat = StructT
 		for _, c := range n.child[0].child {
 			if len(c.child) == 1 {
-				typ := nodeType(interp, scope, c.child[0])
+				typ, err := nodeType(interp, scope, c.child[0])
+				if err != nil {
+					return nil, err
+				}
 				t.field = append(t.field, StructField{name: c.child[0].ident, embed: true, typ: typ})
 				t.incomplete = t.incomplete || typ.incomplete
 			} else {
 				l := len(c.child)
-				typ := nodeType(interp, scope, c.child[l-1])
+				typ, err := nodeType(interp, scope, c.child[l-1])
+				if err != nil {
+					return nil, err
+				}
 				t.incomplete = t.incomplete || typ.incomplete
 				for _, d := range c.child[:l-1] {
 					t.field = append(t.field, StructField{name: d.ident, typ: typ})
@@ -270,10 +287,10 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 		}
 
 	default:
-		log.Panicln("type definition not implemented for node", n.index, n.kind)
+		err = n.cfgError("type definition not implemented: %s", n.kind)
 	}
 
-	return t
+	return t, err
 }
 
 var zeroValues [MaxT]reflect.Value
@@ -302,33 +319,37 @@ func init() {
 }
 
 // if type is incomplete, re-parse it.
-func (t *Type) finalize() *Type {
+func (t *Type) finalize() (*Type, error) {
+	var err CfgError
 	if t.incomplete {
-		t = nodeType(t.node.interp, t.scope, t.node)
+		t, err = nodeType(t.node.interp, t.scope, t.node)
 		t.node.typ = t
-		if t.incomplete {
-			log.Panicln("incomplete type", t.node.index)
+		if t.incomplete && err == nil {
+			err = t.node.cfgError("incomplete type")
 		}
 	}
-	return t
+	return t, err
 }
 
 // zero instantiates and return a zero value object for the given type during execution
-func (t *Type) zero() reflect.Value {
-	t = t.finalize()
+func (t *Type) zero() (v reflect.Value, err error) {
+	if t, err = t.finalize(); err != nil {
+		return v, err
+	}
 	switch t.cat {
 	case AliasT:
-		return t.val.zero()
+		v, err = t.val.zero()
 
 	case ArrayT, StructT:
-		return reflect.New(t.TypeOf()).Elem()
+		v = reflect.New(t.TypeOf()).Elem()
 
 	case ValueT:
-		return reflect.New(t.rtype).Elem()
+		v = reflect.New(t.rtype).Elem()
 
 	default:
-		return zeroValues[t.cat]
+		v = zeroValues[t.cat]
 	}
+	return v, err
 }
 
 // fieldIndex returns the field index from name in a struct, or -1 if not found
@@ -461,6 +482,7 @@ func (t *Type) TypeOf() reflect.Type {
 		return t.rtype
 
 	default:
-		return t.zero().Type()
+		z, _ := t.zero()
+		return z.Type()
 	}
 }

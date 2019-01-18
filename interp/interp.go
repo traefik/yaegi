@@ -209,7 +209,7 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 			initNodes = append(initNodes, sym.node)
 		}
 	} else {
-		root.types = frameTypes(root, i.fsize+1)
+		root.types, _ = frameTypes(root, i.fsize+1)
 		setExec(root.start)
 	}
 
@@ -219,7 +219,9 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 
 	// Execute CFG
 	if !i.NoRun {
-		genRun(root)
+		if err = genRun(root); err != nil {
+			return res, err
+		}
 		i.fsize++
 		i.resizeFrame()
 		i.run(root, nil)

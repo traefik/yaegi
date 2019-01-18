@@ -34,13 +34,12 @@ func (i *Interpreter) importSrcFile(path string) error {
 		}
 
 		name = filepath.Join(dir, name)
-		buf, err := ioutil.ReadFile(name)
-		if err != nil {
+		var buf []byte
+		if buf, err = ioutil.ReadFile(name); err != nil {
 			return err
 		}
 
-		_, root, err = i.ast(string(buf), name)
-		if err != nil {
+		if _, root, err = i.ast(string(buf), name); err != nil {
 			return err
 		}
 		rootNodes = append(rootNodes, root)
@@ -56,8 +55,8 @@ func (i *Interpreter) importSrcFile(path string) error {
 
 	// Generate control flow graphs
 	for _, root := range rootNodes {
-		nodes, err := i.Cfg(root)
-		if err != nil {
+		var nodes []*Node
+		if nodes, err = i.Cfg(root); err != nil {
 			return err
 		}
 		initNodes = append(initNodes, nodes...)
@@ -69,7 +68,9 @@ func (i *Interpreter) importSrcFile(path string) error {
 
 	// Once all package sources have been parsed, execute entry points then init functions
 	for _, n := range rootNodes {
-		genRun(n)
+		if err = genRun(n); err != nil {
+			return err
+		}
 		i.fsize++
 		i.resizeFrame()
 		i.run(n, nil)
