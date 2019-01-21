@@ -14,14 +14,17 @@ func (interp *Interpreter) Gta(root *Node) error {
 	scope := interp.universe
 
 	root.Walk(func(n *Node) bool {
+		if err != nil {
+			return false
+		}
 		switch n.kind {
 		case Define:
 			varName := n.child[0].ident
 			scope.sym[varName] = &Symbol{kind: Var, global: true, index: scope.inc(interp)}
 			if len(n.child) > 1 {
-				scope.sym[varName].typ = nodeType(interp, scope, n.child[1])
+				scope.sym[varName].typ, err = nodeType(interp, scope, n.child[1])
 			} else {
-				scope.sym[varName].typ = nodeType(interp, scope, n.anc.child[0].child[1])
+				scope.sym[varName].typ, err = nodeType(interp, scope, n.anc.child[0].child[1])
 			}
 			return false
 
@@ -33,7 +36,9 @@ func (interp *Interpreter) Gta(root *Node) error {
 			scope = interp.scope[pkgName]
 
 		case FuncDecl:
-			n.typ = nodeType(interp, scope, n.child[2])
+			if n.typ, err = nodeType(interp, scope, n.child[2]); err != nil {
+				return false
+			}
 			scope.sym[n.child[1].ident] = &Symbol{kind: Func, typ: n.typ, node: n}
 			if len(n.child[0].child) > 0 {
 				// function is a method, add it to the related type
@@ -102,9 +107,14 @@ func (interp *Interpreter) Gta(root *Node) error {
 		case TypeSpec:
 			typeName := n.child[0].ident
 			if n.child[1].kind == Ident {
-				n.typ = &Type{cat: AliasT, val: nodeType(interp, scope, n.child[1])}
+				var typ *Type
+				typ, err = nodeType(interp, scope, n.child[1])
+				n.typ = &Type{cat: AliasT, val: typ}
 			} else {
-				n.typ = nodeType(interp, scope, n.child[1])
+				n.typ, err = nodeType(interp, scope, n.child[1])
+			}
+			if err != nil {
+				return false
 			}
 			// Type may already be declared for a receiver in a method function
 			if scope.sym[typeName] == nil {

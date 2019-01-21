@@ -664,7 +664,7 @@ func getFunc(n *Node) {
 	i := n.findex
 	next := getExec(n.tnext)
 	if len(n.types) == 0 {
-		n.types = frameTypes(n, n.flen)
+		n.types, _ = frameTypes(n, n.flen)
 	}
 
 	n.exec = func(f *Frame) Builtin {
@@ -982,7 +982,7 @@ func arrayLit(n *Node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child[1:]
-	a := n.typ.zero()
+	a, _ := n.typ.zero()
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
 		convertLiteralValue(c, n.typ.val.TypeOf())
@@ -1039,7 +1039,7 @@ func compositeLit(n *Node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child[1:]
-	a := n.typ.zero()
+	a, _ := n.typ.zero()
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
 		convertLiteralValue(c, n.typ.field[i].typ.TypeOf())
@@ -1061,7 +1061,7 @@ func compositeSparse(n *Node) {
 	next := getExec(n.tnext)
 	child := n.child[1:]
 	values := make(map[int]func(*Frame) reflect.Value)
-	a := n.typ.zero()
+	a, _ := n.typ.zero()
 	for _, c := range child {
 		convertLiteralValue(c.child[1], n.typ.field[c.findex].typ.TypeOf())
 		values[c.findex] = genValue(c.child[1])

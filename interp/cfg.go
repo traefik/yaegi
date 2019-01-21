@@ -237,7 +237,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			return false
 
 		case ArrayType, BasicLit, ChanType, MapType, StructType:
-			n.typ = nodeType(interp, scope, n)
+			n.typ, err = nodeType(interp, scope, n)
 			return false
 		}
 		return true
@@ -429,7 +429,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					n.typ = scope.getType("int")
 				case "make":
 					if n.typ = scope.getType(n.child[1].ident); n.typ == nil {
-						n.typ = nodeType(interp, scope, n.child[1])
+						n.typ, err = nodeType(interp, scope, n.child[1])
 					}
 					n.child[1].val = n.typ
 					n.child[1].kind = BasicLit
@@ -484,7 +484,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.findex = scope.inc(interp)
 			}
 			if n.child[0].typ == nil {
-				n.child[0].typ = nodeType(interp, scope, n.child[0])
+				if n.child[0].typ, err = nodeType(interp, scope, n.child[0]); err != nil {
+					return
+				}
 			}
 			// TODO: Check that composite litteral expr matches corresponding type
 			n.typ = n.child[0].typ
@@ -498,7 +500,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				// Handle object assign from sparse key / values
 				if len(n.child) > 1 && n.child[1].kind == KeyValueExpr {
 					n.gen = compositeSparse
-					n.typ = nodeType(interp, scope, n.child[0])
+					if n.typ, err = nodeType(interp, scope, n.child[0]); err != nil {
+						return
+					}
 					for _, c := range n.child[1:] {
 						c.findex = n.typ.fieldIndex(c.child[0].ident)
 					}
@@ -514,7 +518,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			// Otherwise, just point to corresponding location in frame, resolved in
 			// ident child.
 			l := len(n.child) - 1
-			n.typ = nodeType(interp, scope.anc, n.child[l])
+			if n.typ, err = nodeType(interp, scope.anc, n.child[l]); err != nil {
+				return
+			}
 			if l == 0 {
 				if n.anc.anc.kind == FuncDecl {
 					// Receiver with implicit var decl
@@ -626,7 +632,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			n.framepos = n.child[2].framepos
 
 		case FuncType:
-			n.typ = nodeType(interp, scope, n)
+			if n.typ, err = nodeType(interp, scope, n); err != nil {
+				return
+			}
 			// Store list of parameter frame indices in framepos
 			for _, c := range n.child[0].child {
 				for _, f := range c.child[:len(c.child)-1] {
@@ -942,13 +950,22 @@ func (n *Node) cfgError(format string, a ...interface{}) CfgError {
 	return CfgError(fmt.Errorf("%s: "+format, a...))
 }
 
-func genRun(n *Node) {
+func genRun(n *Node) error {
+	var err CfgError
+
 	n.Walk(func(n *Node) bool {
+		if err != nil {
+			return false
+		}
 		switch n.kind {
 		case File:
-			n.types = frameTypes(n, n.fsize)
+			if n.types, err = frameTypes(n, n.fsize); err != nil {
+				return false
+			}
 		case FuncDecl, FuncLit:
-			n.types = frameTypes(n, n.flen)
+			if n.types, err = frameTypes(n, n.flen); err != nil {
+				return false
+			}
 		case FuncType:
 			if len(n.anc.child) == 4 {
 				setExec(n.anc.child[3].start)
@@ -959,6 +976,8 @@ func genRun(n *Node) {
 		}
 		return true
 	}, nil)
+
+	return err
 }
 
 // Find default case clause index of a switch statement, if any
@@ -1229,10 +1248,14 @@ func getReturnedType(n *Node) *Type {
 }
 
 // frameTypes returns a slice of frame types for FuncDecl or FuncLit nodes
-func frameTypes(node *Node, size int) []reflect.Type {
+func frameTypes(node *Node, size int) ([]reflect.Type, error) {
 	ft := make([]reflect.Type, size)
+	var err CfgError
 
 	node.Walk(func(n *Node) bool {
+		if err != nil {
+			return false
+		}
 		if n.kind == FuncDecl || n.kind == ImportDecl || n.kind == TypeDecl || n.kind == FuncLit {
 			return n == node // Do not dive in substree, except if this is the entry point
 		}
@@ -1241,7 +1264,9 @@ func frameTypes(node *Node, size int) []reflect.Type {
 		}
 		if ft[n.findex] == nil {
 			if n.typ.incomplete {
-				n.typ = n.typ.finalize()
+				if n.typ, err = n.typ.finalize(); err != nil {
+					return false
+				}
 			}
 			if n.typ.cat == FuncT {
 				ft[n.findex] = reflect.TypeOf(n)
@@ -1253,5 +1278,5 @@ func frameTypes(node *Node, size int) []reflect.Type {
 		return true
 	}, nil)
 
-	return ft
+	return ft, err
 }
