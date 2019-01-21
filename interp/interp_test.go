@@ -2948,6 +2948,25 @@ func main() {
 	// -1
 }
 
+func Example_op0() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	var a, b, c uint16
+	a = 64
+	b = 64
+	c = a * b
+	fmt.Printf("c: %v %T", c, c)
+}`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+}
+
 func Example_plugin0() {
 	src := `
 package sample
@@ -4845,6 +4864,27 @@ func main() {
 
 	// Output:
 	// 1985-04-12 23:20:50.52 +0000 UTC
+}
+
+func Example_time7() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+var d = 2 * time.Second
+
+func main() { fmt.Println(d) }
+`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+	// Output:
+	// 2s
 }
 
 func Example_type0() {

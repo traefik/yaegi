@@ -112,6 +112,7 @@ type Type struct {
 	rtype      reflect.Type  // Reflection type if ValueT, or nil
 	variadic   bool          // true if type is variadic
 	incomplete bool          // true if type must be parsed again
+	untyped    bool          // true for a litteral value (string or number)
 	node       *Node         // root AST node of type definition
 	scope      *Scope        // type declaration scope (in case of re-parse incomplete type)
 }
@@ -162,16 +163,30 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) *Type {
 			t.cat = BoolT
 		case byte:
 			t.cat = ByteT
+			t.untyped = true
 		case float32:
 			t.cat = Float32T
+			t.untyped = true
 		case float64:
 			t.cat = Float64T
+			t.untyped = true
 		case int:
 			t.cat = IntT
+			t.untyped = true
 		case string:
 			t.cat = StringT
+			t.untyped = true
 		default:
 			log.Panicf("Missing support for basic type %T, node %v\n", n.val, n.index)
+		}
+
+	case BinaryExpr:
+		t = nodeType(interp, scope, n.child[0])
+		if t.untyped {
+			t1 := nodeType(interp, scope, n.child[1])
+			if !(t1.untyped && isInt(t1) && isFloat(t)) {
+				t = t1
+			}
 		}
 
 	case CallExpr, CompositeLitExpr:
@@ -463,4 +478,20 @@ func (t *Type) TypeOf() reflect.Type {
 	default:
 		return t.zero().Type()
 	}
+}
+
+func isInt(t *Type) bool {
+	switch t.TypeOf().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return true
+	}
+	return false
+}
+
+func isFloat(t *Type) bool {
+	switch t.TypeOf().Kind() {
+	case reflect.Float32, reflect.Float64:
+		return true
+	}
+	return false
 }

@@ -189,6 +189,7 @@ const (
 	AssignX
 	Add
 	And
+	AndNot
 	Call
 	Case
 	CompositeLit
@@ -202,6 +203,7 @@ const (
 	Land
 	Lor
 	Lower
+	Lshift
 	Mul
 	Negate
 	Not
@@ -211,6 +213,7 @@ const (
 	Recv
 	Remain
 	Return
+	Rshift
 	Select
 	Send
 	Slice
@@ -218,6 +221,7 @@ const (
 	Star
 	Sub
 	TypeAssert
+	Xor
 )
 
 var actions = [...]string{
@@ -227,6 +231,7 @@ var actions = [...]string{
 	AssignX:      "X=",
 	Add:          "+",
 	And:          "&",
+	AndNot:       "&^",
 	Call:         "call",
 	Case:         "case",
 	CompositeLit: "compositeLit",
@@ -240,6 +245,7 @@ var actions = [...]string{
 	Land:         "&&",
 	Lor:          "||",
 	Lower:        "<",
+	Lshift:       "<<",
 	Mul:          "*",
 	Negate:       "-",
 	Not:          "!",
@@ -249,12 +255,14 @@ var actions = [...]string{
 	Recv:         "<-",
 	Remain:       "%",
 	Return:       "return",
+	Rshift:       ">>",
 	Send:         "<~",
 	Slice:        "slice",
 	Slice0:       "slice0",
 	Star:         "*",
 	Sub:          "-",
 	TypeAssert:   "TypeAssert",
+	Xor:          "^",
 }
 
 func (a Action) String() string {
@@ -431,6 +439,8 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 				action = Add
 			case token.AND:
 				action = And
+			case token.AND_NOT:
+				action = AndNot
 			case token.EQL:
 				action = Equal
 			case token.GTR:
@@ -451,8 +461,14 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 				action = Remain
 			case token.SUB:
 				action = Sub
+			case token.SHL:
+				action = Lshift
+			case token.SHR:
+				action = Rshift
 			case token.QUO:
 				action = Quotient
+			case token.XOR:
+				action = Xor
 			}
 			st.push(addChild(&root, anc, pos, kind, action))
 
