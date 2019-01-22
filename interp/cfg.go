@@ -291,6 +291,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				// TODO: perform constant folding and propagation here
 				// Convert literal value to destination type
 				src.val = reflect.ValueOf(src.val).Convert(dest.typ.TypeOf())
+				src.typ = dest.typ
 			}
 			n.typ = dest.typ
 			if sym != nil {

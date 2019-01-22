@@ -1,6 +1,8 @@
 package interp
 
-import "reflect"
+import (
+	"reflect"
+)
 
 func valueGenerator(n *Node, i int) func(*Frame) reflect.Value {
 	switch n.level {

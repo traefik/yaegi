@@ -188,8 +188,11 @@ const (
 	Assign
 	AssignX
 	Add
+	AddAssign
 	And
+	AndAssign
 	AndNot
+	AndNotAssign
 	Call
 	Case
 	CompositeLit
@@ -203,25 +206,34 @@ const (
 	Land
 	Lor
 	Lower
-	Lshift
 	Mul
+	MulAssign
 	Negate
 	Not
 	NotEqual
-	Quotient
+	Or
+	OrAssign
+	Quo
+	QuoAssign
 	Range
 	Recv
-	Remain
+	Rem
+	RemAssign
 	Return
-	Rshift
 	Select
 	Send
+	Shl
+	ShlAssign
+	Shr
+	ShrAssign
 	Slice
 	Slice0
 	Star
 	Sub
+	SubAssign
 	TypeAssert
 	Xor
+	XorAssign
 )
 
 var actions = [...]string{
@@ -230,8 +242,11 @@ var actions = [...]string{
 	Assign:       "=",
 	AssignX:      "X=",
 	Add:          "+",
+	AddAssign:    "+=",
 	And:          "&",
+	AndAssign:    "&=",
 	AndNot:       "&^",
+	AndNotAssign: "&^=",
 	Call:         "call",
 	Case:         "case",
 	CompositeLit: "compositeLit",
@@ -245,24 +260,31 @@ var actions = [...]string{
 	Land:         "&&",
 	Lor:          "||",
 	Lower:        "<",
-	Lshift:       "<<",
 	Mul:          "*",
+	MulAssign:    "*=",
 	Negate:       "-",
 	Not:          "!",
 	NotEqual:     "!=",
-	Quotient:     "/",
+	Quo:          "/",
+	QuoAssign:    "/=",
 	Range:        "range",
 	Recv:         "<-",
-	Remain:       "%",
+	Rem:          "%",
+	RemAssign:    "%=",
 	Return:       "return",
-	Rshift:       ">>",
 	Send:         "<~",
+	Shl:          "<<",
+	ShlAssign:    "<<=",
+	Shr:          ">>",
+	ShrAssign:    ">>=",
 	Slice:        "slice",
 	Slice0:       "slice0",
 	Star:         "*",
 	Sub:          "-",
+	SubAssign:    "-=",
 	TypeAssert:   "TypeAssert",
 	Xor:          "^",
+	XorAssign:    "^=",
 }
 
 func (a Action) String() string {
@@ -402,13 +424,37 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 				}
 				action = AssignX
 			} else {
-				if a.Tok == token.DEFINE {
-					kind = Define
-				} else {
-					kind = AssignStmt
-				}
-				action = Assign
 				nbAssign = len(a.Lhs)
+				kind = AssignStmt
+				switch a.Tok {
+				case token.ASSIGN:
+					action = Assign
+				case token.ADD_ASSIGN:
+					action = AddAssign
+				case token.AND_ASSIGN:
+					action = AndAssign
+				case token.AND_NOT_ASSIGN:
+					action = AndNotAssign
+				case token.DEFINE:
+					kind = Define
+					action = Assign
+				case token.SHL_ASSIGN:
+					action = ShlAssign
+				case token.SHR_ASSIGN:
+					action = ShrAssign
+				case token.MUL_ASSIGN:
+					action = MulAssign
+				case token.OR_ASSIGN:
+					action = OrAssign
+				case token.QUO_ASSIGN:
+					action = QuoAssign
+				case token.REM_ASSIGN:
+					action = RemAssign
+				case token.SUB_ASSIGN:
+					action = SubAssign
+				case token.XOR_ASSIGN:
+					action = XorAssign
+				}
 			}
 			st.push(addChild(&root, anc, pos, kind, action))
 
@@ -457,16 +503,18 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 				action = Mul
 			case token.NEQ:
 				action = NotEqual
+			case token.OR:
+				action = Or
 			case token.REM:
-				action = Remain
+				action = Rem
 			case token.SUB:
 				action = Sub
 			case token.SHL:
-				action = Lshift
+				action = Shl
 			case token.SHR:
-				action = Rshift
+				action = Shr
 			case token.QUO:
-				action = Quotient
+				action = Quo
 			case token.XOR:
 				action = Xor
 			}

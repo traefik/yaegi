@@ -14,7 +14,8 @@ const model = `package interp
 
 import "reflect"
 
-{{range $name, $op := .Ops}}
+// Arithmetic opertators
+{{range $name, $op := .Arithmetic}}
 func {{$name}}(n *Node) {
 	i := n.findex
 	next := getExec(n.tnext)
@@ -67,14 +68,68 @@ func {{$name}}(n *Node) {
 	}
 }
 {{end}}
+// Assign operators
+{{range $name, $op := .Arithmetic}}
+func {{$name}}Assign(n *Node) {
+	next := getExec(n.tnext)
+	typ := n.typ.TypeOf()
+	value := genValue(n.child[0])
+
+	switch typ.Kind() {
+	{{- if $op.Str}}
+	case reflect.String:
+		v0 := genValue(n.child[0])
+		v1 := genValue(n.child[1])
+		n.exec = func(f *Frame) Builtin {
+			value(f).SetString(v0(f).String() {{$op.Name}} v1(f).String())
+			return next
+		}
+	{{- end}}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		v0 := genValueInt(n.child[0])
+		{{- if $op.Shift}}
+		v1 := genValueUint(n.child[1])
+		{{else}}
+		v1 := genValueInt(n.child[1])
+		{{end -}}
+		n.exec = func(f *Frame) Builtin {
+			value(f).SetInt(v0(f) {{$op.Name}} v1(f))
+			return next
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		v0 := genValueUint(n.child[0])
+		v1 := genValueUint(n.child[1])
+		n.exec = func(f *Frame) Builtin {
+			value(f).SetUint(v0(f) {{$op.Name}} v1(f))
+			return next
+		}
+	{{- if $op.Float}}
+	case reflect.Float32, reflect.Float64:
+		v0 := genValueFloat(n.child[0])
+		v1 := genValueFloat(n.child[1])
+		n.exec = func(f *Frame) Builtin {
+			value(f).SetFloat(v0(f) {{$op.Name}} v1(f))
+			return next
+		}
+	case reflect.Complex64, reflect.Complex128:
+		v0 := genValue(n.child[0])
+		v1 := genValue(n.child[1])
+		n.exec = func(f *Frame) Builtin {
+			value(f).SetComplex(v0(f).Complex() {{$op.Name}} v1(f).Complex())
+			return next
+		}
+	{{- end}}
+	}
+}
+{{end}}
 `
 
-// Op FIXME
+// Op define operator name and properties
 type Op struct {
-	Name  string
-	Str   bool
-	Float bool
-	Shift bool
+	Name  string // +, -, ...
+	Str   bool   // true if operator applies to string
+	Float bool   // true if operator applies to float
+	Shift bool   // true if operator is a shift operation
 }
 
 func main() {
@@ -86,7 +141,7 @@ func main() {
 
 	b := &bytes.Buffer{}
 	data := map[string]interface{}{
-		"Ops": map[string]Op{
+		"Arithmetic": map[string]Op{
 			"add":    {"+", true, true, false},
 			"sub":    {"-", false, true, false},
 			"mul":    {"*", false, true, false},
