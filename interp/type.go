@@ -182,9 +182,13 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 		}
 
 	case BinaryExpr:
-		t = nodeType(interp, scope, n.child[0])
+		t, err = nodeType(interp, scope, n.child[0])
+		if err != nil {
+			return nil, err
+		}
 		if t.untyped {
-			t1 := nodeType(interp, scope, n.child[1])
+			var t1 *Type
+			t1, err = nodeType(interp, scope, n.child[1])
 			if !(t1.untyped && isInt(t1) && isFloat(t)) {
 				t = t1
 			}

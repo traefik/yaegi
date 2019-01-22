@@ -385,7 +385,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			case Greater, Lower:
 				n.typ = scope.getType("bool")
 			default:
-				n.typ = nodeType(interp, scope, n)
+				n.typ, err = nodeType(interp, scope, n)
 			}
 
 		case IndexExpr:
