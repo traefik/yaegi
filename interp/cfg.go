@@ -489,7 +489,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					return
 				}
 			}
-			// TODO: Check that composite litteral expr matches corresponding type
+			// TODO: Check that composite literal expr matches corresponding type
 			n.typ = n.child[0].typ
 			switch n.typ.cat {
 			case ArrayT:
@@ -650,7 +650,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case Ident:
 			if isKey(n) {
-				// Skip symbol creation/lookup for idents used as key
+				// Skip symbol creation/lookup for identifier used as key
 			} else if isFuncArg(n) {
 				n.findex = scope.inc(interp)
 				scope.sym[n.ident] = &Symbol{index: scope.size, kind: Var, global: scope.global}
@@ -1173,7 +1173,7 @@ func frameTypes(node *Node, size int) ([]reflect.Type, error) {
 			return false
 		}
 		if n.kind == FuncDecl || n.kind == ImportDecl || n.kind == TypeDecl || n.kind == FuncLit {
-			return n == node // Do not dive in substree, except if this is the entry point
+			return n == node // Do not dive in subtree, except if this is the entry point
 		}
 		if n.findex < 0 || n.typ == nil || n.level > 0 || n.kind == BasicLit || n.kind == SelectorSrc || n.typ.cat == BinPkgT {
 			return true

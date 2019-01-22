@@ -490,7 +490,7 @@ func (t *Type) TypeOf() reflect.Type {
 		return reflect.PtrTo(t.val.TypeOf())
 
 	case StructT:
-		var fields = []reflect.StructField{}
+		var fields []reflect.StructField
 		for _, f := range t.field {
 			field := reflect.StructField{Name: exportName(f.name), Type: f.typ.TypeOf()}
 			fields = append(fields, field)

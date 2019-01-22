@@ -159,7 +159,7 @@ func convert(n *Node) {
 	}
 }
 
-// assignX implements multiple value assignement
+// assignX implements multiple value assignment
 func assignX(n *Node) {
 	l := len(n.child) - 1
 	b := n.child[l].findex
@@ -180,7 +180,7 @@ func assignX(n *Node) {
 	}
 }
 
-// assign implements single value assignement
+// assign implements single value assignment
 func assign(n *Node) {
 	value := genValue(n)
 	value1 := genValue(n.child[1])
@@ -280,7 +280,7 @@ func _println(n *Node) {
 			}
 			fmt.Printf("%v", value(f))
 
-			// Handle multiple results of a function call argmument
+			// Handle multiple results of a function call argument
 			for j := 1; j < child[i].fsize; j++ {
 				fmt.Printf(" %v", f.data[child[i].findex+j])
 			}

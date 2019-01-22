@@ -4,7 +4,7 @@ package interp
 
 import "reflect"
 
-// Arithmetic opertators
+// Arithmetic operators
 
 func add(n *Node) {
 	i := n.findex

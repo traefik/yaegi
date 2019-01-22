@@ -55,14 +55,14 @@ func (interp *Interpreter) Gta(root *Node) error {
 				if typeName == "" {
 					// The receiver is a pointer, retrieve typeName from indirection
 					typeName = receiver.child[1].child[0].ident
-					elemtype := scope.getType(typeName)
-					if elemtype == nil {
+					elementType := scope.getType(typeName)
+					if elementType == nil {
 						// Add type if necessary, so method can be registered
 						scope.sym[typeName] = &Symbol{kind: Typ, typ: &Type{}}
-						elemtype = scope.sym[typeName].typ
+						elementType = scope.sym[typeName].typ
 					}
-					receiverType = &Type{cat: PtrT, val: elemtype}
-					elemtype.method = append(elemtype.method, n)
+					receiverType = &Type{cat: PtrT, val: elementType}
+					elementType.method = append(elementType.method, n)
 				} else {
 					receiverType = scope.getType(typeName)
 					if receiverType == nil {
