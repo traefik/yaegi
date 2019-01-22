@@ -1,5 +1,6 @@
 package main
 
+//go:generate go generate github.com/containous/dyngo/interp
 //go:generate go generate github.com/containous/dyngo/cmd/goexports
 //go:generate go generate github.com/containous/dyngo/stdlib
 //go:generate go generate github.com/containous/dyngo/stdlib/syscall

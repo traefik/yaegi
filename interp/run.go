@@ -1,5 +1,7 @@
 package interp
 
+//go:generate go run ../cmd/genop/genop.go
+
 import (
 	"fmt"
 	"reflect"
@@ -18,6 +20,7 @@ var builtin = [...]BuiltinGenerator{
 	AssignX:      assignX,
 	Add:          add,
 	And:          and,
+	AndNot:       andnot,
 	Call:         call,
 	Case:         _case,
 	CompositeLit: arrayLit,
@@ -30,21 +33,24 @@ var builtin = [...]BuiltinGenerator{
 	Land:         land,
 	Lor:          lor,
 	Lower:        lower,
+	Lshift:       shl,
 	Mul:          mul,
 	Negate:       negate,
 	Not:          not,
 	NotEqual:     notEqual,
-	Quotient:     quotient,
+	Quotient:     quo,
 	Range:        _range,
 	Recv:         recv,
-	Remain:       remain,
+	Remain:       rem,
 	Return:       _return,
+	Rshift:       shr,
 	Send:         send,
 	Slice:        slice,
 	Slice0:       slice0,
 	Star:         deref,
 	Sub:          sub,
 	TypeAssert:   typeAssert,
+	Xor:          xor,
 }
 
 func (interp *Interpreter) run(n *Node, cf *Frame) {
@@ -190,18 +196,6 @@ func assignMap(n *Node) {
 
 	n.exec = func(f *Frame) Builtin {
 		value(f).SetMapIndex(value0(f), value1(f))
-		return next
-	}
-}
-
-func and(n *Node) {
-	i := n.findex
-	value0 := genValue(n.child[0])
-	value1 := genValue(n.child[1])
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		f.data[i].SetInt(value0(f).Int() & value1(f).Int())
 		return next
 	}
 }
@@ -736,42 +730,6 @@ func getPtrIndexSeq(n *Node) {
 	}
 }
 
-func mul(n *Node) {
-	i := n.findex
-	value0 := genValue(n.child[0])
-	value1 := genValue(n.child[1])
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		f.data[i].SetInt(value0(f).Int() * value1(f).Int())
-		return next
-	}
-}
-
-func quotient(n *Node) {
-	i := n.findex
-	value0 := genValue(n.child[0])
-	value1 := genValue(n.child[1])
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		f.data[i].SetInt(value0(f).Int() / value1(f).Int())
-		return next
-	}
-}
-
-func remain(n *Node) {
-	i := n.findex
-	value0 := genValue(n.child[0])
-	value1 := genValue(n.child[1])
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		f.data[i].SetInt(value0(f).Int() % value1(f).Int())
-		return next
-	}
-}
-
 func negate(n *Node) {
 	i := n.findex
 	value := genValue(n.child[0])
@@ -779,30 +737,6 @@ func negate(n *Node) {
 
 	n.exec = func(f *Frame) Builtin {
 		f.data[i].SetInt(-value(f).Int())
-		return next
-	}
-}
-
-func add(n *Node) {
-	i := n.findex
-	value0 := genValue(n.child[0])
-	value1 := genValue(n.child[1])
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		f.data[i].SetInt(value0(f).Int() + value1(f).Int())
-		return next
-	}
-}
-
-func sub(n *Node) {
-	i := n.findex
-	value0 := genValue(n.child[0])
-	value1 := genValue(n.child[1])
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		f.data[i].SetInt(value0(f).Int() - value1(f).Int())
 		return next
 	}
 }
