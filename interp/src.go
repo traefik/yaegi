@@ -18,8 +18,8 @@ func (i *Interpreter) importSrcFile(path string) error {
 		return err
 	}
 
-	initNodes := []*Node{}
-	rootNodes := []*Node{}
+	var initNodes []*Node
+	var rootNodes []*Node
 
 	var root *Node
 

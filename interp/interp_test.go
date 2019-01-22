@@ -912,11 +912,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 )
 
-func client() {
-	resp, err := http.Get("http://localhost:8080/")
+func client(uri string) {
+	resp, err := http.Get(uri)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -927,20 +928,26 @@ func client() {
 	fmt.Println(string(body))
 }
 
-func server(ready chan bool) {
+func server(ln net.Listener, ready chan bool) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Welcome to my website!")
 	})
 
-	go http.ListenAndServe(":8080", nil)
+	go http.Serve(ln, nil)
 	ready <- true
 }
 
 func main() {
+	ln, err := net.Listen("tcp", ":0")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	ready := make(chan bool)
-	go server(ready)
+	go server(ln, ready)
 	<-ready
-	client()
+
+	client(fmt.Sprintf("http://%s", ln.Addr().String()))
 }
 `
 	i := New(Opt{Entry: "main"})

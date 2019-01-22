@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"go/format"
 	"io/ioutil"
 	"log"
 	"text/template"
@@ -68,6 +69,7 @@ func {{$name}}(n *Node) {
 {{end}}
 `
 
+// Op FIXME
 type Op struct {
 	Name  string
 	Str   bool
@@ -85,23 +87,30 @@ func main() {
 	b := &bytes.Buffer{}
 	data := map[string]interface{}{
 		"Ops": map[string]Op{
-			"add":    Op{"+", true, true, false},
-			"sub":    Op{"-", false, true, false},
-			"mul":    Op{"*", false, true, false},
-			"quo":    Op{"/", false, true, false},
-			"rem":    Op{"%", false, false, false},
-			"shl":    Op{"<<", false, false, true},
-			"shr":    Op{">>", false, false, true},
-			"and":    Op{"&", false, false, false},
-			"or":     Op{"|", false, false, false},
-			"xor":    Op{"^", false, false, false},
-			"andnot": Op{"&^", false, false, false},
+			"add":    {"+", true, true, false},
+			"sub":    {"-", false, true, false},
+			"mul":    {"*", false, true, false},
+			"quo":    {"/", false, true, false},
+			"rem":    {"%", false, false, false},
+			"shl":    {"<<", false, false, true},
+			"shr":    {">>", false, false, true},
+			"and":    {"&", false, false, false},
+			"or":     {"|", false, false, false},
+			"xor":    {"^", false, false, false},
+			"andnot": {"&^", false, false, false},
 		},
 	}
 	if err = parse.Execute(b, data); err != nil {
 		log.Fatal(err)
 	}
-	if err = ioutil.WriteFile("op.go", b.Bytes(), 0666); err != nil {
+
+	// gofmt
+	source, err := format.Source(b.Bytes())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err = ioutil.WriteFile("op.go", source, 0666); err != nil {
 		log.Fatal(err)
 	}
 }

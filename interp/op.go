@@ -4,7 +4,6 @@ package interp
 
 import "reflect"
 
-
 func add(n *Node) {
 	i := n.findex
 	next := getExec(n.tnext)
@@ -320,4 +319,3 @@ func xor(n *Node) {
 		}
 	}
 }
-
