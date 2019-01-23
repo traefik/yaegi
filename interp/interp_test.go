@@ -2,7 +2,9 @@
 
 package interp
 
-import "github.com/containous/dyngo/stdlib"
+import (
+	"github.com/containous/dyngo/stdlib"
+)
 
 func Example_a1() {
 	src := `
