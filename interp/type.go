@@ -507,7 +507,11 @@ func (t *Type) TypeOf() reflect.Type {
 }
 
 func isInt(t *Type) bool {
-	switch t.TypeOf().Kind() {
+	typ := t.TypeOf()
+	if typ == nil {
+		return false
+	}
+	switch typ.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return true
 	}
@@ -515,7 +519,11 @@ func isInt(t *Type) bool {
 }
 
 func isFloat(t *Type) bool {
-	switch t.TypeOf().Kind() {
+	typ := t.TypeOf()
+	if typ == nil {
+		return false
+	}
+	switch typ.Kind() {
 	case reflect.Float32, reflect.Float64:
 		return true
 	}
