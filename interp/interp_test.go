@@ -1558,6 +1558,30 @@ func main() {
 	// i: 20
 }
 
+func Example_defer3() {
+	src := `
+package main
+
+import (
+	"net/http"
+	"net/http/httptest"
+)
+
+func main() {
+	println("hello")
+	mux := http.NewServeMux()
+	server := httptest.NewServer(mux)
+	defer server.Close()
+}
+`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+	// Output:
+	// hello
+}
+
 func Example_export0() {
 	src := `
 package main
