@@ -1003,6 +1003,50 @@ func main() {
 
 }
 
+func Example_cli3() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/http/httptest"
+)
+
+func client(uri string) {
+	resp, err := http.Get(uri)
+	if err != nil {
+		log.Fatal(err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(body))
+}
+
+func main() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "Welcome to my website!")
+	})
+
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	client(server.URL)
+}
+`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+	// Output:
+	// Welcome to my website!
+}
+
 func Example_closure0() {
 	src := `
 package main

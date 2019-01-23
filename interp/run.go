@@ -373,21 +373,41 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 func _defer(n *Node) {
 	tnext := getExec(n.tnext)
 	values := make([]func(*Frame) reflect.Value, len(n.child[0].child))
+	var method func(*Frame) reflect.Value
+
 	for i, c := range n.child[0].child {
 		if c.typ.cat == FuncT {
 			values[i] = genNodeWrapper(c)
 		} else {
+			if c.recv != nil {
+				// defer a method on a binary obj
+				mi := c.val.(int)
+				m := genValue(c.child[0])
+				method = func(f *Frame) reflect.Value { return m(f).Method(mi) }
+			}
 			values[i] = genValue(c)
 		}
 	}
 
-	n.exec = func(f *Frame) Builtin {
-		val := make([]reflect.Value, len(values))
-		for i, v := range values {
-			val[i] = v(f)
+	if method != nil {
+		n.exec = func(f *Frame) Builtin {
+			val := make([]reflect.Value, len(values))
+			val[0] = method(f)
+			for i, v := range values[1:] {
+				val[i+1] = v(f)
+			}
+			f.deferred = append([][]reflect.Value{val}, f.deferred...)
+			return tnext
 		}
-		f.deferred = append([][]reflect.Value{val}, f.deferred...)
-		return tnext
+	} else {
+		n.exec = func(f *Frame) Builtin {
+			val := make([]reflect.Value, len(values))
+			for i, v := range values {
+				val[i] = v(f)
+			}
+			f.deferred = append([][]reflect.Value{val}, f.deferred...)
+			return tnext
+		}
 	}
 }
 
