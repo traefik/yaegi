@@ -14,7 +14,7 @@ const model = `package interp
 
 import "reflect"
 
-// Arithmetic opertators
+// Arithmetic operators
 {{range $name, $op := .Arithmetic}}
 func {{$name}}(n *Node) {
 	i := n.findex

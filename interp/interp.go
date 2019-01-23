@@ -29,7 +29,7 @@ type Node struct {
 	sym      *Symbol          // associated symbol
 	typ      *Type            // type of value in frame, or nil
 	recv     *Receiver        // method receiver node for call, or nil
-	types    []reflect.Type   // frame types, used by function litterals only
+	types    []reflect.Type   // frame types, used by function literals only
 	framepos []int            // frame positions of function parameters
 	action   Action           // action
 	exec     Builtin          // generated function to execute
@@ -53,10 +53,10 @@ type Frame struct {
 	recovered interface{}       // to handle panic recover
 }
 
-// LibValueMap stores the map of extern values per package
+// LibValueMap stores the map of external values per package
 type LibValueMap map[string]map[string]reflect.Value
 
-// LibTypeMap stores the map of extern types per package
+// LibTypeMap stores the map of external types per package
 type LibTypeMap map[string]map[string]reflect.Type
 
 // Opt stores interpreter options
@@ -71,7 +71,7 @@ type Opt struct {
 type Interpreter struct {
 	Opt
 	Name     string            // program name
-	Frame    *Frame            // programe data storage during execution
+	Frame    *Frame            // program data storage during execution
 	fsize    int               // global interpreter frame size
 	nindex   int               // next node index
 	universe *Scope            // interpreter global level scope
@@ -171,7 +171,7 @@ func initUniverse() *Scope {
 	return scope
 }
 
-// resizeFrame resizes the global frame of interpeter
+// resizeFrame resizes the global frame of interpreter
 func (i *Interpreter) resizeFrame() {
 	f := &Frame{data: make([]reflect.Value, i.fsize)}
 	copy(f.data, i.Frame.data)

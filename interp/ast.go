@@ -348,12 +348,12 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			anc.child = append(anc.child, n)
 			if anc.action == Assign && nbAssign > 1 {
 				if !typeSpec && len(anc.child) == 2*nbAssign {
-					// All LHS and RSH assing child are now defined, so split multiple assign
+					// All LHS and RSH assign child are now defined, so split multiple assign
 					// statement into single assign statements.
 					newAnc := anc.anc
-					newChild := []*Node{}
+					var newChild []*Node
 					for i := 0; i < nbAssign; i++ {
-						// set new signle assign
+						// set new single assign
 						interp.nindex++
 						na := &Node{anc: anc.anc, interp: interp, index: interp.nindex, pos: pos, kind: anc.kind, action: anc.action, val: new(interface{}), gen: anc.gen}
 						na.start = na
@@ -367,14 +367,14 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 					}
 					newAnc.child = newChild
 				} else if typeSpec && len(anc.child) == 2*nbAssign+1 {
-					// All LHS and RHS assing child are now defined, so split multiple assign
+					// All LHS and RHS assign child are now defined, so split multiple assign
 					// statement into single assign statements. Set type for each assignment.
 					typeSpec = false
 					newAnc := anc.anc
-					newChild := []*Node{}
+					var newChild []*Node
 					typeNode := anc.child[nbAssign]
 					for i := 0; i < nbAssign; i++ {
-						// set new signle assign
+						// set new single assign
 						interp.nindex++
 						na := &Node{anc: anc.anc, interp: interp, index: interp.nindex, pos: pos, kind: anc.kind, action: anc.action, val: new(interface{}), gen: anc.gen}
 						na.start = na

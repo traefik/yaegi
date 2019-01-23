@@ -82,7 +82,7 @@ func (i *Interpreter) importSrcFile(path string) error {
 	return nil
 }
 
-// pkgDir returns the abolute path in filesystem for a package given its name
+// pkgDir returns the absolute path in filesystem for a package given its name
 func pkgDir(path string) (string, error) {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
