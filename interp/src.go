@@ -1,14 +1,13 @@
 package interp
 
 import (
-	"go/build"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 )
 
 func (i *Interpreter) importSrcFile(path string) error {
-	dir, err := pkgDir(path)
+	dir, err := pkgDir(i.GoPath, path)
 	if err != nil {
 		return err
 	}
@@ -83,19 +82,14 @@ func (i *Interpreter) importSrcFile(path string) error {
 }
 
 // pkgDir returns the absolute path in filesystem for a package given its name
-func pkgDir(path string) (string, error) {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		return dir, err
-	}
-
-	dir = filepath.Join(dir, "vendor", path)
-	if _, err = os.Stat(dir); err == nil {
+func pkgDir(goPath string, path string) (string, error) {
+	dir := filepath.Join(goPath, "src", path, "vendor")
+	if _, err := os.Stat(dir); err == nil {
 		return dir, nil // found!
 	}
 
-	dir = filepath.Join(build.Default.GOPATH, "src", path)
-	_, err = os.Stat(dir)
+	dir = filepath.Join(goPath, "src", path)
+	_, err := os.Stat(dir)
 
 	return dir, err
 }

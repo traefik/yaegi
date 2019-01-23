@@ -3,6 +3,7 @@ package interp
 import (
 	"bufio"
 	"fmt"
+	"go/build"
 	"go/scanner"
 	"go/token"
 	"os"
@@ -61,9 +62,10 @@ type LibTypeMap map[string]map[string]reflect.Type
 
 // Opt stores interpreter options
 type Opt struct {
-	AstDot bool   // display AST graph (debug)
-	CfgDot bool   // display CFG graph (debug)
-	NoRun  bool   // compile, but do not run
+	AstDot bool // display AST graph (debug)
+	CfgDot bool // display CFG graph (debug)
+	NoRun  bool // compile, but do not run
+	GoPath string
 	Entry  string // interpreter entry point
 }
 
@@ -115,6 +117,10 @@ func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 
 // New creates and returns a new interpreter object
 func New(opt Opt) *Interpreter {
+	if len(opt.GoPath) == 0 {
+		opt.GoPath = build.Default.GOPATH
+	}
+
 	return &Interpreter{
 		Opt:      opt,
 		universe: initUniverse(),
