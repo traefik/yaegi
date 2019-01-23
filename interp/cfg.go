@@ -273,6 +273,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					sym.typ = dest.typ
 				}
 			}
+			// Detect invalid float truncate
+			if isInt(dest.typ) && isFloat(src.typ) {
+				err = src.cfgError("invalid float truncate")
+			}
 			n.findex = dest.findex
 			n.val = dest.val
 			// Propagate type
