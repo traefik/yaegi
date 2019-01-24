@@ -122,6 +122,40 @@ func {{$name}}Assign(n *Node) {
 	}
 }
 {{end}}
+{{range $name, $op := .IncDec}}
+func {{$name}}(n *Node) {
+	next := getExec(n.tnext)
+	typ := n.typ.TypeOf()
+	value := genValue(n.child[0])
+
+	switch typ.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		v0 := genValueInt(n.child[0])
+		n.exec = func(f *Frame) Builtin {
+			value(f).SetInt(v0(f) {{$op.Name}} 1)
+			return next
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		v0 := genValueUint(n.child[0])
+		n.exec = func(f *Frame) Builtin {
+			value(f).SetUint(v0(f) {{$op.Name}} 1)
+			return next
+		}
+	case reflect.Float32, reflect.Float64:
+		v0 := genValueFloat(n.child[0])
+		n.exec = func(f *Frame) Builtin {
+			value(f).SetFloat(v0(f) {{$op.Name}} 1)
+			return next
+		}
+	case reflect.Complex64, reflect.Complex128:
+		v0 := genValue(n.child[0])
+		n.exec = func(f *Frame) Builtin {
+			value(f).SetComplex(v0(f).Complex() {{$op.Name}} 1)
+			return next
+		}
+	}
+}
+{{end}}
 `
 
 // Op define operator name and properties
@@ -153,6 +187,10 @@ func main() {
 			"or":     {"|", false, false, false},
 			"xor":    {"^", false, false, false},
 			"andnot": {"&^", false, false, false},
+		},
+		"IncDec": map[string]Op{
+			"inc": {Name: "+"},
+			"dec": {Name: "-"},
 		},
 	}
 	if err = parse.Execute(b, data); err != nil {
