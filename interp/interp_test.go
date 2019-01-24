@@ -3044,6 +3044,21 @@ func main() {
 
 }
 
+func Example_op1() {
+	src := `
+package main
+
+func main() {
+	var a int = 3
+	a += 1.3
+	println(a)
+}`
+	i := New(Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	i.Eval(src)
+
+}
+
 func Example_plugin0() {
 	src := `
 package sample
