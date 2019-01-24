@@ -156,6 +156,87 @@ func {{$name}}(n *Node) {
 	}
 }
 {{end}}
+{{range $name, $op := .Comparison}}
+func {{$name}}(n *Node) {
+	tnext := getExec(n.tnext)
+	typ := n.typ.TypeOf()
+
+	switch {
+	case typ.Kind() == reflect.String:
+		v0 := genValueString(n.child[0])
+		v1 := genValueString(n.child[1])
+		if n.fnext != nil {
+			fnext := getExec(n.fnext)
+			n.exec = func(f *Frame) Builtin {
+				if v0(f) {{$op.Name}} v1(f) {
+					return tnext
+				}
+				return fnext
+			}
+		} else {
+			i := n.findex
+			n.exec = func(f *Frame) Builtin {
+				f.data[i].SetBool(v0(f) {{$op.Name}} v1(f))
+				return tnext
+			}
+		}
+	case isFloat(n.child[0].typ) || isFloat(n.child[1].typ):
+		v0 := genValueFloat(n.child[0])
+		v1 := genValueFloat(n.child[1])
+		if n.fnext != nil {
+			fnext := getExec(n.fnext)
+			n.exec = func(f *Frame) Builtin {
+				if v0(f) {{$op.Name}} v1(f) {
+					return tnext
+				}
+				return fnext
+			}
+		} else {
+			i := n.findex
+			n.exec = func(f *Frame) Builtin {
+				f.data[i].SetBool(v0(f) {{$op.Name}} v1(f))
+				return tnext
+			}
+		}
+	case isUint(n.child[0].typ) || isUint(n.child[1].typ):
+		v0 := genValueUint(n.child[0])
+		v1 := genValueUint(n.child[1])
+		if n.fnext != nil {
+			fnext := getExec(n.fnext)
+			n.exec = func(f *Frame) Builtin {
+				if v0(f) {{$op.Name}} v1(f) {
+					return tnext
+				}
+				return fnext
+			}
+		} else {
+			i := n.findex
+			n.exec = func(f *Frame) Builtin {
+				f.data[i].SetBool(v0(f) {{$op.Name}} v1(f))
+				return tnext
+			}
+		}
+	default:
+		v0 := genValueInt(n.child[0])
+		v1 := genValueInt(n.child[1])
+		if n.fnext != nil {
+			fnext := getExec(n.fnext)
+			n.exec = func(f *Frame) Builtin {
+				if v0(f) {{$op.Name}} v1(f) {
+					return tnext
+				}
+				return fnext
+			}
+		} else {
+			i := n.findex
+			n.exec = func(f *Frame) Builtin {
+				f.data[i].SetBool(v0(f) {{$op.Name}} v1(f))
+				return tnext
+			}
+		}
+	}
+}
+{{end}}
 `
 
 // Op define operator name and properties
@@ -191,6 +272,14 @@ func main() {
 		"IncDec": map[string]Op{
 			"inc": {Name: "+"},
 			"dec": {Name: "-"},
+		},
+		"Comparison": map[string]Op{
+			"equal":        {Name: "=="},
+			"greater":      {Name: ">"},
+			"greaterEqual": {Name: ">="},
+			"lower":        {Name: "<"},
+			"lowerEqual":   {Name: "<="},
+			"notEqual":     {Name: "!="},
 		},
 	}
 	if err = parse.Execute(b, data); err != nil {

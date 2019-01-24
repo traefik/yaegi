@@ -387,7 +387,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				if n.child[0].sym == nilSym || n.child[1].sym == nilSym {
 					n.gen = isNil
 				}
-			case Greater, Lower:
+			case Greater, GreaterEqual, Lower, LowerEqual:
 				n.typ = scope.getType("bool")
 			default:
 				n.typ, err = nodeType(interp, scope, n)

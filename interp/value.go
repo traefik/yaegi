@@ -130,3 +130,8 @@ func genValueFloat(n *Node) func(*Frame) float64 {
 	}
 	return nil
 }
+
+func genValueString(n *Node) func(*Frame) string {
+	value := genValue(n)
+	return func(f *Frame) string { return value(f).String() }
+}

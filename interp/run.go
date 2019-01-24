@@ -32,10 +32,12 @@ var builtin = [...]BuiltinGenerator{
 	Equal:        equal,
 	GetFunc:      getFunc,
 	Greater:      greater,
+	GreaterEqual: greaterEqual,
 	Inc:          inc,
 	Land:         land,
 	Lor:          lor,
 	Lower:        lower,
+	LowerEqual:   lowerEqual,
 	Mul:          mul,
 	MulAssign:    mulAssign,
 	Negate:       negate,
@@ -773,75 +775,6 @@ func negate(n *Node) {
 	}
 }
 
-func equal(n *Node) {
-	i := n.findex
-	value0 := genValue(n.child[0])
-	value1 := genValue(n.child[1])
-	tnext := getExec(n.tnext)
-
-	if n.fnext == nil {
-		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetBool(value0(f).Interface() == value1(f).Interface())
-			return tnext
-		}
-	} else {
-		fnext := getExec(n.fnext)
-
-		n.exec = func(f *Frame) Builtin {
-			if value0(f).Interface() == value1(f).Interface() {
-				return tnext
-			}
-			return fnext
-		}
-	}
-}
-
-func notEqual(n *Node) {
-	i := n.findex
-	value0 := genValue(n.child[0])
-	value1 := genValue(n.child[1])
-	tnext := getExec(n.tnext)
-
-	if n.fnext == nil {
-		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetBool(value0(f).Interface() != value1(f).Interface())
-			return tnext
-		}
-	} else {
-		fnext := getExec(n.fnext)
-
-		n.exec = func(f *Frame) Builtin {
-			if value0(f).Interface() != value1(f).Interface() {
-				return tnext
-			}
-			return fnext
-		}
-	}
-}
-
-func greater(n *Node) {
-	i := n.findex
-	value0 := genValue(n.child[0])
-	value1 := genValue(n.child[1])
-	tnext := getExec(n.tnext)
-
-	if n.fnext == nil {
-		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetBool(value0(f).Int() > value1(f).Int())
-			return tnext
-		}
-	} else {
-		fnext := getExec(n.fnext)
-
-		n.exec = func(f *Frame) Builtin {
-			if value0(f).Int() > value1(f).Int() {
-				return tnext
-			}
-			return fnext
-		}
-	}
-}
-
 func land(n *Node) {
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
@@ -881,28 +814,6 @@ func lor(n *Node) {
 		i := n.findex
 		n.exec = func(f *Frame) Builtin {
 			f.data[i].SetBool(value0(f).Bool() || value1(f).Bool())
-			return tnext
-		}
-	}
-}
-
-func lower(n *Node) {
-	value0 := genValue(n.child[0])
-	value1 := genValue(n.child[1])
-	tnext := getExec(n.tnext)
-
-	if n.fnext != nil {
-		fnext := getExec(n.fnext)
-		n.exec = func(f *Frame) Builtin {
-			if value0(f).Int() < value1(f).Int() {
-				return tnext
-			}
-			return fnext
-		}
-	} else {
-		i := n.findex
-		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetBool(value0(f).Int() < value1(f).Int())
 			return tnext
 		}
 	}
