@@ -1413,6 +1413,25 @@ func main() {
 	// 9
 }
 
+func Example_comp0() {
+	src := `
+package main
+
+func main() {
+	println(2 < 2.4)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// true
+}
+
 func Example_const0() {
 	src := `
 package main

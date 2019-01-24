@@ -200,12 +200,14 @@ const (
 	Defer
 	Equal
 	Greater
+	GreaterEqual
 	GetFunc
 	GetIndex
 	Inc
 	Land
 	Lor
 	Lower
+	LowerEqual
 	Mul
 	MulAssign
 	Negate
@@ -489,6 +491,8 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 				action = AndNot
 			case token.EQL:
 				action = Equal
+			case token.GEQ:
+				action = GreaterEqual
 			case token.GTR:
 				action = Greater
 			case token.LAND:
@@ -497,6 +501,8 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			case token.LOR:
 				kind = LorExpr
 				action = Lor
+			case token.LEQ:
+				action = LowerEqual
 			case token.LSS:
 				action = Lower
 			case token.MUL:
