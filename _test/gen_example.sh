@@ -21,7 +21,10 @@ do
 		print "src := `" src "`"
 		print "i := interp.New(interp.Opt{Entry: \"main\"})"
 		print "i.Use(stdlib.Value, stdlib.Type)"
-		print "i.Eval(src)"
+		print "_, err := i.Eval(src)"
+		print "if err != nil {"
+		print "	panic(err)"
+		print "}"
 		print out
 		print "}"
 	}
