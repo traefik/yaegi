@@ -27,7 +27,7 @@ var builtin = [...]BuiltinGenerator{
 	Call:         call,
 	Case:         _case,
 	CompositeLit: arrayLit,
-	Dec:          nop,
+	Dec:          dec,
 	Defer:        _defer,
 	Equal:        equal,
 	GetFunc:      getFunc,
@@ -816,17 +816,6 @@ func notEqual(n *Node) {
 			}
 			return fnext
 		}
-	}
-}
-
-func inc(n *Node) {
-	value := genValue(n)
-	value0 := genValue(n.child[0])
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		value(f).SetInt(value0(f).Int() + 1)
-		return next
 	}
 }
 
