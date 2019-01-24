@@ -84,7 +84,8 @@ func (i *Interpreter) importSrcFile(rPath, path string) error {
 	return nil
 }
 
-// pkgDir returns the absolute path in filesystem for a package given its name
+// pkgDir returns the absolute path in filesystem for a package given its name and
+// the root of the subtree dependencies.
 func pkgDir(goPath string, root, path string) (string, string, error) {
 	rPath := filepath.Join(root, "vendor")
 	dir := filepath.Join(goPath, "src", rPath, path)
@@ -100,10 +101,6 @@ func pkgDir(goPath string, root, path string) (string, string, error) {
 }
 
 func effectivePkg(root, path string) string {
-	return filepath.Join(root, extractPkg(root, path))
-}
-
-func extractPkg(root, path string) string {
 	splitRoot := strings.Split(root, string(filepath.Separator))
 	splitPath := strings.Split(path, string(filepath.Separator))
 
@@ -127,5 +124,5 @@ func extractPkg(root, path string) string {
 		frag = filepath.Join(frag, result[i])
 	}
 
-	return frag
+	return filepath.Join(root, frag)
 }
