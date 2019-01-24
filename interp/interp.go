@@ -200,7 +200,7 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 	}
 
 	// Global type analysis
-	if err = i.Gta(root); err != nil {
+	if err = i.Gta(root, ""); err != nil {
 		return res, err
 	}
 

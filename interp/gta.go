@@ -8,7 +8,7 @@ import (
 // variables and functions symbols at package level, prior to CFG.
 // All function bodies are skipped. GTA is necessary to handle out of
 // order declarations and multiple source files packages.
-func (interp *Interpreter) Gta(root *Node) error {
+func (interp *Interpreter) Gta(root *Node, rpath string) error {
 	var err error
 	var pkgName string
 	scope := interp.universe
@@ -100,7 +100,7 @@ func (interp *Interpreter) Gta(root *Node) error {
 				}
 			} else {
 				// TODO: make sure we do not import a src package more than once
-				err = interp.importSrcFile(ipath)
+				err = interp.importSrcFile(rpath, ipath)
 				scope.sym[name] = &Symbol{typ: &Type{cat: SrcPkgT}, path: ipath}
 			}
 
