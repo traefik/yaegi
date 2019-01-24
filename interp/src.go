@@ -4,10 +4,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
-func (i *Interpreter) importSrcFile(path string) error {
-	dir, err := pkgDir(i.GoPath, path)
+func (i *Interpreter) importSrcFile(rPath, path string) error {
+	dir, rPath, err := pkgDir(i.GoPath, rPath, path)
 	if err != nil {
 		return err
 	}
@@ -47,7 +48,8 @@ func (i *Interpreter) importSrcFile(path string) error {
 			root.AstDot(DotX(), name)
 		}
 
-		if err = i.Gta(root); err != nil {
+		subRPath := effectivePkg(rPath, path)
+		if i.Gta(root, subRPath) != nil {
 			return err
 		}
 	}
@@ -67,7 +69,7 @@ func (i *Interpreter) importSrcFile(path string) error {
 
 	// Once all package sources have been parsed, execute entry points then init functions
 	for _, n := range rootNodes {
-		if err = genRun(n); err != nil {
+		if genRun(n) != nil {
 			return err
 		}
 		i.fsize++
@@ -78,18 +80,49 @@ func (i *Interpreter) importSrcFile(path string) error {
 	for _, n := range initNodes {
 		i.run(n, i.Frame)
 	}
+
 	return nil
 }
 
-// pkgDir returns the absolute path in filesystem for a package given its name
-func pkgDir(goPath string, path string) (string, error) {
-	dir := filepath.Join(goPath, "src", path, "vendor")
+// pkgDir returns the absolute path in filesystem for a package given its name and
+// the root of the subtree dependencies.
+func pkgDir(goPath string, root, path string) (string, string, error) {
+	rPath := filepath.Join(root, "vendor")
+	dir := filepath.Join(goPath, "src", rPath, path)
+
 	if _, err := os.Stat(dir); err == nil {
-		return dir, nil // found!
+		return dir, rPath, nil // found!
 	}
 
-	dir = filepath.Join(goPath, "src", path)
-	_, err := os.Stat(dir)
+	dir = filepath.Join(goPath, "src", effectivePkg(root, path))
 
-	return dir, err
+	_, err := os.Stat(dir)
+	return dir, root, err
+}
+
+func effectivePkg(root, path string) string {
+	splitRoot := strings.Split(root, string(filepath.Separator))
+	splitPath := strings.Split(path, string(filepath.Separator))
+
+	var result []string
+
+	rootIndex := 0
+	prevRootIndex := 0
+	for i := 0; i < len(splitPath); i++ {
+		part := splitPath[len(splitPath)-1-i]
+
+		if part == splitRoot[len(splitRoot)-1-rootIndex] {
+			prevRootIndex = rootIndex
+			rootIndex++
+		} else if prevRootIndex == rootIndex {
+			result = append(result, part)
+		}
+	}
+
+	var frag string
+	for i := len(result) - 1; i >= 0; i-- {
+		frag = filepath.Join(frag, result[i])
+	}
+
+	return filepath.Join(root, frag)
 }
