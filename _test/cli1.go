@@ -21,8 +21,9 @@ func client(uri string) {
 }
 
 func server(ln net.Listener, ready chan bool) {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "Welcome to my website!")
+	http.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+		var r1 *http.Request = r
+		fmt.Fprintln(w, "Welcome to my website!", r1.RequestURI)
 	})
 
 	go http.Serve(ln, nil)
@@ -39,8 +40,8 @@ func main() {
 	go server(ln, ready)
 	<-ready
 
-	client(fmt.Sprintf("http://%s", ln.Addr().String()))
+	client(fmt.Sprintf("http://%s/hello", ln.Addr().String()))
 }
 
 // Output:
-// Welcome to my website!
+// Welcome to my website! /hello

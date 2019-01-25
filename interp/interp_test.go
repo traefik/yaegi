@@ -996,37 +996,6 @@ func main() {
 
 }
 
-func Example_cli0() {
-	src := `
-package main
-
-import (
-	"fmt"
-	"io/ioutil"
-	"log"
-	"net/http"
-)
-
-func main() {
-	resp, err := http.Get("http://localhost:8080/")
-	if err != nil {
-		log.Fatal(err)
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(body))
-}`
-	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
-	_, err := i.Eval(src)
-	if err != nil {
-		panic(err)
-	}
-
-}
-
 func Example_cli1() {
 	src := `
 package main
@@ -1052,8 +1021,9 @@ func client(uri string) {
 }
 
 func server(ln net.Listener, ready chan bool) {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "Welcome to my website!")
+	http.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+		var r1 *http.Request = r
+		fmt.Fprintln(w, "Welcome to my website!", r1.RequestURI)
 	})
 
 	go http.Serve(ln, nil)
@@ -1070,7 +1040,7 @@ func main() {
 	go server(ln, ready)
 	<-ready
 
-	client(fmt.Sprintf("http://%s", ln.Addr().String()))
+	client(fmt.Sprintf("http://%s/hello", ln.Addr().String()))
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
@@ -1081,55 +1051,7 @@ func main() {
 	}
 
 	// Output:
-	// Welcome to my website!
-}
-
-func Example_cli2() {
-	src := `
-package main
-
-import (
-	"fmt"
-	"io/ioutil"
-	"log"
-	"net/http"
-)
-
-func client() {
-	resp, err := http.Get("http://localhost:8080/")
-	if err != nil {
-		log.Fatal(err)
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(body))
-}
-
-func server(ready chan bool) {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		var r1 *http.Request = r
-		fmt.Fprintln(w, "Welcome to my website!", r1)
-	})
-
-	go http.ListenAndServe(":8080", nil)
-	ready <- true
-}
-
-func main() {
-	ready := make(chan bool)
-	go server(ready)
-	<-ready
-	client()
-}`
-	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
-	_, err := i.Eval(src)
-	if err != nil {
-		panic(err)
-	}
-
+	// Welcome to my website! /hello
 }
 
 func Example_cli3() {
@@ -3454,120 +3376,6 @@ func main() {
 
 }
 
-func Example_plugin0() {
-	src := `
-package sample
-
-import (
-	"fmt"
-	"net/http"
-)
-
-var version = "test"
-
-func Handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome to my website", version)
-}
-
-//func main() {
-//	m := &Middleware{"Test"}
-//	http.HandleFunc("/", Handler)
-//	http.ListenAndServe(":8080", nil)
-//}`
-	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
-	_, err := i.Eval(src)
-	if err != nil {
-		panic(err)
-	}
-
-}
-
-func Example_plugin1() {
-	src := `
-package sample
-
-import (
-	"fmt"
-	"net/http"
-)
-
-var version = "v1"
-
-type Sample struct{ Name string }
-
-var samples = []Sample{}
-
-func NewSample(name string) int {
-	fmt.Println("in NewSample", version)
-	i := len(samples)
-	samples = append(samples, Sample{Name: name})
-	return i
-}
-
-func WrapHandler(i int, w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome to my website", samples[i].Name)
-}
-
-//func main() {
-//	m := &Middleware{"Test"}
-//	http.HandleFunc("/", Handler)
-//	http.ListenAndServe(":8080", nil)
-//}`
-	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
-	_, err := i.Eval(src)
-	if err != nil {
-		panic(err)
-	}
-
-}
-
-func Example_plugin2() {
-	src := `
-package sample
-
-import (
-	"fmt"
-	"net/http"
-)
-
-var version = "v1"
-
-type Sample struct{ Name string }
-
-var samples = []Sample{}
-
-func (s *Sample) Handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome to my website", s.Name, version)
-}
-
-func NewSample(name string) int {
-	fmt.Println("in NewSample", name, version)
-	i := len(samples)
-	samples = append(samples, Sample{Name: name})
-	return i
-}
-
-func WrapHandler(i int, w http.ResponseWriter, r *http.Request) {
-	//fmt.Fprintln(w, "Welcome to my website", samples[i].Name)
-	samples[i].Handler(w, r)
-}
-
-//func main() {
-//	m := &Middleware{"Test"}
-//	http.HandleFunc("/", Handler)
-//	http.ListenAndServe(":8080", nil)
-//}`
-	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
-	_, err := i.Eval(src)
-	if err != nil {
-		panic(err)
-	}
-
-}
-
 func Example_ptr0() {
 	src := `
 package main
@@ -3929,10 +3737,12 @@ func Example_run0() {
 	src := `
 package main
 
+import "fmt"
+
 func f() (int, int) { return 2, 3 }
 
 func main() {
-	println(f())
+	fmt.Println(f())
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
@@ -3992,8 +3802,10 @@ func Example_run11() {
 	src := `
 package main
 
+import "fmt"
+
 func main() {
-	println(f())
+	fmt.Println(f())
 }
 
 func f() (int, int) { return 2, 3 }
@@ -4621,7 +4433,6 @@ import (
 var v string = "v1.0"
 
 func myHandler(w http.ResponseWriter, r *http.Request) {
-	//fmt.Fprintln(w, "Welcome to my website!", v)
 	fmt.Fprintln(w, "Welcome to my website!")
 }
 
@@ -4647,11 +4458,11 @@ import (
 	"net/http"
 )
 
+var version string = "1.0"
+
 type Middleware struct {
 	Name string
 }
-
-var version string = "1.0"
 
 func (m *Middleware) Handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Welcome to my website", m.Name, version)
@@ -4688,7 +4499,6 @@ type Middleware struct {
 }
 
 func (m *Middleware) Handler(w http.ResponseWriter, r *http.Request) {
-	//println("Hello")
 	log.Println(r.Header.Get("User-Agent"))
 	w.Header().Set("test", "ok")
 	log.Println(w.Header())
@@ -4723,7 +4533,6 @@ var v string = "v1.0"
 func main() {
 
 	myHandler := func(w http.ResponseWriter, r *http.Request) {
-		//fmt.Fprintln(w, "Welcome to my website!", v)
 		fmt.Fprintln(w, "Welcome to my website!")
 	}
 
@@ -4747,11 +4556,7 @@ import (
 	"net/http"
 )
 
-//func myHandler(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) }
-
 var myHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) })
-
-//var myHandler = func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("hello world")) }
 
 func main() {
 	http.HandleFunc("/", myHandler)
