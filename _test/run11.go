@@ -1,7 +1,9 @@
 package main
 
+import "fmt"
+
 func main() {
-	println(f())
+	fmt.Println(f())
 }
 
 func f() (int, int) { return 2, 3 }
