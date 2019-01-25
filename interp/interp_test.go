@@ -1035,6 +1035,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer ln.Close()
 
 	ready := make(chan bool)
 	go server(ln, ready)

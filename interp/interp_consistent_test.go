@@ -26,7 +26,9 @@ func TestInterpConsistent(t *testing.T) {
 			file.Name() == "op1.go" || // expect error
 			file.Name() == "time0.go" || // display time (similar to random number)
 			file.Name() == "time1.go" || // display time (similar to random number)
+			file.Name() == "time2.go" || // display time (similar to random number)
 
+			file.Name() == "cli1.go" || // FIXME global vars
 			file.Name() == "interface0.go" || // TODO not implemented yet
 			file.Name() == "heap.go" || // TODO not implemented yet
 			file.Name() == "bltn.go" || // TODO not implemented yet
