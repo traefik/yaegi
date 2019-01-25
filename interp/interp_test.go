@@ -1936,25 +1936,29 @@ func Example_for3() {
 	src := `
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 func main() {
-	//m := map[string][]string{
-	//	"hello": {"foo", "bar"},
-	//	"world": {"truc", "machin"},
-	//}
 	m := map[string][]string{
 		"hello": []string{"foo", "bar"},
 		"world": []string{"truc", "machin"},
 	}
-	//fmt.Println(m)
+
+	var content []string
+
 	for key, values := range m {
-		//fmt.Println(key, values)
 		for _, value := range values {
-			fmt.Println(key, value)
+			content = append(content, key+value)
 		}
 	}
-}`
+
+	sort.Strings(content)
+	fmt.Println(content)
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
 	_, err := i.Eval(src)
@@ -1962,6 +1966,8 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// [hellobar hellofoo worldmachin worldtruc]
 }
 
 func Example_fun() {

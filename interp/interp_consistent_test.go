@@ -1,10 +1,12 @@
 package interp_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/containous/dyngo/interp"
@@ -48,6 +50,10 @@ func TestInterpConsistency(t *testing.T) {
 			file.Name() == "server1.go" || // syntax parsing
 			file.Name() == "server0.go" || // syntax parsing
 			file.Name() == "server.go" { // syntax parsing
+			continue
+		}
+
+		if !strings.HasPrefix(file.Name(), "for") {
 			continue
 		}
 
@@ -95,6 +101,8 @@ func TestInterpConsistency(t *testing.T) {
 				t.Log(string(outRun))
 				t.Fatal(err)
 			}
+
+			fmt.Println(string(outInterp))
 
 			if string(outInterp) != string(outRun) {
 				t.Errorf("\nGot: %q,\n want: %q", string(outInterp), string(outRun))

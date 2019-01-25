@@ -1,21 +1,27 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 func main() {
-	//m := map[string][]string{
-	//	"hello": {"foo", "bar"},
-	//	"world": {"truc", "machin"},
-	//}
 	m := map[string][]string{
 		"hello": []string{"foo", "bar"},
 		"world": []string{"truc", "machin"},
 	}
-	//fmt.Println(m)
+
+	var content []string
+
 	for key, values := range m {
-		//fmt.Println(key, values)
 		for _, value := range values {
-			fmt.Println(key, value)
+			content = append(content, key+value)
 		}
 	}
+
+	sort.Strings(content)
+	fmt.Println(content)
 }
+
+// Output:
+// [hellobar hellofoo worldmachin worldtruc]
