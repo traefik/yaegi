@@ -11,7 +11,7 @@ import (
 	"github.com/containous/dyngo/stdlib"
 )
 
-func TestInterpConsistent(t *testing.T) {
+func TestInterpConsistency(t *testing.T) {
 	baseDir := filepath.Join("..", "_test")
 	files, err := ioutil.ReadDir(baseDir)
 	if err != nil {
