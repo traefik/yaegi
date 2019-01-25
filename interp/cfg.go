@@ -650,7 +650,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case GoStmt:
 			wireChild(n)
-			// TODO: should error if call expression refers to a builtin
 
 		case Ident:
 			if isKey(n) {
@@ -696,6 +695,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 							n.fsize = n.typ.rtype.NumOut()
 						}
 						n.rval = sym.val.(reflect.Value)
+					case sym.kind == Bltn:
+						if n.anc.kind != CallExpr {
+							err = n.cfgError("use of builtin %s not in function call", n.ident)
+						}
 					}
 				}
 				if n.sym != nil {
