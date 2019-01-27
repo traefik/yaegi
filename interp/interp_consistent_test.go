@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/containous/dyngo/interp"
@@ -97,6 +98,64 @@ func TestInterpConsistency(t *testing.T) {
 
 			if string(outInterp) != string(outRun) {
 				t.Errorf("\nGot: %q,\n want: %q", string(outInterp), string(outRun))
+			}
+		})
+	}
+}
+
+func TestInterpErrorConsistency(t *testing.T) {
+	testCases := []struct {
+		fileName       string
+		expectedInterp string
+		expectedExec   string
+	}{
+		{
+			fileName:       "op1.go",
+			expectedInterp: "5:7: invalid float truncate",
+			expectedExec:   "5:4: constant 1.3 truncated to integer",
+		},
+		{
+			fileName:       "bltn0.go",
+			expectedInterp: "4:7: use of builtin println not in function call",
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.fileName, func(t *testing.T) {
+			if len(test.expectedInterp) == 0 && len(test.expectedExec) == 0 {
+				t.Fatal("at least expectedInterp must be define")
+			}
+
+			filePath := filepath.Join("..", "_test", test.fileName)
+
+			src, err := ioutil.ReadFile(filePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			i := interp.New(interp.Opt{Entry: "main"})
+			i.Use(stdlib.Value, stdlib.Type)
+
+			_, errEval := i.Eval(string(src))
+			if errEval == nil {
+				t.Fatal("An error is expected but got none.")
+			}
+
+			if errEval.Error() != test.expectedInterp {
+				t.Errorf("got %q, want: %q", errEval.Error(), test.expectedInterp)
+			}
+
+			cmd := exec.Command("go", "run", filePath)
+			outRun, errExec := cmd.CombinedOutput()
+			if errExec == nil {
+				t.Log(string(outRun))
+				t.Fatal("An error is expected but got none.")
+			}
+
+			if len(test.expectedExec) == 0 && !strings.Contains(string(outRun), test.expectedInterp) {
+				t.Errorf("got %q, want: %q", string(outRun), test.expectedInterp)
+			} else if !strings.Contains(string(outRun), test.expectedExec) {
+				t.Errorf("got %q, want: %q", string(outRun), test.expectedExec)
 			}
 		})
 	}

@@ -627,6 +627,22 @@ func Example_bltn() {
 package main
 
 func main() {
+	println("Hello")
+}`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+func Example_bltn0() {
+	src := `
+package main
+
+func main() {
 	f := println
 	f("Hello")
 }`
