@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/containous/dyngo/interp"
@@ -49,10 +48,6 @@ func TestInterpConsistency(t *testing.T) {
 			file.Name() == "server1.go" || // syntax parsing
 			file.Name() == "server0.go" || // syntax parsing
 			file.Name() == "server.go" { // syntax parsing
-			continue
-		}
-
-		if !strings.HasPrefix(file.Name(), "for") {
 			continue
 		}
 
