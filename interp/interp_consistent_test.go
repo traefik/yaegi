@@ -1,7 +1,6 @@
 package interp_test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -25,6 +24,7 @@ func TestInterpConsistency(t *testing.T) {
 			file.Name() == "export0.go" || // non-main package
 			file.Name() == "io0.go" || // use random number
 			file.Name() == "op1.go" || // expect error
+			file.Name() == "bltn0.go" || // expect error
 			file.Name() == "time0.go" || // display time (similar to random number)
 			file.Name() == "time1.go" || // display time (similar to random number)
 			file.Name() == "time2.go" || // display time (similar to random number)
@@ -76,9 +76,8 @@ func TestInterpConsistency(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// read and restore stdout
-			err = w.Close()
-			if err != nil {
+			// read stdout
+			if err = w.Close(); err != nil {
 				t.Fatal(err)
 			}
 			outInterp, err := ioutil.ReadAll(r)
@@ -86,7 +85,7 @@ func TestInterpConsistency(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// Restore Stdout
+			// restore Stdout
 			os.Stdout = backupStdout
 
 			cmd := exec.Command("go", "run", filePath)
@@ -95,8 +94,6 @@ func TestInterpConsistency(t *testing.T) {
 				t.Log(string(outRun))
 				t.Fatal(err)
 			}
-
-			fmt.Println(string(outInterp))
 
 			if string(outInterp) != string(outRun) {
 				t.Errorf("\nGot: %q,\n want: %q", string(outInterp), string(outRun))
