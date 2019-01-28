@@ -174,6 +174,9 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 		case int:
 			t.cat = IntT
 			t.untyped = true
+		case rune:
+			t.cat = RuneT
+			t.untyped = true
 		case string:
 			t.cat = StringT
 			t.untyped = true

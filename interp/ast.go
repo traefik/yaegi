@@ -465,7 +465,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			n.ident = a.Value
 			switch a.Kind {
 			case token.CHAR:
-				n.val = a.Value[1]
+				n.val = rune(a.Value[1])
 			case token.FLOAT:
 				n.val, _ = strconv.ParseFloat(a.Value, 64)
 			case token.IMAG:
