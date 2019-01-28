@@ -148,10 +148,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			if l := len(n.child); n.anc.kind == ConstDecl && l == 1 {
 				// Implicit iota assignment. TODO: replicate previous explicit assignment
 				n.child = append(n.child, &Node{anc: n, interp: interp, kind: Ident, ident: "iota"})
-			} else if l%2 == 1 {
-				// Odd number of children: remove the type node, useless for assign
-				i := l / 2
-				n.child = append(n.child[:i], n.child[i+1:]...)
 			}
 
 		case BlockStmt:
@@ -221,9 +217,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case If0, If1, If2, If3:
 			scope = scope.push(0)
 
-		//case SelectStmt:
-		//	err = CfgError(fmt.Errorf("cfg: SelectStmt not implemented; %s", n.fset.Position(n.pos)))
-
 		case Switch0:
 			// Make sure default clause is in last position
 			c := n.child[1].child
@@ -253,12 +246,16 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			n.findex = scope.inc(interp)
 
 		case Define, AssignStmt:
-			wireChild(n)
-			dest, src := n.child[0], n.child[1]
+			dest, src := n.child[0], n.child[len(n.child)-1]
 			sym, level, _ := scope.lookup(dest.ident)
 			if n.kind == Define {
+				if len(n.child) == 3 {
+					// Type is provided in var declaration
+					dest.typ, err = nodeType(interp, scope, n.child[1])
+				} else {
+					dest.typ = src.typ
+				}
 				dest.val = src.val
-				dest.typ = src.typ
 				dest.recv = src.recv
 				dest.findex = sym.index
 				if src.action == GetFunc {
@@ -273,6 +270,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					sym.typ = dest.typ
 				}
 			}
+			wireChild(n)
 			// Detect invalid float truncate
 			if isInt(dest.typ) && isFloat(src.typ) {
 				err = src.cfgError("invalid float truncate")
@@ -293,9 +291,13 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				src.level = level
 			case src.kind == BasicLit:
 				// TODO: perform constant folding and propagation here
-				// Convert literal value to destination type
-				src.val = reflect.ValueOf(src.val).Convert(dest.typ.TypeOf())
-				src.typ = dest.typ
+				if dest.typ.cat == InterfaceT {
+					src.val = reflect.ValueOf(src.val)
+				} else {
+					// Convert literal value to destination type
+					src.val = reflect.ValueOf(src.val).Convert(dest.typ.TypeOf())
+					src.typ = dest.typ
+				}
 			}
 			n.typ = dest.typ
 			if sym != nil {
@@ -895,9 +897,15 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			}
 
 		case StarExpr:
-			wireChild(n)
-			n.typ = n.child[0].typ.val
-			n.findex = scope.inc(interp)
+			if n.anc.kind == Define && len(n.anc.child) == 3 && n.anc.child[1] == n {
+				// pointer type expression in a var definition
+				n.gen = nop
+			} else {
+				// dereference expression
+				wireChild(n)
+				n.typ = n.child[0].typ.val
+				n.findex = scope.inc(interp)
+			}
 
 		case Switch0:
 			n.start = n.child[1].start
