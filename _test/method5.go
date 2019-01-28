@@ -35,3 +35,10 @@ func main() {
 	Bar{}.Call()
 	Baz{}.Call()
 }
+
+// Output:
+// Foo Called
+// Foo Showed
+// Foo Called
+// Foo Showed
+// Baz Called
