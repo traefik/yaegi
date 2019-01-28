@@ -27,8 +27,6 @@ func TestInterpConsistency(t *testing.T) {
 			file.Name() == "op1.go" || // expect error
 			file.Name() == "bltn0.go" || // expect error
 			file.Name() == "time0.go" || // display time (similar to random number)
-			file.Name() == "time1.go" || // display time (similar to random number)
-			file.Name() == "time2.go" || // display time (similar to random number)
 
 			file.Name() == "cli1.go" || // FIXME global vars
 			file.Name() == "interface0.go" || // TODO not implemented yet
@@ -36,7 +34,7 @@ func TestInterpConsistency(t *testing.T) {
 			file.Name() == "chan6.go" || // FIXME related to channel #7
 			file.Name() == "select1.go" || // FIXME related to channel #7
 			file.Name() == "ret1.go" || // TODO not implemented yet #22
-			file.Name() == "time3.go" || // FIXME only hour is printed, and other returned values minute and second are skipped.
+			file.Name() == "time3.go" || // FIXME related to named returns
 			file.Name() == "type5.go" || // used to illustrate a limitation with no workaround, related to the fact that the reflect package does not allow the creation of named types
 			file.Name() == "type6.go" || // used to illustrate a limitation with no workaround, related to the fact that the reflect package does not allow the creation of named types
 

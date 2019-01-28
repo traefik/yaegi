@@ -5255,10 +5255,11 @@ import (
 )
 
 func main() {
-	t := time.Now()
+	t := time.Date(2009, time.November, 10, 23, 4, 5, 0, time.UTC)
 	m := t.Minute()
 	fmt.Println(t, m)
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
 	_, err := i.Eval(src)
@@ -5266,6 +5267,8 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// 2009-11-10 23:04:05 +0000 UTC 4
 }
 
 func Example_time2() {
@@ -5278,10 +5281,11 @@ import (
 )
 
 func main() {
-	t := time.Now()
+	t := time.Date(2009, time.November, 10, 23, 4, 5, 0, time.UTC)
 	h, m, s := t.Clock()
 	fmt.Println(h, m, s)
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
 	_, err := i.Eval(src)
@@ -5289,6 +5293,8 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// 23 4 5
 }
 
 func Example_time3() {
@@ -5300,8 +5306,9 @@ import (
 	"time"
 )
 
+// FIXME related to named returns
 func main() {
-	t := time.Now()
+	t := time.Date(2009, time.November, 10, 23, 4, 5, 0, time.UTC)
 	fmt.Println(t.Clock())
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
