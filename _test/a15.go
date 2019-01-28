@@ -8,3 +8,6 @@ func main() {
 	var buf [size]int
 	fmt.Println(buf[:])
 }
+
+// Output:
+// [0 0 0 0 0 0 0 0 0 0 0 0]
