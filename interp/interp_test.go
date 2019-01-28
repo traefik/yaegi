@@ -101,7 +101,8 @@ import "fmt"
 func main() {
 	var buf [12]int
 	fmt.Println(buf[0])
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
 	_, err := i.Eval(src)
@@ -109,6 +110,8 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// 0
 }
 
 func Example_a13() {
@@ -174,7 +177,8 @@ const size = 12
 func main() {
 	var buf [size]int
 	fmt.Println(buf[:])
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
 	_, err := i.Eval(src)
@@ -182,6 +186,8 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// [0 0 0 0 0 0 0 0 0 0 0 0]
 }
 
 func Example_a16() {
@@ -442,7 +448,8 @@ func main() {
 	//a[0] = 1
 	//a[1] = 2
 	fmt.Println(a)
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
 	_, err := i.Eval(src)
@@ -450,6 +457,8 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// [0 0]
 }
 
 func Example_a9() {
@@ -627,6 +636,25 @@ func Example_bltn() {
 package main
 
 func main() {
+	println("Hello")
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// Hello
+}
+
+func Example_bltn0() {
+	src := `
+package main
+
+func main() {
 	f := println
 	f("Hello")
 }`
@@ -668,7 +696,8 @@ import "fmt"
 
 func main() {
 	fmt.Println(true)
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
 	_, err := i.Eval(src)
@@ -676,6 +705,8 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// true
 }
 
 func Example_bool1() {
@@ -2358,11 +2389,10 @@ import (
 
 func main() {
 	var buf [4]byte
-	//fmt.Println(buf)
 	s := base64.RawStdEncoding.EncodeToString(buf[:])
-	//fmt.Println(base64.RawStdEncoding)
 	fmt.Println(s)
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
 	_, err := i.Eval(src)
@@ -2370,6 +2400,8 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// AAAAAA
 }
 
 func Example_iota() {
@@ -3189,7 +3221,8 @@ func main() {
 	Foo{}.Call()
 	Bar{}.Call()
 	Baz{}.Call()
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
 	_, err := i.Eval(src)
@@ -3197,6 +3230,12 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// Foo Called
+	// Foo Showed
+	// Foo Called
+	// Foo Showed
+	// Baz Called
 }
 
 func Example_method6() {
@@ -3355,7 +3394,8 @@ func main() {
 	b = 64
 	c = a * b
 	fmt.Printf("c: %v %T", c, c)
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
 	_, err := i.Eval(src)
@@ -3363,6 +3403,8 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// c: 4096 uint16
 }
 
 func Example_op1() {
@@ -3381,6 +3423,54 @@ func main() {
 		panic(err)
 	}
 
+}
+
+func Example_op2() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	a := 64
+	a += 64
+	fmt.Printf("a: %v %T", a, a)
+	fmt.Println()
+
+	b := 64
+	b -= 64
+	fmt.Printf("b: %v %T", b, b)
+	fmt.Println()
+
+	c := 64
+	c *= 64
+	fmt.Printf("c: %v %T", c, c)
+	fmt.Println()
+
+	d := 64
+	d /= 64
+	fmt.Printf("d: %v %T", d, d)
+	fmt.Println()
+
+	e := 64
+	e %= 64
+	fmt.Printf("e: %v %T", e, e)
+	fmt.Println()
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// a: 128 int
+	// b: 0 int
+	// c: 4096 int
+	// d: 1 int
+	// e: 0 int
 }
 
 func Example_ptr0() {
@@ -5165,10 +5255,11 @@ import (
 )
 
 func main() {
-	t := time.Now()
+	t := time.Date(2009, time.November, 10, 23, 4, 5, 0, time.UTC)
 	m := t.Minute()
 	fmt.Println(t, m)
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
 	_, err := i.Eval(src)
@@ -5176,6 +5267,8 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// 2009-11-10 23:04:05 +0000 UTC 4
 }
 
 func Example_time2() {
@@ -5188,10 +5281,11 @@ import (
 )
 
 func main() {
-	t := time.Now()
+	t := time.Date(2009, time.November, 10, 23, 4, 5, 0, time.UTC)
 	h, m, s := t.Clock()
 	fmt.Println(h, m, s)
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
 	_, err := i.Eval(src)
@@ -5199,6 +5293,8 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// 23 4 5
 }
 
 func Example_time3() {
@@ -5210,8 +5306,9 @@ import (
 	"time"
 )
 
+// FIXME related to named returns
 func main() {
-	t := time.Now()
+	t := time.Date(2009, time.November, 10, 23, 4, 5, 0, time.UTC)
 	fmt.Println(t.Clock())
 }`
 	i := interp.New(interp.Opt{Entry: "main"})

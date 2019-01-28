@@ -9,3 +9,6 @@ func main() {
 	//a[1] = 2
 	fmt.Println(a)
 }
+
+// Output:
+// [0 0]
