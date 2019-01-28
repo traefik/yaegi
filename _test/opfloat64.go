@@ -3,30 +3,31 @@ package main
 import "fmt"
 
 func main() {
-	a := 'r'
-	a += 'g'
+	var a float64 = 64
+	a += 64
 	fmt.Printf("a: %v %T", a, a)
 	fmt.Println()
 
-	b := 'r'
-	b -= 'g'
+	var b float64 = 64
+	b -= 64
 	fmt.Printf("b: %v %T", b, b)
 	fmt.Println()
 
-	c := 'r'
-	c *= 'g'
+	var c float64 = 64
+	c *= 64
 	fmt.Printf("c: %v %T", c, c)
 	fmt.Println()
 
-	d := 'r'
-	d /= 'g'
+	var d float64 = 64
+	d /= 64
 	fmt.Printf("d: %v %T", d, d)
 	fmt.Println()
 
-	e := 'r'
-	e %= 'g'
-	fmt.Printf("e: %v %T", e, e)
-	fmt.Println()
+	// FIXME expect an error
+	// var e float64 = 64
+	// e %= 64
+	// fmt.Printf("e: %v %T", e, e)
+	// fmt.Println()
 
 	fmt.Println(a > b)
 	fmt.Println(a >= b)
@@ -36,11 +37,10 @@ func main() {
 }
 
 // Output:
-// a: 217 int32
-// b: 11 int32
-// c: 11742 int32
-// d: 1 int32
-// e: 11 int32
+// a: 128 float64
+// b: 0 float64
+// c: 4096 float64
+// d: 1 float64
 // true
 // true
 // false
