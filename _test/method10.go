@@ -8,3 +8,6 @@ func main() {
 	var t T = 2
 	t.foo()
 }
+
+// Output:
+// foo 2

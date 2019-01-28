@@ -2933,7 +2933,8 @@ func (t T) foo() { println("foo", t) }
 func main() {
 	var t T = 2
 	t.foo()
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
 	_, err := i.Eval(src)
@@ -2941,6 +2942,8 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// foo 2
 }
 
 func Example_method11() {
