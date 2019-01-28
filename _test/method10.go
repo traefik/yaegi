@@ -1,15 +1,10 @@
 package main
 
+type T int
+
+func (t T) foo() { println("foo", t) }
+
 func main() {
-	o := Coord{3, 4}
-	println(o.dist())
+	var t T = 2
+	t.foo()
 }
-
-func (c Coord) dist() int { return c.x*c.x + c.y*c.y }
-
-type Coord struct {
-	x, y int
-}
-
-// Output:
-// 25

@@ -2894,17 +2894,14 @@ func Example_method10() {
 	src := `
 package main
 
+type T int
+
+func (t T) foo() { println("foo", t) }
+
 func main() {
-	o := Coord{3, 4}
-	println(o.dist())
-}
-
-func (c Coord) dist() int { return c.x*c.x + c.y*c.y }
-
-type Coord struct {
-	x, y int
-}
-`
+	var t T = 2
+	t.foo()
+}`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
 	_, err := i.Eval(src)
@@ -2912,8 +2909,6 @@ type Coord struct {
 		panic(err)
 	}
 
-	// Output:
-	// 25
 }
 
 func Example_method11() {
@@ -5610,6 +5605,26 @@ func main() {
 
 	// Output:
 	// 2 3
+}
+
+func Example_var5() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	var a int64 = 64
+	fmt.Printf("a: %v %T", a, a)
+	fmt.Println()
+}`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
 }
 
 func Example_variadic() {

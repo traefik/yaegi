@@ -185,7 +185,7 @@ func assignX(n *Node) {
 // assign implements single value assignment
 func assign(n *Node) {
 	value := genValue(n)
-	value1 := genValue(n.child[1])
+	value1 := genValue(n.child[len(n.child)-1])
 	next := getExec(n.tnext)
 
 	if n.child[0].typ.cat == InterfaceT {
