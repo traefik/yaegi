@@ -5714,7 +5714,8 @@ func main() {
 	var a int64 = 64
 	fmt.Printf("a: %v %T", a, a)
 	fmt.Println()
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
 	_, err := i.Eval(src)
@@ -5722,6 +5723,8 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// a: 64 int64
 }
 
 func Example_variadic() {
