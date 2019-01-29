@@ -1367,6 +1367,42 @@ func main() {
 	// 9
 }
 
+func Example_closure7() {
+	src := `
+package main
+
+import (
+	"fmt"
+)
+
+type Config struct {
+	A string
+}
+
+var conf *Config
+
+func SetConfig() func(*Config) {
+	return func(cf *Config) {
+		conf = cf
+	}
+}
+
+func main() {
+	conf := &Config{
+		A: "foo",
+	}
+
+	fmt.Println(conf.A)
+}`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+}
+
 func Example_comp0() {
 	src := `
 package main
