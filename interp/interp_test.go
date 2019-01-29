@@ -6469,6 +6469,43 @@ func main() {
 	// a: 64 int64
 }
 
+func Example_var6() {
+	src := `
+package main
+
+import (
+	"fmt"
+)
+
+type Foo struct {
+	A string
+}
+
+var f = Foo{"world"} // <-- the root cause
+
+func Hello() {
+	fmt.Println("in")
+}
+
+var name = "v1" // <-- the root cause
+
+func main() {
+	Hello()
+	fmt.Println("Hello", f.A, name)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// in
+	// Hello world v1
+}
+
 func Example_variadic() {
 	src := `
 package main
