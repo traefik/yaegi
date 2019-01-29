@@ -1038,7 +1038,12 @@ func wireChild(n *Node) {
 
 	// Chain sequential operations inside a block (next is right sibling)
 	for i := 1; i < len(n.child); i++ {
-		n.child[i-1].tnext = n.child[i].start
+		switch n.child[i].kind {
+		case FuncDecl:
+			n.child[i-1].tnext = n.child[i]
+		default:
+			n.child[i-1].tnext = n.child[i].start
+		}
 	}
 
 	// Chain subtree next to self
