@@ -23,3 +23,6 @@ func main() {
 
 	fmt.Println(conf.A)
 }
+
+// Output:
+// foo
