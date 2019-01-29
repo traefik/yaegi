@@ -74,6 +74,7 @@ func (interp *Interpreter) run(n *Node, cf *Frame) {
 	} else {
 		f = &Frame{anc: cf, data: make([]reflect.Value, n.flen)}
 	}
+
 	for i, t := range n.types {
 		// FIXME: nil types are forbidden and should be detected at compile time (CFG)
 		if t != nil && i < len(f.data) && !f.data[i].IsValid() {
@@ -606,7 +607,7 @@ func callBin(n *Node) {
 			}
 			//log.Println(n.index, "callbin", value(f).Type(), in)
 			r := value(f).Call(in)
-			//log.Println(n.index, "callBin, res:", v, fsize, n.findex)
+			//log.Println(n.index, "callBin, res:", r, fsize, n.findex, len(r), len(f.data))
 			for i := 0; i < fsize; i++ {
 				f.data[n.findex+i] = r[i]
 			}
