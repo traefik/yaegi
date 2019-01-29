@@ -3510,6 +3510,647 @@ func main() {
 	// e: 0 int
 }
 
+func Example_opfloat32() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	var a float32 = 64
+	a += 64
+	fmt.Printf("a: %v %T", a, a)
+	fmt.Println()
+
+	var b float32 = 64
+	b -= 64
+	fmt.Printf("b: %v %T", b, b)
+	fmt.Println()
+
+	var c float32 = 64
+	c *= 64
+	fmt.Printf("c: %v %T", c, c)
+	fmt.Println()
+
+	var d float32 = 64
+	d /= 64
+	fmt.Printf("d: %v %T", d, d)
+	fmt.Println()
+
+	// FIXME expect an error
+	// var e float32 = 64
+	// e %= 64
+	// fmt.Printf("e: %v %T", e, e)
+	// fmt.Println()
+
+	fmt.Println(a > b)
+	fmt.Println(a >= b)
+	fmt.Println(a < b)
+	fmt.Println(a <= b)
+	fmt.Println(b == d)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// a: 128 float32
+	// b: 0 float32
+	// c: 4096 float32
+	// d: 1 float32
+	// true
+	// true
+	// false
+	// false
+	// false
+}
+
+func Example_opfloat64() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	var a float64 = 64
+	a += 64
+	fmt.Printf("a: %v %T", a, a)
+	fmt.Println()
+
+	var b float64 = 64
+	b -= 64
+	fmt.Printf("b: %v %T", b, b)
+	fmt.Println()
+
+	var c float64 = 64
+	c *= 64
+	fmt.Printf("c: %v %T", c, c)
+	fmt.Println()
+
+	var d float64 = 64
+	d /= 64
+	fmt.Printf("d: %v %T", d, d)
+	fmt.Println()
+
+	// FIXME expect an error
+	// var e float64 = 64
+	// e %= 64
+	// fmt.Printf("e: %v %T", e, e)
+	// fmt.Println()
+
+	fmt.Println(a > b)
+	fmt.Println(a >= b)
+	fmt.Println(a < b)
+	fmt.Println(a <= b)
+	fmt.Println(b == d)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// a: 128 float64
+	// b: 0 float64
+	// c: 4096 float64
+	// d: 1 float64
+	// true
+	// true
+	// false
+	// false
+	// false
+}
+
+func Example_opint16() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	var a int16 = 64
+	a += 64
+	fmt.Printf("a: %v %T", a, a)
+	fmt.Println()
+
+	var b int16 = 64
+	b -= 64
+	fmt.Printf("b: %v %T", b, b)
+	fmt.Println()
+
+	var c int16 = 64
+	c *= 64
+	fmt.Printf("c: %v %T", c, c)
+	fmt.Println()
+
+	var d int16 = 64
+	d /= 64
+	fmt.Printf("d: %v %T", d, d)
+	fmt.Println()
+
+	var e int16 = 64
+	e %= 64
+	fmt.Printf("e: %v %T", e, e)
+	fmt.Println()
+
+	fmt.Println(a > b)
+	fmt.Println(a >= b)
+	fmt.Println(a < b)
+	fmt.Println(a <= b)
+	fmt.Println(b == e)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// a: 128 int16
+	// b: 0 int16
+	// c: 4096 int16
+	// d: 1 int16
+	// e: 0 int16
+	// true
+	// true
+	// false
+	// false
+	// true
+}
+
+func Example_opint32() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	var a int32 = 64
+	a += 64
+	fmt.Printf("a: %v %T", a, a)
+	fmt.Println()
+
+	var b int32 = 64
+	b -= 64
+	fmt.Printf("b: %v %T", b, b)
+	fmt.Println()
+
+	var c int32 = 64
+	c *= 64
+	fmt.Printf("c: %v %T", c, c)
+	fmt.Println()
+
+	var d int32 = 64
+	d /= 64
+	fmt.Printf("d: %v %T", d, d)
+	fmt.Println()
+
+	var e int32 = 64
+	e %= 64
+	fmt.Printf("e: %v %T", e, e)
+	fmt.Println()
+
+	fmt.Println(a > b)
+	fmt.Println(a >= b)
+	fmt.Println(a < b)
+	fmt.Println(a <= b)
+	fmt.Println(b == e)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// a: 128 int32
+	// b: 0 int32
+	// c: 4096 int32
+	// d: 1 int32
+	// e: 0 int32
+	// true
+	// true
+	// false
+	// false
+	// true
+}
+
+func Example_opint64() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	var a int64 = 64
+	a += 64
+	fmt.Printf("a: %v %T", a, a)
+	fmt.Println()
+
+	var b int64 = 64
+	b -= 64
+	fmt.Printf("b: %v %T", b, b)
+	fmt.Println()
+
+	var c int64 = 64
+	c *= 64
+	fmt.Printf("c: %v %T", c, c)
+	fmt.Println()
+
+	var d int64 = 64
+	d /= 64
+	fmt.Printf("d: %v %T", d, d)
+	fmt.Println()
+
+	var e int64 = 64
+	e %= 64
+	fmt.Printf("e: %v %T", e, e)
+	fmt.Println()
+
+	fmt.Println(a > b)
+	fmt.Println(a >= b)
+	fmt.Println(a < b)
+	fmt.Println(a <= b)
+	fmt.Println(b == e)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// a: 128 int64
+	// b: 0 int64
+	// c: 4096 int64
+	// d: 1 int64
+	// e: 0 int64
+	// true
+	// true
+	// false
+	// false
+	// true
+}
+
+func Example_opint8() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	var a int8 = 6
+	a += 6
+	fmt.Printf("a: %v %T", a, a)
+	fmt.Println()
+
+	var b int8 = 6
+	b -= 6
+	fmt.Printf("b: %v %T", b, b)
+	fmt.Println()
+
+	var c int8 = 6
+	c *= 6
+	fmt.Printf("c: %v %T", c, c)
+	fmt.Println()
+
+	var d int8 = 6
+	d /= 6
+	fmt.Printf("d: %v %T", d, d)
+	fmt.Println()
+
+	var e int8 = 6
+	e %= 6
+	fmt.Printf("e: %v %T", e, e)
+	fmt.Println()
+
+	fmt.Println(a > b)
+	fmt.Println(a >= b)
+	fmt.Println(a < b)
+	fmt.Println(a <= b)
+	fmt.Println(b == e)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// a: 12 int8
+	// b: 0 int8
+	// c: 36 int8
+	// d: 1 int8
+	// e: 0 int8
+	// true
+	// true
+	// false
+	// false
+	// true
+}
+
+func Example_opstring() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	a := "hhh"
+	a += "fff"
+	fmt.Printf("a: %v %T", a, a)
+	fmt.Println()
+
+	// b := "hhh"
+	// b -= "fff" // FIXME expect an error
+	// fmt.Printf("b: %v %T", b, b)
+	// fmt.Println()
+	//
+	// c := "hhh"
+	// c *= "fff" // FIXME expect an error
+	// fmt.Printf("c: %v %T", c, c)
+	// fmt.Println()
+	//
+	// d := "hhh"
+	// d /= "fff" // FIXME expect an error
+	// fmt.Printf("d: %v %T", d, d)
+	// fmt.Println()
+	//
+	// e := "hhh"
+	// e %= "fff" // FIXME expect an error
+	// fmt.Printf("e: %v %T", e, e)
+	// fmt.Println()
+
+	// FIXME panic
+	// fmt.Println(a > "ggg")
+	// fmt.Println(a >= "ggg")
+	// fmt.Println(a < "ggg")
+	// fmt.Println(a <= "ggg")
+	// fmt.Println(a == "hhhfff")
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// a: hhhfff string
+}
+
+func Example_opuint16() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	var a uint16 = 64
+	a += 64
+	fmt.Printf("a: %v %T", a, a)
+	fmt.Println()
+
+	var b uint16 = 64
+	b -= 64
+	fmt.Printf("b: %v %T", b, b)
+	fmt.Println()
+
+	var c uint16 = 64
+	c *= 64
+	fmt.Printf("c: %v %T", c, c)
+	fmt.Println()
+
+	var d uint16 = 64
+	d /= 64
+	fmt.Printf("d: %v %T", d, d)
+	fmt.Println()
+
+	var e uint16 = 64
+	e %= 64
+	fmt.Printf("e: %v %T", e, e)
+	fmt.Println()
+
+	fmt.Println(a > b)
+	fmt.Println(a >= b)
+	fmt.Println(a < b)
+	fmt.Println(a <= b)
+	fmt.Println(b == e)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// a: 128 uint16
+	// b: 0 uint16
+	// c: 4096 uint16
+	// d: 1 uint16
+	// e: 0 uint16
+	// true
+	// true
+	// false
+	// false
+	// true
+}
+
+func Example_opuint32() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	var a uint32 = 64
+	a += 64
+	fmt.Printf("a: %v %T", a, a)
+	fmt.Println()
+
+	var b uint32 = 64
+	b -= 64
+	fmt.Printf("b: %v %T", b, b)
+	fmt.Println()
+
+	var c uint32 = 64
+	c *= 64
+	fmt.Printf("c: %v %T", c, c)
+	fmt.Println()
+
+	var d uint32 = 64
+	d /= 64
+	fmt.Printf("d: %v %T", d, d)
+	fmt.Println()
+
+	var e uint32 = 64
+	e %= 64
+	fmt.Printf("e: %v %T", e, e)
+	fmt.Println()
+
+	fmt.Println(a > b)
+	fmt.Println(a >= b)
+	fmt.Println(a < b)
+	fmt.Println(a <= b)
+	fmt.Println(b == e)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// a: 128 uint32
+	// b: 0 uint32
+	// c: 4096 uint32
+	// d: 1 uint32
+	// e: 0 uint32
+	// true
+	// true
+	// false
+	// false
+	// true
+}
+
+func Example_opuint64() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	var a uint64 = 64
+	a += 64
+	fmt.Printf("a: %v %T", a, a)
+	fmt.Println()
+
+	var b uint64 = 64
+	b -= 64
+	fmt.Printf("b: %v %T", b, b)
+	fmt.Println()
+
+	var c uint64 = 64
+	c *= 64
+	fmt.Printf("c: %v %T", c, c)
+	fmt.Println()
+
+	var d uint64 = 64
+	d /= 64
+	fmt.Printf("d: %v %T", d, d)
+	fmt.Println()
+
+	var e uint64 = 64
+	e %= 64
+	fmt.Printf("e: %v %T", e, e)
+	fmt.Println()
+
+	fmt.Println(a > b)
+	fmt.Println(a >= b)
+	fmt.Println(a < b)
+	fmt.Println(a <= b)
+	fmt.Println(b == e)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// a: 128 uint64
+	// b: 0 uint64
+	// c: 4096 uint64
+	// d: 1 uint64
+	// e: 0 uint64
+	// true
+	// true
+	// false
+	// false
+	// true
+}
+
+func Example_opuint8() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	var a uint8 = 6
+	a += 6
+	fmt.Printf("a: %v %T", a, a)
+	fmt.Println()
+
+	var b uint8 = 6
+	b -= 6
+	fmt.Printf("b: %v %T", b, b)
+	fmt.Println()
+
+	var c uint8 = 6
+	c *= 6
+	fmt.Printf("c: %v %T", c, c)
+	fmt.Println()
+
+	var d uint8 = 6
+	d /= 6
+	fmt.Printf("d: %v %T", d, d)
+	fmt.Println()
+
+	var e uint8 = 6
+	e %= 6
+	fmt.Printf("e: %v %T", e, e)
+	fmt.Println()
+
+	fmt.Println(a > b)
+	fmt.Println(a >= b)
+	fmt.Println(a < b)
+	fmt.Println(a <= b)
+	fmt.Println(b == e)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// a: 12 uint8
+	// b: 0 uint8
+	// c: 36 uint8
+	// d: 1 uint8
+	// e: 0 uint8
+	// true
+	// true
+	// false
+	// false
+	// true
+}
+
 func Example_ptr0() {
 	src := `
 package main
@@ -4172,6 +4813,12 @@ func main() {
 	e %= 'g'
 	fmt.Printf("e: %v %T", e, e)
 	fmt.Println()
+
+	fmt.Println(a > b)
+	fmt.Println(a >= b)
+	fmt.Println(a < b)
+	fmt.Println(a <= b)
+	fmt.Println(b == d)
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
@@ -4187,6 +4834,11 @@ func main() {
 	// c: 11742 int32
 	// d: 1 int32
 	// e: 11 int32
+	// true
+	// true
+	// false
+	// false
+	// false
 }
 
 func Example_scope0() {
