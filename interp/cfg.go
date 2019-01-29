@@ -949,7 +949,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case ValueSpec:
 			l := len(n.child) - 1
 			if n.typ = n.child[l].typ; n.typ == nil {
-				n.typ = scope.getType(n.child[l].ident)
+				n.typ, err = nodeType(interp, scope, n.child[l])
+				if err != nil {
+					return
+				}
 			}
 			for _, c := range n.child[:l] {
 				c.typ = n.typ
