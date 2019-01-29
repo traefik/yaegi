@@ -847,7 +847,13 @@ func _return(n *Node) {
 func arrayLit(n *Node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
-	child := n.child[1:]
+	var child []*Node
+
+	if n.typ.untyped {
+		child = n.child
+	} else {
+		child = n.child[1:]
+	}
 	a, _ := n.typ.zero()
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {

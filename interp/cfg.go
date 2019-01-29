@@ -514,6 +514,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 						c.findex = n.typ.fieldIndex(c.child[0].ident)
 					}
 				}
+			default:
+				n.typ = &Type{cat: ArrayT, val: n.typ, untyped: true}
+				n.gen = arrayLit
 			}
 
 		case Continue:

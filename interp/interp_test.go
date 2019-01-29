@@ -2838,6 +2838,44 @@ func main() {
 	// 13 733
 }
 
+func Example_map8() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"sort"
+)
+
+func main() {
+	m := map[string][]string{
+		"hello": {"foo", "bar"},
+		"world": {"truc", "machin"},
+	}
+
+	var content []string
+
+	for key, values := range m {
+		for _, value := range values {
+			content = append(content, key+value)
+		}
+	}
+
+	sort.Strings(content)
+	fmt.Println(content)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// [hellobar hellofoo worldmachin worldtruc]
+}
+
 func Example_math0() {
 	src := `
 package main
