@@ -869,6 +869,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.gen = nop
 			} else if n.typ.cat == SrcPkgT {
 				// Resolve source package symbol
+				log.Println(n.index, "selector:", n.child[0].ident, interp.scope[n.child[0].ident])
 				if sym, ok := interp.scope[n.child[0].ident].sym[n.child[1].ident]; ok {
 					n.val = sym.node
 					n.gen = nop
