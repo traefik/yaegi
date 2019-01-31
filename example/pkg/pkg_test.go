@@ -44,12 +44,26 @@ func TestPackages(t *testing.T) {
 			goPath:   "./_pkg4/",
 			expected: "root Fromage Cheese Vin! Couteau",
 		},
+		{
+			desc:     "vendor flat",
+			goPath:   "./_pkg5/",
+			expected: "root Fromage Cheese Vin! Couteau",
+		},
+		{
+			desc:     "fallback to GOPATH",
+			goPath:   "./_pkg6/",
+			expected: "root Fromage Cheese Vin! Couteau",
+		},
+		{
+			desc:     "recursive vendor",
+			goPath:   "./_pkg7/",
+			expected: "root vin cheese fromage",
+		},
 	}
 
 	for _, test := range testCases {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
-			// t.Parallel()
 
 			goPath, err := filepath.Abs(test.goPath)
 			if err != nil {
