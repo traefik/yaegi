@@ -12,7 +12,14 @@ import (
 	"github.com/containous/dyngo/stdlib"
 )
 
-func TestInterpConsistency(t *testing.T) {
+func TestInterpConsistencyBuild(t *testing.T) {
+	dir := filepath.Join("..", "_test", "tmp")
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.Mkdir(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	baseDir := filepath.Join("..", "_test")
 	files, err := ioutil.ReadDir(baseDir)
 	if err != nil {
@@ -27,6 +34,8 @@ func TestInterpConsistency(t *testing.T) {
 			file.Name() == "op1.go" || // expect error
 			file.Name() == "bltn0.go" || // expect error
 			file.Name() == "time0.go" || // display time (similar to random number)
+			file.Name() == "factor.go" || // bench
+			file.Name() == "fib.go" || // bench
 
 			file.Name() == "cli1.go" || // FIXME global vars
 			file.Name() == "interface0.go" || // TODO not implemented yet
@@ -87,7 +96,16 @@ func TestInterpConsistency(t *testing.T) {
 			// restore Stdout
 			os.Stdout = backupStdout
 
-			cmd := exec.Command("go", "run", filePath)
+			bin := filepath.Join(dir, strings.TrimSuffix(file.Name(), ".go"))
+
+			cmdBuild := exec.Command("go", "build", "-o", bin, filePath)
+			outBuild, err := cmdBuild.CombinedOutput()
+			if err != nil {
+				t.Log(string(outBuild))
+				t.Fatal(err)
+			}
+
+			cmd := exec.Command(bin)
 			outRun, err := cmd.CombinedOutput()
 			if err != nil {
 				t.Log(string(outRun))
