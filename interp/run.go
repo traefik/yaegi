@@ -848,13 +848,11 @@ func _return(n *Node) {
 func arrayLit(n *Node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
-	var child []*Node
-
-	if n.typ.untyped {
-		child = n.child
-	} else {
+	child := n.child
+	if !n.typ.untyped {
 		child = n.child[1:]
 	}
+
 	a, _ := n.typ.zero()
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
@@ -886,7 +884,10 @@ func arrayLit(n *Node) {
 func mapLit(n *Node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
-	child := n.child[1:]
+	child := n.child
+	if !n.typ.untyped {
+		child = n.child[1:]
+	}
 	typ := n.typ.TypeOf()
 	keys := make([]func(*Frame) reflect.Value, len(child))
 	values := make([]func(*Frame) reflect.Value, len(child))
@@ -911,13 +912,11 @@ func mapLit(n *Node) {
 func compositeLit(n *Node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
-	var child []*Node
-
-	if n.typ.untyped {
-		child = n.child
-	} else {
+	child := n.child
+	if !n.typ.untyped {
 		child = n.child[1:]
 	}
+
 	a, _ := n.typ.zero()
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
@@ -938,7 +937,11 @@ func compositeLit(n *Node) {
 func compositeSparse(n *Node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
-	child := n.child[1:]
+	child := n.child
+	if !n.typ.untyped {
+		child = n.child[1:]
+	}
+
 	values := make(map[int]func(*Frame) reflect.Value)
 	a, _ := n.typ.zero()
 	for _, c := range child {
