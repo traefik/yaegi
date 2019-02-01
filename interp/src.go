@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -96,8 +97,34 @@ func pkgDir(goPath string, root, path string) (string, string, error) {
 
 	dir = filepath.Join(goPath, "src", effectivePkg(root, path))
 
-	_, err := os.Stat(dir)
-	return dir, root, err
+	if _, err := os.Stat(dir); err == nil {
+		return dir, root, nil // found!
+	}
+
+	if len(root) == 0 {
+		return "", "", fmt.Errorf("unable to find source related to: %q", path)
+	}
+
+	return pkgDir(goPath, previousRoot(root), path)
+}
+
+// Find the previous source root. (vendor > vendor > ... > GOPATH)
+func previousRoot(root string) string {
+	splitRoot := strings.Split(root, string(filepath.Separator))
+
+	var index int
+	for i := len(splitRoot) - 1; i >= 0; i-- {
+		if splitRoot[i] == "vendor" {
+			index = i
+			break
+		}
+	}
+
+	if index == 0 {
+		return ""
+	}
+
+	return filepath.Join(splitRoot[:index]...)
 }
 
 func effectivePkg(root, path string) string {

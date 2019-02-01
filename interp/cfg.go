@@ -187,6 +187,24 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			}
 			scope = scope.push(0)
 
+		case CompositeLitExpr:
+			if n.child[0].isType(scope) {
+				// Get type from 1st child
+				n.typ, err = nodeType(interp, scope, n.child[0])
+			} else {
+				// Get type from ancestor (implicit type)
+				if n.anc.kind == KeyValueExpr && n == n.anc.child[0] {
+					n.typ = n.anc.typ.key
+				} else if n.anc.typ != nil {
+					n.typ = n.anc.typ.val
+				}
+				n.typ.untyped = true
+			}
+			// Propagate type to children, to handle implicit types
+			for _, c := range n.child {
+				c.typ = n.typ
+			}
+
 		case File:
 			pkgName = n.child[0].ident
 			if _, ok := interp.scope[pkgName]; !ok {
@@ -490,13 +508,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			if n.anc.action != Assign {
 				n.findex = scope.inc(interp)
 			}
-			if n.child[0].typ == nil {
-				if n.child[0].typ, err = nodeType(interp, scope, n.child[0]); err != nil {
-					return
-				}
-			}
 			// TODO: Check that composite literal expr matches corresponding type
-			n.typ = n.child[0].typ
 			switch n.typ.cat {
 			case ArrayT:
 				n.gen = arrayLit
@@ -1015,6 +1027,14 @@ func (n *Node) isType(scope *Scope) bool {
 	switch n.kind {
 	case ArrayType, ChanType, FuncType, MapType, StructType, Rtype:
 		return true
+	case SelectorExpr:
+		pkg, name := n.child[0].ident, n.child[1].ident
+		if p, ok := n.interp.binType[pkg]; ok && p[name] != nil {
+			return true // Imported binary type
+		}
+		if p, ok := n.interp.scope[pkg]; ok && p.sym[name] != nil {
+			return true // Imported source type
+		}
 	case Ident:
 		return scope.getType(n.ident) != nil
 	}
