@@ -516,13 +516,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.gen = mapLit
 			case StructT:
 				n.action, n.gen = CompositeLit, compositeLit
+				child := n.child
+				if child[0].isType(scope) {
+					child = n.child[1:]
+				}
 				// Handle object assign from sparse key / values
-				if len(n.child) > 1 && n.child[1].kind == KeyValueExpr {
+				if len(child) > 0 && child[0].kind == KeyValueExpr {
 					n.gen = compositeSparse
-					if n.typ, err = nodeType(interp, scope, n.child[0]); err != nil {
-						return
-					}
-					for _, c := range n.child[1:] {
+					for _, c := range child {
 						c.findex = n.typ.fieldIndex(c.child[0].ident)
 					}
 				}
@@ -1031,7 +1032,7 @@ func (n *Node) isType(scope *Scope) bool {
 		if p, ok := n.interp.binType[pkg]; ok && p[name] != nil {
 			return true // Imported binary type
 		}
-		if p, ok := n.interp.scope[pkg]; ok && p.sym[name] != nil {
+		if p, ok := n.interp.scope[pkg]; ok && p.sym[name] != nil && p.sym[name].kind == Typ {
 			return true // Imported source type
 		}
 	case Ident:

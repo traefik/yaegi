@@ -2790,6 +2790,46 @@ func main() {
 	// [hellobar hellofoo worldmachin worldtruc]
 }
 
+func Example_map12() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"sort"
+)
+
+type Foo struct {
+	Name string
+}
+
+func main() {
+	m := map[string]Foo{
+		"hello": {Name: "bar"},
+		"world": {Name: "machin"},
+	}
+
+	var content []string
+
+	for key, value := range m {
+		content = append(content, key+value.Name)
+	}
+
+	sort.Strings(content)
+	fmt.Println(content)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// [hellobar worldmachin]
+}
+
 func Example_map2() {
 	src := `
 package main
