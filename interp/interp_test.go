@@ -2706,6 +2706,90 @@ func main() {
 	// machin
 }
 
+func Example_map10() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"sort"
+)
+
+type Foo struct {
+	Name string
+}
+
+func main() {
+	m := map[string][]Foo{
+		"hello": {Foo{"foo"}, Foo{"bar"}},
+		"world": {Foo{"truc"}, Foo{"machin"}},
+	}
+
+	var content []string
+
+	for key, values := range m {
+		for _, value := range values {
+			content = append(content, key+value.Name)
+		}
+	}
+
+	sort.Strings(content)
+	fmt.Println(content)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// [hellobar hellofoo worldmachin worldtruc]
+}
+
+func Example_map11() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"sort"
+)
+
+type Foo struct {
+	Name string
+}
+
+func main() {
+	m := map[string][]Foo{
+		"hello": []Foo{{"foo"}, {"bar"}},
+		"world": []Foo{{"truc"}, {"machin"}},
+	}
+
+	var content []string
+
+	for key, values := range m {
+		for _, value := range values {
+			content = append(content, key+value.Name)
+		}
+	}
+
+	sort.Strings(content)
+	fmt.Println(content)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// [hellobar hellofoo worldmachin worldtruc]
+}
+
 func Example_map2() {
 	src := `
 package main
@@ -2858,6 +2942,48 @@ func main() {
 	for key, values := range m {
 		for _, value := range values {
 			content = append(content, key+value)
+		}
+	}
+
+	sort.Strings(content)
+	fmt.Println(content)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// [hellobar hellofoo worldmachin worldtruc]
+}
+
+func Example_map9() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"sort"
+)
+
+type Foo struct {
+	Name string
+}
+
+func main() {
+	m := map[string][]Foo{
+		"hello": {{"foo"}, {"bar"}},
+		"world": {{"truc"}, {"machin"}},
+	}
+
+	var content []string
+
+	for key, values := range m {
+		for _, value := range values {
+			content = append(content, key+value.Name)
 		}
 	}
 
