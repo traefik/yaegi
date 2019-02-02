@@ -59,6 +59,11 @@ func TestPackages(t *testing.T) {
 			goPath:   "./_pkg7/",
 			expected: "root vin cheese fromage",
 		},
+		{
+			desc:     "named subpackage",
+			goPath:   "./_pkg8/",
+			expected: "root Fromage!",
+		},
 	}
 
 	for _, test := range testCases {
