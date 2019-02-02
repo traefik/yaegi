@@ -100,7 +100,7 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 				}
 			} else {
 				// TODO: make sure we do not import a src package more than once
-				err = interp.importSrcFile(rpath, ipath)
+				err = interp.importSrcFile(rpath, ipath, name)
 				scope.sym[name] = &Symbol{typ: &Type{cat: SrcPkgT}, path: ipath}
 			}
 

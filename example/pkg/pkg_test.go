@@ -59,6 +59,11 @@ func TestPackages(t *testing.T) {
 			goPath:   "./_pkg7/",
 			expected: "root vin cheese fromage",
 		},
+		{
+			desc:     "named subpackage",
+			goPath:   "./_pkg8/",
+			expected: "root Fromage!",
+		},
 	}
 
 	for _, test := range testCases {
@@ -92,6 +97,42 @@ func TestPackages(t *testing.T) {
 
 			if msg != test.expected {
 				t.Errorf("Got %q, want %q", msg, test.expected)
+			}
+		})
+	}
+}
+
+func TestPackagesError(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		goPath   string
+		expected string
+	}{
+		{
+			desc:     "different packages in the same directory",
+			goPath:   "./_pkg9/",
+			expected: "found packages pkg and pkgfalse in _pkg9/src/github.com/foo/pkg",
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+
+			// Init go interpreter
+			i := interp.New(interp.Opt{
+				GoPath: test.goPath,
+			})
+			i.Use(stdlib.Value, stdlib.Type) // Use binary standard library
+
+			// Load pkg from sources
+			_, err := i.Eval(`import "github.com/foo/pkg"`)
+			if err == nil {
+				t.Fatalf("got no error, want %q", test.expected)
+			}
+
+			if err.Error() != test.expected {
+				t.Errorf("got %q, want %q", err.Error(), test.expected)
 			}
 		})
 	}

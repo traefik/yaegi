@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func (i *Interpreter) importSrcFile(rPath, path string) error {
+func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 	dir, rPath, err := pkgDir(i.GoPath, rPath, path)
 	if err != nil {
 		return err
@@ -23,6 +23,7 @@ func (i *Interpreter) importSrcFile(rPath, path string) error {
 	var rootNodes []*Node
 
 	var root *Node
+	var pkgName string
 
 	// Parse source files
 	for _, file := range files {
@@ -40,8 +41,14 @@ func (i *Interpreter) importSrcFile(rPath, path string) error {
 			return err
 		}
 
-		if _, root, err = i.ast(string(buf), name); err != nil {
+		var pname string
+		if pname, root, err = i.ast(string(buf), name); err != nil {
 			return err
+		}
+		if pkgName == "" {
+			pkgName = pname
+		} else if pkgName != pname {
+			return fmt.Errorf("found packages %s and %s in %s", pkgName, pname, dir)
 		}
 		rootNodes = append(rootNodes, root)
 
@@ -62,6 +69,12 @@ func (i *Interpreter) importSrcFile(rPath, path string) error {
 			return err
 		}
 		initNodes = append(initNodes, nodes...)
+	}
+
+	// Rename imported pkgName to alias if they are different
+	if pkgName != alias {
+		i.scope[alias] = i.scope[pkgName]
+		delete(i.scope, pkgName)
 	}
 
 	if i.NoRun {
