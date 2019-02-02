@@ -3,7 +3,7 @@ package pkg
 import (
 	"fmt"
 
-	"github.com/foo/pkg/fromage"
+	fr "github.com/foo/pkg/fromage"
 )
 
 func Here() string {
@@ -12,6 +12,6 @@ func Here() string {
 
 func NewSample() func() string {
 	return func() string {
-		return fmt.Sprintf("%s %s", Here(), fromage.Hello())
+		return fmt.Sprintf("%s %s", Here(), fr.Hello())
 	}
 }
