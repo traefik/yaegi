@@ -1,7 +1,6 @@
 package clos1
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/containous/dyngo/interp"
@@ -9,24 +8,29 @@ import (
 )
 
 func TestFunctionCall(t *testing.T) {
-	goPath, err := filepath.Abs("./")
-	if err != nil {
-		t.Fatal(err)
-	}
-	i := interp.New(interp.Opt{GoPath: goPath})
+	i := interp.New(interp.Opt{GoPath: "./_pkg"})
 	i.Use(stdlib.Value, stdlib.Type)
-	_, err = i.Eval(`import "foo/bar"`)
+
+	_, err := i.Eval(`import "foo/bar"`)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	fnv, err := i.Eval(`bar.NewSample()`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fn, ok := fnv.Interface().(func(string, string) func(string))
+
+	fn, ok := fnv.Interface().(func(string, string) func(string) string)
 	if !ok {
 		t.Fatal("conversion failed")
 	}
+
 	fn2 := fn("hello", "world")
-	fn2("truc")
+	val := fn2("truc")
+
+	expected := "herev1helloworldtruc"
+	if val != expected {
+		t.Errorf("Got: %q, want: %q", val, expected)
+	}
 }
