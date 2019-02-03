@@ -363,8 +363,13 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 			if len(def.child[2].child) > 1 {
 				if fieldList := def.child[2].child[1]; fieldList != nil {
 					result = make([]reflect.Value, len(fieldList.child))
-					for i := range fieldList.child {
-						result[i] = frame.data[i]
+					for i, c := range fieldList.child {
+						if c.typ.cat == FuncT {
+							gv := genNodeWrapper(frame.data[i].Interface().(*Node))
+							result[i] = gv(f)
+						} else {
+							result[i] = frame.data[i]
+						}
 					}
 				}
 			}
