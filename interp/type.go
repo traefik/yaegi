@@ -101,7 +101,7 @@ type StructField struct {
 // Type defines the internal representation of types in the interpreter
 type Type struct {
 	cat        Cat           // Type category
-	field      []StructField // Array of struct fields if StrucT or nil
+	field      []StructField // Array of struct fields if StrucT or InterfaceT
 	key        *Type         // Type of key element if MapT or nil
 	val        *Type         // Type of value element if ChanT, MapT, PtrT, AliasT or ArrayT
 	arg        []*Type       // Argument types if FuncT or nil
@@ -111,7 +111,7 @@ type Type struct {
 	rtype      reflect.Type  // Reflection type if ValueT, or nil
 	variadic   bool          // true if type is variadic
 	incomplete bool          // true if type must be parsed again
-	untyped    bool          // true for a litteral value (string or number)
+	untyped    bool          // true for a literal value (string or number)
 	node       *Node         // root AST node of type definition
 	scope      *Scope        // type declaration scope (in case of re-parse incomplete type)
 }
@@ -254,9 +254,14 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 
 	case InterfaceType:
 		t.cat = InterfaceT
-		//for _, method := range n.child[0].child {
-		//	t.method = append(t.method, nodeType(interp, scope, method))
-		//}
+		for _, field := range n.child[0].child {
+			typ, err := nodeType(interp, scope, field.child[1])
+			if err != nil {
+				return nil, err
+			}
+			t.field = append(t.field, StructField{name: field.child[0].ident, typ: typ})
+			t.incomplete = t.incomplete || typ.incomplete
+		}
 
 	case MapType:
 		t.cat = MapT

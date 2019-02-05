@@ -899,12 +899,16 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			} else if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
 				// Handle struct field
 				n.val = ti
-				if n.typ.cat == PtrT {
+				switch n.typ.cat {
+				case InterfaceT:
+					n.gen = getMethodByName
+				case PtrT:
+					n.typ = n.typ.fieldSeq(ti)
 					n.gen = getPtrIndexSeq
-				} else {
+				default:
+					n.typ = n.typ.fieldSeq(ti)
 					n.gen = getIndexSeq
 				}
-				n.typ = n.typ.fieldSeq(ti)
 			} else {
 				err = n.cfgError("undefined selector: %s", n.child[1].ident)
 			}

@@ -89,6 +89,22 @@ func genValueAddr(n *Node) func(*Frame) *reflect.Value {
 	}
 }
 
+func genValueInterface(n *Node) func(*Frame) reflect.Value {
+	value := genValue(n)
+
+	return func(f *Frame) reflect.Value {
+		return reflect.ValueOf(valueInterface{n, value(f)})
+	}
+}
+
+func genValueInterfaceValue(n *Node) func(*Frame) reflect.Value {
+	value := genValue(n)
+
+	return func(f *Frame) reflect.Value {
+		return value(f).Interface().(valueInterface).value
+	}
+}
+
 func genValueInt(n *Node) func(*Frame) int64 {
 	value := genValue(n)
 
