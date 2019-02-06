@@ -38,7 +38,6 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "fib.go" || // bench
 
 			file.Name() == "cli1.go" || // FIXME global vars
-			file.Name() == "interface0.go" || // TODO not implemented yet
 			file.Name() == "heap.go" || // TODO not implemented yet
 			file.Name() == "chan6.go" || // FIXME related to channel #7
 			file.Name() == "select1.go" || // FIXME related to channel #7
