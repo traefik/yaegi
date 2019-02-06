@@ -915,13 +915,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			}
 
 		case StarExpr:
-			if n.anc.kind == Define && len(n.anc.child) == 3 && n.anc.child[1] == n {
+			switch {
+			case n.anc.kind == Define && len(n.anc.child) == 3 && n.anc.child[1] == n:
 				// pointer type expression in a var definition
 				n.gen = nop
-			} else if n.anc.kind == Field {
+			case n.anc.kind == Field:
 				// pointer type expression in a field expression (arg or struct field)
 				n.gen = nop
-			} else {
+			default:
 				// dereference expression
 				wireChild(n)
 				n.typ = n.child[0].typ.val
