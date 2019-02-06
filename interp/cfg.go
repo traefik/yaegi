@@ -450,6 +450,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.gen = n.child[0].sym.builtin
 				n.child[0].typ = &Type{cat: BuiltinT}
 				switch n.child[0].ident {
+				case "append":
+					if n.typ = scope.getType(n.child[1].ident); n.typ == nil {
+						n.typ, err = nodeType(interp, scope, n.child[1])
+					}
 				case "cap", "len":
 					n.typ = scope.getType("int")
 				case "make":
@@ -472,7 +476,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					n.typ = &Type{cat: ValueT, rtype: typ.Out(0)}
 				}
 			} else if typ := n.child[0].typ; len(typ.ret) > 0 {
-				n.typ = n.child[0].typ.ret[0]
+				n.typ = typ.ret[0]
 				n.fsize = len(typ.ret)
 			}
 
@@ -877,9 +881,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 						n.fsize = s.NumOut()
 					}
 				}
-			} else if n.typ.cat == ArrayT {
-				n.typ = n.typ.val
-				n.gen = nop
 			} else if n.typ.cat == SrcPkgT {
 				// Resolve source package symbol
 				if sym, ok := interp.scope[n.child[0].ident].sym[n.child[1].ident]; ok {
@@ -914,10 +915,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			}
 
 		case StarExpr:
-			if n.anc.kind == Define && len(n.anc.child) == 3 && n.anc.child[1] == n {
+			switch {
+			case n.anc.kind == Define && len(n.anc.child) == 3 && n.anc.child[1] == n:
 				// pointer type expression in a var definition
 				n.gen = nop
-			} else {
+			case n.anc.kind == Field:
+				// pointer type expression in a field expression (arg or struct field)
+				n.gen = nop
+			default:
 				// dereference expression
 				wireChild(n)
 				n.typ = n.child[0].typ.val

@@ -326,6 +326,36 @@ func main() {
 	// 4
 }
 
+func Example_a20() {
+	src := `
+package main
+
+import "fmt"
+
+type IntArray []int
+
+func (h *IntArray) Add(x int) {
+	*h = append(*h, x)
+}
+
+func main() {
+	a := IntArray{}
+	a.Add(4)
+
+	fmt.Println(a)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// [4]
+}
+
 func Example_a3() {
 	src := `
 package main
