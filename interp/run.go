@@ -67,6 +67,11 @@ var builtin = [...]BuiltinGenerator{
 	XorAssign:    xorAssign,
 }
 
+type valueInterface struct {
+	node  *Node
+	value reflect.Value
+}
+
 func (interp *Interpreter) run(n *Node, cf *Frame) {
 	var f *Frame
 	if cf == nil {
@@ -116,7 +121,8 @@ func typeAssert(n *Node) {
 		}
 	} else {
 		n.exec = func(f *Frame) Builtin {
-			f.data[i] = value(f)
+			v := value(f).Interface().(valueInterface)
+			f.data[i] = v.value
 			return next
 		}
 	}
@@ -138,8 +144,9 @@ func typeAssert2(n *Node) {
 		}
 	} else {
 		n.exec = func(f *Frame) Builtin {
-			value0(f).Set(value(f))
-			value1(f).SetBool(true)
+			v, ok := value(f).Interface().(valueInterface)
+			value0(f).Set(v.value)
+			value1(f).SetBool(ok)
 			return next
 		}
 	}
@@ -186,16 +193,17 @@ func assignX(n *Node) {
 // assign implements single value assignment
 func assign(n *Node) {
 	value := genValue(n)
-	value1 := genValue(n.child[len(n.child)-1])
 	next := getExec(n.tnext)
 
 	if n.child[0].typ.cat == InterfaceT {
 		valueAddr := genValueAddr(n)
+		value1 := genValueInterface(n.child[len(n.child)-1])
 		n.exec = func(f *Frame) Builtin {
 			*(valueAddr(f)) = value1(f)
 			return next
 		}
 	} else {
+		value1 := genValue(n.child[len(n.child)-1])
 		n.exec = func(f *Frame) Builtin {
 			value(f).Set(value1(f))
 			return next
@@ -204,9 +212,20 @@ func assign(n *Node) {
 }
 
 func assignMap(n *Node) {
-	value := genValue(n.child[0].child[0])  // map
-	value0 := genValue(n.child[0].child[1]) // key
-	value1 := genValue(n.child[1])          // value
+	value := genValue(n.child[0].child[0]) // map
+	var value0, value1 func(*Frame) reflect.Value
+
+	if n.child[0].child[1].typ.cat == InterfaceT { // key
+		value0 = genValueInterface(n.child[0].child[1])
+	} else {
+		value0 = genValue(n.child[0].child[1])
+	}
+
+	if n.child[1].typ.cat == InterfaceT { // value
+		value1 = genValueInterface(n.child[1])
+	} else {
+		value1 = genValue(n.child[1])
+	}
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
@@ -421,14 +440,20 @@ func _defer(n *Node) {
 
 func call(n *Node) {
 	goroutine := n.anc.kind == GoStmt
-	method := n.child[0].recv != nil
+	var method bool
+	value := genValue(n.child[0])
 	var values []func(*Frame) reflect.Value
-	if method {
+	if n.child[0].recv != nil {
 		// Compute method receiver value
 		values = append(values, genValueRecv(n.child[0]))
+		method = true
+	}
+	if n.child[0].typ.cat == InterfaceT {
+		// add a place holder for interface method receiver
+		values = append(values, nil)
+		method = true
 	}
 	variadic := variadicPos(n)
-	value := genValue(n.child[0])
 	child := n.child[1:]
 	tnext := getExec(n.tnext)
 	fnext := getExec(n.fnext)
@@ -436,6 +461,7 @@ func call(n *Node) {
 	// compute input argument value functions
 	for i, c := range child {
 		if isRegularCall(c) {
+			// Arguments are return values of a nested function call
 			for j := range c.child[0].typ.ret {
 				ind := c.findex + j
 				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
@@ -450,7 +476,11 @@ func call(n *Node) {
 				}
 				convertLiteralValue(c, argType)
 			}
-			values = append(values, genValue(c))
+			if len(n.child[0].typ.arg) > i && n.child[0].typ.arg[i].cat == InterfaceT {
+				values = append(values, genValueInterface(c))
+			} else {
+				values = append(values, genValue(c))
+			}
 		}
 	}
 
@@ -486,9 +516,14 @@ func call(n *Node) {
 
 		// Copy input parameters from caller
 		for i, v := range values {
-			src := v(f)
 			switch {
 			case method && i == 0:
+				var src reflect.Value
+				if v == nil {
+					src = def.rval
+				} else {
+					src = v(f)
+				}
 				dest := nf.data[def.framepos[i]]
 				// Accommodate to receiver type
 				ks, kd := src.Kind(), dest.Kind()
@@ -502,9 +537,11 @@ func call(n *Node) {
 					dest.Set(src)
 				}
 			case variadic >= 0 && i >= variadic:
-				vararg.Set(reflect.Append(vararg, src))
+				vararg.Set(reflect.Append(vararg, v(f)))
+			case len(def.typ.arg) > i && def.typ.arg[i].cat == InterfaceT:
+				nf.data[def.framepos[i]] = v(f)
 			default:
-				nf.data[def.framepos[i]].Set(src)
+				nf.data[def.framepos[i]].Set(v(f))
 			}
 		}
 
@@ -570,8 +607,15 @@ func callBin(n *Node) {
 				}
 			}
 			// FIXME: nil types are forbidden and should be handled at compile time (CFG)
-			if c.typ != nil && c.typ.cat == FuncT {
-				values = append(values, genNodeWrapper(c))
+			if c.typ != nil {
+				switch c.typ.cat {
+				case FuncT:
+					values = append(values, genNodeWrapper(c))
+				case InterfaceT:
+					values = append(values, genValueInterfaceValue(c))
+				default:
+					values = append(values, genValue(c))
+				}
 			} else {
 				values = append(values, genValue(c))
 			}
@@ -720,6 +764,25 @@ func getMethod(n *Node) {
 		node := *(n.val.(*Node))
 		node.val = &node
 		node.recv = n.recv
+		node.frame = &frame
+		f.data[i] = reflect.ValueOf(&node)
+		return next
+	}
+}
+
+func getMethodByName(n *Node) {
+	next := getExec(n.tnext)
+	value0 := genValue(n.child[0])
+	name := n.child[1].ident
+	i := n.findex
+
+	n.exec = func(f *Frame) Builtin {
+		val := value0(f).Interface().(valueInterface)
+		m, _ := val.node.typ.lookupMethod(name)
+		frame := *f
+		node := *m
+		node.val = &node
+		node.rval = val.value // store method receiver value
 		node.frame = &frame
 		f.data[i] = reflect.ValueOf(&node)
 		return next
