@@ -9,14 +9,14 @@ import (
 
 func init() {
 	Value["bufio"] = map[string]reflect.Value{
-		"ErrAdvanceTooFar":     reflect.ValueOf(bufio.ErrAdvanceTooFar),
-		"ErrBufferFull":        reflect.ValueOf(bufio.ErrBufferFull),
-		"ErrFinalToken":        reflect.ValueOf(bufio.ErrFinalToken),
-		"ErrInvalidUnreadByte": reflect.ValueOf(bufio.ErrInvalidUnreadByte),
-		"ErrInvalidUnreadRune": reflect.ValueOf(bufio.ErrInvalidUnreadRune),
-		"ErrNegativeAdvance":   reflect.ValueOf(bufio.ErrNegativeAdvance),
-		"ErrNegativeCount":     reflect.ValueOf(bufio.ErrNegativeCount),
-		"ErrTooLong":           reflect.ValueOf(bufio.ErrTooLong),
+		"ErrAdvanceTooFar":     reflect.ValueOf(&bufio.ErrAdvanceTooFar).Elem(),
+		"ErrBufferFull":        reflect.ValueOf(&bufio.ErrBufferFull).Elem(),
+		"ErrFinalToken":        reflect.ValueOf(&bufio.ErrFinalToken).Elem(),
+		"ErrInvalidUnreadByte": reflect.ValueOf(&bufio.ErrInvalidUnreadByte).Elem(),
+		"ErrInvalidUnreadRune": reflect.ValueOf(&bufio.ErrInvalidUnreadRune).Elem(),
+		"ErrNegativeAdvance":   reflect.ValueOf(&bufio.ErrNegativeAdvance).Elem(),
+		"ErrNegativeCount":     reflect.ValueOf(&bufio.ErrNegativeCount).Elem(),
+		"ErrTooLong":           reflect.ValueOf(&bufio.ErrTooLong).Elem(),
 		"MaxScanTokenSize":     reflect.ValueOf(bufio.MaxScanTokenSize),
 		"NewReadWriter":        reflect.ValueOf(bufio.NewReadWriter),
 		"NewReader":            reflect.ValueOf(bufio.NewReader),

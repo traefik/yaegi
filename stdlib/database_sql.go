@@ -10,9 +10,9 @@ import (
 func init() {
 	Value["database/sql"] = map[string]reflect.Value{
 		"Drivers":              reflect.ValueOf(sql.Drivers),
-		"ErrConnDone":          reflect.ValueOf(sql.ErrConnDone),
-		"ErrNoRows":            reflect.ValueOf(sql.ErrNoRows),
-		"ErrTxDone":            reflect.ValueOf(sql.ErrTxDone),
+		"ErrConnDone":          reflect.ValueOf(&sql.ErrConnDone).Elem(),
+		"ErrNoRows":            reflect.ValueOf(&sql.ErrNoRows).Elem(),
+		"ErrTxDone":            reflect.ValueOf(&sql.ErrTxDone).Elem(),
 		"LevelDefault":         reflect.ValueOf(sql.LevelDefault),
 		"LevelLinearizable":    reflect.ValueOf(sql.LevelLinearizable),
 		"LevelReadCommitted":   reflect.ValueOf(sql.LevelReadCommitted),

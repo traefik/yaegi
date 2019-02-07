@@ -12,7 +12,7 @@ func init() {
 		"Base":          reflect.ValueOf(path.Base),
 		"Clean":         reflect.ValueOf(path.Clean),
 		"Dir":           reflect.ValueOf(path.Dir),
-		"ErrBadPattern": reflect.ValueOf(path.ErrBadPattern),
+		"ErrBadPattern": reflect.ValueOf(&path.ErrBadPattern).Elem(),
 		"Ext":           reflect.ValueOf(path.Ext),
 		"IsAbs":         reflect.ValueOf(path.IsAbs),
 		"Join":          reflect.ValueOf(path.Join),

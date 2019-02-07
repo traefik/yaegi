@@ -9,10 +9,10 @@ import (
 
 func init() {
 	Value["encoding/csv"] = map[string]reflect.Value{
-		"ErrBareQuote":     reflect.ValueOf(csv.ErrBareQuote),
-		"ErrFieldCount":    reflect.ValueOf(csv.ErrFieldCount),
-		"ErrQuote":         reflect.ValueOf(csv.ErrQuote),
-		"ErrTrailingComma": reflect.ValueOf(csv.ErrTrailingComma),
+		"ErrBareQuote":     reflect.ValueOf(&csv.ErrBareQuote).Elem(),
+		"ErrFieldCount":    reflect.ValueOf(&csv.ErrFieldCount).Elem(),
+		"ErrQuote":         reflect.ValueOf(&csv.ErrQuote).Elem(),
+		"ErrTrailingComma": reflect.ValueOf(&csv.ErrTrailingComma).Elem(),
 		"NewReader":        reflect.ValueOf(csv.NewReader),
 		"NewWriter":        reflect.ValueOf(csv.NewWriter),
 	}

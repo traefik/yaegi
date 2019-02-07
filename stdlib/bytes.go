@@ -16,7 +16,7 @@ func init() {
 		"Count":           reflect.ValueOf(bytes.Count),
 		"Equal":           reflect.ValueOf(bytes.Equal),
 		"EqualFold":       reflect.ValueOf(bytes.EqualFold),
-		"ErrTooLarge":     reflect.ValueOf(bytes.ErrTooLarge),
+		"ErrTooLarge":     reflect.ValueOf(&bytes.ErrTooLarge).Elem(),
 		"Fields":          reflect.ValueOf(bytes.Fields),
 		"FieldsFunc":      reflect.ValueOf(bytes.FieldsFunc),
 		"HasPrefix":       reflect.ValueOf(bytes.HasPrefix),

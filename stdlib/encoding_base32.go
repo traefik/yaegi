@@ -9,12 +9,12 @@ import (
 
 func init() {
 	Value["encoding/base32"] = map[string]reflect.Value{
-		"HexEncoding": reflect.ValueOf(base32.HexEncoding),
+		"HexEncoding": reflect.ValueOf(&base32.HexEncoding).Elem(),
 		"NewDecoder":  reflect.ValueOf(base32.NewDecoder),
 		"NewEncoder":  reflect.ValueOf(base32.NewEncoder),
 		"NewEncoding": reflect.ValueOf(base32.NewEncoding),
 		"NoPadding":   reflect.ValueOf(base32.NoPadding),
-		"StdEncoding": reflect.ValueOf(base32.StdEncoding),
+		"StdEncoding": reflect.ValueOf(&base32.StdEncoding).Elem(),
 		"StdPadding":  reflect.ValueOf(base32.StdPadding),
 	}
 

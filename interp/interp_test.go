@@ -639,6 +639,35 @@ func main() {
 	// 1 2
 }
 
+func Example_assign0() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"time"
+)
+
+func main() {
+	http.DefaultClient.Timeout = time.Second * 10
+	fmt.Println(http.DefaultClient)
+	http.DefaultClient = &http.Client{}
+	fmt.Println(http.DefaultClient)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// &{<nil> <nil> <nil> 10s}
+	// &{<nil> <nil> <nil> 0s}
+}
+
 func Example_bin() {
 	src := `
 package main
@@ -5760,6 +5789,29 @@ func main() {
 	t := &T1{"myName"}
 	handler := t.Handler(myHandler)
 	http.ListenAndServe(":8080", handler)
+}`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+func Example_server7() {
+	src := `
+package main
+
+import (
+	"net/http"
+)
+
+func main() {
+	http.DefaultServeMux.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {})
+	http.DefaultServeMux = &http.ServeMux{}
+	http.DefaultServeMux.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {})
+	http.DefaultServeMux = &http.ServeMux{}
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value, stdlib.Type)
