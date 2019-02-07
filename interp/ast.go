@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/scanner"
 	"go/token"
+	"log"
 	"strconv"
 )
 
@@ -32,6 +33,7 @@ const (
 	ConstDecl
 	Continue
 	DeclStmt
+	DefaultClause
 	DeferStmt
 	Define
 	DefineX
@@ -110,6 +112,7 @@ var kinds = [...]string{
 	ConstDecl:        "ConstDecl",
 	Continue:         "Continue",
 	DeclStmt:         "DeclStmt",
+	DefaultClause:    "DefaultClause",
 	DeferStmt:        "DeferStmt",
 	Define:           "Define",
 	DefineX:          "DefineX",
@@ -333,68 +336,77 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 		return "", nil, err
 	}
 
-	var root, anc *Node
+	var root *Node
+	var anc astNode
 	var st nodestack
-	var nbAssign int
+	var nbAssign int // number of assign operations in  the current assign statement
 	var typeSpec bool
 	var pkgName string
 
-	addChild := func(root **Node, anc *Node, pos token.Pos, kind Kind, action Action) *Node {
+	addChild := func(root **Node, anc astNode, pos token.Pos, kind Kind, action Action) *Node {
 		interp.nindex++
 		var i interface{}
-		n := &Node{anc: anc, interp: interp, index: interp.nindex, fset: fset, pos: pos, kind: kind, action: action, val: &i, gen: builtin[action]}
+		n := &Node{anc: anc.node, interp: interp, index: interp.nindex, fset: fset, pos: pos, kind: kind, action: action, val: &i, gen: builtin[action]}
 		n.start = n
-		if anc == nil {
+		if anc.node == nil {
 			*root = n
 		} else {
-			anc.child = append(anc.child, n)
-			if anc.action == Assign && nbAssign > 1 {
-				if !typeSpec && len(anc.child) == 2*nbAssign {
-					// All LHS and RSH assign child are now defined, so split multiple assign
-					// statement into single assign statements.
-					newAnc := anc.anc
-					var newChild []*Node
-					for i := 0; i < nbAssign; i++ {
-						// set new single assign
-						interp.nindex++
-						na := &Node{anc: anc.anc, interp: interp, index: interp.nindex, pos: pos, kind: anc.kind, action: anc.action, val: new(interface{}), gen: anc.gen}
-						na.start = na
-						newChild = append(newChild, na)
-						// Set single assign left hand side
-						anc.child[i].anc = na
-						na.child = append(na.child, anc.child[i])
-						// Set single assign right hand side
-						anc.child[i+nbAssign].anc = na
-						na.child = append(na.child, anc.child[i+nbAssign])
+			anc.node.child = append(anc.node.child, n)
+			if anc.node.action == Assign {
+				if nbAssign > 1 {
+					if !typeSpec && len(anc.node.child) == 2*nbAssign {
+						// All LHS and RSH assign child are now defined, so split multiple assign
+						// statement into single assign statements.
+						newAnc := anc.node.anc
+						var newChild []*Node
+						for i := 0; i < nbAssign; i++ {
+							// set new single assign
+							interp.nindex++
+							na := &Node{
+								anc: anc.node.anc, interp: interp, index: interp.nindex, pos: pos, kind: anc.node.kind, action: anc.node.action, val: new(interface{}),
+								gen: anc.node.gen,
+							}
+							na.start = na
+							newChild = append(newChild, na)
+							// Set single assign left hand side
+							anc.node.child[i].anc = na
+							na.child = append(na.child, anc.node.child[i])
+							// Set single assign right hand side
+							anc.node.child[i+nbAssign].anc = na
+							na.child = append(na.child, anc.node.child[i+nbAssign])
+						}
+						newAnc.child = newChild
+					} else if typeSpec && len(anc.node.child) == 2*nbAssign+1 {
+						// All LHS and RHS assign child are now defined, so split multiple assign
+						// statement into single assign statements. Set type for each assignment.
+						typeSpec = false
+						newAnc := anc.node.anc
+						var newChild []*Node
+						typeNode := anc.node.child[nbAssign]
+						for i := 0; i < nbAssign; i++ {
+							// set new single assign
+							interp.nindex++
+							na := &Node{anc: anc.node.anc, interp: interp, index: interp.nindex, pos: pos, kind: anc.node.kind, action: anc.node.action, val: new(interface{}), gen: anc.node.gen}
+							na.start = na
+							newChild = append(newChild, na)
+							// set new type for this assignment
+							interp.nindex++
+							nt := &Node{anc: na, interp: interp, ident: typeNode.ident, index: interp.nindex, pos: pos, kind: typeNode.kind, action: typeNode.action, val: new(interface{}), gen: typeNode.gen}
+							// Set single assign left hand side
+							anc.node.child[i].anc = na
+							na.child = append(na.child, anc.node.child[i])
+							// Set assignment type
+							na.child = append(na.child, nt)
+							// Set single assign right hand side
+							anc.node.child[i+nbAssign+1].anc = na
+							na.child = append(na.child, anc.node.child[i+nbAssign+1])
+						}
+						newAnc.child = newChild
 					}
-					newAnc.child = newChild
-				} else if typeSpec && len(anc.child) == 2*nbAssign+1 {
-					// All LHS and RHS assign child are now defined, so split multiple assign
-					// statement into single assign statements. Set type for each assignment.
-					typeSpec = false
-					newAnc := anc.anc
-					var newChild []*Node
-					typeNode := anc.child[nbAssign]
-					for i := 0; i < nbAssign; i++ {
-						// set new single assign
-						interp.nindex++
-						na := &Node{anc: anc.anc, interp: interp, index: interp.nindex, pos: pos, kind: anc.kind, action: anc.action, val: new(interface{}), gen: anc.gen}
-						na.start = na
-						newChild = append(newChild, na)
-						// set new type for this assignment
-						interp.nindex++
-						nt := &Node{anc: na, interp: interp, ident: typeNode.ident, index: interp.nindex, pos: pos, kind: typeNode.kind, action: typeNode.action, val: new(interface{}), gen: typeNode.gen}
-						// Set single assign left hand side
-						anc.child[i].anc = na
-						na.child = append(na.child, anc.child[i])
-						// Set assignment type
-						na.child = append(na.child, nt)
-						// Set single assign right hand side
-						anc.child[i+nbAssign+1].anc = na
-						na.child = append(na.child, anc.child[i+nbAssign+1])
-					}
-					newAnc.child = newChild
 				}
+			} else if anc.node.action == Case {
+				ancAst := anc.ast.(*ast.CaseClause)
+				log.Println("anc ast", len(ancAst.List), len(ancAst.Body), len(anc.node.child))
 			}
 		}
 		return n
@@ -413,7 +425,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			anc = st.pop()
 
 		case *ast.ArrayType:
-			st.push(addChild(&root, anc, pos, ArrayType, Nop))
+			st.push(addChild(&root, anc, pos, ArrayType, Nop), node)
 
 		case *ast.AssignStmt:
 			var action Action
@@ -458,7 +470,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 					action = XorAssign
 				}
 			}
-			st.push(addChild(&root, anc, pos, kind, action))
+			st.push(addChild(&root, anc, pos, kind, action), node)
 
 		case *ast.BasicLit:
 			n := addChild(&root, anc, pos, BasicLit, Nop)
@@ -477,7 +489,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			case token.STRING:
 				n.val = a.Value[1 : len(a.Value)-1]
 			}
-			st.push(n)
+			st.push(n, node)
 
 		case *ast.BinaryExpr:
 			kind := BinaryExpr
@@ -524,10 +536,10 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			case token.XOR:
 				action = Xor
 			}
-			st.push(addChild(&root, anc, pos, kind, action))
+			st.push(addChild(&root, anc, pos, kind, action), node)
 
 		case *ast.BlockStmt:
-			st.push(addChild(&root, anc, pos, BlockStmt, Nop))
+			st.push(addChild(&root, anc, pos, BlockStmt, Nop), node)
 
 		case *ast.BranchStmt:
 			var kind Kind
@@ -537,44 +549,48 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			case token.CONTINUE:
 				kind = Continue
 			}
-			st.push(addChild(&root, anc, pos, kind, Nop))
+			st.push(addChild(&root, anc, pos, kind, Nop), node)
 
 		case *ast.CallExpr:
-			st.push(addChild(&root, anc, pos, CallExpr, Call))
+			st.push(addChild(&root, anc, pos, CallExpr, Call), node)
 
 		case *ast.CaseClause:
-			st.push(addChild(&root, anc, pos, CaseClause, Case))
+			//if a.List == nil {
+			//	st.push(addChild(&root, anc, pos, DefaultClause, Nop), node)
+			//} else {
+			st.push(addChild(&root, anc, pos, CaseClause, Case), node)
+			//}
 
 		case *ast.ChanType:
-			st.push(addChild(&root, anc, pos, ChanType, Nop))
+			st.push(addChild(&root, anc, pos, ChanType, Nop), node)
 
 		case *ast.CommClause:
-			st.push(addChild(&root, anc, pos, CommClause, Nop))
+			st.push(addChild(&root, anc, pos, CommClause, Nop), node)
 
 		case *ast.CompositeLit:
-			st.push(addChild(&root, anc, pos, CompositeLitExpr, CompositeLit))
+			st.push(addChild(&root, anc, pos, CompositeLitExpr, CompositeLit), node)
 
 		case *ast.DeclStmt:
-			st.push(addChild(&root, anc, pos, DeclStmt, Nop))
+			st.push(addChild(&root, anc, pos, DeclStmt, Nop), node)
 
 		case *ast.DeferStmt:
-			st.push(addChild(&root, anc, pos, DeferStmt, Defer))
+			st.push(addChild(&root, anc, pos, DeferStmt, Defer), node)
 
 		case *ast.Ellipsis:
-			st.push(addChild(&root, anc, pos, Ellipsis, Nop))
+			st.push(addChild(&root, anc, pos, Ellipsis, Nop), node)
 
 		case *ast.ExprStmt:
-			st.push(addChild(&root, anc, pos, ExprStmt, Nop))
+			st.push(addChild(&root, anc, pos, ExprStmt, Nop), node)
 
 		case *ast.Field:
-			st.push(addChild(&root, anc, pos, Field, Nop))
+			st.push(addChild(&root, anc, pos, Field, Nop), node)
 
 		case *ast.FieldList:
-			st.push(addChild(&root, anc, pos, FieldList, Nop))
+			st.push(addChild(&root, anc, pos, FieldList, Nop), node)
 
 		case *ast.File:
 			pkgName = a.Name.Name
-			st.push(addChild(&root, anc, pos, File, Nop))
+			st.push(addChild(&root, anc, pos, File, Nop), node)
 
 		case *ast.ForStmt:
 			// Disambiguate variants of FOR statements with a node kind per variant
@@ -597,24 +613,24 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 					kind = For4
 				}
 			}
-			st.push(addChild(&root, anc, pos, kind, Nop))
+			st.push(addChild(&root, anc, pos, kind, Nop), node)
 
 		case *ast.FuncDecl:
 			n := addChild(&root, anc, pos, FuncDecl, Nop)
 			if a.Recv == nil {
 				// function is not a method, create an empty receiver list
-				addChild(&root, n, pos, FieldList, Nop)
+				addChild(&root, astNode{n, node}, pos, FieldList, Nop)
 			}
-			st.push(n)
+			st.push(n, node)
 
 		case *ast.FuncLit:
 			n := addChild(&root, anc, pos, FuncLit, GetFunc)
-			addChild(&root, n, pos, FieldList, Nop)
-			addChild(&root, n, pos, Undef, Nop)
-			st.push(n)
+			addChild(&root, astNode{n, node}, pos, FieldList, Nop)
+			addChild(&root, astNode{n, node}, pos, Undef, Nop)
+			st.push(n, node)
 
 		case *ast.FuncType:
-			st.push(addChild(&root, anc, pos, FuncType, Nop))
+			st.push(addChild(&root, anc, pos, FuncType, Nop), node)
 
 		case *ast.GenDecl:
 			var kind Kind
@@ -628,15 +644,15 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			case token.VAR:
 				kind = VarDecl
 			}
-			st.push(addChild(&root, anc, pos, kind, Nop))
+			st.push(addChild(&root, anc, pos, kind, Nop), node)
 
 		case *ast.GoStmt:
-			st.push(addChild(&root, anc, pos, GoStmt, Nop))
+			st.push(addChild(&root, anc, pos, GoStmt, Nop), node)
 
 		case *ast.Ident:
 			n := addChild(&root, anc, pos, Ident, Nop)
 			n.ident = a.Name
-			st.push(n)
+			st.push(n, node)
 
 		case *ast.IfStmt:
 			// Disambiguate variants of IF statements with a node kind per variant
@@ -651,10 +667,10 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			default:
 				kind = If3
 			}
-			st.push(addChild(&root, anc, pos, kind, Nop))
+			st.push(addChild(&root, anc, pos, kind, Nop), node)
 
 		case *ast.ImportSpec:
-			st.push(addChild(&root, anc, pos, ImportSpec, Nop))
+			st.push(addChild(&root, anc, pos, ImportSpec, Nop), node)
 
 		case *ast.IncDecStmt:
 			var action Action
@@ -664,65 +680,65 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			case token.DEC:
 				action = Dec
 			}
-			st.push(addChild(&root, anc, pos, IncDecStmt, action))
+			st.push(addChild(&root, anc, pos, IncDecStmt, action), node)
 
 		case *ast.IndexExpr:
-			st.push(addChild(&root, anc, pos, IndexExpr, GetIndex))
+			st.push(addChild(&root, anc, pos, IndexExpr, GetIndex), node)
 
 		case *ast.InterfaceType:
-			st.push(addChild(&root, anc, pos, InterfaceType, Nop))
+			st.push(addChild(&root, anc, pos, InterfaceType, Nop), node)
 
 		case *ast.KeyValueExpr:
-			st.push(addChild(&root, anc, pos, KeyValueExpr, Nop))
+			st.push(addChild(&root, anc, pos, KeyValueExpr, Nop), node)
 
 		case *ast.MapType:
-			st.push(addChild(&root, anc, pos, MapType, Nop))
+			st.push(addChild(&root, anc, pos, MapType, Nop), node)
 
 		case *ast.ParenExpr:
-			st.push(addChild(&root, anc, pos, ParenExpr, Nop))
+			st.push(addChild(&root, anc, pos, ParenExpr, Nop), node)
 
 		case *ast.RangeStmt:
 			// Insert a missing ForRangeStmt for AST correctness
 			n := addChild(&root, anc, pos, ForRangeStmt, Nop)
-			st.push(addChild(&root, n, pos, RangeStmt, Range))
+			st.push(addChild(&root, astNode{n, node}, pos, RangeStmt, Range), node)
 
 		case *ast.ReturnStmt:
-			st.push(addChild(&root, anc, pos, ReturnStmt, Return))
+			st.push(addChild(&root, anc, pos, ReturnStmt, Return), node)
 
 		case *ast.SelectStmt:
-			st.push(addChild(&root, anc, pos, SelectStmt, Nop))
+			st.push(addChild(&root, anc, pos, SelectStmt, Nop), node)
 
 		case *ast.SelectorExpr:
-			st.push(addChild(&root, anc, pos, SelectorExpr, GetIndex))
+			st.push(addChild(&root, anc, pos, SelectorExpr, GetIndex), node)
 
 		case *ast.SendStmt:
-			st.push(addChild(&root, anc, pos, SendStmt, Send))
+			st.push(addChild(&root, anc, pos, SendStmt, Send), node)
 
 		case *ast.SliceExpr:
 			if a.Low == nil {
-				st.push(addChild(&root, anc, pos, SliceExpr, Slice0))
+				st.push(addChild(&root, anc, pos, SliceExpr, Slice0), node)
 			} else {
-				st.push(addChild(&root, anc, pos, SliceExpr, Slice))
+				st.push(addChild(&root, anc, pos, SliceExpr, Slice), node)
 			}
 
 		case *ast.StarExpr:
-			st.push(addChild(&root, anc, pos, StarExpr, Star))
+			st.push(addChild(&root, anc, pos, StarExpr, Star), node)
 
 		case *ast.StructType:
-			st.push(addChild(&root, anc, pos, StructType, Nop))
+			st.push(addChild(&root, anc, pos, StructType, Nop), node)
 
 		case *ast.SwitchStmt:
 			if a.Init == nil {
-				st.push(addChild(&root, anc, pos, Switch0, Nop))
+				st.push(addChild(&root, anc, pos, Switch0, Nop), node)
 			} else {
-				st.push(addChild(&root, anc, pos, Switch1, Nop))
+				st.push(addChild(&root, anc, pos, Switch1, Nop), node)
 			}
 
 		case *ast.TypeAssertExpr:
-			st.push(addChild(&root, anc, pos, TypeAssertExpr, TypeAssert))
+			st.push(addChild(&root, anc, pos, TypeAssertExpr, TypeAssert), node)
 
 		case *ast.TypeSpec:
-			st.push(addChild(&root, anc, pos, TypeSpec, Nop))
+			st.push(addChild(&root, anc, pos, TypeSpec, Nop), node)
 
 		case *ast.UnaryExpr:
 			var kind = UnaryExpr
@@ -738,21 +754,21 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			case token.SUB:
 				action = Negate
 			}
-			st.push(addChild(&root, anc, pos, kind, action))
+			st.push(addChild(&root, anc, pos, kind, action), node)
 
 		case *ast.ValueSpec:
 			kind := ValueSpec
 			action := Nop
 			if a.Values != nil {
 				if len(a.Names) > 1 && len(a.Values) == 1 {
-					if anc.kind == ConstDecl || anc.kind == VarDecl {
+					if anc.node.kind == ConstDecl || anc.node.kind == VarDecl {
 						kind = DefineX
 					} else {
 						kind = AssignXStmt
 					}
 					action = AssignX
 				} else {
-					if anc.kind == ConstDecl || anc.kind == VarDecl {
+					if anc.node.kind == ConstDecl || anc.node.kind == VarDecl {
 						kind = Define
 					} else {
 						kind = AssignStmt
@@ -763,10 +779,10 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 				if a.Type != nil {
 					typeSpec = true
 				}
-			} else if anc.kind == ConstDecl {
+			} else if anc.node.kind == ConstDecl {
 				kind, action = Define, Assign
 			}
-			st.push(addChild(&root, anc, pos, kind, action))
+			st.push(addChild(&root, anc, pos, kind, action), node)
 
 		default:
 			err = AstError(fmt.Errorf("ast: %T not implemented, line %s", a, fset.Position(pos)))
@@ -783,23 +799,28 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 	return pkgName, root, err
 }
 
-type nodestack []*Node
-
-func (s *nodestack) push(v *Node) {
-	*s = append(*s, v)
+type astNode struct {
+	node *Node
+	ast  ast.Node
 }
 
-func (s *nodestack) pop() *Node {
+type nodestack []astNode
+
+func (s *nodestack) push(n *Node, a ast.Node) {
+	*s = append(*s, astNode{n, a})
+}
+
+func (s *nodestack) pop() astNode {
 	l := len(*s) - 1
 	res := (*s)[l]
 	*s = (*s)[:l]
 	return res
 }
 
-func (s *nodestack) top() *Node {
+func (s *nodestack) top() (v astNode) {
 	l := len(*s)
 	if l > 0 {
 		return (*s)[l-1]
 	}
-	return nil
+	return
 }

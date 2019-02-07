@@ -536,6 +536,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case Continue:
 			n.tnext = loopRestart
 
+		case DefaultClause:
+			wireChild(n)
+			n.tnext = n.child[len(n.child)-1].start
+
 		case Field:
 			// A single child node (no ident, just type) means that the field refers
 			// to a return value, and space on frame should be accordingly allocated.
@@ -936,20 +940,22 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			l := len(clauses)
 			for i, c := range clauses[:l-1] {
 				// chain to next clause
-				c.tnext = c.child[1].start
+				c.tnext = c.child[len(c.child)-1].start
 				c.child[1].tnext = n
 				c.fnext = clauses[i+1]
 			}
 			// Handle last clause
-			if c := clauses[l-1]; len(c.child) > 1 {
-				// No default clause
-				c.tnext = c.child[1].start
-				c.fnext = n
-				c.child[1].tnext = n
-			} else {
+			//if c := clauses[l-1]; len(c.child) > 1 {
+			if c := clauses[l-1]; c.kind == DefaultClause {
 				// Default
-				c.tnext = c.child[0].start
-				c.child[0].tnext = n
+				c.start = c.child[0].start
+				c.tnext = n
+			} else {
+				// No default clause
+				m := len(c.child) - 1
+				c.tnext = c.child[m].start
+				c.fnext = n
+				c.child[m].tnext = n
 			}
 			scope = scope.pop()
 
