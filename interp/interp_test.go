@@ -6239,6 +6239,98 @@ func main() {
 	// 100
 }
 
+func Example_switch0() {
+	src := `
+package main
+
+import "fmt"
+
+func f(i int) bool {
+	switch i {
+	case 0:
+		println(i)
+		return false
+	default:
+		println("not nul")
+		return true
+	}
+}
+
+func main() {
+	r0 := f(0)
+	fmt.Printf("%T %v", r0, r0)
+	fmt.Println()
+	r1 := f(1)
+	fmt.Printf("%T %v", r1, r1)
+	fmt.Println()
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// 0
+	// bool false
+	// not nul
+	// bool true
+}
+
+func Example_switch1() {
+	src := `
+package main
+
+func main() {
+	i := 1
+
+	switch i {
+	case 0:
+		println(i)
+	default:
+		println("not nul")
+	}
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// not nul
+}
+
+func Example_switch2() {
+	src := `
+package main
+
+func main() {
+	i := 1
+
+	switch i {
+	case 0, 1, 2:
+		println(i)
+	default:
+		println("not nul")
+	}
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// 1
+}
+
 func Example_time0() {
 	src := `
 package main

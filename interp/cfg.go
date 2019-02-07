@@ -488,15 +488,11 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				scope.size += n.fsize
 			}
 
-		case CaseClause:
-			n.findex = scope.inc(interp)
-			n.tnext = n.child[len(n.child)-1].start
-
-		case SelectStmt:
+		case CaseBody:
 			wireChild(n)
-			// Move action to block statement, so select node can be an exit point
-			n.child[0].gen = _select
-			n.start = n.child[0]
+			if len(n.child) > 0 {
+				n.start = n.child[0].start
+			}
 
 		case CommClause:
 			wireChild(n)
@@ -535,10 +531,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case Continue:
 			n.tnext = loopRestart
-
-		case DefaultClause:
-			wireChild(n)
-			n.tnext = n.child[len(n.child)-1].start
 
 		case Field:
 			// A single child node (no ident, just type) means that the field refers
@@ -918,6 +910,12 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				err = n.cfgError("undefined selector: %s", n.child[1].ident)
 			}
 
+		case SelectStmt:
+			wireChild(n)
+			// Move action to block statement, so select node can be an exit point
+			n.child[0].gen = _select
+			n.start = n.child[0]
+
 		case StarExpr:
 			switch {
 			case n.anc.kind == Define && len(n.anc.child) == 3 && n.anc.child[1] == n:
@@ -939,24 +937,13 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			clauses := n.child[1].child
 			l := len(clauses)
 			for i, c := range clauses[:l-1] {
-				// chain to next clause
 				c.tnext = c.child[len(c.child)-1].start
 				c.child[1].tnext = n
-				c.fnext = clauses[i+1]
+				c.fnext = clauses[i+1] // chain to next clause
 			}
-			// Handle last clause
-			//if c := clauses[l-1]; len(c.child) > 1 {
-			if c := clauses[l-1]; c.kind == DefaultClause {
-				// Default
-				c.start = c.child[0].start
-				c.tnext = n
-			} else {
-				// No default clause
-				m := len(c.child) - 1
-				c.tnext = c.child[m].start
-				c.fnext = n
-				c.child[m].tnext = n
-			}
+			c := clauses[l-1]
+			c.tnext = c.child[len(c.child)-1].start
+
 			scope = scope.pop()
 
 		case TypeAssertExpr:

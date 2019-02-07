@@ -6,7 +6,6 @@ import (
 	"go/parser"
 	"go/scanner"
 	"go/token"
-	"log"
 	"strconv"
 )
 
@@ -26,6 +25,7 @@ const (
 	BranchStmt
 	Break
 	CallExpr
+	CaseBody
 	CaseClause
 	ChanType
 	CommClause
@@ -33,7 +33,6 @@ const (
 	ConstDecl
 	Continue
 	DeclStmt
-	DefaultClause
 	DeferStmt
 	Define
 	DefineX
@@ -105,6 +104,7 @@ var kinds = [...]string{
 	BranchStmt:       "BranchStmt",
 	Break:            "Break",
 	CallExpr:         "CallExpr",
+	CaseBody:         "CaseBody",
 	CaseClause:       "CaseClause",
 	ChanType:         "ChanType",
 	CommClause:       "CommClause",
@@ -112,7 +112,6 @@ var kinds = [...]string{
 	ConstDecl:        "ConstDecl",
 	Continue:         "Continue",
 	DeclStmt:         "DeclStmt",
-	DefaultClause:    "DefaultClause",
 	DeferStmt:        "DeferStmt",
 	Define:           "Define",
 	DefineX:          "DefineX",
@@ -362,10 +361,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 						for i := 0; i < nbAssign; i++ {
 							// set new single assign
 							interp.nindex++
-							na := &Node{
-								anc: anc.node.anc, interp: interp, index: interp.nindex, pos: pos, kind: anc.node.kind, action: anc.node.action, val: new(interface{}),
-								gen: anc.node.gen,
-							}
+							na := &Node{anc: anc.node.anc, interp: interp, index: interp.nindex, pos: pos, kind: anc.node.kind, action: anc.node.action, val: new(interface{}), gen: anc.node.gen}
 							na.start = na
 							newChild = append(newChild, na)
 							// Set single assign left hand side
@@ -406,7 +402,17 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 				}
 			} else if anc.node.action == Case {
 				ancAst := anc.ast.(*ast.CaseClause)
-				log.Println("anc ast", len(ancAst.List), len(ancAst.Body), len(anc.node.child))
+				if len(ancAst.List)+len(ancAst.Body) == len(anc.node.child) {
+					// All case clause children are collected.
+					// Split children in condition and body nodest to desambiguify the AST.
+					interp.nindex++
+					body := &Node{anc: anc.node, interp: interp, index: interp.nindex, pos: pos, kind: CaseBody, action: Nop, val: &i, gen: nop}
+					body.child = append(body.child, anc.node.child[len(ancAst.List):]...)
+					for i := range body.child {
+						body.child[i].anc = body
+					}
+					anc.node.child = append(anc.node.child[:len(ancAst.List)], body)
+				}
 			}
 		}
 		return n
@@ -555,11 +561,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			st.push(addChild(&root, anc, pos, CallExpr, Call), node)
 
 		case *ast.CaseClause:
-			//if a.List == nil {
-			//	st.push(addChild(&root, anc, pos, DefaultClause, Nop), node)
-			//} else {
 			st.push(addChild(&root, anc, pos, CaseClause, Case), node)
-			//}
 
 		case *ast.ChanType:
 			st.push(addChild(&root, anc, pos, ChanType, Nop), node)

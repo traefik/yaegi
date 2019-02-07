@@ -4,7 +4,6 @@ package interp
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 )
 
@@ -206,7 +205,6 @@ func assign(n *Node) {
 	} else {
 		value1 := genValue(n.child[len(n.child)-1])
 		n.exec = func(f *Frame) Builtin {
-			log.Println(n.index, "in assign")
 			value(f).Set(value1(f))
 			return next
 		}
@@ -1089,21 +1087,25 @@ func rangeMap(n *Node) {
 
 func _case(n *Node) {
 	tnext := getExec(n.tnext)
-	fnext := getExec(n.fnext)
-	value := genValue(n.anc.anc.child[0])
-	values := make([]func(*Frame) reflect.Value, len(n.child)-1)
-	for i := range values {
-		values[i] = genValue(n.child[i])
-	}
 
-	n.exec = func(f *Frame) Builtin {
-		for _, v := range values {
-			log.Println(n.index, "case", value(f), v(f))
-			if value(f).Interface() == v(f).Interface() {
-				return tnext
-			}
+	if len(n.child) <= 1 {
+		// default clause
+		n.exec = func(f *Frame) Builtin { return tnext }
+	} else {
+		fnext := getExec(n.fnext)
+		value := genValue(n.anc.anc.child[0])
+		values := make([]func(*Frame) reflect.Value, len(n.child)-1)
+		for i := range values {
+			values[i] = genValue(n.child[i])
 		}
-		return fnext
+		n.exec = func(f *Frame) Builtin {
+			for _, v := range values {
+				if value(f).Interface() == v(f).Interface() {
+					return tnext
+				}
+			}
+			return fnext
+		}
 	}
 }
 

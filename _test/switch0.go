@@ -5,7 +5,7 @@ import "fmt"
 func f(i int) bool {
 	switch i {
 	case 0:
-		println("not nul")
+		println(i)
 		return false
 	default:
 		println("not nul")
@@ -21,3 +21,9 @@ func main() {
 	fmt.Printf("%T %v", r1, r1)
 	fmt.Println()
 }
+
+// Output:
+// 0
+// bool false
+// not nul
+// bool true
