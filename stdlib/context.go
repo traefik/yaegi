@@ -10,8 +10,8 @@ import (
 func init() {
 	Value["context"] = map[string]reflect.Value{
 		"Background":       reflect.ValueOf(context.Background),
-		"Canceled":         reflect.ValueOf(context.Canceled),
-		"DeadlineExceeded": reflect.ValueOf(context.DeadlineExceeded),
+		"Canceled":         reflect.ValueOf(&context.Canceled).Elem(),
+		"DeadlineExceeded": reflect.ValueOf(&context.DeadlineExceeded).Elem(),
 		"TODO":             reflect.ValueOf(context.TODO),
 		"WithCancel":       reflect.ValueOf(context.WithCancel),
 		"WithDeadline":     reflect.ValueOf(context.WithDeadline),

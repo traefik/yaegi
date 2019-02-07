@@ -32,7 +32,11 @@ import (
 func init() {
 	Value["{{.PkgName}}"] = map[string]reflect.Value{
 		{{range $key, $value := .Val -}}
-			"{{$key}}": reflect.ValueOf({{$value}}),
+			{{- if $value.Addr -}}
+				"{{$key}}": reflect.ValueOf(&{{$value.Name}}).Elem(),
+			{{else -}}
+				"{{$key}}": reflect.ValueOf({{$value.Name}}),
+			{{end -}}
 		{{end}}
 	}
 
@@ -44,6 +48,12 @@ func init() {
 }
 `
 
+// Val store the value name and addressable status of symbols
+type Val struct {
+	Name string // "package.name"
+	Addr bool   // true if symbol is a Var
+}
+
 func genContent(dest, pkgName string) ([]byte, error) {
 	p, err := importer.For("source", nil).Import(pkgName)
 	if err != nil {
@@ -51,7 +61,7 @@ func genContent(dest, pkgName string) ([]byte, error) {
 	}
 
 	typ := map[string]string{}
-	val := map[string]string{}
+	val := map[string]Val{}
 	sc := p.Scope()
 	for _, name := range sc.Names() {
 		o := sc.Lookup(name)
@@ -61,9 +71,11 @@ func genContent(dest, pkgName string) ([]byte, error) {
 		pname := path.Base(pkgName) + "." + name
 		switch o := o.(type) {
 		case *types.Const:
-			val[name] = fixConst(pname, o.Val())
-		case *types.Func, *types.Var:
-			val[name] = pname
+			val[name] = Val{fixConst(pname, o.Val()), false}
+		case *types.Func:
+			val[name] = Val{pname, false}
+		case *types.Var:
+			val[name] = Val{pname, true}
 		case *types.TypeName:
 			typ[name] = pname
 		}

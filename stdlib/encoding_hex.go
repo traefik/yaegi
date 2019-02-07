@@ -17,7 +17,7 @@ func init() {
 		"Encode":         reflect.ValueOf(hex.Encode),
 		"EncodeToString": reflect.ValueOf(hex.EncodeToString),
 		"EncodedLen":     reflect.ValueOf(hex.EncodedLen),
-		"ErrLength":      reflect.ValueOf(hex.ErrLength),
+		"ErrLength":      reflect.ValueOf(&hex.ErrLength).Elem(),
 		"NewDecoder":     reflect.ValueOf(hex.NewDecoder),
 		"NewEncoder":     reflect.ValueOf(hex.NewEncoder),
 	}

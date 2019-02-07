@@ -9,10 +9,10 @@ import (
 
 func init() {
 	Value["image"] = map[string]reflect.Value{
-		"Black":                  reflect.ValueOf(image.Black),
+		"Black":                  reflect.ValueOf(&image.Black).Elem(),
 		"Decode":                 reflect.ValueOf(image.Decode),
 		"DecodeConfig":           reflect.ValueOf(image.DecodeConfig),
-		"ErrFormat":              reflect.ValueOf(image.ErrFormat),
+		"ErrFormat":              reflect.ValueOf(&image.ErrFormat).Elem(),
 		"NewAlpha":               reflect.ValueOf(image.NewAlpha),
 		"NewAlpha16":             reflect.ValueOf(image.NewAlpha16),
 		"NewCMYK":                reflect.ValueOf(image.NewCMYK),
@@ -26,20 +26,20 @@ func init() {
 		"NewRGBA64":              reflect.ValueOf(image.NewRGBA64),
 		"NewUniform":             reflect.ValueOf(image.NewUniform),
 		"NewYCbCr":               reflect.ValueOf(image.NewYCbCr),
-		"Opaque":                 reflect.ValueOf(image.Opaque),
+		"Opaque":                 reflect.ValueOf(&image.Opaque).Elem(),
 		"Pt":                     reflect.ValueOf(image.Pt),
 		"Rect":                   reflect.ValueOf(image.Rect),
 		"RegisterFormat":         reflect.ValueOf(image.RegisterFormat),
-		"Transparent":            reflect.ValueOf(image.Transparent),
-		"White":                  reflect.ValueOf(image.White),
+		"Transparent":            reflect.ValueOf(&image.Transparent).Elem(),
+		"White":                  reflect.ValueOf(&image.White).Elem(),
 		"YCbCrSubsampleRatio410": reflect.ValueOf(image.YCbCrSubsampleRatio410),
 		"YCbCrSubsampleRatio411": reflect.ValueOf(image.YCbCrSubsampleRatio411),
 		"YCbCrSubsampleRatio420": reflect.ValueOf(image.YCbCrSubsampleRatio420),
 		"YCbCrSubsampleRatio422": reflect.ValueOf(image.YCbCrSubsampleRatio422),
 		"YCbCrSubsampleRatio440": reflect.ValueOf(image.YCbCrSubsampleRatio440),
 		"YCbCrSubsampleRatio444": reflect.ValueOf(image.YCbCrSubsampleRatio444),
-		"ZP":                     reflect.ValueOf(image.ZP),
-		"ZR":                     reflect.ValueOf(image.ZR),
+		"ZP":                     reflect.ValueOf(&image.ZP).Elem(),
+		"ZR":                     reflect.ValueOf(&image.ZR).Elem(),
 	}
 
 	Type["image"] = map[string]reflect.Type{

@@ -10,9 +10,9 @@ import (
 func init() {
 	Value["archive/zip"] = map[string]reflect.Value{
 		"Deflate":              reflect.ValueOf(zip.Deflate),
-		"ErrAlgorithm":         reflect.ValueOf(zip.ErrAlgorithm),
-		"ErrChecksum":          reflect.ValueOf(zip.ErrChecksum),
-		"ErrFormat":            reflect.ValueOf(zip.ErrFormat),
+		"ErrAlgorithm":         reflect.ValueOf(&zip.ErrAlgorithm).Elem(),
+		"ErrChecksum":          reflect.ValueOf(&zip.ErrChecksum).Elem(),
+		"ErrFormat":            reflect.ValueOf(&zip.ErrFormat).Elem(),
 		"FileInfoHeader":       reflect.ValueOf(zip.FileInfoHeader),
 		"NewReader":            reflect.ValueOf(zip.NewReader),
 		"NewWriter":            reflect.ValueOf(zip.NewWriter),

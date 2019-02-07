@@ -55,6 +55,10 @@ func genValue(n *Node) func(*Frame) reflect.Value {
 		v := n.rval
 		return func(f *Frame) reflect.Value { return v }
 	default:
+		if n.rval.IsValid() {
+			v := n.rval
+			return func(f *Frame) reflect.Value { return v }
+		}
 		if n.sym != nil {
 			if n.sym.index < 0 {
 				return genValue(n.sym.node)

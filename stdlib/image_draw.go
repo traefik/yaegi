@@ -11,7 +11,7 @@ func init() {
 	Value["image/draw"] = map[string]reflect.Value{
 		"Draw":           reflect.ValueOf(draw.Draw),
 		"DrawMask":       reflect.ValueOf(draw.DrawMask),
-		"FloydSteinberg": reflect.ValueOf(draw.FloydSteinberg),
+		"FloydSteinberg": reflect.ValueOf(&draw.FloydSteinberg).Elem(),
 		"Over":           reflect.ValueOf(draw.Over),
 		"Src":            reflect.ValueOf(draw.Src),
 	}

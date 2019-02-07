@@ -11,7 +11,7 @@ func init() {
 	Value["os/exec"] = map[string]reflect.Value{
 		"Command":        reflect.ValueOf(exec.Command),
 		"CommandContext": reflect.ValueOf(exec.CommandContext),
-		"ErrNotFound":    reflect.ValueOf(exec.ErrNotFound),
+		"ErrNotFound":    reflect.ValueOf(&exec.ErrNotFound).Elem(),
 		"LookPath":       reflect.ValueOf(exec.LookPath),
 	}
 
