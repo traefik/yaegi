@@ -12,7 +12,7 @@ func init() {
 		"AllDecls":        reflect.ValueOf(doc.AllDecls),
 		"AllMethods":      reflect.ValueOf(doc.AllMethods),
 		"Examples":        reflect.ValueOf(doc.Examples),
-		"IllegalPrefixes": reflect.ValueOf(doc.IllegalPrefixes),
+		"IllegalPrefixes": reflect.ValueOf(&doc.IllegalPrefixes).Elem(),
 		"IsPredeclared":   reflect.ValueOf(doc.IsPredeclared),
 		"New":             reflect.ValueOf(doc.New),
 		"Synopsis":        reflect.ValueOf(doc.Synopsis),

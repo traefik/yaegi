@@ -172,7 +172,7 @@ func init() {
 		"Fchdir":              reflect.ValueOf(syscall.Fchdir),
 		"Fchmod":              reflect.ValueOf(syscall.Fchmod),
 		"Fchown":              reflect.ValueOf(syscall.Fchown),
-		"ForkLock":            reflect.ValueOf(syscall.ForkLock),
+		"ForkLock":            reflect.ValueOf(&syscall.ForkLock).Elem(),
 		"Fstat":               reflect.ValueOf(syscall.Fstat),
 		"Fsync":               reflect.ValueOf(syscall.Fsync),
 		"Ftruncate":           reflect.ValueOf(syscall.Ftruncate),

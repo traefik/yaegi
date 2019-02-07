@@ -9,7 +9,7 @@ import (
 
 func init() {
 	Value["crypto/dsa"] = map[string]reflect.Value{
-		"ErrInvalidPublicKey": reflect.ValueOf(dsa.ErrInvalidPublicKey),
+		"ErrInvalidPublicKey": reflect.ValueOf(&dsa.ErrInvalidPublicKey).Elem(),
 		"GenerateKey":         reflect.ValueOf(dsa.GenerateKey),
 		"GenerateParameters":  reflect.ValueOf(dsa.GenerateParameters),
 		"L1024N160":           reflect.ValueOf(dsa.L1024N160),

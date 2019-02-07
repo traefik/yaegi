@@ -13,11 +13,11 @@ func init() {
 		"NewEncoder":     reflect.ValueOf(base64.NewEncoder),
 		"NewEncoding":    reflect.ValueOf(base64.NewEncoding),
 		"NoPadding":      reflect.ValueOf(base64.NoPadding),
-		"RawStdEncoding": reflect.ValueOf(base64.RawStdEncoding),
-		"RawURLEncoding": reflect.ValueOf(base64.RawURLEncoding),
-		"StdEncoding":    reflect.ValueOf(base64.StdEncoding),
+		"RawStdEncoding": reflect.ValueOf(&base64.RawStdEncoding).Elem(),
+		"RawURLEncoding": reflect.ValueOf(&base64.RawURLEncoding).Elem(),
+		"StdEncoding":    reflect.ValueOf(&base64.StdEncoding).Elem(),
 		"StdPadding":     reflect.ValueOf(base64.StdPadding),
-		"URLEncoding":    reflect.ValueOf(base64.URLEncoding),
+		"URLEncoding":    reflect.ValueOf(&base64.URLEncoding).Elem(),
 	}
 
 	Type["encoding/base64"] = map[string]reflect.Type{

@@ -9,7 +9,7 @@ import (
 
 func init() {
 	Value["mime/multipart"] = map[string]reflect.Value{
-		"ErrMessageTooLarge": reflect.ValueOf(multipart.ErrMessageTooLarge),
+		"ErrMessageTooLarge": reflect.ValueOf(&multipart.ErrMessageTooLarge).Elem(),
 		"NewReader":          reflect.ValueOf(multipart.NewReader),
 		"NewWriter":          reflect.ValueOf(multipart.NewWriter),
 	}

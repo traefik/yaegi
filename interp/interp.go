@@ -245,6 +245,7 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 			res = genNodeWrapper(n)(i.Frame)
 		}
 	}
+
 	return res, err
 }
 

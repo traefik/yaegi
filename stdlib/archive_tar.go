@@ -9,10 +9,10 @@ import (
 
 func init() {
 	Value["archive/tar"] = map[string]reflect.Value{
-		"ErrFieldTooLong":    reflect.ValueOf(tar.ErrFieldTooLong),
-		"ErrHeader":          reflect.ValueOf(tar.ErrHeader),
-		"ErrWriteAfterClose": reflect.ValueOf(tar.ErrWriteAfterClose),
-		"ErrWriteTooLong":    reflect.ValueOf(tar.ErrWriteTooLong),
+		"ErrFieldTooLong":    reflect.ValueOf(&tar.ErrFieldTooLong).Elem(),
+		"ErrHeader":          reflect.ValueOf(&tar.ErrHeader).Elem(),
+		"ErrWriteAfterClose": reflect.ValueOf(&tar.ErrWriteAfterClose).Elem(),
+		"ErrWriteTooLong":    reflect.ValueOf(&tar.ErrWriteTooLong).Elem(),
 		"FileInfoHeader":     reflect.ValueOf(tar.FileInfoHeader),
 		"FormatGNU":          reflect.ValueOf(tar.FormatGNU),
 		"FormatPAX":          reflect.ValueOf(tar.FormatPAX),

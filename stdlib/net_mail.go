@@ -9,7 +9,7 @@ import (
 
 func init() {
 	Value["net/mail"] = map[string]reflect.Value{
-		"ErrHeaderNotPresent": reflect.ValueOf(mail.ErrHeaderNotPresent),
+		"ErrHeaderNotPresent": reflect.ValueOf(&mail.ErrHeaderNotPresent).Elem(),
 		"ParseAddress":        reflect.ValueOf(mail.ParseAddress),
 		"ParseAddressList":    reflect.ValueOf(mail.ParseAddressList),
 		"ParseDate":           reflect.ValueOf(mail.ParseDate),

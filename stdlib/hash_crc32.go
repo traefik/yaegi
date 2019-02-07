@@ -13,7 +13,7 @@ func init() {
 		"Checksum":     reflect.ValueOf(crc32.Checksum),
 		"ChecksumIEEE": reflect.ValueOf(crc32.ChecksumIEEE),
 		"IEEE":         reflect.ValueOf(uint32(crc32.IEEE)),
-		"IEEETable":    reflect.ValueOf(crc32.IEEETable),
+		"IEEETable":    reflect.ValueOf(&crc32.IEEETable).Elem(),
 		"Koopman":      reflect.ValueOf(uint32(crc32.Koopman)),
 		"MakeTable":    reflect.ValueOf(crc32.MakeTable),
 		"New":          reflect.ValueOf(crc32.New),

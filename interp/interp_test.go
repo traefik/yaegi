@@ -639,6 +639,35 @@ func main() {
 	// 1 2
 }
 
+func Example_assign0() {
+	src := `
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"time"
+)
+
+func main() {
+	http.DefaultClient.Timeout = time.Second * 10
+	fmt.Println(http.DefaultClient)
+	http.DefaultClient = &http.Client{}
+	fmt.Println(http.DefaultClient)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// &{<nil> <nil> <nil> 10s}
+	// &{<nil> <nil> <nil> 0s}
+}
+
 func Example_bin() {
 	src := `
 package main

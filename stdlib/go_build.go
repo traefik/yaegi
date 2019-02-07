@@ -11,14 +11,14 @@ func init() {
 	Value["go/build"] = map[string]reflect.Value{
 		"AllowBinary":   reflect.ValueOf(build.AllowBinary),
 		"ArchChar":      reflect.ValueOf(build.ArchChar),
-		"Default":       reflect.ValueOf(build.Default),
+		"Default":       reflect.ValueOf(&build.Default).Elem(),
 		"FindOnly":      reflect.ValueOf(build.FindOnly),
 		"IgnoreVendor":  reflect.ValueOf(build.IgnoreVendor),
 		"Import":        reflect.ValueOf(build.Import),
 		"ImportComment": reflect.ValueOf(build.ImportComment),
 		"ImportDir":     reflect.ValueOf(build.ImportDir),
 		"IsLocalImport": reflect.ValueOf(build.IsLocalImport),
-		"ToolDir":       reflect.ValueOf(build.ToolDir),
+		"ToolDir":       reflect.ValueOf(&build.ToolDir).Elem(),
 	}
 
 	Type["go/build"] = map[string]reflect.Type{

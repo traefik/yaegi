@@ -9,8 +9,8 @@ import (
 
 func init() {
 	Value["image/color/palette"] = map[string]reflect.Value{
-		"Plan9":   reflect.ValueOf(palette.Plan9),
-		"WebSafe": reflect.ValueOf(palette.WebSafe),
+		"Plan9":   reflect.ValueOf(&palette.Plan9).Elem(),
+		"WebSafe": reflect.ValueOf(&palette.WebSafe).Elem(),
 	}
 
 	Type["image/color/palette"] = map[string]reflect.Type{}

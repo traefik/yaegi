@@ -28,7 +28,7 @@ func init() {
 		"KeepAlive":               reflect.ValueOf(runtime.KeepAlive),
 		"LockOSThread":            reflect.ValueOf(runtime.LockOSThread),
 		"MemProfile":              reflect.ValueOf(runtime.MemProfile),
-		"MemProfileRate":          reflect.ValueOf(runtime.MemProfileRate),
+		"MemProfileRate":          reflect.ValueOf(&runtime.MemProfileRate).Elem(),
 		"MutexProfile":            reflect.ValueOf(runtime.MutexProfile),
 		"NumCPU":                  reflect.ValueOf(runtime.NumCPU),
 		"NumCgoCall":              reflect.ValueOf(runtime.NumCgoCall),

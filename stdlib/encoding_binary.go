@@ -9,8 +9,8 @@ import (
 
 func init() {
 	Value["encoding/binary"] = map[string]reflect.Value{
-		"BigEndian":      reflect.ValueOf(binary.BigEndian),
-		"LittleEndian":   reflect.ValueOf(binary.LittleEndian),
+		"BigEndian":      reflect.ValueOf(&binary.BigEndian).Elem(),
+		"LittleEndian":   reflect.ValueOf(&binary.LittleEndian).Elem(),
 		"MaxVarintLen16": reflect.ValueOf(binary.MaxVarintLen16),
 		"MaxVarintLen32": reflect.ValueOf(binary.MaxVarintLen32),
 		"MaxVarintLen64": reflect.ValueOf(binary.MaxVarintLen64),

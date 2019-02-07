@@ -9,16 +9,16 @@ import (
 
 func init() {
 	Value["database/sql/driver"] = map[string]reflect.Value{
-		"Bool":                      reflect.ValueOf(driver.Bool),
-		"DefaultParameterConverter": reflect.ValueOf(driver.DefaultParameterConverter),
-		"ErrBadConn":                reflect.ValueOf(driver.ErrBadConn),
-		"ErrRemoveArgument":         reflect.ValueOf(driver.ErrRemoveArgument),
-		"ErrSkip":                   reflect.ValueOf(driver.ErrSkip),
-		"Int32":                     reflect.ValueOf(driver.Int32),
+		"Bool":                      reflect.ValueOf(&driver.Bool).Elem(),
+		"DefaultParameterConverter": reflect.ValueOf(&driver.DefaultParameterConverter).Elem(),
+		"ErrBadConn":                reflect.ValueOf(&driver.ErrBadConn).Elem(),
+		"ErrRemoveArgument":         reflect.ValueOf(&driver.ErrRemoveArgument).Elem(),
+		"ErrSkip":                   reflect.ValueOf(&driver.ErrSkip).Elem(),
+		"Int32":                     reflect.ValueOf(&driver.Int32).Elem(),
 		"IsScanValue":               reflect.ValueOf(driver.IsScanValue),
 		"IsValue":                   reflect.ValueOf(driver.IsValue),
-		"ResultNoRows":              reflect.ValueOf(driver.ResultNoRows),
-		"String":                    reflect.ValueOf(driver.String),
+		"ResultNoRows":              reflect.ValueOf(&driver.ResultNoRows).Elem(),
+		"String":                    reflect.ValueOf(&driver.String).Elem(),
 	}
 
 	Type["database/sql/driver"] = map[string]reflect.Type{

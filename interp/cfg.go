@@ -295,6 +295,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			}
 			n.findex = dest.findex
 			n.val = dest.val
+			n.rval = dest.rval
 			// Propagate type
 			// TODO: Check that existing destination type matches source type
 			switch {
@@ -880,6 +881,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					if s.Kind() == reflect.Func {
 						n.fsize = s.NumOut()
 					}
+				} else {
+					err = n.cfgError("package %s \"%s\" has no symbol %s", n.child[0].ident, pkg, name)
 				}
 			} else if n.typ.cat == SrcPkgT {
 				// Resolve source package symbol
@@ -1038,11 +1041,13 @@ func (n *Node) isType(scope *Scope) bool {
 		return true
 	case SelectorExpr:
 		pkg, name := n.child[0].ident, n.child[1].ident
-		if p, ok := n.interp.binType[pkg]; ok && p[name] != nil {
-			return true // Imported binary type
-		}
-		if p, ok := n.interp.scope[pkg]; ok && p.sym[name] != nil && p.sym[name].kind == Typ {
-			return true // Imported source type
+		if sym, _, ok := scope.lookup(pkg); ok {
+			if p, ok := n.interp.binType[sym.path]; ok && p[name] != nil {
+				return true // Imported binary type
+			}
+			if p, ok := n.interp.scope[sym.path]; ok && p.sym[name] != nil && p.sym[name].kind == Typ {
+				return true // Imported source type
+			}
 		}
 	case Ident:
 		return scope.getType(n.ident) != nil
