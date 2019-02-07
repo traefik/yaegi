@@ -42,7 +42,6 @@ func genValueRecv(n *Node) func(*Frame) reflect.Value {
 }
 
 func genValue(n *Node) func(*Frame) reflect.Value {
-	//log.Println(n.index, "genValue", n.kind)
 	switch n.kind {
 	case BasicLit, FuncDecl, SelectorSrc:
 		var v reflect.Value
@@ -56,9 +55,7 @@ func genValue(n *Node) func(*Frame) reflect.Value {
 		v := n.rval
 		return func(f *Frame) reflect.Value { return v }
 	default:
-		//log.Println(n.index, "genValue default")
 		if n.rval.IsValid() {
-			//	log.Println(n.index, "genValue default rval")
 			v := n.rval
 			return func(f *Frame) reflect.Value { return v }
 		}

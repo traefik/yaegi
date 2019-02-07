@@ -5799,6 +5799,29 @@ func main() {
 
 }
 
+func Example_server7() {
+	src := `
+package main
+
+import (
+	"net/http"
+)
+
+func main() {
+	http.DefaultServeMux.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {})
+	http.DefaultServeMux = &http.ServeMux{}
+	http.DefaultServeMux.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {})
+	http.DefaultServeMux = &http.ServeMux{}
+}`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+}
+
 func Example_sieve() {
 	src := `
 // A concurrent prime sieve
