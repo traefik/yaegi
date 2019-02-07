@@ -940,9 +940,15 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			clauses := n.child[1].child
 			l := len(clauses)
 			for i, c := range clauses[:l-1] {
-				c.tnext = c.child[len(c.child)-1].start
-				c.child[1].tnext = n
 				c.fnext = clauses[i+1] // chain to next clause
+				bi := len(c.child) - 1
+				c.tnext = c.child[bi].start
+				// If last case body statement is a fallthrough, then jump to next case body
+				if bl := len(c.child[bi].child); bl > 0 && c.child[bi].child[bl-1].kind == Fallthrough {
+					c.child[1].tnext = clauses[i+1].child[len(clauses[i+1].child)-1].start
+				} else {
+					c.child[1].tnext = n
+				}
 			}
 			c := clauses[l-1]
 			c.tnext = c.child[len(c.child)-1].start

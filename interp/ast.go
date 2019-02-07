@@ -117,6 +117,7 @@ var kinds = [...]string{
 	DefineX:          "DefineX",
 	Ellipsis:         "Ellipsis",
 	ExprStmt:         "ExprStmt",
+	Fallthrough:      "Fallthrough",
 	Field:            "Field",
 	FieldList:        "FieldList",
 	File:             "File",
@@ -554,6 +555,10 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 				kind = Break
 			case token.CONTINUE:
 				kind = Continue
+			case token.FALLTHROUGH:
+				kind = Fallthrough
+			case token.GOTO:
+				kind = Goto
 			}
 			st.push(addChild(&root, anc, pos, kind, Nop), node)
 
