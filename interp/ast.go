@@ -83,6 +83,7 @@ const (
 	StarExpr
 	StructType
 	Switch
+	SwitchIf
 	TypeAssertExpr
 	TypeDecl
 	TypeSpec
@@ -161,6 +162,7 @@ var kinds = [...]string{
 	StarExpr:         "StarExpr",
 	StructType:       "StructType",
 	Switch:           "Switch",
+	SwitchIf:         "SwitchIf",
 	TypeAssertExpr:   "TypeAssertExpr",
 	TypeDecl:         "TypeDecl",
 	TypeSpec:         "TypeSpec",
@@ -733,7 +735,11 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			st.push(addChild(&root, anc, pos, StructType, Nop), node)
 
 		case *ast.SwitchStmt:
-			st.push(addChild(&root, anc, pos, Switch, Nop), node)
+			if a.Tag == nil {
+				st.push(addChild(&root, anc, pos, SwitchIf, Nop), node)
+			} else {
+				st.push(addChild(&root, anc, pos, Switch, Nop), node)
+			}
 
 		case *ast.TypeAssertExpr:
 			st.push(addChild(&root, anc, pos, TypeAssertExpr, TypeAssert), node)
