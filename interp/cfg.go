@@ -242,6 +242,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				c[i], c[l] = c[l], c[i]
 			}
 			scope = scope.push(0)
+			loop = n
 
 		case ImportSpec, TypeSpec:
 			// processing already done in GTA pass
@@ -960,6 +961,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			c := clauses[l-1]
 			c.tnext = c.child[len(c.child)-1].start
 			scope = scope.pop()
+			loop = nil
 
 		case TypeAssertExpr:
 			if n.child[1].typ == nil {

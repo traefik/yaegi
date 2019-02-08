@@ -6441,6 +6441,36 @@ func main() {
 	// 3 foo
 }
 
+func Example_switch5() {
+	src := `
+package main
+
+func main() {
+	i := 1
+
+	switch i {
+	case 0, 1, 2:
+		if i == 1 {
+			println("one")
+			break
+		}
+		println(i)
+	default:
+		println("not nul")
+	}
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// one
+}
+
 func Example_time0() {
 	src := `
 package main
