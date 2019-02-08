@@ -107,10 +107,12 @@ type Type struct {
 	arg        []*Type       // Argument types if FuncT or nil
 	ret        []*Type       // Return types if FuncT or nil
 	method     []*Node       // Associated methods or nil
+	name       string        // name of type within its package for a defined type
+	pkgPath    string        // for a defined type, the package import path
 	size       int           // Size of array if ArrayT
 	rtype      reflect.Type  // Reflection type if ValueT, or nil
 	variadic   bool          // true if type is variadic
-	incomplete bool          // true if type must be parsed again
+	incomplete bool          // true if type must be parsed again (out of order declarations)
 	untyped    bool          // true for a literal value (string or number)
 	node       *Node         // root AST node of type definition
 	scope      *Scope        // type declaration scope (in case of re-parse incomplete type)
@@ -162,23 +164,30 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 		switch n.val.(type) {
 		case bool:
 			t.cat = BoolT
+			t.name = "bool"
 		case byte:
 			t.cat = ByteT
+			t.name = "byte"
 			t.untyped = true
 		case float32:
 			t.cat = Float32T
+			t.name = "float32"
 			t.untyped = true
 		case float64:
 			t.cat = Float64T
+			t.name = "float64"
 			t.untyped = true
 		case int:
 			t.cat = IntT
+			t.name = "int"
 			t.untyped = true
 		case rune:
 			t.cat = RuneT
+			t.name = "rune"
 			t.untyped = true
 		case string:
 			t.cat = StringT
+			t.name = "string"
 			t.untyped = true
 		default:
 			err = n.cfgError("missign support for type %T", n.val)
@@ -377,6 +386,28 @@ func (t *Type) zero() (v reflect.Value, err error) {
 		v = zeroValues[t.cat]
 	}
 	return v, err
+}
+
+// typeEqual returns true if the 2 given types are equal, false otherwise
+func typeEqual(t1, t2 *Type) bool {
+	var id1, id2 string
+
+	if t1.cat == ValueT {
+		t := t1.rtype
+		id1 = t.PkgPath() + t.Name()
+	} else {
+		id1 = t1.pkgPath + t1.name
+	}
+	// TODO: if id is nil, build identity from String()
+
+	if t2.cat == ValueT {
+		t := t2.rtype
+		id2 = t.PkgPath() + t.Name()
+	} else {
+		id2 = t2.pkgPath + t2.name
+	}
+
+	return id1 == id2
 }
 
 // fieldIndex returns the field index from name in a struct, or -1 if not found

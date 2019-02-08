@@ -1103,7 +1103,7 @@ func _case(n *Node) {
 		n.exec = func(f *Frame) Builtin {
 			vtyp := value(f).Interface().(valueInterface).node.typ
 			for _, typ := range types {
-				if vtyp.cat == typ.cat {
+				if typeEqual(vtyp, typ) {
 					return tnext
 				}
 			}

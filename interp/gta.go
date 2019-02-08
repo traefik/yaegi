@@ -58,7 +58,7 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 					elementType := scope.getType(typeName)
 					if elementType == nil {
 						// Add type if necessary, so method can be registered
-						scope.sym[typeName] = &Symbol{kind: Typ, typ: &Type{}}
+						scope.sym[typeName] = &Symbol{kind: Typ, typ: &Type{name: typeName, pkgPath: rpath}}
 						elementType = scope.sym[typeName].typ
 					}
 					receiverType = &Type{cat: PtrT, val: elementType}
@@ -67,7 +67,7 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 					receiverType = scope.getType(typeName)
 					if receiverType == nil {
 						// Add type if necessary, so method can be registered
-						scope.sym[typeName] = &Symbol{kind: Typ, typ: &Type{}}
+						scope.sym[typeName] = &Symbol{kind: Typ, typ: &Type{name: typeName, pkgPath: rpath}}
 						receiverType = scope.sym[typeName].typ
 					}
 				}
@@ -109,9 +109,11 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 			if n.child[1].kind == Ident {
 				var typ *Type
 				typ, err = nodeType(interp, scope, n.child[1])
-				n.typ = &Type{cat: AliasT, val: typ}
+				n.typ = &Type{cat: AliasT, val: typ, name: typeName, pkgPath: rpath}
 			} else {
 				n.typ, err = nodeType(interp, scope, n.child[1])
+				n.typ.name = typeName
+				n.typ.pkgPath = rpath
 			}
 			if err != nil {
 				return false
