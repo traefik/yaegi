@@ -937,6 +937,47 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case Switch:
 			sbn := n.child[len(n.child)-1] // switch block node
+			clauses := sbn.child
+			l := len(clauses)
+			if len(n.child) > 1 && n.child[len(n.child)-2].action != Assign {
+				// A value node is defined, Chain case clauses
+				for i, c := range clauses[:l-1] {
+					c.fnext = clauses[i+1] // chain to next clause
+					body := c.child[len(c.child)-1]
+					c.tnext = body.start
+					// If last case body statement is a fallthrough, then jump to next case body
+					if bl := len(body.child); bl > 0 && body.child[bl-1].kind == Fallthrough {
+						body.tnext = clauses[i+1].child[len(clauses[i+1].child)-1].start
+					} else {
+						body.tnext = n
+					}
+				}
+				c := clauses[l-1]
+				c.tnext = c.child[len(c.child)-1].start
+			} else {
+				// Switch as if else if ...
+				for i := l - 1; i >= 0; i-- {
+					c := clauses[i]
+					body := c.child[len(c.child)-1]
+					if len(c.child) > 1 {
+						cond := c.child[0]
+						cond.tnext = body.start
+						if i == l-1 {
+							cond.fnext = n
+						} else {
+							cond.fnext = clauses[i+1].start
+						}
+						c.start = cond.start
+					} else {
+						c.start = body.start
+					}
+					// If last case body statement is a fallthrough, then jump to next case body
+					if bl := len(body.child); i < l-1 && bl > 0 && body.child[bl-1].kind == Fallthrough {
+						body.tnext = clauses[i+1].child[len(clauses[i+1].child)-1].start
+					}
+				}
+				sbn.start = clauses[0].start
+			}
 			if n.child[0].action == Assign {
 				// switch init statement is defined
 				n.start = n.child[0].start
@@ -944,22 +985,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			} else {
 				n.start = sbn.start
 			}
-			// Chain case clauses
-			clauses := sbn.child
-			l := len(clauses)
-			for i, c := range clauses[:l-1] {
-				c.fnext = clauses[i+1] // chain to next clause
-				bi := len(c.child) - 1
-				c.tnext = c.child[bi].start
-				// If last case body statement is a fallthrough, then jump to next case body
-				if bl := len(c.child[bi].child); bl > 0 && c.child[bi].child[bl-1].kind == Fallthrough {
-					c.child[1].tnext = clauses[i+1].child[len(clauses[i+1].child)-1].start
-				} else {
-					c.child[1].tnext = n
-				}
-			}
-			c := clauses[l-1]
-			c.tnext = c.child[len(c.child)-1].start
 			scope = scope.pop()
 			loop = nil
 

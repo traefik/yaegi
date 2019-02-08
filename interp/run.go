@@ -1093,10 +1093,14 @@ func _case(n *Node) {
 		valueNode = n.anc.anc.child[l-2]
 	}
 
-	if len(n.child) <= 1 {
+	switch {
+	case len(n.child) <= 1:
 		// default clause
 		n.exec = func(f *Frame) Builtin { return tnext }
-	} else if valueNode != nil {
+
+	case valueNode == nil:
+
+	default:
 		fnext := getExec(n.fnext)
 		value := genValue(valueNode)
 		values := make([]func(*Frame) reflect.Value, len(n.child)-1)
