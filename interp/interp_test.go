@@ -6500,6 +6500,32 @@ func main() {
 	// 3 foo
 }
 
+func Example_switch7() {
+	src := `
+package main
+
+func main() {
+	var i interface{} = "truc"
+
+	switch i.(type) {
+	case string:
+		println("string")
+	default:
+		println("unknown")
+	}
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// string
+}
+
 func Example_time0() {
 	src := `
 package main

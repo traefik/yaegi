@@ -235,7 +235,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case If0, If1, If2, If3:
 			scope = scope.push(0)
 
-		case Switch, SwitchIf:
+		case Switch, SwitchIf, TypeSwitch:
 			// Make sure default clause is in last position
 			c := n.child[len(n.child)-1].child
 			if i, l := getDefault(n), len(c)-1; i >= 0 && i != l {
@@ -935,7 +935,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.findex = scope.inc(interp)
 			}
 
-		case Switch:
+		case Switch, TypeSwitch:
 			sbn := n.child[len(n.child)-1] // switch block node
 			clauses := sbn.child
 			l := len(clauses)
@@ -945,7 +945,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				body := c.child[len(c.child)-1]
 				c.tnext = body.start
 				// If last case body statement is a fallthrough, then jump to next case body
-				if bl := len(body.child); bl > 0 && body.child[bl-1].kind == Fallthrough {
+				if bl := len(body.child); n.kind == Switch && bl > 0 && body.child[bl-1].kind == Fallthrough {
 					body.tnext = clauses[i+1].child[len(clauses[i+1].child)-1].start
 				} else {
 					body.tnext = n
@@ -999,12 +999,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			loop = nil
 
 		case TypeAssertExpr:
-			if n.child[1].typ == nil {
-				n.child[1].typ = scope.getType(n.child[1].ident)
-			}
-			if n.anc.action != AssignX {
-				n.typ = n.child[1].typ
-				n.findex = scope.inc(interp)
+			if len(n.child) > 1 {
+				if n.child[1].typ == nil {
+					n.child[1].typ = scope.getType(n.child[1].ident)
+				}
+				if n.anc.action != AssignX {
+					n.typ = n.child[1].typ
+					n.findex = scope.inc(interp)
+				}
 			}
 
 		case SliceExpr, UnaryExpr:

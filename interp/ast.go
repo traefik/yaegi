@@ -87,6 +87,7 @@ const (
 	TypeAssertExpr
 	TypeDecl
 	TypeSpec
+	TypeSwitch
 	UnaryExpr
 	ValueSpec
 	VarDecl
@@ -166,6 +167,7 @@ var kinds = [...]string{
 	TypeAssertExpr:   "TypeAssertExpr",
 	TypeDecl:         "TypeDecl",
 	TypeSpec:         "TypeSpec",
+	TypeSwitch:       "TypeSwitch",
 	UnaryExpr:        "UnaryExpr",
 	ValueSpec:        "ValueSpec",
 	VarDecl:          "VarDecl",
@@ -746,6 +748,9 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 
 		case *ast.TypeSpec:
 			st.push(addChild(&root, anc, pos, TypeSpec, Nop), node)
+
+		case *ast.TypeSwitchStmt:
+			st.push(addChild(&root, anc, pos, TypeSwitch, Nop), node)
 
 		case *ast.UnaryExpr:
 			var kind = UnaryExpr

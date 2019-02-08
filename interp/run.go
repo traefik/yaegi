@@ -1087,22 +1087,33 @@ func rangeMap(n *Node) {
 
 func _case(n *Node) {
 	tnext := getExec(n.tnext)
-	l := len(n.anc.anc.child)
-	var valueNode *Node
-	if l > 1 && n.anc.anc.child[l-2].action != Assign {
-		valueNode = n.anc.anc.child[l-2]
-	}
 
 	switch {
-	case len(n.child) <= 1:
-		// default clause
+	case len(n.child) <= 1: // default clause
 		n.exec = func(f *Frame) Builtin { return tnext }
 
-	case valueNode == nil:
+	case n.anc.anc.kind == TypeSwitch:
+		fnext := getExec(n.fnext)
+		l := len(n.anc.anc.child)
+		value := genValue(n.anc.anc.child[l-2].child[0].child[0])
+		types := make([]*Type, len(n.child)-1)
+		for i := range types {
+			types[i] = n.child[i].typ
+		}
+		n.exec = func(f *Frame) Builtin {
+			vtyp := value(f).Interface().(valueInterface).node.typ
+			for _, typ := range types {
+				if vtyp.cat == typ.cat {
+					return tnext
+				}
+			}
+			return fnext
+		}
 
 	default:
 		fnext := getExec(n.fnext)
-		value := genValue(valueNode)
+		l := len(n.anc.anc.child)
+		value := genValue(n.anc.anc.child[l-2])
 		values := make([]func(*Frame) reflect.Value, len(n.child)-1)
 		for i := range values {
 			values[i] = genValue(n.child[i])
