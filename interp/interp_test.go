@@ -6526,6 +6526,48 @@ func main() {
 	// string
 }
 
+func Example_switch8() {
+	src := `
+package main
+
+func main() {
+	println("hello")
+	fallthrough
+	println("world")
+}`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+func Example_switch9() {
+	src := `
+package main
+
+func main() {
+	var i interface{} = "truc"
+
+	switch i.(type) {
+	case string:
+		println("string")
+		fallthrough
+	default:
+		println("unknown")
+	}
+}`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+}
+
 func Example_time0() {
 	src := `
 package main

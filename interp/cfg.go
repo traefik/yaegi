@@ -534,6 +534,11 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case Continue:
 			n.tnext = loopRestart
 
+		case Fallthrough:
+			if n.anc.kind != CaseBody {
+				err = n.cfgError("fallthrough statement out of place")
+			}
+
 		case Field:
 			// A single child node (no ident, just type) means that the field refers
 			// to a return value, and space on frame should be accordingly allocated.
@@ -945,7 +950,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				body := c.child[len(c.child)-1]
 				c.tnext = body.start
 				// If last case body statement is a fallthrough, then jump to next case body
-				if bl := len(body.child); n.kind == Switch && bl > 0 && body.child[bl-1].kind == Fallthrough {
+				if bl := len(body.child); bl > 0 && body.child[bl-1].kind == Fallthrough {
+					if n.kind == TypeSwitch {
+						err = body.child[bl-1].cfgError("cannot fallthrough in type switch")
+					}
 					body.tnext = clauses[i+1].child[len(clauses[i+1].child)-1].start
 				} else {
 					body.tnext = n
@@ -967,8 +975,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			sbn := n.child[len(n.child)-1] // switch block node
 			clauses := sbn.child
 			l := len(clauses)
+			// Wire case clauses in reverse order so the next start node is already resolved when used.
 			for i := l - 1; i >= 0; i-- {
 				c := clauses[i]
+				c.gen = nop
 				body := c.child[len(c.child)-1]
 				if len(c.child) > 1 {
 					cond := c.child[0]

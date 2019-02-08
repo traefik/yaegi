@@ -33,6 +33,8 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "io0.go" || // use random number
 			file.Name() == "op1.go" || // expect error
 			file.Name() == "bltn0.go" || // expect error
+			file.Name() == "switch8.go" || // expect error
+			file.Name() == "switch9.go" || // expect error
 			file.Name() == "time0.go" || // display time (similar to random number)
 			file.Name() == "factor.go" || // bench
 			file.Name() == "fib.go" || // bench
@@ -132,6 +134,16 @@ func TestInterpErrorConsistency(t *testing.T) {
 		{
 			fileName:       "bltn0.go",
 			expectedInterp: "4:7: use of builtin println not in function call",
+		},
+		{
+			fileName:       "switch8.go",
+			expectedInterp: "5:2: fallthrough statement out of place",
+			expectedExec:   "5:2: fallthrough statement out of place",
+		},
+		{
+			fileName:       "switch9.go",
+			expectedInterp: "9:3: cannot fallthrough in type switch",
+			expectedExec:   "9:3: cannot fallthrough in type switch",
 		},
 	}
 
