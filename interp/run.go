@@ -1087,13 +1087,18 @@ func rangeMap(n *Node) {
 
 func _case(n *Node) {
 	tnext := getExec(n.tnext)
+	l := len(n.anc.anc.child)
+	var valueNode *Node
+	if l > 1 && n.anc.anc.child[l-2].action != Assign {
+		valueNode = n.anc.anc.child[l-2]
+	}
 
 	if len(n.child) <= 1 {
 		// default clause
 		n.exec = func(f *Frame) Builtin { return tnext }
-	} else {
+	} else if valueNode != nil {
 		fnext := getExec(n.fnext)
-		value := genValue(n.anc.anc.child[0])
+		value := genValue(valueNode)
 		values := make([]func(*Frame) reflect.Value, len(n.child)-1)
 		for i := range values {
 			values[i] = genValue(n.child[i])

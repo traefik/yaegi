@@ -235,9 +235,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case If0, If1, If2, If3:
 			scope = scope.push(0)
 
-		case Switch0:
+		case Switch:
 			// Make sure default clause is in last position
-			c := n.child[1].child
+			c := n.child[len(n.child)-1].child
 			if i, l := getDefault(n), len(c)-1; i >= 0 && i != l {
 				c[i], c[l] = c[l], c[i]
 			}
@@ -934,10 +934,17 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.findex = scope.inc(interp)
 			}
 
-		case Switch0:
-			n.start = n.child[1].start
+		case Switch:
+			sbn := n.child[len(n.child)-1] // switch block node
+			if n.child[0].action == Assign {
+				// switch init statement is defined
+				n.start = n.child[0].start
+				n.child[0].tnext = sbn.start
+			} else {
+				n.start = sbn.start
+			}
 			// Chain case clauses
-			clauses := n.child[1].child
+			clauses := sbn.child
 			l := len(clauses)
 			for i, c := range clauses[:l-1] {
 				c.fnext = clauses[i+1] // chain to next clause
@@ -952,7 +959,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			}
 			c := clauses[l-1]
 			c.tnext = c.child[len(c.child)-1].start
-
 			scope = scope.pop()
 
 		case TypeAssertExpr:
