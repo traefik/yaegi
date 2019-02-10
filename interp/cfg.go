@@ -144,7 +144,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			return false
 		}
 		switch n.kind {
-		case Define, AssignStmt:
+		case AssignStmt, Define:
 			if l := len(n.child); n.anc.kind == ConstDecl && l == 1 {
 				// Implicit iota assignment. TODO: replicate previous explicit assignment
 				n.child = append(n.child, &Node{anc: n, interp: interp, kind: Ident, ident: "iota"})
@@ -189,14 +189,20 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case CaseClause:
 			scope = scope.push(0)
-			if sn := n.anc.anc; sn.kind == TypeSwitch && sn.child[1].action == Assign {
-				// Type switch clause with a var defined in switch guard
-				// if 1 type in condition: define the switch guard var with this type
-				// in the case clause scope
-				if len(n.child) == 2 {
-					node := sn.child[1].child[0]
-					scope.sym[node.ident] = &Symbol{index: node.findex, kind: Var, typ: scope.getType(n.child[0].ident)}
+			if sn := n.anc.anc; sn.kind == TypeSwitch && sn.child[1].action == Assign && len(n.child) == 2 {
+				// Type switch clause with a var defined in switch guard, 1 type in clause:
+				// define the switch guard var with this type in the case clause scope
+				var typ *Type
+				switch sym, _, ok := scope.lookup(n.child[0].ident); {
+				case ok && sym.kind == Typ:
+					typ = sym.typ
+				case n.child[0].ident == "nil":
+					typ = scope.getType("interface{}")
+				default:
+					err = n.cfgError("%s is not a type", n.child[0].ident)
 				}
+				node := sn.child[1].child[0]
+				scope.sym[node.ident] = &Symbol{index: node.findex, kind: Var, typ: typ}
 			}
 
 		case CompositeLitExpr:
@@ -278,16 +284,15 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case AssignStmt, Define:
 			if n.anc.kind == TypeSwitch && n.anc.child[1] == n {
-				// type switch guard assignment: assign to concrete value
-				dest, src := n.child[0], n.child[1].child[0]
-				dest.typ = src.typ
+				// type switch guard assignment: assign dest to concrete value of src
+				n.child[0].typ = n.child[1].child[0].typ
 				break
 			}
 			dest, src := n.child[0], n.lastChild()
 			sym, level, _ := scope.lookup(dest.ident)
 			if n.kind == Define {
 				if len(n.child) == 3 {
-					// Type is provided in var declaration
+					// type is provided in var declaration
 					dest.typ, err = nodeType(interp, scope, n.child[1])
 				} else {
 					dest.typ = src.typ
@@ -359,14 +364,13 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			wireChild(n)
 			n.findex = n.child[0].findex
 			n.level = n.child[0].level
-			n.child[0].typ = scope.getType("int")
 			n.typ = n.child[0].typ
 			if sym, level, ok := scope.lookup(n.child[0].ident); ok {
 				sym.typ = n.typ
 				n.level = level
 			}
 
-		case DefineX, AssignXStmt:
+		case AssignXStmt, DefineX:
 			wireChild(n)
 			l := len(n.child) - 1
 			var types []*Type

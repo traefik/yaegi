@@ -1104,9 +1104,13 @@ func _case(n *Node) {
 			value1 := genValue(sn.child[1].child[0])
 			typ := types[0]
 			n.exec = func(f *Frame) Builtin {
-				ival := value(f).Interface().(valueInterface)
-				if typeEqual(ival.node.typ, typ) {
-					value1(f).Set(ival.value)
+				if v := value(f); !v.IsValid() {
+					if typ.cat == UnsetT {
+						return tnext
+					}
+					return fnext
+				} else if vi := v.Interface().(valueInterface); typeEqual(vi.node.typ, typ) {
+					value1(f).Set(vi.value)
 					return tnext
 				}
 				return fnext

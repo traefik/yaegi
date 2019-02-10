@@ -35,6 +35,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "bltn0.go" || // expect error
 			file.Name() == "switch8.go" || // expect error
 			file.Name() == "switch9.go" || // expect error
+			file.Name() == "switch13.go" || // expect error
 			file.Name() == "time0.go" || // display time (similar to random number)
 			file.Name() == "factor.go" || // bench
 			file.Name() == "fib.go" || // bench
@@ -144,6 +145,11 @@ func TestInterpErrorConsistency(t *testing.T) {
 			fileName:       "switch9.go",
 			expectedInterp: "9:3: cannot fallthrough in type switch",
 			expectedExec:   "9:3: cannot fallthrough in type switch",
+		},
+		{
+			fileName:       "switch13.go",
+			expectedInterp: "9:2: i is not a type",
+			expectedExec:   "9:2: i (type interface {}) is not a type",
 		},
 	}
 
