@@ -197,13 +197,13 @@ func assign(n *Node) {
 
 	if n.child[0].typ.cat == InterfaceT {
 		valueAddr := genValueAddr(n)
-		value1 := genValueInterface(n.child[len(n.child)-1])
+		value1 := genValueInterface(n.lastChild())
 		n.exec = func(f *Frame) Builtin {
 			*(valueAddr(f)) = value1(f)
 			return next
 		}
 	} else {
-		value1 := genValue(n.child[len(n.child)-1])
+		value1 := genValue(n.lastChild())
 		n.exec = func(f *Frame) Builtin {
 			value(f).Set(value1(f))
 			return next
@@ -1094,20 +1094,33 @@ func _case(n *Node) {
 
 	case n.anc.anc.kind == TypeSwitch:
 		fnext := getExec(n.fnext)
-		l := len(n.anc.anc.child)
-		value := genValue(n.anc.anc.child[l-2].child[0].child[0])
+		sn := n.anc.anc // switch node
 		types := make([]*Type, len(n.child)-1)
 		for i := range types {
 			types[i] = n.child[i].typ
 		}
-		n.exec = func(f *Frame) Builtin {
-			vtyp := value(f).Interface().(valueInterface).node.typ
-			for _, typ := range types {
-				if typeEqual(vtyp, typ) {
+		value := genValue(sn.child[1].lastChild().child[0])
+		if len(sn.child[1].child) == 2 && len(types) == 1 {
+			value1 := genValue(sn.child[1].child[0])
+			typ := types[0]
+			n.exec = func(f *Frame) Builtin {
+				ival := value(f).Interface().(valueInterface)
+				if typeEqual(ival.node.typ, typ) {
+					value1(f).Set(ival.value)
 					return tnext
 				}
+				return fnext
 			}
-			return fnext
+		} else {
+			n.exec = func(f *Frame) Builtin {
+				vtyp := value(f).Interface().(valueInterface).node.typ
+				for _, typ := range types {
+					if typeEqual(vtyp, typ) {
+						return tnext
+					}
+				}
+				return fnext
+			}
 		}
 
 	default:

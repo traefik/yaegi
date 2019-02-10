@@ -750,7 +750,12 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			st.push(addChild(&root, anc, pos, TypeSpec, Nop), node)
 
 		case *ast.TypeSwitchStmt:
-			st.push(addChild(&root, anc, pos, TypeSwitch, Nop), node)
+			n := addChild(&root, anc, pos, TypeSwitch, Nop)
+			st.push(n, node)
+			if a.Init == nil {
+				// add an empty init node to disambiguate AST
+				addChild(&root, astNode{n, nil}, pos, FieldList, Nop)
+			}
 
 		case *ast.UnaryExpr:
 			var kind = UnaryExpr

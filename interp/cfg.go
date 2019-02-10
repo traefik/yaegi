@@ -187,6 +187,18 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			}
 			scope = scope.push(0)
 
+		case CaseClause:
+			scope = scope.push(0)
+			if sn := n.anc.anc; sn.kind == TypeSwitch && sn.child[1].action == Assign {
+				// Type switch clause with a var defined in switch guard
+				// if 1 type in condition: define the switch guard var with this type
+				// in the case clause scope
+				if len(n.child) == 2 {
+					node := sn.child[1].child[0]
+					scope.sym[node.ident] = &Symbol{index: node.findex, kind: Var, typ: scope.getType(n.child[0].ident)}
+				}
+			}
+
 		case CompositeLitExpr:
 			if n.child[0].isType(scope) {
 				// Get type from 1st child
@@ -218,7 +230,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			scope = scope.push(0)
 
 		case For1, For2, For3, For3a, For4:
-			loop, loopRestart = n, n.child[len(n.child)-1]
+			loop, loopRestart = n, n.lastChild()
 			scope = scope.push(0)
 
 		case FuncDecl, FuncLit:
@@ -237,7 +249,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case Switch, SwitchIf, TypeSwitch:
 			// Make sure default clause is in last position
-			c := n.child[len(n.child)-1].child
+			c := n.lastChild().child
 			if i, l := getDefault(n), len(c)-1; i >= 0 && i != l {
 				c[i], c[l] = c[l], c[i]
 			}
@@ -264,8 +276,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			n.typ = &Type{cat: PtrT, val: n.child[0].typ}
 			n.findex = scope.inc(interp)
 
-		case Define, AssignStmt:
-			dest, src := n.child[0], n.child[len(n.child)-1]
+		case AssignStmt, Define:
+			if n.anc.kind == TypeSwitch && n.anc.child[1] == n {
+				// type switch guard assignment: assign to concrete value
+				dest, src := n.child[0], n.child[1].child[0]
+				dest.typ = src.typ
+				break
+			}
+			dest, src := n.child[0], n.lastChild()
 			sym, level, _ := scope.lookup(dest.ident)
 			if n.kind == Define {
 				if len(n.child) == 3 {
@@ -430,7 +448,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case BlockStmt:
 			wireChild(n)
 			if len(n.child) > 0 {
-				n.findex = n.child[len(n.child)-1].findex
+				n.findex = n.lastChild().findex
 			}
 			scope = scope.pop()
 
@@ -440,7 +458,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case DeclStmt, ExprStmt, VarDecl, SendStmt:
 			wireChild(n)
-			n.findex = n.child[len(n.child)-1].findex
+			n.findex = n.lastChild().findex
 
 		case Break:
 			n.tnext = loop
@@ -496,6 +514,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.start = n.child[0].start
 			}
 
+		case CaseClause:
+			scope = scope.pop()
+
 		case CommClause:
 			wireChild(n)
 			if len(n.child) > 1 {
@@ -503,7 +524,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			} else {
 				n.start = n.child[0].start // default clause
 			}
-			n.child[len(n.child)-1].tnext = n.anc.anc // exit node is SelectStmt
+			n.lastChild().tnext = n.anc.anc // exit node is SelectStmt
 
 		case CompositeLitExpr:
 			wireChild(n)
@@ -787,8 +808,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case ParenExpr:
 			wireChild(n)
-			n.findex = n.child[len(n.child)-1].findex
-			n.typ = n.child[len(n.child)-1].typ
+			n.findex = n.lastChild().findex
+			n.typ = n.lastChild().typ
 
 		case RangeStmt:
 			n.start = n.child[2]                // Get array or map object
@@ -941,27 +962,27 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			}
 
 		case Switch, TypeSwitch:
-			sbn := n.child[len(n.child)-1] // switch block node
+			sbn := n.lastChild() // switch block node
 			clauses := sbn.child
 			l := len(clauses)
 			// Chain case clauses
 			for i, c := range clauses[:l-1] {
 				c.fnext = clauses[i+1] // chain to next clause
-				body := c.child[len(c.child)-1]
+				body := c.lastChild()
 				c.tnext = body.start
-				// If last case body statement is a fallthrough, then jump to next case body
-				if bl := len(body.child); bl > 0 && body.child[bl-1].kind == Fallthrough {
+				if len(body.child) > 0 && body.lastChild().kind == Fallthrough {
 					if n.kind == TypeSwitch {
-						err = body.child[bl-1].cfgError("cannot fallthrough in type switch")
+						err = body.lastChild().cfgError("cannot fallthrough in type switch")
 					}
-					body.tnext = clauses[i+1].child[len(clauses[i+1].child)-1].start
+					body.tnext = clauses[i+1].lastChild().start
 				} else {
 					body.tnext = n
 				}
 			}
 			c := clauses[l-1]
-			c.tnext = c.child[len(c.child)-1].start
-			if n.child[0].action == Assign {
+			c.tnext = c.lastChild().start
+			if n.child[0].action == Assign &&
+				(n.child[0].child[0].kind != TypeAssertExpr || len(n.child[0].child[0].child) > 1) {
 				// switch init statement is defined
 				n.start = n.child[0].start
 				n.child[0].tnext = sbn.start
@@ -972,14 +993,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			loop = nil
 
 		case SwitchIf: // like an if-else chain
-			sbn := n.child[len(n.child)-1] // switch block node
+			sbn := n.lastChild() // switch block node
 			clauses := sbn.child
 			l := len(clauses)
 			// Wire case clauses in reverse order so the next start node is already resolved when used.
 			for i := l - 1; i >= 0; i-- {
 				c := clauses[i]
 				c.gen = nop
-				body := c.child[len(c.child)-1]
+				body := c.lastChild()
 				if len(c.child) > 1 {
 					cond := c.child[0]
 					cond.tnext = body.start
@@ -993,8 +1014,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					c.start = body.start
 				}
 				// If last case body statement is a fallthrough, then jump to next case body
-				if bl := len(body.child); i < l-1 && bl > 0 && body.child[bl-1].kind == Fallthrough {
-					body.tnext = clauses[i+1].child[len(clauses[i+1].child)-1].start
+				if i < l-1 && len(body.child) > 0 && body.lastChild().kind == Fallthrough {
+					body.tnext = clauses[i+1].lastChild().start
 				}
 			}
 			sbn.start = clauses[0].start
@@ -1017,6 +1038,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					n.typ = n.child[1].typ
 					n.findex = scope.inc(interp)
 				}
+			} else {
+				n.gen = nop
 			}
 
 		case SliceExpr, UnaryExpr:
@@ -1080,7 +1103,7 @@ func genRun(n *Node) error {
 
 // Find default case clause index of a switch statement, if any
 func getDefault(n *Node) int {
-	for i, c := range n.child[1].child {
+	for i, c := range n.lastChild().child {
 		if len(c.child) == 1 {
 			return i
 		}
@@ -1146,6 +1169,9 @@ func wireChild(n *Node) {
 	}
 }
 
+// last returns the last child of a node
+func (n *Node) lastChild() *Node { return n.child[len(n.child)-1] }
+
 func isKey(n *Node) bool {
 	return n.anc.kind == File ||
 		(n.anc.kind == SelectorExpr && n.anc.child[0] != n) ||
@@ -1159,13 +1185,13 @@ func isNewDefine(n *Node) bool {
 	if n.anc.kind == Define && n.anc.child[0] == n {
 		return true
 	}
-	if n.anc.kind == DefineX && n.anc.child[len(n.anc.child)-1] != n {
+	if n.anc.kind == DefineX && n.anc.lastChild() != n {
 		return true
 	}
 	if n.anc.kind == RangeStmt && (n.anc.child[0] == n || n.anc.child[1] == n) {
 		return true
 	}
-	if n.anc.kind == ValueSpec && n.anc.child[len(n.anc.child)-1] != n {
+	if n.anc.kind == ValueSpec && n.anc.lastChild() != n {
 		return true
 	}
 	return false

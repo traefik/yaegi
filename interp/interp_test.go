@@ -6357,6 +6357,58 @@ func main() {
 	// not nul
 }
 
+func Example_switch10() {
+	src := `
+package main
+
+func main() {
+	var i interface{} = "truc"
+
+	switch a := i.(type) {
+	case string:
+		println("string", a+" ok")
+	default:
+		println("unknown")
+	}
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// string truc ok
+}
+
+func Example_switch11() {
+	src := `
+package main
+
+func main() {
+	var i interface{} = "truc"
+
+	switch b := 2; a := i.(type) {
+	case string:
+		println("string", a+" ok")
+	default:
+		println("unknown", b)
+	}
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// string truc ok
+}
+
 func Example_switch2() {
 	src := `
 package main
