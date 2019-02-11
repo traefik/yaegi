@@ -834,10 +834,10 @@ func (s *nodestack) pop() astNode {
 	return res
 }
 
-func (s *nodestack) top() (v astNode) {
+func (s *nodestack) top() astNode {
 	l := len(*s)
 	if l > 0 {
 		return (*s)[l-1]
 	}
-	return
+	return astNode{}
 }

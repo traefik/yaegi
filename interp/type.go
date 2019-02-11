@@ -369,13 +369,14 @@ func (t *Type) finalize() (*Type, error) {
 
 // id returns a unique type identificator string
 func (t *Type) id() string {
+	// TODO: if res is nil, build identity from String()
+
 	res := ""
 	if t.cat == ValueT {
 		res = t.rtype.PkgPath() + t.rtype.Name()
 	} else {
 		res = t.pkgPath + t.name
 	}
-	// TODO: if id is nil, build identity from String()
 	return res
 }
 
