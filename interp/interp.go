@@ -42,8 +42,9 @@ type Node struct {
 
 // Receiver stores method receiver object access path
 type Receiver struct {
-	node  *Node
-	index []int
+	node  *Node         // receiver value for alias and struct types
+	val   reflect.Value // receiver value for interface type
+	index []int         // path in receiver value for interface type
 }
 
 // Frame contains values for the current execution level (a function context)
@@ -134,27 +135,27 @@ func New(opt Opt) *Interpreter {
 func initUniverse() *Scope {
 	scope := &Scope{global: true, sym: SymMap{
 		// predefined Go types
-		"bool":        &Symbol{kind: Typ, typ: &Type{cat: BoolT}},
-		"byte":        &Symbol{kind: Typ, typ: &Type{cat: ByteT}},
-		"complex64":   &Symbol{kind: Typ, typ: &Type{cat: Complex64T}},
-		"complex128":  &Symbol{kind: Typ, typ: &Type{cat: Complex128T}},
-		"error":       &Symbol{kind: Typ, typ: &Type{cat: ErrorT}},
-		"float32":     &Symbol{kind: Typ, typ: &Type{cat: Float32T}},
-		"float64":     &Symbol{kind: Typ, typ: &Type{cat: Float64T}},
-		"int":         &Symbol{kind: Typ, typ: &Type{cat: IntT}},
-		"int8":        &Symbol{kind: Typ, typ: &Type{cat: Int8T}},
-		"int16":       &Symbol{kind: Typ, typ: &Type{cat: Int16T}},
-		"int32":       &Symbol{kind: Typ, typ: &Type{cat: Int32T}},
-		"int64":       &Symbol{kind: Typ, typ: &Type{cat: Int64T}},
+		"bool":        &Symbol{kind: Typ, typ: &Type{cat: BoolT, name: "bool"}},
+		"byte":        &Symbol{kind: Typ, typ: &Type{cat: ByteT, name: "byte"}},
+		"complex64":   &Symbol{kind: Typ, typ: &Type{cat: Complex64T, name: "complex64"}},
+		"complex128":  &Symbol{kind: Typ, typ: &Type{cat: Complex128T, name: "complex128"}},
+		"error":       &Symbol{kind: Typ, typ: &Type{cat: ErrorT, name: "error"}},
+		"float32":     &Symbol{kind: Typ, typ: &Type{cat: Float32T, name: "float32"}},
+		"float64":     &Symbol{kind: Typ, typ: &Type{cat: Float64T, name: "float64"}},
+		"int":         &Symbol{kind: Typ, typ: &Type{cat: IntT, name: "int"}},
+		"int8":        &Symbol{kind: Typ, typ: &Type{cat: Int8T, name: "int8"}},
+		"int16":       &Symbol{kind: Typ, typ: &Type{cat: Int16T, name: "int16"}},
+		"int32":       &Symbol{kind: Typ, typ: &Type{cat: Int32T, name: "int32"}},
+		"int64":       &Symbol{kind: Typ, typ: &Type{cat: Int64T, name: "int64"}},
 		"interface{}": &Symbol{kind: Typ, typ: &Type{cat: InterfaceT}},
-		"rune":        &Symbol{kind: Typ, typ: &Type{cat: RuneT}},
-		"string":      &Symbol{kind: Typ, typ: &Type{cat: StringT}},
-		"uint":        &Symbol{kind: Typ, typ: &Type{cat: UintT}},
-		"uint8":       &Symbol{kind: Typ, typ: &Type{cat: Uint8T}},
-		"uint16":      &Symbol{kind: Typ, typ: &Type{cat: Uint16T}},
-		"uint32":      &Symbol{kind: Typ, typ: &Type{cat: Uint32T}},
-		"uint64":      &Symbol{kind: Typ, typ: &Type{cat: Uint64T}},
-		"uintptr":     &Symbol{kind: Typ, typ: &Type{cat: UintptrT}},
+		"rune":        &Symbol{kind: Typ, typ: &Type{cat: RuneT, name: "rune"}},
+		"string":      &Symbol{kind: Typ, typ: &Type{cat: StringT, name: "string"}},
+		"uint":        &Symbol{kind: Typ, typ: &Type{cat: UintT, name: "uint"}},
+		"uint8":       &Symbol{kind: Typ, typ: &Type{cat: Uint8T, name: "uint8"}},
+		"uint16":      &Symbol{kind: Typ, typ: &Type{cat: Uint16T, name: "uint16"}},
+		"uint32":      &Symbol{kind: Typ, typ: &Type{cat: Uint32T, name: "uint32"}},
+		"uint64":      &Symbol{kind: Typ, typ: &Type{cat: Uint64T, name: "uint64"}},
+		"uintptr":     &Symbol{kind: Typ, typ: &Type{cat: UintptrT, name: "uintptr"}},
 
 		// predefined Go constants
 		"false": &Symbol{kind: Const, typ: &Type{cat: BoolT}, val: false},

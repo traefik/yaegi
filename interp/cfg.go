@@ -2,7 +2,6 @@ package interp
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"strconv"
 	"unicode"
@@ -144,7 +143,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			return false
 		}
 		switch n.kind {
-		case Define, AssignStmt:
+		case AssignStmt, Define:
 			if l := len(n.child); n.anc.kind == ConstDecl && l == 1 {
 				// Implicit iota assignment. TODO: replicate previous explicit assignment
 				n.child = append(n.child, &Node{anc: n, interp: interp, kind: Ident, ident: "iota"})
@@ -187,6 +186,29 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			}
 			scope = scope.push(0)
 
+		case CaseClause:
+			scope = scope.push(0)
+			if sn := n.anc.anc; sn.kind == TypeSwitch && sn.child[1].action == Assign {
+				// Type switch clause with a var defined in switch guard
+				var typ *Type
+				if len(n.child) == 2 {
+					// 1 type in clause: define the var with this type in the case clause scope
+					switch sym, _, ok := scope.lookup(n.child[0].ident); {
+					case ok && sym.kind == Typ:
+						typ = sym.typ
+					case n.child[0].ident == "nil":
+						typ = scope.getType("interface{}")
+					default:
+						err = n.cfgError("%s is not a type", n.child[0].ident)
+					}
+				} else {
+					// define the var with the type in the switch guard expression
+					typ = sn.child[1].child[1].child[0].typ
+				}
+				node := sn.child[1].child[0]
+				scope.sym[node.ident] = &Symbol{index: node.findex, kind: Var, typ: typ}
+			}
+
 		case CompositeLitExpr:
 			if n.child[0].isType(scope) {
 				// Get type from 1st child
@@ -218,7 +240,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			scope = scope.push(0)
 
 		case For1, For2, For3, For3a, For4:
-			loop, loopRestart = n, n.child[len(n.child)-1]
+			loop, loopRestart = n, n.lastChild()
 			scope = scope.push(0)
 
 		case FuncDecl, FuncLit:
@@ -235,13 +257,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case If0, If1, If2, If3:
 			scope = scope.push(0)
 
-		case Switch0:
+		case Switch, SwitchIf, TypeSwitch:
 			// Make sure default clause is in last position
-			c := n.child[1].child
+			c := n.lastChild().child
 			if i, l := getDefault(n), len(c)-1; i >= 0 && i != l {
 				c[i], c[l] = c[l], c[i]
 			}
 			scope = scope.push(0)
+			loop = n
 
 		case ImportSpec, TypeSpec:
 			// processing already done in GTA pass
@@ -263,12 +286,17 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			n.typ = &Type{cat: PtrT, val: n.child[0].typ}
 			n.findex = scope.inc(interp)
 
-		case Define, AssignStmt:
-			dest, src := n.child[0], n.child[len(n.child)-1]
+		case AssignStmt, Define:
+			if n.anc.kind == TypeSwitch && n.anc.child[1] == n {
+				// type switch guard assignment: assign dest to concrete value of src
+				n.child[0].typ = n.child[1].child[0].typ
+				break
+			}
+			dest, src := n.child[0], n.lastChild()
 			sym, level, _ := scope.lookup(dest.ident)
 			if n.kind == Define {
 				if len(n.child) == 3 {
-					// Type is provided in var declaration
+					// type is provided in var declaration
 					dest.typ, err = nodeType(interp, scope, n.child[1])
 				} else {
 					dest.typ = src.typ
@@ -324,7 +352,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				sym.recv = src.recv
 			}
 			n.level = level
-			//log.Println(n.index, "assign", dest.ident, n.typ.cat, n.findex, n.level)
 			// If LHS is an indirection, get reference instead of value, to allow setting
 			if dest.action == GetIndex {
 				if dest.child[0].typ.cat == MapT {
@@ -340,14 +367,13 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			wireChild(n)
 			n.findex = n.child[0].findex
 			n.level = n.child[0].level
-			n.child[0].typ = scope.getType("int")
 			n.typ = n.child[0].typ
 			if sym, level, ok := scope.lookup(n.child[0].ident); ok {
 				sym.typ = n.typ
 				n.level = level
 			}
 
-		case DefineX, AssignXStmt:
+		case AssignXStmt, DefineX:
 			wireChild(n)
 			l := len(n.child) - 1
 			var types []*Type
@@ -429,7 +455,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case BlockStmt:
 			wireChild(n)
 			if len(n.child) > 0 {
-				n.findex = n.child[len(n.child)-1].findex
+				n.findex = n.lastChild().findex
 			}
 			scope = scope.pop()
 
@@ -439,7 +465,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case DeclStmt, ExprStmt, VarDecl, SendStmt:
 			wireChild(n)
-			n.findex = n.child[len(n.child)-1].findex
+			n.findex = n.lastChild().findex
 
 		case Break:
 			n.tnext = loop
@@ -489,15 +515,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				scope.size += n.fsize
 			}
 
-		case CaseClause:
-			n.findex = scope.inc(interp)
-			n.tnext = n.child[len(n.child)-1].start
-
-		case SelectStmt:
+		case CaseBody:
 			wireChild(n)
-			// Move action to block statement, so select node can be an exit point
-			n.child[0].gen = _select
-			n.start = n.child[0]
+			if len(n.child) > 0 {
+				n.start = n.child[0].start
+			}
+
+		case CaseClause:
+			scope = scope.pop()
 
 		case CommClause:
 			wireChild(n)
@@ -506,7 +531,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			} else {
 				n.start = n.child[0].start // default clause
 			}
-			n.child[len(n.child)-1].tnext = n.anc.anc // exit node is SelectStmt
+			n.lastChild().tnext = n.anc.anc // exit node is SelectStmt
 
 		case CompositeLitExpr:
 			wireChild(n)
@@ -536,6 +561,11 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case Continue:
 			n.tnext = loopRestart
+
+		case Fallthrough:
+			if n.anc.kind != CaseBody {
+				err = n.cfgError("fallthrough statement out of place")
+			}
 
 		case Field:
 			// A single child node (no ident, just type) means that the field refers
@@ -785,8 +815,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case ParenExpr:
 			wireChild(n)
-			n.findex = n.child[len(n.child)-1].findex
-			n.typ = n.child[len(n.child)-1].typ
+			n.findex = n.lastChild().findex
+			n.typ = n.lastChild().typ
 
 		case RangeStmt:
 			n.start = n.child[2]                // Get array or map object
@@ -809,7 +839,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				err = n.cfgError("undefined type")
 				return
 			}
-			//log.Println(n.index, "selector", n.child[0].ident+"."+n.child[1].ident, n.typ.cat)
 			if n.typ.cat == ValueT {
 				// Handle object defined in runtime, try to find field or method
 				// Search for method first, as it applies both to types T and *T
@@ -860,7 +889,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					n.typ = &Type{cat: ValueT, rtype: method.Type}
 					n.recv = &Receiver{node: n.child[0]}
 				} else {
-					log.Println(n.index, "selector unresolved")
+					err = n.cfgError("undefined selector: %s", n.child[1].ident)
 				}
 			} else if n.typ.cat == BinPkgT {
 				// Resolve binary package symbol: a type or a value
@@ -917,6 +946,12 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				err = n.cfgError("undefined selector: %s", n.child[1].ident)
 			}
 
+		case SelectStmt:
+			wireChild(n)
+			// Move action to block statement, so select node can be an exit point
+			n.child[0].gen = _select
+			n.start = n.child[0]
+
 		case StarExpr:
 			switch {
 			case n.anc.kind == Define && len(n.anc.child) == 3 && n.anc.child[1] == n:
@@ -932,37 +967,100 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.findex = scope.inc(interp)
 			}
 
-		case Switch0:
-			n.start = n.child[1].start
-			// Chain case clauses
-			clauses := n.child[1].child
-			l := len(clauses)
-			for i, c := range clauses[:l-1] {
-				// chain to next clause
-				c.tnext = c.child[1].start
-				c.child[1].tnext = n
-				c.fnext = clauses[i+1]
+		case TypeSwitch:
+			// Check that cases expressions are all different
+			usedCase := map[string]bool{}
+			for _, c := range n.lastChild().child {
+				for _, t := range c.child[:len(c.child)-1] {
+					tid := t.typ.id()
+					if usedCase[tid] {
+						err = c.cfgError("duplicate case %s in type switch", tid)
+						return
+					}
+					usedCase[tid] = true
+				}
 			}
-			// Handle last clause
-			if c := clauses[l-1]; len(c.child) > 1 {
-				// No default clause
-				c.tnext = c.child[1].start
-				c.fnext = n
-				c.child[1].tnext = n
+			fallthrough
+
+		case Switch:
+			sbn := n.lastChild() // switch block node
+			clauses := sbn.child
+			l := len(clauses)
+			// Chain case clauses
+			for i, c := range clauses[:l-1] {
+				c.fnext = clauses[i+1] // chain to next clause
+				body := c.lastChild()
+				c.tnext = body.start
+				if len(body.child) > 0 && body.lastChild().kind == Fallthrough {
+					if n.kind == TypeSwitch {
+						err = body.lastChild().cfgError("cannot fallthrough in type switch")
+					}
+					body.tnext = clauses[i+1].lastChild().start
+				} else {
+					body.tnext = n
+				}
+			}
+			c := clauses[l-1]
+			c.tnext = c.lastChild().start
+			if n.child[0].action == Assign &&
+				(n.child[0].child[0].kind != TypeAssertExpr || len(n.child[0].child[0].child) > 1) {
+				// switch init statement is defined
+				n.start = n.child[0].start
+				n.child[0].tnext = sbn.start
 			} else {
-				// Default
-				c.tnext = c.child[0].start
-				c.child[0].tnext = n
+				n.start = sbn.start
 			}
 			scope = scope.pop()
+			loop = nil
+
+		case SwitchIf: // like an if-else chain
+			sbn := n.lastChild() // switch block node
+			clauses := sbn.child
+			l := len(clauses)
+			// Wire case clauses in reverse order so the next start node is already resolved when used.
+			for i := l - 1; i >= 0; i-- {
+				c := clauses[i]
+				c.gen = nop
+				body := c.lastChild()
+				if len(c.child) > 1 {
+					cond := c.child[0]
+					cond.tnext = body.start
+					if i == l-1 {
+						cond.fnext = n
+					} else {
+						cond.fnext = clauses[i+1].start
+					}
+					c.start = cond.start
+				} else {
+					c.start = body.start
+				}
+				// If last case body statement is a fallthrough, then jump to next case body
+				if i < l-1 && len(body.child) > 0 && body.lastChild().kind == Fallthrough {
+					body.tnext = clauses[i+1].lastChild().start
+				}
+			}
+			sbn.start = clauses[0].start
+			if n.child[0].action == Assign {
+				// switch init statement is defined
+				n.start = n.child[0].start
+				n.child[0].tnext = sbn.start
+			} else {
+				n.start = sbn.start
+			}
+			scope = scope.pop()
+			loop = nil
 
 		case TypeAssertExpr:
-			if n.child[1].typ == nil {
-				n.child[1].typ = scope.getType(n.child[1].ident)
-			}
-			if n.anc.action != AssignX {
-				n.typ = n.child[1].typ
-				n.findex = scope.inc(interp)
+			if len(n.child) > 1 {
+				if n.child[1].typ == nil {
+					n.child[1].typ = scope.getType(n.child[1].ident)
+				}
+				if n.anc.action != AssignX {
+					n.typ = n.child[1].typ
+					n.findex = scope.inc(interp)
+				}
+			} else {
+				n.gen = nop
 			}
 
 		case SliceExpr, UnaryExpr:
@@ -1026,7 +1124,7 @@ func genRun(n *Node) error {
 
 // Find default case clause index of a switch statement, if any
 func getDefault(n *Node) int {
-	for i, c := range n.child[1].child {
+	for i, c := range n.lastChild().child {
 		if len(c.child) == 1 {
 			return i
 		}
@@ -1092,6 +1190,9 @@ func wireChild(n *Node) {
 	}
 }
 
+// last returns the last child of a node
+func (n *Node) lastChild() *Node { return n.child[len(n.child)-1] }
+
 func isKey(n *Node) bool {
 	return n.anc.kind == File ||
 		(n.anc.kind == SelectorExpr && n.anc.child[0] != n) ||
@@ -1105,13 +1206,13 @@ func isNewDefine(n *Node) bool {
 	if n.anc.kind == Define && n.anc.child[0] == n {
 		return true
 	}
-	if n.anc.kind == DefineX && n.anc.child[len(n.anc.child)-1] != n {
+	if n.anc.kind == DefineX && n.anc.lastChild() != n {
 		return true
 	}
 	if n.anc.kind == RangeStmt && (n.anc.child[0] == n || n.anc.child[1] == n) {
 		return true
 	}
-	if n.anc.kind == ValueSpec && n.anc.child[len(n.anc.child)-1] != n {
+	if n.anc.kind == ValueSpec && n.anc.lastChild() != n {
 		return true
 	}
 	return false
@@ -1212,7 +1313,6 @@ func getReturnedType(n *Node) *Type {
 	case BuiltinT:
 		return n.anc.typ
 	case ValueT:
-		//log.Println(n.index, "getReturnedType", n.typ.rtype)
 		if n.typ.rtype.NumOut() > 0 {
 			return &Type{cat: ValueT, rtype: n.typ.rtype.Out(0)}
 		}

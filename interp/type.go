@@ -107,10 +107,12 @@ type Type struct {
 	arg        []*Type       // Argument types if FuncT or nil
 	ret        []*Type       // Return types if FuncT or nil
 	method     []*Node       // Associated methods or nil
+	name       string        // name of type within its package for a defined type
+	pkgPath    string        // for a defined type, the package import path
 	size       int           // Size of array if ArrayT
 	rtype      reflect.Type  // Reflection type if ValueT, or nil
 	variadic   bool          // true if type is variadic
-	incomplete bool          // true if type must be parsed again
+	incomplete bool          // true if type must be parsed again (out of order declarations)
 	untyped    bool          // true for a literal value (string or number)
 	node       *Node         // root AST node of type definition
 	scope      *Scope        // type declaration scope (in case of re-parse incomplete type)
@@ -162,23 +164,30 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 		switch n.val.(type) {
 		case bool:
 			t.cat = BoolT
+			t.name = "bool"
 		case byte:
 			t.cat = ByteT
+			t.name = "byte"
 			t.untyped = true
 		case float32:
 			t.cat = Float32T
+			t.name = "float32"
 			t.untyped = true
 		case float64:
 			t.cat = Float64T
+			t.name = "float64"
 			t.untyped = true
 		case int:
 			t.cat = IntT
+			t.name = "int"
 			t.untyped = true
 		case rune:
 			t.cat = RuneT
+			t.name = "rune"
 			t.untyped = true
 		case string:
 			t.cat = StringT
+			t.name = "string"
 			t.untyped = true
 		default:
 			err = n.cfgError("missign support for type %T", n.val)
@@ -356,6 +365,19 @@ func (t *Type) finalize() (*Type, error) {
 		}
 	}
 	return t, err
+}
+
+// id returns a unique type identificator string
+func (t *Type) id() string {
+	// TODO: if res is nil, build identity from String()
+
+	res := ""
+	if t.cat == ValueT {
+		res = t.rtype.PkgPath() + t.rtype.Name()
+	} else {
+		res = t.pkgPath + t.name
+	}
+	return res
 }
 
 // zero instantiates and return a zero value object for the given type during execution
