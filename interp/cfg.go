@@ -972,12 +972,12 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			usedCase := map[string]bool{}
 			for _, c := range n.lastChild().child {
 				for _, t := range c.child[:len(c.child)-1] {
-					if tid := t.typ.id(); usedCase[tid] {
+					tid := t.typ.id()
+					if usedCase[tid] {
 						err = c.cfgError("duplicate case %s in type switch", tid)
 						return
-					} else {
-						usedCase[tid] = true
 					}
+					usedCase[tid] = true
 				}
 			}
 			fallthrough
