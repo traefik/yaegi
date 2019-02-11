@@ -42,8 +42,9 @@ type Node struct {
 
 // Receiver stores method receiver object access path
 type Receiver struct {
-	node  *Node
-	index []int
+	node  *Node         // receiver value for alias and struct types
+	val   reflect.Value // receiver value for interface type
+	index []int         // path in receiver value for interface type
 }
 
 // Frame contains values for the current execution level (a function context)

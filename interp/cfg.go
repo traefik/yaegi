@@ -2,7 +2,6 @@ package interp
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"strconv"
 	"unicode"
@@ -189,17 +188,22 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case CaseClause:
 			scope = scope.push(0)
-			if sn := n.anc.anc; sn.kind == TypeSwitch && sn.child[1].action == Assign && len(n.child) == 2 {
-				// Type switch clause with a var defined in switch guard, 1 type in clause:
-				// define the switch guard var with this type in the case clause scope
+			if sn := n.anc.anc; sn.kind == TypeSwitch && sn.child[1].action == Assign {
+				// Type switch clause with a var defined in switch guard
 				var typ *Type
-				switch sym, _, ok := scope.lookup(n.child[0].ident); {
-				case ok && sym.kind == Typ:
-					typ = sym.typ
-				case n.child[0].ident == "nil":
-					typ = scope.getType("interface{}")
-				default:
-					err = n.cfgError("%s is not a type", n.child[0].ident)
+				if len(n.child) == 2 {
+					// 1 type in clause: define the var with this type in the case clause scope
+					switch sym, _, ok := scope.lookup(n.child[0].ident); {
+					case ok && sym.kind == Typ:
+						typ = sym.typ
+					case n.child[0].ident == "nil":
+						typ = scope.getType("interface{}")
+					default:
+						err = n.cfgError("%s is not a type", n.child[0].ident)
+					}
+				} else {
+					// define the var with the type in the switch guard expression
+					typ = sn.child[1].child[1].child[0].typ
 				}
 				node := sn.child[1].child[0]
 				scope.sym[node.ident] = &Symbol{index: node.findex, kind: Var, typ: typ}
@@ -348,7 +352,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				sym.recv = src.recv
 			}
 			n.level = level
-			//log.Println(n.index, "assign", dest.ident, n.typ.cat, n.findex, n.level)
 			// If LHS is an indirection, get reference instead of value, to allow setting
 			if dest.action == GetIndex {
 				if dest.child[0].typ.cat == MapT {
@@ -836,7 +839,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				err = n.cfgError("undefined type")
 				return
 			}
-			//log.Println(n.index, "selector", n.child[0].ident+"."+n.child[1].ident, n.typ.cat)
 			if n.typ.cat == ValueT {
 				// Handle object defined in runtime, try to find field or method
 				// Search for method first, as it applies both to types T and *T
@@ -887,7 +889,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					n.typ = &Type{cat: ValueT, rtype: method.Type}
 					n.recv = &Receiver{node: n.child[0]}
 				} else {
-					log.Println(n.index, "selector unresolved")
+					err = n.cfgError("undefined selector: %s", n.child[1].ident)
 				}
 			} else if n.typ.cat == BinPkgT {
 				// Resolve binary package symbol: a type or a value
@@ -1296,7 +1298,6 @@ func getReturnedType(n *Node) *Type {
 	case BuiltinT:
 		return n.anc.typ
 	case ValueT:
-		//log.Println(n.index, "getReturnedType", n.typ.rtype)
 		if n.typ.rtype.NumOut() > 0 {
 			return &Type{cat: ValueT, rtype: n.typ.rtype.Out(0)}
 		}

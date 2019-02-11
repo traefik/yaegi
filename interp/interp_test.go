@@ -2548,6 +2548,128 @@ func main() {
 	// a: {}
 }
 
+func Example_interface3() {
+	src := `
+package main
+
+import "fmt"
+
+type fii interface {
+	Hello()
+}
+
+type Boo struct {
+	Name string
+}
+
+func (b Boo) Hello() {
+	fmt.Println("Hello", b)
+	fmt.Println(b.Name)
+}
+
+func inCall(foo fii) {
+	fmt.Println("inCall")
+	foo.Hello()
+}
+
+func main() {
+	boo := Boo{"foo"}
+	inCall(boo)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// inCall
+	// Hello {foo}
+	// foo
+}
+
+func Example_interface4() {
+	src := `
+package main
+
+import "fmt"
+
+type fii interface {
+	Hello()
+}
+
+type Boo struct {
+	Name string
+}
+
+type Bir struct {
+	Boo
+}
+
+func (b Boo) Hello() {
+	fmt.Println("Hello", b)
+	fmt.Println(b.Name)
+}
+
+func inCall(foo fii) {
+	fmt.Println("inCall")
+	foo.Hello()
+}
+
+func main() {
+	bir := Bir{Boo{"foo"}}
+	inCall(bir)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// inCall
+	// Hello {foo}
+	// foo
+}
+
+func Example_interface5() {
+	src := `
+package main
+
+import "fmt"
+
+type Myint int
+
+func (i Myint) Double() { fmt.Println("Myint:", i, i) }
+
+type Boo interface {
+	Double()
+}
+
+func f(boo Boo) {
+	boo.Double()
+}
+
+func main() {
+	var i Myint = 3
+	f(i)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// Myint: 3 3
+}
+
 func Example_io0() {
 	src := `
 package main
@@ -6514,6 +6636,307 @@ func main() {
 		panic(err)
 	}
 
+}
+
+func Example_switch14() {
+	src := `
+package main
+
+import "fmt"
+
+type fii interface {
+	Hello()
+}
+
+type Boo struct {
+	Name string
+}
+
+type Bir struct {
+	Boo
+}
+
+type Bar struct{}
+
+func (b Bar) Hello() { fmt.Println("b:", b) }
+
+func (b Boo) Hello() {
+	fmt.Println("Hello", b)
+	fmt.Println(b.Name)
+}
+
+func inCall(foo fii) {
+	fmt.Println("inCall")
+	switch a := foo.(type) {
+	case Boo:
+		a.Hello()
+	default:
+		fmt.Println("a:", a)
+	}
+}
+
+func main() {
+	boo := Bir{Boo{"foo"}}
+	inCall(boo)
+	inCall(Bar{})
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// inCall
+	// a: {{foo}}
+	// inCall
+	// a: {}
+}
+
+func Example_switch15() {
+	src := `
+package main
+
+import "fmt"
+
+type fii interface {
+	Hello()
+}
+
+type Boo struct {
+	Name string
+}
+
+type Bir struct {
+	Boo
+}
+
+type Bar struct{}
+
+func (b Bar) Hello() { fmt.Println("b:", b) }
+
+func (b Boo) Hello() {
+	fmt.Println("Hello", b)
+	fmt.Println(b.Name)
+}
+
+func inCall(foo fii) {
+	fmt.Println("inCall")
+	switch a := foo.(type) {
+	case Boo, Bir:
+		a.Hello()
+	default:
+		fmt.Println("a:", a)
+	}
+}
+
+func main() {
+	boo := Bir{Boo{"foo"}}
+	inCall(boo)
+	inCall(Bar{})
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// inCall
+	// Hello {foo}
+	// foo
+	// inCall
+	// a: {}
+}
+
+func Example_switch16() {
+	src := `
+package main
+
+import "fmt"
+
+type fii interface {
+	Hello()
+}
+
+type Boo struct {
+	Name string
+}
+
+type Bir struct {
+	Boo
+}
+
+type Bar struct{}
+
+func (b Bar) Hello() { fmt.Println("b:", b) }
+
+func (b Boo) Hello() {
+	fmt.Println("Hello", b)
+	fmt.Println(b.Name)
+}
+
+func inCall(foo fii) {
+	fmt.Println("inCall")
+	switch a := foo.(type) {
+	case Boo, Bir:
+		a.Hello()
+	default:
+		fmt.Println("a:", a)
+	}
+}
+
+func main() {
+	boo := Boo{"foo"}
+	inCall(boo)
+	inCall(Bar{})
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// inCall
+	// Hello {foo}
+	// foo
+	// inCall
+	// a: {}
+}
+
+func Example_switch17() {
+	src := `
+package main
+
+import "fmt"
+
+type fii interface {
+	Hello()
+}
+
+type Boo struct {
+	Name string
+}
+
+type Bir struct {
+	Boo
+}
+
+type Bar struct{}
+
+func (b Bar) Hello() { fmt.Println("b:", b) }
+
+func (b Boo) Hello() {
+	fmt.Println("Hello", b)
+	fmt.Println(b.Name)
+}
+
+func inCall(foo fii) {
+	fmt.Println("inCall")
+	switch a := foo.(type) {
+	case Boo:
+		fmt.Println("type Boo")
+		a.Hello()
+	case Bir:
+		fmt.Println("type Bir")
+		a.Hello()
+	default:
+		fmt.Println("a:", a)
+	}
+}
+
+func main() {
+	boo := Bir{Boo{"foo"}}
+	inCall(boo)
+	inCall(Bar{})
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// inCall
+	// type Bir
+	// Hello {foo}
+	// foo
+	// inCall
+	// a: {}
+}
+
+func Example_switch18() {
+	src := `
+package main
+
+import "fmt"
+
+type fii interface {
+	Hello()
+}
+
+type Bir struct{}
+
+func (b Bir) Yo() {
+	fmt.Println("Yo", b)
+}
+
+func (b Bir) Hello() {
+	fmt.Println("Hello", b)
+}
+
+type Boo struct {
+	Name string
+}
+
+func (b Boo) Hello() {
+	fmt.Println("Hello", b)
+	fmt.Println(b.Name)
+}
+
+type Bar struct{}
+
+func (b Bar) Hello() { fmt.Println("b:", b) }
+
+func inCall(foo fii) {
+	fmt.Println("inCall")
+	switch a := foo.(type) {
+	case Boo:
+		a.Hello()
+	case Bir:
+		a.Yo()
+	default:
+		fmt.Println("a:", a)
+	}
+}
+
+func main() {
+	boo := Bir{}
+	inCall(boo)
+	inCall(Bar{})
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// inCall
+	// Yo {}
+	// inCall
+	// a: {}
 }
 
 func Example_switch2() {

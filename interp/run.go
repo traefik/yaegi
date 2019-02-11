@@ -518,9 +518,13 @@ func call(n *Node) {
 		for i, v := range values {
 			switch {
 			case method && i == 0:
+				// compute receiver
 				var src reflect.Value
 				if v == nil {
-					src = def.rval
+					src = def.recv.val
+					if len(def.recv.index) > 0 {
+						src = src.FieldByIndex(def.recv.index)
+					}
 				} else {
 					src = v(f)
 				}
@@ -778,11 +782,12 @@ func getMethodByName(n *Node) {
 
 	n.exec = func(f *Frame) Builtin {
 		val := value0(f).Interface().(valueInterface)
-		m, _ := val.node.typ.lookupMethod(name)
+		m, li := val.node.typ.lookupMethod(name)
 		frame := *f
 		node := *m
 		node.val = &node
 		node.rval = val.value // store method receiver value
+		node.recv = &Receiver{nil, val.value, li}
 		node.frame = &frame
 		f.data[i] = reflect.ValueOf(&node)
 		return next
@@ -1089,9 +1094,6 @@ func _case(n *Node) {
 	tnext := getExec(n.tnext)
 
 	switch {
-	case len(n.child) <= 1: // default clause
-		n.exec = func(f *Frame) Builtin { return tnext }
-
 	case n.anc.anc.kind == TypeSwitch:
 		fnext := getExec(n.fnext)
 		sn := n.anc.anc // switch node
@@ -1100,32 +1102,64 @@ func _case(n *Node) {
 			types[i] = n.child[i].typ
 		}
 		value := genValue(sn.child[1].lastChild().child[0])
-		if len(sn.child[1].child) == 2 && len(types) == 1 {
-			value1 := genValue(sn.child[1].child[0])
-			typ := types[0]
-			n.exec = func(f *Frame) Builtin {
-				if v := value(f); !v.IsValid() {
-					if typ.cat == UnsetT {
+		if len(sn.child[1].child) == 2 {
+			// assign in switch guard
+			vaddr := genValueAddr(sn.child[1].child[0])
+			switch len(types) {
+			case 0:
+				// default clause: assign var to interface value
+				n.exec = func(f *Frame) Builtin {
+					*(vaddr(f)) = value(f)
+					return tnext
+				}
+			case 1:
+				// match against 1 type: assign var to concrete value
+				typ := types[0]
+				n.exec = func(f *Frame) Builtin {
+					if v := value(f); !v.IsValid() {
+						// match zero value against interface{}
+						if typ.cat == UnsetT {
+							return tnext
+						}
+						return fnext
+					} else if vi := v.Interface().(valueInterface); typeEqual(vi.node.typ, typ) {
+						*(vaddr(f)) = vi.value
 						return tnext
 					}
 					return fnext
-				} else if vi := v.Interface().(valueInterface); typeEqual(vi.node.typ, typ) {
-					value1(f).Set(vi.value)
-					return tnext
 				}
-				return fnext
+			default:
+				// match against multiple types: assign var to interface value
+				n.exec = func(f *Frame) Builtin {
+					vtyp := value(f).Interface().(valueInterface).node.typ
+					for _, typ := range types {
+						if typeEqual(vtyp, typ) {
+							*(vaddr(f)) = value(f)
+							return tnext
+						}
+					}
+					return fnext
+				}
 			}
 		} else {
-			n.exec = func(f *Frame) Builtin {
-				vtyp := value(f).Interface().(valueInterface).node.typ
-				for _, typ := range types {
-					if typeEqual(vtyp, typ) {
-						return tnext
+			// no assign in switch guard
+			if len(n.child) <= 1 {
+				n.exec = func(f *Frame) Builtin { return tnext }
+			} else {
+				n.exec = func(f *Frame) Builtin {
+					vtyp := value(f).Interface().(valueInterface).node.typ
+					for _, typ := range types {
+						if typeEqual(vtyp, typ) {
+							return tnext
+						}
 					}
+					return fnext
 				}
-				return fnext
 			}
 		}
+
+	case len(n.child) <= 1: // default clause
+		n.exec = func(f *Frame) Builtin { return tnext }
 
 	default:
 		fnext := getExec(n.fnext)
