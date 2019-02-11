@@ -367,6 +367,18 @@ func (t *Type) finalize() (*Type, error) {
 	return t, err
 }
 
+// id returns a unique type identificator string
+func (t *Type) id() string {
+	res := ""
+	if t.cat == ValueT {
+		res = t.rtype.PkgPath() + t.rtype.Name()
+	} else {
+		res = t.pkgPath + t.name
+	}
+	// TODO: if id is nil, build identity from String()
+	return res
+}
+
 // zero instantiates and return a zero value object for the given type during execution
 func (t *Type) zero() (v reflect.Value, err error) {
 	if t, err = t.finalize(); err != nil {
@@ -386,28 +398,6 @@ func (t *Type) zero() (v reflect.Value, err error) {
 		v = zeroValues[t.cat]
 	}
 	return v, err
-}
-
-// typeEqual returns true if the 2 given types are equal, false otherwise
-func typeEqual(t1, t2 *Type) bool {
-	var id1, id2 string
-
-	if t1.cat == ValueT {
-		t := t1.rtype
-		id1 = t.PkgPath() + t.Name()
-	} else {
-		id1 = t1.pkgPath + t1.name
-	}
-	// TODO: if id is nil, build identity from String()
-
-	if t2.cat == ValueT {
-		t := t2.rtype
-		id2 = t.PkgPath() + t.Name()
-	} else {
-		id2 = t2.pkgPath + t2.name
-	}
-
-	return id1 == id2
 }
 
 // fieldIndex returns the field index from name in a struct, or -1 if not found

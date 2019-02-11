@@ -36,6 +36,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "switch8.go" || // expect error
 			file.Name() == "switch9.go" || // expect error
 			file.Name() == "switch13.go" || // expect error
+			file.Name() == "switch19.go" || // expect error
 			file.Name() == "time0.go" || // display time (similar to random number)
 			file.Name() == "factor.go" || // bench
 			file.Name() == "fib.go" || // bench
@@ -150,6 +151,11 @@ func TestInterpErrorConsistency(t *testing.T) {
 			fileName:       "switch13.go",
 			expectedInterp: "9:2: i is not a type",
 			expectedExec:   "9:2: i (type interface {}) is not a type",
+		},
+		{
+			fileName:       "switch19.go",
+			expectedInterp: "37:2: duplicate case Bir in type switch",
+			expectedExec:   "37:2: duplicate case Bir in type switch",
 		},
 	}
 

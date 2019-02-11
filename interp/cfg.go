@@ -967,7 +967,22 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.findex = scope.inc(interp)
 			}
 
-		case Switch, TypeSwitch:
+		case TypeSwitch:
+			// Check that cases expressions are all different
+			usedCase := map[string]bool{}
+			for _, c := range n.lastChild().child {
+				for _, t := range c.child[:len(c.child)-1] {
+					if tid := t.typ.id(); usedCase[tid] {
+						err = c.cfgError("duplicate case %s in type switch", tid)
+						return
+					} else {
+						usedCase[tid] = true
+					}
+				}
+			}
+			fallthrough
+
+		case Switch:
 			sbn := n.lastChild() // switch block node
 			clauses := sbn.child
 			l := len(clauses)

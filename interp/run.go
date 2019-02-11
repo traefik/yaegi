@@ -1121,7 +1121,7 @@ func _case(n *Node) {
 							return tnext
 						}
 						return fnext
-					} else if vi := v.Interface().(valueInterface); typeEqual(vi.node.typ, typ) {
+					} else if vi := v.Interface().(valueInterface); vi.node.typ.id() == typ.id() {
 						*(vaddr(f)) = vi.value
 						return tnext
 					}
@@ -1132,7 +1132,7 @@ func _case(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					vtyp := value(f).Interface().(valueInterface).node.typ
 					for _, typ := range types {
-						if typeEqual(vtyp, typ) {
+						if vtyp.id() == typ.id() {
 							*(vaddr(f)) = value(f)
 							return tnext
 						}
@@ -1148,7 +1148,7 @@ func _case(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					vtyp := value(f).Interface().(valueInterface).node.typ
 					for _, typ := range types {
-						if typeEqual(vtyp, typ) {
+						if vtyp.id() == typ.id() {
 							return tnext
 						}
 					}
