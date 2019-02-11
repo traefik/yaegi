@@ -786,7 +786,6 @@ func getMethodByName(n *Node) {
 		frame := *f
 		node := *m
 		node.val = &node
-		node.rval = val.value // store method receiver value
 		node.recv = &Receiver{nil, val.value, li}
 		node.frame = &frame
 		f.data[i] = reflect.ValueOf(&node)
