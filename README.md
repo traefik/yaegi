@@ -1,5 +1,7 @@
 # Go interpreter
 
+[![Build Status](https://semaphoreci.com/api/v1/projects/9ae7b3d7-85f8-492f-aa43-62039d5342b7/2465344/badge.svg)](https://semaphoreci.com/containous/dyngo)
+
 A Go interpreter in go
 
 ## Tests
