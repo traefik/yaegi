@@ -456,6 +456,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			wireChild(n)
 			if len(n.child) > 0 {
 				n.findex = n.lastChild().findex
+				n.val = n.lastChild().val
+				n.sym = n.lastChild().sym
+				n.typ = n.lastChild().typ
 			}
 			scope = scope.pop()
 
@@ -466,6 +469,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case DeclStmt, ExprStmt, VarDecl, SendStmt:
 			wireChild(n)
 			n.findex = n.lastChild().findex
+			n.val = n.lastChild().val
+			n.sym = n.lastChild().sym
+			n.typ = n.lastChild().typ
 
 		case Break:
 			n.tnext = loop
@@ -916,9 +922,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			} else if n.typ.cat == SrcPkgT {
 				// Resolve source package symbol
 				if sym, ok := interp.scope[n.child[0].ident].sym[n.child[1].ident]; ok {
+					n.findex = sym.index
 					n.val = sym.node
 					n.gen = nop
-					n.kind = SelectorSrc
 					n.typ = sym.typ
 				} else {
 					err = n.cfgError("undefined selector: %s", n.child[1].ident)
@@ -974,7 +980,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				for _, t := range c.child[:len(c.child)-1] {
 					tid := t.typ.id()
 					if usedCase[tid] {
-						err = c.cfgError("duplicate case %s in type switch", tid)
+						err = c.cfgError("duplicate case %s in type switch", t.ident)
 						return
 					}
 					usedCase[tid] = true
@@ -1143,7 +1149,7 @@ func (n *Node) isType(scope *Scope) bool {
 			if p, ok := n.interp.binType[sym.path]; ok && p[name] != nil {
 				return true // Imported binary type
 			}
-			if p, ok := n.interp.scope[sym.path]; ok && p.sym[name] != nil && p.sym[name].kind == Typ {
+			if p, ok := n.interp.scope[pkg]; ok && p.sym[name] != nil && p.sym[name].kind == Typ {
 				return true // Imported source type
 			}
 		}
@@ -1333,9 +1339,15 @@ func frameTypes(node *Node, size int) ([]reflect.Type, error) {
 		if n.kind == FuncDecl || n.kind == ImportDecl || n.kind == TypeDecl || n.kind == FuncLit {
 			return n == node // Do not dive in subtree, except if this is the entry point
 		}
-		if n.findex < 0 || n.typ == nil || n.level > 0 || n.kind == BasicLit || n.kind == SelectorSrc || n.typ.cat == BinPkgT {
+		if n.findex < 0 || n.typ == nil || n.level > 0 || n.kind == BasicLit || n.typ.cat == BinPkgT {
 			return true
 		}
+		// TODO: investigate issue with size too small. The following fix doesn't address the root cause
+		//if n.findex >= cap(ft) {
+		//	nt := make([]reflect.Type, n.findex+1)
+		//	copy(nt, ft)
+		//	ft = nt
+		//}
 		if ft[n.findex] == nil {
 			if n.typ.incomplete {
 				if n.typ, err = n.typ.finalize(); err != nil {

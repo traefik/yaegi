@@ -201,7 +201,7 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 	}
 
 	// Global type analysis
-	if err = i.Gta(root, ""); err != nil {
+	if err = i.Gta(root, pkgName); err != nil {
 		return res, err
 	}
 
@@ -218,6 +218,10 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 	} else {
 		root.types, _ = frameTypes(root, i.fsize+1)
 		setExec(root.start)
+	}
+	if i.universe.sym[pkgName] == nil {
+		// Make the package visible under a path identical to its name
+		i.universe.sym[pkgName] = &Symbol{typ: &Type{cat: SrcPkgT}, path: pkgName}
 	}
 
 	if i.CfgDot {

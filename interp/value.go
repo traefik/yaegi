@@ -43,7 +43,7 @@ func genValueRecv(n *Node) func(*Frame) reflect.Value {
 
 func genValue(n *Node) func(*Frame) reflect.Value {
 	switch n.kind {
-	case BasicLit, FuncDecl, SelectorSrc:
+	case BasicLit, FuncDecl:
 		var v reflect.Value
 		if w, ok := n.val.(reflect.Value); ok {
 			v = w

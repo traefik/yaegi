@@ -2213,28 +2213,6 @@ func main() {
 	// 34
 }
 
-func Example_goroutine() {
-	src := `
-package main
-
-func f() {
-	println("in goroutine f")
-}
-
-func main() {
-	go f()
-	//sleep(100)
-	println("in main")
-}`
-	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
-	_, err := i.Eval(src)
-	if err != nil {
-		panic(err)
-	}
-
-}
-
 func Example_heap() {
 	src := `
 // This example demonstrates an integer heap built using the heap interface.
@@ -5655,12 +5633,13 @@ import (
 func main() {
 	c1 := make(chan string)
 	c2 := make(chan string)
+	a := 0
 
 	go func() {
 		toSend := "hello"
 		select {
 		case c2 <- toSend:
-			fmt.Println("Sent", toSend, "to c2")
+			a++
 		}
 	}()
 
@@ -5670,7 +5649,7 @@ func main() {
 	case msg2 := <-c2:
 		fmt.Println("received from c2:", msg2)
 	}
-	fmt.Println("Bye")
+	fmt.Println("Bye", a)
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
@@ -5681,9 +5660,8 @@ func main() {
 	}
 
 	// Output:
-	// Sent hello to c2
 	// received from c2: hello
-	// Bye
+	// Bye 1
 }
 
 func Example_select3() {
