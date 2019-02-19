@@ -1342,12 +1342,6 @@ func frameTypes(node *Node, size int) ([]reflect.Type, error) {
 		if n.findex < 0 || n.typ == nil || n.level > 0 || n.kind == BasicLit || n.typ.cat == BinPkgT {
 			return true
 		}
-		// TODO: investigate issue with size too small. The following fix doesn't address the root cause
-		//if n.findex >= cap(ft) {
-		//	nt := make([]reflect.Type, n.findex+1)
-		//	copy(nt, ft)
-		//	ft = nt
-		//}
 		if ft[n.findex] == nil {
 			if n.typ.incomplete {
 				if n.typ, err = n.typ.finalize(); err != nil {
