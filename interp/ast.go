@@ -52,7 +52,6 @@ const (
 	FuncDecl
 	FuncLit
 	FuncType
-	Go
 	GoStmt
 	Goto
 	Ident
@@ -77,7 +76,6 @@ const (
 	SelectStmt
 	SelectorExpr
 	SelectorImport
-	SelectorSrc
 	SendStmt
 	SliceExpr
 	StarExpr
@@ -132,7 +130,6 @@ var kinds = [...]string{
 	FuncDecl:         "FuncDecl",
 	FuncType:         "FuncType",
 	FuncLit:          "FuncLit",
-	Go:               "Go",
 	GoStmt:           "GoStmt",
 	Goto:             "Goto",
 	Ident:            "Ident",
@@ -157,7 +154,6 @@ var kinds = [...]string{
 	SelectStmt:       "SelectStmt",
 	SelectorExpr:     "SelectorExpr",
 	SelectorImport:   "SelectorImport",
-	SelectorSrc:      "SelectorSrc",
 	SendStmt:         "SendStmt",
 	SliceExpr:        "SliceExpr",
 	StarExpr:         "StarExpr",

@@ -7,12 +7,13 @@ import (
 func main() {
 	c1 := make(chan string)
 	c2 := make(chan string)
+	a := 0
 
 	go func() {
 		toSend := "hello"
 		select {
 		case c2 <- toSend:
-			fmt.Println("Sent", toSend, "to c2")
+			a++
 		}
 	}()
 
@@ -22,10 +23,9 @@ func main() {
 	case msg2 := <-c2:
 		fmt.Println("received from c2:", msg2)
 	}
-	fmt.Println("Bye")
+	fmt.Println("Bye", a)
 }
 
 // Output:
-// Sent hello to c2
 // received from c2: hello
-// Bye
+// Bye 1

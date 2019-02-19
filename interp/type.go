@@ -285,13 +285,23 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 	case SelectorExpr:
 		pkgName, typeName := n.child[0].ident, n.child[1].ident
 		if sym, _, found := scope.lookup(pkgName); found {
-			if sym.typ != nil && sym.typ.cat == BinPkgT {
+			if sym.typ == nil {
+				t.incomplete = true
+				break
+			}
+			switch sym.typ.cat {
+			case BinPkgT:
 				pkg := interp.binType[sym.path]
 				if typ, ok := pkg[typeName]; ok {
 					t.cat = ValueT
 					t.rtype = typ
 				} else {
 					t.incomplete = true
+				}
+			case SrcPkgT:
+				pkg := interp.scope[pkgName]
+				if st, ok := pkg.sym[typeName]; ok && st.kind == Typ {
+					t = st.typ
 				}
 			}
 		} else {
@@ -532,7 +542,11 @@ func (t *Type) TypeOf() reflect.Type {
 
 	default:
 		z, _ := t.zero()
-		return z.Type()
+		if z.IsValid() {
+			return z.Type()
+		}
+		var empty reflect.Type
+		return empty
 	}
 }
 
