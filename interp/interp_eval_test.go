@@ -1,6 +1,7 @@
 package interp_test
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/containous/dyngo/interp"
@@ -8,15 +9,9 @@ import (
 
 func TestEval0(t *testing.T) {
 	i := interp.New(interp.Opt{})
-	_, err := i.Eval(`var I int = 2`)
-	if err != nil {
-		t.Fatal(err)
-	}
+	evalCheck(t, i, `var I int = 2`)
 
-	t1, err := i.Eval(`I`)
-	if err != nil {
-		t.Fatal(err)
-	}
+	t1 := evalCheck(t, i, `I`)
 	if t1.Interface().(int) != 2 {
 		t.Fatalf("expected 2, got %v", t1)
 	}
@@ -24,19 +19,15 @@ func TestEval0(t *testing.T) {
 
 func TestEval1(t *testing.T) {
 	i := interp.New(interp.Opt{})
-	_, err := i.Eval(`func Hello() string { return "hello" }`)
-	if err != nil {
-		t.Fatal(err)
-	}
+	evalCheck(t, i, `func Hello() string { return "hello" }`)
 
-	v, err := i.Eval(`Hello`)
-	if err != nil {
-		t.Fatal(err)
-	}
+	v := evalCheck(t, i, `Hello`)
+
 	f, ok := v.Interface().(func() string)
 	if !ok {
 		t.Fatal("conversion failed")
 	}
+
 	if s := f(); s != "hello" {
 		t.Fatalf("expected hello, got %v", s)
 	}
@@ -44,15 +35,9 @@ func TestEval1(t *testing.T) {
 
 func TestEval2(t *testing.T) {
 	i := interp.New(interp.Opt{})
-	_, err := i.Eval(`package foo; var I int = 2`)
-	if err != nil {
-		t.Fatal(err)
-	}
+	evalCheck(t, i, `package foo; var I int = 2`)
 
-	t1, err := i.Eval(`foo.I`)
-	if err != nil {
-		t.Fatal(err)
-	}
+	t1 := evalCheck(t, i, `foo.I`)
 	if t1.Interface().(int) != 2 {
 		t.Fatalf("expected 2, got %v", t1)
 	}
@@ -60,15 +45,9 @@ func TestEval2(t *testing.T) {
 
 func TestEval3(t *testing.T) {
 	i := interp.New(interp.Opt{})
-	_, err := i.Eval(`package foo; func Hello() string { return "hello" }`)
-	if err != nil {
-		t.Fatal(err)
-	}
+	evalCheck(t, i, `package foo; func Hello() string { return "hello" }`)
 
-	v, err := i.Eval(`foo.Hello`)
-	if err != nil {
-		t.Fatal(err)
-	}
+	v := evalCheck(t, i, `foo.Hello`)
 	f, ok := v.Interface().(func() string)
 	if !ok {
 		t.Fatal("conversion failed")
@@ -76,4 +55,53 @@ func TestEval3(t *testing.T) {
 	if s := f(); s != "hello" {
 		t.Fatalf("expected hello, got %v", s)
 	}
+}
+
+func TestEvalNil0(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	evalCheck(t, i, `func getNil() error { return nil }`)
+
+	v := evalCheck(t, i, `getNil()`)
+	if !v.IsNil() {
+		t.Fatalf("expected nil, got %v", v)
+	}
+}
+
+func TestEvalNil1(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	evalCheck(t, i, `
+package bar
+
+func New() func(string) error {
+	return func(v string) error {
+		return nil
+	}
+}
+`)
+
+	v := evalCheck(t, i, `bar.New()`)
+	fn, ok := v.Interface().(func(string) error)
+	if !ok {
+		t.Fatal("conversion failed")
+	}
+
+	if res := fn("hello"); res != nil {
+		t.Fatalf("expected nil, got %v", res)
+	}
+}
+
+func TestEvalNil2(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	_, err := i.Eval(`a := nil`)
+	if err.Error() != "1:27: use of untyped nil" {
+		t.Fatal("should have failed")
+	}
+}
+
+func evalCheck(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
+	res, err := i.Eval(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return res
 }

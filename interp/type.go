@@ -10,7 +10,7 @@ type Cat uint
 
 // Types for go language
 const (
-	UnsetT Cat = iota
+	NilT Cat = iota
 	AliasT
 	ArrayT
 	BinT
@@ -48,7 +48,7 @@ const (
 )
 
 var cats = [...]string{
-	UnsetT:      "UnsetT",
+	NilT:        "NilT",
 	AliasT:      "AliasT",
 	ArrayT:      "ArrayT",
 	BinT:        "BinT",
@@ -346,7 +346,7 @@ func init() {
 	zeroValues[ByteT] = reflect.ValueOf(byte(0))
 	zeroValues[Complex64T] = reflect.ValueOf(complex64(0))
 	zeroValues[Complex128T] = reflect.ValueOf(complex128(0))
-	zeroValues[ErrorT] = reflect.ValueOf(error(nil))
+	zeroValues[ErrorT] = reflect.ValueOf(new(error)).Elem()
 	zeroValues[Float32T] = reflect.ValueOf(float32(0))
 	zeroValues[Float64T] = reflect.ValueOf(float64(0))
 	zeroValues[IntT] = reflect.ValueOf(int(0))
@@ -509,8 +509,7 @@ func (t *Type) TypeOf() reflect.Type {
 		return reflect.ChanOf(reflect.BothDir, t.val.TypeOf())
 
 	case ErrorT:
-		var e = new(error)
-		return reflect.TypeOf(e).Elem()
+		return reflect.TypeOf(new(error)).Elem()
 
 	case FuncT:
 		in := make([]reflect.Type, len(t.arg))
