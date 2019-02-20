@@ -1116,8 +1116,8 @@ func _case(n *Node) {
 				typ := types[0]
 				n.exec = func(f *Frame) Builtin {
 					if v := value(f); !v.IsValid() {
-						// match zero value against interface{}
-						if typ.cat == UnsetT {
+						// match zero value against nil
+						if typ.cat == NilT {
 							return tnext
 						}
 						return fnext

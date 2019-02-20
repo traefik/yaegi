@@ -295,6 +295,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			dest, src := n.child[0], n.lastChild()
 			sym, level, _ := scope.lookup(dest.ident)
 			if n.kind == Define {
+				if src.typ.cat == NilT {
+					err = src.cfgError("use of untyped nil")
+					break
+				}
 				if len(n.child) == 3 {
 					// type is provided in var declaration
 					dest.typ, err = nodeType(interp, scope, n.child[1])
@@ -320,6 +324,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			// Detect invalid float truncate
 			if isInt(dest.typ) && isFloat(src.typ) {
 				err = src.cfgError("invalid float truncate")
+				break
 			}
 			n.findex = dest.findex
 			n.val = dest.val
@@ -835,6 +840,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case ReturnStmt:
 			wireChild(n)
 			n.tnext = nil
+			for i, c := range n.child {
+				if c.typ.cat == NilT {
+					// nil: Set node value to zero of return type
+					f := getAncFunc(n)
+					typ := f.child[2].child[1].child[i].lastChild().typ
+					c.val, err = typ.zero()
+				}
+			}
 
 		case SelectorExpr:
 			wireChild(n)
@@ -1312,6 +1325,17 @@ func setExec(n *Node) {
 	}
 
 	set(n)
+}
+
+// getAncFunc returns the first node in ancestorship which is a FuncDecl or FuncLit
+func getAncFunc(n *Node) *Node {
+	for anc := n.anc; anc != nil; anc = anc.anc {
+		switch anc.kind {
+		case FuncDecl, FuncLit:
+			return anc
+		}
+	}
+	return nil
 }
 
 func getReturnedType(n *Node) *Type {
