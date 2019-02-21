@@ -192,7 +192,6 @@ func assignX(n *Node) {
 
 // assign implements single value assignment
 func assign(n *Node) {
-	value := genValue(n)
 	next := getExec(n.tnext)
 
 	if n.child[0].typ.cat == InterfaceT {
@@ -203,7 +202,14 @@ func assign(n *Node) {
 			return next
 		}
 	} else {
-		value1 := genValue(n.lastChild())
+		value := genValue(n)
+		dest, src := n.child[0], n.lastChild()
+		var value1 func(*Frame) reflect.Value
+		if dest.typ.cat == ValueT && src.typ.cat == FuncT {
+			value1 = genNodeWrapper(src)
+		} else {
+			value1 = genValue(src)
+		}
 		n.exec = func(f *Frame) Builtin {
 			value(f).Set(value1(f))
 			return next

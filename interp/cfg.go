@@ -951,8 +951,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					n.typ = n.typ.fieldSeq(ti)
 					n.gen = getPtrIndexSeq
 				default:
-					n.typ = n.typ.fieldSeq(ti)
 					n.gen = getIndexSeq
+					n.typ = n.typ.fieldSeq(ti)
+					if n.typ.cat == FuncT {
+						// function in a struct field is always wrapped in reflect.Value
+						rtype := n.typ.TypeOf()
+						n.typ = &Type{cat: ValueT, rtype: rtype}
+						n.fsize = rtype.NumOut()
+					}
 				}
 			} else {
 				err = n.cfgError("undefined selector: %s", n.child[1].ident)
