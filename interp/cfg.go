@@ -561,6 +561,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				} else {
 					n.gen = compositeLit
 				}
+			case ValueT:
+				n.gen = compositeBin
 			}
 
 		case Continue:
