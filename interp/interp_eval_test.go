@@ -145,7 +145,7 @@ func f() string {
 	v := evalCheck(t, i, `f()`)
 	if v.Interface().(string) != "test" {
 		t.Fatalf("expected test, got %v", v)
-  }
+	}
 }
 
 func TestEvalComposite0(t *testing.T) {
