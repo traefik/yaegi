@@ -98,6 +98,26 @@ func TestEvalNil2(t *testing.T) {
 	}
 }
 
+func TestEvalComposite0(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	evalCheck(t, i, `
+type T struct {
+	a, b, c, d, e, f, g, h, i, j, k, l, m, n string
+	o map[string]int
+	p []string
+}
+
+var a = T{
+	o: map[string]int{"truc": 1, "machin": 2},
+	p: []string{"hello", "world"},
+}
+`)
+	v := evalCheck(t, i, `a.p[1]`)
+	if v.Interface().(string) != "world" {
+		t.Fatalf("expected world, got %v", v)
+	}
+}
+
 func evalCheck(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
 	res, err := i.Eval(src)
 	if err != nil {
