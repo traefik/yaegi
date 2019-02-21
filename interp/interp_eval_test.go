@@ -2,10 +2,13 @@ package interp_test
 
 import (
 	"log"
+	"net/http"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/containous/dyngo/interp"
+	"github.com/containous/dyngo/stdlib"
 )
 
 func TestEval0(t *testing.T) {
@@ -165,6 +168,28 @@ var a = T{
 	v := evalCheck(t, i, `a.p[1]`)
 	if v.Interface().(string) != "world" {
 		t.Fatalf("expected world, got %v", v)
+	}
+}
+
+func TestEvalCompositeBin0(t *testing.T) {
+	log.SetFlags(log.Lshortfile)
+	i := interp.New(interp.Opt{})
+	i.Use(stdlib.Value, stdlib.Type)
+	evalCheck(t, i, `
+import (
+	"fmt"
+	"net/http"
+	"time"
+)
+
+func Foo() {
+	http.DefaultClient = &http.Client{Timeout: 2 * time.Second}
+}
+`)
+	http.DefaultClient = &http.Client{}
+	evalCheck(t, i, `Foo()`)
+	if http.DefaultClient.Timeout != 2*time.Second {
+		t.Fatalf("expected 2s, got %v", http.DefaultClient.Timeout)
 	}
 }
 
