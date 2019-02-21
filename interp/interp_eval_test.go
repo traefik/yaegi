@@ -194,6 +194,8 @@ func Foo() {
 }
 
 func evalCheck(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
+	t.Helper()
+
 	res, err := i.Eval(src)
 	if err != nil {
 		t.Fatal(err)
