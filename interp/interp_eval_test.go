@@ -1,6 +1,7 @@
 package interp_test
 
 import (
+	"log"
 	"reflect"
 	"testing"
 
@@ -95,6 +96,55 @@ func TestEvalNil2(t *testing.T) {
 	_, err := i.Eval(`a := nil`)
 	if err.Error() != "1:27: use of untyped nil" {
 		t.Fatal("should have failed")
+	}
+}
+
+func TestEvalStruct0(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	evalCheck(t, i, `
+type Fromage struct {
+	Name string
+	Call func(string) string
+}
+
+func f() string {
+	a := Fromage{}
+	a.Name = "test"
+	a.Call = func(s string) string { return s }
+
+	return a.Call(a.Name)
+}
+`)
+
+	v := evalCheck(t, i, `f()`)
+	if v.Interface().(string) != "test" {
+		t.Fatalf("expected test, got %v", v)
+	}
+}
+
+func TestEvalStruct1(t *testing.T) {
+	t.Skip("not yet implemented")
+	log.SetFlags(log.Lshortfile)
+	i := interp.New(interp.Opt{})
+	evalCheck(t, i, `
+type Fromage struct {
+	Name string
+	Call func(string) string
+}
+
+func f() string {
+	a := Fromage{
+		"test",
+		func(s string) string { return s },
+	}
+
+	return a.Call(a.Name)
+}
+`)
+
+	v := evalCheck(t, i, `f()`)
+	if v.Interface().(string) != "test" {
+		t.Fatalf("expected test, got %v", v)
 	}
 }
 
