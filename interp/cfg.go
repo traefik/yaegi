@@ -556,17 +556,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			case MapT:
 				n.gen = mapLit
 			case StructT:
-				n.action, n.gen = CompositeLit, compositeLit
-				child := n.child
-				if child[0].isType(scope) {
-					child = n.child[1:]
-				}
-				// Handle object assign from sparse key / values
-				if len(child) > 0 && child[0].kind == KeyValueExpr {
+				if n.lastChild().kind == KeyValueExpr {
 					n.gen = compositeSparse
-					for _, c := range child {
-						c.findex = n.typ.fieldIndex(c.child[0].ident)
-					}
+				} else {
+					n.gen = compositeLit
 				}
 			}
 
@@ -1117,10 +1110,10 @@ func (n *Node) cfgError(format string, a ...interface{}) CfgError {
 	return CfgError(fmt.Errorf("%s: "+format, a...))
 }
 
-func genRun(n *Node) error {
+func genRun(node *Node) error {
 	var err CfgError
 
-	n.Walk(func(n *Node) bool {
+	node.Walk(func(n *Node) bool {
 		if err != nil {
 			return false
 		}

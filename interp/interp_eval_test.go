@@ -145,6 +145,26 @@ func f() string {
 	v := evalCheck(t, i, `f()`)
 	if v.Interface().(string) != "test" {
 		t.Fatalf("expected test, got %v", v)
+  }
+}
+
+func TestEvalComposite0(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	evalCheck(t, i, `
+type T struct {
+	a, b, c, d, e, f, g, h, i, j, k, l, m, n string
+	o map[string]int
+	p []string
+}
+
+var a = T{
+	o: map[string]int{"truc": 1, "machin": 2},
+	p: []string{"hello", "world"},
+}
+`)
+	v := evalCheck(t, i, `a.p[1]`)
+	if v.Interface().(string) != "world" {
+		t.Fatalf("expected world, got %v", v)
 	}
 }
 
