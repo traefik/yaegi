@@ -839,7 +839,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				if c.typ.cat == NilT {
 					// nil: Set node value to zero of return type
 					f := getAncFunc(n)
-					typ, err := nodeType(interp, scope, f.child[2].child[1].child[i].lastChild())
+					var typ *Type
+					typ, err = nodeType(interp, scope, f.child[2].child[1].child[i].lastChild())
 					if err != nil {
 						break
 					}
