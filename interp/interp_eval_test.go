@@ -144,8 +144,6 @@ func f() string {
 }
 
 func TestEvalStruct1(t *testing.T) {
-	t.Skip("not yet implemented")
-	log.SetFlags(log.Lshortfile)
 	i := interp.New(interp.Opt{})
 	evalCheck(t, i, `
 type Fromage struct {
