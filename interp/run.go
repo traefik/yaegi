@@ -1040,7 +1040,11 @@ func compositeLit(n *Node) {
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
 		convertLiteralValue(c, n.typ.field[i].typ.TypeOf())
-		values[i] = genValue(c)
+		if c.typ.cat == FuncT {
+			values[i] = genNodeWrapper(c)
+		} else {
+			values[i] = genValue(c)
+		}
 	}
 
 	n.exec = func(f *Frame) Builtin {

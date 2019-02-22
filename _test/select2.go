@@ -15,17 +15,21 @@ func main() {
 		case c2 <- toSend:
 			a++
 		}
+		c1 <- "done"
 	}()
 
-	select {
-	case msg1 := <-c1:
-		fmt.Println("received from c1:", msg1)
-	case msg2 := <-c2:
-		fmt.Println("received from c2:", msg2)
+	for i := 0; i < 2; i++ {
+		select {
+		case msg1 := <-c1:
+			fmt.Println("received from c1:", msg1)
+		case msg2 := <-c2:
+			fmt.Println("received from c2:", msg2)
+		}
 	}
 	fmt.Println("Bye", a)
 }
 
 // Output:
 // received from c2: hello
+// received from c1: done
 // Bye 1
