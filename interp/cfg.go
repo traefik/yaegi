@@ -839,8 +839,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				if c.typ.cat == NilT {
 					// nil: Set node value to zero of return type
 					f := getAncFunc(n)
-					typ := f.child[2].child[1].child[i].lastChild().typ
-					c.val, err = typ.zero()
+					var typ *Type
+					typ, err = nodeType(interp, scope, f.child[2].child[1].child[i].lastChild())
+					if err != nil {
+						break
+					}
+					if c.val, err = typ.zero(); err != nil {
+						break
+					}
 				}
 			}
 
@@ -851,7 +857,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			n.recv = n.child[0].recv
 			if n.typ == nil {
 				err = n.cfgError("undefined type")
-				return
+				break
 			}
 			if n.typ.cat == ValueT {
 				// Handle object defined in runtime, try to find field or method
@@ -882,7 +888,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					}
 				default:
 					err = n.cfgError("undefined field or method: %s", n.child[1].ident)
-					return
 				}
 			} else if n.typ.cat == PtrT && n.typ.val.cat == ValueT {
 				// Handle pointer on object defined in runtime

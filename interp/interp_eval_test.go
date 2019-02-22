@@ -102,6 +102,24 @@ func TestEvalNil2(t *testing.T) {
 	}
 }
 
+func TestEvalNil3(t *testing.T) {
+	log.SetFlags(log.Lshortfile)
+	i := interp.New(interp.Opt{})
+	i.Use(stdlib.Value, stdlib.Type)
+	evalCheck(t, i, `
+import "fmt"
+
+type Foo struct{}
+
+func Hello() *Foo {
+	fmt.Println("Hello")
+	return nil
+}
+`)
+
+	evalCheck(t, i, `Hello()`)
+}
+
 func TestEvalStruct0(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	evalCheck(t, i, `
