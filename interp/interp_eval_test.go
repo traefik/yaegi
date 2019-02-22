@@ -1,6 +1,7 @@
 package interp_test
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"reflect"
@@ -172,7 +173,6 @@ var a = T{
 }
 
 func TestEvalCompositeBin0(t *testing.T) {
-	log.SetFlags(log.Lshortfile)
 	i := interp.New(interp.Opt{})
 	i.Use(stdlib.Value, stdlib.Type)
 	evalCheck(t, i, `
@@ -190,6 +190,15 @@ func Foo() {
 	evalCheck(t, i, `Foo()`)
 	if http.DefaultClient.Timeout != 2*time.Second {
 		t.Fatalf("expected 2s, got %v", http.DefaultClient.Timeout)
+	}
+}
+
+func TestEvalCompositeArray0(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	v := evalCheck(t, i, `a := []int{1, 2, 7: 20, 30}`)
+	expected := "[1 2 0 0 0 0 0 20 30]"
+	if fmt.Sprintf("%v", v) != expected {
+		t.Fatalf("expected: %s, got %v", expected, v)
 	}
 }
 

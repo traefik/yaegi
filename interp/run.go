@@ -931,31 +931,40 @@ func arrayLit(n *Node) {
 		child = n.child[1:]
 	}
 
-	a, _ := n.typ.zero()
 	values := make([]func(*Frame) reflect.Value, len(child))
+	index := make([]int, len(child))
+	rtype := n.typ.val.TypeOf()
+	var max, prev int
+
 	for i, c := range child {
-		convertLiteralValue(c, n.typ.val.TypeOf())
-		values[i] = genValue(c)
+		if c.kind == KeyValueExpr {
+			convertLiteralValue(c.child[1], rtype)
+			values[i] = genValue(c.child[1])
+			index[i] = c.child[0].val.(int)
+		} else {
+			convertLiteralValue(c, rtype)
+			values[i] = genValue(c)
+			index[i] = prev
+		}
+		prev = index[i] + 1
+		if prev > max {
+			max = prev
+		}
 	}
 
+	var a reflect.Value
 	if n.typ.size > 0 {
-		// Fixed size array
-		n.exec = func(f *Frame) Builtin {
-			for i, v := range values {
-				a.Index(i).Set(v(f))
-			}
-			value(f).Set(a)
-			return next
-		}
+		a, _ = n.typ.zero()
 	} else {
-		// Slice
-		n.exec = func(f *Frame) Builtin {
-			for _, v := range values {
-				a = reflect.Append(a, v(f))
-			}
-			value(f).Set(a)
-			return next
+		a = reflect.MakeSlice(n.typ.TypeOf(), max, max)
+	}
+
+	n.exec = func(f *Frame) Builtin {
+		for i, v := range values {
+			a.Index(index[i]).Set(v(f))
 		}
+		value(f).Set(a)
+		return next
 	}
 }
 
