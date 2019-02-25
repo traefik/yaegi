@@ -84,9 +84,9 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 				ipath = n.child[0].val.(string)
 				name = path.Base(ipath)
 			}
-			if values, ok := interp.binValue[ipath]; ok {
+			if interp.binValue[ipath] != nil || interp.binType[ipath] != nil {
 				if name == "." {
-					for n, v := range values {
+					for n, v := range interp.binValue[ipath] {
 						scope.sym[n] = &Symbol{kind: Bin, typ: &Type{cat: ValueT, rtype: v.Type()}, val: v}
 					}
 					for n, t := range interp.binType[ipath] {
