@@ -193,6 +193,9 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 			err = n.cfgError("missign support for type %T", n.val)
 		}
 
+	case UnaryExpr:
+		t, err = nodeType(interp, scope, n.child[0])
+
 	case BinaryExpr:
 		t, err = nodeType(interp, scope, n.child[0])
 		if err != nil {

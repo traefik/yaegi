@@ -189,7 +189,6 @@ var a = T{
 }
 
 func TestEvalCompositeBin0(t *testing.T) {
-	log.SetFlags(log.Lshortfile)
 	i := interp.New(interp.Opt{})
 	i.Use(stdlib.Value, stdlib.Type)
 	evalCheck(t, i, `
@@ -220,6 +219,23 @@ var a = Foo("test")
 var b = Bar("test")
 var c = a == b
 `, "", "7:9: mismatched types _.Foo and _.Bar")
+}
+
+func TestEvalCompositeArray0(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	v := evalCheck(t, i, `a := []int{1, 2, 7: 20, 30}`)
+	expected := "[1 2 0 0 0 0 0 20 30]"
+	if fmt.Sprintf("%v", v) != expected {
+		t.Fatalf("expected: %s, got %v", expected, v)
+	}
+}
+
+func TestEvalUnary0(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	v := evalCheck(t, i, `a := -1`)
+	if expected := "-1"; fmt.Sprintf("%v", v) != expected {
+		t.Fatalf("Expected %v, got %v", expected, v)
+	}
 }
 
 func evalCheck(t *testing.T, i *interp.Interpreter, src string, expect ...string) reflect.Value {
