@@ -383,9 +383,9 @@ func (t *Type) id() string {
 
 	res := ""
 	if t.cat == ValueT {
-		res = t.rtype.PkgPath() + t.rtype.Name()
+		res = t.rtype.PkgPath() + "." + t.rtype.Name()
 	} else {
-		res = t.pkgPath + t.name
+		res = t.pkgPath + "." + t.name
 	}
 	return res
 }
