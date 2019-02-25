@@ -218,6 +218,14 @@ func TestEvalCompositeArray0(t *testing.T) {
 	}
 }
 
+func TestEvalUnary0(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	v := evalCheck(t, i, `a := -1`)
+	if expected := "-1"; fmt.Sprintf("%v", v) != expected {
+		t.Fatalf("Expected %v, got %v", expected, v)
+	}
+}
+
 func evalCheck(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
 	t.Helper()
 
