@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -211,14 +212,33 @@ func Foo() {
 
 func TestEvalComparison(t *testing.T) {
 	i := interp.New(interp.Opt{})
-	evalCheck(t, i, `
+
+	testCases := []struct {
+		src           string
+		expectedError string
+		expectedRes   string
+	}{
+		{
+			`
 type Foo string
 type Bar string
 
 var a = Foo("test")
 var b = Bar("test")
 var c = a == b
-`, "", "7:9: mismatched types _.Foo and _.Bar")
+`, "7:9: mismatched types _.Foo and _.Bar", "",
+		},
+		{`"hhh" > "ggg"`, "", "true"},
+	}
+
+	for index, test := range testCases {
+		test := test
+		t.Run(strconv.Itoa(index), func(t *testing.T) {
+			t.Parallel()
+
+			assertEval(t, i, test.src, test.expectedError, test.expectedRes)
+		})
+	}
 }
 
 func TestEvalCompositeArray0(t *testing.T) {
@@ -238,27 +258,31 @@ func TestEvalUnary0(t *testing.T) {
 	}
 }
 
-func evalCheck(t *testing.T, i *interp.Interpreter, src string, expect ...string) reflect.Value {
+func evalCheck(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
 	t.Helper()
 
 	res, err := i.Eval(src)
-	if len(expect) == 0 {
-		if err != nil {
-			t.Fatal(err)
-		}
-		return res
-	}
-	if expect[0] != "" && expect[0] != fmt.Sprintf("%v", res) {
-		t.Fatalf("expected %v, got %v", expect[0], res)
-	}
-	if len(expect) == 1 {
-		if err != nil {
-			t.Fatal(err)
-		}
-		return res
-	}
-	if expect[1] != err.Error() {
-		t.Fatalf("expected error %v, got %v", expect[1], err.Error())
+	if err != nil {
+		t.Fatal(err)
 	}
 	return res
+}
+
+func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expectedRes string) {
+	res, err := i.Eval(src)
+
+	if expectedError != "" {
+		if err == nil || err != nil && err.Error() != expectedError {
+			t.Fatalf("got %v, want %s", err, expectedError)
+		}
+		return
+	}
+
+	if err != nil {
+		t.Fatalf("got an error %v", err)
+	}
+
+	if fmt.Sprintf("%v", res) != expectedRes {
+		t.Fatalf("got %v, want %s", res, expectedRes)
+	}
 }
