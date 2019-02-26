@@ -219,6 +219,8 @@ var a = Foo("test")
 var b = Bar("test")
 var c = a == b
 `, "", "7:9: mismatched types _.Foo and _.Bar")
+
+	evalCheck(t, i, `"hhh" > "ggg"`, "true")
 }
 
 func TestEvalCompositeArray0(t *testing.T) {
@@ -235,14 +237,6 @@ func TestEvalUnary0(t *testing.T) {
 	v := evalCheck(t, i, `a := -1`)
 	if expected := "-1"; fmt.Sprintf("%v", v) != expected {
 		t.Fatalf("Expected %v, got %v", expected, v)
-	}
-}
-
-func TestEvalComparison(t *testing.T) {
-	i := interp.New(interp.Opt{})
-	v := evalCheck(t, i, `"hhh" > "ggg"`)
-	if v.Bool() != true {
-		t.Fatalf("expected true, got %v", v)
 	}
 }
 
