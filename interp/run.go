@@ -1008,12 +1008,20 @@ func compositeBin(n *Node) {
 			if sf, ok := typ.FieldByName(c.child[0].ident); ok {
 				fieldIndex[i] = sf.Index
 				convertLiteralValue(c.child[1], sf.Type)
-				values[i] = genValue(c.child[1])
+				if c.child[1].typ.cat == FuncT {
+					values[i] = genNodeWrapper(c.child[1])
+				} else {
+					values[i] = genValue(c.child[1])
+				}
 			}
 		} else {
 			fieldIndex[i] = []int{i}
 			convertLiteralValue(c.child[1], typ.Field(i).Type)
-			values[i] = genValue(c)
+			if c.typ.cat == FuncT {
+				values[i] = genNodeWrapper(c.child[1])
+			} else {
+				values[i] = genValue(c)
+			}
 		}
 	}
 
