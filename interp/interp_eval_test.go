@@ -236,22 +236,7 @@ var c = a == b
 		t.Run(strconv.Itoa(index), func(t *testing.T) {
 			t.Parallel()
 
-			res, err := i.Eval(test.src)
-
-			if test.expectedError != "" {
-				if err == nil || err != nil && err.Error() != test.expectedError {
-					t.Fatalf("got %v, want %s", err, test.expectedError)
-				}
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("got an error %v", err)
-			}
-
-			if fmt.Sprintf("%v", res) != test.expectedRes {
-				t.Fatalf("got %v, want %s", res, test.expectedRes)
-			}
+			assertEval(t, i, test.src, test.expectedError, test.expectedRes)
 		})
 	}
 }
@@ -296,4 +281,23 @@ func evalCheck(t *testing.T, i *interp.Interpreter, src string, expect ...string
 		t.Fatalf("expected error %v, got %v", expect[1], err.Error())
 	}
 	return res
+}
+
+func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expectedRes string) {
+	res, err := i.Eval(src)
+
+	if expectedError != "" {
+		if err == nil || err != nil && err.Error() != expectedError {
+			t.Fatalf("got %v, want %s", err, expectedError)
+		}
+		return
+	}
+
+	if err != nil {
+		t.Fatalf("got an error %v", err)
+	}
+
+	if fmt.Sprintf("%v", res) != expectedRes {
+		t.Fatalf("got %v, want %s", res, expectedRes)
+	}
 }
