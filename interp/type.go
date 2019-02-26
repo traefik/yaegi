@@ -587,3 +587,7 @@ func isFloat(t *Type) bool {
 	}
 	return false
 }
+
+func isString(t *Type) bool {
+	return t.TypeOf().Kind() == reflect.String
+}

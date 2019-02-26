@@ -226,6 +226,14 @@ func TestEvalUnary0(t *testing.T) {
 	}
 }
 
+func TestEvalComparison(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	v := evalCheck(t, i, `"hhh" > "ggg"`)
+	if v.Bool() != true {
+		t.Fatalf("expected true, got %v", v)
+	}
+}
+
 func evalCheck(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
 	t.Helper()
 
