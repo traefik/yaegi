@@ -428,6 +428,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			wireChild(n)
 			n.findex = scope.inc(interp)
 			nilSym := interp.universe.sym["nil"]
+			if t0, t1 := n.child[0].typ, n.child[1].typ; !t0.untyped && !t1.untyped && t0.id() != t1.id() {
+				err = n.cfgError("mismatched types %s and %s", t0.id(), t1.id())
+			}
 			switch n.action {
 			case NotEqual:
 				n.typ = scope.getType("bool")

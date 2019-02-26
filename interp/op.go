@@ -708,10 +708,9 @@ func inc(n *Node) {
 
 func equal(n *Node) {
 	tnext := getExec(n.tnext)
-	typ := n.typ.TypeOf()
 
-	switch {
-	case typ.Kind() == reflect.String:
+	switch t0, t1 := n.child[0].typ, n.child[1].typ; {
+	case isString(t0) || isString(t1):
 		v0 := genValueString(n.child[0])
 		v1 := genValueString(n.child[1])
 		if n.fnext != nil {
@@ -729,7 +728,7 @@ func equal(n *Node) {
 				return tnext
 			}
 		}
-	case isFloat(n.child[0].typ) || isFloat(n.child[1].typ):
+	case isFloat(t0) || isFloat(t1):
 		v0 := genValueFloat(n.child[0])
 		v1 := genValueFloat(n.child[1])
 		if n.fnext != nil {
@@ -747,7 +746,7 @@ func equal(n *Node) {
 				return tnext
 			}
 		}
-	case isUint(n.child[0].typ) || isUint(n.child[1].typ):
+	case isUint(t0) || isUint(t1):
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		if n.fnext != nil {
@@ -788,10 +787,9 @@ func equal(n *Node) {
 
 func greater(n *Node) {
 	tnext := getExec(n.tnext)
-	typ := n.typ.TypeOf()
 
-	switch {
-	case typ.Kind() == reflect.String:
+	switch t0, t1 := n.child[0].typ, n.child[1].typ; {
+	case isString(t0) || isString(t1):
 		v0 := genValueString(n.child[0])
 		v1 := genValueString(n.child[1])
 		if n.fnext != nil {
@@ -809,7 +807,7 @@ func greater(n *Node) {
 				return tnext
 			}
 		}
-	case isFloat(n.child[0].typ) || isFloat(n.child[1].typ):
+	case isFloat(t0) || isFloat(t1):
 		v0 := genValueFloat(n.child[0])
 		v1 := genValueFloat(n.child[1])
 		if n.fnext != nil {
@@ -827,7 +825,7 @@ func greater(n *Node) {
 				return tnext
 			}
 		}
-	case isUint(n.child[0].typ) || isUint(n.child[1].typ):
+	case isUint(t0) || isUint(t1):
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		if n.fnext != nil {
@@ -868,10 +866,9 @@ func greater(n *Node) {
 
 func greaterEqual(n *Node) {
 	tnext := getExec(n.tnext)
-	typ := n.typ.TypeOf()
 
-	switch {
-	case typ.Kind() == reflect.String:
+	switch t0, t1 := n.child[0].typ, n.child[1].typ; {
+	case isString(t0) || isString(t1):
 		v0 := genValueString(n.child[0])
 		v1 := genValueString(n.child[1])
 		if n.fnext != nil {
@@ -889,7 +886,7 @@ func greaterEqual(n *Node) {
 				return tnext
 			}
 		}
-	case isFloat(n.child[0].typ) || isFloat(n.child[1].typ):
+	case isFloat(t0) || isFloat(t1):
 		v0 := genValueFloat(n.child[0])
 		v1 := genValueFloat(n.child[1])
 		if n.fnext != nil {
@@ -907,7 +904,7 @@ func greaterEqual(n *Node) {
 				return tnext
 			}
 		}
-	case isUint(n.child[0].typ) || isUint(n.child[1].typ):
+	case isUint(t0) || isUint(t1):
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		if n.fnext != nil {
@@ -948,10 +945,9 @@ func greaterEqual(n *Node) {
 
 func lower(n *Node) {
 	tnext := getExec(n.tnext)
-	typ := n.typ.TypeOf()
 
-	switch {
-	case typ.Kind() == reflect.String:
+	switch t0, t1 := n.child[0].typ, n.child[1].typ; {
+	case isString(t0) || isString(t1):
 		v0 := genValueString(n.child[0])
 		v1 := genValueString(n.child[1])
 		if n.fnext != nil {
@@ -969,7 +965,7 @@ func lower(n *Node) {
 				return tnext
 			}
 		}
-	case isFloat(n.child[0].typ) || isFloat(n.child[1].typ):
+	case isFloat(t0) || isFloat(t1):
 		v0 := genValueFloat(n.child[0])
 		v1 := genValueFloat(n.child[1])
 		if n.fnext != nil {
@@ -987,7 +983,7 @@ func lower(n *Node) {
 				return tnext
 			}
 		}
-	case isUint(n.child[0].typ) || isUint(n.child[1].typ):
+	case isUint(t0) || isUint(t1):
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		if n.fnext != nil {
@@ -1028,10 +1024,9 @@ func lower(n *Node) {
 
 func lowerEqual(n *Node) {
 	tnext := getExec(n.tnext)
-	typ := n.typ.TypeOf()
 
-	switch {
-	case typ.Kind() == reflect.String:
+	switch t0, t1 := n.child[0].typ, n.child[1].typ; {
+	case isString(t0) || isString(t1):
 		v0 := genValueString(n.child[0])
 		v1 := genValueString(n.child[1])
 		if n.fnext != nil {
@@ -1049,7 +1044,7 @@ func lowerEqual(n *Node) {
 				return tnext
 			}
 		}
-	case isFloat(n.child[0].typ) || isFloat(n.child[1].typ):
+	case isFloat(t0) || isFloat(t1):
 		v0 := genValueFloat(n.child[0])
 		v1 := genValueFloat(n.child[1])
 		if n.fnext != nil {
@@ -1067,7 +1062,7 @@ func lowerEqual(n *Node) {
 				return tnext
 			}
 		}
-	case isUint(n.child[0].typ) || isUint(n.child[1].typ):
+	case isUint(t0) || isUint(t1):
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		if n.fnext != nil {
@@ -1108,10 +1103,9 @@ func lowerEqual(n *Node) {
 
 func notEqual(n *Node) {
 	tnext := getExec(n.tnext)
-	typ := n.typ.TypeOf()
 
-	switch {
-	case typ.Kind() == reflect.String:
+	switch t0, t1 := n.child[0].typ, n.child[1].typ; {
+	case isString(t0) || isString(t1):
 		v0 := genValueString(n.child[0])
 		v1 := genValueString(n.child[1])
 		if n.fnext != nil {
@@ -1129,7 +1123,7 @@ func notEqual(n *Node) {
 				return tnext
 			}
 		}
-	case isFloat(n.child[0].typ) || isFloat(n.child[1].typ):
+	case isFloat(t0) || isFloat(t1):
 		v0 := genValueFloat(n.child[0])
 		v1 := genValueFloat(n.child[1])
 		if n.fnext != nil {
@@ -1147,7 +1141,7 @@ func notEqual(n *Node) {
 				return tnext
 			}
 		}
-	case isUint(n.child[0].typ) || isUint(n.child[1].typ):
+	case isUint(t0) || isUint(t1):
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		if n.fnext != nil {

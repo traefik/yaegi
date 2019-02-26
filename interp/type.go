@@ -386,9 +386,9 @@ func (t *Type) id() string {
 
 	res := ""
 	if t.cat == ValueT {
-		res = t.rtype.PkgPath() + t.rtype.Name()
+		res = t.rtype.PkgPath() + "." + t.rtype.Name()
 	} else {
-		res = t.pkgPath + t.name
+		res = t.pkgPath + "." + t.name
 	}
 	return res
 }
@@ -586,4 +586,8 @@ func isFloat(t *Type) bool {
 		return true
 	}
 	return false
+}
+
+func isString(t *Type) bool {
+	return t.TypeOf().Kind() == reflect.String
 }
