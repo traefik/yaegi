@@ -258,27 +258,12 @@ func TestEvalUnary0(t *testing.T) {
 	}
 }
 
-func evalCheck(t *testing.T, i *interp.Interpreter, src string, expect ...string) reflect.Value {
+func evalCheck(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
 	t.Helper()
 
 	res, err := i.Eval(src)
-	if len(expect) == 0 {
-		if err != nil {
-			t.Fatal(err)
-		}
-		return res
-	}
-	if expect[0] != "" && expect[0] != fmt.Sprintf("%v", res) {
-		t.Fatalf("expected %v, got %v", expect[0], res)
-	}
-	if len(expect) == 1 {
-		if err != nil {
-			t.Fatal(err)
-		}
-		return res
-	}
-	if expect[1] != err.Error() {
-		t.Fatalf("expected error %v, got %v", expect[1], err.Error())
+	if err != nil {
+		t.Fatal(err)
 	}
 	return res
 }
