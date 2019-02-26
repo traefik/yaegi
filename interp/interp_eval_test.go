@@ -209,6 +209,18 @@ func Foo() {
 	}
 }
 
+func TestEvalComparison(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	evalCheck(t, i, `
+type Foo string
+type Bar string
+
+var a = Foo("test")
+var b = Bar("test")
+var c = a == b
+`, "", "7:9: mismatched types _.Foo and _.Bar")
+}
+
 func TestEvalCompositeArray0(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	v := evalCheck(t, i, `a := []int{1, 2, 7: 20, 30}`)
@@ -234,12 +246,27 @@ func TestEvalComparison(t *testing.T) {
 	}
 }
 
-func evalCheck(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
+func evalCheck(t *testing.T, i *interp.Interpreter, src string, expect ...string) reflect.Value {
 	t.Helper()
 
 	res, err := i.Eval(src)
-	if err != nil {
-		t.Fatal(err)
+	if len(expect) == 0 {
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	if expect[0] != "" && expect[0] != fmt.Sprintf("%v", res) {
+		t.Fatalf("expected %v, got %v", expect[0], res)
+	}
+	if len(expect) == 1 {
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	if expect[1] != err.Error() {
+		t.Fatalf("expected error %v, got %v", expect[1], err.Error())
 	}
 	return res
 }
