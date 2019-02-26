@@ -50,7 +50,7 @@ func TestInterface(t *testing.T) {
 		},
 	})
 
-	evalCheck(t, i, `
+	eval(t, i, `
 import "wrap"
 
 type MyInt int
@@ -62,7 +62,7 @@ func NewMyInt(i int) wrap.Wrap {
 	return wrap.Wrap{DoHello: m.Hello}
 }
 `)
-	NewMyInt := evalCheck(t, i, "NewMyInt").Interface().(func(int) Wrap)
+	NewMyInt := eval(t, i, "NewMyInt").Interface().(func(int) Wrap)
 	w := NewMyInt(4)
 	Hi(w)
 }
