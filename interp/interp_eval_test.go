@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -211,16 +212,48 @@ func Foo() {
 
 func TestEvalComparison(t *testing.T) {
 	i := interp.New(interp.Opt{})
-	evalCheck(t, i, `
+
+	testCases := []struct {
+		src           string
+		expectedError string
+		expectedRes   string
+	}{
+		{
+			`
 type Foo string
 type Bar string
 
 var a = Foo("test")
 var b = Bar("test")
 var c = a == b
-`, "", "7:9: mismatched types _.Foo and _.Bar")
+`, "7:9: mismatched types _.Foo and _.Bar", "",
+		},
+		{`"hhh" > "ggg"`, "", "true"},
+	}
 
-	evalCheck(t, i, `"hhh" > "ggg"`, "true")
+	for index, test := range testCases {
+		test := test
+		t.Run(strconv.Itoa(index), func(t *testing.T) {
+			t.Parallel()
+
+			res, err := i.Eval(test.src)
+
+			if test.expectedError != "" {
+				if err == nil || err != nil && err.Error() != test.expectedError {
+					t.Fatalf("got %v, want %s", err, test.expectedError)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("got an error %v", err)
+			}
+
+			if fmt.Sprintf("%v", res) != test.expectedRes {
+				t.Fatalf("got %v, want %s", res, test.expectedRes)
+			}
+		})
+	}
 }
 
 func TestEvalCompositeArray0(t *testing.T) {
