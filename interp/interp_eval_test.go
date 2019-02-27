@@ -170,7 +170,7 @@ func f() string {
 
 	v := eval(t, i, `f()`)
 	if v.Interface().(string) != "test" {
-		t.Fatalf("expected test, got %v", v)
+		t.Fatalf("got %v, want test", v)
 	}
 }
 
@@ -190,7 +190,7 @@ var a = T{
 `)
 	v := eval(t, i, `a.p[1]`)
 	if v.Interface().(string) != "world" {
-		t.Fatalf("expected world, got %v", v)
+		t.Fatalf("got %v, want word", v)
 	}
 }
 
@@ -211,7 +211,7 @@ func Foo() {
 	http.DefaultClient = &http.Client{}
 	eval(t, i, `Foo()`)
 	if http.DefaultClient.Timeout != 2*time.Second {
-		t.Fatalf("expected 2s, got %v", http.DefaultClient.Timeout)
+		t.Fatalf("got %v, want 2s", http.DefaultClient.Timeout)
 	}
 }
 
