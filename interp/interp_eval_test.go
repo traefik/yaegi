@@ -2,10 +2,8 @@ package interp_test
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"reflect"
-	"strconv"
 	"testing"
 	"time"
 
@@ -13,141 +11,148 @@ import (
 	"github.com/containous/dyngo/stdlib"
 )
 
-func TestEval0(t *testing.T) {
+// testCase represents an interpreter test case.
+// Care must be taken when defining multiple test cases within the same interpreter
+// context, as all declarations occur in the global scope and are therefore
+// shared between multiple test cases.
+// Hint: use different variables or package names in testcases to keep them uncoupled.
+type testCase struct {
+	desc, src, res, err string
+	skip                string // if not empty, skip this test case (used in case of known error)
+	pre                 func() // functions to execute prior eval src, or nil
+}
+
+func TestEvalArithmetic(t *testing.T) {
 	i := interp.New(interp.Opt{})
-	evalCheck(t, i, `var I int = 2`)
-
-	t1 := evalCheck(t, i, `I`)
-	if t1.Interface().(int) != 2 {
-		t.Fatalf("expected 2, got %v", t1)
-	}
+	runTests(t, i, []testCase{
+		{desc: "add_II", src: "2 + 3", res: "5"},
+		{desc: "add_FI", src: "2.3 + 3", res: "5.3"},
+		{desc: "add_IF", src: "2 + 3.3", res: "5.3"},
+		{desc: "mul_II", src: "2 * 3", res: "6"},
+		{desc: "mul_FI", src: "2.2 * 3", res: "6.6000000000000005"},
+		{desc: "mul_IF", src: "3 * 2.2", res: "6.6000000000000005"},
+	})
 }
 
-func TestEval1(t *testing.T) {
+func TestEvalDecl(t *testing.T) {
 	i := interp.New(interp.Opt{})
-	evalCheck(t, i, `func Hello() string { return "hello" }`)
-
-	v := evalCheck(t, i, `Hello`)
-
-	f, ok := v.Interface().(func() string)
-	if !ok {
-		t.Fatal("conversion failed")
-	}
-
-	if s := f(); s != "hello" {
-		t.Fatalf("expected hello, got %v", s)
-	}
+	runTests(t, i, []testCase{
+		{pre: func() { eval(t, i, "var i int = 2") }, src: "i", res: "2"},
+		{pre: func() { eval(t, i, "var j, k int = 2, 3") }, src: "j", res: "2"},
+		{pre: func() { eval(t, i, "var l, m int = 2, 3") }, src: "k", res: "3"},
+		{pre: func() { eval(t, i, "func f() int {return 4}") }, src: "f()", res: "4"},
+		{pre: func() { eval(t, i, `package foo; var I = 2`) }, src: "foo.I", res: "2"},
+		{pre: func() { eval(t, i, `package foo; func F() int {return 5}`) }, src: "foo.F()", res: "5"},
+	})
 }
 
-func TestEval2(t *testing.T) {
-	i := interp.New(interp.Opt{})
-	evalCheck(t, i, `package foo; var I int = 2`)
-
-	t1 := evalCheck(t, i, `foo.I`)
-	if t1.Interface().(int) != 2 {
-		t.Fatalf("expected 2, got %v", t1)
-	}
-}
-
-func TestEval3(t *testing.T) {
-	i := interp.New(interp.Opt{})
-	evalCheck(t, i, `package foo; func Hello() string { return "hello" }`)
-
-	v := evalCheck(t, i, `foo.Hello`)
-	f, ok := v.Interface().(func() string)
-	if !ok {
-		t.Fatal("conversion failed")
-	}
-	if s := f(); s != "hello" {
-		t.Fatalf("expected hello, got %v", s)
-	}
-}
-
-func TestEvalNil0(t *testing.T) {
-	i := interp.New(interp.Opt{})
-	evalCheck(t, i, `func getNil() error { return nil }`)
-
-	v := evalCheck(t, i, `getNil()`)
-	if !v.IsNil() {
-		t.Fatalf("expected nil, got %v", v)
-	}
-}
-
-func TestEvalNil1(t *testing.T) {
-	i := interp.New(interp.Opt{})
-	evalCheck(t, i, `
-package bar
-
-func New() func(string) error {
-	return func(v string) error {
-		return nil
-	}
-}
-`)
-
-	v := evalCheck(t, i, `bar.New()`)
-	fn, ok := v.Interface().(func(string) error)
-	if !ok {
-		t.Fatal("conversion failed")
-	}
-
-	if res := fn("hello"); res != nil {
-		t.Fatalf("expected nil, got %v", res)
-	}
-}
-
-func TestEvalNil2(t *testing.T) {
-	i := interp.New(interp.Opt{})
-	_, err := i.Eval(`a := nil`)
-	if err.Error() != "1:27: use of untyped nil" {
-		t.Fatal("should have failed")
-	}
-}
-
-func TestEvalNil3(t *testing.T) {
-	log.SetFlags(log.Lshortfile)
+func TestEvalImport(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	i.Use(stdlib.Value, stdlib.Type)
-	evalCheck(t, i, `
-import "fmt"
-
-type Foo struct{}
-
-func Hello() *Foo {
-	fmt.Println("Hello")
-	return nil
+	runTests(t, i, []testCase{
+		{pre: func() { eval(t, i, `import "time"`) }, src: "2 * time.Second", res: "2s"},
+	})
 }
-`)
 
-	evalCheck(t, i, `Hello()`)
+func TestEvalNil(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	i.Use(stdlib.Value, stdlib.Type)
+	runTests(t, i, []testCase{
+		{desc: "assign nil", src: "a := nil", err: "1:27: use of untyped nil"},
+		{desc: "return nil", pre: func() { eval(t, i, "func getNil() error {return nil}") }, src: "getNil()", res: "<nil>"},
+		{
+			desc: "return func which return nil error",
+			pre: func() {
+				eval(t, i, `
+					package bar
+
+					func New() func(string) error {
+						return func(v string) error {
+							return nil
+						}
+					}
+				`)
+				v := eval(t, i, `bar.New()`)
+				fn, ok := v.Interface().(func(string) error)
+				if !ok {
+					t.Fatal("conversion failed")
+				}
+				if res := fn("hello"); res != nil {
+					t.Fatalf("got %v, want nil", res)
+				}
+			},
+		},
+		{
+			desc: "return nil pointer",
+			pre: func() {
+				eval(t, i, `
+					import "fmt"
+
+					type Foo struct{}
+
+					func Hello() *Foo {
+						fmt.Println("Hello")
+						return nil
+					}
+				`)
+			},
+			src: "Hello()",
+			res: "<invalid reflect.Value>",
+		},
+	})
 }
 
 func TestEvalStruct0(t *testing.T) {
 	i := interp.New(interp.Opt{})
-	evalCheck(t, i, `
-type Fromage struct {
-	Name string
-	Call func(string) string
-}
+	runTests(t, i, []testCase{
+		{
+			desc: "func field in struct",
+			pre: func() {
+				eval(t, i, `
+					type Fromage struct {
+						Name string
+						Call func(string) string
+					}
 
-func f() string {
-	a := Fromage{}
-	a.Name = "test"
-	a.Call = func(s string) string { return s }
+					func f() string {
+						a := Fromage{}
+						a.Name = "test"
+						a.Call = func(s string) string { return s }
 
-	return a.Call(a.Name)
-}
-`)
+						return a.Call(a.Name)
+					}
+				`)
+			},
+			src: "f()",
+			res: "test",
+		},
+		{
+			desc: "literal func field in struct",
+			pre: func() {
+				eval(t, i, `
+					type Fromage2 struct {
+						Name string
+						Call func(string) string
+					}
 
-	v := evalCheck(t, i, `f()`)
-	if v.Interface().(string) != "test" {
-		t.Fatalf("expected test, got %v", v)
-	}
+					func f2() string {
+						a := Fromage2{
+							"test",
+							func(s string) string { return s },
+						}
+						return a.Call(a.Name)
+					}
+				`)
+			},
+			src: "f2()",
+			res: "test",
+		},
+	})
 }
 
 func TestEvalStruct1(t *testing.T) {
 	i := interp.New(interp.Opt{})
-	evalCheck(t, i, `
+	eval(t, i, `
 type Fromage struct {
 	Name string
 	Call func(string) string
@@ -163,15 +168,15 @@ func f() string {
 }
 `)
 
-	v := evalCheck(t, i, `f()`)
+	v := eval(t, i, `f()`)
 	if v.Interface().(string) != "test" {
-		t.Fatalf("expected test, got %v", v)
+		t.Fatalf("got %v, want test", v)
 	}
 }
 
 func TestEvalComposite0(t *testing.T) {
 	i := interp.New(interp.Opt{})
-	evalCheck(t, i, `
+	eval(t, i, `
 type T struct {
 	a, b, c, d, e, f, g, h, i, j, k, l, m, n string
 	o map[string]int
@@ -183,16 +188,16 @@ var a = T{
 	p: []string{"hello", "world"},
 }
 `)
-	v := evalCheck(t, i, `a.p[1]`)
+	v := eval(t, i, `a.p[1]`)
 	if v.Interface().(string) != "world" {
-		t.Fatalf("expected world, got %v", v)
+		t.Fatalf("got %v, want word", v)
 	}
 }
 
 func TestEvalCompositeBin0(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	i.Use(stdlib.Value, stdlib.Type)
-	evalCheck(t, i, `
+	eval(t, i, `
 import (
 	"fmt"
 	"net/http"
@@ -204,63 +209,65 @@ func Foo() {
 }
 `)
 	http.DefaultClient = &http.Client{}
-	evalCheck(t, i, `Foo()`)
+	eval(t, i, `Foo()`)
 	if http.DefaultClient.Timeout != 2*time.Second {
-		t.Fatalf("expected 2s, got %v", http.DefaultClient.Timeout)
+		t.Fatalf("got %v, want 2s", http.DefaultClient.Timeout)
 	}
 }
 
 func TestEvalComparison(t *testing.T) {
 	i := interp.New(interp.Opt{})
-
-	testCases := []struct {
-		src           string
-		expectedError string
-		expectedRes   string
-	}{
+	runTests(t, i, []testCase{
+		{src: `"hhh" > "ggg"`, res: "true"},
 		{
-			`
-type Foo string
-type Bar string
+			desc: "mismatched types",
+			src: `
+				type Foo string
+				type Bar string
 
-var a = Foo("test")
-var b = Bar("test")
-var c = a == b
-`, "7:9: mismatched types _.Foo and _.Bar", "",
+				var a = Foo("test")
+				var b = Bar("test")
+				var c = a == b
+			`,
+			err: "7:13: mismatched types _.Foo and _.Bar",
 		},
-		{`"hhh" > "ggg"`, "", "true"},
-	}
+	})
+}
 
-	for index, test := range testCases {
-		test := test
-		t.Run(strconv.Itoa(index), func(t *testing.T) {
-			t.Parallel()
+func TestEvalCompositeArray(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	runTests(t, i, []testCase{
+		{src: "a := []int{1, 2, 7: 20, 30}", res: "[1 2 0 0 0 0 0 20 30]"},
+	})
+}
 
-			assertEval(t, i, test.src, test.expectedError, test.expectedRes)
+func TestEvalUnary(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	runTests(t, i, []testCase{
+		{src: "a := -1", res: "-1"},
+		{src: "b := +1", res: "1", skip: "BUG"},
+		{src: "c := !false", res: "true"},
+	})
+}
+
+func runTests(t *testing.T, i *interp.Interpreter, tests []testCase) {
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			if test.skip != "" {
+				t.Skip(test.skip)
+			}
+			if test.pre != nil {
+				test.pre()
+			}
+			if test.src != "" {
+				assertEval(t, i, test.src, test.err, test.res)
+			}
 		})
 	}
 }
 
-func TestEvalCompositeArray0(t *testing.T) {
-	i := interp.New(interp.Opt{})
-	v := evalCheck(t, i, `a := []int{1, 2, 7: 20, 30}`)
-	expected := "[1 2 0 0 0 0 0 20 30]"
-	if fmt.Sprintf("%v", v) != expected {
-		t.Fatalf("expected: %s, got %v", expected, v)
-	}
-}
-
-func TestEvalUnary0(t *testing.T) {
-	i := interp.New(interp.Opt{})
-	v := evalCheck(t, i, `a := -1`)
-	if expected := "-1"; fmt.Sprintf("%v", v) != expected {
-		t.Fatalf("Expected %v, got %v", expected, v)
-	}
-}
-
-func evalCheck(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
+func eval(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
 	t.Helper()
-
 	res, err := i.Eval(src)
 	if err != nil {
 		t.Fatal(err)
@@ -272,7 +279,7 @@ func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expecte
 	res, err := i.Eval(src)
 
 	if expectedError != "" {
-		if err == nil || err != nil && err.Error() != expectedError {
+		if err == nil || err.Error() != expectedError {
 			t.Fatalf("got %v, want %s", err, expectedError)
 		}
 		return

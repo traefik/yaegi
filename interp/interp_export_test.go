@@ -35,7 +35,7 @@ func Hi(h Helloer) {
 // the interfaces and methods  definitions)
 //
 type Wrap struct {
-	DoHello func() // implements Hello()
+	DoHello func() // related to the Hello() method.
 	// Other interface method wrappers...
 }
 
@@ -43,14 +43,14 @@ func (w Wrap) Hello() { w.DoHello() }
 
 func TestInterface(t *testing.T) {
 	i := interp.New(interp.Opt{})
-	// export the Wrap type to the interpeter under virtual "wrap" package
+	// export the Wrap type to the interpreter under virtual "wrap" package
 	i.Use(nil, interp.LibTypeMap{
 		"wrap": {
 			"Wrap": reflect.TypeOf((*Wrap)(nil)).Elem(),
 		},
 	})
 
-	evalCheck(t, i, `
+	eval(t, i, `
 import "wrap"
 
 type MyInt int
@@ -62,7 +62,7 @@ func NewMyInt(i int) wrap.Wrap {
 	return wrap.Wrap{DoHello: m.Hello}
 }
 `)
-	NewMyInt := evalCheck(t, i, "NewMyInt").Interface().(func(int) Wrap)
+	NewMyInt := eval(t, i, "NewMyInt").Interface().(func(int) Wrap)
 	w := NewMyInt(4)
 	Hi(w)
 }
