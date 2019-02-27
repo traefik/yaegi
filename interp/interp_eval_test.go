@@ -17,32 +17,32 @@ import (
 // shared between multiple test cases.
 // Hint: use different variables or package names in testcases to keep them uncoupled.
 type testCase struct {
-	id, src, res, err string // only id is mandatory
-	skip              bool   // if true, skip this test case (used in case of known error)
-	pre               func() // functions to execute prior eval src, or nil
+	desc, src, res, err string
+	skip                string // if not empty, skip this test case (used in case of known error)
+	pre                 func() // functions to execute prior eval src, or nil
 }
 
 func TestEvalArithmetic(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	runTests(t, i, []testCase{
-		{id: "add0", src: "2 + 3", res: "5"},
-		{id: "add1", src: "2.3 + 3", res: "5.3"},
-		{id: "add2", src: "2 + 3.3", res: "5.3"},
-		{id: "mul0", src: "2 * 3", res: "6"},
-		{id: "mul1", src: "2.2 * 3", res: "6.6000000000000005"},
-		{id: "mul2", src: "3 * 2.2", res: "6.6000000000000005"},
+		{desc: "add_II", src: "2 + 3", res: "5"},
+		{desc: "add_FI", src: "2.3 + 3", res: "5.3"},
+		{desc: "add_IF", src: "2 + 3.3", res: "5.3"},
+		{desc: "mul_II", src: "2 * 3", res: "6"},
+		{desc: "mul_FI", src: "2.2 * 3", res: "6.6000000000000005"},
+		{desc: "mul_IF", src: "3 * 2.2", res: "6.6000000000000005"},
 	})
 }
 
 func TestEvalDecl(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	runTests(t, i, []testCase{
-		{id: "0", pre: func() { eval(t, i, "var i int = 2") }, src: "i", res: "2"},
-		{id: "1", pre: func() { eval(t, i, "var j, k int = 2, 3") }, src: "j", res: "2"},
-		{id: "2", pre: func() { eval(t, i, "var l, m int = 2, 3") }, src: "k", res: "3"},
-		{id: "3", pre: func() { eval(t, i, "func f() int {return 4}") }, src: "f()", res: "4"},
-		{id: "4", pre: func() { eval(t, i, `package foo; var I = 2`) }, src: "foo.I", res: "2"},
-		{id: "5", pre: func() { eval(t, i, `package foo; func F() int {return 5}`) }, src: "foo.F()", res: "5"},
+		{pre: func() { eval(t, i, "var i int = 2") }, src: "i", res: "2"},
+		{pre: func() { eval(t, i, "var j, k int = 2, 3") }, src: "j", res: "2"},
+		{pre: func() { eval(t, i, "var l, m int = 2, 3") }, src: "k", res: "3"},
+		{pre: func() { eval(t, i, "func f() int {return 4}") }, src: "f()", res: "4"},
+		{pre: func() { eval(t, i, `package foo; var I = 2`) }, src: "foo.I", res: "2"},
+		{pre: func() { eval(t, i, `package foo; func F() int {return 5}`) }, src: "foo.F()", res: "5"},
 	})
 }
 
@@ -50,7 +50,7 @@ func TestEvalImport(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	i.Use(stdlib.Value, stdlib.Type)
 	runTests(t, i, []testCase{
-		{id: "0", pre: func() { eval(t, i, `import "time"`) }, src: "2 * time.Second", res: "2s"},
+		{pre: func() { eval(t, i, `import "time"`) }, src: "2 * time.Second", res: "2s"},
 	})
 }
 
@@ -58,10 +58,10 @@ func TestEvalNil(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	i.Use(stdlib.Value, stdlib.Type)
 	runTests(t, i, []testCase{
-		{id: "0", src: "a := nil", err: "1:27: use of untyped nil"},
-		{id: "1", pre: func() { eval(t, i, "func getNil() error {return nil}") }, src: "getNil()", res: "<nil>"},
+		{desc: "assign nil", src: "a := nil", err: "1:27: use of untyped nil"},
+		{desc: "return nil", pre: func() { eval(t, i, "func getNil() error {return nil}") }, src: "getNil()", res: "<nil>"},
 		{
-			id: "2",
+			desc: "return func which return nil error",
 			pre: func() {
 				eval(t, i, `
 					package bar
@@ -78,12 +78,12 @@ func TestEvalNil(t *testing.T) {
 					t.Fatal("conversion failed")
 				}
 				if res := fn("hello"); res != nil {
-					t.Fatalf("expected nil, got %v", res)
+					t.Fatalf("got %v, want nil", res)
 				}
 			},
 		},
 		{
-			id: "3",
+			desc: "return nil pointer",
 			pre: func() {
 				eval(t, i, `
 					import "fmt"
@@ -106,7 +106,7 @@ func TestEvalStruct0(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	runTests(t, i, []testCase{
 		{
-			id: "0",
+			desc: "func field in struct",
 			pre: func() {
 				eval(t, i, `
 					type Fromage struct {
@@ -127,7 +127,7 @@ func TestEvalStruct0(t *testing.T) {
 			res: "test",
 		},
 		{
-			id: "1",
+			desc: "literal func field in struct",
 			pre: func() {
 				eval(t, i, `
 					type Fromage2 struct {
@@ -218,9 +218,9 @@ func Foo() {
 func TestEvalComparison(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	runTests(t, i, []testCase{
-		{id: "0", src: `"hhh" > "ggg"`, res: "true"},
+		{src: `"hhh" > "ggg"`, res: "true"},
 		{
-			id: "1",
+			desc: "mismatched types",
 			src: `
 				type Foo string
 				type Bar string
@@ -237,24 +237,24 @@ func TestEvalComparison(t *testing.T) {
 func TestEvalCompositeArray(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	runTests(t, i, []testCase{
-		{id: "0", src: "a := []int{1, 2, 7: 20, 30}", res: "[1 2 0 0 0 0 0 20 30]"},
+		{src: "a := []int{1, 2, 7: 20, 30}", res: "[1 2 0 0 0 0 0 20 30]"},
 	})
 }
 
 func TestEvalUnary(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	runTests(t, i, []testCase{
-		{id: "0", src: "a := -1", res: "-1"},
-		{id: "1", src: "b := +1", res: "1", skip: true},
-		{id: "2", src: "c := !false", res: "true"},
+		{src: "a := -1", res: "-1"},
+		{src: "b := +1", res: "1", skip: "BUG"},
+		{src: "c := !false", res: "true"},
 	})
 }
 
 func runTests(t *testing.T, i *interp.Interpreter, tests []testCase) {
 	for _, test := range tests {
-		t.Run(test.id, func(t *testing.T) {
-			if test.skip {
-				t.SkipNow()
+		t.Run(test.desc, func(t *testing.T) {
+			if test.skip != "" {
+				t.Skip(test.skip)
 			}
 			if test.pre != nil {
 				test.pre()
