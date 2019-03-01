@@ -713,7 +713,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case Ident:
 			if isKey(n) {
 				// Skip symbol creation/lookup for identifier used as key
-			} else if pos, ok := FuncRet(n); ok {
+			} else if pos, ok := funcRet(n); ok {
 				scope.sym[n.ident] = &Symbol{index: pos, kind: Var, global: scope.global}
 				n.sym = scope.sym[n.ident]
 			} else if isFuncArg(n) {
@@ -1265,7 +1265,7 @@ func isFuncArg(n *Node) bool {
 	return false
 }
 
-func FuncRet(n *Node) (int, bool) {
+func funcRet(n *Node) (int, bool) {
 	if n.anc.kind == Field && n.anc.anc.anc.kind == FuncType {
 		if fl := n.anc.anc; len(fl.anc.child) > 1 && fl == fl.anc.child[1] {
 			if n != n.anc.lastChild() {
