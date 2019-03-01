@@ -46,6 +46,18 @@ func TestEvalDecl(t *testing.T) {
 	})
 }
 
+func TestEvalFunc(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	runTests(t, i, []testCase{
+		{src: `(func () {})()`, res: "<invalid reflect.Value>"},
+		{src: `(func () string {return "ok"})()`, res: "ok"},
+		{src: `(func () (res string) {res = "ok"; return})()`, res: "ok"},
+		{src: `(func () int {f := func() (a, b int) {a, b = 3, 4; return}; x, y := f(); return x+y})()`, res: "7"},
+		{src: `(func () int {f := func() (a int, b, c int) {a, b, c = 3, 4, 5; return}; x, y, z := f(); return x+y+z})()`, res: "12", skip: "BUG"},
+		{src: `(func () int {f := func() (a, b, c int) {a, b, c = 3, 4, 5; return}; x, y, z := f(); return x+y+z})()`, res: "12", skip: "BUG"},
+	})
+}
+
 func TestEvalImport(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	i.Use(stdlib.Value, stdlib.Type)

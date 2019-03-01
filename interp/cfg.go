@@ -713,6 +713,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case Ident:
 			if isKey(n) {
 				// Skip symbol creation/lookup for identifier used as key
+			} else if pos, ok := FuncRet(n); ok {
+				scope.sym[n.ident] = &Symbol{index: pos, kind: Var, global: scope.global}
+				n.sym = scope.sym[n.ident]
 			} else if isFuncArg(n) {
 				n.findex = scope.inc(interp)
 				scope.sym[n.ident] = &Symbol{index: scope.size, kind: Var, global: scope.global}
@@ -730,7 +733,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
 				if n.findex < 0 {
 					n.val = sym.node
-					n.kind = sym.node.kind
 				} else {
 					n.sym = sym
 					switch {
@@ -1252,12 +1254,40 @@ func isFuncArg(n *Node) bool {
 	}
 	l := len(n.anc.child)
 	if l == 1 && n.anc.anc.anc.kind == FuncDecl {
-		return true
+		return true // method receiver
 	}
 	if l > 1 && n.anc.child[l-1] != n {
+		if fl := n.anc.anc; len(fl.anc.child) > 1 && fl == fl.anc.child[1] {
+			return false // func return arg
+		}
 		return true
 	}
 	return false
+}
+
+func FuncRet(n *Node) (int, bool) {
+	if n.anc.kind == Field && n.anc.anc.anc.kind == FuncType {
+		if fl := n.anc.anc; len(fl.anc.child) > 1 && fl == fl.anc.child[1] {
+			if n != n.anc.lastChild() {
+				// n is a return parameter. Compute position as its rank
+				return retRank(n), true
+			}
+		}
+	}
+	return 0, false
+}
+
+func retRank(n *Node) int {
+	var r int
+	for _, c := range n.anc.anc.child {
+		for _, cc := range c.child[:len(c.child)-1] {
+			if cc == n {
+				break
+			}
+			r++
+		}
+	}
+	return r
 }
 
 func isBuiltinCall(n *Node) bool {
@@ -1370,7 +1400,15 @@ func frameTypes(node *Node, size int) ([]reflect.Type, error) {
 			return false
 		}
 		if n.kind == FuncDecl || n.kind == ImportDecl || n.kind == TypeDecl || n.kind == FuncLit {
-			return n == node // Do not dive in subtree, except if this is the entry point
+			if n == node {
+				if n.kind == FuncDecl || n.kind == FuncLit {
+					for i, t := range n.typ.ret {
+						ft[i] = t.TypeOf()
+					}
+				}
+				return true
+			}
+			return false
 		}
 		if n.findex < 0 || n.typ == nil || n.level > 0 || n.kind == BasicLit || n.typ.cat == BinPkgT {
 			return true
