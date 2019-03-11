@@ -72,7 +72,6 @@ type Interpreter struct {
 	Opt
 	Name     string            // program name
 	Frame    *Frame            // program data storage during execution
-	fsize    int               // global interpreter frame size
 	nindex   int               // next node index
 	universe *Scope            // interpreter global level scope
 	scope    map[string]*Scope // package level scopes, indexed by package name
@@ -221,7 +220,6 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 			initNodes = append(initNodes, sym.node)
 		}
 	} else {
-		//root.types, _ = frameTypes(root, i.fsize+1)
 		setExec(root.start)
 	}
 	if i.universe.sym[pkgName] == nil {

@@ -73,7 +73,6 @@ type Scope struct {
 	def    *Node          // function definition node this scope belongs to, or nil
 	types  []reflect.Type // Frame layout, may be shared by same level scopes
 	level  int            // Frame level: number of frame indirections to access var during execution
-	size   int            // Frame size: number of entries to allocate during execution (package scope only)
 	sym    SymMap         // Map of symbols defined in this current scope
 	global bool           // true if scope refers to global space (single frame for universe and package level scopes)
 }

@@ -149,7 +149,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				interp.scope[pkgName] = scope.pushBloc()
 			}
 			scope = interp.scope[pkgName]
-			scope.size = interp.fsize
 			n.findex = -1
 
 		case For0, ForRangeStmt:

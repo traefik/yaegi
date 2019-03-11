@@ -319,11 +319,6 @@ func _println(n *Node) {
 				fmt.Printf(" ")
 			}
 			fmt.Printf("%v", value(f))
-
-			// Handle multiple results of a function call argument
-			//for j := 1; j < child[i].fsize; j++ {
-			//	fmt.Printf(" %v", f.data[child[i].findex+j])
-			//}
 		}
 		fmt.Println("")
 		return next

@@ -88,7 +88,6 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 		if genRun(n) != nil {
 			return err
 		}
-		//i.fsize++
 		i.run(n, nil)
 	}
 
