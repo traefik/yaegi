@@ -81,13 +81,14 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 		return nil
 	}
 
+	i.resizeFrame()
+
 	// Once all package sources have been parsed, execute entry points then init functions
 	for _, n := range rootNodes {
 		if genRun(n) != nil {
 			return err
 		}
-		i.fsize++
-		i.resizeFrame()
+		//i.fsize++
 		i.run(n, nil)
 	}
 

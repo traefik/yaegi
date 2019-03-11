@@ -3,117 +3,11 @@ package interp
 import (
 	"fmt"
 	"reflect"
-	"strconv"
 	"unicode"
 )
 
 // A CfgError represents an error during CFG build stage
 type CfgError error
-
-// A SymKind represents the kind of symbol
-type SymKind uint
-
-// Symbol kinds for the go language
-const (
-	Const SymKind = iota // Constant
-	Typ                  // Type
-	Var                  // Variable
-	Func                 // Function
-	Bin                  // Binary from runtime
-	Bltn                 // Builtin
-)
-
-var symKinds = [...]string{
-	Const: "Const",
-	Typ:   "Typ",
-	Var:   "Var",
-	Func:  "Func",
-	Bin:   "Bin",
-	Bltn:  "Bltn",
-}
-
-func (k SymKind) String() string {
-	if k < SymKind(len(symKinds)) {
-		return symKinds[k]
-	}
-	return "SymKind(" + strconv.Itoa(int(k)) + ")"
-}
-
-// A Symbol represents an interpreter object such as type, constant, var, func, builtin or binary object
-type Symbol struct {
-	kind    SymKind
-	typ     *Type            // Type of value
-	node    *Node            // Node value if index is negative
-	recv    *Receiver        // receiver node value, if sym refers to a method
-	index   int              // index of value in frame or -1
-	val     interface{}      // default value (used for constants)
-	path    string           // package path if typ.cat is SrcPkgT or BinPkgT
-	builtin BuiltinGenerator // Builtin function or nil
-	global  bool             // true if symbol is defined in global space
-	//constant bool             // true if symbol value is constant
-}
-
-// A SymMap stores symbols indexed by name
-type SymMap map[string]*Symbol
-
-// Scope type stores the list of visible symbols at current scope level
-type Scope struct {
-	anc    *Scope // Ancestor upper scope
-	level  int    // Frame level: number of frame indirections to access var during execution
-	size   int    // Frame size: number of entries to allocate during execution (package scope only)
-	sym    SymMap // Map of symbols defined in this current scope
-	global bool   // true if scope refers to global space (single frame for universe and package level scopes)
-}
-
-// Create a new scope and chain it to the current one
-func (s *Scope) push(indirect int) *Scope {
-	var size int
-	if indirect == 0 {
-		size = s.size // propagate size as scopes at same level share the same frame
-	}
-	global := s.global && indirect == 0
-	return &Scope{anc: s, global: global, level: s.level + indirect, size: size, sym: map[string]*Symbol{}}
-}
-
-func (s *Scope) pop() *Scope {
-	if s.level == s.anc.level {
-		s.anc.size = s.size // propagate size as scopes at same level share the same frame
-	}
-	return s.anc
-}
-
-// Lookup for a symbol in the current scope, and upper ones if not found
-func (s *Scope) lookup(ident string) (*Symbol, int, bool) {
-	level := s.level
-	for s != nil {
-		if sym, ok := s.sym[ident]; ok {
-			return sym, level - s.level, true
-		}
-		s = s.anc
-	}
-	return nil, 0, false
-}
-
-func (s *Scope) getType(ident string) *Type {
-	var t *Type
-	if sym, _, found := s.lookup(ident); found {
-		if sym.kind == Typ {
-			t = sym.typ
-		}
-	}
-	return t
-}
-
-// Inc increments the size of the scope data frame and returns the new size
-func (s *Scope) inc(interp *Interpreter) int {
-	if s.global {
-		interp.fsize++
-		s.size = interp.fsize
-	} else {
-		s.size++
-	}
-	return s.size
-}
 
 // Cfg generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
@@ -131,10 +25,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		// Set default package namespace for incremental parse
 		pkgName = "_"
 		if _, ok := interp.scope[pkgName]; !ok {
-			interp.scope[pkgName] = scope.push(0)
+			interp.scope[pkgName] = scope.pushBloc()
 		}
 		scope = interp.scope[pkgName]
-		scope.size = interp.fsize
 	}
 
 	root.Walk(func(n *Node) bool {
@@ -150,44 +43,50 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			}
 
 		case BlockStmt:
-			// For range block: ensure that array or map type is propagated to iterators
-			// prior to process block
 			if n.anc != nil && n.anc.kind == RangeStmt {
+				// For range block: ensure that array or map type is propagated to iterators
+				// prior to process block. We cannot perform this at RangeStmt pre-order because
+				// type of array like value is not yet known. This could be fixed in ast structure
+				// by setting array/map node as 1st child of ForRangeStmt instead of 3rd child of
+				// RangeStmt. The following workaround is less elegant but ok.
+				k, v := n.anc.child[0], n.anc.child[1]
+				var ktyp, vtyp *Type
+
 				switch n.anc.child[2].typ.cat {
 				case ValueT:
 					typ := n.anc.child[2].typ.rtype
-
 					switch typ.Kind() {
 					case reflect.Map:
-						scope.sym[n.anc.child[0].ident].typ = &Type{cat: ValueT, rtype: typ.Key()}
-						scope.sym[n.anc.child[1].ident].typ = &Type{cat: ValueT, rtype: typ.Elem()}
 						n.anc.gen = rangeMap
+						ktyp = &Type{cat: ValueT, rtype: typ.Key()}
+						vtyp = &Type{cat: ValueT, rtype: typ.Elem()}
 					case reflect.Array, reflect.Slice:
-						scope.sym[n.anc.child[0].ident].typ = scope.getType("int")
-						n.anc.child[0].typ = scope.getType("int")
-						vtype := &Type{cat: ValueT, rtype: typ.Elem()}
-						scope.sym[n.anc.child[1].ident].typ = vtype
-						n.anc.child[1].typ = vtype
+						ktyp = scope.getType("int")
+						vtyp = &Type{cat: ValueT, rtype: typ.Elem()}
 					}
 				case MapT:
-					scope.sym[n.anc.child[0].ident].typ = n.anc.child[2].typ.key
-					n.anc.child[0].typ = n.anc.child[2].typ.key
 					n.anc.gen = rangeMap
-					vtype := n.anc.child[2].typ.val
-					scope.sym[n.anc.child[1].ident].typ = vtype
-					n.anc.child[1].typ = vtype
-				default:
-					scope.sym[n.anc.child[0].ident].typ = scope.getType("int")
-					n.anc.child[0].typ = scope.getType("int")
-					vtype := n.anc.child[2].typ.val
-					scope.sym[n.anc.child[1].ident].typ = vtype
-					n.anc.child[1].typ = vtype
+					ktyp = n.anc.child[2].typ.key
+					vtyp = n.anc.child[2].typ.val
+				case ArrayT:
+					ktyp = scope.getType("int")
+					vtyp = n.anc.child[2].typ.val
 				}
+
+				kindex := scope.add(ktyp)
+				scope.sym[k.ident] = &Symbol{index: kindex, kind: Var, typ: ktyp}
+				k.typ = ktyp
+				k.findex = kindex
+
+				vindex := scope.add(vtyp)
+				scope.sym[v.ident] = &Symbol{index: vindex, kind: Var, typ: vtyp}
+				v.typ = vtyp
+				v.findex = vindex
 			}
-			scope = scope.push(0)
+			scope = scope.pushBloc()
 
 		case CaseClause:
-			scope = scope.push(0)
+			scope = scope.pushBloc()
 			if sn := n.anc.anc; sn.kind == TypeSwitch && sn.child[1].action == Assign {
 				// Type switch clause with a var defined in switch guard
 				var typ *Type
@@ -200,13 +99,30 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 						typ = scope.getType("interface{}")
 					default:
 						err = n.cfgError("%s is not a type", n.child[0].ident)
+						return false
 					}
 				} else {
 					// define the var with the type in the switch guard expression
 					typ = sn.child[1].child[1].child[0].typ
 				}
-				node := sn.child[1].child[0]
-				scope.sym[node.ident] = &Symbol{index: node.findex, kind: Var, typ: typ}
+				node := n.lastChild().child[0]
+				index := scope.add(typ)
+				scope.sym[node.ident] = &Symbol{index: index, kind: Var, typ: typ}
+				node.findex = index
+				node.typ = typ
+			}
+
+		case CommClause:
+			scope = scope.pushBloc()
+			if n.child[0].action == Assign {
+				ch := n.child[0].child[1].child[0]
+				if sym, _, ok := scope.lookup(ch.ident); ok {
+					assigned := n.child[0].child[0]
+					index := scope.add(sym.typ.val)
+					scope.sym[assigned.ident] = &Symbol{index: index, kind: Var, typ: sym.typ.val}
+					assigned.findex = index
+					assigned.typ = sym.typ.val
+				}
 			}
 
 		case CompositeLitExpr:
@@ -230,32 +146,69 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case File:
 			pkgName = n.child[0].ident
 			if _, ok := interp.scope[pkgName]; !ok {
-				interp.scope[pkgName] = scope.push(0)
+				interp.scope[pkgName] = scope.pushBloc()
 			}
 			scope = interp.scope[pkgName]
 			scope.size = interp.fsize
+			n.findex = -1
 
 		case For0, ForRangeStmt:
 			loop, loopRestart = n, n.child[0]
-			scope = scope.push(0)
+			scope = scope.pushBloc()
 
 		case For1, For2, For3, For3a, For4:
 			loop, loopRestart = n, n.lastChild()
-			scope = scope.push(0)
+			scope = scope.pushBloc()
 
-		case FuncDecl, FuncLit:
+		case FuncLit:
+			n.typ = nil // to force nodeType to recompute the type
+			n.typ, err = nodeType(interp, scope, n)
+			n.findex = scope.add(n.typ)
+			fallthrough
+
+		case FuncDecl:
+			n.val = n
+			// Add a frame indirection level as we enter in a func
+			scope = scope.pushFunc()
+			scope.def = n
+			if len(n.child[2].child) == 2 {
+				// Allocate frame space for return values, define output symbols
+				for _, c := range n.child[2].child[1].child {
+					var typ *Type
+					typ, err = nodeType(interp, scope, c.lastChild())
+					if len(c.child) > 1 {
+						for _, cc := range c.child[:len(c.child)-1] {
+							scope.sym[cc.ident] = &Symbol{index: scope.add(typ), kind: Var, typ: typ}
+						}
+					} else {
+						scope.add(typ)
+					}
+				}
+			}
+			if len(n.child[0].child) > 0 {
+				// define receiver symbol
+				var typ *Type
+				recvName := n.child[0].child[0].child[0].ident
+				typ, err = nodeType(interp, scope, n.child[0].child[0].lastChild())
+				scope.sym[recvName] = &Symbol{index: scope.add(typ), kind: Var, typ: typ}
+			}
+			for _, c := range n.child[2].child[0].child {
+				// define input parameter symbols
+				var typ *Type
+				typ, err = nodeType(interp, scope, c.lastChild())
+				if typ.variadic {
+					typ = &Type{cat: ArrayT, val: typ}
+				}
+				for _, cc := range c.child[:len(c.child)-1] {
+					scope.sym[cc.ident] = &Symbol{index: scope.add(typ), kind: Var, typ: typ}
+				}
+			}
 			if n.child[1].ident == "init" {
 				initNodes = append(initNodes, n)
 			}
-			// Add a frame indirection level as we enter in a func
-			scope = scope.push(1)
-			if len(n.child[2].child) == 2 {
-				// allocate entries for return values at start of frame
-				scope.size += len(n.child[2].child[1].child)
-			}
 
 		case If0, If1, If2, If3:
-			scope = scope.push(0)
+			scope = scope.pushBloc()
 
 		case Switch, SwitchIf, TypeSwitch:
 			// Make sure default clause is in last position
@@ -263,14 +216,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			if i, l := getDefault(n), len(c)-1; i >= 0 && i != l {
 				c[i], c[l] = c[l], c[i]
 			}
-			scope = scope.push(0)
+			scope = scope.pushBloc()
 			loop = n
 
 		case ImportSpec, TypeSpec:
 			// processing already done in GTA pass
 			return false
 
-		case ArrayType, BasicLit, ChanType, MapType, StructType:
+		case ArrayType, BasicLit, ChanType, FuncType, MapType, StructType:
 			n.typ, err = nodeType(interp, scope, n)
 			return false
 		}
@@ -284,41 +237,50 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case Address:
 			wireChild(n)
 			n.typ = &Type{cat: PtrT, val: n.child[0].typ}
-			n.findex = scope.inc(interp)
+			n.findex = scope.add(n.typ)
 
 		case AssignStmt, Define:
 			if n.anc.kind == TypeSwitch && n.anc.child[1] == n {
 				// type switch guard assignment: assign dest to concrete value of src
-				n.child[0].typ = n.child[1].child[0].typ
+				n.gen = nop
+				break
+			}
+			if n.anc.kind == CommClause {
+				n.gen = nop
 				break
 			}
 			dest, src := n.child[0], n.lastChild()
-			sym, level, _ := scope.lookup(dest.ident)
+			var sym *Symbol
+			var level int
 			if n.kind == Define {
 				if src.typ.cat == NilT {
 					err = src.cfgError("use of untyped nil")
 					break
 				}
-				if len(n.child) == 3 {
+				switch {
+				case len(n.child) == 3:
 					// type is provided in var declaration
 					dest.typ, err = nodeType(interp, scope, n.child[1])
-				} else {
+				case isRegularCall(src) || isBinCall(src):
+					dest.typ = getReturnedType(src.child[0])
+				default:
 					dest.typ = src.typ
+				}
+				if scope.global {
+					// Do not overload existings symbols (defined in GTA) in global scope
+					sym, _, _ = scope.lookup(dest.ident)
+				} else {
+					sym = &Symbol{index: scope.add(dest.typ), kind: Var, global: scope.global}
+					scope.sym[dest.ident] = sym
 				}
 				dest.val = src.val
 				dest.recv = src.recv
 				dest.findex = sym.index
-				if src.action == GetFunc {
-					sym.index = -1
-					sym.node = src
-				}
 				if src.kind == BasicLit {
 					sym.val = src.val
-				} else if isRegularCall(src) || isBinCall(src) {
-					// propagate call return value type
-					dest.typ = getReturnedType(src.child[0])
-					sym.typ = dest.typ
 				}
+			} else {
+				sym, level, _ = scope.lookup(dest.ident)
 			}
 			wireChild(n)
 			// Detect invalid float truncate
@@ -378,7 +340,19 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.level = level
 			}
 
-		case AssignXStmt, DefineX:
+		case AssignXStmt:
+			wireChild(n)
+			l := len(n.child) - 1
+			switch n.child[l].kind {
+			case IndexExpr:
+				n.child[l].gen = getIndexMap2
+				n.gen = nop
+			case TypeAssertExpr:
+				n.child[l].gen = typeAssert2
+				n.gen = nop
+			}
+
+		case DefineX:
 			wireChild(n)
 			l := len(n.child) - 1
 			var types []*Type
@@ -391,6 +365,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					}
 				} else {
 					types = funtype.ret
+				}
+				if l > len(types) {
+					n.gen = assignX2
 				}
 
 			case IndexExpr:
@@ -412,24 +389,19 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				err = n.cfgError("unsupported assign expression")
 				return
 			}
-			for i, c := range n.child[:l] {
-				if i == len(types) {
-					break // skip useless type symbol
-				}
-				sym, _, ok := scope.lookup(c.ident)
-				if !ok {
-					err = c.cfgError("undefined: %s", c.ident)
-				}
-				sym.typ = types[i]
-				c.typ = sym.typ
+			for i, t := range types {
+				index := scope.add(t)
+				scope.sym[n.child[i].ident] = &Symbol{index: index, kind: Var, typ: t}
+				n.child[i].typ = t
+				n.child[i].findex = index
 			}
 
 		case BinaryExpr:
 			wireChild(n)
-			n.findex = scope.inc(interp)
 			nilSym := interp.universe.sym["nil"]
 			if t0, t1 := n.child[0].typ, n.child[1].typ; !t0.untyped && !t1.untyped && t0.id() != t1.id() {
 				err = n.cfgError("mismatched types %s and %s", t0.id(), t1.id())
+				break
 			}
 			switch n.action {
 			case NotEqual:
@@ -447,14 +419,15 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			default:
 				n.typ, err = nodeType(interp, scope, n)
 			}
+			// TODO: Possible optimisation: if type is bool and not in assignment or call, then skip result store
+			n.findex = scope.add(n.typ)
 
 		case IndexExpr:
 			wireChild(n)
-			n.findex = scope.inc(interp)
 			n.typ = n.child[0].typ.val
+			n.findex = scope.add(n.typ)
 			n.recv = &Receiver{node: n}
 			if n.child[0].typ.cat == MapT {
-				scope.size++ // Reserve an entry for getIndexMap 2nd return value
 				n.gen = getIndexMap
 			} else if n.child[0].typ.cat == ArrayT {
 				n.gen = getIndexArray
@@ -486,8 +459,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case CallExpr:
 			wireChild(n)
-			n.findex = scope.inc(interp)
-			if isBuiltinCall(n) {
+			switch {
+			case isBuiltinCall(n):
 				n.gen = n.child[0].sym.builtin
 				n.child[0].typ = &Type{cat: BuiltinT}
 				switch n.child[0].ident {
@@ -506,32 +479,44 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				case "recover":
 					n.typ = scope.getType("interface{}")
 				}
-			} else if n.child[0].isType(scope) {
+				if n.typ != nil {
+					n.findex = scope.add(n.typ)
+				}
+			case n.child[0].isType(scope):
 				// Type conversion expression
-				n.typ = n.child[0].typ
 				n.gen = convert
-			} else if isBinCall(n) {
+				n.typ = n.child[0].typ
+				n.findex = scope.add(n.typ)
+			case isBinCall(n):
 				n.gen = callBin
-				n.fsize = n.child[0].fsize
 				if typ := n.child[0].typ.rtype; typ.NumOut() > 0 {
 					n.typ = &Type{cat: ValueT, rtype: typ.Out(0)}
+					n.findex = scope.add(n.typ)
+					for i := 1; i < typ.NumOut(); i++ {
+						scope.add(&Type{cat: ValueT, rtype: typ.Out(i)})
+					}
 				}
-			} else if typ := n.child[0].typ; len(typ.ret) > 0 {
-				n.typ = typ.ret[0]
-				n.fsize = len(typ.ret)
-			}
-
-			// Reserve entries in frame to store results of call
-			if scope.global {
-				interp.fsize += n.fsize
-				scope.size = interp.fsize
-			} else {
-				scope.size += n.fsize
+			default:
+				if n.child[0].action == GetFunc {
+					// allocate frame entry for anonymous function
+					scope.add(n.child[0].typ)
+				}
+				if typ := n.child[0].typ; len(typ.ret) > 0 {
+					n.typ = typ.ret[0]
+					n.findex = scope.add(n.typ)
+					for _, t := range typ.ret[1:] {
+						scope.add(t)
+					}
+				} else {
+					n.findex = -1
+				}
 			}
 
 		case CaseBody:
 			wireChild(n)
-			if len(n.child) > 0 {
+			if typeSwichAssign(n) && len(n.child) > 1 {
+				n.start = n.child[1].start
+			} else {
 				n.start = n.child[0].start
 			}
 
@@ -546,11 +531,12 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.start = n.child[0].start // default clause
 			}
 			n.lastChild().tnext = n.anc.anc // exit node is SelectStmt
+			scope = scope.pop()
 
 		case CompositeLitExpr:
 			wireChild(n)
 			if n.anc.action != Assign {
-				n.findex = scope.inc(interp)
+				n.findex = scope.add(n.typ)
 			}
 			// TODO: Check that composite literal expr matches corresponding type
 			switch n.typ.cat {
@@ -576,38 +562,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				err = n.cfgError("fallthrough statement out of place")
 			}
 
-		case Field:
-			// A single child node (no ident, just type) means that the field refers
-			// to a return value, and space on frame should be accordingly allocated.
-			// Otherwise, just point to corresponding location in frame, resolved in
-			// ident child.
-			l := len(n.child) - 1
-			if n.typ, err = nodeType(interp, scope.anc, n.child[l]); err != nil {
-				return
-			}
-			if l == 0 {
-				if n.anc.anc.kind == FuncDecl {
-					// Receiver with implicit var decl
-					scope.sym[n.child[0].ident].typ = n.typ
-					n.child[0].typ = n.typ
-				} else {
-					n.findex = scope.inc(interp)
-				}
-			} else {
-				for _, f := range n.child[:l] {
-					f.typ = n.typ
-					if n.typ.variadic {
-						scope.sym[f.ident].typ = &Type{cat: ArrayT, val: n.typ}
-					} else {
-						scope.sym[f.ident].typ = n.typ
-					}
-				}
-			}
-
 		case File:
 			wireChild(n)
 			scope = scope.pop()
-			n.fsize = scope.size + 1
 
 		case For0: // for {}
 			body := n.child[0]
@@ -672,16 +629,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			scope = scope.pop()
 
 		case FuncDecl:
-			n.flen = scope.size + 1
-			if len(n.child[0].child) > 0 {
-				// Method: restore receiver frame location (used at run)
-				n.framepos = append(n.framepos, n.child[0].child[0].child[0].findex)
-			}
-			n.framepos = append(n.framepos, n.child[2].framepos...)
+			n.types = scope.types
 			scope = scope.pop()
 			funcName := n.child[1].ident
-			n.typ = n.child[2].typ
-			n.val = n
 			n.start = n.child[3].start
 			interp.scope[pkgName].sym[funcName].index = -1 // to force value to n.val
 			interp.scope[pkgName].sym[funcName].typ = n.typ
@@ -689,45 +639,15 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			interp.scope[pkgName].sym[funcName].node = n
 
 		case FuncLit:
-			n.typ = n.child[2].typ
-			n.val = n
-			n.flen = scope.size + 1
+			n.types = scope.types
 			scope = scope.pop()
-			n.framepos = n.child[2].framepos
-
-		case FuncType:
-			if n.typ, err = nodeType(interp, scope, n); err != nil {
-				return
-			}
-			// Store list of parameter frame indices in framepos
-			for _, c := range n.child[0].child {
-				for _, f := range c.child[:len(c.child)-1] {
-					n.framepos = append(n.framepos, f.findex)
-				}
-			}
-			// TODO: do the same for return values
 
 		case GoStmt:
 			wireChild(n)
 
 		case Ident:
-			if isKey(n) {
-				// Skip symbol creation/lookup for identifier used as key
-			} else if pos, ok := funcRet(n); ok {
-				scope.sym[n.ident] = &Symbol{index: pos, kind: Var, global: scope.global}
-				n.sym = scope.sym[n.ident]
-			} else if isFuncArg(n) {
-				n.findex = scope.inc(interp)
-				scope.sym[n.ident] = &Symbol{index: scope.size, kind: Var, global: scope.global}
-				n.sym = scope.sym[n.ident]
-			} else if isNewDefine(n) {
-				// Create a new symbol in current scope, type to be set by parent node
-				// Note that global symbol should already be defined (gta)
-				if _, _, ok := scope.lookup(n.ident); !ok || !scope.global {
-					n.findex = scope.inc(interp)
-					scope.sym[n.ident] = &Symbol{index: scope.size, kind: Var, global: scope.global}
-					n.sym = scope.sym[n.ident]
-				}
+			if isKey(n) || isNewDefine(n) {
+				break
 			} else if sym, level, ok := scope.lookup(n.ident); ok {
 				// Found symbol, populate node info
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
@@ -752,9 +672,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 							n.kind = Rvalue
 						}
 						n.typ = sym.typ
-						if n.typ.rtype.Kind() == reflect.Func {
-							n.fsize = n.typ.rtype.NumOut()
-						}
 						n.rval = sym.val.(reflect.Value)
 					case sym.kind == Bltn:
 						if n.anc.kind != CallExpr {
@@ -813,16 +730,16 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			n.child[0].tnext = n.child[1].start
 			n.child[0].fnext = n
 			n.child[1].tnext = n
-			n.findex = scope.inc(interp)
 			n.typ = n.child[0].typ
+			n.findex = scope.add(n.typ)
 
 		case LorExpr:
 			n.start = n.child[0].start
 			n.child[0].tnext = n
 			n.child[0].fnext = n.child[1].start
 			n.child[1].tnext = n
-			n.findex = scope.inc(interp)
 			n.typ = n.child[0].typ
+			n.findex = scope.add(n.typ)
 
 		case ParenExpr:
 			wireChild(n)
@@ -843,7 +760,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			for i, c := range n.child {
 				if c.typ.cat == NilT {
 					// nil: Set node value to zero of return type
-					f := getAncFunc(n)
+					f := scope.def
 					var typ *Type
 					typ, err = nodeType(interp, scope, f.child[2].child[1].child[i].lastChild())
 					if err != nil {
@@ -857,7 +774,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case SelectorExpr:
 			wireChild(n)
-			n.findex = scope.inc(interp)
 			n.typ = n.child[0].typ
 			n.recv = n.child[0].recv
 			if n.typ == nil {
@@ -873,7 +789,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					n.val = method.Index
 					n.gen = getIndexBinMethod
 					n.typ = &Type{cat: ValueT, rtype: method.Type}
-					n.fsize = method.Type.NumOut()
 					n.recv = &Receiver{node: n.child[0]}
 				case n.typ.rtype.Kind() == reflect.Ptr:
 					if field, ok := n.typ.rtype.Elem().FieldByName(n.child[1].ident); ok {
@@ -903,12 +818,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				} else if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
 					n.val = method.Index
 					n.typ = &Type{cat: ValueT, rtype: method.Type}
-					n.fsize = method.Type.NumOut()
 					n.recv = &Receiver{node: n.child[0]}
 					n.gen = getIndexBinMethod
 				} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
 					n.val = method.Index
-					n.fsize = method.Type.NumOut()
 					n.gen = getIndexBinMethod
 					n.typ = &Type{cat: ValueT, rtype: method.Type}
 					n.recv = &Receiver{node: n.child[0]}
@@ -923,27 +836,23 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					n.kind = Rvalue
 					n.rval = s
 					n.typ = &Type{cat: ValueT, rtype: s.Type()}
-					if s.Kind() == reflect.Func {
-						n.fsize = n.typ.rtype.NumOut()
-					}
 					n.gen = nop
 				} else if s, ok := interp.binType[pkg][name]; ok {
 					n.kind = Rtype
 					n.typ = &Type{cat: ValueT, rtype: s}
 					n.gen = nop
-					if s.Kind() == reflect.Func {
-						n.fsize = s.NumOut()
-					}
 				} else {
 					err = n.cfgError("package %s \"%s\" has no symbol %s", n.child[0].ident, pkg, name)
 				}
 			} else if n.typ.cat == SrcPkgT {
+				pkg, name := n.child[0].ident, n.child[1].ident
 				// Resolve source package symbol
-				if sym, ok := interp.scope[n.child[0].ident].sym[n.child[1].ident]; ok {
+				if sym, ok := interp.scope[pkg].sym[name]; ok {
 					n.findex = sym.index
 					n.val = sym.node
 					n.gen = nop
 					n.typ = sym.typ
+					n.sym = sym
 				} else {
 					err = n.cfgError("undefined selector: %s", n.child[1].ident)
 				}
@@ -969,11 +878,13 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 						// function in a struct field is always wrapped in reflect.Value
 						rtype := n.typ.TypeOf()
 						n.typ = &Type{cat: ValueT, rtype: rtype}
-						n.fsize = rtype.NumOut()
 					}
 				}
 			} else {
 				err = n.cfgError("undefined selector: %s", n.child[1].ident)
+			}
+			if n.findex != -1 {
+				n.findex = scope.add(n.typ)
 			}
 
 		case SelectStmt:
@@ -987,6 +898,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			case n.anc.kind == Define && len(n.anc.child) == 3 && n.anc.child[1] == n:
 				// pointer type expression in a var definition
 				n.gen = nop
+			case n.anc.kind == ValueSpec && n.anc.lastChild() == n:
+				// pointer type expression in a value spec
+				n.gen = nop
 			case n.anc.kind == Field:
 				// pointer type expression in a field expression (arg or struct field)
 				n.gen = nop
@@ -994,7 +908,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				// dereference expression
 				wireChild(n)
 				n.typ = n.child[0].typ.val
-				n.findex = scope.inc(interp)
+				n.findex = scope.add(n.typ)
 			}
 
 		case TypeSwitch:
@@ -1087,7 +1001,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				}
 				if n.anc.action != AssignX {
 					n.typ = n.child[1].typ
-					n.findex = scope.inc(interp)
+					n.findex = scope.add(n.typ)
 				}
 			} else {
 				n.gen = nop
@@ -1096,8 +1010,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case SliceExpr, UnaryExpr:
 			wireChild(n)
 			n.typ = n.child[0].typ
-			// TODO: avoid allocation if boolean branch op (i.e. '!' in an 'if' expr)
-			n.findex = scope.inc(interp)
+			// TODO: Optimisation: avoid allocation if boolean branch op (i.e. '!' in an 'if' expr)
+			n.findex = scope.add(n.typ)
 
 		case ValueSpec:
 			l := len(n.child) - 1
@@ -1108,12 +1022,17 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				}
 			}
 			for _, c := range n.child[:l] {
+				index := scope.add(n.typ)
+				scope.sym[c.ident] = &Symbol{index: index, kind: Var, typ: n.typ}
 				c.typ = n.typ
-				scope.sym[c.ident].typ = n.typ
+				c.findex = index
 			}
 		}
 	})
 
+	if scope != interp.universe {
+		scope.pop()
+	}
 	return initNodes, err
 }
 
@@ -1130,16 +1049,9 @@ func genRun(node *Node) error {
 			return false
 		}
 		switch n.kind {
-		case File:
-			if n.types, err = frameTypes(n, n.fsize); err != nil {
-				return false
-			}
-		case FuncDecl, FuncLit:
-			if n.types, err = frameTypes(n, n.flen); err != nil {
-				return false
-			}
 		case FuncType:
 			if len(n.anc.child) == 4 {
+				// function body entry point
 				setExec(n.anc.child[3].start)
 			}
 		case ConstDecl, VarDecl:
@@ -1248,48 +1160,6 @@ func isNewDefine(n *Node) bool {
 	return false
 }
 
-func isFuncArg(n *Node) bool {
-	if n.anc.kind != Field {
-		return false
-	}
-	l := len(n.anc.child)
-	if l == 1 && n.anc.anc.anc.kind == FuncDecl {
-		return true // method receiver
-	}
-	if l > 1 && n.anc.child[l-1] != n {
-		if fl := n.anc.anc; len(fl.anc.child) > 1 && fl == fl.anc.child[1] {
-			return false // func return arg
-		}
-		return true
-	}
-	return false
-}
-
-func funcRet(n *Node) (int, bool) {
-	if n.anc.kind == Field && n.anc.anc.anc.kind == FuncType {
-		if fl := n.anc.anc; len(fl.anc.child) > 1 && fl == fl.anc.child[1] {
-			if n != n.anc.lastChild() {
-				// n is a return parameter. Compute position as its rank
-				return retRank(n), true
-			}
-		}
-	}
-	return 0, false
-}
-
-func retRank(n *Node) int {
-	var r int
-	for _, c := range n.anc.anc.child {
-		for _, cc := range c.child[:len(c.child)-1] {
-			if cc == n {
-				break
-			}
-			r++
-		}
-	}
-	return r
-}
-
 func isBuiltinCall(n *Node) bool {
 	return n.kind == CallExpr && n.child[0].sym != nil && n.child[0].sym.kind == Bltn
 }
@@ -1330,8 +1200,8 @@ func getExec(n *Node) Builtin {
 	return n.exec
 }
 
-// setExec recursively sets the node exec builtin function
-// it does nothing if exec is already defined
+// setExec recursively sets the node exec builtin function by walking the CFG
+// from the entry point (first node to exec).
 func setExec(n *Node) {
 	if n.exec != nil {
 		return
@@ -1366,17 +1236,6 @@ func setExec(n *Node) {
 	set(n)
 }
 
-// getAncFunc returns the first node in ancestorship which is a FuncDecl or FuncLit
-func getAncFunc(n *Node) *Node {
-	for anc := n.anc; anc != nil; anc = anc.anc {
-		switch anc.kind {
-		case FuncDecl, FuncLit:
-			return anc
-		}
-	}
-	return nil
-}
-
 func getReturnedType(n *Node) *Type {
 	switch n.typ.cat {
 	case BuiltinT:
@@ -1390,44 +1249,7 @@ func getReturnedType(n *Node) *Type {
 	return n.typ.ret[0]
 }
 
-// frameTypes returns a slice of frame types for FuncDecl or FuncLit nodes
-func frameTypes(node *Node, size int) ([]reflect.Type, error) {
-	ft := make([]reflect.Type, size)
-	var err CfgError
-
-	node.Walk(func(n *Node) bool {
-		if err != nil {
-			return false
-		}
-		if n.kind == FuncDecl || n.kind == ImportDecl || n.kind == TypeDecl || n.kind == FuncLit {
-			if n == node {
-				if n.kind == FuncDecl || n.kind == FuncLit {
-					for i, t := range n.typ.ret {
-						ft[i] = t.TypeOf()
-					}
-				}
-				return true
-			}
-			return false
-		}
-		if n.findex < 0 || n.typ == nil || n.level > 0 || n.kind == BasicLit || n.typ.cat == BinPkgT {
-			return true
-		}
-		if ft[n.findex] == nil {
-			if n.typ.incomplete {
-				if n.typ, err = n.typ.finalize(); err != nil {
-					return false
-				}
-			}
-			if n.typ.cat == FuncT {
-				ft[n.findex] = reflect.TypeOf(n)
-			} else {
-				ft[n.findex] = n.typ.TypeOf()
-			}
-		}
-		// TODO: Check that type is identical
-		return true
-	}, nil)
-
-	return ft, err
+func typeSwichAssign(n *Node) bool {
+	ts := n.anc.anc.anc
+	return ts.kind == TypeSwitch && ts.child[1].action == Assign
 }

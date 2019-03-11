@@ -9,29 +9,58 @@ import (
 // All function bodies are skipped. GTA is necessary to handle out of
 // order declarations and multiple source files packages.
 func (interp *Interpreter) Gta(root *Node, rpath string) error {
+	scope := interp.universe
 	var err error
 	var pkgName string
-	scope := interp.universe
+	var iotaValue int
+
+	if root.kind != File {
+		// Set default package namespace for incremental parse
+		pkgName = "_"
+		if _, ok := interp.scope[pkgName]; !ok {
+			interp.scope[pkgName] = scope.pushBloc()
+		}
+		scope = interp.scope[pkgName]
+	}
 
 	root.Walk(func(n *Node) bool {
 		if err != nil {
 			return false
 		}
 		switch n.kind {
+		case ConstDecl:
+			iotaValue = 0
+
 		case Define:
-			varName := n.child[0].ident
-			scope.sym[varName] = &Symbol{kind: Var, global: true, index: scope.inc(interp)}
+			var typ *Type
 			if len(n.child) > 1 {
-				scope.sym[varName].typ, err = nodeType(interp, scope, n.child[1])
+				typ, err = nodeType(interp, scope, n.child[1])
 			} else {
-				scope.sym[varName].typ, err = nodeType(interp, scope, n.anc.child[0].child[1])
+				typ, err = nodeType(interp, scope, n.anc.child[0].child[1])
+			}
+			if err != nil {
+				return false
+			}
+			if typ.cat == NilT {
+				err = n.cfgError("use of untyped nil")
+				return false
+			}
+			var val interface{} = iotaValue
+			if len(n.child) > 1 {
+				val = n.child[1].val
+			}
+			scope.sym[n.child[0].ident] = &Symbol{kind: Var, global: true, index: scope.add(typ), typ: typ, val: val}
+			if n.anc.kind == ConstDecl {
+				iotaValue++
 			}
 			return false
+
+		// TODO: add DefineX, ValueSpec
 
 		case File:
 			pkgName = n.child[0].ident
 			if _, ok := interp.scope[pkgName]; !ok {
-				interp.scope[pkgName] = scope.push(0)
+				interp.scope[pkgName] = scope.pushBloc()
 			}
 			scope = interp.scope[pkgName]
 
@@ -98,6 +127,7 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 			} else {
 				// TODO: make sure we do not import a src package more than once
 				err = interp.importSrcFile(rpath, ipath, name)
+				scope.types = interp.universe.types
 				scope.sym[name] = &Symbol{typ: &Type{cat: SrcPkgT}, path: ipath}
 			}
 
@@ -127,5 +157,8 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 		return true
 	}, nil)
 
+	if scope != interp.universe {
+		scope.pop()
+	}
 	return err
 }

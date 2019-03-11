@@ -77,16 +77,12 @@ func (interp *Interpreter) run(n *Node, cf *Frame) {
 	if cf == nil {
 		f = interp.Frame
 	} else {
-		f = &Frame{anc: cf, data: make([]reflect.Value, n.flen)}
+		f = &Frame{anc: cf, data: make([]reflect.Value, len(n.types))}
 	}
 
 	for i, t := range n.types {
-		// FIXME: nil types are forbidden and should be detected at compile time (CFG)
-		if t != nil && i < len(f.data) && !f.data[i].IsValid() {
-			f.data[i] = reflect.New(t).Elem()
-		}
+		f.data[i] = reflect.New(t).Elem()
 	}
-	//log.Println(n.index, "run", n.start.index)
 	runCfg(n.start, f)
 }
 
@@ -116,13 +112,13 @@ func typeAssert(n *Node) {
 
 	if n.child[0].typ.cat == ValueT {
 		n.exec = func(f *Frame) Builtin {
-			f.data[i] = value(f).Elem()
+			f.data[i].Set(value(f).Elem())
 			return next
 		}
 	} else {
 		n.exec = func(f *Frame) Builtin {
 			v := value(f).Interface().(valueInterface)
-			f.data[i] = v.value
+			f.data[i].Set(v.value)
 			return next
 		}
 	}
@@ -190,30 +186,46 @@ func assignX(n *Node) {
 	}
 }
 
+// assignX2 implements multiple value assignment for expression where type is defined
+func assignX2(n *Node) {
+	l := len(n.child) - 2
+	b := n.child[l].findex
+	s := n.child[:l]
+	next := getExec(n.tnext)
+	values := make([]func(*Frame) reflect.Value, l)
+	for i, c := range s {
+		values[i] = genValue(c)
+	}
+
+	n.exec = func(f *Frame) Builtin {
+		for i, value := range values {
+			if f.data[b+i].IsValid() {
+				value(f).Set(f.data[b+i])
+			}
+		}
+		return next
+	}
+}
+
 // assign implements single value assignment
 func assign(n *Node) {
 	next := getExec(n.tnext)
+	value := genValue(n)
+	dest, src := n.child[0], n.lastChild()
+	var value1 func(*Frame) reflect.Value
 
-	if n.child[0].typ.cat == InterfaceT {
-		valueAddr := genValueAddr(n)
-		value1 := genValueInterface(n.lastChild())
-		n.exec = func(f *Frame) Builtin {
-			*(valueAddr(f)) = value1(f)
-			return next
-		}
-	} else {
-		value := genValue(n)
-		dest, src := n.child[0], n.lastChild()
-		var value1 func(*Frame) reflect.Value
-		if dest.typ.cat == ValueT && src.typ.cat == FuncT {
-			value1 = genNodeWrapper(src)
-		} else {
-			value1 = genValue(src)
-		}
-		n.exec = func(f *Frame) Builtin {
-			value(f).Set(value1(f))
-			return next
-		}
+	switch {
+	case n.child[0].typ.cat == InterfaceT:
+		value1 = genValueInterface(src)
+	case dest.typ.cat == ValueT && src.typ.cat == FuncT:
+		value1 = genNodeWrapper(src)
+	default:
+		value1 = genValue(src)
+	}
+
+	n.exec = func(f *Frame) Builtin {
+		value(f).Set(value1(f))
+		return next
 	}
 }
 
@@ -309,9 +321,9 @@ func _println(n *Node) {
 			fmt.Printf("%v", value(f))
 
 			// Handle multiple results of a function call argument
-			for j := 1; j < child[i].fsize; j++ {
-				fmt.Printf(" %v", f.data[child[i].findex+j])
-			}
+			//for j := 1; j < child[i].fsize; j++ {
+			//	fmt.Printf(" %v", f.data[child[i].findex+j])
+			//}
 		}
 		fmt.Println("")
 		return next
@@ -347,6 +359,7 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 	def := n.val.(*Node)
 	setExec(def.child[3].start)
 	start := def.child[3].start
+	numRet := len(def.typ.ret)
 	var receiver func(*Frame) reflect.Value
 
 	if n.recv != nil {
@@ -359,43 +372,32 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 		}
 		return reflect.MakeFunc(n.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
 			// Allocate and init local frame. All values to be settable and addressable.
-			frame := Frame{anc: f, data: make([]reflect.Value, def.flen)}
+			frame := Frame{anc: f, data: make([]reflect.Value, len(def.types))}
+			d := frame.data
 			for i, t := range def.types {
-				if t != nil {
-					frame.data[i] = reflect.New(t).Elem()
-				}
+				d[i] = reflect.New(t).Elem()
 			}
 
 			// Copy method receiver as first argument, if defined
-			i := 0
 			if receiver != nil {
-				frame.data[def.framepos[i]].Set(receiver(f))
-				i++
+				d[numRet].Set(receiver(f))
+				d = d[numRet+1:]
+			} else {
+				d = d[numRet:]
 			}
 
 			// Copy function input arguments in local frame
-			for _, arg := range in {
-				frame.data[def.framepos[i]].Set(arg)
-				i++
+			for i, arg := range in {
+				d[i].Set(arg)
 			}
 
 			// Interpreter code execution
 			runCfg(start, &frame)
 
-			// Return output values in a result vector
-			var result []reflect.Value
-
-			if len(def.child[2].child) > 1 {
-				if fieldList := def.child[2].child[1]; fieldList != nil {
-					result = make([]reflect.Value, len(fieldList.child))
-					for i, c := range fieldList.child {
-						if c.typ.cat == FuncT {
-							gv := genNodeWrapper(frame.data[i].Interface().(*Node))
-							result[i] = gv(f)
-						} else {
-							result[i] = frame.data[i]
-						}
-					}
+			result := frame.data[:numRet]
+			for i, r := range result {
+				if v, ok := r.Interface().(*Node); ok {
+					result[i] = genNodeWrapper(v)(f)
 				}
 			}
 			return result
@@ -459,6 +461,7 @@ func call(n *Node) {
 		values = append(values, nil)
 		method = true
 	}
+	numRet := len(n.child[0].typ.ret)
 	variadic := variadicPos(n)
 	child := n.child[1:]
 	tnext := getExec(n.tnext)
@@ -503,24 +506,21 @@ func call(n *Node) {
 		if def.frame != nil {
 			anc = def.frame
 		}
-		nf := Frame{anc: anc, data: make([]reflect.Value, def.flen)}
+		nf := Frame{anc: anc, data: make([]reflect.Value, len(def.types))}
 		var vararg reflect.Value
 
 		// Init local frame values
 		for i, t := range def.types {
-			if t != nil {
-				nf.data[i] = reflect.New(t).Elem()
-			}
+			nf.data[i] = reflect.New(t).Elem()
 		}
 
 		// Init variadic argument vector
 		if variadic >= 0 {
-			fi := def.framepos[variadic]
-			nf.data[fi] = reflect.New(reflect.SliceOf(def.types[fi])).Elem()
-			vararg = nf.data[fi]
+			vararg = nf.data[numRet+variadic]
 		}
 
 		// Copy input parameters from caller
+		dest := nf.data[numRet:]
 		for i, v := range values {
 			switch {
 			case method && i == 0:
@@ -534,24 +534,21 @@ func call(n *Node) {
 				} else {
 					src = v(f)
 				}
-				dest := nf.data[def.framepos[i]]
 				// Accommodate to receiver type
-				ks, kd := src.Kind(), dest.Kind()
-				if ks != kd {
+				d := dest[0]
+				if ks, kd := src.Kind(), d.Kind(); ks != kd {
 					if kd == reflect.Ptr {
-						dest.Set(src.Addr())
+						d.Set(src.Addr())
 					} else {
-						dest.Set(src.Elem())
+						d.Set(src.Elem())
 					}
 				} else {
-					dest.Set(src)
+					d.Set(src)
 				}
 			case variadic >= 0 && i >= variadic:
 				vararg.Set(reflect.Append(vararg, v(f)))
-			case len(def.typ.arg) > i && def.typ.arg[i].cat == InterfaceT:
-				nf.data[def.framepos[i]] = v(f)
 			default:
-				nf.data[def.framepos[i]].Set(v(f))
+				dest[i].Set(v(f))
 			}
 		}
 
@@ -570,7 +567,6 @@ func call(n *Node) {
 			return fnext
 		}
 		// Propagate return values to caller frame
-		//log.Println(n.index, "call rets:", ret, nf.data[:len(ret)])
 		for i, r := range ret {
 			f.data[r] = nf.data[i]
 		}
@@ -632,7 +628,6 @@ func callBin(n *Node) {
 		}
 	}
 	l := len(values)
-	fsize := n.child[0].fsize
 
 	switch {
 	case n.anc.kind == GoStmt:
@@ -652,8 +647,8 @@ func callBin(n *Node) {
 			for i, v := range values {
 				in[i] = v(f)
 			}
-			r := value(f).Call(in)
-			if r[0].Bool() {
+			res := value(f).Call(in)
+			if res[0].Bool() {
 				return tnext
 			}
 			return fnext
@@ -664,12 +659,7 @@ func callBin(n *Node) {
 			for i, v := range values {
 				in[i] = v(f)
 			}
-			//log.Println(n.index, "callbin", value(f).Type(), in)
-			r := value(f).Call(in)
-			//log.Println(n.index, "callBin, res:", r, fsize, n.findex, len(r), len(f.data))
-			for i := 0; i < fsize; i++ {
-				f.data[n.findex+i] = r[i]
-			}
+			copy(f.data[n.findex:], value(f).Call(in))
 			return tnext
 		}
 	}
@@ -751,16 +741,13 @@ func getIndexMap2(n *Node) {
 func getFunc(n *Node) {
 	i := n.findex
 	next := getExec(n.tnext)
-	if len(n.types) == 0 {
-		n.types, _ = frameTypes(n, n.flen)
-	}
 
 	n.exec = func(f *Frame) Builtin {
 		frame := *f
 		node := *n
 		node.val = &node
 		node.frame = &frame
-		f.data[i] = reflect.ValueOf(&node)
+		f.data[i].Set(reflect.ValueOf(&node))
 		return next
 	}
 }
@@ -1160,29 +1147,38 @@ func _case(n *Node) {
 		for i := range types {
 			types[i] = n.child[i].typ
 		}
-		value := genValue(sn.child[1].lastChild().child[0])
+		srcValue := genValue(sn.child[1].lastChild().child[0])
 		if len(sn.child[1].child) == 2 {
 			// assign in switch guard
-			vaddr := genValueAddr(sn.child[1].child[0])
+			destValue := genValue(n.lastChild().child[0])
 			switch len(types) {
 			case 0:
 				// default clause: assign var to interface value
 				n.exec = func(f *Frame) Builtin {
-					*(vaddr(f)) = value(f)
+					destValue(f).Set(srcValue(f))
 					return tnext
 				}
 			case 1:
 				// match against 1 type: assign var to concrete value
 				typ := types[0]
 				n.exec = func(f *Frame) Builtin {
-					if v := value(f); !v.IsValid() {
+					v := srcValue(f)
+					if !v.IsValid() {
 						// match zero value against nil
 						if typ.cat == NilT {
 							return tnext
 						}
 						return fnext
-					} else if vi := v.Interface().(valueInterface); vi.node.typ.id() == typ.id() {
-						*(vaddr(f)) = vi.value
+					}
+					vi := v.Interface().(valueInterface)
+					if vi.node == nil {
+						if typ.cat == NilT {
+							return tnext
+						}
+						return fnext
+					}
+					if vi.node.typ.id() == typ.id() {
+						destValue(f).Set(vi.value)
 						return tnext
 					}
 					return fnext
@@ -1190,10 +1186,11 @@ func _case(n *Node) {
 			default:
 				// match against multiple types: assign var to interface value
 				n.exec = func(f *Frame) Builtin {
-					vtyp := value(f).Interface().(valueInterface).node.typ
+					val := srcValue(f)
+					vid := val.Interface().(valueInterface).node.typ.id()
 					for _, typ := range types {
-						if vtyp.id() == typ.id() {
-							*(vaddr(f)) = value(f)
+						if vid == typ.id() {
+							destValue(f).Set(val)
 							return tnext
 						}
 					}
@@ -1206,7 +1203,7 @@ func _case(n *Node) {
 				n.exec = func(f *Frame) Builtin { return tnext }
 			} else {
 				n.exec = func(f *Frame) Builtin {
-					vtyp := value(f).Interface().(valueInterface).node.typ
+					vtyp := srcValue(f).Interface().(valueInterface).node.typ
 					for _, typ := range types {
 						if vtyp.id() == typ.id() {
 							return tnext

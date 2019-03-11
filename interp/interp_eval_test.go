@@ -2,6 +2,7 @@ package interp_test
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"reflect"
 	"testing"
@@ -10,6 +11,8 @@ import (
 	"github.com/containous/dyngo/interp"
 	"github.com/containous/dyngo/stdlib"
 )
+
+func init() { log.SetFlags(log.Lshortfile) }
 
 // testCase represents an interpreter test case.
 // Care must be taken when defining multiple test cases within the same interpreter
@@ -49,12 +52,11 @@ func TestEvalDecl(t *testing.T) {
 func TestEvalFunc(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	runTests(t, i, []testCase{
-		{src: `(func () {})()`, res: "<invalid reflect.Value>"},
 		{src: `(func () string {return "ok"})()`, res: "ok"},
 		{src: `(func () (res string) {res = "ok"; return})()`, res: "ok"},
 		{src: `(func () int {f := func() (a, b int) {a, b = 3, 4; return}; x, y := f(); return x+y})()`, res: "7"},
-		{src: `(func () int {f := func() (a int, b, c int) {a, b, c = 3, 4, 5; return}; x, y, z := f(); return x+y+z})()`, res: "12", skip: "BUG"},
-		{src: `(func () int {f := func() (a, b, c int) {a, b, c = 3, 4, 5; return}; x, y, z := f(); return x+y+z})()`, res: "12", skip: "BUG"},
+		{src: `(func () int {f := func() (a int, b, c int) {a, b, c = 3, 4, 5; return}; x, y, z := f(); return x+y+z})()`, res: "12"},
+		{src: `(func () int {f := func() (a, b, c int) {a, b, c = 3, 4, 5; return}; x, y, z := f(); return x+y+z})()`, res: "12"},
 	})
 }
 
@@ -70,10 +72,10 @@ func TestEvalNil(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	i.Use(stdlib.Value, stdlib.Type)
 	runTests(t, i, []testCase{
-		{desc: "assign nil", src: "a := nil", err: "1:27: use of untyped nil"},
+		{desc: "assign nil", src: "a := nil", err: "1:22: use of untyped nil"},
 		{desc: "return nil", pre: func() { eval(t, i, "func getNil() error {return nil}") }, src: "getNil()", res: "<nil>"},
 		{
-			desc: "return func which return nil error",
+			desc: "return func which return error",
 			pre: func() {
 				eval(t, i, `
 					package bar
