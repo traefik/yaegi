@@ -110,12 +110,19 @@ func typeAssert(n *Node) {
 	i := n.findex
 	next := getExec(n.tnext)
 
-	if n.child[0].typ.cat == ValueT {
+	switch {
+	case n.child[0].typ.cat == ValueT:
 		n.exec = func(f *Frame) Builtin {
 			f.data[i].Set(value(f).Elem())
 			return next
 		}
-	} else {
+	case n.child[1].typ.cat == InterfaceT:
+		n.exec = func(f *Frame) Builtin {
+			v := value(f).Interface().(valueInterface)
+			f.data[i] = reflect.ValueOf(valueInterface{v.node, v.value})
+			return next
+		}
+	default:
 		n.exec = func(f *Frame) Builtin {
 			v := value(f).Interface().(valueInterface)
 			f.data[i].Set(v.value)
@@ -130,7 +137,8 @@ func typeAssert2(n *Node) {
 	value1 := genValue(n.anc.child[1]) // returned status
 	next := getExec(n.tnext)
 
-	if n.child[0].typ.cat == ValueT {
+	switch {
+	case n.child[0].typ.cat == ValueT:
 		n.exec = func(f *Frame) Builtin {
 			if value(f).IsValid() && !value(f).IsNil() {
 				value0(f).Set(value(f).Elem())
@@ -138,7 +146,14 @@ func typeAssert2(n *Node) {
 			value1(f).SetBool(true)
 			return next
 		}
-	} else {
+	case n.child[1].typ.cat == InterfaceT:
+		n.exec = func(f *Frame) Builtin {
+			v, ok := value(f).Interface().(valueInterface)
+			value0(f).Set(reflect.ValueOf(valueInterface{v.node, v.value}))
+			value1(f).SetBool(ok)
+			return next
+		}
+	default:
 		n.exec = func(f *Frame) Builtin {
 			v, ok := value(f).Interface().(valueInterface)
 			value0(f).Set(v.value)
@@ -450,8 +465,7 @@ func call(n *Node) {
 		// Compute method receiver value
 		values = append(values, genValueRecv(n.child[0]))
 		method = true
-	}
-	if n.child[0].typ.cat == InterfaceT {
+	} else if n.child[0].action == Method {
 		// add a place holder for interface method receiver
 		values = append(values, nil)
 		method = true
@@ -524,7 +538,11 @@ func call(n *Node) {
 				if v == nil {
 					src = def.recv.val
 					if len(def.recv.index) > 0 {
-						src = src.FieldByIndex(def.recv.index)
+						if src.Kind() == reflect.Ptr {
+							src = src.Elem().FieldByIndex(def.recv.index)
+						} else {
+							src = src.FieldByIndex(def.recv.index)
+						}
 					}
 				} else {
 					src = v(f)

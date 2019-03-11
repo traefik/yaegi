@@ -264,6 +264,38 @@ func TestEvalUnary(t *testing.T) {
 	})
 }
 
+func TestEvalMethod(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	eval(t, i, `
+		type Root struct {
+			Name string
+		}
+
+		type One struct {
+			Root
+		}
+
+		type Hi interface {
+			Hello() string
+		}
+
+		func (r *Root) Hello() string { return "Hello " + r.Name }
+
+		var r = Root{"R"}
+		var o = One{r}
+		var root interface{} = &Root{Name: "test1"}
+		var one interface{} = &One{Root{Name: "test2"}}
+	`)
+	runTests(t, i, []testCase{
+		{src: "r.Hello()", res: "Hello R"},
+		{src: "(&r).Hello()", res: "Hello R"},
+		{src: "o.Hello()", res: "Hello R"},
+		{src: "(&o).Hello()", res: "Hello R"},
+		{src: "root.(Hi).Hello()", res: "Hello test1"},
+		{src: "one.(Hi).Hello()", res: "Hello test2"},
+	})
+}
+
 func runTests(t *testing.T, i *interp.Interpreter, tests []testCase) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {

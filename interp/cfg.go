@@ -866,7 +866,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.val = ti
 				switch n.typ.cat {
 				case InterfaceT:
+					n.typ = n.typ.fieldSeq(ti)
 					n.gen = getMethodByName
+					n.action = Method
 				case PtrT:
 					n.typ = n.typ.fieldSeq(ti)
 					n.gen = getPtrIndexSeq
