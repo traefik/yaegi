@@ -8,7 +8,7 @@ import (
 
 func main() {
 	i := interp.New(interp.Opt{})
-	i.Use(interp.ExportValue, interp.ExportType)
+	i.Use(interp.ExportValue)
 	if _, err := i.Eval(`import "github.com/containous/dyngo/interp"`); err != nil {
 		log.Fatal(err)
 	}

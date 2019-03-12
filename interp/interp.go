@@ -58,9 +58,6 @@ type Frame struct {
 // LibValueMap stores the map of external values per package
 type LibValueMap map[string]map[string]reflect.Value
 
-// LibTypeMap stores the map of external types per package
-//type LibTypeMap map[string]map[string]reflect.Type
-
 // Opt stores interpreter options
 type Opt struct {
 	AstDot bool // display AST graph (debug)
@@ -80,14 +77,10 @@ type Interpreter struct {
 	universe *Scope            // interpreter global level scope
 	scope    map[string]*Scope // package level scopes, indexed by package name
 	binValue LibValueMap       // runtime binary values used in interpreter
-	//binType  LibTypeMap        // runtime binary types used in interpreter
 }
 
 // ExportValue exposes interpreter values
 var ExportValue = LibValueMap{}
-
-// ExportType exposes interpreter types
-//var ExportType = LibTypeMap{}
 
 func init() {
 	me := "github.com/containous/dyngo/interp"
@@ -96,11 +89,6 @@ func init() {
 		"Interpreter": reflect.ValueOf((*Interpreter)(nil)),
 		"Opt":         reflect.ValueOf((*Opt)(nil)),
 	}
-	//ExportType[me] = map[string]reflect.Type{
-	//	"Interpreter": reflect.TypeOf((*Interpreter)(nil)).Elem(),
-	//	"Opt":         reflect.TypeOf((*Opt)(nil)).Elem(),
-	//}
-	//ExportValue[me]["ExportType"] = reflect.ValueOf(ExportType)
 	ExportValue[me]["ExportValue"] = reflect.ValueOf(ExportValue)
 }
 
@@ -129,8 +117,7 @@ func New(opt Opt) *Interpreter {
 		universe: initUniverse(),
 		scope:    map[string]*Scope{},
 		binValue: LibValueMap{},
-		//binType:  LibTypeMap{},
-		Frame: &Frame{data: []reflect.Value{}},
+		Frame:    &Frame{data: []reflect.Value{}},
 	}
 }
 
@@ -258,14 +245,10 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 
 // Use loads binary runtime symbols in the interpreter context so
 // they can be used in interpreted code
-//func (i *Interpreter) Use(values LibValueMap, types LibTypeMap) {
 func (i *Interpreter) Use(values LibValueMap) {
 	for k, v := range values {
 		i.binValue[k] = v
 	}
-	//for k, v := range types {
-	//	i.binType[k] = v
-	//}
 }
 
 // Repl performs a Read-Eval-Print-Loop on input file descriptor.
