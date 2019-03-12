@@ -209,6 +209,7 @@ const (
 	Lor
 	Lower
 	LowerEqual
+	Method
 	Mul
 	MulAssign
 	Negate
@@ -263,6 +264,7 @@ var actions = [...]string{
 	Land:         "&&",
 	Lor:          "||",
 	Lower:        "<",
+	Method:       "Method",
 	Mul:          "*",
 	MulAssign:    "*=",
 	Negate:       "-",
