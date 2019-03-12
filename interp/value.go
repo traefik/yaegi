@@ -84,15 +84,6 @@ func genValue(n *Node) func(*Frame) reflect.Value {
 	}
 }
 
-func genValueAddr(n *Node) func(*Frame) *reflect.Value {
-	return func(f *Frame) *reflect.Value {
-		for level := n.level; level > 0; level-- {
-			f = f.anc
-		}
-		return &f.data[n.findex]
-	}
-}
-
 func genValueInterface(n *Node) func(*Frame) reflect.Value {
 	value := genValue(n)
 

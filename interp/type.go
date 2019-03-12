@@ -286,29 +286,36 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 		t.incomplete = t.key.incomplete || t.val.incomplete
 
 	case SelectorExpr:
-		pkgName, typeName := n.child[0].ident, n.child[1].ident
-		if sym, _, found := scope.lookup(pkgName); found {
+		pkg, name := n.child[0].ident, n.child[1].ident
+		if sym, _, found := scope.lookup(pkg); found {
 			if sym.typ == nil {
 				t.incomplete = true
 				break
 			}
 			switch sym.typ.cat {
 			case BinPkgT:
-				pkg := interp.binType[sym.path]
-				if typ, ok := pkg[typeName]; ok {
+				types := interp.binType[sym.path]
+				if typ, ok := types[name]; ok {
 					t.cat = ValueT
 					t.rtype = typ
-				} else {
-					t.incomplete = true
+					break
 				}
+				values := interp.binValue[sym.path]
+				if v, ok := values[name]; ok {
+					t.cat = ValueT
+					t.rtype = v.Type()
+					break
+				}
+				t.incomplete = true
+
 			case SrcPkgT:
-				pkg := interp.scope[pkgName]
-				if st, ok := pkg.sym[typeName]; ok && st.kind == Typ {
+				spkg := interp.scope[pkg]
+				if st, ok := spkg.sym[name]; ok && st.kind == Typ {
 					t = st.typ
 				}
 			}
 		} else {
-			err = n.cfgError("undefined package: %s", pkgName)
+			err = n.cfgError("undefined package: %s", pkg)
 		}
 		// TODO: handle pkgsrc types
 
