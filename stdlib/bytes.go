@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["bytes"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Compare":         reflect.ValueOf(bytes.Compare),
 		"Contains":        reflect.ValueOf(bytes.Contains),
 		"ContainsAny":     reflect.ValueOf(bytes.ContainsAny),
@@ -59,10 +60,9 @@ func init() {
 		"TrimRightFunc":   reflect.ValueOf(bytes.TrimRightFunc),
 		"TrimSpace":       reflect.ValueOf(bytes.TrimSpace),
 		"TrimSuffix":      reflect.ValueOf(bytes.TrimSuffix),
-	}
 
-	Type["bytes"] = map[string]reflect.Type{
-		"Buffer": reflect.TypeOf((*bytes.Buffer)(nil)).Elem(),
-		"Reader": reflect.TypeOf((*bytes.Reader)(nil)).Elem(),
+		// type definitions
+		"Buffer": reflect.ValueOf((*bytes.Buffer)(nil)),
+		"Reader": reflect.ValueOf((*bytes.Reader)(nil)),
 	}
 }

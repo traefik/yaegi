@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["path"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Base":          reflect.ValueOf(path.Base),
 		"Clean":         reflect.ValueOf(path.Clean),
 		"Dir":           reflect.ValueOf(path.Dir),
@@ -18,7 +19,8 @@ func init() {
 		"Join":          reflect.ValueOf(path.Join),
 		"Match":         reflect.ValueOf(path.Match),
 		"Split":         reflect.ValueOf(path.Split),
-	}
 
-	Type["path"] = map[string]reflect.Type{}
+		// type definitions
+
+	}
 }

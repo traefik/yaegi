@@ -9,11 +9,11 @@ import (
 
 func init() {
 	Value["container/list"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"New": reflect.ValueOf(list.New),
-	}
 
-	Type["container/list"] = map[string]reflect.Type{
-		"Element": reflect.TypeOf((*list.Element)(nil)).Elem(),
-		"List":    reflect.TypeOf((*list.List)(nil)).Elem(),
+		// type definitions
+		"Element": reflect.ValueOf((*list.Element)(nil)),
+		"List":    reflect.ValueOf((*list.List)(nil)),
 	}
 }

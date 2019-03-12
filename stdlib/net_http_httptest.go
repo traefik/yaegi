@@ -9,16 +9,16 @@ import (
 
 func init() {
 	Value["net/http/httptest"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"DefaultRemoteAddr":  reflect.ValueOf(httptest.DefaultRemoteAddr),
 		"NewRecorder":        reflect.ValueOf(httptest.NewRecorder),
 		"NewRequest":         reflect.ValueOf(httptest.NewRequest),
 		"NewServer":          reflect.ValueOf(httptest.NewServer),
 		"NewTLSServer":       reflect.ValueOf(httptest.NewTLSServer),
 		"NewUnstartedServer": reflect.ValueOf(httptest.NewUnstartedServer),
-	}
 
-	Type["net/http/httptest"] = map[string]reflect.Type{
-		"ResponseRecorder": reflect.TypeOf((*httptest.ResponseRecorder)(nil)).Elem(),
-		"Server":           reflect.TypeOf((*httptest.Server)(nil)).Elem(),
+		// type definitions
+		"ResponseRecorder": reflect.ValueOf((*httptest.ResponseRecorder)(nil)),
+		"Server":           reflect.ValueOf((*httptest.Server)(nil)),
 	}
 }

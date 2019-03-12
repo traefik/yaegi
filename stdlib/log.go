@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["log"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Fatal":         reflect.ValueOf(log.Fatal),
 		"Fatalf":        reflect.ValueOf(log.Fatalf),
 		"Fatalln":       reflect.ValueOf(log.Fatalln),
@@ -32,9 +33,8 @@ func init() {
 		"SetFlags":      reflect.ValueOf(log.SetFlags),
 		"SetOutput":     reflect.ValueOf(log.SetOutput),
 		"SetPrefix":     reflect.ValueOf(log.SetPrefix),
-	}
 
-	Type["log"] = map[string]reflect.Type{
-		"Logger": reflect.TypeOf((*log.Logger)(nil)).Elem(),
+		// type definitions
+		"Logger": reflect.ValueOf((*log.Logger)(nil)),
 	}
 }

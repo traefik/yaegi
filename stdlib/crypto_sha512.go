@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["crypto/sha512"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"BlockSize":  reflect.ValueOf(sha512.BlockSize),
 		"New":        reflect.ValueOf(sha512.New),
 		"New384":     reflect.ValueOf(sha512.New384),
@@ -22,7 +23,8 @@ func init() {
 		"Sum512":     reflect.ValueOf(sha512.Sum512),
 		"Sum512_224": reflect.ValueOf(sha512.Sum512_224),
 		"Sum512_256": reflect.ValueOf(sha512.Sum512_256),
-	}
 
-	Type["crypto/sha512"] = map[string]reflect.Type{}
+		// type definitions
+
+	}
 }

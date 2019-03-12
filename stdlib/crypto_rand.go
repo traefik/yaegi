@@ -9,11 +9,13 @@ import (
 
 func init() {
 	Value["crypto/rand"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Int":    reflect.ValueOf(rand.Int),
 		"Prime":  reflect.ValueOf(rand.Prime),
 		"Read":   reflect.ValueOf(rand.Read),
 		"Reader": reflect.ValueOf(&rand.Reader).Elem(),
-	}
 
-	Type["crypto/rand"] = map[string]reflect.Type{}
+		// type definitions
+
+	}
 }

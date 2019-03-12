@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["image"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Black":                  reflect.ValueOf(&image.Black).Elem(),
 		"Decode":                 reflect.ValueOf(image.Decode),
 		"DecodeConfig":           reflect.ValueOf(image.DecodeConfig),
@@ -40,27 +41,26 @@ func init() {
 		"YCbCrSubsampleRatio444": reflect.ValueOf(image.YCbCrSubsampleRatio444),
 		"ZP":                     reflect.ValueOf(&image.ZP).Elem(),
 		"ZR":                     reflect.ValueOf(&image.ZR).Elem(),
-	}
 
-	Type["image"] = map[string]reflect.Type{
-		"Alpha":               reflect.TypeOf((*image.Alpha)(nil)).Elem(),
-		"Alpha16":             reflect.TypeOf((*image.Alpha16)(nil)).Elem(),
-		"CMYK":                reflect.TypeOf((*image.CMYK)(nil)).Elem(),
-		"Config":              reflect.TypeOf((*image.Config)(nil)).Elem(),
-		"Gray":                reflect.TypeOf((*image.Gray)(nil)).Elem(),
-		"Gray16":              reflect.TypeOf((*image.Gray16)(nil)).Elem(),
-		"Image":               reflect.TypeOf((*image.Image)(nil)).Elem(),
-		"NRGBA":               reflect.TypeOf((*image.NRGBA)(nil)).Elem(),
-		"NRGBA64":             reflect.TypeOf((*image.NRGBA64)(nil)).Elem(),
-		"NYCbCrA":             reflect.TypeOf((*image.NYCbCrA)(nil)).Elem(),
-		"Paletted":            reflect.TypeOf((*image.Paletted)(nil)).Elem(),
-		"PalettedImage":       reflect.TypeOf((*image.PalettedImage)(nil)).Elem(),
-		"Point":               reflect.TypeOf((*image.Point)(nil)).Elem(),
-		"RGBA":                reflect.TypeOf((*image.RGBA)(nil)).Elem(),
-		"RGBA64":              reflect.TypeOf((*image.RGBA64)(nil)).Elem(),
-		"Rectangle":           reflect.TypeOf((*image.Rectangle)(nil)).Elem(),
-		"Uniform":             reflect.TypeOf((*image.Uniform)(nil)).Elem(),
-		"YCbCr":               reflect.TypeOf((*image.YCbCr)(nil)).Elem(),
-		"YCbCrSubsampleRatio": reflect.TypeOf((*image.YCbCrSubsampleRatio)(nil)).Elem(),
+		// type definitions
+		"Alpha":               reflect.ValueOf((*image.Alpha)(nil)),
+		"Alpha16":             reflect.ValueOf((*image.Alpha16)(nil)),
+		"CMYK":                reflect.ValueOf((*image.CMYK)(nil)),
+		"Config":              reflect.ValueOf((*image.Config)(nil)),
+		"Gray":                reflect.ValueOf((*image.Gray)(nil)),
+		"Gray16":              reflect.ValueOf((*image.Gray16)(nil)),
+		"Image":               reflect.ValueOf((*image.Image)(nil)),
+		"NRGBA":               reflect.ValueOf((*image.NRGBA)(nil)),
+		"NRGBA64":             reflect.ValueOf((*image.NRGBA64)(nil)),
+		"NYCbCrA":             reflect.ValueOf((*image.NYCbCrA)(nil)),
+		"Paletted":            reflect.ValueOf((*image.Paletted)(nil)),
+		"PalettedImage":       reflect.ValueOf((*image.PalettedImage)(nil)),
+		"Point":               reflect.ValueOf((*image.Point)(nil)),
+		"RGBA":                reflect.ValueOf((*image.RGBA)(nil)),
+		"RGBA64":              reflect.ValueOf((*image.RGBA64)(nil)),
+		"Rectangle":           reflect.ValueOf((*image.Rectangle)(nil)),
+		"Uniform":             reflect.ValueOf((*image.Uniform)(nil)),
+		"YCbCr":               reflect.ValueOf((*image.YCbCr)(nil)),
+		"YCbCrSubsampleRatio": reflect.ValueOf((*image.YCbCrSubsampleRatio)(nil)),
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["net/textproto"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"CanonicalMIMEHeaderKey": reflect.ValueOf(textproto.CanonicalMIMEHeaderKey),
 		"Dial":                   reflect.ValueOf(textproto.Dial),
 		"NewConn":                reflect.ValueOf(textproto.NewConn),
@@ -16,15 +17,14 @@ func init() {
 		"NewWriter":              reflect.ValueOf(textproto.NewWriter),
 		"TrimBytes":              reflect.ValueOf(textproto.TrimBytes),
 		"TrimString":             reflect.ValueOf(textproto.TrimString),
-	}
 
-	Type["net/textproto"] = map[string]reflect.Type{
-		"Conn":          reflect.TypeOf((*textproto.Conn)(nil)).Elem(),
-		"Error":         reflect.TypeOf((*textproto.Error)(nil)).Elem(),
-		"MIMEHeader":    reflect.TypeOf((*textproto.MIMEHeader)(nil)).Elem(),
-		"Pipeline":      reflect.TypeOf((*textproto.Pipeline)(nil)).Elem(),
-		"ProtocolError": reflect.TypeOf((*textproto.ProtocolError)(nil)).Elem(),
-		"Reader":        reflect.TypeOf((*textproto.Reader)(nil)).Elem(),
-		"Writer":        reflect.TypeOf((*textproto.Writer)(nil)).Elem(),
+		// type definitions
+		"Conn":          reflect.ValueOf((*textproto.Conn)(nil)),
+		"Error":         reflect.ValueOf((*textproto.Error)(nil)),
+		"MIMEHeader":    reflect.ValueOf((*textproto.MIMEHeader)(nil)),
+		"Pipeline":      reflect.ValueOf((*textproto.Pipeline)(nil)),
+		"ProtocolError": reflect.ValueOf((*textproto.ProtocolError)(nil)),
+		"Reader":        reflect.ValueOf((*textproto.Reader)(nil)),
+		"Writer":        reflect.ValueOf((*textproto.Writer)(nil)),
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["encoding/binary"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"BigEndian":      reflect.ValueOf(&binary.BigEndian).Elem(),
 		"LittleEndian":   reflect.ValueOf(&binary.LittleEndian).Elem(),
 		"MaxVarintLen16": reflect.ValueOf(binary.MaxVarintLen16),
@@ -23,9 +24,8 @@ func init() {
 		"Uvarint":        reflect.ValueOf(binary.Uvarint),
 		"Varint":         reflect.ValueOf(binary.Varint),
 		"Write":          reflect.ValueOf(binary.Write),
-	}
 
-	Type["encoding/binary"] = map[string]reflect.Type{
-		"ByteOrder": reflect.TypeOf((*binary.ByteOrder)(nil)).Elem(),
+		// type definitions
+		"ByteOrder": reflect.ValueOf((*binary.ByteOrder)(nil)),
 	}
 }

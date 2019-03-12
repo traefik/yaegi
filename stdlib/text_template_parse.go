@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["text/template/parse"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"IsEmptyTree":    reflect.ValueOf(parse.IsEmptyTree),
 		"New":            reflect.ValueOf(parse.New),
 		"NewIdentifier":  reflect.ValueOf(parse.NewIdentifier),
@@ -31,31 +32,30 @@ func init() {
 		"NodeVariable":   reflect.ValueOf(parse.NodeVariable),
 		"NodeWith":       reflect.ValueOf(parse.NodeWith),
 		"Parse":          reflect.ValueOf(parse.Parse),
-	}
 
-	Type["text/template/parse"] = map[string]reflect.Type{
-		"ActionNode":     reflect.TypeOf((*parse.ActionNode)(nil)).Elem(),
-		"BoolNode":       reflect.TypeOf((*parse.BoolNode)(nil)).Elem(),
-		"BranchNode":     reflect.TypeOf((*parse.BranchNode)(nil)).Elem(),
-		"ChainNode":      reflect.TypeOf((*parse.ChainNode)(nil)).Elem(),
-		"CommandNode":    reflect.TypeOf((*parse.CommandNode)(nil)).Elem(),
-		"DotNode":        reflect.TypeOf((*parse.DotNode)(nil)).Elem(),
-		"FieldNode":      reflect.TypeOf((*parse.FieldNode)(nil)).Elem(),
-		"IdentifierNode": reflect.TypeOf((*parse.IdentifierNode)(nil)).Elem(),
-		"IfNode":         reflect.TypeOf((*parse.IfNode)(nil)).Elem(),
-		"ListNode":       reflect.TypeOf((*parse.ListNode)(nil)).Elem(),
-		"NilNode":        reflect.TypeOf((*parse.NilNode)(nil)).Elem(),
-		"Node":           reflect.TypeOf((*parse.Node)(nil)).Elem(),
-		"NodeType":       reflect.TypeOf((*parse.NodeType)(nil)).Elem(),
-		"NumberNode":     reflect.TypeOf((*parse.NumberNode)(nil)).Elem(),
-		"PipeNode":       reflect.TypeOf((*parse.PipeNode)(nil)).Elem(),
-		"Pos":            reflect.TypeOf((*parse.Pos)(nil)).Elem(),
-		"RangeNode":      reflect.TypeOf((*parse.RangeNode)(nil)).Elem(),
-		"StringNode":     reflect.TypeOf((*parse.StringNode)(nil)).Elem(),
-		"TemplateNode":   reflect.TypeOf((*parse.TemplateNode)(nil)).Elem(),
-		"TextNode":       reflect.TypeOf((*parse.TextNode)(nil)).Elem(),
-		"Tree":           reflect.TypeOf((*parse.Tree)(nil)).Elem(),
-		"VariableNode":   reflect.TypeOf((*parse.VariableNode)(nil)).Elem(),
-		"WithNode":       reflect.TypeOf((*parse.WithNode)(nil)).Elem(),
+		// type definitions
+		"ActionNode":     reflect.ValueOf((*parse.ActionNode)(nil)),
+		"BoolNode":       reflect.ValueOf((*parse.BoolNode)(nil)),
+		"BranchNode":     reflect.ValueOf((*parse.BranchNode)(nil)),
+		"ChainNode":      reflect.ValueOf((*parse.ChainNode)(nil)),
+		"CommandNode":    reflect.ValueOf((*parse.CommandNode)(nil)),
+		"DotNode":        reflect.ValueOf((*parse.DotNode)(nil)),
+		"FieldNode":      reflect.ValueOf((*parse.FieldNode)(nil)),
+		"IdentifierNode": reflect.ValueOf((*parse.IdentifierNode)(nil)),
+		"IfNode":         reflect.ValueOf((*parse.IfNode)(nil)),
+		"ListNode":       reflect.ValueOf((*parse.ListNode)(nil)),
+		"NilNode":        reflect.ValueOf((*parse.NilNode)(nil)),
+		"Node":           reflect.ValueOf((*parse.Node)(nil)),
+		"NodeType":       reflect.ValueOf((*parse.NodeType)(nil)),
+		"NumberNode":     reflect.ValueOf((*parse.NumberNode)(nil)),
+		"PipeNode":       reflect.ValueOf((*parse.PipeNode)(nil)),
+		"Pos":            reflect.ValueOf((*parse.Pos)(nil)),
+		"RangeNode":      reflect.ValueOf((*parse.RangeNode)(nil)),
+		"StringNode":     reflect.ValueOf((*parse.StringNode)(nil)),
+		"TemplateNode":   reflect.ValueOf((*parse.TemplateNode)(nil)),
+		"TextNode":       reflect.ValueOf((*parse.TextNode)(nil)),
+		"Tree":           reflect.ValueOf((*parse.Tree)(nil)),
+		"VariableNode":   reflect.ValueOf((*parse.VariableNode)(nil)),
+		"WithNode":       reflect.ValueOf((*parse.WithNode)(nil)),
 	}
 }

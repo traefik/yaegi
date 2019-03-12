@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["crypto/dsa"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"ErrInvalidPublicKey": reflect.ValueOf(&dsa.ErrInvalidPublicKey).Elem(),
 		"GenerateKey":         reflect.ValueOf(dsa.GenerateKey),
 		"GenerateParameters":  reflect.ValueOf(dsa.GenerateParameters),
@@ -18,12 +19,11 @@ func init() {
 		"L3072N256":           reflect.ValueOf(dsa.L3072N256),
 		"Sign":                reflect.ValueOf(dsa.Sign),
 		"Verify":              reflect.ValueOf(dsa.Verify),
-	}
 
-	Type["crypto/dsa"] = map[string]reflect.Type{
-		"ParameterSizes": reflect.TypeOf((*dsa.ParameterSizes)(nil)).Elem(),
-		"Parameters":     reflect.TypeOf((*dsa.Parameters)(nil)).Elem(),
-		"PrivateKey":     reflect.TypeOf((*dsa.PrivateKey)(nil)).Elem(),
-		"PublicKey":      reflect.TypeOf((*dsa.PublicKey)(nil)).Elem(),
+		// type definitions
+		"ParameterSizes": reflect.ValueOf((*dsa.ParameterSizes)(nil)),
+		"Parameters":     reflect.ValueOf((*dsa.Parameters)(nil)),
+		"PrivateKey":     reflect.ValueOf((*dsa.PrivateKey)(nil)),
+		"PublicKey":      reflect.ValueOf((*dsa.PublicKey)(nil)),
 	}
 }

@@ -45,8 +45,8 @@ func main() {
 		}
 		i := interp.New(opt)
 		i.Name = args[0]
-		i.Use(stdlib.Value, stdlib.Type)
-		i.Use(interp.ExportValue, interp.ExportType)
+		i.Use(stdlib.Value)
+		i.Use(interp.ExportValue)
 		if _, err := i.Eval(s); err != nil {
 			fmt.Println(err)
 		}
@@ -55,9 +55,9 @@ func main() {
 		}
 	} else {
 		i := interp.New(opt)
-		i.Use(stdlib.Value, stdlib.Type)
-		i.Use(syscall.Value, syscall.Type)
-		i.Use(interp.ExportValue, interp.ExportType)
+		i.Use(stdlib.Value)
+		i.Use(syscall.Value)
+		i.Use(interp.ExportValue)
 		i.Repl(os.Stdin, os.Stdout)
 	}
 }

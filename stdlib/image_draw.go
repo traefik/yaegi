@@ -9,17 +9,17 @@ import (
 
 func init() {
 	Value["image/draw"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Draw":           reflect.ValueOf(draw.Draw),
 		"DrawMask":       reflect.ValueOf(draw.DrawMask),
 		"FloydSteinberg": reflect.ValueOf(&draw.FloydSteinberg).Elem(),
 		"Over":           reflect.ValueOf(draw.Over),
 		"Src":            reflect.ValueOf(draw.Src),
-	}
 
-	Type["image/draw"] = map[string]reflect.Type{
-		"Drawer":    reflect.TypeOf((*draw.Drawer)(nil)).Elem(),
-		"Image":     reflect.TypeOf((*draw.Image)(nil)).Elem(),
-		"Op":        reflect.TypeOf((*draw.Op)(nil)).Elem(),
-		"Quantizer": reflect.TypeOf((*draw.Quantizer)(nil)).Elem(),
+		// type definitions
+		"Drawer":    reflect.ValueOf((*draw.Drawer)(nil)),
+		"Image":     reflect.ValueOf((*draw.Image)(nil)),
+		"Op":        reflect.ValueOf((*draw.Op)(nil)),
+		"Quantizer": reflect.ValueOf((*draw.Quantizer)(nil)),
 	}
 }

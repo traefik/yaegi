@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["sync/atomic"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"AddInt32":              reflect.ValueOf(atomic.AddInt32),
 		"AddInt64":              reflect.ValueOf(atomic.AddInt64),
 		"AddUint32":             reflect.ValueOf(atomic.AddUint32),
@@ -38,9 +39,8 @@ func init() {
 		"SwapUint32":            reflect.ValueOf(atomic.SwapUint32),
 		"SwapUint64":            reflect.ValueOf(atomic.SwapUint64),
 		"SwapUintptr":           reflect.ValueOf(atomic.SwapUintptr),
-	}
 
-	Type["sync/atomic"] = map[string]reflect.Type{
-		"Value": reflect.TypeOf((*atomic.Value)(nil)).Elem(),
+		// type definitions
+		"Value": reflect.ValueOf((*atomic.Value)(nil)),
 	}
 }

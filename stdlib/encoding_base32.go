@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["encoding/base32"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"HexEncoding": reflect.ValueOf(&base32.HexEncoding).Elem(),
 		"NewDecoder":  reflect.ValueOf(base32.NewDecoder),
 		"NewEncoder":  reflect.ValueOf(base32.NewEncoder),
@@ -16,10 +17,9 @@ func init() {
 		"NoPadding":   reflect.ValueOf(base32.NoPadding),
 		"StdEncoding": reflect.ValueOf(&base32.StdEncoding).Elem(),
 		"StdPadding":  reflect.ValueOf(base32.StdPadding),
-	}
 
-	Type["encoding/base32"] = map[string]reflect.Type{
-		"CorruptInputError": reflect.TypeOf((*base32.CorruptInputError)(nil)).Elem(),
-		"Encoding":          reflect.TypeOf((*base32.Encoding)(nil)).Elem(),
+		// type definitions
+		"CorruptInputError": reflect.ValueOf((*base32.CorruptInputError)(nil)),
+		"Encoding":          reflect.ValueOf((*base32.Encoding)(nil)),
 	}
 }

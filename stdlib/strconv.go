@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["strconv"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"AppendBool":               reflect.ValueOf(strconv.AppendBool),
 		"AppendFloat":              reflect.ValueOf(strconv.AppendFloat),
 		"AppendInt":                reflect.ValueOf(strconv.AppendInt),
@@ -43,9 +44,8 @@ func init() {
 		"QuoteToGraphic":           reflect.ValueOf(strconv.QuoteToGraphic),
 		"Unquote":                  reflect.ValueOf(strconv.Unquote),
 		"UnquoteChar":              reflect.ValueOf(strconv.UnquoteChar),
-	}
 
-	Type["strconv"] = map[string]reflect.Type{
-		"NumError": reflect.TypeOf((*strconv.NumError)(nil)).Elem(),
+		// type definitions
+		"NumError": reflect.ValueOf((*strconv.NumError)(nil)),
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["time"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"ANSIC":                  reflect.ValueOf(time.ANSIC),
 		"After":                  reflect.ValueOf(time.After),
 		"AfterFunc":              reflect.ValueOf(time.AfterFunc),
@@ -68,16 +69,15 @@ func init() {
 		"UnixDate":               reflect.ValueOf(time.UnixDate),
 		"Until":                  reflect.ValueOf(time.Until),
 		"Wednesday":              reflect.ValueOf(time.Wednesday),
-	}
 
-	Type["time"] = map[string]reflect.Type{
-		"Duration":   reflect.TypeOf((*time.Duration)(nil)).Elem(),
-		"Location":   reflect.TypeOf((*time.Location)(nil)).Elem(),
-		"Month":      reflect.TypeOf((*time.Month)(nil)).Elem(),
-		"ParseError": reflect.TypeOf((*time.ParseError)(nil)).Elem(),
-		"Ticker":     reflect.TypeOf((*time.Ticker)(nil)).Elem(),
-		"Time":       reflect.TypeOf((*time.Time)(nil)).Elem(),
-		"Timer":      reflect.TypeOf((*time.Timer)(nil)).Elem(),
-		"Weekday":    reflect.TypeOf((*time.Weekday)(nil)).Elem(),
+		// type definitions
+		"Duration":   reflect.ValueOf((*time.Duration)(nil)),
+		"Location":   reflect.ValueOf((*time.Location)(nil)),
+		"Month":      reflect.ValueOf((*time.Month)(nil)),
+		"ParseError": reflect.ValueOf((*time.ParseError)(nil)),
+		"Ticker":     reflect.ValueOf((*time.Ticker)(nil)),
+		"Time":       reflect.ValueOf((*time.Time)(nil)),
+		"Timer":      reflect.ValueOf((*time.Timer)(nil)),
+		"Weekday":    reflect.ValueOf((*time.Weekday)(nil)),
 	}
 }

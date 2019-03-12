@@ -9,12 +9,12 @@ import (
 
 func init() {
 	Value["net/http/cookiejar"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"New": reflect.ValueOf(cookiejar.New),
-	}
 
-	Type["net/http/cookiejar"] = map[string]reflect.Type{
-		"Jar":              reflect.TypeOf((*cookiejar.Jar)(nil)).Elem(),
-		"Options":          reflect.TypeOf((*cookiejar.Options)(nil)).Elem(),
-		"PublicSuffixList": reflect.TypeOf((*cookiejar.PublicSuffixList)(nil)).Elem(),
+		// type definitions
+		"Jar":              reflect.ValueOf((*cookiejar.Jar)(nil)),
+		"Options":          reflect.ValueOf((*cookiejar.Options)(nil)),
+		"PublicSuffixList": reflect.ValueOf((*cookiejar.PublicSuffixList)(nil)),
 	}
 }

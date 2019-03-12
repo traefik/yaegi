@@ -8,18 +8,19 @@ import (
 )
 
 func init() {
-	Value["crypto/x509/pkix"] = map[string]reflect.Value{}
+	Value["crypto/x509/pkix"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 
-	Type["crypto/x509/pkix"] = map[string]reflect.Type{
-		"AlgorithmIdentifier":          reflect.TypeOf((*pkix.AlgorithmIdentifier)(nil)).Elem(),
-		"AttributeTypeAndValue":        reflect.TypeOf((*pkix.AttributeTypeAndValue)(nil)).Elem(),
-		"AttributeTypeAndValueSET":     reflect.TypeOf((*pkix.AttributeTypeAndValueSET)(nil)).Elem(),
-		"CertificateList":              reflect.TypeOf((*pkix.CertificateList)(nil)).Elem(),
-		"Extension":                    reflect.TypeOf((*pkix.Extension)(nil)).Elem(),
-		"Name":                         reflect.TypeOf((*pkix.Name)(nil)).Elem(),
-		"RDNSequence":                  reflect.TypeOf((*pkix.RDNSequence)(nil)).Elem(),
-		"RelativeDistinguishedNameSET": reflect.TypeOf((*pkix.RelativeDistinguishedNameSET)(nil)).Elem(),
-		"RevokedCertificate":           reflect.TypeOf((*pkix.RevokedCertificate)(nil)).Elem(),
-		"TBSCertificateList":           reflect.TypeOf((*pkix.TBSCertificateList)(nil)).Elem(),
+		// type definitions
+		"AlgorithmIdentifier":          reflect.ValueOf((*pkix.AlgorithmIdentifier)(nil)),
+		"AttributeTypeAndValue":        reflect.ValueOf((*pkix.AttributeTypeAndValue)(nil)),
+		"AttributeTypeAndValueSET":     reflect.ValueOf((*pkix.AttributeTypeAndValueSET)(nil)),
+		"CertificateList":              reflect.ValueOf((*pkix.CertificateList)(nil)),
+		"Extension":                    reflect.ValueOf((*pkix.Extension)(nil)),
+		"Name":                         reflect.ValueOf((*pkix.Name)(nil)),
+		"RDNSequence":                  reflect.ValueOf((*pkix.RDNSequence)(nil)),
+		"RelativeDistinguishedNameSET": reflect.ValueOf((*pkix.RelativeDistinguishedNameSET)(nil)),
+		"RevokedCertificate":           reflect.ValueOf((*pkix.RevokedCertificate)(nil)),
+		"TBSCertificateList":           reflect.ValueOf((*pkix.TBSCertificateList)(nil)),
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["crypto/rsa"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"DecryptOAEP":               reflect.ValueOf(rsa.DecryptOAEP),
 		"DecryptPKCS1v15":           reflect.ValueOf(rsa.DecryptPKCS1v15),
 		"DecryptPKCS1v15SessionKey": reflect.ValueOf(rsa.DecryptPKCS1v15SessionKey),
@@ -25,15 +26,14 @@ func init() {
 		"SignPSS":                   reflect.ValueOf(rsa.SignPSS),
 		"VerifyPKCS1v15":            reflect.ValueOf(rsa.VerifyPKCS1v15),
 		"VerifyPSS":                 reflect.ValueOf(rsa.VerifyPSS),
-	}
 
-	Type["crypto/rsa"] = map[string]reflect.Type{
-		"CRTValue":               reflect.TypeOf((*rsa.CRTValue)(nil)).Elem(),
-		"OAEPOptions":            reflect.TypeOf((*rsa.OAEPOptions)(nil)).Elem(),
-		"PKCS1v15DecryptOptions": reflect.TypeOf((*rsa.PKCS1v15DecryptOptions)(nil)).Elem(),
-		"PSSOptions":             reflect.TypeOf((*rsa.PSSOptions)(nil)).Elem(),
-		"PrecomputedValues":      reflect.TypeOf((*rsa.PrecomputedValues)(nil)).Elem(),
-		"PrivateKey":             reflect.TypeOf((*rsa.PrivateKey)(nil)).Elem(),
-		"PublicKey":              reflect.TypeOf((*rsa.PublicKey)(nil)).Elem(),
+		// type definitions
+		"CRTValue":               reflect.ValueOf((*rsa.CRTValue)(nil)),
+		"OAEPOptions":            reflect.ValueOf((*rsa.OAEPOptions)(nil)),
+		"PKCS1v15DecryptOptions": reflect.ValueOf((*rsa.PKCS1v15DecryptOptions)(nil)),
+		"PSSOptions":             reflect.ValueOf((*rsa.PSSOptions)(nil)),
+		"PrecomputedValues":      reflect.ValueOf((*rsa.PrecomputedValues)(nil)),
+		"PrivateKey":             reflect.ValueOf((*rsa.PrivateKey)(nil)),
+		"PublicKey":              reflect.ValueOf((*rsa.PublicKey)(nil)),
 	}
 }

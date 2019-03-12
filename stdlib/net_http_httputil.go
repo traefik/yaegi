@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["net/http/httputil"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"DumpRequest":               reflect.ValueOf(httputil.DumpRequest),
 		"DumpRequestOut":            reflect.ValueOf(httputil.DumpRequestOut),
 		"DumpResponse":              reflect.ValueOf(httputil.DumpResponse),
@@ -22,12 +23,11 @@ func init() {
 		"NewProxyClientConn":        reflect.ValueOf(httputil.NewProxyClientConn),
 		"NewServerConn":             reflect.ValueOf(httputil.NewServerConn),
 		"NewSingleHostReverseProxy": reflect.ValueOf(httputil.NewSingleHostReverseProxy),
-	}
 
-	Type["net/http/httputil"] = map[string]reflect.Type{
-		"BufferPool":   reflect.TypeOf((*httputil.BufferPool)(nil)).Elem(),
-		"ClientConn":   reflect.TypeOf((*httputil.ClientConn)(nil)).Elem(),
-		"ReverseProxy": reflect.TypeOf((*httputil.ReverseProxy)(nil)).Elem(),
-		"ServerConn":   reflect.TypeOf((*httputil.ServerConn)(nil)).Elem(),
+		// type definitions
+		"BufferPool":   reflect.ValueOf((*httputil.BufferPool)(nil)),
+		"ClientConn":   reflect.ValueOf((*httputil.ClientConn)(nil)),
+		"ReverseProxy": reflect.ValueOf((*httputil.ReverseProxy)(nil)),
+		"ServerConn":   reflect.ValueOf((*httputil.ServerConn)(nil)),
 	}
 }

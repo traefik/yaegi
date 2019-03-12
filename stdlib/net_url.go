@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["net/url"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Parse":           reflect.ValueOf(url.Parse),
 		"ParseQuery":      reflect.ValueOf(url.ParseQuery),
 		"ParseRequestURI": reflect.ValueOf(url.ParseRequestURI),
@@ -18,14 +19,13 @@ func init() {
 		"QueryUnescape":   reflect.ValueOf(url.QueryUnescape),
 		"User":            reflect.ValueOf(url.User),
 		"UserPassword":    reflect.ValueOf(url.UserPassword),
-	}
 
-	Type["net/url"] = map[string]reflect.Type{
-		"Error":            reflect.TypeOf((*url.Error)(nil)).Elem(),
-		"EscapeError":      reflect.TypeOf((*url.EscapeError)(nil)).Elem(),
-		"InvalidHostError": reflect.TypeOf((*url.InvalidHostError)(nil)).Elem(),
-		"URL":              reflect.TypeOf((*url.URL)(nil)).Elem(),
-		"Userinfo":         reflect.TypeOf((*url.Userinfo)(nil)).Elem(),
-		"Values":           reflect.TypeOf((*url.Values)(nil)).Elem(),
+		// type definitions
+		"Error":            reflect.ValueOf((*url.Error)(nil)),
+		"EscapeError":      reflect.ValueOf((*url.EscapeError)(nil)),
+		"InvalidHostError": reflect.ValueOf((*url.InvalidHostError)(nil)),
+		"URL":              reflect.ValueOf((*url.URL)(nil)),
+		"Userinfo":         reflect.ValueOf((*url.Userinfo)(nil)),
+		"Values":           reflect.ValueOf((*url.Values)(nil)),
 	}
 }

@@ -9,9 +9,11 @@ import (
 
 func init() {
 	Value["crypto/hmac"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Equal": reflect.ValueOf(hmac.Equal),
 		"New":   reflect.ValueOf(hmac.New),
-	}
 
-	Type["crypto/hmac"] = map[string]reflect.Type{}
+		// type definitions
+
+	}
 }

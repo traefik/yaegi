@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["archive/tar"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"ErrFieldTooLong":    reflect.ValueOf(&tar.ErrFieldTooLong).Elem(),
 		"ErrHeader":          reflect.ValueOf(&tar.ErrHeader).Elem(),
 		"ErrWriteAfterClose": reflect.ValueOf(&tar.ErrWriteAfterClose).Elem(),
@@ -34,12 +35,11 @@ func init() {
 		"TypeSymlink":        reflect.ValueOf(tar.TypeSymlink),
 		"TypeXGlobalHeader":  reflect.ValueOf(tar.TypeXGlobalHeader),
 		"TypeXHeader":        reflect.ValueOf(tar.TypeXHeader),
-	}
 
-	Type["archive/tar"] = map[string]reflect.Type{
-		"Format": reflect.TypeOf((*tar.Format)(nil)).Elem(),
-		"Header": reflect.TypeOf((*tar.Header)(nil)).Elem(),
-		"Reader": reflect.TypeOf((*tar.Reader)(nil)).Elem(),
-		"Writer": reflect.TypeOf((*tar.Writer)(nil)).Elem(),
+		// type definitions
+		"Format": reflect.ValueOf((*tar.Format)(nil)),
+		"Header": reflect.ValueOf((*tar.Header)(nil)),
+		"Reader": reflect.ValueOf((*tar.Reader)(nil)),
+		"Writer": reflect.ValueOf((*tar.Writer)(nil)),
 	}
 }

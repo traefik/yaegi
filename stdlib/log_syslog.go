@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["log/syslog"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Dial":         reflect.ValueOf(syslog.Dial),
 		"LOG_ALERT":    reflect.ValueOf(syslog.LOG_ALERT),
 		"LOG_AUTH":     reflect.ValueOf(syslog.LOG_AUTH),
@@ -40,10 +41,9 @@ func init() {
 		"LOG_WARNING":  reflect.ValueOf(syslog.LOG_WARNING),
 		"New":          reflect.ValueOf(syslog.New),
 		"NewLogger":    reflect.ValueOf(syslog.NewLogger),
-	}
 
-	Type["log/syslog"] = map[string]reflect.Type{
-		"Priority": reflect.TypeOf((*syslog.Priority)(nil)).Elem(),
-		"Writer":   reflect.TypeOf((*syslog.Writer)(nil)).Elem(),
+		// type definitions
+		"Priority": reflect.ValueOf((*syslog.Priority)(nil)),
+		"Writer":   reflect.ValueOf((*syslog.Writer)(nil)),
 	}
 }

@@ -84,14 +84,18 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 				ipath = n.child[0].val.(string)
 				name = path.Base(ipath)
 			}
-			if interp.binValue[ipath] != nil || interp.binType[ipath] != nil {
+			if interp.binValue[ipath] != nil {
 				if name == "." {
 					for n, v := range interp.binValue[ipath] {
-						scope.sym[n] = &Symbol{kind: Bin, typ: &Type{cat: ValueT, rtype: v.Type()}, val: v}
+						if isBinType(v) {
+							scope.sym[n] = &Symbol{kind: Bin, typ: &Type{cat: ValueT, rtype: v.Type().Elem()}, val: v}
+						} else {
+							scope.sym[n] = &Symbol{kind: Bin, typ: &Type{cat: ValueT, rtype: v.Type()}, val: v}
+						}
 					}
-					for n, t := range interp.binType[ipath] {
-						scope.sym[n] = &Symbol{kind: Bin, typ: &Type{cat: ValueT, rtype: t}}
-					}
+					//for n, t := range interp.binType[ipath] {
+					//	scope.sym[n] = &Symbol{kind: Bin, typ: &Type{cat: ValueT, rtype: t}}
+					//}
 				} else {
 					scope.sym[name] = &Symbol{typ: &Type{cat: BinPkgT}, path: ipath}
 				}

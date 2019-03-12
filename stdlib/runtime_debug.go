@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["runtime/debug"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"FreeOSMemory":    reflect.ValueOf(debug.FreeOSMemory),
 		"PrintStack":      reflect.ValueOf(debug.PrintStack),
 		"ReadGCStats":     reflect.ValueOf(debug.ReadGCStats),
@@ -19,9 +20,8 @@ func init() {
 		"SetTraceback":    reflect.ValueOf(debug.SetTraceback),
 		"Stack":           reflect.ValueOf(debug.Stack),
 		"WriteHeapDump":   reflect.ValueOf(debug.WriteHeapDump),
-	}
 
-	Type["runtime/debug"] = map[string]reflect.Type{
-		"GCStats": reflect.TypeOf((*debug.GCStats)(nil)).Elem(),
+		// type definitions
+		"GCStats": reflect.ValueOf((*debug.GCStats)(nil)),
 	}
 }

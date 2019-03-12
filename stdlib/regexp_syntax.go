@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["regexp/syntax"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"ClassNL":                  reflect.ValueOf(syntax.ClassNL),
 		"Compile":                  reflect.ValueOf(syntax.Compile),
 		"DotNL":                    reflect.ValueOf(syntax.DotNL),
@@ -76,17 +77,16 @@ func init() {
 		"Simple":                   reflect.ValueOf(syntax.Simple),
 		"UnicodeGroups":            reflect.ValueOf(syntax.UnicodeGroups),
 		"WasDollar":                reflect.ValueOf(syntax.WasDollar),
-	}
 
-	Type["regexp/syntax"] = map[string]reflect.Type{
-		"EmptyOp":   reflect.TypeOf((*syntax.EmptyOp)(nil)).Elem(),
-		"Error":     reflect.TypeOf((*syntax.Error)(nil)).Elem(),
-		"ErrorCode": reflect.TypeOf((*syntax.ErrorCode)(nil)).Elem(),
-		"Flags":     reflect.TypeOf((*syntax.Flags)(nil)).Elem(),
-		"Inst":      reflect.TypeOf((*syntax.Inst)(nil)).Elem(),
-		"InstOp":    reflect.TypeOf((*syntax.InstOp)(nil)).Elem(),
-		"Op":        reflect.TypeOf((*syntax.Op)(nil)).Elem(),
-		"Prog":      reflect.TypeOf((*syntax.Prog)(nil)).Elem(),
-		"Regexp":    reflect.TypeOf((*syntax.Regexp)(nil)).Elem(),
+		// type definitions
+		"EmptyOp":   reflect.ValueOf((*syntax.EmptyOp)(nil)),
+		"Error":     reflect.ValueOf((*syntax.Error)(nil)),
+		"ErrorCode": reflect.ValueOf((*syntax.ErrorCode)(nil)),
+		"Flags":     reflect.ValueOf((*syntax.Flags)(nil)),
+		"Inst":      reflect.ValueOf((*syntax.Inst)(nil)),
+		"InstOp":    reflect.ValueOf((*syntax.InstOp)(nil)),
+		"Op":        reflect.ValueOf((*syntax.Op)(nil)),
+		"Prog":      reflect.ValueOf((*syntax.Prog)(nil)),
+		"Regexp":    reflect.ValueOf((*syntax.Regexp)(nil)),
 	}
 }

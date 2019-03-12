@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["math"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Abs":                    reflect.ValueOf(math.Abs),
 		"Acos":                   reflect.ValueOf(math.Acos),
 		"Acosh":                  reflect.ValueOf(math.Acosh),
@@ -102,7 +103,8 @@ func init() {
 		"Y0":                     reflect.ValueOf(math.Y0),
 		"Y1":                     reflect.ValueOf(math.Y1),
 		"Yn":                     reflect.ValueOf(math.Yn),
-	}
 
-	Type["math"] = map[string]reflect.Type{}
+		// type definitions
+
+	}
 }

@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["runtime"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"BlockProfile":            reflect.ValueOf(runtime.BlockProfile),
 		"Breakpoint":              reflect.ValueOf(runtime.Breakpoint),
 		"CPUProfile":              reflect.ValueOf(runtime.CPUProfile),
@@ -46,17 +47,16 @@ func init() {
 		"ThreadCreateProfile":     reflect.ValueOf(runtime.ThreadCreateProfile),
 		"UnlockOSThread":          reflect.ValueOf(runtime.UnlockOSThread),
 		"Version":                 reflect.ValueOf(runtime.Version),
-	}
 
-	Type["runtime"] = map[string]reflect.Type{
-		"BlockProfileRecord": reflect.TypeOf((*runtime.BlockProfileRecord)(nil)).Elem(),
-		"Error":              reflect.TypeOf((*runtime.Error)(nil)).Elem(),
-		"Frame":              reflect.TypeOf((*runtime.Frame)(nil)).Elem(),
-		"Frames":             reflect.TypeOf((*runtime.Frames)(nil)).Elem(),
-		"Func":               reflect.TypeOf((*runtime.Func)(nil)).Elem(),
-		"MemProfileRecord":   reflect.TypeOf((*runtime.MemProfileRecord)(nil)).Elem(),
-		"MemStats":           reflect.TypeOf((*runtime.MemStats)(nil)).Elem(),
-		"StackRecord":        reflect.TypeOf((*runtime.StackRecord)(nil)).Elem(),
-		"TypeAssertionError": reflect.TypeOf((*runtime.TypeAssertionError)(nil)).Elem(),
+		// type definitions
+		"BlockProfileRecord": reflect.ValueOf((*runtime.BlockProfileRecord)(nil)),
+		"Error":              reflect.ValueOf((*runtime.Error)(nil)),
+		"Frame":              reflect.ValueOf((*runtime.Frame)(nil)),
+		"Frames":             reflect.ValueOf((*runtime.Frames)(nil)),
+		"Func":               reflect.ValueOf((*runtime.Func)(nil)),
+		"MemProfileRecord":   reflect.ValueOf((*runtime.MemProfileRecord)(nil)),
+		"MemStats":           reflect.ValueOf((*runtime.MemStats)(nil)),
+		"StackRecord":        reflect.ValueOf((*runtime.StackRecord)(nil)),
+		"TypeAssertionError": reflect.ValueOf((*runtime.TypeAssertionError)(nil)),
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["hash/crc32"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Castagnoli":   reflect.ValueOf(uint32(crc32.Castagnoli)),
 		"Checksum":     reflect.ValueOf(crc32.Checksum),
 		"ChecksumIEEE": reflect.ValueOf(crc32.ChecksumIEEE),
@@ -20,9 +21,8 @@ func init() {
 		"NewIEEE":      reflect.ValueOf(crc32.NewIEEE),
 		"Size":         reflect.ValueOf(crc32.Size),
 		"Update":       reflect.ValueOf(crc32.Update),
-	}
 
-	Type["hash/crc32"] = map[string]reflect.Type{
-		"Table": reflect.TypeOf((*crc32.Table)(nil)).Elem(),
+		// type definitions
+		"Table": reflect.ValueOf((*crc32.Table)(nil)),
 	}
 }

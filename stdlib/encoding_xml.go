@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["encoding/xml"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"CopyToken":       reflect.ValueOf(xml.CopyToken),
 		"Escape":          reflect.ValueOf(xml.Escape),
 		"EscapeText":      reflect.ValueOf(xml.EscapeText),
@@ -21,28 +22,27 @@ func init() {
 		"NewEncoder":      reflect.ValueOf(xml.NewEncoder),
 		"NewTokenDecoder": reflect.ValueOf(xml.NewTokenDecoder),
 		"Unmarshal":       reflect.ValueOf(xml.Unmarshal),
-	}
 
-	Type["encoding/xml"] = map[string]reflect.Type{
-		"Attr":                 reflect.TypeOf((*xml.Attr)(nil)).Elem(),
-		"CharData":             reflect.TypeOf((*xml.CharData)(nil)).Elem(),
-		"Comment":              reflect.TypeOf((*xml.Comment)(nil)).Elem(),
-		"Decoder":              reflect.TypeOf((*xml.Decoder)(nil)).Elem(),
-		"Directive":            reflect.TypeOf((*xml.Directive)(nil)).Elem(),
-		"Encoder":              reflect.TypeOf((*xml.Encoder)(nil)).Elem(),
-		"EndElement":           reflect.TypeOf((*xml.EndElement)(nil)).Elem(),
-		"Marshaler":            reflect.TypeOf((*xml.Marshaler)(nil)).Elem(),
-		"MarshalerAttr":        reflect.TypeOf((*xml.MarshalerAttr)(nil)).Elem(),
-		"Name":                 reflect.TypeOf((*xml.Name)(nil)).Elem(),
-		"ProcInst":             reflect.TypeOf((*xml.ProcInst)(nil)).Elem(),
-		"StartElement":         reflect.TypeOf((*xml.StartElement)(nil)).Elem(),
-		"SyntaxError":          reflect.TypeOf((*xml.SyntaxError)(nil)).Elem(),
-		"TagPathError":         reflect.TypeOf((*xml.TagPathError)(nil)).Elem(),
-		"Token":                reflect.TypeOf((*xml.Token)(nil)).Elem(),
-		"TokenReader":          reflect.TypeOf((*xml.TokenReader)(nil)).Elem(),
-		"UnmarshalError":       reflect.TypeOf((*xml.UnmarshalError)(nil)).Elem(),
-		"Unmarshaler":          reflect.TypeOf((*xml.Unmarshaler)(nil)).Elem(),
-		"UnmarshalerAttr":      reflect.TypeOf((*xml.UnmarshalerAttr)(nil)).Elem(),
-		"UnsupportedTypeError": reflect.TypeOf((*xml.UnsupportedTypeError)(nil)).Elem(),
+		// type definitions
+		"Attr":                 reflect.ValueOf((*xml.Attr)(nil)),
+		"CharData":             reflect.ValueOf((*xml.CharData)(nil)),
+		"Comment":              reflect.ValueOf((*xml.Comment)(nil)),
+		"Decoder":              reflect.ValueOf((*xml.Decoder)(nil)),
+		"Directive":            reflect.ValueOf((*xml.Directive)(nil)),
+		"Encoder":              reflect.ValueOf((*xml.Encoder)(nil)),
+		"EndElement":           reflect.ValueOf((*xml.EndElement)(nil)),
+		"Marshaler":            reflect.ValueOf((*xml.Marshaler)(nil)),
+		"MarshalerAttr":        reflect.ValueOf((*xml.MarshalerAttr)(nil)),
+		"Name":                 reflect.ValueOf((*xml.Name)(nil)),
+		"ProcInst":             reflect.ValueOf((*xml.ProcInst)(nil)),
+		"StartElement":         reflect.ValueOf((*xml.StartElement)(nil)),
+		"SyntaxError":          reflect.ValueOf((*xml.SyntaxError)(nil)),
+		"TagPathError":         reflect.ValueOf((*xml.TagPathError)(nil)),
+		"Token":                reflect.ValueOf((*xml.Token)(nil)),
+		"TokenReader":          reflect.ValueOf((*xml.TokenReader)(nil)),
+		"UnmarshalError":       reflect.ValueOf((*xml.UnmarshalError)(nil)),
+		"Unmarshaler":          reflect.ValueOf((*xml.Unmarshaler)(nil)),
+		"UnmarshalerAttr":      reflect.ValueOf((*xml.UnmarshalerAttr)(nil)),
+		"UnsupportedTypeError": reflect.ValueOf((*xml.UnsupportedTypeError)(nil)),
 	}
 }

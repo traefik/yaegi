@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["compress/flate"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"BestCompression":    reflect.ValueOf(flate.BestCompression),
 		"BestSpeed":          reflect.ValueOf(flate.BestSpeed),
 		"DefaultCompression": reflect.ValueOf(flate.DefaultCompression),
@@ -18,15 +19,14 @@ func init() {
 		"NewWriter":          reflect.ValueOf(flate.NewWriter),
 		"NewWriterDict":      reflect.ValueOf(flate.NewWriterDict),
 		"NoCompression":      reflect.ValueOf(flate.NoCompression),
-	}
 
-	Type["compress/flate"] = map[string]reflect.Type{
-		"CorruptInputError": reflect.TypeOf((*flate.CorruptInputError)(nil)).Elem(),
-		"InternalError":     reflect.TypeOf((*flate.InternalError)(nil)).Elem(),
-		"ReadError":         reflect.TypeOf((*flate.ReadError)(nil)).Elem(),
-		"Reader":            reflect.TypeOf((*flate.Reader)(nil)).Elem(),
-		"Resetter":          reflect.TypeOf((*flate.Resetter)(nil)).Elem(),
-		"WriteError":        reflect.TypeOf((*flate.WriteError)(nil)).Elem(),
-		"Writer":            reflect.TypeOf((*flate.Writer)(nil)).Elem(),
+		// type definitions
+		"CorruptInputError": reflect.ValueOf((*flate.CorruptInputError)(nil)),
+		"InternalError":     reflect.ValueOf((*flate.InternalError)(nil)),
+		"ReadError":         reflect.ValueOf((*flate.ReadError)(nil)),
+		"Reader":            reflect.ValueOf((*flate.Reader)(nil)),
+		"Resetter":          reflect.ValueOf((*flate.Resetter)(nil)),
+		"WriteError":        reflect.ValueOf((*flate.WriteError)(nil)),
+		"Writer":            reflect.ValueOf((*flate.Writer)(nil)),
 	}
 }

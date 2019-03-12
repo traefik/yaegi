@@ -9,19 +9,19 @@ import (
 
 func init() {
 	Value["os/user"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Current":       reflect.ValueOf(user.Current),
 		"Lookup":        reflect.ValueOf(user.Lookup),
 		"LookupGroup":   reflect.ValueOf(user.LookupGroup),
 		"LookupGroupId": reflect.ValueOf(user.LookupGroupId),
 		"LookupId":      reflect.ValueOf(user.LookupId),
-	}
 
-	Type["os/user"] = map[string]reflect.Type{
-		"Group":               reflect.TypeOf((*user.Group)(nil)).Elem(),
-		"UnknownGroupError":   reflect.TypeOf((*user.UnknownGroupError)(nil)).Elem(),
-		"UnknownGroupIdError": reflect.TypeOf((*user.UnknownGroupIdError)(nil)).Elem(),
-		"UnknownUserError":    reflect.TypeOf((*user.UnknownUserError)(nil)).Elem(),
-		"UnknownUserIdError":  reflect.TypeOf((*user.UnknownUserIdError)(nil)).Elem(),
-		"User":                reflect.TypeOf((*user.User)(nil)).Elem(),
+		// type definitions
+		"Group":               reflect.ValueOf((*user.Group)(nil)),
+		"UnknownGroupError":   reflect.ValueOf((*user.UnknownGroupError)(nil)),
+		"UnknownGroupIdError": reflect.ValueOf((*user.UnknownGroupIdError)(nil)),
+		"UnknownUserError":    reflect.ValueOf((*user.UnknownUserError)(nil)),
+		"UnknownUserIdError":  reflect.ValueOf((*user.UnknownUserIdError)(nil)),
+		"User":                reflect.ValueOf((*user.User)(nil)),
 	}
 }

@@ -9,15 +9,15 @@ import (
 
 func init() {
 	Value["go/scanner"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"PrintError":   reflect.ValueOf(scanner.PrintError),
 		"ScanComments": reflect.ValueOf(scanner.ScanComments),
-	}
 
-	Type["go/scanner"] = map[string]reflect.Type{
-		"Error":        reflect.TypeOf((*scanner.Error)(nil)).Elem(),
-		"ErrorHandler": reflect.TypeOf((*scanner.ErrorHandler)(nil)).Elem(),
-		"ErrorList":    reflect.TypeOf((*scanner.ErrorList)(nil)).Elem(),
-		"Mode":         reflect.TypeOf((*scanner.Mode)(nil)).Elem(),
-		"Scanner":      reflect.TypeOf((*scanner.Scanner)(nil)).Elem(),
+		// type definitions
+		"Error":        reflect.ValueOf((*scanner.Error)(nil)),
+		"ErrorHandler": reflect.ValueOf((*scanner.ErrorHandler)(nil)),
+		"ErrorList":    reflect.ValueOf((*scanner.ErrorList)(nil)),
+		"Mode":         reflect.ValueOf((*scanner.Mode)(nil)),
+		"Scanner":      reflect.ValueOf((*scanner.Scanner)(nil)),
 	}
 }

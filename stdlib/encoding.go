@@ -8,12 +8,13 @@ import (
 )
 
 func init() {
-	Value["encoding"] = map[string]reflect.Value{}
+	Value["encoding"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 
-	Type["encoding"] = map[string]reflect.Type{
-		"BinaryMarshaler":   reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem(),
-		"BinaryUnmarshaler": reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem(),
-		"TextMarshaler":     reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem(),
-		"TextUnmarshaler":   reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem(),
+		// type definitions
+		"BinaryMarshaler":   reflect.ValueOf((*encoding.BinaryMarshaler)(nil)),
+		"BinaryUnmarshaler": reflect.ValueOf((*encoding.BinaryUnmarshaler)(nil)),
+		"TextMarshaler":     reflect.ValueOf((*encoding.TextMarshaler)(nil)),
+		"TextUnmarshaler":   reflect.ValueOf((*encoding.TextUnmarshaler)(nil)),
 	}
 }

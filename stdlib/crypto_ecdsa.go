@@ -9,13 +9,13 @@ import (
 
 func init() {
 	Value["crypto/ecdsa"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"GenerateKey": reflect.ValueOf(ecdsa.GenerateKey),
 		"Sign":        reflect.ValueOf(ecdsa.Sign),
 		"Verify":      reflect.ValueOf(ecdsa.Verify),
-	}
 
-	Type["crypto/ecdsa"] = map[string]reflect.Type{
-		"PrivateKey": reflect.TypeOf((*ecdsa.PrivateKey)(nil)).Elem(),
-		"PublicKey":  reflect.TypeOf((*ecdsa.PublicKey)(nil)).Elem(),
+		// type definitions
+		"PrivateKey": reflect.ValueOf((*ecdsa.PrivateKey)(nil)),
+		"PublicKey":  reflect.ValueOf((*ecdsa.PublicKey)(nil)),
 	}
 }

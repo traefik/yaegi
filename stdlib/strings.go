@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["strings"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Compare":        reflect.ValueOf(strings.Compare),
 		"Contains":       reflect.ValueOf(strings.Contains),
 		"ContainsAny":    reflect.ValueOf(strings.ContainsAny),
@@ -54,11 +55,10 @@ func init() {
 		"TrimRightFunc":  reflect.ValueOf(strings.TrimRightFunc),
 		"TrimSpace":      reflect.ValueOf(strings.TrimSpace),
 		"TrimSuffix":     reflect.ValueOf(strings.TrimSuffix),
-	}
 
-	Type["strings"] = map[string]reflect.Type{
-		"Builder":  reflect.TypeOf((*strings.Builder)(nil)).Elem(),
-		"Reader":   reflect.TypeOf((*strings.Reader)(nil)).Elem(),
-		"Replacer": reflect.TypeOf((*strings.Replacer)(nil)).Elem(),
+		// type definitions
+		"Builder":  reflect.ValueOf((*strings.Builder)(nil)),
+		"Reader":   reflect.ValueOf((*strings.Reader)(nil)),
+		"Replacer": reflect.ValueOf((*strings.Replacer)(nil)),
 	}
 }

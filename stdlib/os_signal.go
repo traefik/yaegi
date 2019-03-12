@@ -9,12 +9,14 @@ import (
 
 func init() {
 	Value["os/signal"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Ignore":  reflect.ValueOf(signal.Ignore),
 		"Ignored": reflect.ValueOf(signal.Ignored),
 		"Notify":  reflect.ValueOf(signal.Notify),
 		"Reset":   reflect.ValueOf(signal.Reset),
 		"Stop":    reflect.ValueOf(signal.Stop),
-	}
 
-	Type["os/signal"] = map[string]reflect.Type{}
+		// type definitions
+
+	}
 }

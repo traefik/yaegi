@@ -9,11 +9,11 @@ import (
 
 func init() {
 	Value["crypto/rc4"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"NewCipher": reflect.ValueOf(rc4.NewCipher),
-	}
 
-	Type["crypto/rc4"] = map[string]reflect.Type{
-		"Cipher":       reflect.TypeOf((*rc4.Cipher)(nil)).Elem(),
-		"KeySizeError": reflect.TypeOf((*rc4.KeySizeError)(nil)).Elem(),
+		// type definitions
+		"Cipher":       reflect.ValueOf((*rc4.Cipher)(nil)),
+		"KeySizeError": reflect.ValueOf((*rc4.KeySizeError)(nil)),
 	}
 }

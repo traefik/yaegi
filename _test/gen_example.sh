@@ -20,7 +20,7 @@ do
 		print "func Example_'${file%.*}'() {"
 		print "src := `" src "`"
 		print "i := interp.New(interp.Opt{Entry: \"main\"})"
-		print "i.Use(stdlib.Value, stdlib.Type)"
+		print "i.Use(stdlib.Value)"
 		print "_, err := i.Eval(src)"
 		print "if err != nil {"
 		print "	panic(err)"

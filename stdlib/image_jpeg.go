@@ -9,16 +9,16 @@ import (
 
 func init() {
 	Value["image/jpeg"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Decode":         reflect.ValueOf(jpeg.Decode),
 		"DecodeConfig":   reflect.ValueOf(jpeg.DecodeConfig),
 		"DefaultQuality": reflect.ValueOf(jpeg.DefaultQuality),
 		"Encode":         reflect.ValueOf(jpeg.Encode),
-	}
 
-	Type["image/jpeg"] = map[string]reflect.Type{
-		"FormatError":      reflect.TypeOf((*jpeg.FormatError)(nil)).Elem(),
-		"Options":          reflect.TypeOf((*jpeg.Options)(nil)).Elem(),
-		"Reader":           reflect.TypeOf((*jpeg.Reader)(nil)).Elem(),
-		"UnsupportedError": reflect.TypeOf((*jpeg.UnsupportedError)(nil)).Elem(),
+		// type definitions
+		"FormatError":      reflect.ValueOf((*jpeg.FormatError)(nil)),
+		"Options":          reflect.ValueOf((*jpeg.Options)(nil)),
+		"Reader":           reflect.ValueOf((*jpeg.Reader)(nil)),
+		"UnsupportedError": reflect.ValueOf((*jpeg.UnsupportedError)(nil)),
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["crypto/cipher"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"NewCBCDecrypter":     reflect.ValueOf(cipher.NewCBCDecrypter),
 		"NewCBCEncrypter":     reflect.ValueOf(cipher.NewCBCEncrypter),
 		"NewCFBDecrypter":     reflect.ValueOf(cipher.NewCFBDecrypter),
@@ -18,14 +19,13 @@ func init() {
 		"NewGCMWithNonceSize": reflect.ValueOf(cipher.NewGCMWithNonceSize),
 		"NewGCMWithTagSize":   reflect.ValueOf(cipher.NewGCMWithTagSize),
 		"NewOFB":              reflect.ValueOf(cipher.NewOFB),
-	}
 
-	Type["crypto/cipher"] = map[string]reflect.Type{
-		"AEAD":         reflect.TypeOf((*cipher.AEAD)(nil)).Elem(),
-		"Block":        reflect.TypeOf((*cipher.Block)(nil)).Elem(),
-		"BlockMode":    reflect.TypeOf((*cipher.BlockMode)(nil)).Elem(),
-		"Stream":       reflect.TypeOf((*cipher.Stream)(nil)).Elem(),
-		"StreamReader": reflect.TypeOf((*cipher.StreamReader)(nil)).Elem(),
-		"StreamWriter": reflect.TypeOf((*cipher.StreamWriter)(nil)).Elem(),
+		// type definitions
+		"AEAD":         reflect.ValueOf((*cipher.AEAD)(nil)),
+		"Block":        reflect.ValueOf((*cipher.Block)(nil)),
+		"BlockMode":    reflect.ValueOf((*cipher.BlockMode)(nil)),
+		"Stream":       reflect.ValueOf((*cipher.Stream)(nil)),
+		"StreamReader": reflect.ValueOf((*cipher.StreamReader)(nil)),
+		"StreamWriter": reflect.ValueOf((*cipher.StreamWriter)(nil)),
 	}
 }

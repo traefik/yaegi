@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["encoding/json"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Compact":       reflect.ValueOf(json.Compact),
 		"HTMLEscape":    reflect.ValueOf(json.HTMLEscape),
 		"Indent":        reflect.ValueOf(json.Indent),
@@ -18,24 +19,23 @@ func init() {
 		"NewEncoder":    reflect.ValueOf(json.NewEncoder),
 		"Unmarshal":     reflect.ValueOf(json.Unmarshal),
 		"Valid":         reflect.ValueOf(json.Valid),
-	}
 
-	Type["encoding/json"] = map[string]reflect.Type{
-		"Decoder":               reflect.TypeOf((*json.Decoder)(nil)).Elem(),
-		"Delim":                 reflect.TypeOf((*json.Delim)(nil)).Elem(),
-		"Encoder":               reflect.TypeOf((*json.Encoder)(nil)).Elem(),
-		"InvalidUTF8Error":      reflect.TypeOf((*json.InvalidUTF8Error)(nil)).Elem(),
-		"InvalidUnmarshalError": reflect.TypeOf((*json.InvalidUnmarshalError)(nil)).Elem(),
-		"Marshaler":             reflect.TypeOf((*json.Marshaler)(nil)).Elem(),
-		"MarshalerError":        reflect.TypeOf((*json.MarshalerError)(nil)).Elem(),
-		"Number":                reflect.TypeOf((*json.Number)(nil)).Elem(),
-		"RawMessage":            reflect.TypeOf((*json.RawMessage)(nil)).Elem(),
-		"SyntaxError":           reflect.TypeOf((*json.SyntaxError)(nil)).Elem(),
-		"Token":                 reflect.TypeOf((*json.Token)(nil)).Elem(),
-		"UnmarshalFieldError":   reflect.TypeOf((*json.UnmarshalFieldError)(nil)).Elem(),
-		"UnmarshalTypeError":    reflect.TypeOf((*json.UnmarshalTypeError)(nil)).Elem(),
-		"Unmarshaler":           reflect.TypeOf((*json.Unmarshaler)(nil)).Elem(),
-		"UnsupportedTypeError":  reflect.TypeOf((*json.UnsupportedTypeError)(nil)).Elem(),
-		"UnsupportedValueError": reflect.TypeOf((*json.UnsupportedValueError)(nil)).Elem(),
+		// type definitions
+		"Decoder":               reflect.ValueOf((*json.Decoder)(nil)),
+		"Delim":                 reflect.ValueOf((*json.Delim)(nil)),
+		"Encoder":               reflect.ValueOf((*json.Encoder)(nil)),
+		"InvalidUTF8Error":      reflect.ValueOf((*json.InvalidUTF8Error)(nil)),
+		"InvalidUnmarshalError": reflect.ValueOf((*json.InvalidUnmarshalError)(nil)),
+		"Marshaler":             reflect.ValueOf((*json.Marshaler)(nil)),
+		"MarshalerError":        reflect.ValueOf((*json.MarshalerError)(nil)),
+		"Number":                reflect.ValueOf((*json.Number)(nil)),
+		"RawMessage":            reflect.ValueOf((*json.RawMessage)(nil)),
+		"SyntaxError":           reflect.ValueOf((*json.SyntaxError)(nil)),
+		"Token":                 reflect.ValueOf((*json.Token)(nil)),
+		"UnmarshalFieldError":   reflect.ValueOf((*json.UnmarshalFieldError)(nil)),
+		"UnmarshalTypeError":    reflect.ValueOf((*json.UnmarshalTypeError)(nil)),
+		"Unmarshaler":           reflect.ValueOf((*json.Unmarshaler)(nil)),
+		"UnsupportedTypeError":  reflect.ValueOf((*json.UnsupportedTypeError)(nil)),
+		"UnsupportedValueError": reflect.ValueOf((*json.UnsupportedValueError)(nil)),
 	}
 }

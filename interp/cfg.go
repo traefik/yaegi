@@ -918,20 +918,18 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				name := n.child[1].ident
 				pkg := n.child[0].sym.path
 				if s, ok := interp.binValue[pkg][name]; ok {
-					n.kind = Rvalue
-					n.rval = s
-					n.typ = &Type{cat: ValueT, rtype: s.Type()}
-					if s.Kind() == reflect.Func {
-						n.fsize = n.typ.rtype.NumOut()
+					if isBinType(s) {
+						n.kind = Rtype
+						n.typ = &Type{cat: ValueT, rtype: s.Type().Elem()}
+					} else {
+						n.kind = Rvalue
+						n.typ = &Type{cat: ValueT, rtype: s.Type()}
+						n.rval = s
+						if s.Kind() == reflect.Func {
+							n.fsize = n.typ.rtype.NumOut()
+						}
 					}
 					n.gen = nop
-				} else if s, ok := interp.binType[pkg][name]; ok {
-					n.kind = Rtype
-					n.typ = &Type{cat: ValueT, rtype: s}
-					n.gen = nop
-					if s.Kind() == reflect.Func {
-						n.fsize = s.NumOut()
-					}
 				} else {
 					err = n.cfgError("package %s \"%s\" has no symbol %s", n.child[0].ident, pkg, name)
 				}
@@ -1160,6 +1158,8 @@ func getDefault(n *Node) int {
 	return -1
 }
 
+func isBinType(v reflect.Value) bool { return v.IsValid() && v.Kind() == reflect.Ptr && v.IsNil() }
+
 // isType returns true if node refers to a type definition, false otherwise
 func (n *Node) isType(scope *Scope) bool {
 	switch n.kind {
@@ -1168,7 +1168,7 @@ func (n *Node) isType(scope *Scope) bool {
 	case SelectorExpr:
 		pkg, name := n.child[0].ident, n.child[1].ident
 		if sym, _, ok := scope.lookup(pkg); ok {
-			if p, ok := n.interp.binType[sym.path]; ok && p[name] != nil {
+			if p, ok := n.interp.binValue[sym.path]; ok && isBinType(p[name]) {
 				return true // Imported binary type
 			}
 			if p, ok := n.interp.scope[pkg]; ok && p.sym[name] != nil && p.sym[name].kind == Typ {

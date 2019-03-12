@@ -80,7 +80,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			os.Stdout = w
 
 			i := interp.New(interp.Opt{Entry: "main"})
-			i.Use(stdlib.Value, stdlib.Type)
+			i.Use(stdlib.Value)
 
 			_, err = i.Eval(string(src))
 			if err != nil {
@@ -173,7 +173,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 			}
 
 			i := interp.New(interp.Opt{Entry: "main"})
-			i.Use(stdlib.Value, stdlib.Type)
+			i.Use(stdlib.Value)
 
 			_, errEval := i.Eval(string(src))
 			if errEval == nil {

@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["crypto/elliptic"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"GenerateKey": reflect.ValueOf(elliptic.GenerateKey),
 		"Marshal":     reflect.ValueOf(elliptic.Marshal),
 		"P224":        reflect.ValueOf(elliptic.P224),
@@ -16,10 +17,9 @@ func init() {
 		"P384":        reflect.ValueOf(elliptic.P384),
 		"P521":        reflect.ValueOf(elliptic.P521),
 		"Unmarshal":   reflect.ValueOf(elliptic.Unmarshal),
-	}
 
-	Type["crypto/elliptic"] = map[string]reflect.Type{
-		"Curve":       reflect.TypeOf((*elliptic.Curve)(nil)).Elem(),
-		"CurveParams": reflect.TypeOf((*elliptic.CurveParams)(nil)).Elem(),
+		// type definitions
+		"Curve":       reflect.ValueOf((*elliptic.Curve)(nil)),
+		"CurveParams": reflect.ValueOf((*elliptic.CurveParams)(nil)),
 	}
 }

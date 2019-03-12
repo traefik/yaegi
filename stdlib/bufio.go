@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["bufio"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"ErrAdvanceTooFar":     reflect.ValueOf(&bufio.ErrAdvanceTooFar).Elem(),
 		"ErrBufferFull":        reflect.ValueOf(&bufio.ErrBufferFull).Elem(),
 		"ErrFinalToken":        reflect.ValueOf(&bufio.ErrFinalToken).Elem(),
@@ -28,13 +29,12 @@ func init() {
 		"ScanLines":            reflect.ValueOf(bufio.ScanLines),
 		"ScanRunes":            reflect.ValueOf(bufio.ScanRunes),
 		"ScanWords":            reflect.ValueOf(bufio.ScanWords),
-	}
 
-	Type["bufio"] = map[string]reflect.Type{
-		"ReadWriter": reflect.TypeOf((*bufio.ReadWriter)(nil)).Elem(),
-		"Reader":     reflect.TypeOf((*bufio.Reader)(nil)).Elem(),
-		"Scanner":    reflect.TypeOf((*bufio.Scanner)(nil)).Elem(),
-		"SplitFunc":  reflect.TypeOf((*bufio.SplitFunc)(nil)).Elem(),
-		"Writer":     reflect.TypeOf((*bufio.Writer)(nil)).Elem(),
+		// type definitions
+		"ReadWriter": reflect.ValueOf((*bufio.ReadWriter)(nil)),
+		"Reader":     reflect.ValueOf((*bufio.Reader)(nil)),
+		"Scanner":    reflect.ValueOf((*bufio.Scanner)(nil)),
+		"SplitFunc":  reflect.ValueOf((*bufio.SplitFunc)(nil)),
+		"Writer":     reflect.ValueOf((*bufio.Writer)(nil)),
 	}
 }

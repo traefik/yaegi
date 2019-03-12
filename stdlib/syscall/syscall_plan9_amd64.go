@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["syscall"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Await":               reflect.ValueOf(syscall.Await),
 		"Bind":                reflect.ValueOf(syscall.Bind),
 		"BytePtrFromString":   reflect.ValueOf(syscall.BytePtrFromString),
@@ -197,19 +198,18 @@ func init() {
 		"WaitProcess":         reflect.ValueOf(syscall.WaitProcess),
 		"Write":               reflect.ValueOf(syscall.Write),
 		"Wstat":               reflect.ValueOf(syscall.Wstat),
-	}
 
-	Type["syscall"] = map[string]reflect.Type{
-		"Conn":        reflect.TypeOf((*syscall.Conn)(nil)).Elem(),
-		"Dir":         reflect.TypeOf((*syscall.Dir)(nil)).Elem(),
-		"ErrorString": reflect.TypeOf((*syscall.ErrorString)(nil)).Elem(),
-		"Note":        reflect.TypeOf((*syscall.Note)(nil)).Elem(),
-		"ProcAttr":    reflect.TypeOf((*syscall.ProcAttr)(nil)).Elem(),
-		"Qid":         reflect.TypeOf((*syscall.Qid)(nil)).Elem(),
-		"RawConn":     reflect.TypeOf((*syscall.RawConn)(nil)).Elem(),
-		"SysProcAttr": reflect.TypeOf((*syscall.SysProcAttr)(nil)).Elem(),
-		"Timespec":    reflect.TypeOf((*syscall.Timespec)(nil)).Elem(),
-		"Timeval":     reflect.TypeOf((*syscall.Timeval)(nil)).Elem(),
-		"Waitmsg":     reflect.TypeOf((*syscall.Waitmsg)(nil)).Elem(),
+		// type definitions
+		"Conn":        reflect.ValueOf((*syscall.Conn)(nil)),
+		"Dir":         reflect.ValueOf((*syscall.Dir)(nil)),
+		"ErrorString": reflect.ValueOf((*syscall.ErrorString)(nil)),
+		"Note":        reflect.ValueOf((*syscall.Note)(nil)),
+		"ProcAttr":    reflect.ValueOf((*syscall.ProcAttr)(nil)),
+		"Qid":         reflect.ValueOf((*syscall.Qid)(nil)),
+		"RawConn":     reflect.ValueOf((*syscall.RawConn)(nil)),
+		"SysProcAttr": reflect.ValueOf((*syscall.SysProcAttr)(nil)),
+		"Timespec":    reflect.ValueOf((*syscall.Timespec)(nil)),
+		"Timeval":     reflect.ValueOf((*syscall.Timeval)(nil)),
+		"Waitmsg":     reflect.ValueOf((*syscall.Waitmsg)(nil)),
 	}
 }
