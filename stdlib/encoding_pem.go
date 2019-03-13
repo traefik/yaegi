@@ -9,12 +9,12 @@ import (
 
 func init() {
 	Value["encoding/pem"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Decode":         reflect.ValueOf(pem.Decode),
 		"Encode":         reflect.ValueOf(pem.Encode),
 		"EncodeToMemory": reflect.ValueOf(pem.EncodeToMemory),
-	}
 
-	Type["encoding/pem"] = map[string]reflect.Type{
-		"Block": reflect.TypeOf((*pem.Block)(nil)).Elem(),
+		// type definitions
+		"Block": reflect.ValueOf((*pem.Block)(nil)),
 	}
 }

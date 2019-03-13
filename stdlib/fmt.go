@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["fmt"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Errorf":   reflect.ValueOf(fmt.Errorf),
 		"Fprint":   reflect.ValueOf(fmt.Fprint),
 		"Fprintf":  reflect.ValueOf(fmt.Fprintf),
@@ -28,14 +29,13 @@ func init() {
 		"Sscan":    reflect.ValueOf(fmt.Sscan),
 		"Sscanf":   reflect.ValueOf(fmt.Sscanf),
 		"Sscanln":  reflect.ValueOf(fmt.Sscanln),
-	}
 
-	Type["fmt"] = map[string]reflect.Type{
-		"Formatter":  reflect.TypeOf((*fmt.Formatter)(nil)).Elem(),
-		"GoStringer": reflect.TypeOf((*fmt.GoStringer)(nil)).Elem(),
-		"ScanState":  reflect.TypeOf((*fmt.ScanState)(nil)).Elem(),
-		"Scanner":    reflect.TypeOf((*fmt.Scanner)(nil)).Elem(),
-		"State":      reflect.TypeOf((*fmt.State)(nil)).Elem(),
-		"Stringer":   reflect.TypeOf((*fmt.Stringer)(nil)).Elem(),
+		// type definitions
+		"Formatter":  reflect.ValueOf((*fmt.Formatter)(nil)),
+		"GoStringer": reflect.ValueOf((*fmt.GoStringer)(nil)),
+		"ScanState":  reflect.ValueOf((*fmt.ScanState)(nil)),
+		"Scanner":    reflect.ValueOf((*fmt.Scanner)(nil)),
+		"State":      reflect.ValueOf((*fmt.State)(nil)),
+		"Stringer":   reflect.ValueOf((*fmt.Stringer)(nil)),
 	}
 }

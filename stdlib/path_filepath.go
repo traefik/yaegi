@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["path/filepath"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Abs":           reflect.ValueOf(filepath.Abs),
 		"Base":          reflect.ValueOf(filepath.Base),
 		"Clean":         reflect.ValueOf(filepath.Clean),
@@ -31,9 +32,8 @@ func init() {
 		"ToSlash":       reflect.ValueOf(filepath.ToSlash),
 		"VolumeName":    reflect.ValueOf(filepath.VolumeName),
 		"Walk":          reflect.ValueOf(filepath.Walk),
-	}
 
-	Type["path/filepath"] = map[string]reflect.Type{
-		"WalkFunc": reflect.TypeOf((*filepath.WalkFunc)(nil)).Elem(),
+		// type definitions
+		"WalkFunc": reflect.ValueOf((*filepath.WalkFunc)(nil)),
 	}
 }

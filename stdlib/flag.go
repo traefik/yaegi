@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["flag"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Arg":             reflect.ValueOf(flag.Arg),
 		"Args":            reflect.ValueOf(flag.Args),
 		"Bool":            reflect.ValueOf(flag.Bool),
@@ -45,13 +46,12 @@ func init() {
 		"Var":             reflect.ValueOf(flag.Var),
 		"Visit":           reflect.ValueOf(flag.Visit),
 		"VisitAll":        reflect.ValueOf(flag.VisitAll),
-	}
 
-	Type["flag"] = map[string]reflect.Type{
-		"ErrorHandling": reflect.TypeOf((*flag.ErrorHandling)(nil)).Elem(),
-		"Flag":          reflect.TypeOf((*flag.Flag)(nil)).Elem(),
-		"FlagSet":       reflect.TypeOf((*flag.FlagSet)(nil)).Elem(),
-		"Getter":        reflect.TypeOf((*flag.Getter)(nil)).Elem(),
-		"Value":         reflect.TypeOf((*flag.Value)(nil)).Elem(),
+		// type definitions
+		"ErrorHandling": reflect.ValueOf((*flag.ErrorHandling)(nil)),
+		"Flag":          reflect.ValueOf((*flag.Flag)(nil)),
+		"FlagSet":       reflect.ValueOf((*flag.FlagSet)(nil)),
+		"Getter":        reflect.ValueOf((*flag.Getter)(nil)),
+		"Value":         reflect.ValueOf((*flag.Value)(nil)),
 	}
 }

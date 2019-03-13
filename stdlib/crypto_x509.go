@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["crypto/x509"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"CANotAuthorizedForExtKeyUsage":             reflect.ValueOf(x509.CANotAuthorizedForExtKeyUsage),
 		"CANotAuthorizedForThisName":                reflect.ValueOf(x509.CANotAuthorizedForThisName),
 		"CreateCertificate":                         reflect.ValueOf(x509.CreateCertificate),
@@ -91,25 +92,24 @@ func init() {
 		"UnconstrainedName":                         reflect.ValueOf(x509.UnconstrainedName),
 		"UnknownPublicKeyAlgorithm":                 reflect.ValueOf(x509.UnknownPublicKeyAlgorithm),
 		"UnknownSignatureAlgorithm":                 reflect.ValueOf(x509.UnknownSignatureAlgorithm),
-	}
 
-	Type["crypto/x509"] = map[string]reflect.Type{
-		"CertPool":                   reflect.TypeOf((*x509.CertPool)(nil)).Elem(),
-		"Certificate":                reflect.TypeOf((*x509.Certificate)(nil)).Elem(),
-		"CertificateInvalidError":    reflect.TypeOf((*x509.CertificateInvalidError)(nil)).Elem(),
-		"CertificateRequest":         reflect.TypeOf((*x509.CertificateRequest)(nil)).Elem(),
-		"ConstraintViolationError":   reflect.TypeOf((*x509.ConstraintViolationError)(nil)).Elem(),
-		"ExtKeyUsage":                reflect.TypeOf((*x509.ExtKeyUsage)(nil)).Elem(),
-		"HostnameError":              reflect.TypeOf((*x509.HostnameError)(nil)).Elem(),
-		"InsecureAlgorithmError":     reflect.TypeOf((*x509.InsecureAlgorithmError)(nil)).Elem(),
-		"InvalidReason":              reflect.TypeOf((*x509.InvalidReason)(nil)).Elem(),
-		"KeyUsage":                   reflect.TypeOf((*x509.KeyUsage)(nil)).Elem(),
-		"PEMCipher":                  reflect.TypeOf((*x509.PEMCipher)(nil)).Elem(),
-		"PublicKeyAlgorithm":         reflect.TypeOf((*x509.PublicKeyAlgorithm)(nil)).Elem(),
-		"SignatureAlgorithm":         reflect.TypeOf((*x509.SignatureAlgorithm)(nil)).Elem(),
-		"SystemRootsError":           reflect.TypeOf((*x509.SystemRootsError)(nil)).Elem(),
-		"UnhandledCriticalExtension": reflect.TypeOf((*x509.UnhandledCriticalExtension)(nil)).Elem(),
-		"UnknownAuthorityError":      reflect.TypeOf((*x509.UnknownAuthorityError)(nil)).Elem(),
-		"VerifyOptions":              reflect.TypeOf((*x509.VerifyOptions)(nil)).Elem(),
+		// type definitions
+		"CertPool":                   reflect.ValueOf((*x509.CertPool)(nil)),
+		"Certificate":                reflect.ValueOf((*x509.Certificate)(nil)),
+		"CertificateInvalidError":    reflect.ValueOf((*x509.CertificateInvalidError)(nil)),
+		"CertificateRequest":         reflect.ValueOf((*x509.CertificateRequest)(nil)),
+		"ConstraintViolationError":   reflect.ValueOf((*x509.ConstraintViolationError)(nil)),
+		"ExtKeyUsage":                reflect.ValueOf((*x509.ExtKeyUsage)(nil)),
+		"HostnameError":              reflect.ValueOf((*x509.HostnameError)(nil)),
+		"InsecureAlgorithmError":     reflect.ValueOf((*x509.InsecureAlgorithmError)(nil)),
+		"InvalidReason":              reflect.ValueOf((*x509.InvalidReason)(nil)),
+		"KeyUsage":                   reflect.ValueOf((*x509.KeyUsage)(nil)),
+		"PEMCipher":                  reflect.ValueOf((*x509.PEMCipher)(nil)),
+		"PublicKeyAlgorithm":         reflect.ValueOf((*x509.PublicKeyAlgorithm)(nil)),
+		"SignatureAlgorithm":         reflect.ValueOf((*x509.SignatureAlgorithm)(nil)),
+		"SystemRootsError":           reflect.ValueOf((*x509.SystemRootsError)(nil)),
+		"UnhandledCriticalExtension": reflect.ValueOf((*x509.UnhandledCriticalExtension)(nil)),
+		"UnknownAuthorityError":      reflect.ValueOf((*x509.UnknownAuthorityError)(nil)),
+		"VerifyOptions":              reflect.ValueOf((*x509.VerifyOptions)(nil)),
 	}
 }

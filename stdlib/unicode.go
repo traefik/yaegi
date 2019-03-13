@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["unicode"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"ASCII_Hex_Digit":                    reflect.ValueOf(&unicode.ASCII_Hex_Digit).Elem(),
 		"Adlam":                              reflect.ValueOf(&unicode.Adlam).Elem(),
 		"Ahom":                               reflect.ValueOf(&unicode.Ahom).Elem(),
@@ -273,13 +274,12 @@ func init() {
 		"Zl":                                 reflect.ValueOf(&unicode.Zl).Elem(),
 		"Zp":                                 reflect.ValueOf(&unicode.Zp).Elem(),
 		"Zs":                                 reflect.ValueOf(&unicode.Zs).Elem(),
-	}
 
-	Type["unicode"] = map[string]reflect.Type{
-		"CaseRange":   reflect.TypeOf((*unicode.CaseRange)(nil)).Elem(),
-		"Range16":     reflect.TypeOf((*unicode.Range16)(nil)).Elem(),
-		"Range32":     reflect.TypeOf((*unicode.Range32)(nil)).Elem(),
-		"RangeTable":  reflect.TypeOf((*unicode.RangeTable)(nil)).Elem(),
-		"SpecialCase": reflect.TypeOf((*unicode.SpecialCase)(nil)).Elem(),
+		// type definitions
+		"CaseRange":   reflect.ValueOf((*unicode.CaseRange)(nil)),
+		"Range16":     reflect.ValueOf((*unicode.Range16)(nil)),
+		"Range32":     reflect.ValueOf((*unicode.Range32)(nil)),
+		"RangeTable":  reflect.ValueOf((*unicode.RangeTable)(nil)),
+		"SpecialCase": reflect.ValueOf((*unicode.SpecialCase)(nil)),
 	}
 }

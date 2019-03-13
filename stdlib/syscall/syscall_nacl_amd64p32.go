@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["syscall"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"AF_INET":                reflect.ValueOf(syscall.AF_INET),
 		"AF_INET6":               reflect.ValueOf(syscall.AF_INET6),
 		"AF_UNIX":                reflect.ValueOf(syscall.AF_UNIX),
@@ -366,31 +367,30 @@ func init() {
 		"UtimesNano":             reflect.ValueOf(syscall.UtimesNano),
 		"Wait4":                  reflect.ValueOf(syscall.Wait4),
 		"Write":                  reflect.ValueOf(syscall.Write),
-	}
 
-	Type["syscall"] = map[string]reflect.Type{
-		"Conn":             reflect.TypeOf((*syscall.Conn)(nil)).Elem(),
-		"Dirent":           reflect.TypeOf((*syscall.Dirent)(nil)).Elem(),
-		"Errno":            reflect.TypeOf((*syscall.Errno)(nil)).Elem(),
-		"ICMPv6Filter":     reflect.TypeOf((*syscall.ICMPv6Filter)(nil)).Elem(),
-		"IPMreq":           reflect.TypeOf((*syscall.IPMreq)(nil)).Elem(),
-		"IPv6Mreq":         reflect.TypeOf((*syscall.IPv6Mreq)(nil)).Elem(),
-		"Iovec":            reflect.TypeOf((*syscall.Iovec)(nil)).Elem(),
-		"Linger":           reflect.TypeOf((*syscall.Linger)(nil)).Elem(),
-		"ProcAttr":         reflect.TypeOf((*syscall.ProcAttr)(nil)).Elem(),
-		"RawConn":          reflect.TypeOf((*syscall.RawConn)(nil)).Elem(),
-		"RoutingMessage":   reflect.TypeOf((*syscall.RoutingMessage)(nil)).Elem(),
-		"Rusage":           reflect.TypeOf((*syscall.Rusage)(nil)).Elem(),
-		"Signal":           reflect.TypeOf((*syscall.Signal)(nil)).Elem(),
-		"Sockaddr":         reflect.TypeOf((*syscall.Sockaddr)(nil)).Elem(),
-		"SockaddrDatalink": reflect.TypeOf((*syscall.SockaddrDatalink)(nil)).Elem(),
-		"SockaddrInet4":    reflect.TypeOf((*syscall.SockaddrInet4)(nil)).Elem(),
-		"SockaddrInet6":    reflect.TypeOf((*syscall.SockaddrInet6)(nil)).Elem(),
-		"SockaddrUnix":     reflect.TypeOf((*syscall.SockaddrUnix)(nil)).Elem(),
-		"Stat_t":           reflect.TypeOf((*syscall.Stat_t)(nil)).Elem(),
-		"SysProcAttr":      reflect.TypeOf((*syscall.SysProcAttr)(nil)).Elem(),
-		"Timespec":         reflect.TypeOf((*syscall.Timespec)(nil)).Elem(),
-		"Timeval":          reflect.TypeOf((*syscall.Timeval)(nil)).Elem(),
-		"WaitStatus":       reflect.TypeOf((*syscall.WaitStatus)(nil)).Elem(),
+		// type definitions
+		"Conn":             reflect.ValueOf((*syscall.Conn)(nil)),
+		"Dirent":           reflect.ValueOf((*syscall.Dirent)(nil)),
+		"Errno":            reflect.ValueOf((*syscall.Errno)(nil)),
+		"ICMPv6Filter":     reflect.ValueOf((*syscall.ICMPv6Filter)(nil)),
+		"IPMreq":           reflect.ValueOf((*syscall.IPMreq)(nil)),
+		"IPv6Mreq":         reflect.ValueOf((*syscall.IPv6Mreq)(nil)),
+		"Iovec":            reflect.ValueOf((*syscall.Iovec)(nil)),
+		"Linger":           reflect.ValueOf((*syscall.Linger)(nil)),
+		"ProcAttr":         reflect.ValueOf((*syscall.ProcAttr)(nil)),
+		"RawConn":          reflect.ValueOf((*syscall.RawConn)(nil)),
+		"RoutingMessage":   reflect.ValueOf((*syscall.RoutingMessage)(nil)),
+		"Rusage":           reflect.ValueOf((*syscall.Rusage)(nil)),
+		"Signal":           reflect.ValueOf((*syscall.Signal)(nil)),
+		"Sockaddr":         reflect.ValueOf((*syscall.Sockaddr)(nil)),
+		"SockaddrDatalink": reflect.ValueOf((*syscall.SockaddrDatalink)(nil)),
+		"SockaddrInet4":    reflect.ValueOf((*syscall.SockaddrInet4)(nil)),
+		"SockaddrInet6":    reflect.ValueOf((*syscall.SockaddrInet6)(nil)),
+		"SockaddrUnix":     reflect.ValueOf((*syscall.SockaddrUnix)(nil)),
+		"Stat_t":           reflect.ValueOf((*syscall.Stat_t)(nil)),
+		"SysProcAttr":      reflect.ValueOf((*syscall.SysProcAttr)(nil)),
+		"Timespec":         reflect.ValueOf((*syscall.Timespec)(nil)),
+		"Timeval":          reflect.ValueOf((*syscall.Timeval)(nil)),
+		"WaitStatus":       reflect.ValueOf((*syscall.WaitStatus)(nil)),
 	}
 }

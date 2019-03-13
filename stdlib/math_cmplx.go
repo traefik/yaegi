@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["math/cmplx"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Abs":   reflect.ValueOf(cmplx.Abs),
 		"Acos":  reflect.ValueOf(cmplx.Acos),
 		"Acosh": reflect.ValueOf(cmplx.Acosh),
@@ -36,7 +37,8 @@ func init() {
 		"Sqrt":  reflect.ValueOf(cmplx.Sqrt),
 		"Tan":   reflect.ValueOf(cmplx.Tan),
 		"Tanh":  reflect.ValueOf(cmplx.Tanh),
-	}
 
-	Type["math/cmplx"] = map[string]reflect.Type{}
+		// type definitions
+
+	}
 }

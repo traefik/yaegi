@@ -23,7 +23,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -57,7 +57,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -79,7 +79,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -104,7 +104,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -130,7 +130,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -156,7 +156,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -180,7 +180,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -208,7 +208,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -238,7 +238,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -260,7 +260,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -285,7 +285,7 @@ func main() {
 const bsize = 10
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -312,7 +312,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -346,7 +346,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -368,7 +368,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -390,7 +390,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -412,7 +412,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -434,7 +434,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -456,7 +456,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -481,7 +481,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -509,7 +509,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -544,7 +544,7 @@ func f2() bool {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -578,7 +578,7 @@ func f2() bool {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -608,7 +608,7 @@ func f2() bool {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -629,7 +629,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -657,7 +657,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -680,7 +680,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -699,7 +699,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -718,7 +718,7 @@ func main() {
 	f("Hello")
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -737,7 +737,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -758,7 +758,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -786,7 +786,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -814,7 +814,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -838,7 +838,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -862,7 +862,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -888,7 +888,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -914,7 +914,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -938,7 +938,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -964,7 +964,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -988,7 +988,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1015,7 +1015,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1057,7 +1057,7 @@ func main() {
 	println(msg2)
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1078,7 +1078,7 @@ func main() {
 	println(msg, ok)
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1135,7 +1135,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1182,7 +1182,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1210,7 +1210,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1240,7 +1240,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1271,7 +1271,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1313,7 +1313,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1347,7 +1347,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1381,7 +1381,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1415,7 +1415,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1455,7 +1455,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1474,7 +1474,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1498,7 +1498,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1524,7 +1524,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1545,7 +1545,7 @@ func main() {
 const a = "hello"
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1564,7 +1564,7 @@ const a, b, c int = 1, 2, 3
 func main() { println(a, b, c) }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1588,7 +1588,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1621,7 +1621,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1657,7 +1657,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1692,7 +1692,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1724,7 +1724,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1749,7 +1749,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1777,7 +1777,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1806,7 +1806,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1835,7 +1835,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1853,7 +1853,7 @@ func Test() {
 	println("Hello from test")
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1871,7 +1871,7 @@ func (s *Sample) Test() {
 	println("Hello from test", s.Name)
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1913,7 +1913,7 @@ func main() {
 	}
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1938,7 +1938,7 @@ func main() {
 	//println(fib(10))
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1963,7 +1963,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -1990,7 +1990,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2021,7 +2021,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2049,7 +2049,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2089,7 +2089,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2110,7 +2110,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2134,7 +2134,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2158,7 +2158,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2180,7 +2180,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2203,7 +2203,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2256,7 +2256,7 @@ func main() {
 	}
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2277,7 +2277,7 @@ func main() {
 func f() int { return 1 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2298,7 +2298,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2319,7 +2319,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2340,7 +2340,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2362,7 +2362,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2389,7 +2389,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2420,7 +2420,7 @@ func main() {
 	run(a, "truc")
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2459,7 +2459,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2512,7 +2512,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2556,7 +2556,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2602,7 +2602,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2638,7 +2638,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2666,7 +2666,7 @@ func main() {
 	fmt.Println(buf)
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2690,7 +2690,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2725,7 +2725,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2761,7 +2761,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2789,7 +2789,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2821,7 +2821,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2843,7 +2843,7 @@ func main() {
 	}
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2866,7 +2866,7 @@ func main() {
 	}
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2882,7 +2882,7 @@ func main()       { println(f(5)) }
 func f(i int) int { return i + 1 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2907,7 +2907,7 @@ func main() {
 	}
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2930,7 +2930,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2953,7 +2953,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -2995,7 +2995,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3037,7 +3037,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3077,7 +3077,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3098,7 +3098,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3119,7 +3119,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3141,7 +3141,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3165,7 +3165,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3187,7 +3187,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3209,7 +3209,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3247,7 +3247,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3289,7 +3289,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3313,7 +3313,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3339,7 +3339,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3381,7 +3381,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3412,7 +3412,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3436,7 +3436,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3462,7 +3462,7 @@ type Coord struct {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3489,7 +3489,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3521,7 +3521,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3547,7 +3547,7 @@ type Coord struct {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3573,7 +3573,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3604,7 +3604,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3635,7 +3635,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3671,7 +3671,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3722,7 +3722,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3757,7 +3757,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3788,7 +3788,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3822,7 +3822,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3848,7 +3848,7 @@ func main() {
 func (c Coord) dist() int { return c.x*c.x + c.y*c.y }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3870,7 +3870,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3895,7 +3895,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3915,7 +3915,7 @@ func main() {
 	println(a)
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -3957,7 +3957,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4012,7 +4012,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4071,7 +4071,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4129,7 +4129,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4188,7 +4188,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4247,7 +4247,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4306,7 +4306,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4366,7 +4366,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4416,7 +4416,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4475,7 +4475,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4534,7 +4534,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4593,7 +4593,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4625,7 +4625,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4646,7 +4646,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4671,7 +4671,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4696,7 +4696,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4725,7 +4725,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4749,7 +4749,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4774,7 +4774,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4799,7 +4799,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4825,7 +4825,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4854,7 +4854,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4873,7 +4873,7 @@ func f(i int) (o int) { o = i + 1; return }
 
 func main() { println(f(4)) }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4893,7 +4893,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4916,7 +4916,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4938,7 +4938,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4959,7 +4959,7 @@ var a, b int = r2()
 func main() { println(a, b) }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -4982,7 +4982,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5005,7 +5005,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5024,7 +5024,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5047,7 +5047,7 @@ func main() {
 func f() (int, int) { return 2, 3 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5071,7 +5071,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5095,7 +5095,7 @@ func f(a int) (int, int) {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5118,7 +5118,7 @@ func test(f fn, v int) { f(v) }
 func main() { test(f1, 21) }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5142,7 +5142,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5165,7 +5165,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5189,7 +5189,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5210,7 +5210,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5232,7 +5232,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5283,7 +5283,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5313,7 +5313,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5338,7 +5338,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5364,7 +5364,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5389,7 +5389,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5417,7 +5417,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5445,7 +5445,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5474,7 +5474,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5502,7 +5502,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5547,7 +5547,7 @@ func main() {
 	fmt.Println("Bye")
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5572,7 +5572,7 @@ func main() {
 	println("bye")
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5614,7 +5614,7 @@ func main() {
 	fmt.Println("Bye")
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5656,7 +5656,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5681,7 +5681,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5712,7 +5712,7 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5740,7 +5740,7 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5773,7 +5773,7 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5810,7 +5810,7 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5839,7 +5839,7 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5862,7 +5862,7 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5886,7 +5886,7 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5910,7 +5910,7 @@ func main() {
 	http.ListenAndServe(":8080", myHandler)
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5949,7 +5949,7 @@ func main() {
 	http.ListenAndServe(":8080", handler)
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -5972,7 +5972,7 @@ func main() {
 	http.DefaultServeMux = &http.ServeMux{}
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6019,7 +6019,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6047,7 +6047,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6072,7 +6072,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6097,7 +6097,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6123,7 +6123,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6152,7 +6152,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6177,7 +6177,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6202,7 +6202,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6233,7 +6233,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6270,7 +6270,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6297,7 +6297,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6321,7 +6321,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6350,7 +6350,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6387,7 +6387,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6412,7 +6412,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6439,7 +6439,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6476,7 +6476,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6505,7 +6505,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6531,7 +6531,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6557,7 +6557,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6585,7 +6585,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6612,7 +6612,7 @@ func main() {
 	}
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6664,7 +6664,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6721,7 +6721,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6779,7 +6779,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6841,7 +6841,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6908,7 +6908,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6972,7 +6972,7 @@ func main() {
 	inCall(Bar{})
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -6996,7 +6996,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7024,7 +7024,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7053,7 +7053,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7084,7 +7084,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7112,7 +7112,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7139,7 +7139,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7159,7 +7159,7 @@ func main() {
 	println("world")
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7183,7 +7183,7 @@ func main() {
 	}
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7204,7 +7204,7 @@ func main() {
 	fmt.Println(time.Now())
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7228,7 +7228,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7254,7 +7254,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7279,7 +7279,7 @@ func main() {
 	fmt.Println(t.Clock())
 }`
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7303,7 +7303,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7328,7 +7328,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7355,7 +7355,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7379,7 +7379,7 @@ var d = 2 * time.Second
 func main() { fmt.Println(d) }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7401,7 +7401,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7424,7 +7424,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7459,7 +7459,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7483,7 +7483,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7508,7 +7508,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7535,7 +7535,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7562,7 +7562,7 @@ func main() {
 type T int
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7586,7 +7586,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7606,7 +7606,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7626,7 +7626,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7646,7 +7646,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7666,7 +7666,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7689,7 +7689,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7725,7 +7725,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7751,7 +7751,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7776,7 +7776,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7801,7 +7801,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7828,7 +7828,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
@@ -7858,7 +7858,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)

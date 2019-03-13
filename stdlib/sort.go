@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["sort"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Float64s":          reflect.ValueOf(sort.Float64s),
 		"Float64sAreSorted": reflect.ValueOf(sort.Float64sAreSorted),
 		"Ints":              reflect.ValueOf(sort.Ints),
@@ -26,12 +27,11 @@ func init() {
 		"Stable":            reflect.ValueOf(sort.Stable),
 		"Strings":           reflect.ValueOf(sort.Strings),
 		"StringsAreSorted":  reflect.ValueOf(sort.StringsAreSorted),
-	}
 
-	Type["sort"] = map[string]reflect.Type{
-		"Float64Slice": reflect.TypeOf((*sort.Float64Slice)(nil)).Elem(),
-		"IntSlice":     reflect.TypeOf((*sort.IntSlice)(nil)).Elem(),
-		"Interface":    reflect.TypeOf((*sort.Interface)(nil)).Elem(),
-		"StringSlice":  reflect.TypeOf((*sort.StringSlice)(nil)).Elem(),
+		// type definitions
+		"Float64Slice": reflect.ValueOf((*sort.Float64Slice)(nil)),
+		"IntSlice":     reflect.ValueOf((*sort.IntSlice)(nil)),
+		"Interface":    reflect.ValueOf((*sort.Interface)(nil)),
+		"StringSlice":  reflect.ValueOf((*sort.StringSlice)(nil)),
 	}
 }

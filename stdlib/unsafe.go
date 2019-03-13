@@ -8,9 +8,10 @@ import (
 )
 
 func init() {
-	Value["unsafe"] = map[string]reflect.Value{}
+	Value["unsafe"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 
-	Type["unsafe"] = map[string]reflect.Type{
-		"Pointer": reflect.TypeOf((*unsafe.Pointer)(nil)).Elem(),
+		// type definitions
+		"Pointer": reflect.ValueOf((*unsafe.Pointer)(nil)),
 	}
 }

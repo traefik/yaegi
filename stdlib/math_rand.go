@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["math/rand"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"ExpFloat64":  reflect.ValueOf(rand.ExpFloat64),
 		"Float32":     reflect.ValueOf(rand.Float32),
 		"Float64":     reflect.ValueOf(rand.Float64),
@@ -28,12 +29,11 @@ func init() {
 		"Shuffle":     reflect.ValueOf(rand.Shuffle),
 		"Uint32":      reflect.ValueOf(rand.Uint32),
 		"Uint64":      reflect.ValueOf(rand.Uint64),
-	}
 
-	Type["math/rand"] = map[string]reflect.Type{
-		"Rand":     reflect.TypeOf((*rand.Rand)(nil)).Elem(),
-		"Source":   reflect.TypeOf((*rand.Source)(nil)).Elem(),
-		"Source64": reflect.TypeOf((*rand.Source64)(nil)).Elem(),
-		"Zipf":     reflect.TypeOf((*rand.Zipf)(nil)).Elem(),
+		// type definitions
+		"Rand":     reflect.ValueOf((*rand.Rand)(nil)),
+		"Source":   reflect.ValueOf((*rand.Source)(nil)),
+		"Source64": reflect.ValueOf((*rand.Source64)(nil)),
+		"Zipf":     reflect.ValueOf((*rand.Zipf)(nil)),
 	}
 }

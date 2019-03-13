@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["text/scanner"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Char":           reflect.ValueOf(scanner.Char),
 		"Comment":        reflect.ValueOf(scanner.Comment),
 		"EOF":            reflect.ValueOf(scanner.EOF),
@@ -28,10 +29,9 @@ func init() {
 		"SkipComments":   reflect.ValueOf(scanner.SkipComments),
 		"String":         reflect.ValueOf(scanner.String),
 		"TokenString":    reflect.ValueOf(scanner.TokenString),
-	}
 
-	Type["text/scanner"] = map[string]reflect.Type{
-		"Position": reflect.TypeOf((*scanner.Position)(nil)).Elem(),
-		"Scanner":  reflect.TypeOf((*scanner.Scanner)(nil)).Elem(),
+		// type definitions
+		"Position": reflect.ValueOf((*scanner.Position)(nil)),
+		"Scanner":  reflect.ValueOf((*scanner.Scanner)(nil)),
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["go/token"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"ADD":            reflect.ValueOf(token.ADD),
 		"ADD_ASSIGN":     reflect.ValueOf(token.ADD_ASSIGN),
 		"AND":            reflect.ValueOf(token.AND),
@@ -96,13 +97,12 @@ func init() {
 		"VAR":            reflect.ValueOf(token.VAR),
 		"XOR":            reflect.ValueOf(token.XOR),
 		"XOR_ASSIGN":     reflect.ValueOf(token.XOR_ASSIGN),
-	}
 
-	Type["go/token"] = map[string]reflect.Type{
-		"File":     reflect.TypeOf((*token.File)(nil)).Elem(),
-		"FileSet":  reflect.TypeOf((*token.FileSet)(nil)).Elem(),
-		"Pos":      reflect.TypeOf((*token.Pos)(nil)).Elem(),
-		"Position": reflect.TypeOf((*token.Position)(nil)).Elem(),
-		"Token":    reflect.TypeOf((*token.Token)(nil)).Elem(),
+		// type definitions
+		"File":     reflect.ValueOf((*token.File)(nil)),
+		"FileSet":  reflect.ValueOf((*token.FileSet)(nil)),
+		"Pos":      reflect.ValueOf((*token.Pos)(nil)),
+		"Position": reflect.ValueOf((*token.Position)(nil)),
+		"Token":    reflect.ValueOf((*token.Token)(nil)),
 	}
 }

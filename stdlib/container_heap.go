@@ -9,14 +9,14 @@ import (
 
 func init() {
 	Value["container/heap"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Fix":    reflect.ValueOf(heap.Fix),
 		"Init":   reflect.ValueOf(heap.Init),
 		"Pop":    reflect.ValueOf(heap.Pop),
 		"Push":   reflect.ValueOf(heap.Push),
 		"Remove": reflect.ValueOf(heap.Remove),
-	}
 
-	Type["container/heap"] = map[string]reflect.Type{
-		"Interface": reflect.TypeOf((*heap.Interface)(nil)).Elem(),
+		// type definitions
+		"Interface": reflect.ValueOf((*heap.Interface)(nil)),
 	}
 }

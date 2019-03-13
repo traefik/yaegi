@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["encoding/asn1"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"ClassApplication":     reflect.ValueOf(asn1.ClassApplication),
 		"ClassContextSpecific": reflect.ValueOf(asn1.ClassContextSpecific),
 		"ClassPrivate":         reflect.ValueOf(asn1.ClassPrivate),
@@ -36,16 +37,15 @@ func init() {
 		"TagUTF8String":        reflect.ValueOf(asn1.TagUTF8String),
 		"Unmarshal":            reflect.ValueOf(asn1.Unmarshal),
 		"UnmarshalWithParams":  reflect.ValueOf(asn1.UnmarshalWithParams),
-	}
 
-	Type["encoding/asn1"] = map[string]reflect.Type{
-		"BitString":        reflect.TypeOf((*asn1.BitString)(nil)).Elem(),
-		"Enumerated":       reflect.TypeOf((*asn1.Enumerated)(nil)).Elem(),
-		"Flag":             reflect.TypeOf((*asn1.Flag)(nil)).Elem(),
-		"ObjectIdentifier": reflect.TypeOf((*asn1.ObjectIdentifier)(nil)).Elem(),
-		"RawContent":       reflect.TypeOf((*asn1.RawContent)(nil)).Elem(),
-		"RawValue":         reflect.TypeOf((*asn1.RawValue)(nil)).Elem(),
-		"StructuralError":  reflect.TypeOf((*asn1.StructuralError)(nil)).Elem(),
-		"SyntaxError":      reflect.TypeOf((*asn1.SyntaxError)(nil)).Elem(),
+		// type definitions
+		"BitString":        reflect.ValueOf((*asn1.BitString)(nil)),
+		"Enumerated":       reflect.ValueOf((*asn1.Enumerated)(nil)),
+		"Flag":             reflect.ValueOf((*asn1.Flag)(nil)),
+		"ObjectIdentifier": reflect.ValueOf((*asn1.ObjectIdentifier)(nil)),
+		"RawContent":       reflect.ValueOf((*asn1.RawContent)(nil)),
+		"RawValue":         reflect.ValueOf((*asn1.RawValue)(nil)),
+		"StructuralError":  reflect.ValueOf((*asn1.StructuralError)(nil)),
+		"SyntaxError":      reflect.ValueOf((*asn1.SyntaxError)(nil)),
 	}
 }

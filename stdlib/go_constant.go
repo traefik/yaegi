@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["go/constant"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"BinaryOp":        reflect.ValueOf(constant.BinaryOp),
 		"BitLen":          reflect.ValueOf(constant.BitLen),
 		"Bool":            reflect.ValueOf(constant.Bool),
@@ -44,10 +45,9 @@ func init() {
 		"Uint64Val":       reflect.ValueOf(constant.Uint64Val),
 		"UnaryOp":         reflect.ValueOf(constant.UnaryOp),
 		"Unknown":         reflect.ValueOf(constant.Unknown),
-	}
 
-	Type["go/constant"] = map[string]reflect.Type{
-		"Kind":  reflect.TypeOf((*constant.Kind)(nil)).Elem(),
-		"Value": reflect.TypeOf((*constant.Value)(nil)).Elem(),
+		// type definitions
+		"Kind":  reflect.ValueOf((*constant.Kind)(nil)),
+		"Value": reflect.ValueOf((*constant.Value)(nil)),
 	}
 }

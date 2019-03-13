@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["compress/gzip"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"BestCompression":    reflect.ValueOf(gzip.BestCompression),
 		"BestSpeed":          reflect.ValueOf(gzip.BestSpeed),
 		"DefaultCompression": reflect.ValueOf(gzip.DefaultCompression),
@@ -19,11 +20,10 @@ func init() {
 		"NewWriter":          reflect.ValueOf(gzip.NewWriter),
 		"NewWriterLevel":     reflect.ValueOf(gzip.NewWriterLevel),
 		"NoCompression":      reflect.ValueOf(gzip.NoCompression),
-	}
 
-	Type["compress/gzip"] = map[string]reflect.Type{
-		"Header": reflect.TypeOf((*gzip.Header)(nil)).Elem(),
-		"Reader": reflect.TypeOf((*gzip.Reader)(nil)).Elem(),
-		"Writer": reflect.TypeOf((*gzip.Writer)(nil)).Elem(),
+		// type definitions
+		"Header": reflect.ValueOf((*gzip.Header)(nil)),
+		"Reader": reflect.ValueOf((*gzip.Reader)(nil)),
+		"Writer": reflect.ValueOf((*gzip.Writer)(nil)),
 	}
 }

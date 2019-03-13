@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["encoding/base64"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"NewDecoder":     reflect.ValueOf(base64.NewDecoder),
 		"NewEncoder":     reflect.ValueOf(base64.NewEncoder),
 		"NewEncoding":    reflect.ValueOf(base64.NewEncoding),
@@ -18,10 +19,9 @@ func init() {
 		"StdEncoding":    reflect.ValueOf(&base64.StdEncoding).Elem(),
 		"StdPadding":     reflect.ValueOf(base64.StdPadding),
 		"URLEncoding":    reflect.ValueOf(&base64.URLEncoding).Elem(),
-	}
 
-	Type["encoding/base64"] = map[string]reflect.Type{
-		"CorruptInputError": reflect.TypeOf((*base64.CorruptInputError)(nil)).Elem(),
-		"Encoding":          reflect.TypeOf((*base64.Encoding)(nil)).Elem(),
+		// type definitions
+		"CorruptInputError": reflect.ValueOf((*base64.CorruptInputError)(nil)),
+		"Encoding":          reflect.ValueOf((*base64.Encoding)(nil)),
 	}
 }

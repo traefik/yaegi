@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["go/doc"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"AllDecls":        reflect.ValueOf(doc.AllDecls),
 		"AllMethods":      reflect.ValueOf(doc.AllMethods),
 		"Examples":        reflect.ValueOf(doc.Examples),
@@ -18,16 +19,15 @@ func init() {
 		"Synopsis":        reflect.ValueOf(doc.Synopsis),
 		"ToHTML":          reflect.ValueOf(doc.ToHTML),
 		"ToText":          reflect.ValueOf(doc.ToText),
-	}
 
-	Type["go/doc"] = map[string]reflect.Type{
-		"Example": reflect.TypeOf((*doc.Example)(nil)).Elem(),
-		"Filter":  reflect.TypeOf((*doc.Filter)(nil)).Elem(),
-		"Func":    reflect.TypeOf((*doc.Func)(nil)).Elem(),
-		"Mode":    reflect.TypeOf((*doc.Mode)(nil)).Elem(),
-		"Note":    reflect.TypeOf((*doc.Note)(nil)).Elem(),
-		"Package": reflect.TypeOf((*doc.Package)(nil)).Elem(),
-		"Type":    reflect.TypeOf((*doc.Type)(nil)).Elem(),
-		"Value":   reflect.TypeOf((*doc.Value)(nil)).Elem(),
+		// type definitions
+		"Example": reflect.ValueOf((*doc.Example)(nil)),
+		"Filter":  reflect.ValueOf((*doc.Filter)(nil)),
+		"Func":    reflect.ValueOf((*doc.Func)(nil)),
+		"Mode":    reflect.ValueOf((*doc.Mode)(nil)),
+		"Note":    reflect.ValueOf((*doc.Note)(nil)),
+		"Package": reflect.ValueOf((*doc.Package)(nil)),
+		"Type":    reflect.ValueOf((*doc.Type)(nil)),
+		"Value":   reflect.ValueOf((*doc.Value)(nil)),
 	}
 }

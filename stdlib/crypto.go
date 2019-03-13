@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["crypto"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"BLAKE2b_256":  reflect.ValueOf(crypto.BLAKE2b_256),
 		"BLAKE2b_384":  reflect.ValueOf(crypto.BLAKE2b_384),
 		"BLAKE2b_512":  reflect.ValueOf(crypto.BLAKE2b_512),
@@ -29,15 +30,14 @@ func init() {
 		"SHA512":       reflect.ValueOf(crypto.SHA512),
 		"SHA512_224":   reflect.ValueOf(crypto.SHA512_224),
 		"SHA512_256":   reflect.ValueOf(crypto.SHA512_256),
-	}
 
-	Type["crypto"] = map[string]reflect.Type{
-		"Decrypter":     reflect.TypeOf((*crypto.Decrypter)(nil)).Elem(),
-		"DecrypterOpts": reflect.TypeOf((*crypto.DecrypterOpts)(nil)).Elem(),
-		"Hash":          reflect.TypeOf((*crypto.Hash)(nil)).Elem(),
-		"PrivateKey":    reflect.TypeOf((*crypto.PrivateKey)(nil)).Elem(),
-		"PublicKey":     reflect.TypeOf((*crypto.PublicKey)(nil)).Elem(),
-		"Signer":        reflect.TypeOf((*crypto.Signer)(nil)).Elem(),
-		"SignerOpts":    reflect.TypeOf((*crypto.SignerOpts)(nil)).Elem(),
+		// type definitions
+		"Decrypter":     reflect.ValueOf((*crypto.Decrypter)(nil)),
+		"DecrypterOpts": reflect.ValueOf((*crypto.DecrypterOpts)(nil)),
+		"Hash":          reflect.ValueOf((*crypto.Hash)(nil)),
+		"PrivateKey":    reflect.ValueOf((*crypto.PrivateKey)(nil)),
+		"PublicKey":     reflect.ValueOf((*crypto.PublicKey)(nil)),
+		"Signer":        reflect.ValueOf((*crypto.Signer)(nil)),
+		"SignerOpts":    reflect.ValueOf((*crypto.SignerOpts)(nil)),
 	}
 }

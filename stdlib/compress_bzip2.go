@@ -9,10 +9,10 @@ import (
 
 func init() {
 	Value["compress/bzip2"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"NewReader": reflect.ValueOf(bzip2.NewReader),
-	}
 
-	Type["compress/bzip2"] = map[string]reflect.Type{
-		"StructuralError": reflect.TypeOf((*bzip2.StructuralError)(nil)).Elem(),
+		// type definitions
+		"StructuralError": reflect.ValueOf((*bzip2.StructuralError)(nil)),
 	}
 }

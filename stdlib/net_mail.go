@@ -9,17 +9,17 @@ import (
 
 func init() {
 	Value["net/mail"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"ErrHeaderNotPresent": reflect.ValueOf(&mail.ErrHeaderNotPresent).Elem(),
 		"ParseAddress":        reflect.ValueOf(mail.ParseAddress),
 		"ParseAddressList":    reflect.ValueOf(mail.ParseAddressList),
 		"ParseDate":           reflect.ValueOf(mail.ParseDate),
 		"ReadMessage":         reflect.ValueOf(mail.ReadMessage),
-	}
 
-	Type["net/mail"] = map[string]reflect.Type{
-		"Address":       reflect.TypeOf((*mail.Address)(nil)).Elem(),
-		"AddressParser": reflect.TypeOf((*mail.AddressParser)(nil)).Elem(),
-		"Header":        reflect.TypeOf((*mail.Header)(nil)).Elem(),
-		"Message":       reflect.TypeOf((*mail.Message)(nil)).Elem(),
+		// type definitions
+		"Address":       reflect.ValueOf((*mail.Address)(nil)),
+		"AddressParser": reflect.ValueOf((*mail.AddressParser)(nil)),
+		"Header":        reflect.ValueOf((*mail.Header)(nil)),
+		"Message":       reflect.ValueOf((*mail.Message)(nil)),
 	}
 }

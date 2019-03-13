@@ -9,10 +9,10 @@ import (
 
 func init() {
 	Value["index/suffixarray"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"New": reflect.ValueOf(suffixarray.New),
-	}
 
-	Type["index/suffixarray"] = map[string]reflect.Type{
-		"Index": reflect.TypeOf((*suffixarray.Index)(nil)).Elem(),
+		// type definitions
+		"Index": reflect.ValueOf((*suffixarray.Index)(nil)),
 	}
 }

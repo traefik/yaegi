@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["compress/zlib"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"BestCompression":    reflect.ValueOf(zlib.BestCompression),
 		"BestSpeed":          reflect.ValueOf(zlib.BestSpeed),
 		"DefaultCompression": reflect.ValueOf(zlib.DefaultCompression),
@@ -22,10 +23,9 @@ func init() {
 		"NewWriterLevel":     reflect.ValueOf(zlib.NewWriterLevel),
 		"NewWriterLevelDict": reflect.ValueOf(zlib.NewWriterLevelDict),
 		"NoCompression":      reflect.ValueOf(zlib.NoCompression),
-	}
 
-	Type["compress/zlib"] = map[string]reflect.Type{
-		"Resetter": reflect.TypeOf((*zlib.Resetter)(nil)).Elem(),
-		"Writer":   reflect.TypeOf((*zlib.Writer)(nil)).Elem(),
+		// type definitions
+		"Resetter": reflect.ValueOf((*zlib.Resetter)(nil)),
+		"Writer":   reflect.ValueOf((*zlib.Writer)(nil)),
 	}
 }

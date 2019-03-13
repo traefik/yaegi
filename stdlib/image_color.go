@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["image/color"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Alpha16Model": reflect.ValueOf(&color.Alpha16Model).Elem(),
 		"AlphaModel":   reflect.ValueOf(&color.AlphaModel).Elem(),
 		"Black":        reflect.ValueOf(&color.Black).Elem(),
@@ -29,22 +30,21 @@ func init() {
 		"White":        reflect.ValueOf(&color.White).Elem(),
 		"YCbCrModel":   reflect.ValueOf(&color.YCbCrModel).Elem(),
 		"YCbCrToRGB":   reflect.ValueOf(color.YCbCrToRGB),
-	}
 
-	Type["image/color"] = map[string]reflect.Type{
-		"Alpha":   reflect.TypeOf((*color.Alpha)(nil)).Elem(),
-		"Alpha16": reflect.TypeOf((*color.Alpha16)(nil)).Elem(),
-		"CMYK":    reflect.TypeOf((*color.CMYK)(nil)).Elem(),
-		"Color":   reflect.TypeOf((*color.Color)(nil)).Elem(),
-		"Gray":    reflect.TypeOf((*color.Gray)(nil)).Elem(),
-		"Gray16":  reflect.TypeOf((*color.Gray16)(nil)).Elem(),
-		"Model":   reflect.TypeOf((*color.Model)(nil)).Elem(),
-		"NRGBA":   reflect.TypeOf((*color.NRGBA)(nil)).Elem(),
-		"NRGBA64": reflect.TypeOf((*color.NRGBA64)(nil)).Elem(),
-		"NYCbCrA": reflect.TypeOf((*color.NYCbCrA)(nil)).Elem(),
-		"Palette": reflect.TypeOf((*color.Palette)(nil)).Elem(),
-		"RGBA":    reflect.TypeOf((*color.RGBA)(nil)).Elem(),
-		"RGBA64":  reflect.TypeOf((*color.RGBA64)(nil)).Elem(),
-		"YCbCr":   reflect.TypeOf((*color.YCbCr)(nil)).Elem(),
+		// type definitions
+		"Alpha":   reflect.ValueOf((*color.Alpha)(nil)),
+		"Alpha16": reflect.ValueOf((*color.Alpha16)(nil)),
+		"CMYK":    reflect.ValueOf((*color.CMYK)(nil)),
+		"Color":   reflect.ValueOf((*color.Color)(nil)),
+		"Gray":    reflect.ValueOf((*color.Gray)(nil)),
+		"Gray16":  reflect.ValueOf((*color.Gray16)(nil)),
+		"Model":   reflect.ValueOf((*color.Model)(nil)),
+		"NRGBA":   reflect.ValueOf((*color.NRGBA)(nil)),
+		"NRGBA64": reflect.ValueOf((*color.NRGBA64)(nil)),
+		"NYCbCrA": reflect.ValueOf((*color.NYCbCrA)(nil)),
+		"Palette": reflect.ValueOf((*color.Palette)(nil)),
+		"RGBA":    reflect.ValueOf((*color.RGBA)(nil)),
+		"RGBA64":  reflect.ValueOf((*color.RGBA64)(nil)),
+		"YCbCr":   reflect.ValueOf((*color.YCbCr)(nil)),
 	}
 }

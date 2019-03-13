@@ -62,7 +62,7 @@ func TestEvalFunc(t *testing.T) {
 
 func TestEvalImport(t *testing.T) {
 	i := interp.New(interp.Opt{})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	runTests(t, i, []testCase{
 		{pre: func() { eval(t, i, `import "time"`) }, src: "2 * time.Second", res: "2s"},
 	})
@@ -70,7 +70,7 @@ func TestEvalImport(t *testing.T) {
 
 func TestEvalNil(t *testing.T) {
 	i := interp.New(interp.Opt{})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	runTests(t, i, []testCase{
 		{desc: "assign nil", src: "a := nil", err: "1:22: use of untyped nil"},
 		{desc: "return nil", pre: func() { eval(t, i, "func getNil() error {return nil}") }, src: "getNil()", res: "<nil>"},
@@ -210,7 +210,7 @@ var a = T{
 
 func TestEvalCompositeBin0(t *testing.T) {
 	i := interp.New(interp.Opt{})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	eval(t, i, `
 import (
 	"fmt"

@@ -9,14 +9,14 @@ import (
 
 func init() {
 	Value["encoding/ascii85"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Decode":        reflect.ValueOf(ascii85.Decode),
 		"Encode":        reflect.ValueOf(ascii85.Encode),
 		"MaxEncodedLen": reflect.ValueOf(ascii85.MaxEncodedLen),
 		"NewDecoder":    reflect.ValueOf(ascii85.NewDecoder),
 		"NewEncoder":    reflect.ValueOf(ascii85.NewEncoder),
-	}
 
-	Type["encoding/ascii85"] = map[string]reflect.Type{
-		"CorruptInputError": reflect.TypeOf((*ascii85.CorruptInputError)(nil)).Elem(),
+		// type definitions
+		"CorruptInputError": reflect.ValueOf((*ascii85.CorruptInputError)(nil)),
 	}
 }

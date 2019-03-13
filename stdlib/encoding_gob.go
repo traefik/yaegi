@@ -9,17 +9,17 @@ import (
 
 func init() {
 	Value["encoding/gob"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"NewDecoder":   reflect.ValueOf(gob.NewDecoder),
 		"NewEncoder":   reflect.ValueOf(gob.NewEncoder),
 		"Register":     reflect.ValueOf(gob.Register),
 		"RegisterName": reflect.ValueOf(gob.RegisterName),
-	}
 
-	Type["encoding/gob"] = map[string]reflect.Type{
-		"CommonType": reflect.TypeOf((*gob.CommonType)(nil)).Elem(),
-		"Decoder":    reflect.TypeOf((*gob.Decoder)(nil)).Elem(),
-		"Encoder":    reflect.TypeOf((*gob.Encoder)(nil)).Elem(),
-		"GobDecoder": reflect.TypeOf((*gob.GobDecoder)(nil)).Elem(),
-		"GobEncoder": reflect.TypeOf((*gob.GobEncoder)(nil)).Elem(),
+		// type definitions
+		"CommonType": reflect.ValueOf((*gob.CommonType)(nil)),
+		"Decoder":    reflect.ValueOf((*gob.Decoder)(nil)),
+		"Encoder":    reflect.ValueOf((*gob.Encoder)(nil)),
+		"GobDecoder": reflect.ValueOf((*gob.GobDecoder)(nil)),
+		"GobEncoder": reflect.ValueOf((*gob.GobEncoder)(nil)),
 	}
 }

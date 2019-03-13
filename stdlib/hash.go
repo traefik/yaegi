@@ -8,11 +8,12 @@ import (
 )
 
 func init() {
-	Value["hash"] = map[string]reflect.Value{}
+	Value["hash"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 
-	Type["hash"] = map[string]reflect.Type{
-		"Hash":   reflect.TypeOf((*hash.Hash)(nil)).Elem(),
-		"Hash32": reflect.TypeOf((*hash.Hash32)(nil)).Elem(),
-		"Hash64": reflect.TypeOf((*hash.Hash64)(nil)).Elem(),
+		// type definitions
+		"Hash":   reflect.ValueOf((*hash.Hash)(nil)),
+		"Hash32": reflect.ValueOf((*hash.Hash32)(nil)),
+		"Hash64": reflect.ValueOf((*hash.Hash64)(nil)),
 	}
 }

@@ -9,8 +9,10 @@ import (
 
 func init() {
 	Value["errors"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"New": reflect.ValueOf(errors.New),
-	}
 
-	Type["errors"] = map[string]reflect.Type{}
+		// type definitions
+
+	}
 }

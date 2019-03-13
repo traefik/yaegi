@@ -9,15 +9,15 @@ import (
 
 func init() {
 	Value["net/http/httptrace"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"ContextClientTrace": reflect.ValueOf(httptrace.ContextClientTrace),
 		"WithClientTrace":    reflect.ValueOf(httptrace.WithClientTrace),
-	}
 
-	Type["net/http/httptrace"] = map[string]reflect.Type{
-		"ClientTrace":      reflect.TypeOf((*httptrace.ClientTrace)(nil)).Elem(),
-		"DNSDoneInfo":      reflect.TypeOf((*httptrace.DNSDoneInfo)(nil)).Elem(),
-		"DNSStartInfo":     reflect.TypeOf((*httptrace.DNSStartInfo)(nil)).Elem(),
-		"GotConnInfo":      reflect.TypeOf((*httptrace.GotConnInfo)(nil)).Elem(),
-		"WroteRequestInfo": reflect.TypeOf((*httptrace.WroteRequestInfo)(nil)).Elem(),
+		// type definitions
+		"ClientTrace":      reflect.ValueOf((*httptrace.ClientTrace)(nil)),
+		"DNSDoneInfo":      reflect.ValueOf((*httptrace.DNSDoneInfo)(nil)),
+		"DNSStartInfo":     reflect.ValueOf((*httptrace.DNSStartInfo)(nil)),
+		"GotConnInfo":      reflect.ValueOf((*httptrace.GotConnInfo)(nil)),
+		"WroteRequestInfo": reflect.ValueOf((*httptrace.WroteRequestInfo)(nil)),
 	}
 }

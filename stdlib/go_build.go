@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["go/build"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"AllowBinary":   reflect.ValueOf(build.AllowBinary),
 		"ArchChar":      reflect.ValueOf(build.ArchChar),
 		"Default":       reflect.ValueOf(&build.Default).Elem(),
@@ -19,13 +20,12 @@ func init() {
 		"ImportDir":     reflect.ValueOf(build.ImportDir),
 		"IsLocalImport": reflect.ValueOf(build.IsLocalImport),
 		"ToolDir":       reflect.ValueOf(&build.ToolDir).Elem(),
-	}
 
-	Type["go/build"] = map[string]reflect.Type{
-		"Context":              reflect.TypeOf((*build.Context)(nil)).Elem(),
-		"ImportMode":           reflect.TypeOf((*build.ImportMode)(nil)).Elem(),
-		"MultiplePackageError": reflect.TypeOf((*build.MultiplePackageError)(nil)).Elem(),
-		"NoGoError":            reflect.TypeOf((*build.NoGoError)(nil)).Elem(),
-		"Package":              reflect.TypeOf((*build.Package)(nil)).Elem(),
+		// type definitions
+		"Context":              reflect.ValueOf((*build.Context)(nil)),
+		"ImportMode":           reflect.ValueOf((*build.ImportMode)(nil)),
+		"MultiplePackageError": reflect.ValueOf((*build.MultiplePackageError)(nil)),
+		"NoGoError":            reflect.ValueOf((*build.NoGoError)(nil)),
+		"Package":              reflect.ValueOf((*build.Package)(nil)),
 	}
 }

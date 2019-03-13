@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["os"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Args":              reflect.ValueOf(&os.Args).Elem(),
 		"Chdir":             reflect.ValueOf(os.Chdir),
 		"Chmod":             reflect.ValueOf(os.Chmod),
@@ -102,18 +103,17 @@ func init() {
 		"Truncate":          reflect.ValueOf(os.Truncate),
 		"Unsetenv":          reflect.ValueOf(os.Unsetenv),
 		"UserCacheDir":      reflect.ValueOf(os.UserCacheDir),
-	}
 
-	Type["os"] = map[string]reflect.Type{
-		"File":         reflect.TypeOf((*os.File)(nil)).Elem(),
-		"FileInfo":     reflect.TypeOf((*os.FileInfo)(nil)).Elem(),
-		"FileMode":     reflect.TypeOf((*os.FileMode)(nil)).Elem(),
-		"LinkError":    reflect.TypeOf((*os.LinkError)(nil)).Elem(),
-		"PathError":    reflect.TypeOf((*os.PathError)(nil)).Elem(),
-		"ProcAttr":     reflect.TypeOf((*os.ProcAttr)(nil)).Elem(),
-		"Process":      reflect.TypeOf((*os.Process)(nil)).Elem(),
-		"ProcessState": reflect.TypeOf((*os.ProcessState)(nil)).Elem(),
-		"Signal":       reflect.TypeOf((*os.Signal)(nil)).Elem(),
-		"SyscallError": reflect.TypeOf((*os.SyscallError)(nil)).Elem(),
+		// type definitions
+		"File":         reflect.ValueOf((*os.File)(nil)),
+		"FileInfo":     reflect.ValueOf((*os.FileInfo)(nil)),
+		"FileMode":     reflect.ValueOf((*os.FileMode)(nil)),
+		"LinkError":    reflect.ValueOf((*os.LinkError)(nil)),
+		"PathError":    reflect.ValueOf((*os.PathError)(nil)),
+		"ProcAttr":     reflect.ValueOf((*os.ProcAttr)(nil)),
+		"Process":      reflect.ValueOf((*os.Process)(nil)),
+		"ProcessState": reflect.ValueOf((*os.ProcessState)(nil)),
+		"Signal":       reflect.ValueOf((*os.Signal)(nil)),
+		"SyscallError": reflect.ValueOf((*os.SyscallError)(nil)),
 	}
 }

@@ -9,9 +9,11 @@ import (
 
 func init() {
 	Value["go/format"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Node":   reflect.ValueOf(format.Node),
 		"Source": reflect.ValueOf(format.Source),
-	}
 
-	Type["go/format"] = map[string]reflect.Type{}
+		// type definitions
+
+	}
 }

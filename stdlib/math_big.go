@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["math/big"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Above":         reflect.ValueOf(big.Above),
 		"AwayFromZero":  reflect.ValueOf(big.AwayFromZero),
 		"Below":         reflect.ValueOf(big.Below),
@@ -27,15 +28,14 @@ func init() {
 		"ToNegativeInf": reflect.ValueOf(big.ToNegativeInf),
 		"ToPositiveInf": reflect.ValueOf(big.ToPositiveInf),
 		"ToZero":        reflect.ValueOf(big.ToZero),
-	}
 
-	Type["math/big"] = map[string]reflect.Type{
-		"Accuracy":     reflect.TypeOf((*big.Accuracy)(nil)).Elem(),
-		"ErrNaN":       reflect.TypeOf((*big.ErrNaN)(nil)).Elem(),
-		"Float":        reflect.TypeOf((*big.Float)(nil)).Elem(),
-		"Int":          reflect.TypeOf((*big.Int)(nil)).Elem(),
-		"Rat":          reflect.TypeOf((*big.Rat)(nil)).Elem(),
-		"RoundingMode": reflect.TypeOf((*big.RoundingMode)(nil)).Elem(),
-		"Word":         reflect.TypeOf((*big.Word)(nil)).Elem(),
+		// type definitions
+		"Accuracy":     reflect.ValueOf((*big.Accuracy)(nil)),
+		"ErrNaN":       reflect.ValueOf((*big.ErrNaN)(nil)),
+		"Float":        reflect.ValueOf((*big.Float)(nil)),
+		"Int":          reflect.ValueOf((*big.Int)(nil)),
+		"Rat":          reflect.ValueOf((*big.Rat)(nil)),
+		"RoundingMode": reflect.ValueOf((*big.RoundingMode)(nil)),
+		"Word":         reflect.ValueOf((*big.Word)(nil)),
 	}
 }

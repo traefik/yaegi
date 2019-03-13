@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["expvar"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Do":        reflect.ValueOf(expvar.Do),
 		"Get":       reflect.ValueOf(expvar.Get),
 		"Handler":   reflect.ValueOf(expvar.Handler),
@@ -17,15 +18,14 @@ func init() {
 		"NewMap":    reflect.ValueOf(expvar.NewMap),
 		"NewString": reflect.ValueOf(expvar.NewString),
 		"Publish":   reflect.ValueOf(expvar.Publish),
-	}
 
-	Type["expvar"] = map[string]reflect.Type{
-		"Float":    reflect.TypeOf((*expvar.Float)(nil)).Elem(),
-		"Func":     reflect.TypeOf((*expvar.Func)(nil)).Elem(),
-		"Int":      reflect.TypeOf((*expvar.Int)(nil)).Elem(),
-		"KeyValue": reflect.TypeOf((*expvar.KeyValue)(nil)).Elem(),
-		"Map":      reflect.TypeOf((*expvar.Map)(nil)).Elem(),
-		"String":   reflect.TypeOf((*expvar.String)(nil)).Elem(),
-		"Var":      reflect.TypeOf((*expvar.Var)(nil)).Elem(),
+		// type definitions
+		"Float":    reflect.ValueOf((*expvar.Float)(nil)),
+		"Func":     reflect.ValueOf((*expvar.Func)(nil)),
+		"Int":      reflect.ValueOf((*expvar.Int)(nil)),
+		"KeyValue": reflect.ValueOf((*expvar.KeyValue)(nil)),
+		"Map":      reflect.ValueOf((*expvar.Map)(nil)),
+		"String":   reflect.ValueOf((*expvar.String)(nil)),
+		"Var":      reflect.ValueOf((*expvar.Var)(nil)),
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["crypto/tls"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Client":                               reflect.ValueOf(tls.Client),
 		"CurveP256":                            reflect.ValueOf(tls.CurveP256),
 		"CurveP384":                            reflect.ValueOf(tls.CurveP384),
@@ -68,21 +69,20 @@ func init() {
 		"VersionTLS12":                            reflect.ValueOf(tls.VersionTLS12),
 		"X25519":                                  reflect.ValueOf(tls.X25519),
 		"X509KeyPair":                             reflect.ValueOf(tls.X509KeyPair),
-	}
 
-	Type["crypto/tls"] = map[string]reflect.Type{
-		"Certificate":            reflect.TypeOf((*tls.Certificate)(nil)).Elem(),
-		"CertificateRequestInfo": reflect.TypeOf((*tls.CertificateRequestInfo)(nil)).Elem(),
-		"ClientAuthType":         reflect.TypeOf((*tls.ClientAuthType)(nil)).Elem(),
-		"ClientHelloInfo":        reflect.TypeOf((*tls.ClientHelloInfo)(nil)).Elem(),
-		"ClientSessionCache":     reflect.TypeOf((*tls.ClientSessionCache)(nil)).Elem(),
-		"ClientSessionState":     reflect.TypeOf((*tls.ClientSessionState)(nil)).Elem(),
-		"Config":                 reflect.TypeOf((*tls.Config)(nil)).Elem(),
-		"Conn":                   reflect.TypeOf((*tls.Conn)(nil)).Elem(),
-		"ConnectionState":        reflect.TypeOf((*tls.ConnectionState)(nil)).Elem(),
-		"CurveID":                reflect.TypeOf((*tls.CurveID)(nil)).Elem(),
-		"RecordHeaderError":      reflect.TypeOf((*tls.RecordHeaderError)(nil)).Elem(),
-		"RenegotiationSupport":   reflect.TypeOf((*tls.RenegotiationSupport)(nil)).Elem(),
-		"SignatureScheme":        reflect.TypeOf((*tls.SignatureScheme)(nil)).Elem(),
+		// type definitions
+		"Certificate":            reflect.ValueOf((*tls.Certificate)(nil)),
+		"CertificateRequestInfo": reflect.ValueOf((*tls.CertificateRequestInfo)(nil)),
+		"ClientAuthType":         reflect.ValueOf((*tls.ClientAuthType)(nil)),
+		"ClientHelloInfo":        reflect.ValueOf((*tls.ClientHelloInfo)(nil)),
+		"ClientSessionCache":     reflect.ValueOf((*tls.ClientSessionCache)(nil)),
+		"ClientSessionState":     reflect.ValueOf((*tls.ClientSessionState)(nil)),
+		"Config":                 reflect.ValueOf((*tls.Config)(nil)),
+		"Conn":                   reflect.ValueOf((*tls.Conn)(nil)),
+		"ConnectionState":        reflect.ValueOf((*tls.ConnectionState)(nil)),
+		"CurveID":                reflect.ValueOf((*tls.CurveID)(nil)),
+		"RecordHeaderError":      reflect.ValueOf((*tls.RecordHeaderError)(nil)),
+		"RenegotiationSupport":   reflect.ValueOf((*tls.RenegotiationSupport)(nil)),
+		"SignatureScheme":        reflect.ValueOf((*tls.SignatureScheme)(nil)),
 	}
 }

@@ -9,9 +9,11 @@ import (
 
 func init() {
 	Value["html"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"EscapeString":   reflect.ValueOf(html.EscapeString),
 		"UnescapeString": reflect.ValueOf(html.UnescapeString),
-	}
 
-	Type["html"] = map[string]reflect.Type{}
+		// type definitions
+
+	}
 }

@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["image/gif"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Decode":             reflect.ValueOf(gif.Decode),
 		"DecodeAll":          reflect.ValueOf(gif.DecodeAll),
 		"DecodeConfig":       reflect.ValueOf(gif.DecodeConfig),
@@ -17,10 +18,9 @@ func init() {
 		"DisposalPrevious":   reflect.ValueOf(gif.DisposalPrevious),
 		"Encode":             reflect.ValueOf(gif.Encode),
 		"EncodeAll":          reflect.ValueOf(gif.EncodeAll),
-	}
 
-	Type["image/gif"] = map[string]reflect.Type{
-		"GIF":     reflect.TypeOf((*gif.GIF)(nil)).Elem(),
-		"Options": reflect.TypeOf((*gif.Options)(nil)).Elem(),
+		// type definitions
+		"GIF":     reflect.ValueOf((*gif.GIF)(nil)),
+		"Options": reflect.ValueOf((*gif.Options)(nil)),
 	}
 }

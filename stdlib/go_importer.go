@@ -9,11 +9,11 @@ import (
 
 func init() {
 	Value["go/importer"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Default": reflect.ValueOf(importer.Default),
 		"For":     reflect.ValueOf(importer.For),
-	}
 
-	Type["go/importer"] = map[string]reflect.Type{
-		"Lookup": reflect.TypeOf((*importer.Lookup)(nil)).Elem(),
+		// type definitions
+		"Lookup": reflect.ValueOf((*importer.Lookup)(nil)),
 	}
 }

@@ -9,17 +9,17 @@ import (
 
 func init() {
 	Value["encoding/csv"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"ErrBareQuote":     reflect.ValueOf(&csv.ErrBareQuote).Elem(),
 		"ErrFieldCount":    reflect.ValueOf(&csv.ErrFieldCount).Elem(),
 		"ErrQuote":         reflect.ValueOf(&csv.ErrQuote).Elem(),
 		"ErrTrailingComma": reflect.ValueOf(&csv.ErrTrailingComma).Elem(),
 		"NewReader":        reflect.ValueOf(csv.NewReader),
 		"NewWriter":        reflect.ValueOf(csv.NewWriter),
-	}
 
-	Type["encoding/csv"] = map[string]reflect.Type{
-		"ParseError": reflect.TypeOf((*csv.ParseError)(nil)).Elem(),
-		"Reader":     reflect.TypeOf((*csv.Reader)(nil)).Elem(),
-		"Writer":     reflect.TypeOf((*csv.Writer)(nil)).Elem(),
+		// type definitions
+		"ParseError": reflect.ValueOf((*csv.ParseError)(nil)),
+		"Reader":     reflect.ValueOf((*csv.Reader)(nil)),
+		"Writer":     reflect.ValueOf((*csv.Writer)(nil)),
 	}
 }

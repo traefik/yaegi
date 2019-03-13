@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["unicode/utf8"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"DecodeLastRune":         reflect.ValueOf(utf8.DecodeLastRune),
 		"DecodeLastRuneInString": reflect.ValueOf(utf8.DecodeLastRuneInString),
 		"DecodeRune":             reflect.ValueOf(utf8.DecodeRune),
@@ -27,7 +28,8 @@ func init() {
 		"Valid":                  reflect.ValueOf(utf8.Valid),
 		"ValidRune":              reflect.ValueOf(utf8.ValidRune),
 		"ValidString":            reflect.ValueOf(utf8.ValidString),
-	}
 
-	Type["unicode/utf8"] = map[string]reflect.Type{}
+		// type definitions
+
+	}
 }

@@ -9,12 +9,12 @@ import (
 
 func init() {
 	Value["net/http/cgi"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Request":        reflect.ValueOf(cgi.Request),
 		"RequestFromMap": reflect.ValueOf(cgi.RequestFromMap),
 		"Serve":          reflect.ValueOf(cgi.Serve),
-	}
 
-	Type["net/http/cgi"] = map[string]reflect.Type{
-		"Handler": reflect.TypeOf((*cgi.Handler)(nil)).Elem(),
+		// type definitions
+		"Handler": reflect.ValueOf((*cgi.Handler)(nil)),
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["encoding/hex"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Decode":         reflect.ValueOf(hex.Decode),
 		"DecodeString":   reflect.ValueOf(hex.DecodeString),
 		"DecodedLen":     reflect.ValueOf(hex.DecodedLen),
@@ -20,9 +21,8 @@ func init() {
 		"ErrLength":      reflect.ValueOf(&hex.ErrLength).Elem(),
 		"NewDecoder":     reflect.ValueOf(hex.NewDecoder),
 		"NewEncoder":     reflect.ValueOf(hex.NewEncoder),
-	}
 
-	Type["encoding/hex"] = map[string]reflect.Type{
-		"InvalidByteError": reflect.TypeOf((*hex.InvalidByteError)(nil)).Elem(),
+		// type definitions
+		"InvalidByteError": reflect.ValueOf((*hex.InvalidByteError)(nil)),
 	}
 }

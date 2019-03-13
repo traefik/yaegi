@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["database/sql"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Drivers":              reflect.ValueOf(sql.Drivers),
 		"ErrConnDone":          reflect.ValueOf(&sql.ErrConnDone).Elem(),
 		"ErrNoRows":            reflect.ValueOf(&sql.ErrNoRows).Elem(),
@@ -25,27 +26,26 @@ func init() {
 		"Open":                 reflect.ValueOf(sql.Open),
 		"OpenDB":               reflect.ValueOf(sql.OpenDB),
 		"Register":             reflect.ValueOf(sql.Register),
-	}
 
-	Type["database/sql"] = map[string]reflect.Type{
-		"ColumnType":     reflect.TypeOf((*sql.ColumnType)(nil)).Elem(),
-		"Conn":           reflect.TypeOf((*sql.Conn)(nil)).Elem(),
-		"DB":             reflect.TypeOf((*sql.DB)(nil)).Elem(),
-		"DBStats":        reflect.TypeOf((*sql.DBStats)(nil)).Elem(),
-		"IsolationLevel": reflect.TypeOf((*sql.IsolationLevel)(nil)).Elem(),
-		"NamedArg":       reflect.TypeOf((*sql.NamedArg)(nil)).Elem(),
-		"NullBool":       reflect.TypeOf((*sql.NullBool)(nil)).Elem(),
-		"NullFloat64":    reflect.TypeOf((*sql.NullFloat64)(nil)).Elem(),
-		"NullInt64":      reflect.TypeOf((*sql.NullInt64)(nil)).Elem(),
-		"NullString":     reflect.TypeOf((*sql.NullString)(nil)).Elem(),
-		"Out":            reflect.TypeOf((*sql.Out)(nil)).Elem(),
-		"RawBytes":       reflect.TypeOf((*sql.RawBytes)(nil)).Elem(),
-		"Result":         reflect.TypeOf((*sql.Result)(nil)).Elem(),
-		"Row":            reflect.TypeOf((*sql.Row)(nil)).Elem(),
-		"Rows":           reflect.TypeOf((*sql.Rows)(nil)).Elem(),
-		"Scanner":        reflect.TypeOf((*sql.Scanner)(nil)).Elem(),
-		"Stmt":           reflect.TypeOf((*sql.Stmt)(nil)).Elem(),
-		"Tx":             reflect.TypeOf((*sql.Tx)(nil)).Elem(),
-		"TxOptions":      reflect.TypeOf((*sql.TxOptions)(nil)).Elem(),
+		// type definitions
+		"ColumnType":     reflect.ValueOf((*sql.ColumnType)(nil)),
+		"Conn":           reflect.ValueOf((*sql.Conn)(nil)),
+		"DB":             reflect.ValueOf((*sql.DB)(nil)),
+		"DBStats":        reflect.ValueOf((*sql.DBStats)(nil)),
+		"IsolationLevel": reflect.ValueOf((*sql.IsolationLevel)(nil)),
+		"NamedArg":       reflect.ValueOf((*sql.NamedArg)(nil)),
+		"NullBool":       reflect.ValueOf((*sql.NullBool)(nil)),
+		"NullFloat64":    reflect.ValueOf((*sql.NullFloat64)(nil)),
+		"NullInt64":      reflect.ValueOf((*sql.NullInt64)(nil)),
+		"NullString":     reflect.ValueOf((*sql.NullString)(nil)),
+		"Out":            reflect.ValueOf((*sql.Out)(nil)),
+		"RawBytes":       reflect.ValueOf((*sql.RawBytes)(nil)),
+		"Result":         reflect.ValueOf((*sql.Result)(nil)),
+		"Row":            reflect.ValueOf((*sql.Row)(nil)),
+		"Rows":           reflect.ValueOf((*sql.Rows)(nil)),
+		"Scanner":        reflect.ValueOf((*sql.Scanner)(nil)),
+		"Stmt":           reflect.ValueOf((*sql.Stmt)(nil)),
+		"Tx":             reflect.ValueOf((*sql.Tx)(nil)),
+		"TxOptions":      reflect.ValueOf((*sql.TxOptions)(nil)),
 	}
 }

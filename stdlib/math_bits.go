@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["math/bits"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"LeadingZeros":    reflect.ValueOf(bits.LeadingZeros),
 		"LeadingZeros16":  reflect.ValueOf(bits.LeadingZeros16),
 		"LeadingZeros32":  reflect.ValueOf(bits.LeadingZeros32),
@@ -44,7 +45,8 @@ func init() {
 		"TrailingZeros64": reflect.ValueOf(bits.TrailingZeros64),
 		"TrailingZeros8":  reflect.ValueOf(bits.TrailingZeros8),
 		"UintSize":        reflect.ValueOf(bits.UintSize),
-	}
 
-	Type["math/bits"] = map[string]reflect.Type{}
+		// type definitions
+
+	}
 }

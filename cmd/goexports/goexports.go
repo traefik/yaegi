@@ -31,6 +31,7 @@ import (
 
 func init() {
 	Value["{{.PkgName}}"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		{{range $key, $value := .Val -}}
 			{{- if $value.Addr -}}
 				"{{$key}}": reflect.ValueOf(&{{$value.Name}}).Elem(),
@@ -38,11 +39,10 @@ func init() {
 				"{{$key}}": reflect.ValueOf({{$value.Name}}),
 			{{end -}}
 		{{end}}
-	}
 
-	Type["{{.PkgName}}"] = map[string]reflect.Type{
+		// type definitions
 		{{range $key, $value := .Typ -}}
-			"{{$key}}": reflect.TypeOf((*{{$value}})(nil)).Elem(),
+			"{{$key}}": reflect.ValueOf((*{{$value}})(nil)),
 		{{end}}
 	}
 }

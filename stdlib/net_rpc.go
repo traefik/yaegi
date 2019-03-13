@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["net/rpc"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Accept":             reflect.ValueOf(rpc.Accept),
 		"DefaultDebugPath":   reflect.ValueOf(rpc.DefaultDebugPath),
 		"DefaultRPCPath":     reflect.ValueOf(rpc.DefaultRPCPath),
@@ -26,16 +27,15 @@ func init() {
 		"ServeCodec":         reflect.ValueOf(rpc.ServeCodec),
 		"ServeConn":          reflect.ValueOf(rpc.ServeConn),
 		"ServeRequest":       reflect.ValueOf(rpc.ServeRequest),
-	}
 
-	Type["net/rpc"] = map[string]reflect.Type{
-		"Call":        reflect.TypeOf((*rpc.Call)(nil)).Elem(),
-		"Client":      reflect.TypeOf((*rpc.Client)(nil)).Elem(),
-		"ClientCodec": reflect.TypeOf((*rpc.ClientCodec)(nil)).Elem(),
-		"Request":     reflect.TypeOf((*rpc.Request)(nil)).Elem(),
-		"Response":    reflect.TypeOf((*rpc.Response)(nil)).Elem(),
-		"Server":      reflect.TypeOf((*rpc.Server)(nil)).Elem(),
-		"ServerCodec": reflect.TypeOf((*rpc.ServerCodec)(nil)).Elem(),
-		"ServerError": reflect.TypeOf((*rpc.ServerError)(nil)).Elem(),
+		// type definitions
+		"Call":        reflect.ValueOf((*rpc.Call)(nil)),
+		"Client":      reflect.ValueOf((*rpc.Client)(nil)),
+		"ClientCodec": reflect.ValueOf((*rpc.ClientCodec)(nil)),
+		"Request":     reflect.ValueOf((*rpc.Request)(nil)),
+		"Response":    reflect.ValueOf((*rpc.Response)(nil)),
+		"Server":      reflect.ValueOf((*rpc.Server)(nil)),
+		"ServerCodec": reflect.ValueOf((*rpc.ServerCodec)(nil)),
+		"ServerError": reflect.ValueOf((*rpc.ServerError)(nil)),
 	}
 }

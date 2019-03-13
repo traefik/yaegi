@@ -9,17 +9,17 @@ import (
 
 func init() {
 	Value["sync"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"NewCond": reflect.ValueOf(sync.NewCond),
-	}
 
-	Type["sync"] = map[string]reflect.Type{
-		"Cond":      reflect.TypeOf((*sync.Cond)(nil)).Elem(),
-		"Locker":    reflect.TypeOf((*sync.Locker)(nil)).Elem(),
-		"Map":       reflect.TypeOf((*sync.Map)(nil)).Elem(),
-		"Mutex":     reflect.TypeOf((*sync.Mutex)(nil)).Elem(),
-		"Once":      reflect.TypeOf((*sync.Once)(nil)).Elem(),
-		"Pool":      reflect.TypeOf((*sync.Pool)(nil)).Elem(),
-		"RWMutex":   reflect.TypeOf((*sync.RWMutex)(nil)).Elem(),
-		"WaitGroup": reflect.TypeOf((*sync.WaitGroup)(nil)).Elem(),
+		// type definitions
+		"Cond":      reflect.ValueOf((*sync.Cond)(nil)),
+		"Locker":    reflect.ValueOf((*sync.Locker)(nil)),
+		"Map":       reflect.ValueOf((*sync.Map)(nil)),
+		"Mutex":     reflect.ValueOf((*sync.Mutex)(nil)),
+		"Once":      reflect.ValueOf((*sync.Once)(nil)),
+		"Pool":      reflect.ValueOf((*sync.Pool)(nil)),
+		"RWMutex":   reflect.ValueOf((*sync.RWMutex)(nil)),
+		"WaitGroup": reflect.ValueOf((*sync.WaitGroup)(nil)),
 	}
 }

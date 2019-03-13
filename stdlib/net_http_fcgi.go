@@ -9,11 +9,13 @@ import (
 
 func init() {
 	Value["net/http/fcgi"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"ErrConnClosed":     reflect.ValueOf(&fcgi.ErrConnClosed).Elem(),
 		"ErrRequestAborted": reflect.ValueOf(&fcgi.ErrRequestAborted).Elem(),
 		"ProcessEnv":        reflect.ValueOf(fcgi.ProcessEnv),
 		"Serve":             reflect.ValueOf(fcgi.Serve),
-	}
 
-	Type["net/http/fcgi"] = map[string]reflect.Type{}
+		// type definitions
+
+	}
 }

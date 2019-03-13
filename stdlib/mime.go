@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["mime"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"AddExtensionType":         reflect.ValueOf(mime.AddExtensionType),
 		"BEncoding":                reflect.ValueOf(mime.BEncoding),
 		"ErrInvalidMediaParameter": reflect.ValueOf(&mime.ErrInvalidMediaParameter).Elem(),
@@ -17,10 +18,9 @@ func init() {
 		"ParseMediaType":           reflect.ValueOf(mime.ParseMediaType),
 		"QEncoding":                reflect.ValueOf(mime.QEncoding),
 		"TypeByExtension":          reflect.ValueOf(mime.TypeByExtension),
-	}
 
-	Type["mime"] = map[string]reflect.Type{
-		"WordDecoder": reflect.TypeOf((*mime.WordDecoder)(nil)).Elem(),
-		"WordEncoder": reflect.TypeOf((*mime.WordEncoder)(nil)).Elem(),
+		// type definitions
+		"WordDecoder": reflect.ValueOf((*mime.WordDecoder)(nil)),
+		"WordEncoder": reflect.ValueOf((*mime.WordEncoder)(nil)),
 	}
 }

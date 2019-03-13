@@ -8,6 +8,7 @@ import (
 
 func init() {
 	Value["reflect"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Append":          reflect.ValueOf(reflect.Append),
 		"AppendSlice":     reflect.ValueOf(reflect.AppendSlice),
 		"Array":           reflect.ValueOf(reflect.Array),
@@ -65,20 +66,19 @@ func init() {
 		"UnsafePointer":   reflect.ValueOf(reflect.UnsafePointer),
 		"ValueOf":         reflect.ValueOf(reflect.ValueOf),
 		"Zero":            reflect.ValueOf(reflect.Zero),
-	}
 
-	Type["reflect"] = map[string]reflect.Type{
-		"ChanDir":      reflect.TypeOf((*reflect.ChanDir)(nil)).Elem(),
-		"Kind":         reflect.TypeOf((*reflect.Kind)(nil)).Elem(),
-		"Method":       reflect.TypeOf((*reflect.Method)(nil)).Elem(),
-		"SelectCase":   reflect.TypeOf((*reflect.SelectCase)(nil)).Elem(),
-		"SelectDir":    reflect.TypeOf((*reflect.SelectDir)(nil)).Elem(),
-		"SliceHeader":  reflect.TypeOf((*reflect.SliceHeader)(nil)).Elem(),
-		"StringHeader": reflect.TypeOf((*reflect.StringHeader)(nil)).Elem(),
-		"StructField":  reflect.TypeOf((*reflect.StructField)(nil)).Elem(),
-		"StructTag":    reflect.TypeOf((*reflect.StructTag)(nil)).Elem(),
-		"Type":         reflect.TypeOf((*reflect.Type)(nil)).Elem(),
-		"Value":        reflect.TypeOf((*reflect.Value)(nil)).Elem(),
-		"ValueError":   reflect.TypeOf((*reflect.ValueError)(nil)).Elem(),
+		// type definitions
+		"ChanDir":      reflect.ValueOf((*reflect.ChanDir)(nil)),
+		"Kind":         reflect.ValueOf((*reflect.Kind)(nil)),
+		"Method":       reflect.ValueOf((*reflect.Method)(nil)),
+		"SelectCase":   reflect.ValueOf((*reflect.SelectCase)(nil)),
+		"SelectDir":    reflect.ValueOf((*reflect.SelectDir)(nil)),
+		"SliceHeader":  reflect.ValueOf((*reflect.SliceHeader)(nil)),
+		"StringHeader": reflect.ValueOf((*reflect.StringHeader)(nil)),
+		"StructField":  reflect.ValueOf((*reflect.StructField)(nil)),
+		"StructTag":    reflect.ValueOf((*reflect.StructTag)(nil)),
+		"Type":         reflect.ValueOf((*reflect.Type)(nil)),
+		"Value":        reflect.ValueOf((*reflect.Value)(nil)),
+		"ValueError":   reflect.ValueOf((*reflect.ValueError)(nil)),
 	}
 }

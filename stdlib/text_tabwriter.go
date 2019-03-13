@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["text/tabwriter"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"AlignRight":          reflect.ValueOf(tabwriter.AlignRight),
 		"Debug":               reflect.ValueOf(tabwriter.Debug),
 		"DiscardEmptyColumns": reflect.ValueOf(tabwriter.DiscardEmptyColumns),
@@ -17,9 +18,8 @@ func init() {
 		"NewWriter":           reflect.ValueOf(tabwriter.NewWriter),
 		"StripEscape":         reflect.ValueOf(tabwriter.StripEscape),
 		"TabIndent":           reflect.ValueOf(tabwriter.TabIndent),
-	}
 
-	Type["text/tabwriter"] = map[string]reflect.Type{
-		"Writer": reflect.TypeOf((*tabwriter.Writer)(nil)).Elem(),
+		// type definitions
+		"Writer": reflect.ValueOf((*tabwriter.Writer)(nil)),
 	}
 }

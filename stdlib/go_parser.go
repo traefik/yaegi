@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["go/parser"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"AllErrors":         reflect.ValueOf(parser.AllErrors),
 		"DeclarationErrors": reflect.ValueOf(parser.DeclarationErrors),
 		"ImportsOnly":       reflect.ValueOf(parser.ImportsOnly),
@@ -20,9 +21,8 @@ func init() {
 		"ParseFile":         reflect.ValueOf(parser.ParseFile),
 		"SpuriousErrors":    reflect.ValueOf(parser.SpuriousErrors),
 		"Trace":             reflect.ValueOf(parser.Trace),
-	}
 
-	Type["go/parser"] = map[string]reflect.Type{
-		"Mode": reflect.TypeOf((*parser.Mode)(nil)).Elem(),
+		// type definitions
+		"Mode": reflect.ValueOf((*parser.Mode)(nil)),
 	}
 }

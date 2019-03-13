@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["html/template"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"ErrAmbigContext":      reflect.ValueOf(template.ErrAmbigContext),
 		"ErrBadHTML":           reflect.ValueOf(template.ErrBadHTML),
 		"ErrBranchEnd":         reflect.ValueOf(template.ErrBranchEnd),
@@ -33,19 +34,18 @@ func init() {
 		"ParseFiles":           reflect.ValueOf(template.ParseFiles),
 		"ParseGlob":            reflect.ValueOf(template.ParseGlob),
 		"URLQueryEscaper":      reflect.ValueOf(template.URLQueryEscaper),
-	}
 
-	Type["html/template"] = map[string]reflect.Type{
-		"CSS":       reflect.TypeOf((*template.CSS)(nil)).Elem(),
-		"Error":     reflect.TypeOf((*template.Error)(nil)).Elem(),
-		"ErrorCode": reflect.TypeOf((*template.ErrorCode)(nil)).Elem(),
-		"FuncMap":   reflect.TypeOf((*template.FuncMap)(nil)).Elem(),
-		"HTML":      reflect.TypeOf((*template.HTML)(nil)).Elem(),
-		"HTMLAttr":  reflect.TypeOf((*template.HTMLAttr)(nil)).Elem(),
-		"JS":        reflect.TypeOf((*template.JS)(nil)).Elem(),
-		"JSStr":     reflect.TypeOf((*template.JSStr)(nil)).Elem(),
-		"Srcset":    reflect.TypeOf((*template.Srcset)(nil)).Elem(),
-		"Template":  reflect.TypeOf((*template.Template)(nil)).Elem(),
-		"URL":       reflect.TypeOf((*template.URL)(nil)).Elem(),
+		// type definitions
+		"CSS":       reflect.ValueOf((*template.CSS)(nil)),
+		"Error":     reflect.ValueOf((*template.Error)(nil)),
+		"ErrorCode": reflect.ValueOf((*template.ErrorCode)(nil)),
+		"FuncMap":   reflect.ValueOf((*template.FuncMap)(nil)),
+		"HTML":      reflect.ValueOf((*template.HTML)(nil)),
+		"HTMLAttr":  reflect.ValueOf((*template.HTMLAttr)(nil)),
+		"JS":        reflect.ValueOf((*template.JS)(nil)),
+		"JSStr":     reflect.ValueOf((*template.JSStr)(nil)),
+		"Srcset":    reflect.ValueOf((*template.Srcset)(nil)),
+		"Template":  reflect.ValueOf((*template.Template)(nil)),
+		"URL":       reflect.ValueOf((*template.URL)(nil)),
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["image/png"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"BestCompression":    reflect.ValueOf(png.BestCompression),
 		"BestSpeed":          reflect.ValueOf(png.BestSpeed),
 		"Decode":             reflect.ValueOf(png.Decode),
@@ -16,14 +17,13 @@ func init() {
 		"DefaultCompression": reflect.ValueOf(png.DefaultCompression),
 		"Encode":             reflect.ValueOf(png.Encode),
 		"NoCompression":      reflect.ValueOf(png.NoCompression),
-	}
 
-	Type["image/png"] = map[string]reflect.Type{
-		"CompressionLevel":  reflect.TypeOf((*png.CompressionLevel)(nil)).Elem(),
-		"Encoder":           reflect.TypeOf((*png.Encoder)(nil)).Elem(),
-		"EncoderBuffer":     reflect.TypeOf((*png.EncoderBuffer)(nil)).Elem(),
-		"EncoderBufferPool": reflect.TypeOf((*png.EncoderBufferPool)(nil)).Elem(),
-		"FormatError":       reflect.TypeOf((*png.FormatError)(nil)).Elem(),
-		"UnsupportedError":  reflect.TypeOf((*png.UnsupportedError)(nil)).Elem(),
+		// type definitions
+		"CompressionLevel":  reflect.ValueOf((*png.CompressionLevel)(nil)),
+		"Encoder":           reflect.ValueOf((*png.Encoder)(nil)),
+		"EncoderBuffer":     reflect.ValueOf((*png.EncoderBuffer)(nil)),
+		"EncoderBufferPool": reflect.ValueOf((*png.EncoderBufferPool)(nil)),
+		"FormatError":       reflect.ValueOf((*png.FormatError)(nil)),
+		"UnsupportedError":  reflect.ValueOf((*png.UnsupportedError)(nil)),
 	}
 }

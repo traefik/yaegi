@@ -9,16 +9,16 @@ import (
 
 func init() {
 	Value["go/printer"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Fprint":    reflect.ValueOf(printer.Fprint),
 		"RawFormat": reflect.ValueOf(printer.RawFormat),
 		"SourcePos": reflect.ValueOf(printer.SourcePos),
 		"TabIndent": reflect.ValueOf(printer.TabIndent),
 		"UseSpaces": reflect.ValueOf(printer.UseSpaces),
-	}
 
-	Type["go/printer"] = map[string]reflect.Type{
-		"CommentedNode": reflect.TypeOf((*printer.CommentedNode)(nil)).Elem(),
-		"Config":        reflect.TypeOf((*printer.Config)(nil)).Elem(),
-		"Mode":          reflect.TypeOf((*printer.Mode)(nil)).Elem(),
+		// type definitions
+		"CommentedNode": reflect.ValueOf((*printer.CommentedNode)(nil)),
+		"Config":        reflect.ValueOf((*printer.Config)(nil)),
+		"Mode":          reflect.ValueOf((*printer.Mode)(nil)),
 	}
 }

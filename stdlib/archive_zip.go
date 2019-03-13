@@ -9,6 +9,7 @@ import (
 
 func init() {
 	Value["archive/zip"] = map[string]reflect.Value{
+		// function, constant and variable definitions
 		"Deflate":              reflect.ValueOf(zip.Deflate),
 		"ErrAlgorithm":         reflect.ValueOf(&zip.ErrAlgorithm).Elem(),
 		"ErrChecksum":          reflect.ValueOf(&zip.ErrChecksum).Elem(),
@@ -20,15 +21,14 @@ func init() {
 		"RegisterCompressor":   reflect.ValueOf(zip.RegisterCompressor),
 		"RegisterDecompressor": reflect.ValueOf(zip.RegisterDecompressor),
 		"Store":                reflect.ValueOf(zip.Store),
-	}
 
-	Type["archive/zip"] = map[string]reflect.Type{
-		"Compressor":   reflect.TypeOf((*zip.Compressor)(nil)).Elem(),
-		"Decompressor": reflect.TypeOf((*zip.Decompressor)(nil)).Elem(),
-		"File":         reflect.TypeOf((*zip.File)(nil)).Elem(),
-		"FileHeader":   reflect.TypeOf((*zip.FileHeader)(nil)).Elem(),
-		"ReadCloser":   reflect.TypeOf((*zip.ReadCloser)(nil)).Elem(),
-		"Reader":       reflect.TypeOf((*zip.Reader)(nil)).Elem(),
-		"Writer":       reflect.TypeOf((*zip.Writer)(nil)).Elem(),
+		// type definitions
+		"Compressor":   reflect.ValueOf((*zip.Compressor)(nil)),
+		"Decompressor": reflect.ValueOf((*zip.Decompressor)(nil)),
+		"File":         reflect.ValueOf((*zip.File)(nil)),
+		"FileHeader":   reflect.ValueOf((*zip.FileHeader)(nil)),
+		"ReadCloser":   reflect.ValueOf((*zip.ReadCloser)(nil)),
+		"Reader":       reflect.ValueOf((*zip.Reader)(nil)),
+		"Writer":       reflect.ValueOf((*zip.Writer)(nil)),
 	}
 }

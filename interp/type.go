@@ -294,19 +294,16 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 			}
 			switch sym.typ.cat {
 			case BinPkgT:
-				types := interp.binType[sym.path]
-				if typ, ok := types[name]; ok {
-					t.cat = ValueT
-					t.rtype = typ
-					break
-				}
-				values := interp.binValue[sym.path]
-				if v, ok := values[name]; ok {
+				pkg := interp.binValue[sym.path]
+				if v, ok := pkg[name]; ok {
 					t.cat = ValueT
 					t.rtype = v.Type()
-					break
+					if isBinType(v) {
+						t.rtype = t.rtype.Elem()
+					}
+				} else {
+					t.incomplete = true
 				}
-				t.incomplete = true
 
 			case SrcPkgT:
 				spkg := interp.scope[pkg]
