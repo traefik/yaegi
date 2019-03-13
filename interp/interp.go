@@ -12,32 +12,29 @@ import (
 
 // Node structure for AST and CFG
 type Node struct {
-	child    []*Node          // child subtrees (AST)
-	anc      *Node            // ancestor (AST)
-	start    *Node            // entry point in subtree (CFG)
-	tnext    *Node            // true branch successor (CFG)
-	fnext    *Node            // false branch successor (CFG)
-	interp   *Interpreter     // interpreter context
-	frame    *Frame           // frame pointer used for closures only (TODO: suppress this)
-	index    int              // node index (dot display)
-	findex   int              // index of value in frame or frame size (func def, type def)
-	fsize    int              // number of entries in frame (call expressions)
-	flen     int              // frame length (function definition)
-	level    int              // number of frame indirections to access value
-	kind     Kind             // kind of node
-	fset     *token.FileSet   // fileset to locate node in source code
-	pos      token.Pos        // position in source code, relative to fset
-	sym      *Symbol          // associated symbol
-	typ      *Type            // type of value in frame, or nil
-	recv     *Receiver        // method receiver node for call, or nil
-	types    []reflect.Type   // frame types, used by function literals only
-	framepos []int            // frame positions of function parameters
-	action   Action           // action
-	exec     Builtin          // generated function to execute
-	gen      BuiltinGenerator // generator function to produce above bltn
-	val      interface{}      // static generic value (CFG execution)
-	rval     reflect.Value    // reflection value to let runtime access interpreter (CFG)
-	ident    string           // set if node is a var or func
+	child  []*Node          // child subtrees (AST)
+	anc    *Node            // ancestor (AST)
+	start  *Node            // entry point in subtree (CFG)
+	tnext  *Node            // true branch successor (CFG)
+	fnext  *Node            // false branch successor (CFG)
+	interp *Interpreter     // interpreter context
+	frame  *Frame           // frame pointer used for closures only (TODO: suppress this)
+	index  int              // node index (dot display)
+	findex int              // index of value in frame or frame size (func def, type def)
+	level  int              // number of frame indirections to access value
+	kind   Kind             // kind of node
+	fset   *token.FileSet   // fileset to locate node in source code
+	pos    token.Pos        // position in source code, relative to fset
+	sym    *Symbol          // associated symbol
+	typ    *Type            // type of value in frame, or nil
+	recv   *Receiver        // method receiver node for call, or nil
+	types  []reflect.Type   // frame types, used by function literals only
+	action Action           // action
+	exec   Builtin          // generated function to execute
+	gen    BuiltinGenerator // generator function to produce above bltn
+	val    interface{}      // static generic value (CFG execution)
+	rval   reflect.Value    // reflection value to let runtime access interpreter (CFG)
+	ident  string           // set if node is a var or func
 }
 
 // Receiver stores method receiver object access path
@@ -72,7 +69,6 @@ type Interpreter struct {
 	Opt
 	Name     string            // program name
 	Frame    *Frame            // program data storage during execution
-	fsize    int               // global interpreter frame size
 	nindex   int               // next node index
 	universe *Scope            // interpreter global level scope
 	scope    map[string]*Scope // package level scopes, indexed by package name
@@ -169,9 +165,17 @@ func initUniverse() *Scope {
 
 // resizeFrame resizes the global frame of interpreter
 func (i *Interpreter) resizeFrame() {
-	f := &Frame{data: make([]reflect.Value, i.fsize)}
-	copy(f.data, i.Frame.data)
-	i.Frame = f
+	l := len(i.universe.types)
+	b := len(i.Frame.data)
+	if l-b <= 0 {
+		return
+	}
+	data := make([]reflect.Value, l)
+	copy(data, i.Frame.data)
+	for j, t := range i.universe.types[b:] {
+		data[b+j] = reflect.New(t).Elem()
+	}
+	i.Frame.data = data
 }
 
 // Eval evaluates Go code represented as a string. It returns a map on
@@ -205,7 +209,6 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 			initNodes = append(initNodes, sym.node)
 		}
 	} else {
-		root.types, _ = frameTypes(root, i.fsize+1)
 		setExec(root.start)
 	}
 	if i.universe.sym[pkgName] == nil {
@@ -222,7 +225,6 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 		if err = genRun(root); err != nil {
 			return res, err
 		}
-		i.fsize++
 		i.resizeFrame()
 		i.run(root, nil)
 

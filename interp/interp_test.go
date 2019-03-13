@@ -7837,3 +7837,34 @@ func main() {
 	// Output:
 	// 3
 }
+
+func Example_variadic3() {
+	src := `
+package main
+
+import "fmt"
+
+func f(a ...int) int {
+	fmt.Println(a)
+	res := 0
+	for _, v := range a {
+		res += v
+	}
+	return res
+}
+
+func main() {
+	fmt.Println(f(1, 2, 3, 4))
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value, stdlib.Type)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// [1 2 3 4]
+	// 10
+}
