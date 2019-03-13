@@ -7858,7 +7858,7 @@ func main() {
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
-	i.Use(stdlib.Value, stdlib.Type)
+	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
 	if err != nil {
 		panic(err)
