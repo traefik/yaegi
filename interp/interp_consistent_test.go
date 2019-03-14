@@ -130,7 +130,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 	}{
 		{
 			fileName:       "op1.go",
-			expectedInterp: "5:7: invalid float truncate",
+			expectedInterp: "5:2: illegal operand types for '+=' operator",
 			expectedExec:   "5:4: constant 1.3 truncated to integer",
 		},
 		{

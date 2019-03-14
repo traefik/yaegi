@@ -284,11 +284,11 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			wireChild(n)
 			switch t0, t1 := dest.typ, src.typ; n.action {
 			case AddAssign:
-				if !(isNumber(t0) && isNumber(t1) || isString(t0) && isString(t1)) {
+				if !(isNumber(t0) && isNumber(t1) || isString(t0) && isString(t1)) || isInt(t0) && isFloat(t1) {
 					err = n.cfgError("illegal operand types for '%v' operator", n.action)
 				}
 			case SubAssign, MulAssign, QuoAssign:
-				if !(isNumber(t0) && isNumber(t1)) {
+				if !(isNumber(t0) && isNumber(t1)) || isInt(t0) && isFloat(t1) {
 					err = n.cfgError("illegal operand types for '%v' operator", n.action)
 				}
 			case RemAssign, AndAssign, OrAssign, XorAssign, AndNotAssign:
