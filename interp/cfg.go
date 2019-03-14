@@ -282,10 +282,29 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				sym, level, _ = scope.lookup(dest.ident)
 			}
 			wireChild(n)
-			// Detect invalid float truncate
-			if isInt(dest.typ) && isFloat(src.typ) {
-				err = src.cfgError("invalid float truncate")
-				break
+			switch t0, t1 := dest.typ, src.typ; n.action {
+			case AddAssign:
+				if !(isNumber(t0) && isNumber(t1) || isString(t0) && isString(t1)) {
+					err = n.cfgError("illegal operand types for '%v' operator", n.action)
+				}
+			case SubAssign, MulAssign, QuoAssign:
+				if !(isNumber(t0) && isNumber(t1)) {
+					err = n.cfgError("illegal operand types for '%v' operator", n.action)
+				}
+			case RemAssign, AndAssign, OrAssign, XorAssign, AndNotAssign:
+				if !(isInt(t0) && isInt(t1)) {
+					err = n.cfgError("illegal operand types for '%v' operator", n.action)
+				}
+			case ShlAssign, ShrAssign:
+				if !(isInt(t0) && isUint(t1)) {
+					err = n.cfgError("illegal operand types for '%v' operator", n.action)
+				}
+			default:
+				// Detect invalid float truncate
+				if isInt(dest.typ) && isFloat(src.typ) {
+					err = src.cfgError("invalid float truncate")
+					return
+				}
 			}
 			n.findex = dest.findex
 			n.val = dest.val
@@ -398,28 +417,53 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case BinaryExpr:
 			wireChild(n)
 			nilSym := interp.universe.sym["nil"]
-			if t0, t1 := n.child[0].typ, n.child[1].typ; !t0.untyped && !t1.untyped && t0.id() != t1.id() {
+			t0, t1 := n.child[0].typ, n.child[1].typ
+			if !t0.untyped && !t1.untyped && t0.id() != t1.id() {
 				err = n.cfgError("mismatched types %s and %s", t0.id(), t1.id())
 				break
 			}
 			switch n.action {
-			case NotEqual:
-				n.typ = scope.getType("bool")
-				if n.child[0].sym == nilSym || n.child[1].sym == nilSym {
-					n.gen = isNotNil
+			case Add:
+				if !(isNumber(t0) && isNumber(t1) || isString(t0) && isString(t1)) {
+					err = n.cfgError("illegal operand types for '%v' operator", n.action)
 				}
-			case Equal:
+			case Sub, Mul, Quo:
+				if !(isNumber(t0) && isNumber(t1)) {
+					err = n.cfgError("illegal operand types for '%v' operator", n.action)
+				}
+			case Rem, And, Or, Xor, AndNot:
+				if !(isInt(t0) && isInt(t1)) {
+					err = n.cfgError("illegal operand types for '%v' operator", n.action)
+				}
+			case Shl, Shr:
+				if !(isInt(t0) && isUint(t1)) {
+					err = n.cfgError("illegal operand types for '%v' operator", n.action)
+				}
+			case Equal, NotEqual:
+				if isNumber(t0) && !isNumber(t1) || isString(t0) && !isString(t1) {
+					err = n.cfgError("illegal operand types for '%v' operator", n.action)
+				}
 				n.typ = scope.getType("bool")
 				if n.child[0].sym == nilSym || n.child[1].sym == nilSym {
-					n.gen = isNil
+					if n.action == Equal {
+						n.gen = isNil
+					} else {
+						n.gen = isNotNil
+					}
 				}
 			case Greater, GreaterEqual, Lower, LowerEqual:
+				if isNumber(t0) && !isNumber(t1) || isString(t0) && !isString(t1) {
+					err = n.cfgError("illegal operand types for '%v' operator", n.action)
+				}
 				n.typ = scope.getType("bool")
-			default:
-				n.typ, err = nodeType(interp, scope, n)
 			}
 			// TODO: Possible optimisation: if type is bool and not in assignment or call, then skip result store
-			n.findex = scope.add(n.typ)
+			if err == nil {
+				if n.typ == nil {
+					n.typ, err = nodeType(interp, scope, n)
+				}
+				n.findex = scope.add(n.typ)
+			}
 
 		case IndexExpr:
 			wireChild(n)
@@ -443,10 +487,13 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			scope = scope.pop()
 
 		case ConstDecl:
-			wireChild(n)
 			iotaValue = 0
+			wireChild(n)
 
-		case DeclStmt, ExprStmt, VarDecl, SendStmt:
+		case VarDecl:
+			wireChild(n)
+
+		case DeclStmt, ExprStmt, SendStmt:
 			wireChild(n)
 			n.findex = n.lastChild().findex
 			n.val = n.lastChild().val
@@ -1056,6 +1103,7 @@ func genRun(node *Node) error {
 				// function body entry point
 				setExec(n.anc.child[3].start)
 			}
+			// continue in function body as there may be inner function definitions
 		case ConstDecl, VarDecl:
 			setExec(n.start)
 			return false
