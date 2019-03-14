@@ -530,6 +530,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				}
 			case n.child[0].isType(scope):
 				// Type conversion expression
+				if isInt(n.child[0].typ) && isFloat(n.child[1].typ) {
+					err = n.cfgError("truncated to integer")
+				}
 				n.gen = convert
 				n.typ = n.child[0].typ
 				n.findex = scope.add(n.typ)

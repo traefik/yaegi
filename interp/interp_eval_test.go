@@ -45,12 +45,13 @@ func TestEvalArithmetic(t *testing.T) {
 }
 
 func TestEvalAssign(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New(interp.Opt{AstDot: true})
 	runTests(t, i, []testCase{
 		{src: `a := "Hello"; a += " world"`, res: "Hello world"},
 		{src: `b := "Hello"; b += 1`, err: "1:36: illegal operand types for '+=' operator"},
 		{src: `c := "Hello"; c -= " world"`, err: "1:36: illegal operand types for '-=' operator"},
 		{src: "e := 64.0; e %= 64", err: "1:33: illegal operand types for '%=' operator"},
+		{src: "f := int64(3.2)", err: "1:27: truncated to integer"},
 	})
 }
 
