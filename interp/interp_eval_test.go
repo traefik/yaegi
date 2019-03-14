@@ -45,7 +45,7 @@ func TestEvalArithmetic(t *testing.T) {
 }
 
 func TestEvalAssign(t *testing.T) {
-	i := interp.New(interp.Opt{AstDot: true})
+	i := interp.New(interp.Opt{})
 	runTests(t, i, []testCase{
 		{src: `a := "Hello"; a += " world"`, res: "Hello world"},
 		{src: `b := "Hello"; b += 1`, err: "1:36: illegal operand types for '+=' operator"},

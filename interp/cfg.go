@@ -530,7 +530,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				}
 			case n.child[0].isType(scope):
 				// Type conversion expression
-				if isInt(n.child[0].typ) && isFloat(n.child[1].typ) {
+				if isInt(n.child[0].typ) && n.child[1].kind == BasicLit && isFloat(n.child[1].typ) {
 					err = n.cfgError("truncated to integer")
 				}
 				n.gen = convert
