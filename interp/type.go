@@ -502,21 +502,23 @@ func exportName(s string) string {
 
 // TypeOf returns the reflection type of dynamic interpreter type t.
 func (t *Type) TypeOf() reflect.Type {
+	if t.rtype != nil {
+		return t.rtype
+	}
+
 	switch t.cat {
 	case ArrayT:
 		if t.size > 0 {
-			return reflect.ArrayOf(t.size, t.val.TypeOf())
+			t.rtype = reflect.ArrayOf(t.size, t.val.TypeOf())
+		} else {
+			t.rtype = reflect.SliceOf(t.val.TypeOf())
 		}
-		return reflect.SliceOf(t.val.TypeOf())
-
-	case BinPkgT, BuiltinT, InterfaceT, SrcPkgT:
-		return nil
 
 	case ChanT:
-		return reflect.ChanOf(reflect.BothDir, t.val.TypeOf())
+		t.rtype = reflect.ChanOf(reflect.BothDir, t.val.TypeOf())
 
 	case ErrorT:
-		return reflect.TypeOf(new(error)).Elem()
+		t.rtype = reflect.TypeOf(new(error)).Elem()
 
 	case FuncT:
 		in := make([]reflect.Type, len(t.arg))
@@ -527,13 +529,13 @@ func (t *Type) TypeOf() reflect.Type {
 		for i, v := range t.ret {
 			out[i] = v.TypeOf()
 		}
-		return reflect.FuncOf(in, out, false)
+		t.rtype = reflect.FuncOf(in, out, false)
 
 	case MapT:
-		return reflect.MapOf(t.key.TypeOf(), t.val.TypeOf())
+		t.rtype = reflect.MapOf(t.key.TypeOf(), t.val.TypeOf())
 
 	case PtrT:
-		return reflect.PtrTo(t.val.TypeOf())
+		t.rtype = reflect.PtrTo(t.val.TypeOf())
 
 	case StructT:
 		var fields []reflect.StructField
@@ -541,20 +543,17 @@ func (t *Type) TypeOf() reflect.Type {
 			field := reflect.StructField{Name: exportName(f.name), Type: f.typ.TypeOf()}
 			fields = append(fields, field)
 		}
-		return reflect.StructOf(fields)
-
-	case ValueT:
-		return t.rtype
+		t.rtype = reflect.StructOf(fields)
 
 	default:
-		z, _ := t.zero()
-		if z.IsValid() {
-			return z.Type()
+		if z, _ := t.zero(); z.IsValid() {
+			t.rtype = z.Type()
 		}
-		var empty reflect.Type
-		return empty
 	}
+	return t.rtype
 }
+
+func isNumber(t *Type) bool { return isInt(t) || isFloat(t) }
 
 func isInt(t *Type) bool {
 	typ := t.TypeOf()
