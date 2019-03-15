@@ -1119,6 +1119,22 @@ func _range(n *Node) {
 	}
 }
 
+func rangeChan(n *Node) {
+	i := n.child[0].findex        // element index location in frame
+	value := genValue(n.child[1]) // chan
+	fnext := getExec(n.fnext)
+	tnext := getExec(n.tnext)
+
+	n.exec = func(f *Frame) Builtin {
+		v, ok := value(f).Recv()
+		if !ok {
+			return fnext
+		}
+		f.data[i].Set(v)
+		return tnext
+	}
+}
+
 func rangeMap(n *Node) {
 	index0 := n.child[0].findex   // array index location in frame
 	index1 := n.child[1].findex   // array value location in frame
@@ -1269,6 +1285,16 @@ func _cap(n *Node) {
 
 	n.exec = func(f *Frame) Builtin {
 		f.data[i].SetInt(int64(value(f).Cap()))
+		return next
+	}
+}
+
+func _close(n *Node) {
+	value := genValue(n.child[1])
+	next := getExec(n.tnext)
+
+	n.exec = func(f *Frame) Builtin {
+		value(f).Close()
 		return next
 	}
 }

@@ -118,6 +118,15 @@ func (s *Scope) lookup(ident string) (*Symbol, int, bool) {
 	return nil, 0, false
 }
 
+func (s *Scope) rangeChanType(n *Node) *Type {
+	if sym, _, found := s.lookup(n.child[1].ident); found {
+		if t := sym.typ; len(n.child) == 3 && t != nil && t.cat == ChanT {
+			return t
+		}
+	}
+	return nil
+}
+
 func (s *Scope) getType(ident string) *Type {
 	var t *Type
 	if sym, _, found := s.lookup(ident); found {

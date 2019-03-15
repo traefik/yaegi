@@ -153,12 +153,13 @@ func initUniverse() *Scope {
 		// predefined Go builtins
 		"append":  &Symbol{kind: Bltn, builtin: _append},
 		"cap":     &Symbol{kind: Bltn, builtin: _cap},
+		"close":   &Symbol{kind: Bltn, builtin: _close},
 		"len":     &Symbol{kind: Bltn, builtin: _len},
 		"make":    &Symbol{kind: Bltn, builtin: _make},
 		"panic":   &Symbol{kind: Bltn, builtin: _panic},
 		"println": &Symbol{kind: Bltn, builtin: _println},
 		"recover": &Symbol{kind: Bltn, builtin: _recover},
-		// TODO: close, complex, copy, delete, imag, new, print, real
+		// TODO: complex, copy, delete, imag, new, print, real
 	}}
 	return scope
 }
