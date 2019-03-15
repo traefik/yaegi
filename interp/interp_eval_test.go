@@ -31,9 +31,27 @@ func TestEvalArithmetic(t *testing.T) {
 		{desc: "add_II", src: "2 + 3", res: "5"},
 		{desc: "add_FI", src: "2.3 + 3", res: "5.3"},
 		{desc: "add_IF", src: "2 + 3.3", res: "5.3"},
+		{desc: "add_SS", src: `"foo" + "bar"`, res: "foobar"},
+		{desc: "add_SI", src: `"foo" + 1`, err: "1:22: illegal operand types for '+' operator"},
+		{desc: "sub_SS", src: `"foo" - "bar"`, err: "1:22: illegal operand types for '-' operator"},
+		{desc: "sub_II", src: "7 - 3", res: "4"},
+		{desc: "sub_FI", src: "7.2 - 3", res: "4.2"},
+		{desc: "sub_IF", src: "7 - 3.2", res: "3.8"},
 		{desc: "mul_II", src: "2 * 3", res: "6"},
 		{desc: "mul_FI", src: "2.2 * 3", res: "6.6000000000000005"},
 		{desc: "mul_IF", src: "3 * 2.2", res: "6.6000000000000005"},
+		{desc: "rem_FI", src: "8.0 % 4", err: "1:22: illegal operand types for '%' operator"},
+	})
+}
+
+func TestEvalAssign(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	runTests(t, i, []testCase{
+		{src: `a := "Hello"; a += " world"`, res: "Hello world"},
+		{src: `b := "Hello"; b += 1`, err: "1:36: illegal operand types for '+=' operator"},
+		{src: `c := "Hello"; c -= " world"`, err: "1:36: illegal operand types for '-=' operator"},
+		{src: "e := 64.0; e %= 64", err: "1:33: illegal operand types for '%=' operator"},
+		{src: "f := int64(3.2)", err: "1:27: truncated to integer"},
 	})
 }
 
