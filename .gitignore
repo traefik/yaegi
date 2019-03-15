@@ -6,3 +6,6 @@ dyngo
 cmd/goexports/goexports
 example/inception/inception
 _test/tmp/
+stdlib/*
+!stdlib/stdlib.go
+!stdlib/syscall/syscall.go
