@@ -349,6 +349,11 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			case TypeAssertExpr:
 				n.child[l].gen = typeAssert2
 				n.gen = nop
+			case UnaryExpr:
+				if n.child[l].action == Recv {
+					n.child[l].gen = recv2
+					n.gen = nop
+				}
 			}
 
 		case DefineX:

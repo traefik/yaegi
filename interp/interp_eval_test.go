@@ -315,6 +315,16 @@ func TestEvalChan(t *testing.T) {
 				return ok && msg == "ping"
 			})()`, res: "true",
 		},
+		{
+			src: `(func () bool {
+				messages := make(chan string)
+				go func() { messages <- "ping" }()
+				var msg string
+				var ok bool
+				msg, ok = <-messages
+				return ok && msg == "ping"
+			})()`, res: "true",
+		},
 	})
 }
 
