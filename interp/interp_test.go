@@ -1160,6 +1160,7 @@ func main() {
 	<-ready
 
 	client(fmt.Sprintf("http://%s/hello", ln.Addr().String()))
+	http.DefaultServeMux = &http.ServeMux{}
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
