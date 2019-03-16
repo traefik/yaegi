@@ -1363,6 +1363,20 @@ func recv(n *Node) {
 	}
 }
 
+func recv2(n *Node) {
+	vchan := genValue(n.child[0])    // chan
+	vres := genValue(n.anc.child[0]) // result
+	vok := genValue(n.anc.child[1])  // status
+	tnext := getExec(n.tnext)
+
+	n.exec = func(f *Frame) Builtin {
+		v, ok := vchan(f).Recv()
+		vres(f).Set(v)
+		vok(f).SetBool(ok)
+		return tnext
+	}
+}
+
 func convertLiteralValue(n *Node, t reflect.Type) {
 	if n.kind != BasicLit || t == nil || t.Kind() == reflect.Interface {
 		return

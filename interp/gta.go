@@ -31,6 +31,11 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 		case ConstDecl:
 			iotaValue = 0
 
+		case BlockStmt:
+			if n != root {
+				return false // skip statement block if not the entry point
+			}
+
 		case Define:
 			var typ *Type
 			if len(n.child) > 1 {
@@ -55,7 +60,7 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 			}
 			return false
 
-		// TODO: add DefineX, ValueSpec
+		// TODO: add DefineX, ValueSpec ?
 
 		case File:
 			pkgName = n.child[0].ident
@@ -116,15 +121,12 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 			if interp.binValue[ipath] != nil {
 				if name == "." {
 					for n, v := range interp.binValue[ipath] {
+						typ := v.Type()
 						if isBinType(v) {
-							scope.sym[n] = &Symbol{kind: Bin, typ: &Type{cat: ValueT, rtype: v.Type().Elem()}, val: v}
-						} else {
-							scope.sym[n] = &Symbol{kind: Bin, typ: &Type{cat: ValueT, rtype: v.Type()}, val: v}
+							typ = typ.Elem()
 						}
+						scope.sym[n] = &Symbol{kind: Bin, typ: &Type{cat: ValueT, rtype: typ}, val: v}
 					}
-					//for n, t := range interp.binType[ipath] {
-					//	scope.sym[n] = &Symbol{kind: Bin, typ: &Type{cat: ValueT, rtype: t}}
-					//}
 				} else {
 					scope.sym[name] = &Symbol{typ: &Type{cat: BinPkgT}, path: ipath}
 				}
