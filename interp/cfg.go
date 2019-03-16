@@ -368,6 +368,11 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			case TypeAssertExpr:
 				n.child[l].gen = typeAssert2
 				n.gen = nop
+			case UnaryExpr:
+				if n.child[l].action == Recv {
+					n.child[l].gen = recv2
+					n.gen = nop
+				}
 			}
 
 		case DefineX:
@@ -401,6 +406,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			case UnaryExpr:
 				if n.child[l].action == Recv {
 					types = append(types, n.child[l].child[0].typ.val, scope.getType("bool"))
+					n.child[l].gen = recv2
+					n.gen = nop
 				}
 
 			default:

@@ -314,6 +314,38 @@ func TestEvalMethod(t *testing.T) {
 	})
 }
 
+func TestEvalChan(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	runTests(t, i, []testCase{
+		{
+			src: `(func () string {
+				messages := make(chan string)
+				go func() { messages <- "ping" }()
+				msg := <-messages
+				return msg
+			})()`, res: "ping",
+		},
+		{
+			src: `(func () bool {
+				messages := make(chan string)
+				go func() { messages <- "ping" }()
+				msg, ok := <-messages
+				return ok && msg == "ping"
+			})()`, res: "true",
+		},
+		{
+			src: `(func () bool {
+				messages := make(chan string)
+				go func() { messages <- "ping" }()
+				var msg string
+				var ok bool
+				msg, ok = <-messages
+				return ok && msg == "ping"
+			})()`, res: "true",
+		},
+	})
+}
+
 func runTests(t *testing.T, i *interp.Interpreter, tests []testCase) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
