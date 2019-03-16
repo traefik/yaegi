@@ -1086,6 +1086,34 @@ func main() {
 
 }
 
+func Example_chan7() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	queue := make(chan string, 2)
+	queue <- "one"
+	queue <- "two"
+	close(queue)
+	for elem := range queue {
+		fmt.Println(elem)
+	}
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// one
+	// two
+}
+
 func Example_cli1() {
 	src := `
 package main
@@ -1132,6 +1160,7 @@ func main() {
 	<-ready
 
 	client(fmt.Sprintf("http://%s/hello", ln.Addr().String()))
+	http.DefaultServeMux = &http.ServeMux{}
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
