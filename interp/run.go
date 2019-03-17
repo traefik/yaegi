@@ -1448,8 +1448,8 @@ func clauseChanDir(n *Node) (*Node, *Node, *Node, reflect.SelectDir) {
 			case Assign:
 				assigned = m.anc.child[0]
 			case AssignX:
+				assigned = m.anc.child[0]
 				ok = m.anc.child[1]
-				// TODO
 			}
 			stop = true
 		case Send:
