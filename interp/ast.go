@@ -64,9 +64,10 @@ const (
 	IncDecStmt
 	IndexExpr
 	InterfaceType
+	KeyValueExpr
+	LabeledStmt
 	LandExpr
 	LorExpr
-	KeyValueExpr
 	MapType
 	ParenExpr
 	RangeStmt
@@ -143,6 +144,7 @@ var kinds = [...]string{
 	IndexExpr:        "IndexExpr",
 	InterfaceType:    "InterfaceType",
 	KeyValueExpr:     "KeyValueExpr",
+	LabeledStmt:      "LabeledStmt",
 	LandExpr:         "LandExpr",
 	LorExpr:          "LorExpr",
 	MapType:          "MapType",
@@ -708,6 +710,9 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 
 		case *ast.KeyValueExpr:
 			st.push(addChild(&root, anc, pos, KeyValueExpr, Nop), node)
+
+		case *ast.LabeledStmt:
+			st.push(addChild(&root, anc, pos, LabeledStmt, Nop), node)
 
 		case *ast.MapType:
 			st.push(addChild(&root, anc, pos, MapType, Nop), node)

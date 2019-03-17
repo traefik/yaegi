@@ -2,6 +2,7 @@ package interp
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"unicode"
 )
@@ -84,6 +85,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				v.findex = vindex
 			}
 			scope = scope.pushBloc()
+
+		case Break, Continue, Goto:
+			// Handle labeled statements
 
 		case CaseClause:
 			scope = scope.pushBloc()
@@ -732,7 +736,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					n.recv = n.sym.recv
 				}
 			} else {
-				err = n.cfgError("undefined: %s", n.ident)
+				log.Println(n.index, "undefined ident:", n.ident)
+				//err = n.cfgError("undefined: %s", n.ident)
 			}
 
 		case If0: // if cond {}
