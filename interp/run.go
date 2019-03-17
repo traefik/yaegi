@@ -478,13 +478,21 @@ func call(n *Node) {
 
 	// compute input argument value functions
 	for i, c := range child {
-		if isRegularCall(c) {
+		switch {
+		case isBinCall(c):
+			// Handle nested function calls: pass returned values as arguments
+			numOut := c.child[0].typ.rtype.NumOut()
+			for j := 0; j < numOut; j++ {
+				ind := c.findex + j
+				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
+			}
+		case isRegularCall(c):
 			// Arguments are return values of a nested function call
 			for j := range c.child[0].typ.ret {
 				ind := c.findex + j
 				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
 			}
-		} else {
+		default:
 			if c.kind == BasicLit {
 				var argType reflect.Type
 				if variadic >= 0 && i >= variadic {
@@ -605,13 +613,21 @@ func callBin(n *Node) {
 	}
 
 	for i, c := range child {
-		if isRegularCall(c) {
+		switch {
+		case isBinCall(c):
+			// Handle nested function calls: pass returned values as arguments
+			numOut := c.child[0].typ.rtype.NumOut()
+			for j := 0; j < numOut; j++ {
+				ind := c.findex + j
+				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
+			}
+		case isRegularCall(c):
 			// Handle nested function calls: pass returned values as arguments
 			for j := range c.child[0].typ.ret {
 				ind := c.findex + j
 				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
 			}
-		} else {
+		default:
 			if c.kind == BasicLit {
 				// Convert literal value (untyped) to function argument type (if not an interface{})
 				var argType reflect.Type
@@ -625,17 +641,12 @@ func callBin(n *Node) {
 					c.val = reflect.Zero(argType)
 				}
 			}
-			// FIXME: nil types are forbidden and should be handled at compile time (CFG)
-			if c.typ != nil {
-				switch c.typ.cat {
-				case FuncT:
-					values = append(values, genNodeWrapper(c))
-				case InterfaceT:
-					values = append(values, genValueInterfaceValue(c))
-				default:
-					values = append(values, genValue(c))
-				}
-			} else {
+			switch c.typ.cat {
+			case FuncT:
+				values = append(values, genNodeWrapper(c))
+			case InterfaceT:
+				values = append(values, genValueInterfaceValue(c))
+			default:
 				values = append(values, genValue(c))
 			}
 		}

@@ -7306,7 +7306,8 @@ import (
 func main() {
 	t := time.Date(2009, time.November, 10, 23, 4, 5, 0, time.UTC)
 	fmt.Println(t.Clock())
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
@@ -7314,6 +7315,8 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// 23 4 5
 }
 
 func Example_time4() {
