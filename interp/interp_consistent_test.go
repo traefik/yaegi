@@ -42,8 +42,6 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "fib.go" || // bench
 
 			file.Name() == "heap.go" || // TODO not implemented yet
-			file.Name() == "chan6.go" || // FIXME related to channel #7
-			file.Name() == "select1.go" || // FIXME related to channel #7
 			file.Name() == "type5.go" || // used to illustrate a limitation with no workaround, related to the fact that the reflect package does not allow the creation of named types
 			file.Name() == "type6.go" || // used to illustrate a limitation with no workaround, related to the fact that the reflect package does not allow the creation of named types
 
