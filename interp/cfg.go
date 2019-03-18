@@ -532,6 +532,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					if n.typ = scope.getType(n.child[1].ident); n.typ == nil {
 						n.typ, err = nodeType(interp, scope, n.child[1])
 					}
+					if c2 := n.child[2]; len(n.child) == 3 && c2.typ.cat == ArrayT && c2.typ.val.id() == n.typ.val.id() {
+						n.gen = appendSlice
+					}
 				case "cap", "len":
 					n.typ = scope.getType("int")
 				case "make":
