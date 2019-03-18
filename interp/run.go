@@ -320,6 +320,25 @@ func deref(n *Node) {
 	}
 }
 
+func _print(n *Node) {
+	child := n.child[1:]
+	next := getExec(n.tnext)
+	values := make([]func(*Frame) reflect.Value, len(child))
+	for i, c := range child {
+		values[i] = genValue(c)
+	}
+
+	n.exec = func(f *Frame) Builtin {
+		for i, value := range values {
+			if i > 0 {
+				fmt.Printf(" ")
+			}
+			fmt.Printf("%v", value(f))
+		}
+		return next
+	}
+}
+
 func _println(n *Node) {
 	child := n.child[1:]
 	next := getExec(n.tnext)

@@ -94,6 +94,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					v.findex = vindex
 				}
 			}
+			n.findex = -1
+			n.val = nil
 			scope = scope.pushBloc()
 
 		case CaseClause:
@@ -548,6 +550,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				}
 				if n.typ != nil {
 					n.findex = scope.add(n.typ)
+				} else {
+					n.findex = -1
+					n.val = nil
 				}
 			case n.child[0].isType(scope):
 				// Type conversion expression
