@@ -5641,7 +5641,8 @@ func main() {
 		fmt.Println("end for")
 	}
 	fmt.Println("Bye")
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
@@ -5649,6 +5650,15 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// start for
+	// received one
+	// finish 1
+	// end for
+	// start for
+	// received #2 two true
+	// end for
+	// Bye
 }
 
 func Example_select2() {
