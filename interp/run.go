@@ -478,13 +478,21 @@ func call(n *Node) {
 
 	// compute input argument value functions
 	for i, c := range child {
-		if isRegularCall(c) {
+		switch {
+		case isBinCall(c):
+			// Handle nested function calls: pass returned values as arguments
+			numOut := c.child[0].typ.rtype.NumOut()
+			for j := 0; j < numOut; j++ {
+				ind := c.findex + j
+				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
+			}
+		case isRegularCall(c):
 			// Arguments are return values of a nested function call
 			for j := range c.child[0].typ.ret {
 				ind := c.findex + j
 				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
 			}
-		} else {
+		default:
 			if c.kind == BasicLit {
 				var argType reflect.Type
 				if variadic >= 0 && i >= variadic {
@@ -605,13 +613,21 @@ func callBin(n *Node) {
 	}
 
 	for i, c := range child {
-		if isRegularCall(c) {
+		switch {
+		case isBinCall(c):
+			// Handle nested function calls: pass returned values as arguments
+			numOut := c.child[0].typ.rtype.NumOut()
+			for j := 0; j < numOut; j++ {
+				ind := c.findex + j
+				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
+			}
+		case isRegularCall(c):
 			// Handle nested function calls: pass returned values as arguments
 			for j := range c.child[0].typ.ret {
 				ind := c.findex + j
 				values = append(values, func(f *Frame) reflect.Value { return f.data[ind] })
 			}
-		} else {
+		default:
 			if c.kind == BasicLit {
 				// Convert literal value (untyped) to function argument type (if not an interface{})
 				var argType reflect.Type
@@ -625,17 +641,12 @@ func callBin(n *Node) {
 					c.val = reflect.Zero(argType)
 				}
 			}
-			// FIXME: nil types are forbidden and should be handled at compile time (CFG)
-			if c.typ != nil {
-				switch c.typ.cat {
-				case FuncT:
-					values = append(values, genNodeWrapper(c))
-				case InterfaceT:
-					values = append(values, genValueInterfaceValue(c))
-				default:
-					values = append(values, genValue(c))
-				}
-			} else {
+			switch c.typ.cat {
+			case FuncT:
+				values = append(values, genNodeWrapper(c))
+			case InterfaceT:
+				values = append(values, genValueInterfaceValue(c))
+			default:
 				values = append(values, genValue(c))
 			}
 		}
@@ -1119,6 +1130,22 @@ func _range(n *Node) {
 	}
 }
 
+func rangeChan(n *Node) {
+	i := n.child[0].findex        // element index location in frame
+	value := genValue(n.child[1]) // chan
+	fnext := getExec(n.fnext)
+	tnext := getExec(n.tnext)
+
+	n.exec = func(f *Frame) Builtin {
+		v, ok := value(f).Recv()
+		if !ok {
+			return fnext
+		}
+		f.data[i].Set(v)
+		return tnext
+	}
+}
+
 func rangeMap(n *Node) {
 	index0 := n.child[0].findex   // array index location in frame
 	index1 := n.child[1].findex   // array value location in frame
@@ -1273,6 +1300,16 @@ func _cap(n *Node) {
 	}
 }
 
+func _close(n *Node) {
+	value := genValue(n.child[1])
+	next := getExec(n.tnext)
+
+	n.exec = func(f *Frame) Builtin {
+		value(f).Close()
+		return next
+	}
+}
+
 func _len(n *Node) {
 	i := n.findex
 	value := genValue(n.child[1])
@@ -1363,6 +1400,20 @@ func recv(n *Node) {
 	}
 }
 
+func recv2(n *Node) {
+	vchan := genValue(n.child[0])    // chan
+	vres := genValue(n.anc.child[0]) // result
+	vok := genValue(n.anc.child[1])  // status
+	tnext := getExec(n.tnext)
+
+	n.exec = func(f *Frame) Builtin {
+		v, ok := vchan(f).Recv()
+		vres(f).Set(v)
+		vok(f).SetBool(ok)
+		return tnext
+	}
+}
+
 func convertLiteralValue(n *Node, t reflect.Type) {
 	if n.kind != BasicLit || t == nil || t.Kind() == reflect.Interface {
 		return
@@ -1397,8 +1448,8 @@ func clauseChanDir(n *Node) (*Node, *Node, *Node, reflect.SelectDir) {
 			case Assign:
 				assigned = m.anc.child[0]
 			case AssignX:
+				assigned = m.anc.child[0]
 				ok = m.anc.child[1]
-				// TODO
 			}
 			stop = true
 		case Send:

@@ -1086,6 +1086,34 @@ func main() {
 
 }
 
+func Example_chan7() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	queue := make(chan string, 2)
+	queue <- "one"
+	queue <- "two"
+	close(queue)
+	for elem := range queue {
+		fmt.Println(elem)
+	}
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// one
+	// two
+}
+
 func Example_cli1() {
 	src := `
 package main
@@ -1132,6 +1160,7 @@ func main() {
 	<-ready
 
 	client(fmt.Sprintf("http://%s/hello", ln.Addr().String()))
+	http.DefaultServeMux = &http.ServeMux{}
 }
 `
 	i := interp.New(interp.Opt{Entry: "main"})
@@ -5638,7 +5667,8 @@ func main() {
 		fmt.Println("end for")
 	}
 	fmt.Println("Bye")
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
@@ -5646,6 +5676,15 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// start for
+	// received one
+	// finish 1
+	// end for
+	// start for
+	// received #2 two true
+	// end for
+	// Bye
 }
 
 func Example_select2() {
@@ -7303,7 +7342,8 @@ import (
 func main() {
 	t := time.Date(2009, time.November, 10, 23, 4, 5, 0, time.UTC)
 	fmt.Println(t.Clock())
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
@@ -7311,6 +7351,8 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// 23 4 5
 }
 
 func Example_time4() {

@@ -49,39 +49,50 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				// type of array like value is not yet known. This could be fixed in ast structure
 				// by setting array/map node as 1st child of ForRangeStmt instead of 3rd child of
 				// RangeStmt. The following workaround is less elegant but ok.
-				k, v := n.anc.child[0], n.anc.child[1]
-				var ktyp, vtyp *Type
+				if t := scope.rangeChanType(n.anc); t != nil {
+					// range over channel
+					e := n.anc.child[0]
+					index := scope.add(t.val)
+					scope.sym[e.ident] = &Symbol{index: index, kind: Var, typ: t.val}
+					e.typ = t.val
+					e.findex = index
+					n.anc.gen = rangeChan
+				} else {
+					// range over array or map
+					k, v := n.anc.child[0], n.anc.child[1]
+					var ktyp, vtyp *Type
 
-				switch n.anc.child[2].typ.cat {
-				case ValueT:
-					typ := n.anc.child[2].typ.rtype
-					switch typ.Kind() {
-					case reflect.Map:
+					switch n.anc.child[2].typ.cat {
+					case ValueT:
+						typ := n.anc.child[2].typ.rtype
+						switch typ.Kind() {
+						case reflect.Map:
+							n.anc.gen = rangeMap
+							ktyp = &Type{cat: ValueT, rtype: typ.Key()}
+							vtyp = &Type{cat: ValueT, rtype: typ.Elem()}
+						case reflect.Array, reflect.Slice:
+							ktyp = scope.getType("int")
+							vtyp = &Type{cat: ValueT, rtype: typ.Elem()}
+						}
+					case MapT:
 						n.anc.gen = rangeMap
-						ktyp = &Type{cat: ValueT, rtype: typ.Key()}
-						vtyp = &Type{cat: ValueT, rtype: typ.Elem()}
-					case reflect.Array, reflect.Slice:
+						ktyp = n.anc.child[2].typ.key
+						vtyp = n.anc.child[2].typ.val
+					case ArrayT:
 						ktyp = scope.getType("int")
-						vtyp = &Type{cat: ValueT, rtype: typ.Elem()}
+						vtyp = n.anc.child[2].typ.val
 					}
-				case MapT:
-					n.anc.gen = rangeMap
-					ktyp = n.anc.child[2].typ.key
-					vtyp = n.anc.child[2].typ.val
-				case ArrayT:
-					ktyp = scope.getType("int")
-					vtyp = n.anc.child[2].typ.val
+
+					kindex := scope.add(ktyp)
+					scope.sym[k.ident] = &Symbol{index: kindex, kind: Var, typ: ktyp}
+					k.typ = ktyp
+					k.findex = kindex
+
+					vindex := scope.add(vtyp)
+					scope.sym[v.ident] = &Symbol{index: vindex, kind: Var, typ: vtyp}
+					v.typ = vtyp
+					v.findex = vindex
 				}
-
-				kindex := scope.add(ktyp)
-				scope.sym[k.ident] = &Symbol{index: kindex, kind: Var, typ: ktyp}
-				k.typ = ktyp
-				k.findex = kindex
-
-				vindex := scope.add(vtyp)
-				scope.sym[v.ident] = &Symbol{index: vindex, kind: Var, typ: vtyp}
-				v.typ = vtyp
-				v.findex = vindex
 			}
 			scope = scope.pushBloc()
 
@@ -399,6 +410,11 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			case TypeAssertExpr:
 				n.child[l].gen = typeAssert2
 				n.gen = nop
+			case UnaryExpr:
+				if n.child[l].action == Recv {
+					n.child[l].gen = recv2
+					n.gen = nop
+				}
 			}
 
 		case DefineX:
@@ -432,6 +448,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			case UnaryExpr:
 				if n.child[l].action == Recv {
 					types = append(types, n.child[l].child[0].typ.val, scope.getType("bool"))
+					n.child[l].gen = recv2
+					n.gen = nop
 				}
 
 			default:
@@ -843,12 +861,20 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			n.typ = n.lastChild().typ
 
 		case RangeStmt:
-			n.start = n.child[2]                // Get array or map object
-			n.child[2].tnext = n.child[0].start // then go to iterator init
-			n.child[0].tnext = n                // then go to range function
-			n.tnext = n.child[3].start          // then go to range body
-			n.child[3].tnext = n                // then body go to range function (loop)
-			n.child[0].gen = empty              // init filled later by generator
+			if scope.rangeChanType(n) != nil {
+				n.start = n.child[1]       // Get chan
+				n.child[1].tnext = n       // then go to range function
+				n.tnext = n.child[2].start // then go to range body
+				n.child[2].tnext = n       // then body go to range function (loop)
+				n.child[0].gen = empty
+			} else {
+				n.start = n.child[2]                // Get array or map object
+				n.child[2].tnext = n.child[0].start // then go to iterator init
+				n.child[0].tnext = n                // then go to range function
+				n.tnext = n.child[3].start          // then go to range body
+				n.child[3].tnext = n                // then body go to range function (loop)
+				n.child[0].gen = empty              // init filled later by generator
+			}
 
 		case ReturnStmt:
 			wireChild(n)
