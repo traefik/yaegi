@@ -2,7 +2,6 @@ package interp
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"unicode"
 )
@@ -87,7 +86,35 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			scope = scope.pushBloc()
 
 		case Break, Continue, Goto:
-			// Handle labeled statements
+			if len(n.child) > 0 {
+				// Handle labeled statements
+				label := n.child[0].ident
+				if sym, _, ok := scope.lookup(label); ok {
+					if sym.kind != Label {
+						err = n.child[0].cfgError("label %s not defined", label)
+						break
+					}
+					sym.from = append(sym.from, n)
+					n.sym = sym
+				} else {
+					n.sym = &Symbol{kind: Label, from: []*Node{n}, index: -1}
+					scope.sym[label] = n.sym
+				}
+			}
+
+		case LabeledStmt:
+			label := n.child[0].ident
+			if sym, _, ok := scope.lookup(label); ok {
+				if sym.kind != Label {
+					err = n.child[0].cfgError("label %s not defined", label)
+					break
+				}
+				sym.node = n
+				n.sym = sym
+			} else {
+				n.sym = &Symbol{kind: Label, node: n, index: -1}
+				scope.sym[label] = n.sym
+			}
 
 		case CaseClause:
 			scope = scope.pushBloc()
@@ -505,7 +532,26 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			n.typ = n.lastChild().typ
 
 		case Break:
-			n.tnext = loop
+			if len(n.child) > 0 {
+				gotoLabel(n.sym)
+			} else {
+				n.tnext = loop
+			}
+
+		case Continue:
+			if len(n.child) > 0 {
+				gotoLabel(n.sym)
+			} else {
+				n.tnext = loopRestart
+			}
+
+		case Goto:
+			gotoLabel(n.sym)
+
+		case LabeledStmt:
+			wireChild(n)
+			n.start = n.child[1].start
+			gotoLabel(n.sym)
 
 		case CallExpr:
 			wireChild(n)
@@ -606,9 +652,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			case ValueT:
 				n.gen = compositeBin
 			}
-
-		case Continue:
-			n.tnext = loopRestart
 
 		case Fallthrough:
 			if n.anc.kind != CaseBody {
@@ -736,8 +779,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					n.recv = n.sym.recv
 				}
 			} else {
-				log.Println(n.index, "undefined ident:", n.ident)
-				//err = n.cfgError("undefined: %s", n.ident)
+				err = n.cfgError("undefined: %s", n.ident)
 			}
 
 		case If0: // if cond {}
@@ -1174,7 +1216,12 @@ func wireChild(n *Node) {
 		case FuncDecl:
 			n.child[i-1].tnext = n.child[i]
 		default:
-			n.child[i-1].tnext = n.child[i].start
+			switch n.child[i-1].kind {
+			case Break, Continue, Goto, ReturnStmt:
+				// tnext is already computed, no change
+			default:
+				n.child[i-1].tnext = n.child[i].start
+			}
 		}
 	}
 
@@ -1183,7 +1230,7 @@ func wireChild(n *Node) {
 		switch n.child[i].kind {
 		case ArrayType, ChanType, ImportDecl, MapType, FuncDecl, BasicLit, Ident, TypeDecl:
 			continue
-		case Break, Continue, ReturnStmt:
+		case Break, Continue, Goto, ReturnStmt:
 			// tnext is already computed, no change
 		default:
 			n.child[i].tnext = n
@@ -1312,4 +1359,13 @@ func getReturnedType(n *Node) *Type {
 func typeSwichAssign(n *Node) bool {
 	ts := n.anc.anc.anc
 	return ts.kind == TypeSwitch && ts.child[1].action == Assign
+}
+
+func gotoLabel(s *Symbol) {
+	if s.node == nil {
+		return
+	}
+	for _, c := range s.from {
+		c.tnext = s.node.start
+	}
 }
