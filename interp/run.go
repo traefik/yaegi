@@ -1412,10 +1412,10 @@ func _real(n *Node) {
 
 	n.exec = func(f *Frame) Builtin {
 		f.data[i].SetFloat(real(value(f).Complex()))
-    return next
-  }
+		return next
+	}
 }
-   
+
 func _delete(n *Node) {
 	value0 := genValue(n.child[1]) // map
 	value1 := genValue(n.child[2]) // key
