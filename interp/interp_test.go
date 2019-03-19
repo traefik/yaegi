@@ -1899,6 +1899,29 @@ func main() {
 	// hello
 }
 
+func Example_delete0() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	a := map[string]int{"hello": 1, "world": 3}
+	delete(a, "hello")
+	fmt.Println(a)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// map[world:3]
+}
+
 func Example_export0() {
 	src := `
 package main
