@@ -21,7 +21,7 @@ import (
 	"text/template"
 )
 
-const model = `// +build go1.12, !go1.13
+const model = `// +build {{.CurrentGoVersion}}, !{{.NextGoVersion}}
 
 package {{.Dest}}
 
@@ -84,6 +84,12 @@ func genContent(dest, pkgName string) ([]byte, error) {
 		}
 	}
 
+	parts := strings.Split(runtime.Version(), ".")
+	currentGoVersion := parts[0] + "." + parts[1]
+
+	minor, err := strconv.Atoi(parts[1])
+	nextGoVersion := parts[0] + "." + strconv.Itoa(minor+1)
+
 	base := template.New("goexports")
 	parse, err := base.Parse(model)
 	if err != nil {
@@ -92,10 +98,12 @@ func genContent(dest, pkgName string) ([]byte, error) {
 
 	b := &bytes.Buffer{}
 	data := map[string]interface{}{
-		"Dest":    dest,
-		"PkgName": pkgName,
-		"Val":     val,
-		"Typ":     typ,
+		"Dest":             dest,
+		"PkgName":          pkgName,
+		"Val":              val,
+		"Typ":              typ,
+		"CurrentGoVersion": currentGoVersion,
+		"NextGoVersion":    nextGoVersion,
 	}
 	err = parse.Execute(b, data)
 	if err != nil {
