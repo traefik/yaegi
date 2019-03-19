@@ -1764,6 +1764,31 @@ func main() {
 	// world
 }
 
+func Example_copy0() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	a := []int{10, 20, 30}
+	b := [4]int{}
+	c := b[:]
+	copy(c, a)
+	fmt.Println(c)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// [10 20 30 0]
+}
+
 func Example_defer0() {
 	src := `
 package main
@@ -3909,6 +3934,27 @@ func main() {
 	// -1
 }
 
+func Example_new0() {
+	src := `
+package main
+
+func main() {
+	a := new(int)
+	*a = 3
+	println(*a)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// 3
+}
+
 func Example_op0() {
 	src := `
 package main
@@ -5641,7 +5687,8 @@ func main() {
 		fmt.Println("end for")
 	}
 	fmt.Println("Bye")
-}`
+}
+`
 	i := interp.New(interp.Opt{Entry: "main"})
 	i.Use(stdlib.Value)
 	_, err := i.Eval(src)
@@ -5649,6 +5696,15 @@ func main() {
 		panic(err)
 	}
 
+	// Output:
+	// start for
+	// received one
+	// finish 1
+	// end for
+	// start for
+	// received #2 two true
+	// end for
+	// Bye
 }
 
 func Example_select2() {
