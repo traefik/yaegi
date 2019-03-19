@@ -1321,6 +1321,17 @@ func _len(n *Node) {
 	}
 }
 
+func _new(n *Node) {
+	i := n.findex
+	next := getExec(n.tnext)
+	typ := n.child[1].typ.TypeOf()
+
+	n.exec = func(f *Frame) Builtin {
+		f.data[i] = reflect.New(typ)
+		return next
+	}
+}
+
 // _make allocates and initializes a slice, a map or a chan.
 func _make(n *Node) {
 	i := n.findex
