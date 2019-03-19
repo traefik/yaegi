@@ -1,4 +1,4 @@
-// +build go1.12, !go1.13
+// +build go1.12,!go1.13
 
 package syscall
 
@@ -1687,8 +1687,6 @@ func init() {
 		"S_IFREG":                           reflect.ValueOf(syscall.S_IFREG),
 		"S_IFSOCK":                          reflect.ValueOf(syscall.S_IFSOCK),
 		"S_IRUSR":                           reflect.ValueOf(syscall.S_IRUSR),
-		"S_IRWXG":                           reflect.ValueOf(syscall.S_IRWXG),
-		"S_IRWXO":                           reflect.ValueOf(syscall.S_IRWXO),
 		"S_ISGID":                           reflect.ValueOf(syscall.S_ISGID),
 		"S_ISUID":                           reflect.ValueOf(syscall.S_ISUID),
 		"S_ISVTX":                           reflect.ValueOf(syscall.S_ISVTX),

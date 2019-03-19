@@ -1,4 +1,4 @@
-// +build go1.12, !go1.13
+// +build go1.12,!go1.13
 
 package syscall
 
@@ -236,7 +236,6 @@ func init() {
 		"SIGINT":              reflect.ValueOf(syscall.SIGINT),
 		"SIGKILL":             reflect.ValueOf(syscall.SIGKILL),
 		"SIGQUIT":             reflect.ValueOf(syscall.SIGQUIT),
-		"SIGTERM":             reflect.ValueOf(syscall.SIGTERM),
 		"SIGTRAP":             reflect.ValueOf(syscall.SIGTRAP),
 		"SOCK_DGRAM":          reflect.ValueOf(syscall.SOCK_DGRAM),
 		"SOCK_RAW":            reflect.ValueOf(syscall.SOCK_RAW),
