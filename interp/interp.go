@@ -160,6 +160,7 @@ func initUniverse() *Scope {
 		"make":    &Symbol{kind: Bltn, builtin: _make},
 		"new":     &Symbol{kind: Bltn, builtin: _new},
 		"panic":   &Symbol{kind: Bltn, builtin: _panic},
+		"print":   &Symbol{kind: Bltn, builtin: _print},
 		"println": &Symbol{kind: Bltn, builtin: _println},
 		"recover": &Symbol{kind: Bltn, builtin: _recover},
 		// TODO: complex, copy, delete, imag, new, print, real
