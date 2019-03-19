@@ -540,15 +540,23 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 						n.typ = scope.getType("complex64")
 					case isFloat64(t0) && isFloat64(t1):
 						n.typ = scope.getType("complex128")
+					case isUntypedNumber(t0) && isUntypedNumber(t1):
+						n.typ = &Type{cat: ValueT, rtype: complexType}
+					case isUntypedNumber(t0) && isFloat32(t1) || isUntypedNumber(t1) && isFloat32(t0):
+						n.typ = scope.getType("complex64")
+					case isUntypedNumber(t0) && isFloat64(t1) || isUntypedNumber(t1) && isFloat64(t0):
+						n.typ = scope.getType("complex128")
 					default:
 						err = n.cfgError("invalid types %s and %s", t0.TypeOf().Kind(), t1.TypeOf().Kind())
 					}
 				case "real", "imag":
-					switch k := n.child[1].typ.TypeOf().Kind(); k {
-					case reflect.Complex64:
+					switch k := n.child[1].typ.TypeOf().Kind(); {
+					case k == reflect.Complex64:
 						n.typ = scope.getType("float32")
-					case reflect.Complex128:
+					case k == reflect.Complex128:
 						n.typ = scope.getType("float64")
+					case isUntypedNumber(n.child[1].typ):
+						n.typ = &Type{cat: ValueT, rtype: floatType}
 					default:
 						err = n.cfgError("invalid complex type %s", k)
 					}

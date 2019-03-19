@@ -556,8 +556,6 @@ func (t *Type) TypeOf() reflect.Type {
 	return t.rtype
 }
 
-func isNumber(t *Type) bool { return isInt(t) || isFloat(t) }
-
 func isInt(t *Type) bool {
 	switch t.TypeOf().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
@@ -582,8 +580,10 @@ func isFloat(t *Type) bool {
 	return false
 }
 
-func isFloat32(t *Type) bool    { return t.TypeOf().Kind() == reflect.Float32 }
-func isFloat64(t *Type) bool    { return t.TypeOf().Kind() == reflect.Float64 }
-func isComplex64(t *Type) bool  { return t.TypeOf().Kind() == reflect.Complex64 }
-func isComplex128(t *Type) bool { return t.TypeOf().Kind() == reflect.Complex128 }
-func isString(t *Type) bool     { return t.TypeOf().Kind() == reflect.String }
+func isFloat32(t *Type) bool       { return t.TypeOf().Kind() == reflect.Float32 }
+func isFloat64(t *Type) bool       { return t.TypeOf().Kind() == reflect.Float64 }
+func isComplex64(t *Type) bool     { return t.TypeOf().Kind() == reflect.Complex64 }
+func isComplex128(t *Type) bool    { return t.TypeOf().Kind() == reflect.Complex128 }
+func isUntypedNumber(t *Type) bool { return t.untyped && (isInt(t) || isFloat(t)) }
+func isNumber(t *Type) bool        { return isInt(t) || isFloat(t) }
+func isString(t *Type) bool        { return t.TypeOf().Kind() == reflect.String }

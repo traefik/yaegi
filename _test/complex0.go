@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 func main() {
-	a := complex(float64(3), float64(2))
+	a := complex(3, 2)
 	fmt.Println(a, real(a), imag(a))
 }
 

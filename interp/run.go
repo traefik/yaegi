@@ -72,6 +72,13 @@ type valueInterface struct {
 	value reflect.Value
 }
 
+var floatType, complexType reflect.Type
+
+func init() {
+	floatType = reflect.ValueOf(0.0).Type()
+	complexType = reflect.ValueOf(complex(0, 0)).Type()
+}
+
 func (interp *Interpreter) run(n *Node, cf *Frame) {
 	var f *Frame
 	if cf == nil {
@@ -1312,6 +1319,8 @@ func _close(n *Node) {
 
 func _complex(n *Node) {
 	i := n.findex
+	convertLiteralValue(n.child[1], floatType)
+	convertLiteralValue(n.child[2], floatType)
 	value0 := genValue(n.child[1])
 	value1 := genValue(n.child[2])
 	next := getExec(n.tnext)
@@ -1324,6 +1333,7 @@ func _complex(n *Node) {
 
 func _imag(n *Node) {
 	i := n.findex
+	convertLiteralValue(n.child[1], complexType)
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
@@ -1335,6 +1345,7 @@ func _imag(n *Node) {
 
 func _real(n *Node) {
 	i := n.findex
+	convertLiteralValue(n.child[1], complexType)
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
