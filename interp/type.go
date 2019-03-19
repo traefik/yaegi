@@ -582,8 +582,6 @@ func isFloat(t *Type) bool {
 
 func isFloat32(t *Type) bool       { return t.TypeOf().Kind() == reflect.Float32 }
 func isFloat64(t *Type) bool       { return t.TypeOf().Kind() == reflect.Float64 }
-func isComplex64(t *Type) bool     { return t.TypeOf().Kind() == reflect.Complex64 }
-func isComplex128(t *Type) bool    { return t.TypeOf().Kind() == reflect.Complex128 }
 func isUntypedNumber(t *Type) bool { return t.untyped && (isInt(t) || isFloat(t)) }
 func isNumber(t *Type) bool        { return isInt(t) || isFloat(t) }
 func isString(t *Type) bool        { return t.TypeOf().Kind() == reflect.String }
