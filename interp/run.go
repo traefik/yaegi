@@ -1300,6 +1300,18 @@ func _cap(n *Node) {
 	}
 }
 
+func _copy(n *Node) {
+	i := n.findex
+	value0 := genValue(n.child[1])
+	value1 := genValue(n.child[2])
+	next := getExec(n.tnext)
+
+	n.exec = func(f *Frame) Builtin {
+		f.data[i].SetInt(int64(reflect.Copy(value0(f), value1(f))))
+		return next
+	}
+}
+
 func _close(n *Node) {
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)

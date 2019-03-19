@@ -1764,6 +1764,31 @@ func main() {
 	// world
 }
 
+func Example_copy0() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	a := []int{10, 20, 30}
+	b := [4]int{}
+	c := b[:]
+	copy(c, a)
+	fmt.Println(c)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// [10 20 30 0]
+}
+
 func Example_defer0() {
 	src := `
 package main
