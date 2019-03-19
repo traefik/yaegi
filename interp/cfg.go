@@ -540,6 +540,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					}
 					n.child[1].val = n.typ
 					n.child[1].kind = BasicLit
+				case "new":
+					n.typ, err = nodeType(interp, scope, n.child[1])
+					n.typ = &Type{cat: PtrT, val: n.typ}
 				case "recover":
 					n.typ = scope.getType("interface{}")
 				}

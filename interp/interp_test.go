@@ -3934,6 +3934,27 @@ func main() {
 	// -1
 }
 
+func Example_new0() {
+	src := `
+package main
+
+func main() {
+	a := new(int)
+	*a = 3
+	println(*a)
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// 3
+}
+
 func Example_op0() {
 	src := `
 package main
