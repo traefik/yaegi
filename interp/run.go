@@ -1322,6 +1322,18 @@ func _close(n *Node) {
 	}
 }
 
+func _delete(n *Node) {
+	value0 := genValue(n.child[1]) // map
+	value1 := genValue(n.child[2]) // key
+	next := getExec(n.tnext)
+	var z reflect.Value
+
+	n.exec = func(f *Frame) Builtin {
+		value0(f).SetMapIndex(value1(f), z)
+		return next
+	}
+}
+
 func _len(n *Node) {
 	i := n.findex
 	value := genValue(n.child[1])
