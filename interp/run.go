@@ -1115,7 +1115,11 @@ func compositeSparse(n *Node) {
 	for _, c := range child {
 		field := n.typ.fieldIndex(c.child[0].ident)
 		convertLiteralValue(c.child[1], n.typ.field[field].typ.TypeOf())
-		values[field] = genValue(c.child[1])
+		if c.typ.cat == FuncT {
+			values[field] = genNodeWrapper(c.child[1])
+		} else {
+			values[field] = genValue(c.child[1])
+		}
 	}
 
 	n.exec = func(f *Frame) Builtin {

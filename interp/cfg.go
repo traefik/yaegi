@@ -643,20 +643,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.findex = scope.add(n.typ)
 			}
 			// TODO: Check that composite literal expr matches corresponding type
-			switch n.typ.cat {
-			case ArrayT:
-				n.gen = arrayLit
-			case MapT:
-				n.gen = mapLit
-			case StructT:
-				if n.lastChild().kind == KeyValueExpr {
-					n.gen = compositeSparse
-				} else {
-					n.gen = compositeLit
-				}
-			case ValueT:
-				n.gen = compositeBin
-			}
+			n.gen = compositeGenerator(n)
 
 		case Continue:
 			n.tnext = loopRestart
@@ -1383,4 +1370,25 @@ func getReturnedType(n *Node) *Type {
 func typeSwichAssign(n *Node) bool {
 	ts := n.anc.anc.anc
 	return ts.kind == TypeSwitch && ts.child[1].action == Assign
+}
+
+func compositeGenerator(n *Node) (gen BuiltinGenerator) {
+	switch n.typ.cat {
+	case AliasT:
+		n.typ = n.typ.val
+		gen = compositeGenerator(n)
+	case ArrayT:
+		gen = arrayLit
+	case MapT:
+		gen = mapLit
+	case StructT:
+		if n.lastChild().kind == KeyValueExpr {
+			gen = compositeSparse
+		} else {
+			gen = compositeLit
+		}
+	case ValueT:
+		gen = compositeBin
+	}
+	return
 }
