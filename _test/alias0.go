@@ -12,15 +12,26 @@ func (r *Root) Hello() {
 
 type One = Root
 
-type Hi interface {
-	Hello()
+func main() {
+	one := &One{Name: "one"}
+	displayOne(one)
+	displayRoot(one)
+
+	root := &Root{Name: "root"}
+	displayOne(root)
+	displayRoot(root)
 }
 
-func main() {
-	one := &One{Name: "test"}
+func displayOne(val *One) {
+	fmt.Println(val)
+}
 
-	fmt.Println(one)
+func displayRoot(val *Root) {
+	fmt.Println(val)
 }
 
 // Output:
-// &{test}
+// &{one}
+// &{one}
+// &{root}
+// &{root}
