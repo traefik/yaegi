@@ -55,6 +55,15 @@ func TestEvalAssign(t *testing.T) {
 	})
 }
 
+func TestEvalBuiltin(t *testing.T) {
+	i := interp.New(interp.Opt{})
+	runTests(t, i, []testCase{
+		{src: `a := []int{}; a = append(a, 1); a`, res: "[1]"},
+		{src: `a := []int{1}; a = append(a, 2, 3); a`, res: "[1 2 3]"},
+		{src: `a := []int{1}; b := []int{2, 3}; a = append(a, b...); a`, res: "[1 2 3]"},
+	})
+}
+
 func TestEvalDecl(t *testing.T) {
 	i := interp.New(interp.Opt{})
 	runTests(t, i, []testCase{
