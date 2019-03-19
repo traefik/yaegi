@@ -1310,6 +1310,40 @@ func _close(n *Node) {
 	}
 }
 
+func _complex(n *Node) {
+	i := n.findex
+	value0 := genValue(n.child[1])
+	value1 := genValue(n.child[2])
+	next := getExec(n.tnext)
+
+	n.exec = func(f *Frame) Builtin {
+		f.data[i].SetComplex(complex(value0(f).Float(), value1(f).Float()))
+		return next
+	}
+}
+
+func _imag(n *Node) {
+	i := n.findex
+	value := genValue(n.child[1])
+	next := getExec(n.tnext)
+
+	n.exec = func(f *Frame) Builtin {
+		f.data[i].SetFloat(imag(value(f).Complex()))
+		return next
+	}
+}
+
+func _real(n *Node) {
+	i := n.findex
+	value := genValue(n.child[1])
+	next := getExec(n.tnext)
+
+	n.exec = func(f *Frame) Builtin {
+		f.data[i].SetFloat(real(value(f).Complex()))
+		return next
+	}
+}
+
 func _len(n *Node) {
 	i := n.findex
 	value := genValue(n.child[1])

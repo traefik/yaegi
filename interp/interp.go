@@ -154,10 +154,13 @@ func initUniverse() *Scope {
 		"append":  &Symbol{kind: Bltn, builtin: _append},
 		"cap":     &Symbol{kind: Bltn, builtin: _cap},
 		"close":   &Symbol{kind: Bltn, builtin: _close},
+		"complex": &Symbol{kind: Bltn, builtin: _complex},
+		"imag":    &Symbol{kind: Bltn, builtin: _imag},
 		"len":     &Symbol{kind: Bltn, builtin: _len},
 		"make":    &Symbol{kind: Bltn, builtin: _make},
 		"panic":   &Symbol{kind: Bltn, builtin: _panic},
 		"println": &Symbol{kind: Bltn, builtin: _println},
+		"real":    &Symbol{kind: Bltn, builtin: _real},
 		"recover": &Symbol{kind: Bltn, builtin: _recover},
 		// TODO: complex, copy, delete, imag, new, print, real
 	}}
