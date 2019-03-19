@@ -1513,6 +1513,28 @@ func main() {
 	// true
 }
 
+func Example_complex0() {
+	src := `
+package main
+
+import "fmt"
+
+func main() {
+	a := complex(3, 2)
+	fmt.Println(a, real(a), imag(a))
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// (3+2i) 3 2
+}
+
 func Example_const0() {
 	src := `
 package main

@@ -531,6 +531,9 @@ func (t *Type) TypeOf() reflect.Type {
 		}
 		t.rtype = reflect.FuncOf(in, out, false)
 
+	case InterfaceT:
+		t.rtype = reflect.TypeOf(new(interface{})).Elem()
+
 	case MapT:
 		t.rtype = reflect.MapOf(t.key.TypeOf(), t.val.TypeOf())
 
@@ -553,14 +556,8 @@ func (t *Type) TypeOf() reflect.Type {
 	return t.rtype
 }
 
-func isNumber(t *Type) bool { return isInt(t) || isFloat(t) }
-
 func isInt(t *Type) bool {
-	typ := t.TypeOf()
-	if typ == nil {
-		return false
-	}
-	switch typ.Kind() {
+	switch t.TypeOf().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return true
 	}
@@ -568,11 +565,7 @@ func isInt(t *Type) bool {
 }
 
 func isUint(t *Type) bool {
-	typ := t.TypeOf()
-	if typ == nil {
-		return false
-	}
-	switch typ.Kind() {
+	switch t.TypeOf().Kind() {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return true
 	}
@@ -580,17 +573,15 @@ func isUint(t *Type) bool {
 }
 
 func isFloat(t *Type) bool {
-	typ := t.TypeOf()
-	if typ == nil {
-		return false
-	}
-	switch typ.Kind() {
+	switch t.TypeOf().Kind() {
 	case reflect.Float32, reflect.Float64:
 		return true
 	}
 	return false
 }
 
-func isString(t *Type) bool {
-	return t.TypeOf().Kind() == reflect.String
-}
+func isFloat32(t *Type) bool       { return t.TypeOf().Kind() == reflect.Float32 }
+func isFloat64(t *Type) bool       { return t.TypeOf().Kind() == reflect.Float64 }
+func isUntypedNumber(t *Type) bool { return t.untyped && (isInt(t) || isFloat(t)) }
+func isNumber(t *Type) bool        { return isInt(t) || isFloat(t) }
+func isString(t *Type) bool        { return t.TypeOf().Kind() == reflect.String }

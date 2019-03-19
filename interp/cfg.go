@@ -314,7 +314,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				}
 			default:
 				// Detect invalid float truncate
-				if isInt(dest.typ) && isFloat(src.typ) {
+				if isInt(t0) && isFloat(t1) {
 					err = src.cfgError("invalid float truncate")
 					return
 				}
@@ -539,6 +539,32 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					}
 				case "cap", "copy", "len":
 					n.typ = scope.getType("int")
+				case "complex":
+					switch t0, t1 := n.child[1].typ, n.child[2].typ; {
+					case isFloat32(t0) && isFloat32(t1):
+						n.typ = scope.getType("complex64")
+					case isFloat64(t0) && isFloat64(t1):
+						n.typ = scope.getType("complex128")
+					case isUntypedNumber(t0) && isUntypedNumber(t1):
+						n.typ = &Type{cat: ValueT, rtype: complexType}
+					case isUntypedNumber(t0) && isFloat32(t1) || isUntypedNumber(t1) && isFloat32(t0):
+						n.typ = scope.getType("complex64")
+					case isUntypedNumber(t0) && isFloat64(t1) || isUntypedNumber(t1) && isFloat64(t0):
+						n.typ = scope.getType("complex128")
+					default:
+						err = n.cfgError("invalid types %s and %s", t0.TypeOf().Kind(), t1.TypeOf().Kind())
+					}
+				case "real", "imag":
+					switch k := n.child[1].typ.TypeOf().Kind(); {
+					case k == reflect.Complex64:
+						n.typ = scope.getType("float32")
+					case k == reflect.Complex128:
+						n.typ = scope.getType("float64")
+					case isUntypedNumber(n.child[1].typ):
+						n.typ = &Type{cat: ValueT, rtype: floatType}
+					default:
+						err = n.cfgError("invalid complex type %s", k)
+					}
 				case "make":
 					if n.typ = scope.getType(n.child[1].ident); n.typ == nil {
 						n.typ, err = nodeType(interp, scope, n.child[1])
