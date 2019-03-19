@@ -532,7 +532,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					if n.typ = scope.getType(n.child[1].ident); n.typ == nil {
 						n.typ, err = nodeType(interp, scope, n.child[1])
 					}
-				case "cap", "len":
+				case "cap", "copy", "len":
 					n.typ = scope.getType("int")
 				case "complex":
 					switch t0, t1 := n.child[1].typ, n.child[2].typ; {
@@ -566,6 +566,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					}
 					n.child[1].val = n.typ
 					n.child[1].kind = BasicLit
+				case "new":
+					n.typ, err = nodeType(interp, scope, n.child[1])
+					n.typ = &Type{cat: PtrT, val: n.typ}
 				case "recover":
 					n.typ = scope.getType("interface{}")
 				}
@@ -1111,7 +1114,20 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.gen = nop
 			}
 
-		case SliceExpr, UnaryExpr:
+		case SliceExpr:
+			wireChild(n)
+			if ctyp := n.child[0].typ; ctyp.size != 0 {
+				// Create a slice type from an array type
+				n.typ = &Type{}
+				*n.typ = *ctyp
+				n.typ.size = 0
+				n.typ.rtype = nil
+			} else {
+				n.typ = ctyp
+			}
+			n.findex = scope.add(n.typ)
+
+		case UnaryExpr:
 			wireChild(n)
 			n.typ = n.child[0].typ
 			// TODO: Optimisation: avoid allocation if boolean branch op (i.e. '!' in an 'if' expr)
