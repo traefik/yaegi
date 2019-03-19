@@ -37,6 +37,9 @@
 [issues]
   exclude-use-default = false
   max-per-linter = 0
-  max-same = 0
-  exclude = [
-  ]
+  max-same-issues = 0
+  exclude = []
+
+  [[issues.exclude-rules]]
+    path = "cmd/goexports/goexports.go"
+    text = "SA1019: importer.For is deprecated: use ForCompiler, which populates a FileSet with the positions of objects created by the importer."

@@ -693,20 +693,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.findex = scope.add(n.typ)
 			}
 			// TODO: Check that composite literal expr matches corresponding type
-			switch n.typ.cat {
-			case ArrayT:
-				n.gen = arrayLit
-			case MapT:
-				n.gen = mapLit
-			case StructT:
-				if n.lastChild().kind == KeyValueExpr {
-					n.gen = compositeSparse
-				} else {
-					n.gen = compositeLit
-				}
-			case ValueT:
-				n.gen = compositeBin
-			}
+			n.gen = compositeGenerator(n)
 
 		case Fallthrough:
 			if n.anc.kind != CaseBody {
@@ -1444,4 +1431,25 @@ func gotoLabel(s *Symbol) {
 	for _, c := range s.from {
 		c.tnext = s.node.start
 	}
+}
+
+func compositeGenerator(n *Node) (gen BuiltinGenerator) {
+	switch n.typ.cat {
+	case AliasT:
+		n.typ = n.typ.val
+		gen = compositeGenerator(n)
+	case ArrayT:
+		gen = arrayLit
+	case MapT:
+		gen = mapLit
+	case StructT:
+		if n.lastChild().kind == KeyValueExpr {
+			gen = compositeSparse
+		} else {
+			gen = compositeLit
+		}
+	case ValueT:
+		gen = compositeBin
+	}
+	return
 }
