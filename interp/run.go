@@ -327,6 +327,25 @@ func deref(n *Node) {
 	}
 }
 
+func _print(n *Node) {
+	child := n.child[1:]
+	next := getExec(n.tnext)
+	values := make([]func(*Frame) reflect.Value, len(child))
+	for i, c := range child {
+		values[i] = genValue(c)
+	}
+
+	n.exec = func(f *Frame) Builtin {
+		for i, value := range values {
+			if i > 0 {
+				fmt.Printf(" ")
+			}
+			fmt.Printf("%v", value(f))
+		}
+		return next
+	}
+}
+
 func _println(n *Node) {
 	child := n.child[1:]
 	next := getExec(n.tnext)
@@ -1283,16 +1302,46 @@ func _case(n *Node) {
 	}
 }
 
-// TODO: handle variable number of arguments to append
-func _append(n *Node) {
+func appendSlice(n *Node) {
 	i := n.findex
-	value0 := genValue(n.child[1])
-	value1 := genValue(n.child[2])
+	value := genValue(n.child[1])
 	next := getExec(n.tnext)
+	value0 := genValue(n.child[2])
 
 	n.exec = func(f *Frame) Builtin {
-		f.data[i] = reflect.Append(value0(f), value1(f))
+		f.data[i] = reflect.AppendSlice(value(f), value0(f))
 		return next
+	}
+}
+
+func _append(n *Node) {
+	i := n.findex
+	value := genValue(n.child[1])
+	next := getExec(n.tnext)
+
+	if len(n.child) > 3 {
+		args := n.child[2:]
+		l := len(args)
+		values := make([]func(*Frame) reflect.Value, l)
+		for i, arg := range args {
+			values[i] = genValue(arg)
+		}
+
+		n.exec = func(f *Frame) Builtin {
+			sl := make([]reflect.Value, l)
+			for i, v := range values {
+				sl[i] = v(f)
+			}
+			f.data[i] = reflect.Append(value(f), sl...)
+			return next
+		}
+	} else {
+		value0 := genValue(n.child[2])
+
+		n.exec = func(f *Frame) Builtin {
+			f.data[i] = reflect.Append(value(f), value0(f))
+			return next
+		}
 	}
 }
 
@@ -1363,6 +1412,18 @@ func _real(n *Node) {
 
 	n.exec = func(f *Frame) Builtin {
 		f.data[i].SetFloat(real(value(f).Complex()))
+    return next
+  }
+}
+   
+func _delete(n *Node) {
+	value0 := genValue(n.child[1]) // map
+	value1 := genValue(n.child[2]) // key
+	next := getExec(n.tnext)
+	var z reflect.Value
+
+	n.exec = func(f *Frame) Builtin {
+		value0(f).SetMapIndex(value1(f), z)
 		return next
 	}
 }

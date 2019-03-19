@@ -94,6 +94,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					v.findex = vindex
 				}
 			}
+			n.findex = -1
+			n.val = nil
 			scope = scope.pushBloc()
 
 		case CaseClause:
@@ -532,6 +534,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					if n.typ = scope.getType(n.child[1].ident); n.typ == nil {
 						n.typ, err = nodeType(interp, scope, n.child[1])
 					}
+					if c2 := n.child[2]; len(n.child) == 3 && c2.typ.cat == ArrayT && c2.typ.val.id() == n.typ.val.id() {
+						n.gen = appendSlice
+					}
 				case "cap", "copy", "len":
 					n.typ = scope.getType("int")
 				case "complex":
@@ -574,6 +579,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				}
 				if n.typ != nil {
 					n.findex = scope.add(n.typ)
+				} else {
+					n.findex = -1
+					n.val = nil
 				}
 			case n.child[0].isType(scope):
 				// Type conversion expression
