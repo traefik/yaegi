@@ -63,6 +63,7 @@ func TestEvalBuiltin(t *testing.T) {
 		{src: `a := []int{1}; b := []int{2, 3}; a = append(a, b...); a`, res: "[1 2 3]"},
 		{src: `string(append([]byte("hello "), "world"...))`, res: "hello world"},
 		{src: `a := "world"; string(append([]byte("hello "), a...))`, res: "hello world"},
+		{src: `a := []byte("Hello"); copy(a, "world"); string(a)`, res: "world"},
 	})
 }
 
