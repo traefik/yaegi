@@ -3,8 +3,8 @@
 package interp_test
 
 import (
-	"github.com/containous/dyngo/interp"
-	"github.com/containous/dyngo/stdlib"
+	"github.com/containous/yaegi/interp"
+	"github.com/containous/yaegi/stdlib"
 )
 
 func Example_a1() {

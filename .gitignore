@@ -2,7 +2,7 @@
 .*.swp
 *.dot
 .idea/
-dyngo
+yaegi
 cmd/goexports/goexports
 example/inception/inception
 _test/tmp/

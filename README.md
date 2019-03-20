@@ -1,6 +1,6 @@
 # Go interpreter
 
-[![Build Status](https://semaphoreci.com/api/v1/projects/9ae7b3d7-85f8-492f-aa43-62039d5342b7/2465344/badge.svg)](https://semaphoreci.com/containous/dyngo)
+[![Build Status](https://semaphoreci.com/api/v1/projects/8a9d3e41-0a4f-408e-a477-3c9c7418314d/2583906/badge.svg)](https://semaphoreci.com/containous/yaegi)
 
 A Go interpreter in go
 

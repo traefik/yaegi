@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/containous/dyngo/interp"
-	"github.com/containous/dyngo/stdlib"
+	"github.com/containous/yaegi/interp"
+	"github.com/containous/yaegi/stdlib"
 )
 
 func TestGetFunc(t *testing.T) {

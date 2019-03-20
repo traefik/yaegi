@@ -22,6 +22,6 @@ $ go run ./sample.go
 
 Got:
 ```console
-$ dyngo ./sample.go
+$ yaegi ./sample.go
 // ouput
 ```

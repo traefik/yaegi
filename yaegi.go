@@ -1,9 +1,9 @@
 package main
 
-//go:generate go generate github.com/containous/dyngo/interp
-//go:generate go generate github.com/containous/dyngo/cmd/goexports
-//go:generate go generate github.com/containous/dyngo/stdlib
-//go:generate go generate github.com/containous/dyngo/stdlib/syscall
+//go:generate go generate github.com/containous/yaegi/interp
+//go:generate go generate github.com/containous/yaegi/cmd/goexports
+//go:generate go generate github.com/containous/yaegi/stdlib
+//go:generate go generate github.com/containous/yaegi/stdlib/syscall
 
 import (
 	"flag"
@@ -13,9 +13,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/containous/dyngo/interp"
-	"github.com/containous/dyngo/stdlib"
-	"github.com/containous/dyngo/stdlib/syscall"
+	"github.com/containous/yaegi/interp"
+	"github.com/containous/yaegi/stdlib"
+	"github.com/containous/yaegi/stdlib/syscall"
 )
 
 func main() {

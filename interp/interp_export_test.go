@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/containous/dyngo/interp"
+	"github.com/containous/yaegi/interp"
 )
 
 type Helloer interface {

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/containous/dyngo/interp"
-	"github.com/containous/dyngo/stdlib"
+	"github.com/containous/yaegi/interp"
+	"github.com/containous/yaegi/stdlib"
 )
 
 func init() { log.SetFlags(log.Lshortfile) }

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/containous/dyngo/interp"
+	"github.com/containous/yaegi/interp"
 )
 
 func main() {

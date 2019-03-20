@@ -7,8 +7,8 @@ echo
 echo 'package interp_test'
 echo
 echo 'import ('
-echo '	"github.com/containous/dyngo/interp"'
-echo '	"github.com/containous/dyngo/stdlib"'
+echo '	"github.com/containous/yaegi/interp"'
+echo '	"github.com/containous/yaegi/stdlib"'
 echo ')'
 echo
 for file in *.go

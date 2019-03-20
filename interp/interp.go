@@ -79,7 +79,7 @@ type Interpreter struct {
 var ExportValue = LibValueMap{}
 
 func init() {
-	me := "github.com/containous/dyngo/interp"
+	me := "github.com/containous/yaegi/interp"
 	ExportValue[me] = map[string]reflect.Value{
 		"New":         reflect.ValueOf(New),
 		"Interpreter": reflect.ValueOf((*Interpreter)(nil)),

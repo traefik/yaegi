@@ -3,8 +3,8 @@ package clos1
 import (
 	"testing"
 
-	"github.com/containous/dyngo/interp"
-	"github.com/containous/dyngo/stdlib"
+	"github.com/containous/yaegi/interp"
+	"github.com/containous/yaegi/stdlib"
 )
 
 func TestFunctionCall(t *testing.T) {
