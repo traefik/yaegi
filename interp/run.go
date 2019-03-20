@@ -1308,14 +1308,23 @@ func _case(n *Node) {
 
 func appendSlice(n *Node) {
 	i := n.findex
-	value := genValue(n.child[1])
 	next := getExec(n.tnext)
+	value := genValue(n.child[1])
 	value0 := genValue(n.child[2])
 
-	n.exec = func(f *Frame) Builtin {
-		f.data[i] = reflect.AppendSlice(value(f), value0(f))
-		return next
+	if isString(n.child[2].typ) {
+		typ := reflect.TypeOf([]byte{})
+		n.exec = func(f *Frame) Builtin {
+			f.data[i] = reflect.AppendSlice(value(f), value0(f).Convert(typ))
+			return next
+		}
+	} else {
+		n.exec = func(f *Frame) Builtin {
+			f.data[i] = reflect.AppendSlice(value(f), value0(f))
+			return next
+		}
 	}
+
 }
 
 func _append(n *Node) {

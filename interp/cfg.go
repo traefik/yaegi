@@ -581,11 +581,15 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.child[0].typ = &Type{cat: BuiltinT}
 				switch n.child[0].ident {
 				case "append":
-					if n.typ = scope.getType(n.child[1].ident); n.typ == nil {
-						n.typ, err = nodeType(interp, scope, n.child[1])
+					c1, c2 := n.child[1], n.child[2]
+					if n.typ = scope.getType(c1.ident); n.typ == nil {
+						n.typ, err = nodeType(interp, scope, c1)
 					}
-					if c2 := n.child[2]; len(n.child) == 3 && c2.typ.cat == ArrayT && c2.typ.val.id() == n.typ.val.id() {
-						n.gen = appendSlice
+					if len(n.child) == 3 {
+						if c2.typ.cat == ArrayT && c2.typ.val.id() == n.typ.val.id() ||
+							isByteArray(c1.typ) && isString(c2.typ) {
+							n.gen = appendSlice
+						}
 					}
 				case "cap", "copy", "len":
 					n.typ = scope.getType("int")
