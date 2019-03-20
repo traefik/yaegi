@@ -9,23 +9,27 @@ import (
 // A SymKind represents the kind of symbol
 type SymKind uint
 
-// Symbol kinds for the go language
+// Symbol kinds for the Go interpreter
 const (
-	Const SymKind = iota // Constant
-	Typ                  // Type
-	Var                  // Variable
-	Func                 // Function
-	Bin                  // Binary from runtime
-	Bltn                 // Builtin
+	Empty SymKind = iota
+	Bin           // Binary from runtime
+	Bltn          // Builtin
+	Const         // Constant
+	Func          // Function
+	Label         // Label
+	Typ           // Type
+	Var           // Variable
 )
 
 var symKinds = [...]string{
-	Const: "Const",
-	Typ:   "Typ",
-	Var:   "Var",
-	Func:  "Func",
+	Empty: "Empty",
 	Bin:   "Bin",
 	Bltn:  "Bltn",
+	Const: "Const",
+	Func:  "Func",
+	Label: "Label",
+	Typ:   "Typ",
+	Var:   "Var",
 }
 
 func (k SymKind) String() string {
@@ -35,11 +39,13 @@ func (k SymKind) String() string {
 	return "SymKind(" + strconv.Itoa(int(k)) + ")"
 }
 
-// A Symbol represents an interpreter object such as type, constant, var, func, builtin or binary object
+// A Symbol represents an interpreter object such as type, constant, var, func,
+// label, builtin or binary object. Symbols are defined within a scope.
 type Symbol struct {
 	kind    SymKind
 	typ     *Type            // Type of value
 	node    *Node            // Node value if index is negative
+	from    []*Node          // list of nodes jumping to node if kind is label, or nil
 	recv    *Receiver        // receiver node value, if sym refers to a method
 	index   int              // index of value in frame or -1
 	val     interface{}      // default value (used for constants)
