@@ -13,10 +13,7 @@ gen_all_syscall: cmd/goexports/goexports
 cmd/goexports/goexports: cmd/goexports/goexports.go
 	go generate cmd/goexports/goexports.go
 
-gen_tests:
-	make -C _test
-
-generate: gen_all_syscall gen_tests
+generate: gen_all_syscall
 	go generate
 
 .PHONY: check gen_all_syscall gen_tests
