@@ -34,10 +34,11 @@ func TestFile(t *testing.T) {
 }
 
 func runCheck(t *testing.T, p string) {
-	wanted := wantedFromComment(p)
+	wanted, errWanted := wantedFromComment(p)
 	if wanted == "" {
-		t.Skip(p, "has no block '// Output:'")
+		t.Skip(p, "has no block '// Output:' or '// Error:'")
 	}
+	wanted = strings.TrimSpace(wanted)
 
 	src, err := ioutil.ReadFile(p)
 	if err != nil {
@@ -54,6 +55,16 @@ func runCheck(t *testing.T, p string) {
 	i.Use(stdlib.Value)
 
 	_, err = i.Eval(string(src))
+	if errWanted {
+		if err == nil {
+			t.Fatalf("got nil error, want: %q", wanted)
+		}
+		if res := strings.TrimSpace(err.Error()); res != wanted {
+			t.Errorf("got %q, want: %q", res, wanted)
+		}
+		return
+	}
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,12 +77,12 @@ func runCheck(t *testing.T, p string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.TrimSpace(string(outInterp)) != strings.TrimSpace(wanted) {
+	if strings.TrimSpace(string(outInterp)) != wanted {
 		t.Errorf("\ngot:  %q,\nwant: %q", string(outInterp), wanted)
 	}
 }
 
-func wantedFromComment(p string) (res string) {
+func wantedFromComment(p string) (res string, err bool) {
 	fset := token.NewFileSet()
 	f, _ := parser.ParseFile(fset, p, nil, parser.ParseComments)
 	if len(f.Comments) == 0 {
@@ -79,11 +90,19 @@ func wantedFromComment(p string) (res string) {
 	}
 	// wanted output text is in last block comment and start by: '// Output:'
 	last := f.Comments[len(f.Comments)-1].List
-	if header := last[0].Text; header != "// Output:" {
+	switch header := last[0].Text; {
+	case header == "// Output:":
+	case header == "// Error:":
+		err = true
+	default:
 		return
 	}
 	for _, l := range last[1:] {
-		res += l.Text[3:] + "\n"
+		if len(l.Text) < 3 {
+			res += "\n"
+		} else {
+			res += l.Text[3:] + "\n"
+		}
 	}
 	return
 }
