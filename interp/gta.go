@@ -128,13 +128,13 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 						scope.sym[n] = &Symbol{kind: Bin, typ: &Type{cat: ValueT, rtype: typ}, val: v}
 					}
 				} else {
-					scope.sym[name] = &Symbol{typ: &Type{cat: BinPkgT}, path: ipath}
+					scope.sym[name] = &Symbol{kind: Package, typ: &Type{cat: BinPkgT}, path: ipath}
 				}
 			} else {
 				// TODO: make sure we do not import a src package more than once
 				err = interp.importSrcFile(rpath, ipath, name)
 				scope.types = interp.universe.types
-				scope.sym[name] = &Symbol{typ: &Type{cat: SrcPkgT}, path: ipath}
+				scope.sym[name] = &Symbol{kind: Package, typ: &Type{cat: SrcPkgT}, path: ipath}
 			}
 
 		case TypeSpec:
