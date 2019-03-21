@@ -301,10 +301,9 @@ func (a Action) String() string {
 	return "Action(" + strconv.Itoa(int(a)) + ")"
 }
 
-func firstToken(src string) token.Token {
+func (interp *Interpreter) firstToken(src string) token.Token {
 	var s scanner.Scanner
-	fset := token.NewFileSet()
-	file := fset.AddFile("", fset.Base(), len(src))
+	file := interp.fset.AddFile("", interp.fset.Base(), len(src))
 	s.Init(file, []byte(src), nil, 0)
 
 	_, tok, _ := s.Scan()
@@ -322,7 +321,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 	// Allow incremental parsing of declarations or statements, by inserting them in a pseudo
 	// file package or function.
 	// Those statements or declarations will be always evaluated in the global scope
-	switch firstToken(src) {
+	switch interp.firstToken(src) {
 	case token.PACKAGE:
 		// nothing to do
 	case token.CONST, token.FUNC, token.IMPORT, token.TYPE, token.VAR:
@@ -332,8 +331,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 		src = "package _; func _() {" + src + "}"
 	}
 
-	fset := token.NewFileSet() // positions are relative to fset
-	f, err := parser.ParseFile(fset, name, src, 0)
+	f, err := parser.ParseFile(interp.fset, name, src, 0)
 	if err != nil {
 		return "", nil, err
 	}
@@ -348,7 +346,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 	addChild := func(root **Node, anc astNode, pos token.Pos, kind Kind, action Action) *Node {
 		interp.nindex++
 		var i interface{}
-		n := &Node{anc: anc.node, interp: interp, index: interp.nindex, fset: fset, pos: pos, kind: kind, action: action, val: &i, gen: builtin[action]}
+		n := &Node{anc: anc.node, interp: interp, index: interp.nindex, pos: pos, kind: kind, action: action, val: &i, gen: builtin[action]}
 		n.start = n
 		if anc.node == nil {
 			*root = n
@@ -816,7 +814,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			st.push(addChild(&root, anc, pos, kind, action), node)
 
 		default:
-			err = AstError(fmt.Errorf("ast: %T not implemented, line %s", a, fset.Position(pos)))
+			err = AstError(fmt.Errorf("ast: %T not implemented, line %s", a, interp.fset.Position(pos)))
 			return false
 		}
 		return true
