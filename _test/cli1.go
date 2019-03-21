@@ -31,7 +31,7 @@ func server(ln net.Listener, ready chan bool) {
 }
 
 func main() {
-	ln, err := net.Listen("tcp", ":0")
+	ln, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		log.Fatal(err)
 	}
