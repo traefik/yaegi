@@ -33,6 +33,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "io0.go" || // use random number
 			file.Name() == "op1.go" || // expect error
 			file.Name() == "bltn0.go" || // expect error
+			file.Name() == "method16.go" || // private struct field
 			file.Name() == "switch8.go" || // expect error
 			file.Name() == "switch9.go" || // expect error
 			file.Name() == "switch13.go" || // expect error
