@@ -581,11 +581,15 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.child[0].typ = &Type{cat: BuiltinT}
 				switch n.child[0].ident {
 				case "append":
-					if n.typ = scope.getType(n.child[1].ident); n.typ == nil {
-						n.typ, err = nodeType(interp, scope, n.child[1])
+					c1, c2 := n.child[1], n.child[2]
+					if n.typ = scope.getType(c1.ident); n.typ == nil {
+						n.typ, err = nodeType(interp, scope, c1)
 					}
-					if c2 := n.child[2]; len(n.child) == 3 && c2.typ.cat == ArrayT && c2.typ.val.id() == n.typ.val.id() {
-						n.gen = appendSlice
+					if len(n.child) == 3 {
+						if c2.typ.cat == ArrayT && c2.typ.val.id() == n.typ.val.id() ||
+							isByteArray(c1.typ) && isString(c2.typ) {
+							n.gen = appendSlice
+						}
 					}
 				case "cap", "copy", "len":
 					n.typ = scope.getType("int")
@@ -1004,11 +1008,21 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					err = n.cfgError("undefined selector: %s", n.child[1].ident)
 				}
 			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
-				// Handle method
-				n.gen = getMethod
-				n.val = m
-				n.typ = m.typ
-				n.recv = &Receiver{node: n.child[0], index: lind}
+				if n.child[0].isType(scope) {
+					// Handle method as a function with receiver in 1st argument
+					n.val = m
+					n.findex = -1
+					n.gen = nop
+					n.typ = &Type{}
+					*n.typ = *m.typ
+					n.typ.arg = append([]*Type{n.child[0].typ}, m.typ.arg...)
+				} else {
+					// Handle method with receiver
+					n.gen = getMethod
+					n.val = m
+					n.typ = m.typ
+					n.recv = &Receiver{node: n.child[0], index: lind}
+				}
 			} else if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
 				// Handle struct field
 				n.val = ti
@@ -1053,6 +1067,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			case n.anc.kind == Field:
 				// pointer type expression in a field expression (arg or struct field)
 				n.gen = nop
+			case n.anc.kind == ParenExpr && n.child[0].sym != nil && n.child[0].sym.kind == Typ:
+				// pointer type expression
+				n.gen = nop
+				n.typ = &Type{cat: PtrT, val: n.child[0].sym.typ}
 			default:
 				// dereference expression
 				wireChild(n)
@@ -1199,7 +1217,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 }
 
 func (n *Node) cfgError(format string, a ...interface{}) CfgError {
-	a = append([]interface{}{n.fset.Position(n.pos)}, a...)
+	a = append([]interface{}{n.interp.fset.Position(n.pos)}, a...)
 	return CfgError(fmt.Errorf("%s: "+format, a...))
 }
 
@@ -1244,6 +1262,10 @@ func (n *Node) isType(scope *Scope) bool {
 	switch n.kind {
 	case ArrayType, ChanType, FuncType, MapType, StructType, Rtype:
 		return true
+	case ParenExpr, StarExpr:
+		if len(n.child) == 1 {
+			return n.child[0].isType(scope)
+		}
 	case SelectorExpr:
 		pkg, name := n.child[0].ident, n.child[1].ident
 		if sym, _, ok := scope.lookup(pkg); ok {
