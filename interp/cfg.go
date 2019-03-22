@@ -1217,7 +1217,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 }
 
 func (n *Node) cfgError(format string, a ...interface{}) CfgError {
-	a = append([]interface{}{n.fset.Position(n.pos)}, a...)
+	a = append([]interface{}{n.interp.fset.Position(n.pos)}, a...)
 	return CfgError(fmt.Errorf("%s: "+format, a...))
 }
 
