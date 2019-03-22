@@ -3756,6 +3756,37 @@ func main() {
 	// 25
 }
 
+func Example_method16() {
+	src := `
+package main
+
+import (
+	"fmt"
+)
+
+type Cheese struct {
+	property string
+}
+
+func (t *Cheese) Hello(param string) {
+	fmt.Printf("%+v %+v", t, param)
+}
+
+func main() {
+	(*Cheese).Hello(&Cheese{property: "value"}, "param")
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// &{Xproperty:value} param
+}
+
 func Example_method2() {
 	src := `
 package main

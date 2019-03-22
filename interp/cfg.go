@@ -1008,11 +1008,21 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					err = n.cfgError("undefined selector: %s", n.child[1].ident)
 				}
 			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
-				// Handle method
-				n.gen = getMethod
-				n.val = m
-				n.typ = m.typ
-				n.recv = &Receiver{node: n.child[0], index: lind}
+				if n.child[0].isType(scope) {
+					// Handle method as a function with receiver in 1st argument
+					n.val = m
+					n.findex = -1
+					n.gen = nop
+					n.typ = &Type{}
+					*n.typ = *m.typ
+					n.typ.arg = append([]*Type{n.child[0].typ}, m.typ.arg...)
+				} else {
+					// Handle method with receiver
+					n.gen = getMethod
+					n.val = m
+					n.typ = m.typ
+					n.recv = &Receiver{node: n.child[0], index: lind}
+				}
 			} else if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
 				// Handle struct field
 				n.val = ti
@@ -1057,6 +1067,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			case n.anc.kind == Field:
 				// pointer type expression in a field expression (arg or struct field)
 				n.gen = nop
+			case n.anc.kind == ParenExpr && n.child[0].sym != nil && n.child[0].sym.kind == Typ:
+				// pointer type expression
+				n.gen = nop
+				n.typ = &Type{cat: PtrT, val: n.child[0].sym.typ}
 			default:
 				// dereference expression
 				wireChild(n)
@@ -1248,6 +1262,10 @@ func (n *Node) isType(scope *Scope) bool {
 	switch n.kind {
 	case ArrayType, ChanType, FuncType, MapType, StructType, Rtype:
 		return true
+	case ParenExpr, StarExpr:
+		if len(n.child) == 1 {
+			return n.child[0].isType(scope)
+		}
 	case SelectorExpr:
 		pkg, name := n.child[0].ident, n.child[1].ident
 		if sym, _, ok := scope.lookup(pkg); ok {
