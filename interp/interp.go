@@ -23,7 +23,6 @@ type Node struct {
 	findex int              // index of value in frame or frame size (func def, type def)
 	level  int              // number of frame indirections to access value
 	kind   Kind             // kind of node
-	fset   *token.FileSet   // fileset to locate node in source code
 	pos    token.Pos        // position in source code, relative to fset
 	sym    *Symbol          // associated symbol
 	typ    *Type            // type of value in frame, or nil
@@ -70,6 +69,7 @@ type Interpreter struct {
 	Name     string            // program name
 	Frame    *Frame            // program data storage during execution
 	nindex   int               // next node index
+	fset     *token.FileSet    // fileset to locate node in source code
 	universe *Scope            // interpreter global level scope
 	scope    map[string]*Scope // package level scopes, indexed by package name
 	binValue LibValueMap       // runtime binary values used in interpreter
@@ -110,6 +110,7 @@ func New(opt Opt) *Interpreter {
 
 	return &Interpreter{
 		Opt:      opt,
+		fset:     token.NewFileSet(),
 		universe: initUniverse(),
 		scope:    map[string]*Scope{},
 		binValue: LibValueMap{},
