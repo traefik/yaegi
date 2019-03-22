@@ -11,25 +11,27 @@ type SymKind uint
 
 // Symbol kinds for the Go interpreter
 const (
-	Empty SymKind = iota
-	Bin           // Binary from runtime
-	Bltn          // Builtin
-	Const         // Constant
-	Func          // Function
-	Label         // Label
-	Typ           // Type
-	Var           // Variable
+	Empty   SymKind = iota
+	Bin             // Binary from runtime
+	Bltn            // Builtin
+	Const           // Constant
+	Func            // Function
+	Label           // Label
+	Package         // Package
+	Typ             // Type
+	Var             // Variable
 )
 
 var symKinds = [...]string{
-	Empty: "Empty",
-	Bin:   "Bin",
-	Bltn:  "Bltn",
-	Const: "Const",
-	Func:  "Func",
-	Label: "Label",
-	Typ:   "Typ",
-	Var:   "Var",
+	Empty:   "Empty",
+	Bin:     "Bin",
+	Bltn:    "Bltn",
+	Const:   "Const",
+	Func:    "Func",
+	Label:   "Label",
+	Package: "Package",
+	Typ:     "Typ",
+	Var:     "Var",
 }
 
 func (k SymKind) String() string {
