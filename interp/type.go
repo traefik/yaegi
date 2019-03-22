@@ -580,6 +580,12 @@ func isFloat(t *Type) bool {
 	return false
 }
 
+func isByteArray(t *Type) bool {
+	r := t.TypeOf()
+	k := r.Kind()
+	return (k == reflect.Array || k == reflect.Slice) && r.Elem().Kind() == reflect.Uint8
+}
+
 func isFloat32(t *Type) bool       { return t.TypeOf().Kind() == reflect.Float32 }
 func isFloat64(t *Type) bool       { return t.TypeOf().Kind() == reflect.Float64 }
 func isUntypedNumber(t *Type) bool { return t.untyped && (isInt(t) || isFloat(t)) }
