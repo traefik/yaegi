@@ -946,6 +946,30 @@ func main() {
 	// 1
 }
 
+func Example_build0() {
+	src := `
+// A test program
+
+// +build darwin,linux !arm
+// +build go1.12 !go1.13
+
+package main
+
+func main() {
+	println("hello world")
+}
+`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// hello world
+}
+
 func Example_chan0() {
 	src := `
 package main
