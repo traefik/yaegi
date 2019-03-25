@@ -310,17 +310,17 @@ func (interp *Interpreter) firstToken(src string) token.Token {
 	return tok
 }
 
-// Note: no type analysis is performed at this stage, it is done in pre-order processing
-// of CFG, in order to accommodate forward type declarations
+// Note: no type analysis is performed at this stage, it is done in pre-order
+// processing of CFG, in order to accommodate forward type declarations
 
 // ast parses src string containing Go code and generates the corresponding AST.
 // The package name and the AST root node are returned.
 func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 	var inFunc bool
 
-	// Allow incremental parsing of declarations or statements, by inserting them in a pseudo
-	// file package or function.
-	// Those statements or declarations will be always evaluated in the global scope
+	// Allow incremental parsing of declarations or statements, by inserting
+	// them in a pseudo file package or function. Those statements or
+	// declarations will be always evaluated in the global scope
 	switch interp.firstToken(src) {
 	case token.PACKAGE:
 		// nothing to do
@@ -329,6 +329,10 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 	default:
 		inFunc = true
 		src = "package _; func _() {" + src + "}"
+	}
+
+	if !interp.buildOk(name, src) {
+		return "", nil, nil // skip source not matching build constraints
 	}
 
 	f, err := parser.ParseFile(interp.fset, name, src, 0)
