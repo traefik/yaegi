@@ -87,9 +87,8 @@ func buildTagOk(s string) (r bool) {
 
 // goNumVersion returns the go minor version number
 func goNumVersion() int {
-	v := runtime.Version()
-	v = v[4:strings.LastIndex(v, ".")]
-	n, _ := strconv.Atoi(v)
+	v := strings.Split(runtime.Version(), ".")
+	n, _ := strconv.Atoi(v[1])
 	return n
 }
 
