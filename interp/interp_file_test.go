@@ -36,7 +36,7 @@ func TestFile(t *testing.T) {
 func runCheck(t *testing.T, p string) {
 	wanted, errWanted := wantedFromComment(p)
 	if wanted == "" {
-		t.Skip(p, "has no block '// Output:' or '// Error:'")
+		t.Skip(p, "has no comment 'Output:' or 'Error:'")
 	}
 	wanted = strings.TrimSpace(wanted)
 
@@ -77,8 +77,8 @@ func runCheck(t *testing.T, p string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.TrimSpace(string(outInterp)) != wanted {
-		t.Errorf("\ngot:  %q,\nwant: %q", string(outInterp), wanted)
+	if res := strings.TrimSpace(string(outInterp)); res != wanted {
+		t.Errorf("\ngot:  %q,\nwant: %q", res, wanted)
 	}
 }
 
@@ -88,21 +88,12 @@ func wantedFromComment(p string) (res string, err bool) {
 	if len(f.Comments) == 0 {
 		return
 	}
-	// wanted output text is in last block comment and start by: '// Output:'
-	last := f.Comments[len(f.Comments)-1].List
-	switch header := last[0].Text; {
-	case header == "// Output:":
-	case header == "// Error:":
-		err = true
-	default:
-		return
+	text := f.Comments[len(f.Comments)-1].Text()
+	if strings.HasPrefix(text, "Output:\n") {
+		return strings.TrimPrefix(text, "Output:\n"), false
 	}
-	for _, l := range last[1:] {
-		if len(l.Text) < 3 {
-			res += "\n"
-		} else {
-			res += l.Text[3:] + "\n"
-		}
+	if strings.HasPrefix(text, "Error:\n") {
+		return strings.TrimPrefix(text, "Error:\n"), true
 	}
 	return
 }
