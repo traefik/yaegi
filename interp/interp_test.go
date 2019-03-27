@@ -2523,6 +2523,23 @@ func main() {
 	// Hello 42
 }
 
+func Example_import3() {
+	src := `
+package main
+
+import "./foo"
+
+//func main() { println(foo.Bar, foo.Boo) }
+func main() { println(foo.Bar, foo.Boo) }`
+	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(stdlib.Value)
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+}
+
 func Example_inc() {
 	src := `
 package main
