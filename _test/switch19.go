@@ -46,3 +46,6 @@ func main() {
 	inCall(boo)
 	inCall(Bar{})
 }
+
+// Error:
+// 37:2: duplicate case Bir in type switch
