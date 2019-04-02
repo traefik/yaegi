@@ -7,6 +7,7 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.Lshortfile)
 	i := interp.New(interp.Opt{})
 	i.Use(interp.ExportValue)
 	if _, err := i.Eval(`import "github.com/containous/yaegi/interp"`); err != nil {
