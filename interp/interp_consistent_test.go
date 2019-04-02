@@ -77,6 +77,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 
 			i := interp.New(interp.Opt{Entry: "main"})
 			i.Use(stdlib.Value)
+			i.Use(interp.ExportValue)
 
 			_, err = i.Eval(string(src))
 			if err != nil {
