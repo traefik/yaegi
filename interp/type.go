@@ -209,7 +209,23 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 			}
 		}
 
-	case CallExpr, CompositeLitExpr:
+	case CallExpr:
+		t, err = nodeType(interp, scope, n.child[0])
+		if err != nil {
+			return nil, err
+		}
+		switch t.cat {
+		case ValueT:
+			if t.rtype.NumOut() == 1 {
+				t = &Type{cat: ValueT, rtype: t.rtype.Out(0)}
+			}
+		default:
+			if len(t.ret) == 1 {
+				t = t.ret[0]
+			}
+		}
+
+	case CompositeLitExpr:
 		t, err = nodeType(interp, scope, n.child[0])
 
 	case ChanType:
