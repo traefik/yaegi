@@ -14,3 +14,7 @@ func main() {
 	println(a.count)
 	run(a, "truc")
 }
+
+// Output:
+// 2
+// 2 truc
