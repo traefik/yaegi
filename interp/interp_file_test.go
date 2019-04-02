@@ -52,6 +52,7 @@ func runCheck(t *testing.T, p string) {
 	os.Stdout = w
 
 	i := interp.New(interp.Opt{Entry: "main"})
+	i.Use(interp.ExportValue)
 	i.Use(stdlib.Value)
 
 	_, err = i.Eval(string(src))
