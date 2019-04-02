@@ -300,13 +300,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					err = src.cfgError("use of untyped nil")
 					break
 				}
-				switch {
-				case len(n.child) == 3:
+				if len(n.child) == 3 {
 					// type is provided in var declaration
 					dest.typ, err = nodeType(interp, scope, n.child[1])
-				case isRegularCall(src) || isBinCall(src):
-					dest.typ = getReturnedType(src.child[0])
-				default:
+				} else {
 					dest.typ = src.typ
 				}
 				if scope.global {
@@ -1426,19 +1423,6 @@ func setExec(n *Node) {
 	}
 
 	set(n)
-}
-
-func getReturnedType(n *Node) *Type {
-	switch n.typ.cat {
-	case BuiltinT:
-		return n.anc.typ
-	case ValueT:
-		if n.typ.rtype.NumOut() > 0 {
-			return &Type{cat: ValueT, rtype: n.typ.rtype.Out(0)}
-		}
-		return &Type{cat: ValueT, rtype: n.typ.rtype}
-	}
-	return n.typ.ret[0]
 }
 
 func typeSwichAssign(n *Node) bool {

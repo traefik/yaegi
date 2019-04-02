@@ -237,7 +237,7 @@ func assign(n *Node) {
 	var value1 func(*Frame) reflect.Value
 
 	switch {
-	case n.child[0].typ.cat == InterfaceT:
+	case dest.typ.cat == InterfaceT:
 		value1 = genValueInterface(src)
 	case dest.typ.cat == ValueT && src.typ.cat == FuncT:
 		value1 = genNodeWrapper(src)
