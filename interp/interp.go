@@ -194,7 +194,7 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 
 	// Parse source to AST
 	pkgName, root, err := i.ast(src, i.Name)
-	if err != nil {
+	if err != nil || root == nil {
 		return res, err
 	}
 
