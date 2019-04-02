@@ -28,10 +28,7 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 	// Parse source files
 	for _, file := range files {
 		name := file.Name()
-		if len(name) <= 3 || name[len(name)-3:] != ".go" {
-			continue
-		}
-		if len(name) > 8 && name[len(name)-8:] == "_test.go" {
+		if skipFile(name) {
 			continue
 		}
 
@@ -44,6 +41,9 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 		var pname string
 		if pname, root, err = i.ast(string(buf), name); err != nil {
 			return err
+		}
+		if root == nil {
+			continue
 		}
 		if pkgName == "" {
 			pkgName = pname
