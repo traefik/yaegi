@@ -15,16 +15,14 @@ import (
 
 	"github.com/containous/yaegi/interp"
 	"github.com/containous/yaegi/stdlib"
-	"github.com/containous/yaegi/stdlib/syscall"
 )
 
 func main() {
-	opt := interp.Opt{Entry: "main"}
-	var interactive bool
-	flag.BoolVar(&opt.AstDot, "a", false, "display AST graph")
-	flag.BoolVar(&opt.CfgDot, "c", false, "display CFG graph")
+	var interactive, astDot, cfgDot, noRun bool
+	flag.BoolVar(&astDot, "a", false, "display AST graph")
+	flag.BoolVar(&cfgDot, "c", false, "display CFG graph")
 	flag.BoolVar(&interactive, "i", false, "start an interactive REPL")
-	flag.BoolVar(&opt.NoRun, "n", false, "do not run")
+	flag.BoolVar(&noRun, "n", false, "do not run")
 	flag.Usage = func() {
 		fmt.Println("Usage:", os.Args[0], "[options] [script] [args]")
 		fmt.Println("Options:")
@@ -33,6 +31,20 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 	log.SetFlags(log.Lshortfile)
+
+	i := interp.New()
+	i.Use(stdlib.Value)
+	i.Use(interp.ExportValue)
+	if astDot {
+		interp.AstDot(i)
+	}
+	if cfgDot {
+		interp.CfgDot(i)
+	}
+	if noRun {
+		interp.NoRun(i)
+	}
+
 	if len(args) > 0 {
 		b, err := ioutil.ReadFile(args[0])
 		if err != nil {
@@ -43,10 +55,7 @@ func main() {
 			// Allow executable go scripts, but fix them prior to parse
 			s = strings.Replace(s, "#!", "//", 1)
 		}
-		i := interp.New(opt)
 		i.Name = args[0]
-		i.Use(stdlib.Value)
-		i.Use(interp.ExportValue)
 		if _, err := i.Eval(s); err != nil {
 			fmt.Println(err)
 		}
@@ -54,10 +63,6 @@ func main() {
 			i.Repl(os.Stdin, os.Stdout)
 		}
 	} else {
-		i := interp.New(opt)
-		i.Use(stdlib.Value)
-		i.Use(syscall.Value)
-		i.Use(interp.ExportValue)
 		i.Repl(os.Stdin, os.Stdout)
 	}
 }

@@ -325,10 +325,10 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 	case token.PACKAGE:
 		// nothing to do
 	case token.CONST, token.FUNC, token.IMPORT, token.TYPE, token.VAR:
-		src = "package _;" + src
+		src = "package main;" + src
 	default:
 		inFunc = true
-		src = "package _; func _() {" + src + "}"
+		src = "package main; func main() {" + src + "}"
 	}
 
 	if !interp.buildOk(name, src) {
@@ -825,9 +825,9 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 	})
 	if inFunc {
 		// Incremental parsing: statements were inserted in a pseudo function.
-		// Return function body as AST root, so its statements are evaluated in global scope
-		root.child[1].child[3].anc = nil
-		return "_", root.child[1].child[3], err
+		// Set root to function body so its statements are evaluated in global scope
+		root = root.child[1].child[3]
+		root.anc = nil
 	}
 	return pkgName, root, err
 }

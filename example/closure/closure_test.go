@@ -8,7 +8,7 @@ import (
 )
 
 func TestFunctionCall(t *testing.T) {
-	i := interp.New(interp.Opt{GoPath: "./_pkg"})
+	i := interp.New(interp.GoPath("./_pkg"))
 	i.Use(stdlib.Value)
 
 	_, err := i.Eval(`import "foo/bar"`)

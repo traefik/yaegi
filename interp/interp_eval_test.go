@@ -26,37 +26,37 @@ type testCase struct {
 }
 
 func TestEvalArithmetic(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	runTests(t, i, []testCase{
 		{desc: "add_II", src: "2 + 3", res: "5"},
 		{desc: "add_FI", src: "2.3 + 3", res: "5.3"},
 		{desc: "add_IF", src: "2 + 3.3", res: "5.3"},
 		{desc: "add_SS", src: `"foo" + "bar"`, res: "foobar"},
-		{desc: "add_SI", src: `"foo" + 1`, err: "1:22: illegal operand types for '+' operator"},
-		{desc: "sub_SS", src: `"foo" - "bar"`, err: "1:22: illegal operand types for '-' operator"},
+		{desc: "add_SI", src: `"foo" + 1`, err: "1:28: illegal operand types for '+' operator"},
+		{desc: "sub_SS", src: `"foo" - "bar"`, err: "1:28: illegal operand types for '-' operator"},
 		{desc: "sub_II", src: "7 - 3", res: "4"},
 		{desc: "sub_FI", src: "7.2 - 3", res: "4.2"},
 		{desc: "sub_IF", src: "7 - 3.2", res: "3.8"},
 		{desc: "mul_II", src: "2 * 3", res: "6"},
 		{desc: "mul_FI", src: "2.2 * 3", res: "6.6000000000000005"},
 		{desc: "mul_IF", src: "3 * 2.2", res: "6.6000000000000005"},
-		{desc: "rem_FI", src: "8.0 % 4", err: "1:22: illegal operand types for '%' operator"},
+		{desc: "rem_FI", src: "8.0 % 4", err: "1:28: illegal operand types for '%' operator"},
 	})
 }
 
 func TestEvalAssign(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	runTests(t, i, []testCase{
 		{src: `a := "Hello"; a += " world"`, res: "Hello world"},
-		{src: `b := "Hello"; b += 1`, err: "1:36: illegal operand types for '+=' operator"},
-		{src: `c := "Hello"; c -= " world"`, err: "1:36: illegal operand types for '-=' operator"},
-		{src: "e := 64.0; e %= 64", err: "1:33: illegal operand types for '%=' operator"},
-		{src: "f := int64(3.2)", err: "1:27: truncated to integer"},
+		{src: `b := "Hello"; b += 1`, err: "1:42: illegal operand types for '+=' operator"},
+		{src: `c := "Hello"; c -= " world"`, err: "1:42: illegal operand types for '-=' operator"},
+		{src: "e := 64.0; e %= 64", err: "1:39: illegal operand types for '%=' operator"},
+		{src: "f := int64(3.2)", err: "1:33: truncated to integer"},
 	})
 }
 
 func TestEvalBuiltin(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	runTests(t, i, []testCase{
 		{src: `a := []int{}; a = append(a, 1); a`, res: "[1]"},
 		{src: `a := []int{1}; a = append(a, 2, 3); a`, res: "[1 2 3]"},
@@ -68,7 +68,7 @@ func TestEvalBuiltin(t *testing.T) {
 }
 
 func TestEvalDecl(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	runTests(t, i, []testCase{
 		{pre: func() { eval(t, i, "var i int = 2") }, src: "i", res: "2"},
 		{pre: func() { eval(t, i, "var j, k int = 2, 3") }, src: "j", res: "2"},
@@ -80,7 +80,7 @@ func TestEvalDecl(t *testing.T) {
 }
 
 func TestEvalFunc(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	runTests(t, i, []testCase{
 		{src: `(func () string {return "ok"})()`, res: "ok"},
 		{src: `(func () (res string) {res = "ok"; return})()`, res: "ok"},
@@ -91,7 +91,7 @@ func TestEvalFunc(t *testing.T) {
 }
 
 func TestEvalImport(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	i.Use(stdlib.Value)
 	runTests(t, i, []testCase{
 		{pre: func() { eval(t, i, `import "time"`) }, src: "2 * time.Second", res: "2s"},
@@ -99,10 +99,10 @@ func TestEvalImport(t *testing.T) {
 }
 
 func TestEvalNil(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	i.Use(stdlib.Value)
 	runTests(t, i, []testCase{
-		{desc: "assign nil", src: "a := nil", err: "1:22: use of untyped nil"},
+		{desc: "assign nil", src: "a := nil", err: "1:28: use of untyped nil"},
 		{desc: "return nil", pre: func() { eval(t, i, "func getNil() error {return nil}") }, src: "getNil()", res: "<nil>"},
 		{
 			desc: "return func which return error",
@@ -147,7 +147,7 @@ func TestEvalNil(t *testing.T) {
 }
 
 func TestEvalStruct0(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	runTests(t, i, []testCase{
 		{
 			desc: "func field in struct",
@@ -195,7 +195,7 @@ func TestEvalStruct0(t *testing.T) {
 }
 
 func TestEvalStruct1(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	eval(t, i, `
 type Fromage struct {
 	Name string
@@ -219,7 +219,7 @@ func f() string {
 }
 
 func TestEvalComposite0(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	eval(t, i, `
 type T struct {
 	a, b, c, d, e, f, g, h, i, j, k, l, m, n string
@@ -239,7 +239,7 @@ var a = T{
 }
 
 func TestEvalCompositeBin0(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	i.Use(stdlib.Value)
 	eval(t, i, `
 import (
@@ -260,7 +260,7 @@ func Foo() {
 }
 
 func TestEvalComparison(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	runTests(t, i, []testCase{
 		{src: `"hhh" > "ggg"`, res: "true"},
 		{
@@ -273,20 +273,20 @@ func TestEvalComparison(t *testing.T) {
 				var b = Bar("test")
 				var c = a == b
 			`,
-			err: "7:13: mismatched types _.Foo and _.Bar",
+			err: "7:13: mismatched types main.Foo and main.Bar",
 		},
 	})
 }
 
 func TestEvalCompositeArray(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	runTests(t, i, []testCase{
 		{src: "a := []int{1, 2, 7: 20, 30}", res: "[1 2 0 0 0 0 0 20 30]"},
 	})
 }
 
 func TestEvalUnary(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	runTests(t, i, []testCase{
 		{src: "a := -1", res: "-1"},
 		{src: "b := +1", res: "1", skip: "BUG"},
@@ -295,7 +295,7 @@ func TestEvalUnary(t *testing.T) {
 }
 
 func TestEvalMethod(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	eval(t, i, `
 		type Root struct {
 			Name string
@@ -327,7 +327,7 @@ func TestEvalMethod(t *testing.T) {
 }
 
 func TestEvalChan(t *testing.T) {
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	runTests(t, i, []testCase{
 		{
 			src: `(func () string {

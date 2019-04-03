@@ -14,21 +14,11 @@ type CfgError error
 // variables. A list of nodes of init functions is returned.
 // Following this pass, the CFG is ready to run
 func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
-	scope := interp.universe
+	scope, pkgName := interp.initScopePkg(root)
 	var loop, loopRestart *Node
 	var initNodes []*Node
 	var iotaValue int
-	var pkgName string
 	var err error
-
-	if root.kind != File {
-		// Set default package namespace for incremental parse
-		pkgName = "_"
-		if _, ok := interp.scope[pkgName]; !ok {
-			interp.scope[pkgName] = scope.pushBloc()
-		}
-		scope = interp.scope[pkgName]
-	}
 
 	root.Walk(func(n *Node) bool {
 		// Pre-order processing
@@ -186,14 +176,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			for _, c := range n.child {
 				c.typ = n.typ
 			}
-
-		case File:
-			pkgName = n.child[0].ident
-			if _, ok := interp.scope[pkgName]; !ok {
-				interp.scope[pkgName] = scope.pushBloc()
-			}
-			scope = interp.scope[pkgName]
-			n.findex = -1
 
 		case For0, ForRangeStmt:
 			loop, loopRestart = n, n.child[0]
@@ -704,6 +686,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case File:
 			wireChild(n)
 			scope = scope.pop()
+			n.findex = -1
 
 		case For0: // for {}
 			body := n.child[0]

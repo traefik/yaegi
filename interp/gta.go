@@ -9,19 +9,9 @@ import (
 // All function bodies are skipped. GTA is necessary to handle out of
 // order declarations and multiple source files packages.
 func (interp *Interpreter) Gta(root *Node, rpath string) error {
-	scope := interp.universe
+	scope, _ := interp.initScopePkg(root)
 	var err error
-	var pkgName string
 	var iotaValue int
-
-	if root.kind != File {
-		// Set default package namespace for incremental parse
-		pkgName = "_"
-		if _, ok := interp.scope[pkgName]; !ok {
-			interp.scope[pkgName] = scope.pushBloc()
-		}
-		scope = interp.scope[pkgName]
-	}
 
 	root.Walk(func(n *Node) bool {
 		if err != nil {
@@ -61,13 +51,6 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 			return false
 
 		// TODO: add DefineX, ValueSpec ?
-
-		case File:
-			pkgName = n.child[0].ident
-			if _, ok := interp.scope[pkgName]; !ok {
-				interp.scope[pkgName] = scope.pushBloc()
-			}
-			scope = interp.scope[pkgName]
 
 		case FuncDecl:
 			if n.typ, err = nodeType(interp, scope, n.child[2]); err != nil {

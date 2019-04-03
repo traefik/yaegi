@@ -91,6 +91,11 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 		i.run(n, nil)
 	}
 
+	// Add main to list of functions to run, after all inits
+	if m := i.main(); m != nil {
+		initNodes = append(initNodes, m)
+	}
+
 	for _, n := range initNodes {
 		i.run(n, i.Frame)
 	}
