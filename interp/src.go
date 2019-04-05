@@ -22,7 +22,7 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 			rPath = "."
 		}
 		dir = filepath.Join(filepath.Dir(i.Name), rPath, path)
-	} else if dir, rPath, err = pkgDir(i.GoPath, rPath, path); err != nil {
+	} else if dir, rPath, err = pkgDir(i.goPath, rPath, path); err != nil {
 		return err
 	}
 
@@ -64,7 +64,7 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 		}
 		rootNodes = append(rootNodes, root)
 
-		if i.AstDot {
+		if i.astDot {
 			root.AstDot(DotX(), name)
 		}
 
@@ -89,7 +89,7 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 		delete(i.scope, pkgName)
 	}
 
-	if i.NoRun {
+	if i.noRun {
 		return nil
 	}
 

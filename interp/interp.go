@@ -54,17 +54,17 @@ type Frame struct {
 // LibValueMap stores the map of external values per package
 type LibValueMap map[string]map[string]reflect.Value
 
-// Opt stores interpreter options
-type Opt struct {
-	AstDot bool   // display AST graph (debug)
-	CfgDot bool   // display CFG graph (debug)
-	NoRun  bool   // compile, but do not run
-	GoPath string // custom GOPATH
+// opt stores interpreter options
+type opt struct {
+	astDot bool   // display AST graph (debug)
+	cfgDot bool   // display CFG graph (debug)
+	noRun  bool   // compile, but do not run
+	goPath string // custom GOPATH
 }
 
 // Interpreter contains global resources and state
 type Interpreter struct {
-	Opt
+	opt
 	Name     string            // program name
 	Frame    *Frame            // program data storage during execution
 	nindex   int               // next node index
@@ -85,7 +85,7 @@ var ExportValue = LibValueMap{
 		"New": reflect.ValueOf(New),
 
 		"Interpreter": reflect.ValueOf((*Interpreter)(nil)),
-		"Opt":         reflect.ValueOf((*Opt)(nil)),
+		"Opt":         reflect.ValueOf((*opt)(nil)),
 	},
 }
 
@@ -108,7 +108,7 @@ func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 // New returns a new interpreter
 func New(options ...func(*Interpreter)) *Interpreter {
 	i := Interpreter{
-		Opt:      Opt{GoPath: build.Default.GOPATH},
+		opt:      opt{goPath: build.Default.GOPATH},
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
 		scope:    map[string]*Scope{},
@@ -125,17 +125,17 @@ func New(options ...func(*Interpreter)) *Interpreter {
 
 // GoPath sets GOPATH for the interpreter
 func GoPath(s string) func(*Interpreter) {
-	return func(i *Interpreter) { i.GoPath = s }
+	return func(i *Interpreter) { i.goPath = s }
 }
 
 // AstDot activates AST graph display for the interpreter
-func AstDot(i *Interpreter) { i.AstDot = true }
+func AstDot(i *Interpreter) { i.astDot = true }
 
 // CfgDot activates AST graph display for the interpreter
-func CfgDot(i *Interpreter) { i.CfgDot = true }
+func CfgDot(i *Interpreter) { i.cfgDot = true }
 
 // NoRun disable the execution (but not the compilation) in the interpreter
-func NoRun(i *Interpreter) { i.NoRun = true }
+func NoRun(i *Interpreter) { i.noRun = true }
 
 func initUniverse() *Scope {
 	scope := &Scope{global: true, sym: SymMap{
@@ -224,7 +224,7 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 		return res, err
 	}
 
-	if i.AstDot {
+	if i.astDot {
 		root.AstDot(DotX(), i.Name)
 	}
 
@@ -253,12 +253,12 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 		i.universe.sym[pkgName] = &Symbol{typ: &Type{cat: SrcPkgT}, path: pkgName}
 	}
 
-	if i.CfgDot {
+	if i.cfgDot {
 		root.CfgDot(DotX())
 	}
 
 	// Execute CFG
-	if !i.NoRun {
+	if !i.noRun {
 		if err = genRun(root); err != nil {
 			return res, err
 		}
