@@ -107,7 +107,7 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 		i.run(n, i.Frame)
 	}
 
-	return err
+	return nil
 }
 
 // pkgDir returns the absolute path in filesystem for a package given its name and
