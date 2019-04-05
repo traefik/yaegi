@@ -323,14 +323,15 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 
 			case SrcPkgT:
 				spkg := interp.scope[pkg]
-				if st, ok := spkg.sym[name]; ok && st.kind == Typ {
+				if st, ok := spkg.sym[name]; ok {
 					t = st.typ
+				} else {
+					t.incomplete = true
 				}
 			}
 		} else {
 			err = n.cfgError("undefined package: %s", pkg)
 		}
-		// TODO: handle pkgsrc types
 
 	case StructType:
 		t.cat = StructT

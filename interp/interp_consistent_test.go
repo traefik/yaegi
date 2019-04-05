@@ -76,6 +76,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			os.Stdout = w
 
 			i := interp.New(interp.Opt{Entry: "main"})
+			i.Name = filePath
 			i.Use(stdlib.Value)
 			i.Use(interp.ExportValue)
 
