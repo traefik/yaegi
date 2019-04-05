@@ -9,8 +9,20 @@ import (
 )
 
 func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
-	dir, rPath, err := pkgDir(i.GoPath, rPath, path)
-	if err != nil {
+	var dir string
+	var err error
+
+	// For relative import paths in the form "./xxx" or "../xxx", the initial
+	// base path is the directory of the interprer input file, or "." if no file
+	// was provided.
+	// In all other cases, absolute import paths are resolved from the GOPATH
+	// and the nested "vendor" directories.
+	if isPathRelative(path) {
+		if rPath == "main" {
+			rPath = "."
+		}
+		dir = filepath.Join(filepath.Dir(i.Name), rPath, path)
+	} else if dir, rPath, err = pkgDir(i.GoPath, rPath, path); err != nil {
 		return err
 	}
 
@@ -57,7 +69,7 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 		}
 
 		subRPath := effectivePkg(rPath, path)
-		if i.Gta(root, subRPath) != nil {
+		if err = i.Gta(root, subRPath); err != nil {
 			return err
 		}
 	}
@@ -85,7 +97,7 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 
 	// Once all package sources have been parsed, execute entry points then init functions
 	for _, n := range rootNodes {
-		if genRun(n) != nil {
+		if err = genRun(n); err != nil {
 			return err
 		}
 		i.run(n, nil)
@@ -170,4 +182,10 @@ func effectivePkg(root, path string) string {
 	}
 
 	return filepath.Join(root, frag)
+}
+
+// isPathRelative returns true if path starts with "./" or "../"
+func isPathRelative(s string) bool {
+	p := "." + string(filepath.Separator)
+	return strings.HasPrefix(s, p) || strings.HasPrefix(s, "."+p)
 }
