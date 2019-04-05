@@ -54,18 +54,17 @@ type Frame struct {
 // LibValueMap stores the map of external values per package
 type LibValueMap map[string]map[string]reflect.Value
 
-// Opt stores interpreter options
-type Opt struct {
-	AstDot bool // display AST graph (debug)
-	CfgDot bool // display CFG graph (debug)
-	NoRun  bool // compile, but do not run
-	GoPath string
-	Entry  string // interpreter entry point
+// opt stores interpreter options
+type opt struct {
+	astDot bool   // display AST graph (debug)
+	cfgDot bool   // display CFG graph (debug)
+	noRun  bool   // compile, but do not run
+	goPath string // custom GOPATH
 }
 
 // Interpreter contains global resources and state
 type Interpreter struct {
-	Opt
+	opt
 	Name     string            // program name
 	Frame    *Frame            // program data storage during execution
 	nindex   int               // next node index
@@ -75,18 +74,22 @@ type Interpreter struct {
 	binValue LibValueMap       // runtime binary values used in interpreter
 }
 
-// ExportValue exposes interpreter values
-var ExportValue = LibValueMap{}
+const (
+	mainID   = "main"
+	selfPath = "github.com/containous/yaegi/interp"
+)
 
-func init() {
-	me := "github.com/containous/yaegi/interp"
-	ExportValue[me] = map[string]reflect.Value{
-		"New":         reflect.ValueOf(New),
+// ExportValue exposes interpreter values
+var ExportValue = LibValueMap{
+	selfPath: map[string]reflect.Value{
+		"New": reflect.ValueOf(New),
+
 		"Interpreter": reflect.ValueOf((*Interpreter)(nil)),
-		"Opt":         reflect.ValueOf((*Opt)(nil)),
-	}
-	ExportValue[me]["ExportValue"] = reflect.ValueOf(ExportValue)
+		"Opt":         reflect.ValueOf((*opt)(nil)),
+	},
 }
+
+func init() { ExportValue[selfPath]["ExportValue"] = reflect.ValueOf(ExportValue) }
 
 // Walk traverses AST n in depth first order, call cbin function
 // at node entry and cbout function at node exit.
@@ -102,21 +105,37 @@ func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
 	}
 }
 
-// New creates and returns a new interpreter object
-func New(opt Opt) *Interpreter {
-	if len(opt.GoPath) == 0 {
-		opt.GoPath = build.Default.GOPATH
-	}
-
-	return &Interpreter{
-		Opt:      opt,
+// New returns a new interpreter
+func New(options ...func(*Interpreter)) *Interpreter {
+	i := Interpreter{
+		opt:      opt{goPath: build.Default.GOPATH},
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
 		scope:    map[string]*Scope{},
 		binValue: LibValueMap{},
 		Frame:    &Frame{data: []reflect.Value{}},
 	}
+
+	for _, option := range options {
+		option(&i)
+	}
+
+	return &i
 }
+
+// GoPath sets GOPATH for the interpreter
+func GoPath(s string) func(*Interpreter) {
+	return func(i *Interpreter) { i.goPath = s }
+}
+
+// AstDot activates AST graph display for the interpreter
+func AstDot(i *Interpreter) { i.astDot = true }
+
+// CfgDot activates AST graph display for the interpreter
+func CfgDot(i *Interpreter) { i.cfgDot = true }
+
+// NoRun disable the execution (but not the compilation) in the interpreter
+func NoRun(i *Interpreter) { i.noRun = true }
 
 func initUniverse() *Scope {
 	scope := &Scope{global: true, sym: SymMap{
@@ -187,6 +206,13 @@ func (i *Interpreter) resizeFrame() {
 	i.Frame.data = data
 }
 
+func (i *Interpreter) main() *Node {
+	if m, ok := i.scope[mainID]; ok && m.sym[mainID] != nil {
+		return m.sym[mainID].node
+	}
+	return nil
+}
+
 // Eval evaluates Go code represented as a string. It returns a map on
 // current interpreted package exported symbols
 func (i *Interpreter) Eval(src string) (reflect.Value, error) {
@@ -198,7 +224,7 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 		return res, err
 	}
 
-	if i.AstDot {
+	if i.astDot {
 		root.AstDot(DotX(), i.Name)
 	}
 
@@ -213,11 +239,13 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 		return res, err
 	}
 
-	if pkgName != "_" {
-		if sym := i.scope[pkgName].sym[i.Entry]; sym != nil {
-			initNodes = append(initNodes, sym.node)
-		}
-	} else {
+	// Add main to list of functions to run, after all inits
+	if m := i.main(); m != nil {
+		initNodes = append(initNodes, m)
+	}
+
+	if root.kind != File {
+		// REPL may skip package statement
 		setExec(root.start)
 	}
 	if i.universe.sym[pkgName] == nil {
@@ -225,12 +253,12 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 		i.universe.sym[pkgName] = &Symbol{typ: &Type{cat: SrcPkgT}, path: pkgName}
 	}
 
-	if i.CfgDot {
+	if i.cfgDot {
 		root.CfgDot(DotX())
 	}
 
 	// Execute CFG
-	if !i.NoRun {
+	if !i.noRun {
 		if err = genRun(root); err != nil {
 			return res, err
 		}

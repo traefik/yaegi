@@ -75,7 +75,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
-			i := interp.New(interp.Opt{Entry: "main"})
+			i := interp.New()
 			i.Name = filePath
 			i.Use(stdlib.Value)
 			i.Use(interp.ExportValue)
@@ -170,7 +170,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			i := interp.New(interp.Opt{Entry: "main"})
+			i := interp.New()
 			i.Use(stdlib.Value)
 
 			_, errEval := i.Eval(string(src))

@@ -8,12 +8,12 @@ import (
 
 func main() {
 	log.SetFlags(log.Lshortfile)
-	i := interp.New(interp.Opt{})
+	i := interp.New()
 	i.Use(interp.ExportValue)
 	if _, err := i.Eval(`import "github.com/containous/yaegi/interp"`); err != nil {
 		log.Fatal(err)
 	}
-	if _, err := i.Eval(`i := interp.New(interp.Opt{})`); err != nil {
+	if _, err := i.Eval(`i := interp.New()`); err != nil {
 		log.Fatal(err)
 	}
 	if _, err := i.Eval(`i.Eval("println(42)")`); err != nil {

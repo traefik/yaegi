@@ -166,3 +166,19 @@ func (s *Scope) add(typ *Type) (index int) {
 	s.types = append(s.types, t)
 	return
 }
+
+func (interp *Interpreter) initScopePkg(n *Node) (*Scope, string) {
+	scope := interp.universe
+	pkgName := mainID
+
+	if n.kind == File {
+		pkgName = n.child[0].ident
+	}
+
+	if _, ok := interp.scope[pkgName]; !ok {
+		interp.scope[pkgName] = scope.pushBloc()
+	}
+
+	scope = interp.scope[pkgName]
+	return scope, pkgName
+}
