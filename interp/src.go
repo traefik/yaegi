@@ -90,7 +90,7 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 	}
 
 	if i.NoRun {
-		return err
+		return nil
 	}
 
 	i.resizeFrame()
