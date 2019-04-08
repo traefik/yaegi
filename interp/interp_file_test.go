@@ -52,6 +52,7 @@ func runCheck(t *testing.T, p string) {
 	os.Stdout = w
 
 	i := interp.New()
+	i.Name = p
 	i.Use(interp.ExportValue)
 	i.Use(stdlib.Value)
 
@@ -60,7 +61,7 @@ func runCheck(t *testing.T, p string) {
 		if err == nil {
 			t.Fatalf("got nil error, want: %q", wanted)
 		}
-		if res := strings.TrimSpace(err.Error()); res != wanted {
+		if res := strings.TrimSpace(err.Error()); !strings.Contains(res, wanted) {
 			t.Errorf("got %q, want: %q", res, wanted)
 		}
 		return

@@ -171,6 +171,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 			}
 
 			i := interp.New()
+			i.Name = filePath
 			i.Use(stdlib.Value)
 
 			_, errEval := i.Eval(string(src))
@@ -178,7 +179,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 				t.Fatal("An error is expected but got none.")
 			}
 
-			if errEval.Error() != test.expectedInterp {
+			if !strings.Contains(errEval.Error(), test.expectedInterp) {
 				t.Errorf("got %q, want: %q", errEval.Error(), test.expectedInterp)
 			}
 

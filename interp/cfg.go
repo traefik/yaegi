@@ -2,6 +2,7 @@ package interp
 
 import (
 	"fmt"
+	"path"
 	"reflect"
 	"unicode"
 )
@@ -244,7 +245,23 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			scope = scope.pushBloc()
 			loop = n
 
-		case ImportSpec, TypeSpec:
+		case ImportSpec:
+			var name, ipath string
+			if len(n.child) == 2 {
+				ipath = n.child[1].val.(string)
+				name = n.child[0].ident
+			} else {
+				ipath = n.child[0].val.(string)
+				name = path.Base(ipath)
+			}
+			if interp.binValue[ipath] != nil && name != "." {
+				scope.sym[name] = &Symbol{kind: Package, typ: &Type{cat: BinPkgT}, path: ipath}
+			} else {
+				scope.sym[name] = &Symbol{kind: Package, typ: &Type{cat: SrcPkgT}, path: ipath}
+			}
+			return false
+
+		case TypeSpec:
 			// processing already done in GTA pass
 			return false
 
@@ -1026,7 +1043,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			} else {
 				err = n.cfgError("undefined selector: %s", n.child[1].ident)
 			}
-			if n.findex != -1 {
+			if err == nil && n.findex != -1 {
 				n.findex = scope.add(n.typ)
 			}
 
