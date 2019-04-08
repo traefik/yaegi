@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -387,7 +388,7 @@ func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expecte
 	res, err := i.Eval(src)
 
 	if expectedError != "" {
-		if err == nil || err.Error() != expectedError {
+		if err == nil || !strings.Contains(err.Error(), expectedError) {
 			t.Fatalf("got %v, want %s", err, expectedError)
 		}
 		return
