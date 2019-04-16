@@ -309,7 +309,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					// Do not overload existings symbols (defined in GTA) in global scope
 					sym, _, _ = scope.lookup(dest.ident)
 				} else {
-					sym = &Symbol{index: scope.add(dest.typ), kind: Var, global: scope.global}
+					sym = &Symbol{index: scope.add(dest.typ), kind: Var}
 					scope.sym[dest.ident] = sym
 				}
 				dest.val = src.val
@@ -352,6 +352,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			// Propagate type
 			// TODO: Check that existing destination type matches source type
 			switch {
+			case src.action == Call:
+				n.gen = nop
+				src.level = level
+				src.findex = dest.findex
 			case src.action == Recv:
 				// Assign by reading from a receiving channel
 				n.gen = nop
@@ -402,6 +406,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			wireChild(n)
 			l := len(n.child) - 1
 			switch n.child[l].kind {
+			case CallExpr:
+				n.gen = nop
 			case IndexExpr:
 				n.child[l].gen = getIndexMap2
 				n.gen = nop
@@ -429,9 +435,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				} else {
 					types = funtype.ret
 				}
-				if l > len(types) {
-					n.gen = assignX2
-				}
+				n.gen = nop
 
 			case IndexExpr:
 				types = append(types, n.child[l].child[0].typ.val, scope.getType("bool"))
@@ -785,7 +789,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			wireChild(n)
 
 		case Ident:
-			if isKey(n) || isNewDefine(n) {
+			if isKey(n) || isNewDefine(n, scope) {
 				break
 			} else if sym, level, ok := scope.lookup(n.ident); ok {
 				// Found symbol, populate node info
@@ -1330,7 +1334,8 @@ func isKey(n *Node) bool {
 		(n.anc.kind == KeyValueExpr && n.anc.child[0] == n)
 }
 
-func isNewDefine(n *Node) bool {
+// isNewDefine returns true if node refers to a new definition
+func isNewDefine(n *Node, scope *Scope) bool {
 	if n.ident == "_" {
 		return true
 	}
@@ -1340,8 +1345,14 @@ func isNewDefine(n *Node) bool {
 	if n.anc.kind == DefineX && n.anc.lastChild() != n {
 		return true
 	}
-	if n.anc.kind == RangeStmt && (n.anc.child[0] == n || n.anc.child[1] == n) {
-		return true
+	if n.anc.kind == RangeStmt {
+		if n.anc.child[0] == n {
+			return true // array or map key, or chan element
+		}
+		if scope.rangeChanType(n.anc) == nil && n.anc.child[1] == n {
+			return true // array or map value
+		}
+		return false // array, map or channel are always pre-defined in range expression
 	}
 	if n.anc.kind == ValueSpec && n.anc.lastChild() != n {
 		return true

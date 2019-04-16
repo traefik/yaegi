@@ -423,7 +423,7 @@ func (t *Type) zero() (v reflect.Value, err error) {
 	case AliasT:
 		v, err = t.val.zero()
 
-	case ArrayT, StructT:
+	case ArrayT, PtrT, StructT:
 		v = reflect.New(t.TypeOf()).Elem()
 
 	case ValueT:
