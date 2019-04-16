@@ -17,7 +17,6 @@ var builtin = [...]BuiltinGenerator{
 	Nop:          nop,
 	Addr:         addr,
 	Assign:       assign,
-	AssignX:      assignX,
 	Add:          add,
 	AddAssign:    addAssign,
 	And:          and,
@@ -187,48 +186,6 @@ func convert(n *Node) {
 	}
 }
 
-// assignX implements multiple value assignment
-func assignX(n *Node) {
-	l := len(n.child) - 1
-	b := n.child[l].findex
-	s := n.child[:l]
-	next := getExec(n.tnext)
-	values := make([]func(*Frame) reflect.Value, l)
-	for i, c := range s {
-		values[i] = genValue(c)
-	}
-
-	n.exec = func(f *Frame) Builtin {
-		for i, value := range values {
-			if f.data[b+i].IsValid() {
-				value(f).Set(f.data[b+i])
-			}
-		}
-		return next
-	}
-}
-
-// assignX2 implements multiple value assignment for expression where type is defined
-func assignX2(n *Node) {
-	l := len(n.child) - 2
-	b := n.child[l].findex
-	s := n.child[:l]
-	next := getExec(n.tnext)
-	values := make([]func(*Frame) reflect.Value, l)
-	for i, c := range s {
-		values[i] = genValue(c)
-	}
-
-	n.exec = func(f *Frame) Builtin {
-		for i, value := range values {
-			if f.data[b+i].IsValid() {
-				value(f).Set(f.data[b+i])
-			}
-		}
-		return next
-	}
-}
-
 // assign implements single value assignment
 func assign(n *Node) {
 	next := getExec(n.tnext)
@@ -368,15 +325,15 @@ func _println(n *Node) {
 
 func _recover(n *Node) {
 	tnext := getExec(n.tnext)
-	i := n.findex
+	dest := genValue(n)
 	var err error
-	nilErr := reflect.ValueOf(&err).Elem()
+	nilErr := reflect.ValueOf(valueInterface{n, reflect.ValueOf(&err).Elem()})
 
 	n.exec = func(f *Frame) Builtin {
 		if f.anc.recovered == nil {
-			f.data[i] = nilErr
+			dest(f).Set(nilErr)
 		} else {
-			f.data[i] = reflect.ValueOf(f.anc.recovered)
+			dest(f).Set(reflect.ValueOf(valueInterface{n, reflect.ValueOf(f.anc.recovered)}))
 			f.anc.recovered = nil
 		}
 		return tnext
@@ -541,6 +498,21 @@ func call(n *Node) {
 	for i := range n.child[0].typ.ret {
 		ret[i] = n.findex + i
 	}
+	rvalues := make([]func(*Frame) reflect.Value, len(n.child[0].typ.ret))
+	switch n.anc.kind {
+	case Define, AssignStmt, DefineX, AssignXStmt:
+		for i := range rvalues {
+			c := n.anc.child[i]
+			if c.ident != "_" {
+				rvalues[i] = genValue(c)
+			}
+		}
+	default:
+		for i := range n.child[0].typ.ret {
+			j := n.findex + i
+			rvalues[i] = func(f *Frame) reflect.Value { return f.data[j] }
+		}
+	}
 
 	n.exec = func(f *Frame) Builtin {
 		def := value(f).Interface().(*Node)
@@ -614,8 +586,10 @@ func call(n *Node) {
 			return fnext
 		}
 		// Propagate return values to caller frame
-		for i, r := range ret {
-			f.data[r] = nf.data[i]
+		for i, v := range rvalues {
+			if v != nil {
+				v(f).Set(nf.data[i])
+			}
 		}
 		return tnext
 	}
@@ -704,13 +678,38 @@ func callBin(n *Node) {
 			return fnext
 		}
 	default:
-		n.exec = func(f *Frame) Builtin {
-			in := make([]reflect.Value, l)
-			for i, v := range values {
-				in[i] = v(f)
+		switch n.anc.kind {
+		case Define, AssignStmt, DefineX, AssignXStmt:
+			rvalues := make([]func(*Frame) reflect.Value, funcType.NumOut())
+			for i := range rvalues {
+				c := n.anc.child[i]
+				if c.ident != "_" {
+					rvalues[i] = genValue(c)
+				}
 			}
-			copy(f.data[n.findex:], value(f).Call(in))
-			return tnext
+			n.exec = func(f *Frame) Builtin {
+				in := make([]reflect.Value, l)
+				for i, v := range values {
+					in[i] = v(f)
+				}
+				out := value(f).Call(in)
+				for i, v := range rvalues {
+					if v != nil {
+						v(f).Set(out[i])
+					}
+				}
+				return tnext
+			}
+		default:
+			n.exec = func(f *Frame) Builtin {
+				in := make([]reflect.Value, l)
+				for i, v := range values {
+					in[i] = v(f)
+				}
+				out := value(f).Call(in)
+				copy(f.data[n.findex:], out)
+				return tnext
+			}
 		}
 	}
 }
@@ -1328,7 +1327,7 @@ func appendSlice(n *Node) {
 }
 
 func _append(n *Node) {
-	i := n.findex
+	dest := genValue(n)
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
@@ -1345,38 +1344,38 @@ func _append(n *Node) {
 			for i, v := range values {
 				sl[i] = v(f)
 			}
-			f.data[i] = reflect.Append(value(f), sl...)
+			dest(f).Set(reflect.Append(value(f), sl...))
 			return next
 		}
 	} else {
 		value0 := genValue(n.child[2])
 
 		n.exec = func(f *Frame) Builtin {
-			f.data[i] = reflect.Append(value(f), value0(f))
+			dest(f).Set(reflect.Append(value(f), value0(f)))
 			return next
 		}
 	}
 }
 
 func _cap(n *Node) {
-	i := n.findex
+	dest := genValue(n)
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
-		f.data[i].SetInt(int64(value(f).Cap()))
+		dest(f).SetInt(int64(value(f).Cap()))
 		return next
 	}
 }
 
 func _copy(n *Node) {
-	i := n.findex
+	dest := genValue(n)
 	value0 := genValue(n.child[1])
 	value1 := genValue(n.child[2])
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
-		f.data[i].SetInt(int64(reflect.Copy(value0(f), value1(f))))
+		dest(f).SetInt(int64(reflect.Copy(value0(f), value1(f))))
 		return next
 	}
 }
@@ -1465,7 +1464,7 @@ func _new(n *Node) {
 
 // _make allocates and initializes a slice, a map or a chan.
 func _make(n *Node) {
-	i := n.findex
+	dest := genValue(n)
 	next := getExec(n.tnext)
 	typ := n.child[1].typ.TypeOf()
 
@@ -1477,13 +1476,13 @@ func _make(n *Node) {
 		case 3:
 			n.exec = func(f *Frame) Builtin {
 				len := int(value(f).Int())
-				f.data[i] = reflect.MakeSlice(typ, len, len)
+				dest(f).Set(reflect.MakeSlice(typ, len, len))
 				return next
 			}
 		case 4:
 			value1 := genValue(n.child[3])
 			n.exec = func(f *Frame) Builtin {
-				f.data[i] = reflect.MakeSlice(typ, int(value(f).Int()), int(value1(f).Int()))
+				dest(f).Set(reflect.MakeSlice(typ, int(value(f).Int()), int(value1(f).Int())))
 				return next
 			}
 		}
@@ -1492,13 +1491,13 @@ func _make(n *Node) {
 		switch len(n.child) {
 		case 2:
 			n.exec = func(f *Frame) Builtin {
-				f.data[i] = reflect.MakeChan(typ, 0)
+				dest(f).Set(reflect.MakeChan(typ, 0))
 				return next
 			}
 		case 3:
 			value := genValue(n.child[2])
 			n.exec = func(f *Frame) Builtin {
-				f.data[i] = reflect.MakeChan(typ, int(value(f).Int()))
+				dest(f).Set(reflect.MakeChan(typ, int(value(f).Int())))
 				return next
 			}
 		}
@@ -1507,13 +1506,13 @@ func _make(n *Node) {
 		switch len(n.child) {
 		case 2:
 			n.exec = func(f *Frame) Builtin {
-				f.data[i] = reflect.MakeMap(typ)
+				dest(f).Set(reflect.MakeMap(typ))
 				return next
 			}
 		case 3:
 			value := genValue(n.child[2])
 			n.exec = func(f *Frame) Builtin {
-				f.data[i] = reflect.MakeMapWithSize(typ, int(value(f).Int()))
+				dest(f).Set(reflect.MakeMapWithSize(typ, int(value(f).Int())))
 				return next
 			}
 		}

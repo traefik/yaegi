@@ -142,7 +142,7 @@ func TestEvalNil(t *testing.T) {
 				`)
 			},
 			src: "Hello()",
-			res: "<invalid reflect.Value>",
+			res: "<nil>",
 		},
 	})
 }
