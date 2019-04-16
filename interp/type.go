@@ -341,7 +341,14 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 				if err != nil {
 					return nil, err
 				}
-				t.field = append(t.field, StructField{name: c.child[0].ident, embed: true, typ: typ})
+				name := c.child[0].ident
+				if name == "" && c.child[0].kind == SelectorExpr {
+					name = c.child[0].child[1].ident
+				}
+				if name == "" {
+					return nil, n.cfgError("empty field name")
+				}
+				t.field = append(t.field, StructField{name: name, embed: true, typ: typ})
 				t.incomplete = t.incomplete || typ.incomplete
 			} else {
 				l := len(c.child)
