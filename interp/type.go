@@ -341,14 +341,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 				if err != nil {
 					return nil, err
 				}
-				name := c.child[0].ident
-				if name == "" && c.child[0].kind == SelectorExpr {
-					name = c.child[0].child[1].ident
-				}
-				if name == "" {
-					return nil, n.cfgError("empty field name")
-				}
-				t.field = append(t.field, StructField{name: name, embed: true, typ: typ})
+				t.field = append(t.field, StructField{name: fieldName(c.child[0]), embed: true, typ: typ})
 				t.incomplete = t.incomplete || typ.incomplete
 			} else {
 				l := len(c.child)
@@ -368,6 +361,20 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 	}
 
 	return t, err
+}
+
+// fieldName returns an implicit struct field name according to node kind
+func fieldName(n *Node) string {
+	switch n.kind {
+	case SelectorExpr:
+		return fieldName(n.child[1])
+	case StarExpr:
+		return fieldName(n.child[0])
+	case Ident:
+		return n.ident
+	default:
+		return ""
+	}
 }
 
 var zeroValues [MaxT]reflect.Value

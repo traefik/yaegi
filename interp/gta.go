@@ -122,17 +122,17 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 
 		case TypeSpec:
 			typeName := n.child[0].ident
-			if n.child[1].kind == Ident {
-				var typ *Type
-				typ, err = nodeType(interp, scope, n.child[1])
-				n.typ = &Type{cat: AliasT, val: typ, name: typeName, pkgPath: rpath}
-			} else {
-				n.typ, err = nodeType(interp, scope, n.child[1])
-				n.typ.name = typeName
-				n.typ.pkgPath = rpath
-			}
+			var typ *Type
+			typ, err = nodeType(interp, scope, n.child[1])
 			if err != nil {
 				return false
+			}
+			if n.child[1].kind == Ident {
+				n.typ = &Type{cat: AliasT, val: typ, name: typeName, pkgPath: rpath}
+			} else {
+				n.typ = typ
+				n.typ.name = typeName
+				n.typ.pkgPath = rpath
 			}
 			// Type may already be declared for a receiver in a method function
 			if scope.sym[typeName] == nil {
