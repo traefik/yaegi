@@ -372,8 +372,9 @@ func fieldName(n *Node) string {
 		return fieldName(n.child[0])
 	case Ident:
 		return n.ident
+	default:
+		return ""
 	}
-	return ""
 }
 
 var zeroValues [MaxT]reflect.Value
