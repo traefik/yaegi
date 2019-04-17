@@ -475,22 +475,21 @@ func (t *Type) fieldSeq(seq []int) *Type {
 }
 
 // lookupField returns a list of indices, i.e. a path to access a field in a struct object
-func (t *Type) lookupField(name string) []int {
-	var index []int
+func (t *Type) lookupField(name string) (index []int) {
 	if fi := t.fieldIndex(name); fi < 0 {
 		for i, f := range t.field {
-			if f.typ.cat != StructT {
-				continue
-			}
-			if index2 := f.typ.lookupField(name); len(index2) > 0 {
-				index = append([]int{i}, index2...)
-				break
+			switch f.typ.cat {
+			case PtrT, StructT:
+				if index2 := f.typ.lookupField(name); len(index2) > 0 {
+					index = append([]int{i}, index2...)
+					return
+				}
 			}
 		}
 	} else {
 		index = append(index, fi)
 	}
-	return index
+	return
 }
 
 // getMethod returns a pointer to the method definition
