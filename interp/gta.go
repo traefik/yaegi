@@ -122,7 +122,8 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 
 		case TypeSpec:
 			typeName := n.child[0].ident
-			typ, err := nodeType(interp, scope, n.child[1])
+			var typ *Type
+			typ, err = nodeType(interp, scope, n.child[1])
 			if err != nil {
 				return false
 			}
