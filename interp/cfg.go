@@ -1024,6 +1024,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					n.typ = m.typ
 					n.recv = &Receiver{node: n.child[0], index: lind}
 				}
+			} else if m, lind, ok := n.typ.lookupBinMethod(n.child[1].ident); ok {
+				n.gen = getIndexSeqMethod
+				n.val = append([]int{m.Index}, lind...)
+				n.typ = &Type{cat: ValueT, rtype: m.Type}
 			} else if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
 				// Handle struct field
 				n.val = ti
