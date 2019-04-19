@@ -198,6 +198,9 @@ func assign(n *Node) {
 		value1 = genValueInterface(src)
 	case dest.typ.cat == ValueT && src.typ.cat == FuncT:
 		value1 = genNodeWrapper(src)
+	case src.kind == BasicLit && src.val == nil:
+		t := dest.typ.TypeOf()
+		value1 = func(*Frame) reflect.Value { return reflect.New(t).Elem() }
 	default:
 		value1 = genValue(src)
 	}
