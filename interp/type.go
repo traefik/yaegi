@@ -503,7 +503,7 @@ func (t *Type) getMethod(name string) *Node {
 }
 
 // lookupMethod returns a pointer to method definition associated to type t
-// and the list of indices to access the right struct field, in case of a promoted method
+// and the list of indices to access the right struct field, in case of an embedded method
 func (t *Type) lookupMethod(name string) (*Node, []int) {
 	if t.cat == PtrT {
 		return t.val.lookupMethod(name)
@@ -521,6 +521,26 @@ func (t *Type) lookupMethod(name string) (*Node, []int) {
 		}
 	}
 	return m, index
+}
+
+// lookupBinMethod returns a method and a path to access a field in a struct object (the receiver)
+func (t *Type) lookupBinMethod(name string) (reflect.Method, []int, bool) {
+	if t.cat == PtrT {
+		return t.val.lookupBinMethod(name)
+	}
+	var index []int
+	m, ok := t.TypeOf().MethodByName(name)
+	if !ok {
+		for i, f := range t.field {
+			if f.embed {
+				if m2, index2, ok2 := f.typ.lookupBinMethod(name); ok2 {
+					index = append([]int{i}, index2...)
+					return m2, index, ok2
+				}
+			}
+		}
+	}
+	return m, index, ok
 }
 
 func exportName(s string) string {
