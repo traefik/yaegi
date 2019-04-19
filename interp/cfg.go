@@ -367,9 +367,12 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				src.level = level
 			case src.kind == BasicLit:
 				// TODO: perform constant folding and propagation here
-				if dest.typ.cat == InterfaceT {
+				switch {
+				case dest.typ.cat == InterfaceT:
 					src.val = reflect.ValueOf(src.val)
-				} else {
+				case src.val == nil:
+					// Assign to nil
+				default:
 					// Convert literal value to destination type
 					src.val = reflect.ValueOf(src.val).Convert(dest.typ.TypeOf())
 					src.typ = dest.typ
