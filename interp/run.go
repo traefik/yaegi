@@ -171,14 +171,24 @@ func typeAssert2(n *Node) {
 
 func convert(n *Node) {
 	i := n.findex
-	var value func(*Frame) reflect.Value
-	if n.child[1].typ.cat == FuncT {
-		value = genNodeWrapper(n.child[1])
-	} else {
-		value = genValue(n.child[1])
-	}
+	c := n.child[1]
 	typ := n.child[0].typ.TypeOf()
 	next := getExec(n.tnext)
+
+	if c.kind == BasicLit && c.val == nil { // convert nil to type
+		n.exec = func(f *Frame) Builtin {
+			f.data[i] = reflect.New(typ).Elem()
+			return next
+		}
+		return
+	}
+
+	var value func(*Frame) reflect.Value
+	if c.typ.cat == FuncT {
+		value = genNodeWrapper(c)
+	} else {
+		value = genValue(c)
+	}
 
 	n.exec = func(f *Frame) Builtin {
 		f.data[i] = value(f).Convert(typ)

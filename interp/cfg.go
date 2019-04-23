@@ -1075,10 +1075,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			case n.anc.kind == Field:
 				// pointer type expression in a field expression (arg or struct field)
 				n.gen = nop
-			case n.anc.kind == ParenExpr && n.child[0].sym != nil && n.child[0].sym.kind == Typ:
+			case n.child[0].isType(scope):
 				// pointer type expression
 				n.gen = nop
-				n.typ = &Type{cat: PtrT, val: n.child[0].sym.typ}
+				n.typ = &Type{cat: PtrT, val: n.child[0].typ}
 			default:
 				// dereference expression
 				wireChild(n)
