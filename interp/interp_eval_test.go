@@ -42,6 +42,13 @@ func TestEvalArithmetic(t *testing.T) {
 		{desc: "mul_FI", src: "2.2 * 3", res: "6.6000000000000005"},
 		{desc: "mul_IF", src: "3 * 2.2", res: "6.6000000000000005"},
 		{desc: "rem_FI", src: "8.0 % 4", err: "1:28: illegal operand types for '%' operator"},
+		{desc: "shl_II", src: "1 << 8", res: "256"},
+		{desc: "shl_IN", src: "1 << -1", err: "1:28: illegal operand types for '<<' operator"},
+		{desc: "shl_IF", src: "1 << 1.0", err: "1:28: illegal operand types for '<<' operator"},
+		{desc: "shl_IF", src: "1.0 << 1", err: "1:28: illegal operand types for '<<' operator"},
+		{desc: "shr_II", src: "1 >> 8", res: "0"},
+		{desc: "shr_IN", src: "1 >> -1", err: "1:28: illegal operand types for '>>' operator"},
+		{desc: "shr_IF", src: "1 >> 1.0", err: "1:28: illegal operand types for '>>' operator"},
 	})
 }
 
@@ -53,6 +60,8 @@ func TestEvalAssign(t *testing.T) {
 		{src: `c := "Hello"; c -= " world"`, err: "1:42: illegal operand types for '-=' operator"},
 		{src: "e := 64.0; e %= 64", err: "1:39: illegal operand types for '%=' operator"},
 		{src: "f := int64(3.2)", err: "1:33: truncated to integer"},
+		{src: "g := 1; g <<= 8", res: "256"},
+		{src: "h := 1; h >>= 8", res: "0"},
 	})
 }
 

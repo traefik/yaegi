@@ -161,7 +161,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 		}
 
 	case BasicLit:
-		switch n.val.(type) {
+		switch v := n.val.(type) {
 		case bool:
 			t.cat = BoolT
 			t.name = "bool"
@@ -178,8 +178,14 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 			t.name = "float64"
 			t.untyped = true
 		case int:
-			t.cat = IntT
-			t.name = "int"
+			if isShiftOperand(n) && v >= 0 {
+				t.cat = UintT
+				t.name = "uint"
+				n.val = uint(v)
+			} else {
+				t.cat = IntT
+				t.name = "int"
+			}
 			t.untyped = true
 		case rune:
 			t.cat = RuneT
@@ -604,6 +610,14 @@ func (t *Type) TypeOf() reflect.Type {
 		}
 	}
 	return t.rtype
+}
+
+func isShiftOperand(n *Node) bool {
+	switch n.anc.action {
+	case Shl, Shr, ShlAssign, ShrAssign:
+		return n.anc.lastChild() == n
+	}
+	return false
 }
 
 func isInt(t *Type) bool {
