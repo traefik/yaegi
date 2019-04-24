@@ -161,7 +161,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 		}
 
 	case BasicLit:
-		switch n.val.(type) {
+		switch v := n.val.(type) {
 		case bool:
 			t.cat = BoolT
 			t.name = "bool"
@@ -178,10 +178,10 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 			t.name = "float64"
 			t.untyped = true
 		case int:
-			if isShiftOperand(n) && n.val.(int) >= 0 {
+			if isShiftOperand(n) && v >= 0 {
 				t.cat = UintT
 				t.name = "uint"
-				n.val = uint(n.val.(int))
+				n.val = uint(v)
 			} else {
 				t.cat = IntT
 				t.name = "int"
