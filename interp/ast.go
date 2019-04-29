@@ -343,8 +343,6 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 	var root *Node
 	var anc astNode
 	var st nodestack
-	var nbAssign int // number of assign operations in  the current assign statement
-	var typeSpec bool
 	var pkgName string
 
 	addChild := func(root **Node, anc astNode, pos token.Pos, kind Kind, action Action) *Node {
@@ -356,56 +354,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			*root = n
 		} else {
 			anc.node.child = append(anc.node.child, n)
-			if anc.node.action == Assign {
-				if nbAssign > 1 {
-					if !typeSpec && len(anc.node.child) == 2*nbAssign {
-						// All LHS and RSH assign child are now defined, so split multiple assign
-						// statement into single assign statements.
-						newAnc := anc.node.anc
-						var newChild []*Node
-						for i := 0; i < nbAssign; i++ {
-							// set new single assign
-							interp.nindex++
-							na := &Node{anc: anc.node.anc, interp: interp, index: interp.nindex, pos: pos, kind: anc.node.kind, action: anc.node.action, val: new(interface{}), gen: anc.node.gen}
-							na.start = na
-							newChild = append(newChild, na)
-							// Set single assign left hand side
-							anc.node.child[i].anc = na
-							na.child = append(na.child, anc.node.child[i])
-							// Set single assign right hand side
-							anc.node.child[i+nbAssign].anc = na
-							na.child = append(na.child, anc.node.child[i+nbAssign])
-						}
-						newAnc.child = newChild
-					} else if typeSpec && len(anc.node.child) == 2*nbAssign+1 {
-						// All LHS and RHS assign child are now defined, so split multiple assign
-						// statement into single assign statements. Set type for each assignment.
-						typeSpec = false
-						newAnc := anc.node.anc
-						var newChild []*Node
-						typeNode := anc.node.child[nbAssign]
-						for i := 0; i < nbAssign; i++ {
-							// set new single assign
-							interp.nindex++
-							na := &Node{anc: anc.node.anc, interp: interp, index: interp.nindex, pos: pos, kind: anc.node.kind, action: anc.node.action, val: new(interface{}), gen: anc.node.gen}
-							na.start = na
-							newChild = append(newChild, na)
-							// set new type for this assignment
-							interp.nindex++
-							nt := &Node{anc: na, interp: interp, ident: typeNode.ident, index: interp.nindex, pos: pos, kind: typeNode.kind, action: typeNode.action, val: new(interface{}), gen: typeNode.gen}
-							// Set single assign left hand side
-							anc.node.child[i].anc = na
-							na.child = append(na.child, anc.node.child[i])
-							// Set assignment type
-							na.child = append(na.child, nt)
-							// Set single assign right hand side
-							anc.node.child[i+nbAssign+1].anc = na
-							na.child = append(na.child, anc.node.child[i+nbAssign+1])
-						}
-						newAnc.child = newChild
-					}
-				}
-			} else if anc.node.action == Case {
+			if anc.node.action == Case {
 				ancAst := anc.ast.(*ast.CaseClause)
 				if len(ancAst.List)+len(ancAst.Body) == len(anc.node.child) {
 					// All case clause children are collected.
@@ -460,7 +409,6 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 				}
 				action = AssignX
 			} else {
-				nbAssign = len(a.Lhs)
 				kind = AssignStmt
 				switch a.Tok {
 				case token.ASSIGN:
@@ -492,14 +440,17 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 					action = XorAssign
 				}
 			}
-			st.push(addChild(&root, anc, pos, kind, action), node)
+			n := addChild(&root, anc, pos, kind, action)
+			n.nleft = len(a.Lhs)
+			n.nright = len(a.Rhs)
+			st.push(n, node)
 
 		case *ast.BasicLit:
 			n := addChild(&root, anc, pos, BasicLit, Nop)
 			n.ident = a.Value
 			switch a.Kind {
 			case token.CHAR:
-				n.val = rune(a.Value[1])
+				n.val, _, _, _ = strconv.UnquoteChar(a.Value[1:len(a.Value)-1], '\'')
 			case token.FLOAT:
 				n.val, _ = strconv.ParseFloat(a.Value, 64)
 			case token.IMAG:
@@ -509,7 +460,7 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 				v, _ := strconv.ParseInt(a.Value, 0, 0)
 				n.val = int(v)
 			case token.STRING:
-				n.val = a.Value[1 : len(a.Value)-1]
+				n.val, _ = strconv.Unquote(a.Value)
 			}
 			st.push(n, node)
 
@@ -675,6 +626,21 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			n := addChild(&root, anc, pos, Ident, Nop)
 			n.ident = a.Name
 			st.push(n, node)
+			if n.anc.kind == Define && n.anc.nright == 0 {
+				// Implicit assign expression (in a ConstDecl block).
+				// Clone assign source and type from previous
+				a := n.anc
+				pa := a.anc.child[childPos(a)-1]
+
+				if len(pa.child) > pa.nleft+pa.nright {
+					// duplicate previous type spec
+					a.child = append(a.child, interp.dup(pa.child[a.nleft], a))
+				}
+
+				// duplicate previous assign right hand side
+				a.child = append(a.child, interp.dup(pa.lastChild(), a))
+				a.nright++
+			}
 
 		case *ast.IfStmt:
 			// Disambiguate variants of IF statements with a node kind per variant
@@ -807,15 +773,14 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 						kind = AssignStmt
 					}
 					action = Assign
-					nbAssign = len(a.Names)
-				}
-				if a.Type != nil {
-					typeSpec = true
 				}
 			} else if anc.node.kind == ConstDecl {
 				kind, action = Define, Assign
 			}
-			st.push(addChild(&root, anc, pos, kind, action), node)
+			n := addChild(&root, anc, pos, kind, action)
+			n.nleft = len(a.Names)
+			n.nright = len(a.Values)
+			st.push(n, node)
 
 		default:
 			err = AstError(fmt.Errorf("ast: %T not implemented, line %s", a, interp.fset.Position(pos)))
@@ -856,4 +821,19 @@ func (s *nodestack) top() astNode {
 		return (*s)[l-1]
 	}
 	return astNode{}
+}
+
+// dup returns a duplicated node subtree
+func (interp *Interpreter) dup(node, anc *Node) *Node {
+	interp.nindex++
+	n := *node
+	n.index = interp.nindex
+	n.anc = anc
+	n.start = &n
+	n.pos = anc.pos
+	n.child = nil
+	for _, c := range node.child {
+		n.child = append(n.child, interp.dup(c, &n))
+	}
+	return &n
 }

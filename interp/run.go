@@ -196,51 +196,87 @@ func convert(n *Node) {
 	}
 }
 
-// assign implements single value assignment
 func assign(n *Node) {
 	next := getExec(n.tnext)
-	value := genValue(n)
-	dest, src := n.child[0], n.lastChild()
-	var value1 func(*Frame) reflect.Value
-
-	switch {
-	case dest.typ.cat == InterfaceT:
-		value1 = genValueInterface(src)
-	case dest.typ.cat == ValueT && src.typ.cat == FuncT:
-		value1 = genNodeWrapper(src)
-	case src.kind == BasicLit && src.val == nil:
-		t := dest.typ.TypeOf()
-		value1 = func(*Frame) reflect.Value { return reflect.New(t).Elem() }
-	default:
-		value1 = genValue(src)
+	dvalue := make([]func(*Frame) reflect.Value, n.nleft)
+	ivalue := make([]func(*Frame) reflect.Value, n.nleft)
+	svalue := make([]func(*Frame) reflect.Value, n.nleft)
+	var sbase int
+	if n.nright > 0 {
+		sbase = len(n.child) - n.nright
 	}
 
-	n.exec = func(f *Frame) Builtin {
-		value(f).Set(value1(f))
-		return next
+	for i := 0; i < n.nleft; i++ {
+		dest, src := n.child[i], n.child[sbase+i]
+		switch {
+		case dest.typ.cat == InterfaceT:
+			svalue[i] = genValueInterface(src)
+		case dest.typ.cat == ValueT && src.typ.cat == FuncT:
+			svalue[i] = genNodeWrapper(src)
+		case src.kind == BasicLit && src.val == nil:
+			t := dest.typ.TypeOf()
+			svalue[i] = func(*Frame) reflect.Value { return reflect.New(t).Elem() }
+		default:
+			svalue[i] = genValue(src)
+		}
+		if isMapEntry(dest) {
+			if dest.child[1].typ.cat == InterfaceT { // key
+				ivalue[i] = genValueInterface(dest.child[1])
+			} else {
+				ivalue[i] = genValue(dest.child[1])
+			}
+			dvalue[i] = genValue(dest.child[0])
+		} else {
+			dvalue[i] = genValue(dest)
+		}
 	}
-}
 
-func assignMap(n *Node) {
-	value := genValue(n.child[0].child[0]) // map
-	var value0, value1 func(*Frame) reflect.Value
-
-	if n.child[0].child[1].typ.cat == InterfaceT { // key
-		value0 = genValueInterface(n.child[0].child[1])
+	if n.nleft == 1 {
+		if s, d, i := svalue[0], dvalue[0], ivalue[0]; i != nil {
+			n.exec = func(f *Frame) Builtin {
+				d(f).SetMapIndex(i(f), s(f))
+				return next
+			}
+		} else {
+			n.exec = func(f *Frame) Builtin {
+				d(f).Set(s(f))
+				return next
+			}
+		}
 	} else {
-		value0 = genValue(n.child[0].child[1])
-	}
+		types := make([]reflect.Type, n.nright)
+		for i := range types {
+			var t reflect.Type
+			switch typ := n.child[sbase+i].typ; typ.cat {
+			case FuncT:
+				t = reflect.TypeOf((*Node)(nil))
+			case InterfaceT:
+				t = reflect.TypeOf((*valueInterface)(nil)).Elem()
+			default:
+				t = typ.TypeOf()
+			}
+			//types[i] = n.child[sbase+i].typ.TypeOf()
+			types[i] = t
+		}
 
-	if n.child[1].typ.cat == InterfaceT { // value
-		value1 = genValueInterface(n.child[1])
-	} else {
-		value1 = genValue(n.child[1])
-	}
-	next := getExec(n.tnext)
-
-	n.exec = func(f *Frame) Builtin {
-		value(f).SetMapIndex(value0(f), value1(f))
-		return next
+		// To handle swap in multi-assign:
+		// evaluate and copy all values in assign right hand side into temporary
+		// then evaluate assign left hand side and copy temporary into it
+		n.exec = func(f *Frame) Builtin {
+			t := make([]reflect.Value, len(svalue))
+			for i, s := range svalue {
+				t[i] = reflect.New(types[i]).Elem()
+				t[i].Set(s(f))
+			}
+			for i, d := range dvalue {
+				if j := ivalue[i]; j != nil {
+					d(f).SetMapIndex(j(f), t[i]) // Assign a map entry
+				} else {
+					d(f).Set(t[i]) // Assign a var or array/slice entry
+				}
+			}
+			return next
+		}
 	}
 }
 
@@ -513,7 +549,7 @@ func call(n *Node) {
 	}
 	rvalues := make([]func(*Frame) reflect.Value, len(n.child[0].typ.ret))
 	switch n.anc.kind {
-	case Define, AssignStmt, DefineX, AssignXStmt:
+	case DefineX, AssignXStmt:
 		for i := range rvalues {
 			c := n.anc.child[i]
 			if c.ident != "_" {
@@ -801,7 +837,7 @@ func getIndexMap2(n *Node) {
 }
 
 func getFunc(n *Node) {
-	i := n.findex
+	dest := genValue(n)
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
@@ -809,7 +845,7 @@ func getFunc(n *Node) {
 		node := *n
 		node.val = &node
 		node.frame = &frame
-		f.data[i].Set(reflect.ValueOf(&node))
+		dest(f).Set(reflect.ValueOf(&node))
 		return next
 	}
 }
