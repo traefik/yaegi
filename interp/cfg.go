@@ -775,14 +775,16 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			scope = scope.pop()
 
 		case FuncDecl:
+			n.start = n.child[3].start
 			n.types = scope.types
 			scope = scope.pop()
-			funcName := n.child[1].ident
-			n.start = n.child[3].start
-			interp.scope[pkgName].sym[funcName].index = -1 // to force value to n.val
-			interp.scope[pkgName].sym[funcName].typ = n.typ
-			interp.scope[pkgName].sym[funcName].kind = Func
-			interp.scope[pkgName].sym[funcName].node = n
+			if !isMethod(n) {
+				funcName := n.child[1].ident
+				interp.scope[pkgName].sym[funcName].index = -1 // to force value to n.val
+				interp.scope[pkgName].sym[funcName].typ = n.typ
+				interp.scope[pkgName].sym[funcName].kind = Func
+				interp.scope[pkgName].sym[funcName].node = n
+			}
 
 		case FuncLit:
 			n.types = scope.types
@@ -1338,6 +1340,7 @@ func (n *Node) lastChild() *Node { return n.child[len(n.child)-1] }
 func isKey(n *Node) bool {
 	return n.anc.kind == File ||
 		(n.anc.kind == SelectorExpr && n.anc.child[0] != n) ||
+		(n.anc.kind == FuncDecl && isMethod(n.anc)) ||
 		(n.anc.kind == KeyValueExpr && n.anc.child[0] == n)
 }
 
@@ -1365,6 +1368,10 @@ func isNewDefine(n *Node, scope *Scope) bool {
 		return true
 	}
 	return false
+}
+
+func isMethod(n *Node) bool {
+	return len(n.child[0].child) > 0 // receiver defined
 }
 
 func isBuiltinCall(n *Node) bool {

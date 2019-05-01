@@ -56,7 +56,9 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 			if n.typ, err = nodeType(interp, scope, n.child[2]); err != nil {
 				return false
 			}
-			scope.sym[n.child[1].ident] = &Symbol{kind: Func, typ: n.typ, node: n, index: -1}
+			if !isMethod(n) {
+				scope.sym[n.child[1].ident] = &Symbol{kind: Func, typ: n.typ, node: n, index: -1}
+			}
 			if len(n.child[0].child) > 0 {
 				// function is a method, add it to the related type
 				var receiverType *Type
