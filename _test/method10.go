@@ -1,13 +1,17 @@
 package main
 
-type T int
+const BlockSize = 8
 
-func (t T) foo() { println("foo", t) }
+type Cipher struct{}
+
+func (c *Cipher) BlockSize() int { return BlockSize }
 
 func main() {
-	var t T = 2
-	t.foo()
+	println(BlockSize)
+	s := Cipher{}
+	println(s.BlockSize())
 }
 
 // Output:
-// foo 2
+// 8
+// 8
