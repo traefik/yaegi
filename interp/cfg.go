@@ -27,12 +27,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			return false
 		}
 		switch n.kind {
-		case AssignStmt, Define:
-			if l := len(n.child); n.anc.kind == ConstDecl && l == 1 {
-				// Implicit iota assignment. TODO: replicate previous explicit assignment
-				n.child = append(n.child, &Node{anc: n, interp: interp, kind: Ident, ident: "iota"})
-			}
-
 		case BlockStmt:
 			if n.anc != nil && n.anc.kind == RangeStmt {
 				// For range block: ensure that array or map type is propagated to iterators
@@ -291,103 +285,110 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.gen = nop
 				break
 			}
-			dest, src := n.child[0], n.lastChild()
-			var sym *Symbol
-			var level int
-			if n.kind == Define {
-				if src.typ.cat == NilT {
-					err = src.cfgError("use of untyped nil")
-					break
-				}
-				if len(n.child) == 3 {
-					// type is provided in var declaration
-					dest.typ, err = nodeType(interp, scope, n.child[1])
-				} else {
-					dest.typ = src.typ
-				}
-				if scope.global {
-					// Do not overload existings symbols (defined in GTA) in global scope
-					sym, _, _ = scope.lookup(dest.ident)
-				} else {
-					sym = &Symbol{index: scope.add(dest.typ), kind: Var}
-					scope.sym[dest.ident] = sym
-				}
-				dest.val = src.val
-				dest.recv = src.recv
-				dest.findex = sym.index
-				if src.kind == BasicLit {
-					sym.val = src.val
-				}
-			} else {
-				sym, level, _ = scope.lookup(dest.ident)
+			var atyp *Type
+			if n.nleft+n.nright < len(n.child) {
+				atyp, err = nodeType(interp, scope, n.child[n.nleft])
 			}
+
+			var sbase int
+			if n.nright > 0 {
+				sbase = len(n.child) - n.nright
+			}
+
 			wireChild(n)
-			switch t0, t1 := dest.typ, src.typ; n.action {
-			case AddAssign:
-				if !(isNumber(t0) && isNumber(t1) || isString(t0) && isString(t1)) || isInt(t0) && isFloat(t1) {
-					err = n.cfgError("illegal operand types for '%v' operator", n.action)
+			for i := 0; i < n.nleft; i++ {
+				dest, src := n.child[i], n.child[sbase+i]
+				var sym *Symbol
+				var level int
+				if n.kind == Define {
+					if src.typ != nil && src.typ.cat == NilT {
+						err = src.cfgError("use of untyped nil")
+						break
+					}
+					if atyp != nil {
+						dest.typ = atyp
+					} else {
+						dest.typ = src.typ
+					}
+					if scope.global {
+						// Do not overload existings symbols (defined in GTA) in global scope
+						sym, _, _ = scope.lookup(dest.ident)
+					} else {
+						sym = &Symbol{index: scope.add(dest.typ), kind: Var}
+						scope.sym[dest.ident] = sym
+					}
+					dest.val = src.val
+					dest.recv = src.recv
+					dest.findex = sym.index
+					if src.kind == BasicLit {
+						sym.val = src.val
+					}
+				} else {
+					sym, level, _ = scope.lookup(dest.ident)
 				}
-			case SubAssign, MulAssign, QuoAssign:
-				if !(isNumber(t0) && isNumber(t1)) || isInt(t0) && isFloat(t1) {
-					err = n.cfgError("illegal operand types for '%v' operator", n.action)
-				}
-			case RemAssign, AndAssign, OrAssign, XorAssign, AndNotAssign:
-				if !(isInt(t0) && isInt(t1)) {
-					err = n.cfgError("illegal operand types for '%v' operator", n.action)
-				}
-			case ShlAssign, ShrAssign:
-				if !(isInt(t0) && isUint(t1)) {
-					err = n.cfgError("illegal operand types for '%v' operator", n.action)
-				}
-			default:
-				// Detect invalid float truncate
-				if isInt(t0) && isFloat(t1) {
-					err = src.cfgError("invalid float truncate")
-					return
-				}
-			}
-			n.findex = dest.findex
-			n.val = dest.val
-			n.rval = dest.rval
-			// Propagate type
-			// TODO: Check that existing destination type matches source type
-			switch {
-			case src.action == Call:
-				n.gen = nop
-				src.level = level
-				src.findex = dest.findex
-			case src.action == Recv:
-				// Assign by reading from a receiving channel
-				n.gen = nop
-				src.findex = dest.findex // Set recv address to LHS
-				dest.typ = src.typ.val
-			case src.action == CompositeLit:
-				n.gen = nop
-				src.findex = dest.findex
-				src.level = level
-			case src.kind == BasicLit:
-				// TODO: perform constant folding and propagation here
-				switch {
-				case dest.typ.cat == InterfaceT:
-					src.val = reflect.ValueOf(src.val)
-				case src.val == nil:
-					// Assign to nil
+				switch t0, t1 := dest.typ, src.typ; n.action {
+				case AddAssign:
+					if !(isNumber(t0) && isNumber(t1) || isString(t0) && isString(t1)) || isInt(t0) && isFloat(t1) {
+						err = n.cfgError("illegal operand types for '%v' operator", n.action)
+					}
+				case SubAssign, MulAssign, QuoAssign:
+					if !(isNumber(t0) && isNumber(t1)) || isInt(t0) && isFloat(t1) {
+						err = n.cfgError("illegal operand types for '%v' operator", n.action)
+					}
+				case RemAssign, AndAssign, OrAssign, XorAssign, AndNotAssign:
+					if !(isInt(t0) && isInt(t1)) {
+						err = n.cfgError("illegal operand types for '%v' operator", n.action)
+					}
+				case ShlAssign, ShrAssign:
+					if !(isInt(t0) && isUint(t1)) {
+						err = n.cfgError("illegal operand types for '%v' operator", n.action)
+					}
 				default:
-					// Convert literal value to destination type
-					src.val = reflect.ValueOf(src.val).Convert(dest.typ.TypeOf())
-					src.typ = dest.typ
+					// Detect invalid float truncate
+					if isInt(t0) && isFloat(t1) {
+						err = src.cfgError("invalid float truncate")
+						return
+					}
 				}
-			}
-			n.typ = dest.typ
-			if sym != nil {
-				sym.typ = n.typ
-				sym.recv = src.recv
-			}
-			n.level = level
-			// If LHS is an indirection, get reference instead of value, to allow setting
-			if dest.action == GetIndex {
-				if dest.child[0].typ.cat == MapT {
-					n.gen = assignMap
+				n.findex = dest.findex
+				n.val = dest.val
+				n.rval = dest.rval
+				// Propagate type
+				// TODO: Check that existing destination type matches source type
+				switch {
+				case src.action == Call:
+					n.gen = nop
+					src.level = level
+					src.findex = dest.findex
+				case src.action == Recv:
+					// Assign by reading from a receiving channel
+					n.gen = nop
+					src.findex = dest.findex // Set recv address to LHS
+					dest.typ = src.typ.val
+				case src.action == CompositeLit:
+					n.gen = nop
+					src.findex = dest.findex
+					src.level = level
+				case src.kind == BasicLit:
+					// TODO: perform constant folding and propagation here
+					switch {
+					case dest.typ.cat == InterfaceT:
+						src.val = reflect.ValueOf(src.val)
+					case src.val == nil:
+						// Assign to nil
+					default:
+						// Convert literal value to destination type
+						src.val = reflect.ValueOf(src.val).Convert(dest.typ.TypeOf())
+						src.typ = dest.typ
+					}
+				}
+				n.typ = dest.typ
+				if sym != nil {
+					sym.typ = n.typ
+					sym.recv = src.recv
+				}
+				n.level = level
+				if isMapEntry(dest) {
 					dest.gen = nop // skip getIndexMap
 				}
 			}
@@ -1226,6 +1227,15 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 	return initNodes, err
 }
 
+func childPos(n *Node) int {
+	for i, c := range n.anc.child {
+		if n == c {
+			return i
+		}
+	}
+	return -1
+}
+
 func (n *Node) cfgError(format string, a ...interface{}) CfgError {
 	a = append([]interface{}{n.interp.fset.Position(n.pos)}, a...)
 	return CfgError(fmt.Errorf("%s: "+format, a...))
@@ -1349,10 +1359,7 @@ func isNewDefine(n *Node, scope *Scope) bool {
 	if n.ident == "_" {
 		return true
 	}
-	if n.anc.kind == Define && n.anc.child[0] == n {
-		return true
-	}
-	if n.anc.kind == DefineX && n.anc.lastChild() != n {
+	if (n.anc.kind == DefineX || n.anc.kind == Define || n.anc.kind == ValueSpec) && childPos(n) < n.anc.nleft {
 		return true
 	}
 	if n.anc.kind == RangeStmt {
@@ -1364,14 +1371,15 @@ func isNewDefine(n *Node, scope *Scope) bool {
 		}
 		return false // array, map or channel are always pre-defined in range expression
 	}
-	if n.anc.kind == ValueSpec && n.anc.lastChild() != n {
-		return true
-	}
 	return false
 }
 
 func isMethod(n *Node) bool {
 	return len(n.child[0].child) > 0 // receiver defined
+}
+
+func isMapEntry(n *Node) bool {
+	return n.action == GetIndex && n.child[0].typ.cat == MapT
 }
 
 func isBuiltinCall(n *Node) bool {

@@ -196,22 +196,26 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 			t.name = "string"
 			t.untyped = true
 		default:
-			err = n.cfgError("missign support for type %T", n.val)
+			err = n.cfgError("missing support for type %T: %v", v, n.val)
 		}
 
 	case UnaryExpr:
 		t, err = nodeType(interp, scope, n.child[0])
 
 	case BinaryExpr:
-		t, err = nodeType(interp, scope, n.child[0])
-		if err != nil {
-			return nil, err
-		}
-		if t.untyped {
-			var t1 *Type
-			t1, err = nodeType(interp, scope, n.child[1])
-			if !(t1.untyped && isInt(t1) && isFloat(t)) {
-				t = t1
+		if a := n.anc; a.kind == Define && len(a.child) > a.nleft+a.nright {
+			t, err = nodeType(interp, scope, a.child[a.nleft])
+		} else {
+			t, err = nodeType(interp, scope, n.child[0])
+			if err != nil {
+				return nil, err
+			}
+			if t.untyped {
+				var t1 *Type
+				t1, err = nodeType(interp, scope, n.child[1])
+				if !(t1.untyped && isInt(t1) && isFloat(t)) {
+					t = t1
+				}
 			}
 		}
 
