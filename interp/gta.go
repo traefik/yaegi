@@ -27,26 +27,38 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 			}
 
 		case Define:
-			var typ *Type
-			if len(n.child) > 1 {
-				typ, err = nodeType(interp, scope, n.child[1])
-			} else {
-				typ, err = nodeType(interp, scope, n.anc.child[0].child[1])
+			var atyp *Type
+			if n.nleft+n.nright < len(n.child) {
+				atyp, err = nodeType(interp, scope, n.child[n.nleft])
+				if err != nil {
+					return false
+				}
 			}
-			if err != nil {
-				return false
+
+			var sbase int
+			if n.nright > 0 {
+				sbase = len(n.child) - n.nright
 			}
-			if typ.cat == NilT {
-				err = n.cfgError("use of untyped nil")
-				return false
-			}
-			var val interface{} = iotaValue
-			if len(n.child) > 1 {
-				val = n.child[1].val
-			}
-			scope.sym[n.child[0].ident] = &Symbol{kind: Var, global: true, index: scope.add(typ), typ: typ, val: val}
-			if n.anc.kind == ConstDecl {
-				iotaValue++
+
+			for i := 0; i < n.nleft; i++ {
+				dest, src := n.child[i], n.child[sbase+i]
+				typ := atyp
+				var val interface{} = iotaValue
+				if typ == nil {
+					typ, err = nodeType(interp, scope, src)
+					if err != nil {
+						return false
+					}
+					val = src.val
+				}
+				if typ.cat == NilT {
+					err = n.cfgError("use of untyped nil")
+					return false
+				}
+				scope.sym[dest.ident] = &Symbol{kind: Var, global: true, index: scope.add(typ), typ: typ, val: val}
+				if n.anc.kind == ConstDecl {
+					iotaValue++
+				}
 			}
 			return false
 
