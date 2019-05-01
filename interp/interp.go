@@ -22,6 +22,8 @@ type Node struct {
 	index  int              // node index (dot display)
 	findex int              // index of value in frame or frame size (func def, type def)
 	level  int              // number of frame indirections to access value
+	nleft  int              // number of children in left part (assign)
+	nright int              // number of children in right part (assign)
 	kind   Kind             // kind of node
 	pos    token.Pos        // position in source code, relative to fset
 	sym    *Symbol          // associated symbol
@@ -226,6 +228,9 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 
 	if i.astDot {
 		root.AstDot(DotX(), i.Name)
+		if i.noRun {
+			return res, err
+		}
 	}
 
 	// Global type analysis
@@ -257,20 +262,22 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 		root.CfgDot(DotX())
 	}
 
-	// Execute CFG
-	if !i.noRun {
-		if err = genRun(root); err != nil {
-			return res, err
-		}
-		i.resizeFrame()
-		i.run(root, nil)
-
-		for _, n := range initNodes {
-			i.run(n, i.Frame)
-		}
-		v := genValue(root)
-		res = v(i.Frame)
+	if i.noRun {
+		return res, err
 	}
+
+	// Execute CFG
+	if err = genRun(root); err != nil {
+		return res, err
+	}
+	i.resizeFrame()
+	i.run(root, nil)
+
+	for _, n := range initNodes {
+		i.run(n, i.Frame)
+	}
+	v := genValue(root)
+	res = v(i.Frame)
 
 	// If result is an interpreter node, wrap it in a runtime callable function
 	if res.IsValid() {

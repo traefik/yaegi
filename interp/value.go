@@ -9,9 +9,7 @@ func valueGenerator(n *Node, i int) func(*Frame) reflect.Value {
 	case 0:
 		return func(f *Frame) reflect.Value { return f.data[i] }
 	case 1:
-		return func(f *Frame) reflect.Value {
-			return f.anc.data[i]
-		}
+		return func(f *Frame) reflect.Value { return f.anc.data[i] }
 	case 2:
 		return func(f *Frame) reflect.Value { return f.anc.anc.data[i] }
 	default:
