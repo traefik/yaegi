@@ -1370,7 +1370,11 @@ func _append(n *Node) {
 		l := len(args)
 		values := make([]func(*Frame) reflect.Value, l)
 		for i, arg := range args {
-			values[i] = genValue(arg)
+			if arg.typ.untyped {
+				values[i] = genValueAs(arg, n.child[1].typ.TypeOf().Elem())
+			} else {
+				values[i] = genValue(arg)
+			}
 		}
 
 		n.exec = func(f *Frame) Builtin {
@@ -1383,6 +1387,9 @@ func _append(n *Node) {
 		}
 	} else {
 		value0 := genValue(n.child[2])
+		if n.child[2].typ.untyped {
+			value0 = genValueAs(n.child[2], n.child[1].typ.TypeOf().Elem())
+		}
 
 		n.exec = func(f *Frame) Builtin {
 			dest(f).Set(reflect.Append(value(f), value0(f)))
