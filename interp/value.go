@@ -106,7 +106,7 @@ func genValueInt(n *Node) func(*Frame) int64 {
 	switch n.typ.TypeOf().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return func(f *Frame) int64 { return value(f).Int() }
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return func(f *Frame) int64 { return int64(value(f).Uint()) }
 	case reflect.Float32, reflect.Float64:
 		return func(f *Frame) int64 { return int64(value(f).Float()) }
@@ -120,7 +120,7 @@ func genValueUint(n *Node) func(*Frame) uint64 {
 	switch n.typ.TypeOf().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return func(f *Frame) uint64 { return uint64(value(f).Int()) }
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return func(f *Frame) uint64 { return value(f).Uint() }
 	case reflect.Float32, reflect.Float64:
 		return func(f *Frame) uint64 { return uint64(value(f).Float()) }
@@ -134,7 +134,7 @@ func genValueFloat(n *Node) func(*Frame) float64 {
 	switch n.typ.TypeOf().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return func(f *Frame) float64 { return float64(value(f).Int()) }
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return func(f *Frame) float64 { return float64(value(f).Uint()) }
 	case reflect.Float32, reflect.Float64:
 		return func(f *Frame) float64 { return value(f).Float() }
