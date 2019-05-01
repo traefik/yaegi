@@ -39,6 +39,13 @@ func genValueRecv(n *Node) func(*Frame) reflect.Value {
 	}
 }
 
+func genValueAs(n *Node, t reflect.Type) func(*Frame) reflect.Value {
+	v := genValue(n)
+	return func(f *Frame) reflect.Value {
+		return v(f).Convert(t)
+	}
+}
+
 func genValue(n *Node) func(*Frame) reflect.Value {
 	switch n.kind {
 	case BasicLit, FuncDecl:
