@@ -779,12 +779,12 @@ func getIndexBinMethod(n *Node) {
 func getIndexArray(n *Node) {
 	tnext := getExec(n.tnext)
 	value0 := genValue(n.child[0])
-	value1 := genValue(n.child[1])
+	value1 := genValueInt(n.child[1])
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *Frame) Builtin {
-			if value0(f).Index(int(value1(f).Int())).Bool() {
+			if value0(f).Index(int(value1(f))).Bool() {
 				return tnext
 			}
 			return fnext
@@ -792,7 +792,7 @@ func getIndexArray(n *Node) {
 	} else {
 		i := n.findex
 		n.exec = func(f *Frame) Builtin {
-			f.data[i] = value0(f).Index(int(value1(f).Int()))
+			f.data[i] = value0(f).Index(int(value1(f)))
 			return tnext
 		}
 	}
