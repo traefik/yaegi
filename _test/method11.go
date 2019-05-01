@@ -1,15 +1,17 @@
 package main
 
+func BlockSize() string { return "func" }
+
+type Cipher struct{}
+
+func (c *Cipher) BlockSize() string { return "method" }
+
 func main() {
-	o := &Coord{3, 4}
-	println(o.dist())
-}
-
-func (c *Coord) dist() int { return c.x*c.x + c.y*c.y }
-
-type Coord struct {
-	x, y int
+	println(BlockSize())
+	s := Cipher{}
+	println(s.BlockSize())
 }
 
 // Output:
-// 25
+// func
+// method
