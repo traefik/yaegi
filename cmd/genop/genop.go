@@ -17,7 +17,7 @@ import "reflect"
 // Arithmetic operators
 {{range $name, $op := .Arithmetic}}
 func {{$name}}(n *Node) {
-	i := n.findex
+	dest := genValue(n)
 	next := getExec(n.tnext)
 	typ := n.typ.TypeOf()
 
@@ -27,7 +27,7 @@ func {{$name}}(n *Node) {
 		v0 := genValue(n.child[0])
 		v1 := genValue(n.child[1])
 		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetString(v0(f).String() {{$op.Name}} v1(f).String())
+			dest(f).SetString(v0(f).String() {{$op.Name}} v1(f).String())
 			return next
 		}
 	{{- end}}
@@ -39,14 +39,14 @@ func {{$name}}(n *Node) {
 		v1 := genValueInt(n.child[1])
 		{{end -}}
 		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetInt(v0(f) {{$op.Name}} v1(f))
+			dest(f).SetInt(v0(f) {{$op.Name}} v1(f))
 			return next
 		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetUint(v0(f) {{$op.Name}} v1(f))
+			dest(f).SetUint(v0(f) {{$op.Name}} v1(f))
 			return next
 		}
 	{{- if $op.Float}}
@@ -54,14 +54,14 @@ func {{$name}}(n *Node) {
 		v0 := genValueFloat(n.child[0])
 		v1 := genValueFloat(n.child[1])
 		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetFloat(v0(f) {{$op.Name}} v1(f))
+			dest(f).SetFloat(v0(f) {{$op.Name}} v1(f))
 			return next
 		}
 	case reflect.Complex64, reflect.Complex128:
 		v0 := genValue(n.child[0])
 		v1 := genValue(n.child[1])
 		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetComplex(v0(f).Complex() {{$op.Name}} v1(f).Complex())
+			dest(f).SetComplex(v0(f).Complex() {{$op.Name}} v1(f).Complex())
 			return next
 		}
 	{{- end}}
@@ -191,9 +191,9 @@ func {{$name}}(n *Node) {
 				return fnext
 			}
 		} else {
-			i := n.findex
+			dest := genValue(n)
 			n.exec = func(f *Frame) Builtin {
-				f.data[i].SetBool(v0(f) {{$op.Name}} v1(f))
+				dest(f).SetBool(v0(f) {{$op.Name}} v1(f))
 				return tnext
 			}
 		}
@@ -209,9 +209,9 @@ func {{$name}}(n *Node) {
 				return fnext
 			}
 		} else {
-			i := n.findex
+			dest := genValue(n)
 			n.exec = func(f *Frame) Builtin {
-				f.data[i].SetBool(v0(f) {{$op.Name}} v1(f))
+				dest(f).SetBool(v0(f) {{$op.Name}} v1(f))
 				return tnext
 			}
 		}
@@ -227,9 +227,9 @@ func {{$name}}(n *Node) {
 				return fnext
 			}
 		} else {
-			i := n.findex
+			dest := genValue(n)
 			n.exec = func(f *Frame) Builtin {
-				f.data[i].SetBool(v0(f) {{$op.Name}} v1(f))
+				dest(f).SetBool(v0(f) {{$op.Name}} v1(f))
 				return tnext
 			}
 		}
