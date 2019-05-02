@@ -494,6 +494,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				if !(isInt(t0) && isUint(t1)) {
 					err = n.cfgError("illegal operand types for '%v' operator", n.action)
 				}
+				n.typ = t0
 			case Equal, NotEqual:
 				if isNumber(t0) && !isNumber(t1) || isString(t0) && !isString(t1) {
 					err = n.cfgError("illegal operand types for '%v' operator", n.action)
@@ -512,8 +513,15 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				}
 				n.typ = scope.getType("bool")
 			}
-			// TODO: Possible optimisation: if type is bool and not in assignment or call, then skip result store
-			if err == nil {
+			if err != nil {
+				break
+			}
+			switch {
+			case n.anc.kind == AssignStmt:
+				dest := n.anc.child[childPos(n)-n.anc.nright]
+				n.typ = dest.typ
+				n.findex = dest.findex
+			default:
 				if n.typ == nil {
 					n.typ, err = nodeType(interp, scope, n)
 				}
