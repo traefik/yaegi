@@ -1322,6 +1322,16 @@ func _case(n *Node) {
 						}
 						return fnext
 					}
+					if t := v.Type(); t.Kind() == reflect.Interface {
+						if typ.cat == NilT && v.IsNil() {
+							return tnext
+						}
+						if typ.TypeOf().String() == t.String() {
+							destValue(f).Set(v.Elem())
+							return tnext
+						}
+						return fnext
+					}
 					vi := v.Interface().(valueInterface)
 					if vi.node == nil {
 						if typ.cat == NilT {
