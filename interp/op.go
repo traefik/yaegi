@@ -344,7 +344,7 @@ func addAssign(n *Node) {
 			value(f).SetInt(v0(f) + v1(f))
 			return next
 		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		n.exec = func(f *Frame) Builtin {
@@ -381,7 +381,7 @@ func andAssign(n *Node) {
 			value(f).SetInt(v0(f) & v1(f))
 			return next
 		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		n.exec = func(f *Frame) Builtin {
@@ -404,7 +404,7 @@ func andnotAssign(n *Node) {
 			value(f).SetInt(v0(f) &^ v1(f))
 			return next
 		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		n.exec = func(f *Frame) Builtin {
@@ -427,7 +427,7 @@ func mulAssign(n *Node) {
 			value(f).SetInt(v0(f) * v1(f))
 			return next
 		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		n.exec = func(f *Frame) Builtin {
@@ -464,7 +464,7 @@ func orAssign(n *Node) {
 			value(f).SetInt(v0(f) | v1(f))
 			return next
 		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		n.exec = func(f *Frame) Builtin {
@@ -487,7 +487,7 @@ func quoAssign(n *Node) {
 			value(f).SetInt(v0(f) / v1(f))
 			return next
 		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		n.exec = func(f *Frame) Builtin {
@@ -524,7 +524,7 @@ func remAssign(n *Node) {
 			value(f).SetInt(v0(f) % v1(f))
 			return next
 		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		n.exec = func(f *Frame) Builtin {
@@ -547,7 +547,7 @@ func shlAssign(n *Node) {
 			value(f).SetInt(v0(f) << v1(f))
 			return next
 		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		n.exec = func(f *Frame) Builtin {
@@ -570,7 +570,7 @@ func shrAssign(n *Node) {
 			value(f).SetInt(v0(f) >> v1(f))
 			return next
 		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		n.exec = func(f *Frame) Builtin {
@@ -593,7 +593,7 @@ func subAssign(n *Node) {
 			value(f).SetInt(v0(f) - v1(f))
 			return next
 		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		n.exec = func(f *Frame) Builtin {
@@ -630,7 +630,7 @@ func xorAssign(n *Node) {
 			value(f).SetInt(v0(f) ^ v1(f))
 			return next
 		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		v0 := genValueUint(n.child[0])
 		v1 := genValueUint(n.child[1])
 		n.exec = func(f *Frame) Builtin {

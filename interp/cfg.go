@@ -44,12 +44,17 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					n.anc.gen = rangeChan
 				} else {
 					// range over array or map
-					k, v := n.anc.child[0], n.anc.child[1]
 					var ktyp, vtyp *Type
+					var k, v, o *Node
+					if len(n.anc.child) == 4 {
+						k, v, o = n.anc.child[0], n.anc.child[1], n.anc.child[2]
+					} else {
+						k, o = n.anc.child[0], n.anc.child[1]
+					}
 
-					switch n.anc.child[2].typ.cat {
+					switch o.typ.cat {
 					case ValueT:
-						typ := n.anc.child[2].typ.rtype
+						typ := o.typ.rtype
 						switch typ.Kind() {
 						case reflect.Map:
 							n.anc.gen = rangeMap
@@ -61,11 +66,11 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 						}
 					case MapT:
 						n.anc.gen = rangeMap
-						ktyp = n.anc.child[2].typ.key
-						vtyp = n.anc.child[2].typ.val
+						ktyp = o.typ.key
+						vtyp = o.typ.val
 					case ArrayT:
 						ktyp = scope.getType("int")
-						vtyp = n.anc.child[2].typ.val
+						vtyp = o.typ.val
 					}
 
 					kindex := scope.add(ktyp)
@@ -73,10 +78,12 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					k.typ = ktyp
 					k.findex = kindex
 
-					vindex := scope.add(vtyp)
-					scope.sym[v.ident] = &Symbol{index: vindex, kind: Var, typ: vtyp}
-					v.typ = vtyp
-					v.findex = vindex
+					if v != nil {
+						vindex := scope.add(vtyp)
+						scope.sym[v.ident] = &Symbol{index: vindex, kind: Var, typ: vtyp}
+						v.typ = vtyp
+						v.findex = vindex
+					}
 				}
 			}
 			n.findex = -1
@@ -356,16 +363,16 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				// Propagate type
 				// TODO: Check that existing destination type matches source type
 				switch {
-				case src.action == Call:
+				case n.action == Assign && src.action == Call:
 					n.gen = nop
 					src.level = level
 					src.findex = dest.findex
-				case src.action == Recv:
+				case n.action == Assign && src.action == Recv:
 					// Assign by reading from a receiving channel
 					n.gen = nop
 					src.findex = dest.findex // Set recv address to LHS
 					dest.typ = src.typ.val
-				case src.action == CompositeLit:
+				case n.action == Assign && src.action == CompositeLit:
 					n.gen = nop
 					src.findex = dest.findex
 					src.level = level
@@ -517,7 +524,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				break
 			}
 			switch {
-			case n.anc.kind == AssignStmt:
+			case n.anc.kind == AssignStmt && n.anc.action == Assign:
 				dest := n.anc.child[childPos(n)-n.anc.nright]
 				n.typ = dest.typ
 				n.findex = dest.findex
@@ -911,12 +918,18 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.child[2].tnext = n       // then body go to range function (loop)
 				n.child[0].gen = empty
 			} else {
-				n.start = n.child[2]                // Get array or map object
-				n.child[2].tnext = n.child[0].start // then go to iterator init
-				n.child[0].tnext = n                // then go to range function
-				n.tnext = n.child[3].start          // then go to range body
-				n.child[3].tnext = n                // then body go to range function (loop)
-				n.child[0].gen = empty              // init filled later by generator
+				var k, o, body *Node
+				if len(n.child) == 4 {
+					k, o, body = n.child[0], n.child[2], n.child[3]
+				} else {
+					k, o, body = n.child[0], n.child[1], n.child[2]
+				}
+				n.start = o          // Get array or map object
+				o.tnext = k.start    // then go to iterator init
+				k.tnext = n          // then go to range function
+				n.tnext = body.start // then go to range body
+				body.tnext = n       // then body go to range function (loop)
+				k.gen = empty        // init filled later by generator
 			}
 
 		case ReturnStmt:
@@ -1213,6 +1226,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			n.findex = scope.add(n.typ)
 
 		case ValueSpec:
+			n.gen = reset
 			l := len(n.child) - 1
 			if n.typ = n.child[l].typ; n.typ == nil {
 				n.typ, err = nodeType(interp, scope, n.child[l])
@@ -1374,7 +1388,7 @@ func isNewDefine(n *Node, scope *Scope) bool {
 		if n.anc.child[0] == n {
 			return true // array or map key, or chan element
 		}
-		if scope.rangeChanType(n.anc) == nil && n.anc.child[1] == n {
+		if scope.rangeChanType(n.anc) == nil && n.anc.child[1] == n && len(n.anc.child) == 4 {
 			return true // array or map value
 		}
 		return false // array, map or channel are always pre-defined in range expression

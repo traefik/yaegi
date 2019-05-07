@@ -1203,22 +1203,35 @@ func compositeSparse(n *Node) {
 func empty(n *Node) {}
 
 func _range(n *Node) {
-	index0 := n.child[0].findex   // array index location in frame
-	index1 := n.child[1].findex   // array value location in frame
-	value := genValue(n.child[2]) // array
+	index0 := n.child[0].findex // array index location in frame
 	fnext := getExec(n.fnext)
 	tnext := getExec(n.tnext)
 
-	n.exec = func(f *Frame) Builtin {
-		a := value(f)
-		v0 := f.data[index0]
-		v0.SetInt(v0.Int() + 1)
-		i := int(v0.Int())
-		if i >= a.Len() {
-			return fnext
+	if len(n.child) == 4 {
+		index1 := n.child[1].findex   // array value location in frame
+		value := genValue(n.child[2]) // array
+		n.exec = func(f *Frame) Builtin {
+			a := value(f)
+			v0 := f.data[index0]
+			v0.SetInt(v0.Int() + 1)
+			i := int(v0.Int())
+			if i >= a.Len() {
+				return fnext
+			}
+			f.data[index1].Set(a.Index(i))
+			return tnext
 		}
-		f.data[index1].Set(a.Index(i))
-		return tnext
+	} else {
+		value := genValue(n.child[1]) // array
+		n.exec = func(f *Frame) Builtin {
+			a := value(f)
+			v0 := f.data[index0]
+			v0.SetInt(v0.Int() + 1)
+			if int(v0.Int()) >= a.Len() {
+				return fnext
+			}
+			return tnext
+		}
 	}
 
 	// Init sequence
@@ -1305,6 +1318,16 @@ func _case(n *Node) {
 					if !v.IsValid() {
 						// match zero value against nil
 						if typ.cat == NilT {
+							return tnext
+						}
+						return fnext
+					}
+					if t := v.Type(); t.Kind() == reflect.Interface {
+						if typ.cat == NilT && v.IsNil() {
+							return tnext
+						}
+						if typ.TypeOf().String() == t.String() {
+							destValue(f).Set(v.Elem())
 							return tnext
 						}
 						return fnext
@@ -1596,6 +1619,42 @@ func _make(n *Node) {
 	}
 }
 
+func reset(n *Node) {
+	next := getExec(n.tnext)
+
+	switch l := len(n.child) - 1; l {
+	case 1:
+		typ := n.child[0].typ.TypeOf()
+		i := n.child[0].findex
+		n.exec = func(f *Frame) Builtin {
+			f.data[i] = reflect.New(typ).Elem()
+			return next
+		}
+	case 2:
+		c0, c1 := n.child[0], n.child[1]
+		i0, i1 := c0.findex, c1.findex
+		t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
+		n.exec = func(f *Frame) Builtin {
+			f.data[i0] = reflect.New(t0).Elem()
+			f.data[i1] = reflect.New(t1).Elem()
+			return next
+		}
+	default:
+		types := make([]reflect.Type, l)
+		index := make([]int, l)
+		for i, c := range n.child[:l] {
+			index[i] = c.findex
+			types[i] = c.typ.TypeOf()
+		}
+		n.exec = func(f *Frame) Builtin {
+			for i, ind := range index {
+				f.data[ind] = reflect.New(types[i]).Elem()
+			}
+			return next
+		}
+	}
+}
+
 // recv reads from a channel
 func recv(n *Node) {
 	value := genValue(n.child[0])
@@ -1636,7 +1695,11 @@ func convertLiteralValue(n *Node, t reflect.Type) {
 	if n.kind != BasicLit || t == nil || t.Kind() == reflect.Interface {
 		return
 	}
-	n.val = reflect.ValueOf(n.val).Convert(t)
+	if n.val == nil {
+		n.val = reflect.New(t).Elem() // convert to type nil value
+	} else {
+		n.val = reflect.ValueOf(n.val).Convert(t)
+	}
 }
 
 // Write to a channel
