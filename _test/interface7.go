@@ -12,3 +12,6 @@ func main() {
 	x := T(1)
 	fmt.Println(f(x))
 }
+
+// Output:
+// This is an error from T: 1
