@@ -91,6 +91,18 @@ var ExportValue = LibValueMap{
 	},
 }
 
+// werror is a wrapper of error interface type
+type werror struct {
+	WError func() string
+}
+
+func (w werror) Error() string { return w.WError() }
+
+// Wrappers define a map of interface wrapper types
+var Wrappers = map[string]reflect.Type{
+	"error": reflect.TypeOf((*werror)(nil)).Elem(),
+}
+
 func init() { ExportValue[selfPath]["ExportValue"] = reflect.ValueOf(ExportValue) }
 
 // Walk traverses AST n in depth first order, call cbin function
@@ -282,7 +294,7 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 	// If result is an interpreter node, wrap it in a runtime callable function
 	if res.IsValid() {
 		if n, ok := res.Interface().(*Node); ok {
-			res = genNodeWrapper(n)(i.Frame)
+			res = genFunctionWrapper(n)(i.Frame)
 		}
 	}
 

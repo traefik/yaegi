@@ -935,6 +935,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case ReturnStmt:
 			wireChild(n)
 			n.tnext = nil
+			n.val = scope.def
 			for i, c := range n.child {
 				if c.typ.cat == NilT {
 					// nil: Set node value to zero of return type

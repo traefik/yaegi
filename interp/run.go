@@ -185,7 +185,7 @@ func convert(n *Node) {
 
 	var value func(*Frame) reflect.Value
 	if c.typ.cat == FuncT {
-		value = genNodeWrapper(c)
+		value = genFunctionWrapper(c)
 	} else {
 		value = genValue(c)
 	}
@@ -212,7 +212,7 @@ func assign(n *Node) {
 		case dest.typ.cat == InterfaceT:
 			svalue[i] = genValueInterface(src)
 		case dest.typ.cat == ValueT && src.typ.cat == FuncT:
-			svalue[i] = genNodeWrapper(src)
+			svalue[i] = genFunctionWrapper(src)
 		case src.kind == BasicLit && src.val == nil:
 			t := dest.typ.TypeOf()
 			svalue[i] = func(*Frame) reflect.Value { return reflect.New(t).Elem() }
@@ -397,7 +397,7 @@ func _panic(n *Node) {
 	}
 }
 
-func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
+func genFunctionWrapper(n *Node) func(*Frame) reflect.Value {
 	def := n.val.(*Node)
 	setExec(def.child[3].start)
 	start := def.child[3].start
@@ -439,11 +439,39 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 			result := frame.data[:numRet]
 			for i, r := range result {
 				if v, ok := r.Interface().(*Node); ok {
-					result[i] = genNodeWrapper(v)(f)
+					result[i] = genFunctionWrapper(v)(f)
 				}
 			}
 			return result
 		})
+	}
+}
+
+func genInterfaceWrapper(n *Node, typ reflect.Type) func(*Frame) reflect.Value {
+	value := genValue(n)
+	mn := typ.NumMethod()
+	methods := make([]*Node, mn)
+	indexes := make([][]int, mn)
+	for i := 0; i < mn; i++ {
+		methods[i], indexes[i] = n.typ.lookupMethod(typ.Method(i).Name)
+	}
+	wrap := Wrappers[typ.Name()]
+
+	return func(f *Frame) reflect.Value {
+		v := value(f)
+		switch v.Kind() {
+		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+			if v.IsNil() {
+				return reflect.New(typ).Elem()
+			}
+		}
+		w := reflect.New(wrap).Elem()
+		for i, m := range methods {
+			node := *m
+			node.recv = &Receiver{n, v, indexes[i]}
+			w.Field(i).Set(genFunctionWrapper(&node)(f))
+		}
+		return w
 	}
 }
 
@@ -454,7 +482,7 @@ func _defer(n *Node) {
 
 	for i, c := range n.child[0].child {
 		if c.typ.cat == FuncT {
-			values[i] = genNodeWrapper(c)
+			values[i] = genFunctionWrapper(c)
 		} else {
 			if c.recv != nil {
 				// defer a method on a binary obj
@@ -543,11 +571,12 @@ func call(n *Node) {
 	}
 
 	// compute frame indexes for return values
-	ret := make([]int, len(n.child[0].typ.ret))
-	for i := range n.child[0].typ.ret {
+	rtypes := n.child[0].typ.ret
+	ret := make([]int, len(rtypes))
+	for i := range rtypes {
 		ret[i] = n.findex + i
 	}
-	rvalues := make([]func(*Frame) reflect.Value, len(n.child[0].typ.ret))
+	rvalues := make([]func(*Frame) reflect.Value, len(rtypes))
 	switch n.anc.kind {
 	case DefineX, AssignXStmt:
 		for i := range rvalues {
@@ -557,7 +586,7 @@ func call(n *Node) {
 			}
 		}
 	default:
-		for i := range n.child[0].typ.ret {
+		for i := range rtypes {
 			j := n.findex + i
 			rvalues[i] = func(f *Frame) reflect.Value { return f.data[j] }
 		}
@@ -692,7 +721,7 @@ func callBin(n *Node) {
 			}
 			switch c.typ.cat {
 			case FuncT:
-				values = append(values, genNodeWrapper(c))
+				values = append(values, genFunctionWrapper(c))
 			case InterfaceT:
 				values = append(values, genValueInterfaceValue(c))
 			default:
@@ -1016,9 +1045,17 @@ func nop(n *Node) {
 func _return(n *Node) {
 	child := n.child
 	next := getExec(n.tnext)
+	def := n.val.(*Node)
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
-		values[i] = genValue(c)
+		switch t := def.typ.ret[i]; t.cat {
+		case ErrorT:
+			values[i] = genInterfaceWrapper(c, t.TypeOf())
+		case InterfaceT:
+			values[i] = genValueInterface(c)
+		default:
+			values[i] = genValue(c)
+		}
 	}
 
 	n.exec = func(f *Frame) Builtin {
@@ -1101,7 +1138,7 @@ func mapLit(n *Node) {
 	}
 }
 
-// compositeBin creates and populats a struct object from a binary type
+// compositeBin creates and populates a struct object from a binary type
 func compositeBin(n *Node) {
 	next := getExec(n.tnext)
 	value := valueGenerator(n, n.findex)
@@ -1115,7 +1152,7 @@ func compositeBin(n *Node) {
 				fieldIndex[i] = sf.Index
 				convertLiteralValue(c.child[1], sf.Type)
 				if c.child[1].typ.cat == FuncT {
-					values[i] = genNodeWrapper(c.child[1])
+					values[i] = genFunctionWrapper(c.child[1])
 				} else {
 					values[i] = genValue(c.child[1])
 				}
@@ -1124,7 +1161,7 @@ func compositeBin(n *Node) {
 			fieldIndex[i] = []int{i}
 			convertLiteralValue(c.child[1], typ.Field(i).Type)
 			if c.typ.cat == FuncT {
-				values[i] = genNodeWrapper(c.child[1])
+				values[i] = genFunctionWrapper(c.child[1])
 			} else {
 				values[i] = genValue(c)
 			}
@@ -1155,7 +1192,7 @@ func compositeLit(n *Node) {
 	for i, c := range child {
 		convertLiteralValue(c, n.typ.field[i].typ.TypeOf())
 		if c.typ.cat == FuncT {
-			values[i] = genNodeWrapper(c)
+			values[i] = genFunctionWrapper(c)
 		} else {
 			values[i] = genValue(c)
 		}
@@ -1185,7 +1222,7 @@ func compositeSparse(n *Node) {
 		field := n.typ.fieldIndex(c.child[0].ident)
 		convertLiteralValue(c.child[1], n.typ.field[field].typ.TypeOf())
 		if c.typ.cat == FuncT {
-			values[field] = genNodeWrapper(c.child[1])
+			values[field] = genFunctionWrapper(c.child[1])
 		} else {
 			values[field] = genValue(c.child[1])
 		}
