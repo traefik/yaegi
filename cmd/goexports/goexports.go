@@ -48,13 +48,33 @@ func init() {
 			"{{$key}}": reflect.ValueOf((*{{$value}})(nil)),
 		{{end}}
 	}
+	Wrapper["{{.PkgName}}"] = map[string]reflect.Type{
+		{{range $key, $value := .Wrap -}}
+			"{{$key}}": reflect.TypeOf((*w{{$key}})(nil)),
+		{{end}}
+	}
 }
+{{range $key, $value := .Wrap -}}
+	// w{{$key}} is an interface wrapper for {{$key}} type
+	type w{{$key}} struct {
+		{{range $m := $value -}}
+		W{{$m.Name}} {{$m.Type}}
+		{{end}}
+	}
+	{{range $m := $value -}}
+		func (w w{{$key}}) {{$m.Name}}{{$m.Param}} {{$m.Result}} { {{$m.Ret}} w.W{{$m.Name}}{{$m.Arg}} }
+	{{end}}
+{{end}}
 `
 
 // Val store the value name and addressable status of symbols
 type Val struct {
 	Name string // "package.name"
 	Addr bool   // true if symbol is a Var
+}
+
+type Method struct {
+	Name, Type, Param, Result, Arg, Ret string
 }
 
 func genContent(dest, pkgName string) ([]byte, error) {
@@ -65,6 +85,7 @@ func genContent(dest, pkgName string) ([]byte, error) {
 
 	typ := map[string]string{}
 	val := map[string]Val{}
+	wrap := map[string][]Method{}
 	sc := p.Scope()
 	for _, name := range sc.Names() {
 		o := sc.Lookup(name)
@@ -81,6 +102,26 @@ func genContent(dest, pkgName string) ([]byte, error) {
 			val[name] = Val{pname, true}
 		case *types.TypeName:
 			typ[name] = pname
+			switch t := o.Type().Underlying().(type) {
+			case *types.Interface:
+				wrap[name] = make([]Method, t.NumMethods())
+				for i := range wrap[name] {
+					f := t.Method(i)
+					sig := f.Type().(*types.Signature)
+					param := sig.Params().String()
+					result := sig.Results().String()
+					args := make([]string, sig.Params().Len())
+					for i := range args {
+						args[i] = sig.Params().At(i).Name()
+					}
+					arg := "(" + strings.Join(args, ", ") + ")"
+					ret := ""
+					if sig.Results().Len() > 0 {
+						ret = "return"
+					}
+					wrap[name][i] = Method{f.Name(), f.Type().String(), param, result, arg, ret}
+				}
+			}
 		}
 	}
 
@@ -105,6 +146,7 @@ func genContent(dest, pkgName string) ([]byte, error) {
 		"PkgName":          pkgName,
 		"Val":              val,
 		"Typ":              typ,
+		"Wrap":             wrap,
 		"CurrentGoVersion": currentGoVersion,
 		"NextGoVersion":    nextGoVersion,
 	}
