@@ -25,4 +25,5 @@ func init() {
 		"GIF":     reflect.ValueOf((*gif.GIF)(nil)),
 		"Options": reflect.ValueOf((*gif.Options)(nil)),
 	}
+	Wrapper["image/gif"] = map[string]reflect.Type{}
 }

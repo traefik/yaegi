@@ -48,4 +48,5 @@ func init() {
 		"Priority": reflect.ValueOf((*syslog.Priority)(nil)),
 		"Writer":   reflect.ValueOf((*syslog.Writer)(nil)),
 	}
+	Wrapper["log/syslog"] = map[string]reflect.Type{}
 }

@@ -83,4 +83,74 @@ func init() {
 		"Value":        reflect.ValueOf((*reflect.Value)(nil)),
 		"ValueError":   reflect.ValueOf((*reflect.ValueError)(nil)),
 	}
+	Wrapper["reflect"] = map[string]reflect.Type{
+		"Type": reflect.TypeOf((*_reflect_Type)(nil)),
+	}
 }
+
+// _reflect_Type is an interface wrapper for Type type
+type _reflect_Type struct {
+	WAlign           func() int
+	WAssignableTo    func(u reflect.Type) bool
+	WBits            func() int
+	WChanDir         func() reflect.ChanDir
+	WComparable      func() bool
+	WConvertibleTo   func(u reflect.Type) bool
+	WElem            func() reflect.Type
+	WField           func(i int) reflect.StructField
+	WFieldAlign      func() int
+	WFieldByIndex    func(index []int) reflect.StructField
+	WFieldByName     func(name string) (reflect.StructField, bool)
+	WFieldByNameFunc func(match func(string) bool) (reflect.StructField, bool)
+	WImplements      func(u reflect.Type) bool
+	WIn              func(i int) reflect.Type
+	WIsVariadic      func() bool
+	WKey             func() reflect.Type
+	WKind            func() reflect.Kind
+	WLen             func() int
+	WMethod          func(a0 int) reflect.Method
+	WMethodByName    func(a0 string) (reflect.Method, bool)
+	WName            func() string
+	WNumField        func() int
+	WNumIn           func() int
+	WNumMethod       func() int
+	WNumOut          func() int
+	WOut             func(i int) reflect.Type
+	WPkgPath         func() string
+	WSize            func() uintptr
+	WString          func() string
+}
+
+func (W _reflect_Type) Align() int                                   { return W.WAlign() }
+func (W _reflect_Type) AssignableTo(u reflect.Type) bool             { return W.WAssignableTo(u) }
+func (W _reflect_Type) Bits() int                                    { return W.WBits() }
+func (W _reflect_Type) ChanDir() reflect.ChanDir                     { return W.WChanDir() }
+func (W _reflect_Type) Comparable() bool                             { return W.WComparable() }
+func (W _reflect_Type) ConvertibleTo(u reflect.Type) bool            { return W.WConvertibleTo(u) }
+func (W _reflect_Type) Elem() reflect.Type                           { return W.WElem() }
+func (W _reflect_Type) Field(i int) reflect.StructField              { return W.WField(i) }
+func (W _reflect_Type) FieldAlign() int                              { return W.WFieldAlign() }
+func (W _reflect_Type) FieldByIndex(index []int) reflect.StructField { return W.WFieldByIndex(index) }
+func (W _reflect_Type) FieldByName(name string) (reflect.StructField, bool) {
+	return W.WFieldByName(name)
+}
+func (W _reflect_Type) FieldByNameFunc(match func(string) bool) (reflect.StructField, bool) {
+	return W.WFieldByNameFunc(match)
+}
+func (W _reflect_Type) Implements(u reflect.Type) bool                { return W.WImplements(u) }
+func (W _reflect_Type) In(i int) reflect.Type                         { return W.WIn(i) }
+func (W _reflect_Type) IsVariadic() bool                              { return W.WIsVariadic() }
+func (W _reflect_Type) Key() reflect.Type                             { return W.WKey() }
+func (W _reflect_Type) Kind() reflect.Kind                            { return W.WKind() }
+func (W _reflect_Type) Len() int                                      { return W.WLen() }
+func (W _reflect_Type) Method(a0 int) reflect.Method                  { return W.WMethod(a0) }
+func (W _reflect_Type) MethodByName(a0 string) (reflect.Method, bool) { return W.WMethodByName(a0) }
+func (W _reflect_Type) Name() string                                  { return W.WName() }
+func (W _reflect_Type) NumField() int                                 { return W.WNumField() }
+func (W _reflect_Type) NumIn() int                                    { return W.WNumIn() }
+func (W _reflect_Type) NumMethod() int                                { return W.WNumMethod() }
+func (W _reflect_Type) NumOut() int                                   { return W.WNumOut() }
+func (W _reflect_Type) Out(i int) reflect.Type                        { return W.WOut(i) }
+func (W _reflect_Type) PkgPath() string                               { return W.WPkgPath() }
+func (W _reflect_Type) Size() uintptr                                 { return W.WSize() }
+func (W _reflect_Type) String() string                                { return W.WString() }

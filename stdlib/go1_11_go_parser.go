@@ -27,4 +27,5 @@ func init() {
 		// type definitions
 		"Mode": reflect.ValueOf((*parser.Mode)(nil)),
 	}
+	Wrapper["go/parser"] = map[string]reflect.Type{}
 }

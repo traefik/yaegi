@@ -17,4 +17,5 @@ func init() {
 		// type definitions
 
 	}
+	Wrapper["errors"] = map[string]reflect.Type{}
 }

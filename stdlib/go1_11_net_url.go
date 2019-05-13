@@ -30,4 +30,5 @@ func init() {
 		"Userinfo":         reflect.ValueOf((*url.Userinfo)(nil)),
 		"Values":           reflect.ValueOf((*url.Values)(nil)),
 	}
+	Wrapper["net/url"] = map[string]reflect.Type{}
 }

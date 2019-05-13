@@ -25,4 +25,5 @@ func init() {
 		"RevokedCertificate":           reflect.ValueOf((*pkix.RevokedCertificate)(nil)),
 		"TBSCertificateList":           reflect.ValueOf((*pkix.TBSCertificateList)(nil)),
 	}
+	Wrapper["crypto/x509/pkix"] = map[string]reflect.Type{}
 }

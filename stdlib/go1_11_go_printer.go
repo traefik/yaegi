@@ -23,4 +23,5 @@ func init() {
 		"Config":        reflect.ValueOf((*printer.Config)(nil)),
 		"Mode":          reflect.ValueOf((*printer.Mode)(nil)),
 	}
+	Wrapper["go/printer"] = map[string]reflect.Type{}
 }

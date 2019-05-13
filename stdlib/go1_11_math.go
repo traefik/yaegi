@@ -109,4 +109,5 @@ func init() {
 		// type definitions
 
 	}
+	Wrapper["math"] = map[string]reflect.Type{}
 }

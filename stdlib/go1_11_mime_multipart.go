@@ -24,4 +24,22 @@ func init() {
 		"Reader":     reflect.ValueOf((*multipart.Reader)(nil)),
 		"Writer":     reflect.ValueOf((*multipart.Writer)(nil)),
 	}
+	Wrapper["mime/multipart"] = map[string]reflect.Type{
+		"File": reflect.TypeOf((*_mime_multipart_File)(nil)),
+	}
+}
+
+// _mime_multipart_File is an interface wrapper for File type
+type _mime_multipart_File struct {
+	WClose  func() error
+	WRead   func(p []byte) (n int, err error)
+	WReadAt func(p []byte, off int64) (n int, err error)
+	WSeek   func(offset int64, whence int) (int64, error)
+}
+
+func (W _mime_multipart_File) Close() error                                  { return W.WClose() }
+func (W _mime_multipart_File) Read(p []byte) (n int, err error)              { return W.WRead(p) }
+func (W _mime_multipart_File) ReadAt(p []byte, off int64) (n int, err error) { return W.WReadAt(p, off) }
+func (W _mime_multipart_File) Seek(offset int64, whence int) (int64, error) {
+	return W.WSeek(offset, whence)
 }

@@ -18,4 +18,5 @@ func init() {
 		"Cipher":       reflect.ValueOf((*rc4.Cipher)(nil)),
 		"KeySizeError": reflect.ValueOf((*rc4.KeySizeError)(nil)),
 	}
+	Wrapper["crypto/rc4"] = map[string]reflect.Type{}
 }

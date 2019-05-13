@@ -19,4 +19,5 @@ func init() {
 		"Reader": reflect.ValueOf((*quotedprintable.Reader)(nil)),
 		"Writer": reflect.ValueOf((*quotedprintable.Writer)(nil)),
 	}
+	Wrapper["mime/quotedprintable"] = map[string]reflect.Type{}
 }

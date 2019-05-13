@@ -23,4 +23,5 @@ func init() {
 		"ResponseRecorder": reflect.ValueOf((*httptest.ResponseRecorder)(nil)),
 		"Server":           reflect.ValueOf((*httptest.Server)(nil)),
 	}
+	Wrapper["net/http/httptest"] = map[string]reflect.Type{}
 }

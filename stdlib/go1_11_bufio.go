@@ -39,4 +39,5 @@ func init() {
 		"SplitFunc":  reflect.ValueOf((*bufio.SplitFunc)(nil)),
 		"Writer":     reflect.ValueOf((*bufio.Writer)(nil)),
 	}
+	Wrapper["bufio"] = map[string]reflect.Type{}
 }

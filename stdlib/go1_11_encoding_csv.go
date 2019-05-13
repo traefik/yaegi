@@ -24,4 +24,5 @@ func init() {
 		"Reader":     reflect.ValueOf((*csv.Reader)(nil)),
 		"Writer":     reflect.ValueOf((*csv.Writer)(nil)),
 	}
+	Wrapper["encoding/csv"] = map[string]reflect.Type{}
 }

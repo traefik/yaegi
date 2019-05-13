@@ -43,4 +43,5 @@ func init() {
 		// type definitions
 
 	}
+	Wrapper["math/cmplx"] = map[string]reflect.Type{}
 }

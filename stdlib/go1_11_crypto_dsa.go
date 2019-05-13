@@ -28,4 +28,5 @@ func init() {
 		"PrivateKey":     reflect.ValueOf((*dsa.PrivateKey)(nil)),
 		"PublicKey":      reflect.ValueOf((*dsa.PublicKey)(nil)),
 	}
+	Wrapper["crypto/dsa"] = map[string]reflect.Type{}
 }

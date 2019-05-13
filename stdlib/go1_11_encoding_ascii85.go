@@ -21,4 +21,5 @@ func init() {
 		// type definitions
 		"CorruptInputError": reflect.ValueOf((*ascii85.CorruptInputError)(nil)),
 	}
+	Wrapper["encoding/ascii85"] = map[string]reflect.Type{}
 }

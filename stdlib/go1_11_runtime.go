@@ -61,4 +61,16 @@ func init() {
 		"StackRecord":        reflect.ValueOf((*runtime.StackRecord)(nil)),
 		"TypeAssertionError": reflect.ValueOf((*runtime.TypeAssertionError)(nil)),
 	}
+	Wrapper["runtime"] = map[string]reflect.Type{
+		"Error": reflect.TypeOf((*_runtime_Error)(nil)),
+	}
 }
+
+// _runtime_Error is an interface wrapper for Error type
+type _runtime_Error struct {
+	WError        func() string
+	WRuntimeError func()
+}
+
+func (W _runtime_Error) Error() string { return W.WError() }
+func (W _runtime_Error) RuntimeError() { W.WRuntimeError() }

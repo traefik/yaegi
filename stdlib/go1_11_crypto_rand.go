@@ -20,4 +20,5 @@ func init() {
 		// type definitions
 
 	}
+	Wrapper["crypto/rand"] = map[string]reflect.Type{}
 }

@@ -24,4 +24,5 @@ func init() {
 		// type definitions
 		"Regexp": reflect.ValueOf((*regexp.Regexp)(nil)),
 	}
+	Wrapper["regexp"] = map[string]reflect.Type{}
 }

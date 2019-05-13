@@ -17,4 +17,5 @@ func init() {
 		// type definitions
 		"StructuralError": reflect.ValueOf((*bzip2.StructuralError)(nil)),
 	}
+	Wrapper["compress/bzip2"] = map[string]reflect.Type{}
 }

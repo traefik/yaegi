@@ -21,4 +21,5 @@ func init() {
 		// type definitions
 
 	}
+	Wrapper["os/signal"] = map[string]reflect.Type{}
 }

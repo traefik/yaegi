@@ -236,7 +236,6 @@ func main() {
 	dest := path.Base(dir)
 
 	for _, pkg := range os.Args[1:] {
-		//log.Println("pkg:", pkg)
 		content, err := genContent(dest, pkg)
 		if err != nil {
 			log.Fatal(err)
