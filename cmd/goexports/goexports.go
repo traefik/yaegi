@@ -93,7 +93,7 @@ type Wrap struct {
 func genContent(dest, pkgName string) ([]byte, error) {
 	p, err := importer.For("source", nil).Import(pkgName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get imports: %v", err)
 	}
 
 	prefix := "_" + pkgName + "_"
@@ -173,14 +173,14 @@ func genContent(dest, pkgName string) ([]byte, error) {
 
 	minor, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse version: %v", err)
 	}
 	nextGoVersion := parts[0] + "." + strconv.Itoa(minor+1)
 
 	base := template.New("goexports")
 	parse, err := base.Parse(model)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("template parsing error: %v", err)
 	}
 
 	b := &bytes.Buffer{}
@@ -196,14 +196,14 @@ func genContent(dest, pkgName string) ([]byte, error) {
 	}
 	err = parse.Execute(b, data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("template error: %v", err)
 	}
 
 	//log.Println(string(b.Bytes()))
 	// gofmt
 	source, err := format.Source(b.Bytes())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to format source: %v: %s", err, b.Bytes())
 	}
 	return source, nil
 }
