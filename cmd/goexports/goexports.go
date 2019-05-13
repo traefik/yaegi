@@ -79,12 +79,12 @@ type Val struct {
 	Addr bool   // true if symbol is a Var
 }
 
-// Method store informations for generating interface wrapper method
+// Method store information for generating interface wrapper method
 type Method struct {
 	Name, Param, Result, Arg, Ret string
 }
 
-// Wrap store informations for generating interface wrapper
+// Wrap store information for generating interface wrapper
 type Wrap struct {
 	Name   string
 	Method []Method
@@ -97,9 +97,7 @@ func genContent(dest, pkgName string) ([]byte, error) {
 	}
 
 	prefix := "_" + pkgName + "_"
-	prefix = strings.ReplaceAll(prefix, "/", "_")
-	prefix = strings.ReplaceAll(prefix, "-", "_")
-	prefix = strings.ReplaceAll(prefix, ".", "_")
+	prefix = strings.NewReplacer("/", "_", "-", "_", ".", "_").Replace(prefix)
 
 	typ := map[string]string{}
 	val := map[string]Val{}
@@ -133,7 +131,7 @@ func genContent(dest, pkgName string) ([]byte, error) {
 		case *types.TypeName:
 			typ[name] = pname
 			if t, ok := o.Type().Underlying().(*types.Interface); ok {
-				methods := []Method{}
+				var methods []Method
 				for i := 0; i < t.NumMethods(); i++ {
 					f := t.Method(i)
 					if !f.Exported() {
@@ -199,7 +197,6 @@ func genContent(dest, pkgName string) ([]byte, error) {
 		return nil, fmt.Errorf("template error: %v", err)
 	}
 
-	//log.Println(string(b.Bytes()))
 	// gofmt
 	source, err := format.Source(b.Bytes())
 	if err != nil {
