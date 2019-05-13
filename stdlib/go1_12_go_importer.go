@@ -19,4 +19,5 @@ func init() {
 		// type definitions
 		"Lookup": reflect.ValueOf((*importer.Lookup)(nil)),
 	}
+	Wrapper["go/importer"] = map[string]reflect.Type{}
 }

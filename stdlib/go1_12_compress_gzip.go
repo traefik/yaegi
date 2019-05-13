@@ -28,4 +28,5 @@ func init() {
 		"Reader": reflect.ValueOf((*gzip.Reader)(nil)),
 		"Writer": reflect.ValueOf((*gzip.Writer)(nil)),
 	}
+	Wrapper["compress/gzip"] = map[string]reflect.Type{}
 }

@@ -22,4 +22,5 @@ func init() {
 		"GotConnInfo":      reflect.ValueOf((*httptrace.GotConnInfo)(nil)),
 		"WroteRequestInfo": reflect.ValueOf((*httptrace.WroteRequestInfo)(nil)),
 	}
+	Wrapper["net/http/httptrace"] = map[string]reflect.Type{}
 }

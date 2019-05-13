@@ -26,4 +26,5 @@ func init() {
 		"CorruptInputError": reflect.ValueOf((*base64.CorruptInputError)(nil)),
 		"Encoding":          reflect.ValueOf((*base64.Encoding)(nil)),
 	}
+	Wrapper["encoding/base64"] = map[string]reflect.Type{}
 }

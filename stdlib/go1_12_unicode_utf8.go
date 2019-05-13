@@ -34,4 +34,5 @@ func init() {
 		// type definitions
 
 	}
+	Wrapper["unicode/utf8"] = map[string]reflect.Type{}
 }

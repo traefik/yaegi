@@ -29,4 +29,5 @@ func init() {
 		// type definitions
 
 	}
+	Wrapper["crypto/sha512"] = map[string]reflect.Type{}
 }

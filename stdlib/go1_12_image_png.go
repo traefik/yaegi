@@ -28,4 +28,16 @@ func init() {
 		"FormatError":       reflect.ValueOf((*png.FormatError)(nil)),
 		"UnsupportedError":  reflect.ValueOf((*png.UnsupportedError)(nil)),
 	}
+	Wrapper["image/png"] = map[string]reflect.Type{
+		"EncoderBufferPool": reflect.TypeOf((*_image_png_EncoderBufferPool)(nil)),
+	}
 }
+
+// EncoderBufferPool is an interface wrapper for EncoderBufferPool type
+type _image_png_EncoderBufferPool struct {
+	WGet func() *png.EncoderBuffer
+	WPut func(a0 *png.EncoderBuffer)
+}
+
+func (W _image_png_EncoderBufferPool) Get() *png.EncoderBuffer   { return W.WGet() }
+func (W _image_png_EncoderBufferPool) Put(a0 *png.EncoderBuffer) { W.WPut(a0) }

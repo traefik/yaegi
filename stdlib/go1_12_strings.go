@@ -64,4 +64,5 @@ func init() {
 		"Reader":   reflect.ValueOf((*strings.Reader)(nil)),
 		"Replacer": reflect.ValueOf((*strings.Replacer)(nil)),
 	}
+	Wrapper["strings"] = map[string]reflect.Type{}
 }

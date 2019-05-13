@@ -18,4 +18,5 @@ func init() {
 		// type definitions
 
 	}
+	Wrapper["image/color/palette"] = map[string]reflect.Type{}
 }

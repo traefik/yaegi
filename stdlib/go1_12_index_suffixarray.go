@@ -17,4 +17,5 @@ func init() {
 		// type definitions
 		"Index": reflect.ValueOf((*suffixarray.Index)(nil)),
 	}
+	Wrapper["index/suffixarray"] = map[string]reflect.Type{}
 }

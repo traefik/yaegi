@@ -24,4 +24,16 @@ func init() {
 		"RWMutex":   reflect.ValueOf((*sync.RWMutex)(nil)),
 		"WaitGroup": reflect.ValueOf((*sync.WaitGroup)(nil)),
 	}
+	Wrapper["sync"] = map[string]reflect.Type{
+		"Locker": reflect.TypeOf((*_sync_Locker)(nil)),
+	}
 }
+
+// Locker is an interface wrapper for Locker type
+type _sync_Locker struct {
+	WLock   func()
+	WUnlock func()
+}
+
+func (W _sync_Locker) Lock()   { W.WLock() }
+func (W _sync_Locker) Unlock() { W.WUnlock() }

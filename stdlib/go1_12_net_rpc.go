@@ -40,4 +40,42 @@ func init() {
 		"ServerCodec": reflect.ValueOf((*rpc.ServerCodec)(nil)),
 		"ServerError": reflect.ValueOf((*rpc.ServerError)(nil)),
 	}
+	Wrapper["net/rpc"] = map[string]reflect.Type{
+		"ClientCodec": reflect.TypeOf((*_net_rpc_ClientCodec)(nil)),
+		"ServerCodec": reflect.TypeOf((*_net_rpc_ServerCodec)(nil)),
+	}
+}
+
+// ClientCodec is an interface wrapper for ClientCodec type
+type _net_rpc_ClientCodec struct {
+	WClose              func() error
+	WReadResponseBody   func(a0 interface{}) error
+	WReadResponseHeader func(a0 *rpc.Response) error
+	WWriteRequest       func(a0 *rpc.Request, a1 interface{}) error
+}
+
+func (W _net_rpc_ClientCodec) Close() error                          { return W.WClose() }
+func (W _net_rpc_ClientCodec) ReadResponseBody(a0 interface{}) error { return W.WReadResponseBody(a0) }
+func (W _net_rpc_ClientCodec) ReadResponseHeader(a0 *rpc.Response) error {
+	return W.WReadResponseHeader(a0)
+}
+func (W _net_rpc_ClientCodec) WriteRequest(a0 *rpc.Request, a1 interface{}) error {
+	return W.WWriteRequest(a0, a1)
+}
+
+// ServerCodec is an interface wrapper for ServerCodec type
+type _net_rpc_ServerCodec struct {
+	WClose             func() error
+	WReadRequestBody   func(a0 interface{}) error
+	WReadRequestHeader func(a0 *rpc.Request) error
+	WWriteResponse     func(a0 *rpc.Response, a1 interface{}) error
+}
+
+func (W _net_rpc_ServerCodec) Close() error                         { return W.WClose() }
+func (W _net_rpc_ServerCodec) ReadRequestBody(a0 interface{}) error { return W.WReadRequestBody(a0) }
+func (W _net_rpc_ServerCodec) ReadRequestHeader(a0 *rpc.Request) error {
+	return W.WReadRequestHeader(a0)
+}
+func (W _net_rpc_ServerCodec) WriteResponse(a0 *rpc.Response, a1 interface{}) error {
+	return W.WWriteResponse(a0, a1)
 }

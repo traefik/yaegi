@@ -24,4 +24,5 @@ func init() {
 		"Header":        reflect.ValueOf((*mail.Header)(nil)),
 		"Message":       reflect.ValueOf((*mail.Message)(nil)),
 	}
+	Wrapper["net/mail"] = map[string]reflect.Type{}
 }

@@ -91,4 +91,20 @@ func init() {
 		"RenegotiationSupport":   reflect.ValueOf((*tls.RenegotiationSupport)(nil)),
 		"SignatureScheme":        reflect.ValueOf((*tls.SignatureScheme)(nil)),
 	}
+	Wrapper["crypto/tls"] = map[string]reflect.Type{
+		"ClientSessionCache": reflect.TypeOf((*_crypto_tls_ClientSessionCache)(nil)),
+	}
+}
+
+// ClientSessionCache is an interface wrapper for ClientSessionCache type
+type _crypto_tls_ClientSessionCache struct {
+	WGet func(sessionKey string) (session *tls.ClientSessionState, ok bool)
+	WPut func(sessionKey string, cs *tls.ClientSessionState)
+}
+
+func (W _crypto_tls_ClientSessionCache) Get(sessionKey string) (session *tls.ClientSessionState, ok bool) {
+	return W.WGet(sessionKey)
+}
+func (W _crypto_tls_ClientSessionCache) Put(sessionKey string, cs *tls.ClientSessionState) {
+	W.WPut(sessionKey, cs)
 }

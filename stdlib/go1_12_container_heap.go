@@ -21,4 +21,22 @@ func init() {
 		// type definitions
 		"Interface": reflect.ValueOf((*heap.Interface)(nil)),
 	}
+	Wrapper["container/heap"] = map[string]reflect.Type{
+		"Interface": reflect.TypeOf((*_container_heap_Interface)(nil)),
+	}
 }
+
+// Interface is an interface wrapper for Interface type
+type _container_heap_Interface struct {
+	WLen  func() int
+	WLess func(i int, j int) bool
+	WPop  func() interface{}
+	WPush func(x interface{})
+	WSwap func(i int, j int)
+}
+
+func (W _container_heap_Interface) Len() int               { return W.WLen() }
+func (W _container_heap_Interface) Less(i int, j int) bool { return W.WLess(i, j) }
+func (W _container_heap_Interface) Pop() interface{}       { return W.WPop() }
+func (W _container_heap_Interface) Push(x interface{})     { W.WPush(x) }
+func (W _container_heap_Interface) Swap(i int, j int)      { W.WSwap(i, j) }

@@ -68,4 +68,5 @@ func init() {
 		"Buffer": reflect.ValueOf((*bytes.Buffer)(nil)),
 		"Reader": reflect.ValueOf((*bytes.Reader)(nil)),
 	}
+	Wrapper["bytes"] = map[string]reflect.Type{}
 }

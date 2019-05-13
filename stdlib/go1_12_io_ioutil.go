@@ -24,4 +24,5 @@ func init() {
 		// type definitions
 
 	}
+	Wrapper["io/ioutil"] = map[string]reflect.Type{}
 }

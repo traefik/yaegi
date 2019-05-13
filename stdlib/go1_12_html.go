@@ -18,4 +18,5 @@ func init() {
 		// type definitions
 
 	}
+	Wrapper["html"] = map[string]reflect.Type{}
 }

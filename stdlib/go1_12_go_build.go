@@ -30,4 +30,5 @@ func init() {
 		"NoGoError":            reflect.ValueOf((*build.NoGoError)(nil)),
 		"Package":              reflect.ValueOf((*build.Package)(nil)),
 	}
+	Wrapper["go/build"] = map[string]reflect.Type{}
 }

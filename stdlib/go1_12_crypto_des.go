@@ -19,4 +19,5 @@ func init() {
 		// type definitions
 		"KeySizeError": reflect.ValueOf((*des.KeySizeError)(nil)),
 	}
+	Wrapper["crypto/des"] = map[string]reflect.Type{}
 }

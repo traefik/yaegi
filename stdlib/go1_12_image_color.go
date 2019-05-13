@@ -49,4 +49,22 @@ func init() {
 		"RGBA64":  reflect.ValueOf((*color.RGBA64)(nil)),
 		"YCbCr":   reflect.ValueOf((*color.YCbCr)(nil)),
 	}
+	Wrapper["image/color"] = map[string]reflect.Type{
+		"Color": reflect.TypeOf((*_image_color_Color)(nil)),
+		"Model": reflect.TypeOf((*_image_color_Model)(nil)),
+	}
 }
+
+// Color is an interface wrapper for Color type
+type _image_color_Color struct {
+	WRGBA func() (r uint32, g uint32, b uint32, a uint32)
+}
+
+func (W _image_color_Color) RGBA() (r uint32, g uint32, b uint32, a uint32) { return W.WRGBA() }
+
+// Model is an interface wrapper for Model type
+type _image_color_Model struct {
+	WConvert func(c color.Color) color.Color
+}
+
+func (W _image_color_Model) Convert(c color.Color) color.Color { return W.WConvert(c) }

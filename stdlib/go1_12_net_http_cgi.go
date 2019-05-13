@@ -19,4 +19,5 @@ func init() {
 		// type definitions
 		"Handler": reflect.ValueOf((*cgi.Handler)(nil)),
 	}
+	Wrapper["net/http/cgi"] = map[string]reflect.Type{}
 }

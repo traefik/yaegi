@@ -19,4 +19,18 @@ func init() {
 		"Options":          reflect.ValueOf((*cookiejar.Options)(nil)),
 		"PublicSuffixList": reflect.ValueOf((*cookiejar.PublicSuffixList)(nil)),
 	}
+	Wrapper["net/http/cookiejar"] = map[string]reflect.Type{
+		"PublicSuffixList": reflect.TypeOf((*_net_http_cookiejar_PublicSuffixList)(nil)),
+	}
 }
+
+// PublicSuffixList is an interface wrapper for PublicSuffixList type
+type _net_http_cookiejar_PublicSuffixList struct {
+	WPublicSuffix func(domain string) string
+	WString       func() string
+}
+
+func (W _net_http_cookiejar_PublicSuffixList) PublicSuffix(domain string) string {
+	return W.WPublicSuffix(domain)
+}
+func (W _net_http_cookiejar_PublicSuffixList) String() string { return W.WString() }

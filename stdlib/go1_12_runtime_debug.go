@@ -29,4 +29,5 @@ func init() {
 		"GCStats":   reflect.ValueOf((*debug.GCStats)(nil)),
 		"Module":    reflect.ValueOf((*debug.Module)(nil)),
 	}
+	Wrapper["runtime/debug"] = map[string]reflect.Type{}
 }

@@ -44,4 +44,5 @@ func init() {
 		"Reader": reflect.ValueOf((*tar.Reader)(nil)),
 		"Writer": reflect.ValueOf((*tar.Writer)(nil)),
 	}
+	Wrapper["archive/tar"] = map[string]reflect.Type{}
 }

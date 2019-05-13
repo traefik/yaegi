@@ -22,4 +22,5 @@ func init() {
 		"Mode":         reflect.ValueOf((*scanner.Mode)(nil)),
 		"Scanner":      reflect.ValueOf((*scanner.Scanner)(nil)),
 	}
+	Wrapper["go/scanner"] = map[string]reflect.Type{}
 }

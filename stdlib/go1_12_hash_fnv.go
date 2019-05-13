@@ -22,4 +22,5 @@ func init() {
 		// type definitions
 
 	}
+	Wrapper["hash/fnv"] = map[string]reflect.Type{}
 }

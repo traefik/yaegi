@@ -50,4 +50,5 @@ func init() {
 		"Template":  reflect.ValueOf((*template.Template)(nil)),
 		"URL":       reflect.ValueOf((*template.URL)(nil)),
 	}
+	Wrapper["html/template"] = map[string]reflect.Type{}
 }

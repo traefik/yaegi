@@ -7,6 +7,7 @@ package stdlib
 import (
 	"os"
 	"reflect"
+	"time"
 )
 
 func init() {
@@ -119,4 +120,34 @@ func init() {
 		"Signal":       reflect.ValueOf((*os.Signal)(nil)),
 		"SyscallError": reflect.ValueOf((*os.SyscallError)(nil)),
 	}
+	Wrapper["os"] = map[string]reflect.Type{
+		"FileInfo": reflect.TypeOf((*_os_FileInfo)(nil)),
+		"Signal":   reflect.TypeOf((*_os_Signal)(nil)),
+	}
 }
+
+// FileInfo is an interface wrapper for FileInfo type
+type _os_FileInfo struct {
+	WIsDir   func() bool
+	WModTime func() time.Time
+	WMode    func() os.FileMode
+	WName    func() string
+	WSize    func() int64
+	WSys     func() interface{}
+}
+
+func (W _os_FileInfo) IsDir() bool        { return W.WIsDir() }
+func (W _os_FileInfo) ModTime() time.Time { return W.WModTime() }
+func (W _os_FileInfo) Mode() os.FileMode  { return W.WMode() }
+func (W _os_FileInfo) Name() string       { return W.WName() }
+func (W _os_FileInfo) Size() int64        { return W.WSize() }
+func (W _os_FileInfo) Sys() interface{}   { return W.WSys() }
+
+// Signal is an interface wrapper for Signal type
+type _os_Signal struct {
+	WSignal func()
+	WString func() string
+}
+
+func (W _os_Signal) Signal()        { W.WSignal() }
+func (W _os_Signal) String() string { return W.WString() }

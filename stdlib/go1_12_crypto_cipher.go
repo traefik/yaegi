@@ -30,4 +30,54 @@ func init() {
 		"StreamReader": reflect.ValueOf((*cipher.StreamReader)(nil)),
 		"StreamWriter": reflect.ValueOf((*cipher.StreamWriter)(nil)),
 	}
+	Wrapper["crypto/cipher"] = map[string]reflect.Type{
+		"AEAD":      reflect.TypeOf((*_crypto_cipher_AEAD)(nil)),
+		"Block":     reflect.TypeOf((*_crypto_cipher_Block)(nil)),
+		"BlockMode": reflect.TypeOf((*_crypto_cipher_BlockMode)(nil)),
+		"Stream":    reflect.TypeOf((*_crypto_cipher_Stream)(nil)),
+	}
 }
+
+// AEAD is an interface wrapper for AEAD type
+type _crypto_cipher_AEAD struct {
+	WNonceSize func() int
+	WOpen      func(dst []byte, nonce []byte, ciphertext []byte, additionalData []byte) ([]byte, error)
+	WOverhead  func() int
+	WSeal      func(dst []byte, nonce []byte, plaintext []byte, additionalData []byte) []byte
+}
+
+func (W _crypto_cipher_AEAD) NonceSize() int { return W.WNonceSize() }
+func (W _crypto_cipher_AEAD) Open(dst []byte, nonce []byte, ciphertext []byte, additionalData []byte) ([]byte, error) {
+	return W.WOpen(dst, nonce, ciphertext, additionalData)
+}
+func (W _crypto_cipher_AEAD) Overhead() int { return W.WOverhead() }
+func (W _crypto_cipher_AEAD) Seal(dst []byte, nonce []byte, plaintext []byte, additionalData []byte) []byte {
+	return W.WSeal(dst, nonce, plaintext, additionalData)
+}
+
+// Block is an interface wrapper for Block type
+type _crypto_cipher_Block struct {
+	WBlockSize func() int
+	WDecrypt   func(dst []byte, src []byte)
+	WEncrypt   func(dst []byte, src []byte)
+}
+
+func (W _crypto_cipher_Block) BlockSize() int                 { return W.WBlockSize() }
+func (W _crypto_cipher_Block) Decrypt(dst []byte, src []byte) { W.WDecrypt(dst, src) }
+func (W _crypto_cipher_Block) Encrypt(dst []byte, src []byte) { W.WEncrypt(dst, src) }
+
+// BlockMode is an interface wrapper for BlockMode type
+type _crypto_cipher_BlockMode struct {
+	WBlockSize   func() int
+	WCryptBlocks func(dst []byte, src []byte)
+}
+
+func (W _crypto_cipher_BlockMode) BlockSize() int                     { return W.WBlockSize() }
+func (W _crypto_cipher_BlockMode) CryptBlocks(dst []byte, src []byte) { W.WCryptBlocks(dst, src) }
+
+// Stream is an interface wrapper for Stream type
+type _crypto_cipher_Stream struct {
+	WXORKeyStream func(dst []byte, src []byte)
+}
+
+func (W _crypto_cipher_Stream) XORKeyStream(dst []byte, src []byte) { W.WXORKeyStream(dst, src) }

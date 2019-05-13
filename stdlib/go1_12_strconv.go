@@ -50,4 +50,5 @@ func init() {
 		// type definitions
 		"NumError": reflect.ValueOf((*strconv.NumError)(nil)),
 	}
+	Wrapper["strconv"] = map[string]reflect.Type{}
 }

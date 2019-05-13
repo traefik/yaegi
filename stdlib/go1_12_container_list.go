@@ -18,4 +18,5 @@ func init() {
 		"Element": reflect.ValueOf((*list.Element)(nil)),
 		"List":    reflect.ValueOf((*list.List)(nil)),
 	}
+	Wrapper["container/list"] = map[string]reflect.Type{}
 }

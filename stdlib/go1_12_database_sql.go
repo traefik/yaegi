@@ -50,4 +50,24 @@ func init() {
 		"Tx":             reflect.ValueOf((*sql.Tx)(nil)),
 		"TxOptions":      reflect.ValueOf((*sql.TxOptions)(nil)),
 	}
+	Wrapper["database/sql"] = map[string]reflect.Type{
+		"Result":  reflect.TypeOf((*_database_sql_Result)(nil)),
+		"Scanner": reflect.TypeOf((*_database_sql_Scanner)(nil)),
+	}
 }
+
+// Result is an interface wrapper for Result type
+type _database_sql_Result struct {
+	WLastInsertId func() (int64, error)
+	WRowsAffected func() (int64, error)
+}
+
+func (W _database_sql_Result) LastInsertId() (int64, error) { return W.WLastInsertId() }
+func (W _database_sql_Result) RowsAffected() (int64, error) { return W.WRowsAffected() }
+
+// Scanner is an interface wrapper for Scanner type
+type _database_sql_Scanner struct {
+	WScan func(src interface{}) error
+}
+
+func (W _database_sql_Scanner) Scan(src interface{}) error { return W.WScan(src) }

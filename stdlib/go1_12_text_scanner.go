@@ -36,4 +36,5 @@ func init() {
 		"Position": reflect.ValueOf((*scanner.Position)(nil)),
 		"Scanner":  reflect.ValueOf((*scanner.Scanner)(nil)),
 	}
+	Wrapper["text/scanner"] = map[string]reflect.Type{}
 }

@@ -23,4 +23,20 @@ func init() {
 		"Client":     reflect.ValueOf((*smtp.Client)(nil)),
 		"ServerInfo": reflect.ValueOf((*smtp.ServerInfo)(nil)),
 	}
+	Wrapper["net/smtp"] = map[string]reflect.Type{
+		"Auth": reflect.TypeOf((*_net_smtp_Auth)(nil)),
+	}
+}
+
+// Auth is an interface wrapper for Auth type
+type _net_smtp_Auth struct {
+	WNext  func(fromServer []byte, more bool) (toServer []byte, err error)
+	WStart func(server *smtp.ServerInfo) (proto string, toServer []byte, err error)
+}
+
+func (W _net_smtp_Auth) Next(fromServer []byte, more bool) (toServer []byte, err error) {
+	return W.WNext(fromServer, more)
+}
+func (W _net_smtp_Auth) Start(server *smtp.ServerInfo) (proto string, toServer []byte, err error) {
+	return W.WStart(server)
 }

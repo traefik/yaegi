@@ -19,4 +19,5 @@ func init() {
 		// type definitions
 
 	}
+	Wrapper["hash/adler32"] = map[string]reflect.Type{}
 }

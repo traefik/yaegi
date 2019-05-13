@@ -22,4 +22,5 @@ func init() {
 		"Error":     reflect.ValueOf((*exec.Error)(nil)),
 		"ExitError": reflect.ValueOf((*exec.ExitError)(nil)),
 	}
+	Wrapper["os/exec"] = map[string]reflect.Type{}
 }

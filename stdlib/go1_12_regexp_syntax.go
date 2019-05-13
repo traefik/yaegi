@@ -91,4 +91,5 @@ func init() {
 		"Prog":      reflect.ValueOf((*syntax.Prog)(nil)),
 		"Regexp":    reflect.ValueOf((*syntax.Regexp)(nil)),
 	}
+	Wrapper["regexp/syntax"] = map[string]reflect.Type{}
 }

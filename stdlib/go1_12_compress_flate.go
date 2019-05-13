@@ -6,6 +6,7 @@ package stdlib
 
 import (
 	"compress/flate"
+	"io"
 	"reflect"
 )
 
@@ -31,4 +32,24 @@ func init() {
 		"WriteError":        reflect.ValueOf((*flate.WriteError)(nil)),
 		"Writer":            reflect.ValueOf((*flate.Writer)(nil)),
 	}
+	Wrapper["compress/flate"] = map[string]reflect.Type{
+		"Reader":   reflect.TypeOf((*_compress_flate_Reader)(nil)),
+		"Resetter": reflect.TypeOf((*_compress_flate_Resetter)(nil)),
+	}
 }
+
+// Reader is an interface wrapper for Reader type
+type _compress_flate_Reader struct {
+	WRead     func(p []byte) (n int, err error)
+	WReadByte func() (byte, error)
+}
+
+func (W _compress_flate_Reader) Read(p []byte) (n int, err error) { return W.WRead(p) }
+func (W _compress_flate_Reader) ReadByte() (byte, error)          { return W.WReadByte() }
+
+// Resetter is an interface wrapper for Resetter type
+type _compress_flate_Resetter struct {
+	WReset func(r io.Reader, dict []byte) error
+}
+
+func (W _compress_flate_Resetter) Reset(r io.Reader, dict []byte) error { return W.WReset(r, dict) }

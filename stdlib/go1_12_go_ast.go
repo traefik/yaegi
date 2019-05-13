@@ -6,6 +6,7 @@ package stdlib
 
 import (
 	"go/ast"
+	"go/token"
 	"reflect"
 )
 
@@ -115,4 +116,64 @@ func init() {
 		"ValueSpec":      reflect.ValueOf((*ast.ValueSpec)(nil)),
 		"Visitor":        reflect.ValueOf((*ast.Visitor)(nil)),
 	}
+	Wrapper["go/ast"] = map[string]reflect.Type{
+		"Decl":    reflect.TypeOf((*_go_ast_Decl)(nil)),
+		"Expr":    reflect.TypeOf((*_go_ast_Expr)(nil)),
+		"Node":    reflect.TypeOf((*_go_ast_Node)(nil)),
+		"Spec":    reflect.TypeOf((*_go_ast_Spec)(nil)),
+		"Stmt":    reflect.TypeOf((*_go_ast_Stmt)(nil)),
+		"Visitor": reflect.TypeOf((*_go_ast_Visitor)(nil)),
+	}
 }
+
+// Decl is an interface wrapper for Decl type
+type _go_ast_Decl struct {
+	WEnd func() token.Pos
+	WPos func() token.Pos
+}
+
+func (W _go_ast_Decl) End() token.Pos { return W.WEnd() }
+func (W _go_ast_Decl) Pos() token.Pos { return W.WPos() }
+
+// Expr is an interface wrapper for Expr type
+type _go_ast_Expr struct {
+	WEnd func() token.Pos
+	WPos func() token.Pos
+}
+
+func (W _go_ast_Expr) End() token.Pos { return W.WEnd() }
+func (W _go_ast_Expr) Pos() token.Pos { return W.WPos() }
+
+// Node is an interface wrapper for Node type
+type _go_ast_Node struct {
+	WEnd func() token.Pos
+	WPos func() token.Pos
+}
+
+func (W _go_ast_Node) End() token.Pos { return W.WEnd() }
+func (W _go_ast_Node) Pos() token.Pos { return W.WPos() }
+
+// Spec is an interface wrapper for Spec type
+type _go_ast_Spec struct {
+	WEnd func() token.Pos
+	WPos func() token.Pos
+}
+
+func (W _go_ast_Spec) End() token.Pos { return W.WEnd() }
+func (W _go_ast_Spec) Pos() token.Pos { return W.WPos() }
+
+// Stmt is an interface wrapper for Stmt type
+type _go_ast_Stmt struct {
+	WEnd func() token.Pos
+	WPos func() token.Pos
+}
+
+func (W _go_ast_Stmt) End() token.Pos { return W.WEnd() }
+func (W _go_ast_Stmt) Pos() token.Pos { return W.WPos() }
+
+// Visitor is an interface wrapper for Visitor type
+type _go_ast_Visitor struct {
+	WVisit func(node ast.Node) (w ast.Visitor)
+}
+
+func (W _go_ast_Visitor) Visit(node ast.Node) (w ast.Visitor) { return W.WVisit(node) }

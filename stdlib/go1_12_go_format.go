@@ -18,4 +18,5 @@ func init() {
 		// type definitions
 
 	}
+	Wrapper["go/format"] = map[string]reflect.Type{}
 }

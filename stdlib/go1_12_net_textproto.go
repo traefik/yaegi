@@ -29,4 +29,5 @@ func init() {
 		"Reader":        reflect.ValueOf((*textproto.Reader)(nil)),
 		"Writer":        reflect.ValueOf((*textproto.Writer)(nil)),
 	}
+	Wrapper["net/textproto"] = map[string]reflect.Type{}
 }

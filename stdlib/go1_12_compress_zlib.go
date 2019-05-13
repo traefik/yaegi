@@ -6,6 +6,7 @@ package stdlib
 
 import (
 	"compress/zlib"
+	"io"
 	"reflect"
 )
 
@@ -30,4 +31,14 @@ func init() {
 		"Resetter": reflect.ValueOf((*zlib.Resetter)(nil)),
 		"Writer":   reflect.ValueOf((*zlib.Writer)(nil)),
 	}
+	Wrapper["compress/zlib"] = map[string]reflect.Type{
+		"Resetter": reflect.TypeOf((*_compress_zlib_Resetter)(nil)),
+	}
 }
+
+// Resetter is an interface wrapper for Resetter type
+type _compress_zlib_Resetter struct {
+	WReset func(r io.Reader, dict []byte) error
+}
+
+func (W _compress_zlib_Resetter) Reset(r io.Reader, dict []byte) error { return W.WReset(r, dict) }
