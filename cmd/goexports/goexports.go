@@ -243,8 +243,8 @@ func main() {
 
 		var oFile string
 		if pkg == "syscall" {
-			os, arch := os.Getenv("GOOS"), os.Getenv("GOARCH")
-			oFile = strings.Replace(pkg, "/", "_", -1) + "_" + os + "_" + arch + ".go"
+			goos, arch := os.Getenv("GOOS"), os.Getenv("GOARCH")
+			oFile = strings.Replace(pkg, "/", "_", -1) + "_" + goos + "_" + arch + ".go"
 		} else {
 			oFile = strings.Replace(pkg, "/", "_", -1) + ".go"
 		}
