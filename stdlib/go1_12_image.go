@@ -72,7 +72,7 @@ func init() {
 	}
 }
 
-// Image is an interface wrapper for Image type
+// _image_Image is an interface wrapper for Image type
 type _image_Image struct {
 	WAt         func(x int, y int) color.Color
 	WBounds     func() image.Rectangle
@@ -83,7 +83,7 @@ func (W _image_Image) At(x int, y int) color.Color { return W.WAt(x, y) }
 func (W _image_Image) Bounds() image.Rectangle     { return W.WBounds() }
 func (W _image_Image) ColorModel() color.Model     { return W.WColorModel() }
 
-// PalettedImage is an interface wrapper for PalettedImage type
+// _image_PalettedImage is an interface wrapper for PalettedImage type
 type _image_PalettedImage struct {
 	WAt           func(x int, y int) color.Color
 	WBounds       func() image.Rectangle

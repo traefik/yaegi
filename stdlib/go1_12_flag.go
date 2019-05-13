@@ -62,7 +62,7 @@ func init() {
 	}
 }
 
-// Getter is an interface wrapper for Getter type
+// _flag_Getter is an interface wrapper for Getter type
 type _flag_Getter struct {
 	WGet    func() interface{}
 	WSet    func(a0 string) error
@@ -73,7 +73,7 @@ func (W _flag_Getter) Get() interface{}    { return W.WGet() }
 func (W _flag_Getter) Set(a0 string) error { return W.WSet(a0) }
 func (W _flag_Getter) String() string      { return W.WString() }
 
-// Value is an interface wrapper for Value type
+// _flag_Value is an interface wrapper for Value type
 type _flag_Value struct {
 	WSet    func(a0 string) error
 	WString func() string

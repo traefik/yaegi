@@ -30,14 +30,14 @@ func init() {
 	}
 }
 
-// GobDecoder is an interface wrapper for GobDecoder type
+// _encoding_gob_GobDecoder is an interface wrapper for GobDecoder type
 type _encoding_gob_GobDecoder struct {
 	WGobDecode func(a0 []byte) error
 }
 
 func (W _encoding_gob_GobDecoder) GobDecode(a0 []byte) error { return W.WGobDecode(a0) }
 
-// GobEncoder is an interface wrapper for GobEncoder type
+// _encoding_gob_GobEncoder is an interface wrapper for GobEncoder type
 type _encoding_gob_GobEncoder struct {
 	WGobEncode func() ([]byte, error)
 }

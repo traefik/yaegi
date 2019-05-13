@@ -25,7 +25,7 @@ func init() {
 	}
 }
 
-// Hash is an interface wrapper for Hash type
+// _hash_Hash is an interface wrapper for Hash type
 type _hash_Hash struct {
 	WBlockSize func() int
 	WReset     func()
@@ -40,7 +40,7 @@ func (W _hash_Hash) Size() int                         { return W.WSize() }
 func (W _hash_Hash) Sum(b []byte) []byte               { return W.WSum(b) }
 func (W _hash_Hash) Write(p []byte) (n int, err error) { return W.WWrite(p) }
 
-// Hash32 is an interface wrapper for Hash32 type
+// _hash_Hash32 is an interface wrapper for Hash32 type
 type _hash_Hash32 struct {
 	WBlockSize func() int
 	WReset     func()
@@ -57,7 +57,7 @@ func (W _hash_Hash32) Sum(b []byte) []byte               { return W.WSum(b) }
 func (W _hash_Hash32) Sum32() uint32                     { return W.WSum32() }
 func (W _hash_Hash32) Write(p []byte) (n int, err error) { return W.WWrite(p) }
 
-// Hash64 is an interface wrapper for Hash64 type
+// _hash_Hash64 is an interface wrapper for Hash64 type
 type _hash_Hash64 struct {
 	WBlockSize func() int
 	WReset     func()

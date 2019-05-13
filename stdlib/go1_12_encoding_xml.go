@@ -57,7 +57,7 @@ func init() {
 	}
 }
 
-// Marshaler is an interface wrapper for Marshaler type
+// _encoding_xml_Marshaler is an interface wrapper for Marshaler type
 type _encoding_xml_Marshaler struct {
 	WMarshalXML func(e *xml.Encoder, start xml.StartElement) error
 }
@@ -66,7 +66,7 @@ func (W _encoding_xml_Marshaler) MarshalXML(e *xml.Encoder, start xml.StartEleme
 	return W.WMarshalXML(e, start)
 }
 
-// MarshalerAttr is an interface wrapper for MarshalerAttr type
+// _encoding_xml_MarshalerAttr is an interface wrapper for MarshalerAttr type
 type _encoding_xml_MarshalerAttr struct {
 	WMarshalXMLAttr func(name xml.Name) (xml.Attr, error)
 }
@@ -75,18 +75,18 @@ func (W _encoding_xml_MarshalerAttr) MarshalXMLAttr(name xml.Name) (xml.Attr, er
 	return W.WMarshalXMLAttr(name)
 }
 
-// Token is an interface wrapper for Token type
+// _encoding_xml_Token is an interface wrapper for Token type
 type _encoding_xml_Token struct {
 }
 
-// TokenReader is an interface wrapper for TokenReader type
+// _encoding_xml_TokenReader is an interface wrapper for TokenReader type
 type _encoding_xml_TokenReader struct {
 	WToken func() (xml.Token, error)
 }
 
 func (W _encoding_xml_TokenReader) Token() (xml.Token, error) { return W.WToken() }
 
-// Unmarshaler is an interface wrapper for Unmarshaler type
+// _encoding_xml_Unmarshaler is an interface wrapper for Unmarshaler type
 type _encoding_xml_Unmarshaler struct {
 	WUnmarshalXML func(d *xml.Decoder, start xml.StartElement) error
 }
@@ -95,7 +95,7 @@ func (W _encoding_xml_Unmarshaler) UnmarshalXML(d *xml.Decoder, start xml.StartE
 	return W.WUnmarshalXML(d, start)
 }
 
-// UnmarshalerAttr is an interface wrapper for UnmarshalerAttr type
+// _encoding_xml_UnmarshalerAttr is an interface wrapper for UnmarshalerAttr type
 type _encoding_xml_UnmarshalerAttr struct {
 	WUnmarshalXMLAttr func(attr xml.Attr) error
 }

@@ -159,14 +159,14 @@ func init() {
 	}
 }
 
-// Importer is an interface wrapper for Importer type
+// _go_types_Importer is an interface wrapper for Importer type
 type _go_types_Importer struct {
 	WImport func(path string) (*types.Package, error)
 }
 
 func (W _go_types_Importer) Import(path string) (*types.Package, error) { return W.WImport(path) }
 
-// ImporterFrom is an interface wrapper for ImporterFrom type
+// _go_types_ImporterFrom is an interface wrapper for ImporterFrom type
 type _go_types_ImporterFrom struct {
 	WImport     func(path string) (*types.Package, error)
 	WImportFrom func(path string, dir string, mode types.ImportMode) (*types.Package, error)
@@ -177,7 +177,7 @@ func (W _go_types_ImporterFrom) ImportFrom(path string, dir string, mode types.I
 	return W.WImportFrom(path, dir, mode)
 }
 
-// Object is an interface wrapper for Object type
+// _go_types_Object is an interface wrapper for Object type
 type _go_types_Object struct {
 	WExported func() bool
 	WId       func() string
@@ -198,7 +198,7 @@ func (W _go_types_Object) Pos() token.Pos       { return W.WPos() }
 func (W _go_types_Object) String() string       { return W.WString() }
 func (W _go_types_Object) Type() types.Type     { return W.WType() }
 
-// Sizes is an interface wrapper for Sizes type
+// _go_types_Sizes is an interface wrapper for Sizes type
 type _go_types_Sizes struct {
 	WAlignof   func(T types.Type) int64
 	WOffsetsof func(fields []*types.Var) []int64
@@ -209,7 +209,7 @@ func (W _go_types_Sizes) Alignof(T types.Type) int64            { return W.WAlig
 func (W _go_types_Sizes) Offsetsof(fields []*types.Var) []int64 { return W.WOffsetsof(fields) }
 func (W _go_types_Sizes) Sizeof(T types.Type) int64             { return W.WSizeof(T) }
 
-// Type is an interface wrapper for Type type
+// _go_types_Type is an interface wrapper for Type type
 type _go_types_Type struct {
 	WString     func() string
 	WUnderlying func() types.Type

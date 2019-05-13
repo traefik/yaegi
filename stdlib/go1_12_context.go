@@ -31,7 +31,7 @@ func init() {
 	}
 }
 
-// Context is an interface wrapper for Context type
+// _context_Context is an interface wrapper for Context type
 type _context_Context struct {
 	WDeadline func() (deadline time.Time, ok bool)
 	WDone     func() <-chan struct{}

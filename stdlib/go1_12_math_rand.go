@@ -44,7 +44,7 @@ func init() {
 	}
 }
 
-// Source is an interface wrapper for Source type
+// _math_rand_Source is an interface wrapper for Source type
 type _math_rand_Source struct {
 	WInt63 func() int64
 	WSeed  func(seed int64)
@@ -53,7 +53,7 @@ type _math_rand_Source struct {
 func (W _math_rand_Source) Int63() int64    { return W.WInt63() }
 func (W _math_rand_Source) Seed(seed int64) { W.WSeed(seed) }
 
-// Source64 is an interface wrapper for Source64 type
+// _math_rand_Source64 is an interface wrapper for Source64 type
 type _math_rand_Source64 struct {
 	WInt63  func() int64
 	WSeed   func(seed int64)

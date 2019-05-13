@@ -35,7 +35,7 @@ func init() {
 	}
 }
 
-// ByteOrder is an interface wrapper for ByteOrder type
+// _encoding_binary_ByteOrder is an interface wrapper for ByteOrder type
 type _encoding_binary_ByteOrder struct {
 	WPutUint16 func(a0 []byte, a1 uint16)
 	WPutUint32 func(a0 []byte, a1 uint32)

@@ -28,7 +28,7 @@ func init() {
 	}
 }
 
-// Reader is an interface wrapper for Reader type
+// _image_jpeg_Reader is an interface wrapper for Reader type
 type _image_jpeg_Reader struct {
 	WRead     func(p []byte) (n int, err error)
 	WReadByte func() (byte, error)

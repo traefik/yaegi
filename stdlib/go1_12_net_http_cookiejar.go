@@ -24,7 +24,7 @@ func init() {
 	}
 }
 
-// PublicSuffixList is an interface wrapper for PublicSuffixList type
+// _net_http_cookiejar_PublicSuffixList is an interface wrapper for PublicSuffixList type
 type _net_http_cookiejar_PublicSuffixList struct {
 	WPublicSuffix func(domain string) string
 	WString       func() string

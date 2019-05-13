@@ -65,7 +65,7 @@ func init() {
 	}
 }
 
-// Node is an interface wrapper for Node type
+// _text_template_parse_Node is an interface wrapper for Node type
 type _text_template_parse_Node struct {
 	WCopy     func() parse.Node
 	WPosition func() parse.Pos

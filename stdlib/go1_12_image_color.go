@@ -55,14 +55,14 @@ func init() {
 	}
 }
 
-// Color is an interface wrapper for Color type
+// _image_color_Color is an interface wrapper for Color type
 type _image_color_Color struct {
 	WRGBA func() (r uint32, g uint32, b uint32, a uint32)
 }
 
 func (W _image_color_Color) RGBA() (r uint32, g uint32, b uint32, a uint32) { return W.WRGBA() }
 
-// Model is an interface wrapper for Model type
+// _image_color_Model is an interface wrapper for Model type
 type _image_color_Model struct {
 	WConvert func(c color.Color) color.Color
 }

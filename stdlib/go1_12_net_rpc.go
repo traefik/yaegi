@@ -46,7 +46,7 @@ func init() {
 	}
 }
 
-// ClientCodec is an interface wrapper for ClientCodec type
+// _net_rpc_ClientCodec is an interface wrapper for ClientCodec type
 type _net_rpc_ClientCodec struct {
 	WClose              func() error
 	WReadResponseBody   func(a0 interface{}) error
@@ -63,7 +63,7 @@ func (W _net_rpc_ClientCodec) WriteRequest(a0 *rpc.Request, a1 interface{}) erro
 	return W.WWriteRequest(a0, a1)
 }
 
-// ServerCodec is an interface wrapper for ServerCodec type
+// _net_rpc_ServerCodec is an interface wrapper for ServerCodec type
 type _net_rpc_ServerCodec struct {
 	WClose             func() error
 	WReadRequestBody   func(a0 interface{}) error

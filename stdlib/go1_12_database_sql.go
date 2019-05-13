@@ -56,7 +56,7 @@ func init() {
 	}
 }
 
-// Result is an interface wrapper for Result type
+// _database_sql_Result is an interface wrapper for Result type
 type _database_sql_Result struct {
 	WLastInsertId func() (int64, error)
 	WRowsAffected func() (int64, error)
@@ -65,7 +65,7 @@ type _database_sql_Result struct {
 func (W _database_sql_Result) LastInsertId() (int64, error) { return W.WLastInsertId() }
 func (W _database_sql_Result) RowsAffected() (int64, error) { return W.WRowsAffected() }
 
-// Scanner is an interface wrapper for Scanner type
+// _database_sql_Scanner is an interface wrapper for Scanner type
 type _database_sql_Scanner struct {
 	WScan func(src interface{}) error
 }

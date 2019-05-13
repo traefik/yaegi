@@ -66,7 +66,7 @@ func init() {
 	}
 }
 
-// Error is an interface wrapper for Error type
+// _runtime_Error is an interface wrapper for Error type
 type _runtime_Error struct {
 	WError        func() string
 	WRuntimeError func()

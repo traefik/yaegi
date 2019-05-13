@@ -57,7 +57,7 @@ func init() {
 	}
 }
 
-// Value is an interface wrapper for Value type
+// _go_constant_Value is an interface wrapper for Value type
 type _go_constant_Value struct {
 	WExactString func() string
 	WKind        func() constant.Kind

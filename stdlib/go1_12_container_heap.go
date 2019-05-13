@@ -26,7 +26,7 @@ func init() {
 	}
 }
 
-// Interface is an interface wrapper for Interface type
+// _container_heap_Interface is an interface wrapper for Interface type
 type _container_heap_Interface struct {
 	WLen  func() int
 	WLess func(i int, j int) bool

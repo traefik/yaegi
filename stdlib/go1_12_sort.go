@@ -41,7 +41,7 @@ func init() {
 	}
 }
 
-// Interface is an interface wrapper for Interface type
+// _sort_Interface is an interface wrapper for Interface type
 type _sort_Interface struct {
 	WLen  func() int
 	WLess func(i int, j int) bool

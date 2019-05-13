@@ -33,7 +33,7 @@ func init() {
 	}
 }
 
-// Drawer is an interface wrapper for Drawer type
+// _image_draw_Drawer is an interface wrapper for Drawer type
 type _image_draw_Drawer struct {
 	WDraw func(dst draw.Image, r image.Rectangle, src image.Image, sp image.Point)
 }
@@ -42,7 +42,7 @@ func (W _image_draw_Drawer) Draw(dst draw.Image, r image.Rectangle, src image.Im
 	W.WDraw(dst, r, src, sp)
 }
 
-// Image is an interface wrapper for Image type
+// _image_draw_Image is an interface wrapper for Image type
 type _image_draw_Image struct {
 	WAt         func(x int, y int) color.Color
 	WBounds     func() image.Rectangle
@@ -55,7 +55,7 @@ func (W _image_draw_Image) Bounds() image.Rectangle         { return W.WBounds()
 func (W _image_draw_Image) ColorModel() color.Model         { return W.WColorModel() }
 func (W _image_draw_Image) Set(x int, y int, c color.Color) { W.WSet(x, y, c) }
 
-// Quantizer is an interface wrapper for Quantizer type
+// _image_draw_Quantizer is an interface wrapper for Quantizer type
 type _image_draw_Quantizer struct {
 	WQuantize func(p color.Palette, m image.Image) color.Palette
 }

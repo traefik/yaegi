@@ -35,7 +35,7 @@ func init() {
 	}
 }
 
-// Var is an interface wrapper for Var type
+// _expvar_Var is an interface wrapper for Var type
 type _expvar_Var struct {
 	WString func() string
 }
