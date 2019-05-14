@@ -17,4 +17,5 @@ func init() {
 		// type definitions
 		"Ring": reflect.ValueOf((*ring.Ring)(nil)),
 	}
+	Wrapper["container/ring"] = map[string]reflect.Type{}
 }

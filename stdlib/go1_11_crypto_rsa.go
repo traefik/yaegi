@@ -38,4 +38,5 @@ func init() {
 		"PrivateKey":             reflect.ValueOf((*rsa.PrivateKey)(nil)),
 		"PublicKey":              reflect.ValueOf((*rsa.PublicKey)(nil)),
 	}
+	Wrapper["crypto/rsa"] = map[string]reflect.Type{}
 }

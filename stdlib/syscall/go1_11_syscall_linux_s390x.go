@@ -2509,4 +2509,31 @@ func init() {
 		"Utsname":              reflect.ValueOf((*syscall.Utsname)(nil)),
 		"WaitStatus":           reflect.ValueOf((*syscall.WaitStatus)(nil)),
 	}
+	Wrapper["syscall"] = map[string]reflect.Type{
+		"Conn":     reflect.TypeOf((*_syscall_Conn)(nil)),
+		"RawConn":  reflect.TypeOf((*_syscall_RawConn)(nil)),
+		"Sockaddr": reflect.TypeOf((*_syscall_Sockaddr)(nil)),
+	}
+}
+
+// _syscall_Conn is an interface wrapper for Conn type
+type _syscall_Conn struct {
+	WSyscallConn func() (syscall.RawConn, error)
+}
+
+func (W _syscall_Conn) SyscallConn() (syscall.RawConn, error) { return W.WSyscallConn() }
+
+// _syscall_RawConn is an interface wrapper for RawConn type
+type _syscall_RawConn struct {
+	WControl func(f func(fd uintptr)) error
+	WRead    func(f func(fd uintptr) (done bool)) error
+	WWrite   func(f func(fd uintptr) (done bool)) error
+}
+
+func (W _syscall_RawConn) Control(f func(fd uintptr)) error           { return W.WControl(f) }
+func (W _syscall_RawConn) Read(f func(fd uintptr) (done bool)) error  { return W.WRead(f) }
+func (W _syscall_RawConn) Write(f func(fd uintptr) (done bool)) error { return W.WWrite(f) }
+
+// _syscall_Sockaddr is an interface wrapper for Sockaddr type
+type _syscall_Sockaddr struct {
 }

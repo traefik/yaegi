@@ -39,4 +39,5 @@ func init() {
 		// type definitions
 		"Logger": reflect.ValueOf((*log.Logger)(nil)),
 	}
+	Wrapper["log"] = map[string]reflect.Type{}
 }

@@ -21,4 +21,5 @@ func init() {
 		// type definitions
 
 	}
+	Wrapper["net/rpc/jsonrpc"] = map[string]reflect.Type{}
 }

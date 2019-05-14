@@ -26,4 +26,5 @@ func init() {
 		"UnknownUserIdError":  reflect.ValueOf((*user.UnknownUserIdError)(nil)),
 		"User":                reflect.ValueOf((*user.User)(nil)),
 	}
+	Wrapper["os/user"] = map[string]reflect.Type{}
 }

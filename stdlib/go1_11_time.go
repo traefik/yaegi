@@ -82,4 +82,5 @@ func init() {
 		"Timer":      reflect.ValueOf((*time.Timer)(nil)),
 		"Weekday":    reflect.ValueOf((*time.Weekday)(nil)),
 	}
+	Wrapper["time"] = map[string]reflect.Type{}
 }

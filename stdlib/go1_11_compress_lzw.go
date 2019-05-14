@@ -20,4 +20,5 @@ func init() {
 		// type definitions
 		"Order": reflect.ValueOf((*lzw.Order)(nil)),
 	}
+	Wrapper["compress/lzw"] = map[string]reflect.Type{}
 }

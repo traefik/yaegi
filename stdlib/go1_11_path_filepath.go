@@ -38,4 +38,5 @@ func init() {
 		// type definitions
 		"WalkFunc": reflect.ValueOf((*filepath.WalkFunc)(nil)),
 	}
+	Wrapper["path/filepath"] = map[string]reflect.Type{}
 }

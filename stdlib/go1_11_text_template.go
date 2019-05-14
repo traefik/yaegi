@@ -30,4 +30,5 @@ func init() {
 		"FuncMap":   reflect.ValueOf((*template.FuncMap)(nil)),
 		"Template":  reflect.ValueOf((*template.Template)(nil)),
 	}
+	Wrapper["text/template"] = map[string]reflect.Type{}
 }

@@ -25,4 +25,5 @@ func init() {
 		"WordDecoder": reflect.ValueOf((*mime.WordDecoder)(nil)),
 		"WordEncoder": reflect.ValueOf((*mime.WordEncoder)(nil)),
 	}
+	Wrapper["mime"] = map[string]reflect.Type{}
 }

@@ -50,4 +50,5 @@ func init() {
 		"StructuralError":  reflect.ValueOf((*asn1.StructuralError)(nil)),
 		"SyntaxError":      reflect.ValueOf((*asn1.SyntaxError)(nil)),
 	}
+	Wrapper["encoding/asn1"] = map[string]reflect.Type{}
 }

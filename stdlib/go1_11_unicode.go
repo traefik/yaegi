@@ -284,4 +284,5 @@ func init() {
 		"RangeTable":  reflect.ValueOf((*unicode.RangeTable)(nil)),
 		"SpecialCase": reflect.ValueOf((*unicode.SpecialCase)(nil)),
 	}
+	Wrapper["unicode"] = map[string]reflect.Type{}
 }

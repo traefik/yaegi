@@ -114,4 +114,5 @@ func init() {
 		"UnknownAuthorityError":      reflect.ValueOf((*x509.UnknownAuthorityError)(nil)),
 		"VerifyOptions":              reflect.ValueOf((*x509.VerifyOptions)(nil)),
 	}
+	Wrapper["crypto/x509"] = map[string]reflect.Type{}
 }

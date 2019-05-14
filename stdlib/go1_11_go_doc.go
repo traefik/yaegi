@@ -32,4 +32,5 @@ func init() {
 		"Type":    reflect.ValueOf((*doc.Type)(nil)),
 		"Value":   reflect.ValueOf((*doc.Value)(nil)),
 	}
+	Wrapper["go/doc"] = map[string]reflect.Type{}
 }

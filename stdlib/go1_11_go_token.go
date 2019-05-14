@@ -107,4 +107,5 @@ func init() {
 		"Position": reflect.ValueOf((*token.Position)(nil)),
 		"Token":    reflect.ValueOf((*token.Token)(nil)),
 	}
+	Wrapper["go/token"] = map[string]reflect.Type{}
 }

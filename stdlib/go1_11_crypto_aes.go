@@ -18,4 +18,5 @@ func init() {
 		// type definitions
 		"KeySizeError": reflect.ValueOf((*aes.KeySizeError)(nil)),
 	}
+	Wrapper["crypto/aes"] = map[string]reflect.Type{}
 }
