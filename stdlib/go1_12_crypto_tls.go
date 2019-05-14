@@ -90,9 +90,9 @@ func init() {
 		"RecordHeaderError":      reflect.ValueOf((*tls.RecordHeaderError)(nil)),
 		"RenegotiationSupport":   reflect.ValueOf((*tls.RenegotiationSupport)(nil)),
 		"SignatureScheme":        reflect.ValueOf((*tls.SignatureScheme)(nil)),
-	}
-	Wrapper["crypto/tls"] = map[string]reflect.Type{
-		"ClientSessionCache": reflect.TypeOf((*_crypto_tls_ClientSessionCache)(nil)),
+
+		// interface wrapper definitions
+		"_ClientSessionCache": reflect.ValueOf((*_crypto_tls_ClientSessionCache)(nil)),
 	}
 }
 

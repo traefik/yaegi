@@ -405,7 +405,11 @@ func genFunctionWrapper(n *Node) func(*Frame) reflect.Value {
 	var receiver func(*Frame) reflect.Value
 
 	if n.recv != nil {
-		receiver = genValueRecv(n)
+		if n.recv.node.typ.val.id() == defRecvType(def).id() {
+			receiver = genValueRecvIndirect(n)
+		} else {
+			receiver = genValueRecv(n)
+		}
 	}
 
 	return func(f *Frame) reflect.Value {
@@ -430,7 +434,11 @@ func genFunctionWrapper(n *Node) func(*Frame) reflect.Value {
 
 			// Copy function input arguments in local frame
 			for i, arg := range in {
-				d[i].Set(arg)
+				if def.typ.arg[i].cat == InterfaceT {
+					d[i].Set(reflect.ValueOf(valueInterface{value: arg.Elem()}))
+				} else {
+					d[i].Set(arg)
+				}
 			}
 
 			// Interpreter code execution
@@ -441,6 +449,11 @@ func genFunctionWrapper(n *Node) func(*Frame) reflect.Value {
 				if v, ok := r.Interface().(*Node); ok {
 					result[i] = genFunctionWrapper(v)(f)
 				}
+				if def.typ.ret[i].cat == InterfaceT {
+					x := result[i].Interface().(valueInterface).value
+					result[i] = reflect.New(reflect.TypeOf((*interface{})(nil)).Elem()).Elem()
+					result[i].Set(x)
+				}
 			}
 			return result
 		})
@@ -449,13 +462,19 @@ func genFunctionWrapper(n *Node) func(*Frame) reflect.Value {
 
 func genInterfaceWrapper(n *Node, typ reflect.Type) func(*Frame) reflect.Value {
 	value := genValue(n)
+	if typ == nil || typ.Kind() != reflect.Interface || typ.NumMethod() == 0 || n.typ.cat == ValueT {
+		return value
+	}
+	if nt := n.typ.TypeOf(); nt != nil && nt.Kind() == reflect.Interface {
+		return value
+	}
 	mn := typ.NumMethod()
 	methods := make([]*Node, mn)
 	indexes := make([][]int, mn)
 	for i := 0; i < mn; i++ {
 		methods[i], indexes[i] = n.typ.lookupMethod(typ.Method(i).Name)
 	}
-	wrap := Wrappers[typ.Name()]
+	wrap := n.interp.getWrapper(typ)
 
 	return func(f *Frame) reflect.Value {
 		v := value(f)
@@ -673,6 +692,14 @@ func call(n *Node) {
 	}
 }
 
+// pindex returns defintion parameter index for function call
+func pindex(i, variadic int) int {
+	if variadic < 0 || i <= variadic {
+		return i
+	}
+	return variadic
+}
+
 // Call a function from a bin import, accessible through reflect
 func callBin(n *Node) {
 	tnext := getExec(n.tnext)
@@ -691,6 +718,7 @@ func callBin(n *Node) {
 	}
 
 	for i, c := range child {
+		defType := funcType.In(pindex(i, variadic))
 		switch {
 		case isBinCall(c):
 			// Handle nested function calls: pass returned values as arguments
@@ -725,7 +753,8 @@ func callBin(n *Node) {
 			case InterfaceT:
 				values = append(values, genValueInterfaceValue(c))
 			default:
-				values = append(values, genValue(c))
+				//values = append(values, genValue(c))
+				values = append(values, genInterfaceWrapper(c, defType))
 			}
 		}
 	}

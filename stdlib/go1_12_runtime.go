@@ -60,9 +60,9 @@ func init() {
 		"MemStats":           reflect.ValueOf((*runtime.MemStats)(nil)),
 		"StackRecord":        reflect.ValueOf((*runtime.StackRecord)(nil)),
 		"TypeAssertionError": reflect.ValueOf((*runtime.TypeAssertionError)(nil)),
-	}
-	Wrapper["runtime"] = map[string]reflect.Type{
-		"Error": reflect.TypeOf((*_runtime_Error)(nil)),
+
+		// interface wrapper definitions
+		"_Error": reflect.ValueOf((*_runtime_Error)(nil)),
 	}
 }
 

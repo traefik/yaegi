@@ -32,6 +32,8 @@ func init() {
 		"Package": reflect.ValueOf((*doc.Package)(nil)),
 		"Type":    reflect.ValueOf((*doc.Type)(nil)),
 		"Value":   reflect.ValueOf((*doc.Value)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["go/doc"] = map[string]reflect.Type{}
 }

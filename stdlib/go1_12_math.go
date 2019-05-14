@@ -108,6 +108,7 @@ func init() {
 
 		// type definitions
 
+		// interface wrapper definitions
+
 	}
-	Wrapper["math"] = map[string]reflect.Type{}
 }

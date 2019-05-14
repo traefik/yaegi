@@ -112,13 +112,13 @@ func init() {
 		"UnixConn":            reflect.ValueOf((*net.UnixConn)(nil)),
 		"UnixListener":        reflect.ValueOf((*net.UnixListener)(nil)),
 		"UnknownNetworkError": reflect.ValueOf((*net.UnknownNetworkError)(nil)),
-	}
-	Wrapper["net"] = map[string]reflect.Type{
-		"Addr":       reflect.TypeOf((*_net_Addr)(nil)),
-		"Conn":       reflect.TypeOf((*_net_Conn)(nil)),
-		"Error":      reflect.TypeOf((*_net_Error)(nil)),
-		"Listener":   reflect.TypeOf((*_net_Listener)(nil)),
-		"PacketConn": reflect.TypeOf((*_net_PacketConn)(nil)),
+
+		// interface wrapper definitions
+		"_Addr":       reflect.ValueOf((*_net_Addr)(nil)),
+		"_Conn":       reflect.ValueOf((*_net_Conn)(nil)),
+		"_Error":      reflect.ValueOf((*_net_Error)(nil)),
+		"_Listener":   reflect.ValueOf((*_net_Listener)(nil)),
+		"_PacketConn": reflect.ValueOf((*_net_PacketConn)(nil)),
 	}
 }
 

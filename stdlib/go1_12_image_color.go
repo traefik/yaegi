@@ -48,10 +48,10 @@ func init() {
 		"RGBA":    reflect.ValueOf((*color.RGBA)(nil)),
 		"RGBA64":  reflect.ValueOf((*color.RGBA64)(nil)),
 		"YCbCr":   reflect.ValueOf((*color.YCbCr)(nil)),
-	}
-	Wrapper["image/color"] = map[string]reflect.Type{
-		"Color": reflect.TypeOf((*_image_color_Color)(nil)),
-		"Model": reflect.TypeOf((*_image_color_Model)(nil)),
+
+		// interface wrapper definitions
+		"_Color": reflect.ValueOf((*_image_color_Color)(nil)),
+		"_Model": reflect.ValueOf((*_image_color_Model)(nil)),
 	}
 }
 

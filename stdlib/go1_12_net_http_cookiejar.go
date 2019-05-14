@@ -18,9 +18,9 @@ func init() {
 		"Jar":              reflect.ValueOf((*cookiejar.Jar)(nil)),
 		"Options":          reflect.ValueOf((*cookiejar.Options)(nil)),
 		"PublicSuffixList": reflect.ValueOf((*cookiejar.PublicSuffixList)(nil)),
-	}
-	Wrapper["net/http/cookiejar"] = map[string]reflect.Type{
-		"PublicSuffixList": reflect.TypeOf((*_net_http_cookiejar_PublicSuffixList)(nil)),
+
+		// interface wrapper definitions
+		"_PublicSuffixList": reflect.ValueOf((*_net_http_cookiejar_PublicSuffixList)(nil)),
 	}
 }
 

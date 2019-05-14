@@ -37,6 +37,8 @@ func init() {
 		"PrecomputedValues":      reflect.ValueOf((*rsa.PrecomputedValues)(nil)),
 		"PrivateKey":             reflect.ValueOf((*rsa.PrivateKey)(nil)),
 		"PublicKey":              reflect.ValueOf((*rsa.PublicKey)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["crypto/rsa"] = map[string]reflect.Type{}
 }

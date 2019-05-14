@@ -39,14 +39,14 @@ func init() {
 		"Scanner":    reflect.ValueOf((*fmt.Scanner)(nil)),
 		"State":      reflect.ValueOf((*fmt.State)(nil)),
 		"Stringer":   reflect.ValueOf((*fmt.Stringer)(nil)),
-	}
-	Wrapper["fmt"] = map[string]reflect.Type{
-		"Formatter":  reflect.TypeOf((*_fmt_Formatter)(nil)),
-		"GoStringer": reflect.TypeOf((*_fmt_GoStringer)(nil)),
-		"ScanState":  reflect.TypeOf((*_fmt_ScanState)(nil)),
-		"Scanner":    reflect.TypeOf((*_fmt_Scanner)(nil)),
-		"State":      reflect.TypeOf((*_fmt_State)(nil)),
-		"Stringer":   reflect.TypeOf((*_fmt_Stringer)(nil)),
+
+		// interface wrapper definitions
+		"_Formatter":  reflect.ValueOf((*_fmt_Formatter)(nil)),
+		"_GoStringer": reflect.ValueOf((*_fmt_GoStringer)(nil)),
+		"_ScanState":  reflect.ValueOf((*_fmt_ScanState)(nil)),
+		"_Scanner":    reflect.ValueOf((*_fmt_Scanner)(nil)),
+		"_State":      reflect.ValueOf((*_fmt_State)(nil)),
+		"_Stringer":   reflect.ValueOf((*_fmt_Stringer)(nil)),
 	}
 }
 

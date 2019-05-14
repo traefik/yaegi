@@ -24,9 +24,9 @@ func init() {
 		// type definitions
 		"Curve":       reflect.ValueOf((*elliptic.Curve)(nil)),
 		"CurveParams": reflect.ValueOf((*elliptic.CurveParams)(nil)),
-	}
-	Wrapper["crypto/elliptic"] = map[string]reflect.Type{
-		"Curve": reflect.TypeOf((*_crypto_elliptic_Curve)(nil)),
+
+		// interface wrapper definitions
+		"_Curve": reflect.ValueOf((*_crypto_elliptic_Curve)(nil)),
 	}
 }
 

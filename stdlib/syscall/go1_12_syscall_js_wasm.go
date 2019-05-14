@@ -330,11 +330,11 @@ func init() {
 		"Timespec":      reflect.ValueOf((*syscall.Timespec)(nil)),
 		"Timeval":       reflect.ValueOf((*syscall.Timeval)(nil)),
 		"WaitStatus":    reflect.ValueOf((*syscall.WaitStatus)(nil)),
-	}
-	Wrapper["syscall"] = map[string]reflect.Type{
-		"Conn":     reflect.TypeOf((*_syscall_Conn)(nil)),
-		"RawConn":  reflect.TypeOf((*_syscall_RawConn)(nil)),
-		"Sockaddr": reflect.TypeOf((*_syscall_Sockaddr)(nil)),
+
+		// interface wrapper definitions
+		"_Conn":     reflect.ValueOf((*_syscall_Conn)(nil)),
+		"_RawConn":  reflect.ValueOf((*_syscall_RawConn)(nil)),
+		"_Sockaddr": reflect.ValueOf((*_syscall_Sockaddr)(nil)),
 	}
 }
 

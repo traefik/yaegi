@@ -24,6 +24,7 @@ func init() {
 
 		// type definitions
 
+		// interface wrapper definitions
+
 	}
-	Wrapper["path"] = map[string]reflect.Type{}
 }

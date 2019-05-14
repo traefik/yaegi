@@ -22,6 +22,7 @@ func init() {
 
 		// type definitions
 
+		// interface wrapper definitions
+
 	}
-	Wrapper["crypto/sha256"] = map[string]reflect.Type{}
 }

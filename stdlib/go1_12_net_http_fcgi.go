@@ -19,6 +19,7 @@ func init() {
 
 		// type definitions
 
+		// interface wrapper definitions
+
 	}
-	Wrapper["net/http/fcgi"] = map[string]reflect.Type{}
 }

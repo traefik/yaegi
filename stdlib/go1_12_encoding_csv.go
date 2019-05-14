@@ -23,6 +23,8 @@ func init() {
 		"ParseError": reflect.ValueOf((*csv.ParseError)(nil)),
 		"Reader":     reflect.ValueOf((*csv.Reader)(nil)),
 		"Writer":     reflect.ValueOf((*csv.Writer)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["encoding/csv"] = map[string]reflect.Type{}
 }

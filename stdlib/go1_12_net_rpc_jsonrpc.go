@@ -20,6 +20,7 @@ func init() {
 
 		// type definitions
 
+		// interface wrapper definitions
+
 	}
-	Wrapper["net/rpc/jsonrpc"] = map[string]reflect.Type{}
 }

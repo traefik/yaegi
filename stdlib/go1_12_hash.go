@@ -17,11 +17,11 @@ func init() {
 		"Hash":   reflect.ValueOf((*hash.Hash)(nil)),
 		"Hash32": reflect.ValueOf((*hash.Hash32)(nil)),
 		"Hash64": reflect.ValueOf((*hash.Hash64)(nil)),
-	}
-	Wrapper["hash"] = map[string]reflect.Type{
-		"Hash":   reflect.TypeOf((*_hash_Hash)(nil)),
-		"Hash32": reflect.TypeOf((*_hash_Hash32)(nil)),
-		"Hash64": reflect.TypeOf((*_hash_Hash64)(nil)),
+
+		// interface wrapper definitions
+		"_Hash":   reflect.ValueOf((*_hash_Hash)(nil)),
+		"_Hash32": reflect.ValueOf((*_hash_Hash32)(nil)),
+		"_Hash64": reflect.ValueOf((*_hash_Hash64)(nil)),
 	}
 }
 

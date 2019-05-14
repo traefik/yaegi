@@ -44,6 +44,8 @@ func init() {
 
 		// type definitions
 		"Value": reflect.ValueOf((*atomic.Value)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["sync/atomic"] = map[string]reflect.Type{}
 }

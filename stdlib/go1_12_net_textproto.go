@@ -28,6 +28,8 @@ func init() {
 		"ProtocolError": reflect.ValueOf((*textproto.ProtocolError)(nil)),
 		"Reader":        reflect.ValueOf((*textproto.Reader)(nil)),
 		"Writer":        reflect.ValueOf((*textproto.Writer)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["net/textproto"] = map[string]reflect.Type{}
 }

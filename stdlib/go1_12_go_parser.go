@@ -26,6 +26,8 @@ func init() {
 
 		// type definitions
 		"Mode": reflect.ValueOf((*parser.Mode)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["go/parser"] = map[string]reflect.Type{}
 }

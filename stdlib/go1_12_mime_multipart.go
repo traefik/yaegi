@@ -23,9 +23,9 @@ func init() {
 		"Part":       reflect.ValueOf((*multipart.Part)(nil)),
 		"Reader":     reflect.ValueOf((*multipart.Reader)(nil)),
 		"Writer":     reflect.ValueOf((*multipart.Writer)(nil)),
-	}
-	Wrapper["mime/multipart"] = map[string]reflect.Type{
-		"File": reflect.TypeOf((*_mime_multipart_File)(nil)),
+
+		// interface wrapper definitions
+		"_File": reflect.ValueOf((*_mime_multipart_File)(nil)),
 	}
 }
 

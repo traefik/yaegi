@@ -32,6 +32,8 @@ func init() {
 		"ReadCloser":   reflect.ValueOf((*zip.ReadCloser)(nil)),
 		"Reader":       reflect.ValueOf((*zip.Reader)(nil)),
 		"Writer":       reflect.ValueOf((*zip.Writer)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["archive/zip"] = map[string]reflect.Type{}
 }

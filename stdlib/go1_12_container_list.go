@@ -17,6 +17,8 @@ func init() {
 		// type definitions
 		"Element": reflect.ValueOf((*list.Element)(nil)),
 		"List":    reflect.ValueOf((*list.List)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["container/list"] = map[string]reflect.Type{}
 }

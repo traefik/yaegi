@@ -23,6 +23,8 @@ func init() {
 
 		// type definitions
 		"Writer": reflect.ValueOf((*tabwriter.Writer)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["text/tabwriter"] = map[string]reflect.Type{}
 }

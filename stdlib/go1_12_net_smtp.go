@@ -22,9 +22,9 @@ func init() {
 		"Auth":       reflect.ValueOf((*smtp.Auth)(nil)),
 		"Client":     reflect.ValueOf((*smtp.Client)(nil)),
 		"ServerInfo": reflect.ValueOf((*smtp.ServerInfo)(nil)),
-	}
-	Wrapper["net/smtp"] = map[string]reflect.Type{
-		"Auth": reflect.TypeOf((*_net_smtp_Auth)(nil)),
+
+		// interface wrapper definitions
+		"_Auth": reflect.ValueOf((*_net_smtp_Auth)(nil)),
 	}
 }
 

@@ -23,6 +23,7 @@ func init() {
 
 		// type definitions
 
+		// interface wrapper definitions
+
 	}
-	Wrapper["io/ioutil"] = map[string]reflect.Type{}
 }

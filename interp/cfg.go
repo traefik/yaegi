@@ -216,7 +216,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				// define receiver symbol
 				var typ *Type
 				recvName := n.child[0].child[0].child[0].ident
-				typ, err = nodeType(interp, scope, n.child[0].child[0].lastChild())
+				recvTypeNode := n.child[0].child[0].lastChild()
+				typ, err = nodeType(interp, scope, recvTypeNode)
+				recvTypeNode.typ = typ
 				scope.sym[recvName] = &Symbol{index: scope.add(typ), kind: Var, typ: typ}
 			}
 			for _, c := range n.child[2].child[0].child {

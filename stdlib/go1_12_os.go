@@ -119,10 +119,10 @@ func init() {
 		"ProcessState": reflect.ValueOf((*os.ProcessState)(nil)),
 		"Signal":       reflect.ValueOf((*os.Signal)(nil)),
 		"SyscallError": reflect.ValueOf((*os.SyscallError)(nil)),
-	}
-	Wrapper["os"] = map[string]reflect.Type{
-		"FileInfo": reflect.TypeOf((*_os_FileInfo)(nil)),
-		"Signal":   reflect.TypeOf((*_os_Signal)(nil)),
+
+		// interface wrapper definitions
+		"_FileInfo": reflect.ValueOf((*_os_FileInfo)(nil)),
+		"_Signal":   reflect.ValueOf((*_os_Signal)(nil)),
 	}
 }
 

@@ -29,9 +29,9 @@ func init() {
 
 		// type definitions
 		"ByteOrder": reflect.ValueOf((*binary.ByteOrder)(nil)),
-	}
-	Wrapper["encoding/binary"] = map[string]reflect.Type{
-		"ByteOrder": reflect.TypeOf((*_encoding_binary_ByteOrder)(nil)),
+
+		// interface wrapper definitions
+		"_ByteOrder": reflect.ValueOf((*_encoding_binary_ByteOrder)(nil)),
 	}
 }
 

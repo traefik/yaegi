@@ -20,6 +20,7 @@ func init() {
 
 		// type definitions
 
+		// interface wrapper definitions
+
 	}
-	Wrapper["unicode/utf16"] = map[string]reflect.Type{}
 }

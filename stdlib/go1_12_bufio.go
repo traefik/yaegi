@@ -38,6 +38,8 @@ func init() {
 		"Scanner":    reflect.ValueOf((*bufio.Scanner)(nil)),
 		"SplitFunc":  reflect.ValueOf((*bufio.SplitFunc)(nil)),
 		"Writer":     reflect.ValueOf((*bufio.Writer)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["bufio"] = map[string]reflect.Type{}
 }

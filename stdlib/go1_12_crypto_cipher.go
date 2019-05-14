@@ -29,12 +29,12 @@ func init() {
 		"Stream":       reflect.ValueOf((*cipher.Stream)(nil)),
 		"StreamReader": reflect.ValueOf((*cipher.StreamReader)(nil)),
 		"StreamWriter": reflect.ValueOf((*cipher.StreamWriter)(nil)),
-	}
-	Wrapper["crypto/cipher"] = map[string]reflect.Type{
-		"AEAD":      reflect.TypeOf((*_crypto_cipher_AEAD)(nil)),
-		"Block":     reflect.TypeOf((*_crypto_cipher_Block)(nil)),
-		"BlockMode": reflect.TypeOf((*_crypto_cipher_BlockMode)(nil)),
-		"Stream":    reflect.TypeOf((*_crypto_cipher_Stream)(nil)),
+
+		// interface wrapper definitions
+		"_AEAD":      reflect.ValueOf((*_crypto_cipher_AEAD)(nil)),
+		"_Block":     reflect.ValueOf((*_crypto_cipher_Block)(nil)),
+		"_BlockMode": reflect.ValueOf((*_crypto_cipher_BlockMode)(nil)),
+		"_Stream":    reflect.ValueOf((*_crypto_cipher_Stream)(nil)),
 	}
 }
 

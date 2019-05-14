@@ -62,6 +62,7 @@ func init() {
 
 		// type definitions
 
+		// interface wrapper definitions
+
 	}
-	Wrapper["math/bits"] = map[string]reflect.Type{}
 }

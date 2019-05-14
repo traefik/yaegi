@@ -19,6 +19,7 @@ func init() {
 
 		// type definitions
 
+		// interface wrapper definitions
+
 	}
-	Wrapper["crypto/md5"] = map[string]reflect.Type{}
 }

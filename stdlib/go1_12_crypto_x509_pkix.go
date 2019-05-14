@@ -24,6 +24,8 @@ func init() {
 		"RelativeDistinguishedNameSET": reflect.ValueOf((*pkix.RelativeDistinguishedNameSET)(nil)),
 		"RevokedCertificate":           reflect.ValueOf((*pkix.RevokedCertificate)(nil)),
 		"TBSCertificateList":           reflect.ValueOf((*pkix.TBSCertificateList)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["crypto/x509/pkix"] = map[string]reflect.Type{}
 }

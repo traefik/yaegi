@@ -91,17 +91,12 @@ var ExportValue = LibValueMap{
 	},
 }
 
-// werror is a wrapper of error interface type
-type werror struct {
+// _error is a wrapper of error interface type
+type _error struct {
 	WError func() string
 }
 
-func (w werror) Error() string { return w.WError() }
-
-// Wrappers define a map of interface wrapper types
-var Wrappers = map[string]reflect.Type{
-	"error": reflect.TypeOf((*werror)(nil)).Elem(),
-}
+func (W _error) Error() string { return W.WError() }
 
 func init() { ExportValue[selfPath]["ExportValue"] = reflect.ValueOf(ExportValue) }
 
@@ -126,7 +121,7 @@ func New(options ...func(*Interpreter)) *Interpreter {
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
 		scope:    map[string]*Scope{},
-		binValue: LibValueMap{},
+		binValue: LibValueMap{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
 		Frame:    &Frame{data: []reflect.Value{}},
 	}
 
@@ -299,6 +294,14 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 	}
 
 	return res, err
+}
+
+// getWrapper returns the wrapper type of the corresponding interface, or nil if not found
+func (i *Interpreter) getWrapper(t reflect.Type) reflect.Type {
+	if p, ok := i.binValue[t.PkgPath()]; ok {
+		return p["_"+t.Name()].Type().Elem()
+	}
+	return nil
 }
 
 // Use loads binary runtime symbols in the interpreter context so

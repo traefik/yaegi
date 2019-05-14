@@ -26,6 +26,8 @@ func init() {
 
 		// type definitions
 		"Table": reflect.ValueOf((*crc32.Table)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["hash/crc32"] = map[string]reflect.Type{}
 }

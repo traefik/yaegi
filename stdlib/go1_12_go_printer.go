@@ -22,6 +22,8 @@ func init() {
 		"CommentedNode": reflect.ValueOf((*printer.CommentedNode)(nil)),
 		"Config":        reflect.ValueOf((*printer.Config)(nil)),
 		"Mode":          reflect.ValueOf((*printer.Mode)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["go/printer"] = map[string]reflect.Type{}
 }

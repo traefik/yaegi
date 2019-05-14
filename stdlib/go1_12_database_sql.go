@@ -49,10 +49,10 @@ func init() {
 		"Stmt":           reflect.ValueOf((*sql.Stmt)(nil)),
 		"Tx":             reflect.ValueOf((*sql.Tx)(nil)),
 		"TxOptions":      reflect.ValueOf((*sql.TxOptions)(nil)),
-	}
-	Wrapper["database/sql"] = map[string]reflect.Type{
-		"Result":  reflect.TypeOf((*_database_sql_Result)(nil)),
-		"Scanner": reflect.TypeOf((*_database_sql_Scanner)(nil)),
+
+		// interface wrapper definitions
+		"_Result":  reflect.ValueOf((*_database_sql_Result)(nil)),
+		"_Scanner": reflect.ValueOf((*_database_sql_Scanner)(nil)),
 	}
 }
 

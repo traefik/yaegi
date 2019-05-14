@@ -34,7 +34,13 @@ func main() {
 	heap.Init(h)
 	heap.Push(h, 3)
 	fmt.Printf("minimum: %d\n", (*h)[0])
+	fmt.Println("h:", h)
 	for h.Len() > 0 {
 		fmt.Printf("%d ", heap.Pop(h))
 	}
 }
+
+// Output:
+// minimum: 1
+// h: &[1 2 5 3]
+// 1 2 3 5

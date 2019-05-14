@@ -616,6 +616,16 @@ func (t *Type) TypeOf() reflect.Type {
 	return t.rtype
 }
 
+func defRecvType(n *Node) *Type {
+	if n.kind != FuncDecl || len(n.child[0].child) == 0 {
+		return nil
+	}
+	if r := n.child[0].child[0].lastChild(); r != nil {
+		return r.typ
+	}
+	return nil
+}
+
 func isShiftOperand(n *Node) bool {
 	switch n.anc.action {
 	case Shl, Shr, ShlAssign, ShrAssign:

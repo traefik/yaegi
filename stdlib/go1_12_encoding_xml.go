@@ -46,14 +46,14 @@ func init() {
 		"Unmarshaler":          reflect.ValueOf((*xml.Unmarshaler)(nil)),
 		"UnmarshalerAttr":      reflect.ValueOf((*xml.UnmarshalerAttr)(nil)),
 		"UnsupportedTypeError": reflect.ValueOf((*xml.UnsupportedTypeError)(nil)),
-	}
-	Wrapper["encoding/xml"] = map[string]reflect.Type{
-		"Marshaler":       reflect.TypeOf((*_encoding_xml_Marshaler)(nil)),
-		"MarshalerAttr":   reflect.TypeOf((*_encoding_xml_MarshalerAttr)(nil)),
-		"Token":           reflect.TypeOf((*_encoding_xml_Token)(nil)),
-		"TokenReader":     reflect.TypeOf((*_encoding_xml_TokenReader)(nil)),
-		"Unmarshaler":     reflect.TypeOf((*_encoding_xml_Unmarshaler)(nil)),
-		"UnmarshalerAttr": reflect.TypeOf((*_encoding_xml_UnmarshalerAttr)(nil)),
+
+		// interface wrapper definitions
+		"_Marshaler":       reflect.ValueOf((*_encoding_xml_Marshaler)(nil)),
+		"_MarshalerAttr":   reflect.ValueOf((*_encoding_xml_MarshalerAttr)(nil)),
+		"_Token":           reflect.ValueOf((*_encoding_xml_Token)(nil)),
+		"_TokenReader":     reflect.ValueOf((*_encoding_xml_TokenReader)(nil)),
+		"_Unmarshaler":     reflect.ValueOf((*_encoding_xml_Unmarshaler)(nil)),
+		"_UnmarshalerAttr": reflect.ValueOf((*_encoding_xml_UnmarshalerAttr)(nil)),
 	}
 }
 

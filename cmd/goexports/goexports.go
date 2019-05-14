@@ -53,10 +53,10 @@ func init() {
 		{{range $key, $value := .Typ -}}
 			"{{$key}}": reflect.ValueOf((*{{$value}})(nil)),
 		{{end}}
-	}
-	Wrapper["{{.PkgName}}"] = map[string]reflect.Type{
+
+		// interface wrapper definitions
 		{{range $key, $value := .Wrap -}}
-			"{{$key}}": reflect.TypeOf((*{{$value.Name}})(nil)),
+			"_{{$key}}": reflect.ValueOf((*{{$value.Name}})(nil)),
 		{{end}}
 	}
 }
