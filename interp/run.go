@@ -1166,9 +1166,35 @@ func mapLit(n *Node) {
 		return next
 	}
 }
+func compositeBinMap(n *Node) {
+	value := valueGenerator(n, n.findex)
+	next := getExec(n.tnext)
+	child := n.child
+	if !n.typ.untyped {
+		child = n.child[1:]
+	}
+	typ := n.typ.TypeOf()
+	keys := make([]func(*Frame) reflect.Value, len(child))
+	values := make([]func(*Frame) reflect.Value, len(child))
+	for i, c := range child {
+		convertLiteralValue(c.child[0], typ.Key())
+		convertLiteralValue(c.child[1], typ.Elem())
+		keys[i] = genValue(c.child[0])
+		values[i] = genValue(c.child[1])
+	}
 
-// compositeBin creates and populates a struct object from a binary type
-func compositeBin(n *Node) {
+	n.exec = func(f *Frame) Builtin {
+		m := reflect.MakeMap(typ)
+		for i, k := range keys {
+			m.SetMapIndex(k(f), values[i](f))
+		}
+		value(f).Set(m)
+		return next
+	}
+}
+
+// compositeBinStruct creates and populates a struct object from a binary type
+func compositeBinStruct(n *Node) {
 	next := getExec(n.tnext)
 	value := valueGenerator(n, n.findex)
 	typ := n.typ.rtype

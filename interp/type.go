@@ -634,6 +634,8 @@ func isShiftOperand(n *Node) bool {
 	return false
 }
 
+func isStruct(t *Type) bool { return t.TypeOf().Kind() == reflect.Struct }
+
 func isInt(t *Type) bool {
 	switch t.TypeOf().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:

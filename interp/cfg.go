@@ -2,6 +2,7 @@ package interp
 
 import (
 	"fmt"
+	"log"
 	"path"
 	"reflect"
 	"unicode"
@@ -1376,7 +1377,7 @@ func isKey(n *Node) bool {
 	return n.anc.kind == File ||
 		(n.anc.kind == SelectorExpr && n.anc.child[0] != n) ||
 		(n.anc.kind == FuncDecl && isMethod(n.anc)) ||
-		(n.anc.kind == KeyValueExpr && n.anc.child[0] == n)
+		(n.anc.kind == KeyValueExpr && isStruct(n.anc.typ) && n.anc.child[0] == n)
 }
 
 // isNewDefine returns true if node refers to a new definition
@@ -1513,7 +1514,14 @@ func compositeGenerator(n *Node) (gen BuiltinGenerator) {
 			gen = compositeLit
 		}
 	case ValueT:
-		gen = compositeBin
+		switch k := n.typ.rtype.Kind(); k {
+		case reflect.Struct:
+			gen = compositeBinStruct
+		case reflect.Map:
+			gen = compositeBinMap
+		default:
+			log.Panic(n.cfgError("compositeGenerator not implemented for type kind: %s", k))
+		}
 	}
 	return
 }
