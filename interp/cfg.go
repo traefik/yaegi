@@ -962,7 +962,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				err = n.cfgError("undefined type")
 				break
 			}
-			if n.typ.cat == ValueT {
+			if n.typ.cat == ValueT || n.typ.cat == ErrorT {
 				// Handle object defined in runtime, try to find field or method
 				// Search for method first, as it applies both to types T and *T
 				// Search for field must then be performed on type T only (not *T)
@@ -991,7 +991,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				default:
 					err = n.cfgError("undefined field or method: %s", n.child[1].ident)
 				}
-			} else if n.typ.cat == PtrT && n.typ.val.cat == ValueT {
+			} else if n.typ.cat == PtrT && (n.typ.val.cat == ValueT || n.typ.val.cat == ErrorT) {
 				// Handle pointer on object defined in runtime
 				if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
 					n.typ = &Type{cat: ValueT, rtype: field.Type}
