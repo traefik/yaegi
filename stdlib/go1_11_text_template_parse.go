@@ -59,9 +59,9 @@ func init() {
 		"Tree":           reflect.ValueOf((*parse.Tree)(nil)),
 		"VariableNode":   reflect.ValueOf((*parse.VariableNode)(nil)),
 		"WithNode":       reflect.ValueOf((*parse.WithNode)(nil)),
-	}
-	Wrapper["text/template/parse"] = map[string]reflect.Type{
-		"Node": reflect.TypeOf((*_text_template_parse_Node)(nil)),
+
+		// interface wrapper definitions
+		"_Node": reflect.ValueOf((*_text_template_parse_Node)(nil)),
 	}
 }
 

@@ -18,12 +18,12 @@ func init() {
 		"BinaryUnmarshaler": reflect.ValueOf((*encoding.BinaryUnmarshaler)(nil)),
 		"TextMarshaler":     reflect.ValueOf((*encoding.TextMarshaler)(nil)),
 		"TextUnmarshaler":   reflect.ValueOf((*encoding.TextUnmarshaler)(nil)),
-	}
-	Wrapper["encoding"] = map[string]reflect.Type{
-		"BinaryMarshaler":   reflect.TypeOf((*_encoding_BinaryMarshaler)(nil)),
-		"BinaryUnmarshaler": reflect.TypeOf((*_encoding_BinaryUnmarshaler)(nil)),
-		"TextMarshaler":     reflect.TypeOf((*_encoding_TextMarshaler)(nil)),
-		"TextUnmarshaler":   reflect.TypeOf((*_encoding_TextUnmarshaler)(nil)),
+
+		// interface wrapper definitions
+		"_BinaryMarshaler":   reflect.ValueOf((*_encoding_BinaryMarshaler)(nil)),
+		"_BinaryUnmarshaler": reflect.ValueOf((*_encoding_BinaryUnmarshaler)(nil)),
+		"_TextMarshaler":     reflect.ValueOf((*_encoding_TextMarshaler)(nil)),
+		"_TextUnmarshaler":   reflect.ValueOf((*_encoding_TextUnmarshaler)(nil)),
 	}
 }
 

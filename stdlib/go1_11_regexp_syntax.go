@@ -90,6 +90,8 @@ func init() {
 		"Op":        reflect.ValueOf((*syntax.Op)(nil)),
 		"Prog":      reflect.ValueOf((*syntax.Prog)(nil)),
 		"Regexp":    reflect.ValueOf((*syntax.Regexp)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["regexp/syntax"] = map[string]reflect.Type{}
 }

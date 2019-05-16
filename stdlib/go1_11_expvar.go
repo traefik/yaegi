@@ -29,9 +29,9 @@ func init() {
 		"Map":      reflect.ValueOf((*expvar.Map)(nil)),
 		"String":   reflect.ValueOf((*expvar.String)(nil)),
 		"Var":      reflect.ValueOf((*expvar.Var)(nil)),
-	}
-	Wrapper["expvar"] = map[string]reflect.Type{
-		"Var": reflect.TypeOf((*_expvar_Var)(nil)),
+
+		// interface wrapper definitions
+		"_Var": reflect.ValueOf((*_expvar_Var)(nil)),
 	}
 }
 

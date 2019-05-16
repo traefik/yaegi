@@ -149,13 +149,13 @@ func init() {
 		"TypeAndValue":  reflect.ValueOf((*types.TypeAndValue)(nil)),
 		"TypeName":      reflect.ValueOf((*types.TypeName)(nil)),
 		"Var":           reflect.ValueOf((*types.Var)(nil)),
-	}
-	Wrapper["go/types"] = map[string]reflect.Type{
-		"Importer":     reflect.TypeOf((*_go_types_Importer)(nil)),
-		"ImporterFrom": reflect.TypeOf((*_go_types_ImporterFrom)(nil)),
-		"Object":       reflect.TypeOf((*_go_types_Object)(nil)),
-		"Sizes":        reflect.TypeOf((*_go_types_Sizes)(nil)),
-		"Type":         reflect.TypeOf((*_go_types_Type)(nil)),
+
+		// interface wrapper definitions
+		"_Importer":     reflect.ValueOf((*_go_types_Importer)(nil)),
+		"_ImporterFrom": reflect.ValueOf((*_go_types_ImporterFrom)(nil)),
+		"_Object":       reflect.ValueOf((*_go_types_Object)(nil)),
+		"_Sizes":        reflect.ValueOf((*_go_types_Sizes)(nil)),
+		"_Type":         reflect.ValueOf((*_go_types_Type)(nil)),
 	}
 }
 

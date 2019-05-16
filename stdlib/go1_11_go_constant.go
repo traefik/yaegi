@@ -51,9 +51,9 @@ func init() {
 		// type definitions
 		"Kind":  reflect.ValueOf((*constant.Kind)(nil)),
 		"Value": reflect.ValueOf((*constant.Value)(nil)),
-	}
-	Wrapper["go/constant"] = map[string]reflect.Type{
-		"Value": reflect.TypeOf((*_go_constant_Value)(nil)),
+
+		// interface wrapper definitions
+		"_Value": reflect.ValueOf((*_go_constant_Value)(nil)),
 	}
 }
 

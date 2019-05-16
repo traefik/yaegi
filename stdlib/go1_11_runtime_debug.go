@@ -25,6 +25,8 @@ func init() {
 
 		// type definitions
 		"GCStats": reflect.ValueOf((*debug.GCStats)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["runtime/debug"] = map[string]reflect.Type{}
 }

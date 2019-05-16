@@ -23,9 +23,9 @@ func init() {
 		"Pool":      reflect.ValueOf((*sync.Pool)(nil)),
 		"RWMutex":   reflect.ValueOf((*sync.RWMutex)(nil)),
 		"WaitGroup": reflect.ValueOf((*sync.WaitGroup)(nil)),
-	}
-	Wrapper["sync"] = map[string]reflect.Type{
-		"Locker": reflect.TypeOf((*_sync_Locker)(nil)),
+
+		// interface wrapper definitions
+		"_Locker": reflect.ValueOf((*_sync_Locker)(nil)),
 	}
 }
 

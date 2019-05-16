@@ -23,10 +23,10 @@ func init() {
 		"Encoder":    reflect.ValueOf((*gob.Encoder)(nil)),
 		"GobDecoder": reflect.ValueOf((*gob.GobDecoder)(nil)),
 		"GobEncoder": reflect.ValueOf((*gob.GobEncoder)(nil)),
-	}
-	Wrapper["encoding/gob"] = map[string]reflect.Type{
-		"GobDecoder": reflect.TypeOf((*_encoding_gob_GobDecoder)(nil)),
-		"GobEncoder": reflect.TypeOf((*_encoding_gob_GobEncoder)(nil)),
+
+		// interface wrapper definitions
+		"_GobDecoder": reflect.ValueOf((*_encoding_gob_GobDecoder)(nil)),
+		"_GobEncoder": reflect.ValueOf((*_encoding_gob_GobEncoder)(nil)),
 	}
 }
 

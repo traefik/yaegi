@@ -29,6 +29,8 @@ func init() {
 		"ExecError": reflect.ValueOf((*template.ExecError)(nil)),
 		"FuncMap":   reflect.ValueOf((*template.FuncMap)(nil)),
 		"Template":  reflect.ValueOf((*template.Template)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["text/template"] = map[string]reflect.Type{}
 }

@@ -19,6 +19,8 @@ func init() {
 		// type definitions
 		"PrivateKey": reflect.ValueOf((*ecdsa.PrivateKey)(nil)),
 		"PublicKey":  reflect.ValueOf((*ecdsa.PublicKey)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["crypto/ecdsa"] = map[string]reflect.Type{}
 }

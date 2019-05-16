@@ -65,10 +65,10 @@ func init() {
 		"Uniform":             reflect.ValueOf((*image.Uniform)(nil)),
 		"YCbCr":               reflect.ValueOf((*image.YCbCr)(nil)),
 		"YCbCrSubsampleRatio": reflect.ValueOf((*image.YCbCrSubsampleRatio)(nil)),
-	}
-	Wrapper["image"] = map[string]reflect.Type{
-		"Image":         reflect.TypeOf((*_image_Image)(nil)),
-		"PalettedImage": reflect.TypeOf((*_image_PalettedImage)(nil)),
+
+		// interface wrapper definitions
+		"_Image":         reflect.ValueOf((*_image_Image)(nil)),
+		"_PalettedImage": reflect.ValueOf((*_image_PalettedImage)(nil)),
 	}
 }
 

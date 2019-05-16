@@ -20,6 +20,7 @@ func init() {
 
 		// type definitions
 
+		// interface wrapper definitions
+
 	}
-	Wrapper["os/signal"] = map[string]reflect.Type{}
 }

@@ -31,9 +31,9 @@ func init() {
 		"ClientConn":   reflect.ValueOf((*httputil.ClientConn)(nil)),
 		"ReverseProxy": reflect.ValueOf((*httputil.ReverseProxy)(nil)),
 		"ServerConn":   reflect.ValueOf((*httputil.ServerConn)(nil)),
-	}
-	Wrapper["net/http/httputil"] = map[string]reflect.Type{
-		"BufferPool": reflect.TypeOf((*_net_http_httputil_BufferPool)(nil)),
+
+		// interface wrapper definitions
+		"_BufferPool": reflect.ValueOf((*_net_http_httputil_BufferPool)(nil)),
 	}
 }
 

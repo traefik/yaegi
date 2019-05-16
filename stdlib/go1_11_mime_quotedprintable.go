@@ -18,6 +18,8 @@ func init() {
 		// type definitions
 		"Reader": reflect.ValueOf((*quotedprintable.Reader)(nil)),
 		"Writer": reflect.ValueOf((*quotedprintable.Writer)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["mime/quotedprintable"] = map[string]reflect.Type{}
 }

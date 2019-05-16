@@ -25,9 +25,9 @@ func init() {
 		// type definitions
 		"CancelFunc": reflect.ValueOf((*context.CancelFunc)(nil)),
 		"Context":    reflect.ValueOf((*context.Context)(nil)),
-	}
-	Wrapper["context"] = map[string]reflect.Type{
-		"Context": reflect.TypeOf((*_context_Context)(nil)),
+
+		// interface wrapper definitions
+		"_Context": reflect.ValueOf((*_context_Context)(nil)),
 	}
 }
 

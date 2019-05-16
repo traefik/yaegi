@@ -18,6 +18,8 @@ func init() {
 
 		// type definitions
 		"Block": reflect.ValueOf((*pem.Block)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["encoding/pem"] = map[string]reflect.Type{}
 }

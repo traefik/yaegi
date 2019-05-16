@@ -42,14 +42,14 @@ func init() {
 		"PublicKey":     reflect.ValueOf((*crypto.PublicKey)(nil)),
 		"Signer":        reflect.ValueOf((*crypto.Signer)(nil)),
 		"SignerOpts":    reflect.ValueOf((*crypto.SignerOpts)(nil)),
-	}
-	Wrapper["crypto"] = map[string]reflect.Type{
-		"Decrypter":     reflect.TypeOf((*_crypto_Decrypter)(nil)),
-		"DecrypterOpts": reflect.TypeOf((*_crypto_DecrypterOpts)(nil)),
-		"PrivateKey":    reflect.TypeOf((*_crypto_PrivateKey)(nil)),
-		"PublicKey":     reflect.TypeOf((*_crypto_PublicKey)(nil)),
-		"Signer":        reflect.TypeOf((*_crypto_Signer)(nil)),
-		"SignerOpts":    reflect.TypeOf((*_crypto_SignerOpts)(nil)),
+
+		// interface wrapper definitions
+		"_Decrypter":     reflect.ValueOf((*_crypto_Decrypter)(nil)),
+		"_DecrypterOpts": reflect.ValueOf((*_crypto_DecrypterOpts)(nil)),
+		"_PrivateKey":    reflect.ValueOf((*_crypto_PrivateKey)(nil)),
+		"_PublicKey":     reflect.ValueOf((*_crypto_PublicKey)(nil)),
+		"_Signer":        reflect.ValueOf((*_crypto_Signer)(nil)),
+		"_SignerOpts":    reflect.ValueOf((*_crypto_SignerOpts)(nil)),
 	}
 }
 

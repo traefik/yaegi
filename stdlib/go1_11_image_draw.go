@@ -25,11 +25,11 @@ func init() {
 		"Image":     reflect.ValueOf((*draw.Image)(nil)),
 		"Op":        reflect.ValueOf((*draw.Op)(nil)),
 		"Quantizer": reflect.ValueOf((*draw.Quantizer)(nil)),
-	}
-	Wrapper["image/draw"] = map[string]reflect.Type{
-		"Drawer":    reflect.TypeOf((*_image_draw_Drawer)(nil)),
-		"Image":     reflect.TypeOf((*_image_draw_Image)(nil)),
-		"Quantizer": reflect.TypeOf((*_image_draw_Quantizer)(nil)),
+
+		// interface wrapper definitions
+		"_Drawer":    reflect.ValueOf((*_image_draw_Drawer)(nil)),
+		"_Image":     reflect.ValueOf((*_image_draw_Image)(nil)),
+		"_Quantizer": reflect.ValueOf((*_image_draw_Quantizer)(nil)),
 	}
 }
 

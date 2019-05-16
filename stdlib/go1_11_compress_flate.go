@@ -31,10 +31,10 @@ func init() {
 		"Resetter":          reflect.ValueOf((*flate.Resetter)(nil)),
 		"WriteError":        reflect.ValueOf((*flate.WriteError)(nil)),
 		"Writer":            reflect.ValueOf((*flate.Writer)(nil)),
-	}
-	Wrapper["compress/flate"] = map[string]reflect.Type{
-		"Reader":   reflect.TypeOf((*_compress_flate_Reader)(nil)),
-		"Resetter": reflect.TypeOf((*_compress_flate_Resetter)(nil)),
+
+		// interface wrapper definitions
+		"_Reader":   reflect.ValueOf((*_compress_flate_Reader)(nil)),
+		"_Resetter": reflect.ValueOf((*_compress_flate_Resetter)(nil)),
 	}
 }
 

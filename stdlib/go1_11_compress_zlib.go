@@ -30,9 +30,9 @@ func init() {
 		// type definitions
 		"Resetter": reflect.ValueOf((*zlib.Resetter)(nil)),
 		"Writer":   reflect.ValueOf((*zlib.Writer)(nil)),
-	}
-	Wrapper["compress/zlib"] = map[string]reflect.Type{
-		"Resetter": reflect.TypeOf((*_compress_zlib_Resetter)(nil)),
+
+		// interface wrapper definitions
+		"_Resetter": reflect.ValueOf((*_compress_zlib_Resetter)(nil)),
 	}
 }
 

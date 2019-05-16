@@ -82,9 +82,9 @@ func init() {
 		"Type":         reflect.ValueOf((*reflect.Type)(nil)),
 		"Value":        reflect.ValueOf((*reflect.Value)(nil)),
 		"ValueError":   reflect.ValueOf((*reflect.ValueError)(nil)),
-	}
-	Wrapper["reflect"] = map[string]reflect.Type{
-		"Type": reflect.TypeOf((*_reflect_Type)(nil)),
+
+		// interface wrapper definitions
+		"_Type": reflect.ValueOf((*_reflect_Type)(nil)),
 	}
 }
 
