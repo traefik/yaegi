@@ -8,7 +8,7 @@ type Config struct {
 	A string
 }
 
-var conf *Config
+var conf *Config = &Config{}
 
 func SetConfig() func(*Config) {
 	return func(cf *Config) {

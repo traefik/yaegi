@@ -233,7 +233,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					scope.sym[cc.ident] = &Symbol{index: scope.add(typ), kind: Var, typ: typ}
 				}
 			}
-			if n.child[1].ident == "init" {
+			if n.child[1].ident == "init" && len(n.child[0].child) == 0 {
 				initNodes = append(initNodes, n)
 			}
 

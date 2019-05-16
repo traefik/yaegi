@@ -573,13 +573,10 @@ func (t *Type) TypeOf() reflect.Type {
 		} else {
 			t.rtype = reflect.SliceOf(t.val.TypeOf())
 		}
-
 	case ChanT:
 		t.rtype = reflect.ChanOf(reflect.BothDir, t.val.TypeOf())
-
 	case ErrorT:
 		t.rtype = reflect.TypeOf(new(error)).Elem()
-
 	case FuncT:
 		in := make([]reflect.Type, len(t.arg))
 		out := make([]reflect.Type, len(t.ret))
@@ -590,16 +587,12 @@ func (t *Type) TypeOf() reflect.Type {
 			out[i] = v.TypeOf()
 		}
 		t.rtype = reflect.FuncOf(in, out, false)
-
 	case InterfaceT:
 		t.rtype = reflect.TypeOf(new(interface{})).Elem()
-
 	case MapT:
 		t.rtype = reflect.MapOf(t.key.TypeOf(), t.val.TypeOf())
-
 	case PtrT:
 		t.rtype = reflect.PtrTo(t.val.TypeOf())
-
 	case StructT:
 		var fields []reflect.StructField
 		for _, f := range t.field {
@@ -607,13 +600,49 @@ func (t *Type) TypeOf() reflect.Type {
 			fields = append(fields, field)
 		}
 		t.rtype = reflect.StructOf(fields)
-
 	default:
 		if z, _ := t.zero(); z.IsValid() {
 			t.rtype = z.Type()
 		}
 	}
 	return t.rtype
+}
+
+func (t *Type) frameType() reflect.Type {
+	var r reflect.Type
+	switch t.cat {
+	case ArrayT:
+		if t.size > 0 {
+			r = reflect.ArrayOf(t.size, t.val.frameType())
+		} else {
+			r = reflect.SliceOf(t.val.frameType())
+		}
+	//case ChanT:
+	//	r = reflect.ChanOf(reflect.BothDir, t.val.frameType())
+	//case ErrorT:
+	//	r = reflect.TypeOf(new(error)).Elem()
+	case FuncT:
+		r = reflect.TypeOf((*Node)(nil))
+	case InterfaceT:
+		r = reflect.TypeOf((*valueInterface)(nil)).Elem()
+	//case MapT:
+	//	r = reflect.MapOf(t.key.frameType(), t.val.frameType())
+	//case PtrT:
+	//	r = reflect.PtrTo(t.val.frameType())
+	//case StructT:
+	//	var fields []reflect.StructField
+	//	for _, f := range t.field {
+	//		field := reflect.StructField{Name: exportName(f.name), Type: f.typ.frameType()}
+	//		fields = append(fields, field)
+	//	}
+	//	r = reflect.StructOf(fields)
+	default:
+		//	if z, _ := t.zero(); z.IsValid() {
+		//		r = z.Type()
+		//	}
+		r = t.TypeOf()
+	}
+	return r
 }
 
 func defRecvType(n *Node) *Type {

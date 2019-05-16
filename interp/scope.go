@@ -151,17 +151,18 @@ func (s *Scope) add(typ *Type) (index int) {
 		log.Panic("nil type")
 	}
 	index = len(s.types)
-	var t reflect.Type
-	switch typ.cat {
-	case FuncT:
-		t = reflect.TypeOf((*Node)(nil))
-	case InterfaceT:
-		t = reflect.TypeOf((*valueInterface)(nil)).Elem()
-	default:
-		t = typ.TypeOf()
-		if t == nil {
-			log.Panic("nil reflect type")
-		}
+	//var t reflect.Type
+	//switch typ.cat {
+	//case FuncT:
+	//	t = reflect.TypeOf((*Node)(nil))
+	//case InterfaceT:
+	//	t = reflect.TypeOf((*valueInterface)(nil)).Elem()
+	//default:
+	//	t = typ.TypeOf()
+	//}
+	t := typ.frameType()
+	if t == nil {
+		log.Panic("nil reflect type")
 	}
 	s.types = append(s.types, t)
 	return

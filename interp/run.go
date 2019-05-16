@@ -836,8 +836,8 @@ func getIndexBinMethod(n *Node) {
 // getIndexArray returns array value from index
 func getIndexArray(n *Node) {
 	tnext := getExec(n.tnext)
-	value0 := genValue(n.child[0])
-	value1 := genValueInt(n.child[1])
+	value0 := genValue(n.child[0])    // array
+	value1 := genValueInt(n.child[1]) // index
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)

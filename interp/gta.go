@@ -62,7 +62,13 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 			}
 			return false
 
-		// TODO: add DefineX, ValueSpec ?
+		case DefineX:
+			// TODO: handle global DefineX
+			err = n.cfgError("global DefineX not implemented")
+
+		case ValueSpec:
+			// TODO: handle global ValueSpec
+			err = n.cfgError("global ValueSpec not implemented")
 
 		case FuncDecl:
 			if n.typ, err = nodeType(interp, scope, n.child[2]); err != nil {
