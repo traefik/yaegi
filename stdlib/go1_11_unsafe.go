@@ -15,6 +15,8 @@ func init() {
 
 		// type definitions
 		"Pointer": reflect.ValueOf((*unsafe.Pointer)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["unsafe"] = map[string]reflect.Type{}
 }

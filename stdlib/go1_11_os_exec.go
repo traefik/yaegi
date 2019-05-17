@@ -21,6 +21,8 @@ func init() {
 		"Cmd":       reflect.ValueOf((*exec.Cmd)(nil)),
 		"Error":     reflect.ValueOf((*exec.Error)(nil)),
 		"ExitError": reflect.ValueOf((*exec.ExitError)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["os/exec"] = map[string]reflect.Type{}
 }

@@ -49,6 +49,8 @@ func init() {
 		"RawValue":         reflect.ValueOf((*asn1.RawValue)(nil)),
 		"StructuralError":  reflect.ValueOf((*asn1.StructuralError)(nil)),
 		"SyntaxError":      reflect.ValueOf((*asn1.SyntaxError)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["encoding/asn1"] = map[string]reflect.Type{}
 }

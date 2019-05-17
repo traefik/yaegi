@@ -55,10 +55,10 @@ func init() {
 		"FlagSet":       reflect.ValueOf((*flag.FlagSet)(nil)),
 		"Getter":        reflect.ValueOf((*flag.Getter)(nil)),
 		"Value":         reflect.ValueOf((*flag.Value)(nil)),
-	}
-	Wrapper["flag"] = map[string]reflect.Type{
-		"Getter": reflect.TypeOf((*_flag_Getter)(nil)),
-		"Value":  reflect.TypeOf((*_flag_Value)(nil)),
+
+		// interface wrapper definitions
+		"_Getter": reflect.ValueOf((*_flag_Getter)(nil)),
+		"_Value":  reflect.ValueOf((*_flag_Value)(nil)),
 	}
 }
 

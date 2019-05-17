@@ -27,6 +27,8 @@ func init() {
 		"Parameters":     reflect.ValueOf((*dsa.Parameters)(nil)),
 		"PrivateKey":     reflect.ValueOf((*dsa.PrivateKey)(nil)),
 		"PublicKey":      reflect.ValueOf((*dsa.PublicKey)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["crypto/dsa"] = map[string]reflect.Type{}
 }

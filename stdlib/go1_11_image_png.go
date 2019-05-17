@@ -27,9 +27,9 @@ func init() {
 		"EncoderBufferPool": reflect.ValueOf((*png.EncoderBufferPool)(nil)),
 		"FormatError":       reflect.ValueOf((*png.FormatError)(nil)),
 		"UnsupportedError":  reflect.ValueOf((*png.UnsupportedError)(nil)),
-	}
-	Wrapper["image/png"] = map[string]reflect.Type{
-		"EncoderBufferPool": reflect.TypeOf((*_image_png_EncoderBufferPool)(nil)),
+
+		// interface wrapper definitions
+		"_EncoderBufferPool": reflect.ValueOf((*_image_png_EncoderBufferPool)(nil)),
 	}
 }
 

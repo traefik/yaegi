@@ -22,9 +22,9 @@ func init() {
 		"Options":          reflect.ValueOf((*jpeg.Options)(nil)),
 		"Reader":           reflect.ValueOf((*jpeg.Reader)(nil)),
 		"UnsupportedError": reflect.ValueOf((*jpeg.UnsupportedError)(nil)),
-	}
-	Wrapper["image/jpeg"] = map[string]reflect.Type{
-		"Reader": reflect.TypeOf((*_image_jpeg_Reader)(nil)),
+
+		// interface wrapper definitions
+		"_Reader": reflect.ValueOf((*_image_jpeg_Reader)(nil)),
 	}
 }
 

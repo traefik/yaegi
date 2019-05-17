@@ -184,18 +184,18 @@ func init() {
 		"ServeMux":       reflect.ValueOf((*http.ServeMux)(nil)),
 		"Server":         reflect.ValueOf((*http.Server)(nil)),
 		"Transport":      reflect.ValueOf((*http.Transport)(nil)),
-	}
-	Wrapper["net/http"] = map[string]reflect.Type{
-		"CloseNotifier":  reflect.TypeOf((*_net_http_CloseNotifier)(nil)),
-		"CookieJar":      reflect.TypeOf((*_net_http_CookieJar)(nil)),
-		"File":           reflect.TypeOf((*_net_http_File)(nil)),
-		"FileSystem":     reflect.TypeOf((*_net_http_FileSystem)(nil)),
-		"Flusher":        reflect.TypeOf((*_net_http_Flusher)(nil)),
-		"Handler":        reflect.TypeOf((*_net_http_Handler)(nil)),
-		"Hijacker":       reflect.TypeOf((*_net_http_Hijacker)(nil)),
-		"Pusher":         reflect.TypeOf((*_net_http_Pusher)(nil)),
-		"ResponseWriter": reflect.TypeOf((*_net_http_ResponseWriter)(nil)),
-		"RoundTripper":   reflect.TypeOf((*_net_http_RoundTripper)(nil)),
+
+		// interface wrapper definitions
+		"_CloseNotifier":  reflect.ValueOf((*_net_http_CloseNotifier)(nil)),
+		"_CookieJar":      reflect.ValueOf((*_net_http_CookieJar)(nil)),
+		"_File":           reflect.ValueOf((*_net_http_File)(nil)),
+		"_FileSystem":     reflect.ValueOf((*_net_http_FileSystem)(nil)),
+		"_Flusher":        reflect.ValueOf((*_net_http_Flusher)(nil)),
+		"_Handler":        reflect.ValueOf((*_net_http_Handler)(nil)),
+		"_Hijacker":       reflect.ValueOf((*_net_http_Hijacker)(nil)),
+		"_Pusher":         reflect.ValueOf((*_net_http_Pusher)(nil)),
+		"_ResponseWriter": reflect.ValueOf((*_net_http_ResponseWriter)(nil)),
+		"_RoundTripper":   reflect.ValueOf((*_net_http_RoundTripper)(nil)),
 	}
 }
 

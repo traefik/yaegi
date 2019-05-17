@@ -39,10 +39,10 @@ func init() {
 		"Server":      reflect.ValueOf((*rpc.Server)(nil)),
 		"ServerCodec": reflect.ValueOf((*rpc.ServerCodec)(nil)),
 		"ServerError": reflect.ValueOf((*rpc.ServerError)(nil)),
-	}
-	Wrapper["net/rpc"] = map[string]reflect.Type{
-		"ClientCodec": reflect.TypeOf((*_net_rpc_ClientCodec)(nil)),
-		"ServerCodec": reflect.TypeOf((*_net_rpc_ServerCodec)(nil)),
+
+		// interface wrapper definitions
+		"_ClientCodec": reflect.ValueOf((*_net_rpc_ClientCodec)(nil)),
+		"_ServerCodec": reflect.ValueOf((*_net_rpc_ServerCodec)(nil)),
 	}
 }
 

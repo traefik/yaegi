@@ -20,9 +20,9 @@ func init() {
 
 		// type definitions
 		"Interface": reflect.ValueOf((*heap.Interface)(nil)),
-	}
-	Wrapper["container/heap"] = map[string]reflect.Type{
-		"Interface": reflect.TypeOf((*_container_heap_Interface)(nil)),
+
+		// interface wrapper definitions
+		"_Interface": reflect.ValueOf((*_container_heap_Interface)(nil)),
 	}
 }
 

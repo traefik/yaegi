@@ -17,6 +17,7 @@ func init() {
 
 		// type definitions
 
+		// interface wrapper definitions
+
 	}
-	Wrapper["go/format"] = map[string]reflect.Type{}
 }

@@ -39,11 +39,11 @@ func init() {
 		"Unmarshaler":           reflect.ValueOf((*json.Unmarshaler)(nil)),
 		"UnsupportedTypeError":  reflect.ValueOf((*json.UnsupportedTypeError)(nil)),
 		"UnsupportedValueError": reflect.ValueOf((*json.UnsupportedValueError)(nil)),
-	}
-	Wrapper["encoding/json"] = map[string]reflect.Type{
-		"Marshaler":   reflect.TypeOf((*_encoding_json_Marshaler)(nil)),
-		"Token":       reflect.TypeOf((*_encoding_json_Token)(nil)),
-		"Unmarshaler": reflect.TypeOf((*_encoding_json_Unmarshaler)(nil)),
+
+		// interface wrapper definitions
+		"_Marshaler":   reflect.ValueOf((*_encoding_json_Marshaler)(nil)),
+		"_Token":       reflect.ValueOf((*_encoding_json_Token)(nil)),
+		"_Unmarshaler": reflect.ValueOf((*_encoding_json_Unmarshaler)(nil)),
 	}
 }
 

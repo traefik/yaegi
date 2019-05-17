@@ -115,14 +115,14 @@ func init() {
 		"UnaryExpr":      reflect.ValueOf((*ast.UnaryExpr)(nil)),
 		"ValueSpec":      reflect.ValueOf((*ast.ValueSpec)(nil)),
 		"Visitor":        reflect.ValueOf((*ast.Visitor)(nil)),
-	}
-	Wrapper["go/ast"] = map[string]reflect.Type{
-		"Decl":    reflect.TypeOf((*_go_ast_Decl)(nil)),
-		"Expr":    reflect.TypeOf((*_go_ast_Expr)(nil)),
-		"Node":    reflect.TypeOf((*_go_ast_Node)(nil)),
-		"Spec":    reflect.TypeOf((*_go_ast_Spec)(nil)),
-		"Stmt":    reflect.TypeOf((*_go_ast_Stmt)(nil)),
-		"Visitor": reflect.TypeOf((*_go_ast_Visitor)(nil)),
+
+		// interface wrapper definitions
+		"_Decl":    reflect.ValueOf((*_go_ast_Decl)(nil)),
+		"_Expr":    reflect.ValueOf((*_go_ast_Expr)(nil)),
+		"_Node":    reflect.ValueOf((*_go_ast_Node)(nil)),
+		"_Spec":    reflect.ValueOf((*_go_ast_Spec)(nil)),
+		"_Stmt":    reflect.ValueOf((*_go_ast_Stmt)(nil)),
+		"_Visitor": reflect.ValueOf((*_go_ast_Visitor)(nil)),
 	}
 }
 

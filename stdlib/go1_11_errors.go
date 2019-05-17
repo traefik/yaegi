@@ -16,6 +16,7 @@ func init() {
 
 		// type definitions
 
+		// interface wrapper definitions
+
 	}
-	Wrapper["errors"] = map[string]reflect.Type{}
 }

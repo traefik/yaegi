@@ -21,6 +21,7 @@ func init() {
 
 		// type definitions
 
+		// interface wrapper definitions
+
 	}
-	Wrapper["crypto/subtle"] = map[string]reflect.Type{}
 }

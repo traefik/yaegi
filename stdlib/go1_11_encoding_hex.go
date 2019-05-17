@@ -26,6 +26,8 @@ func init() {
 
 		// type definitions
 		"InvalidByteError": reflect.ValueOf((*hex.InvalidByteError)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["encoding/hex"] = map[string]reflect.Type{}
 }

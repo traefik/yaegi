@@ -35,9 +35,9 @@ func init() {
 		"IntSlice":     reflect.ValueOf((*sort.IntSlice)(nil)),
 		"Interface":    reflect.ValueOf((*sort.Interface)(nil)),
 		"StringSlice":  reflect.ValueOf((*sort.StringSlice)(nil)),
-	}
-	Wrapper["sort"] = map[string]reflect.Type{
-		"Interface": reflect.TypeOf((*_sort_Interface)(nil)),
+
+		// interface wrapper definitions
+		"_Interface": reflect.ValueOf((*_sort_Interface)(nil)),
 	}
 }
 

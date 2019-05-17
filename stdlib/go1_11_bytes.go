@@ -66,6 +66,8 @@ func init() {
 		// type definitions
 		"Buffer": reflect.ValueOf((*bytes.Buffer)(nil)),
 		"Reader": reflect.ValueOf((*bytes.Reader)(nil)),
+
+		// interface wrapper definitions
+
 	}
-	Wrapper["bytes"] = map[string]reflect.Type{}
 }

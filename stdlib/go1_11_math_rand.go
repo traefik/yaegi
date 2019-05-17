@@ -37,10 +37,10 @@ func init() {
 		"Source":   reflect.ValueOf((*rand.Source)(nil)),
 		"Source64": reflect.ValueOf((*rand.Source64)(nil)),
 		"Zipf":     reflect.ValueOf((*rand.Zipf)(nil)),
-	}
-	Wrapper["math/rand"] = map[string]reflect.Type{
-		"Source":   reflect.TypeOf((*_math_rand_Source)(nil)),
-		"Source64": reflect.TypeOf((*_math_rand_Source64)(nil)),
+
+		// interface wrapper definitions
+		"_Source":   reflect.ValueOf((*_math_rand_Source)(nil)),
+		"_Source64": reflect.ValueOf((*_math_rand_Source64)(nil)),
 	}
 }
 

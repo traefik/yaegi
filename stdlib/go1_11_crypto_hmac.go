@@ -17,6 +17,7 @@ func init() {
 
 		// type definitions
 
+		// interface wrapper definitions
+
 	}
-	Wrapper["crypto/hmac"] = map[string]reflect.Type{}
 }
