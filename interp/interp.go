@@ -96,7 +96,7 @@ type _error struct {
 	WError func() string
 }
 
-func (W _error) Error() string { return W.WError() }
+func (w _error) Error() string { return w.WError() }
 
 func init() { ExportValue[selfPath]["ExportValue"] = reflect.ValueOf(ExportValue) }
 

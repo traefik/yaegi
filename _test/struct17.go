@@ -9,8 +9,8 @@ type S2 struct {
 }
 
 func main() {
-	s1 := S1{"foo"}
-	s2 := S2{&s1}
+	s1 := &S1{"foo"}
+	s2 := S2{s1}
 	println(s2.Name)
 }
 

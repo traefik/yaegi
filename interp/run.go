@@ -4,6 +4,7 @@ package interp
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 )
 
@@ -405,7 +406,7 @@ func genFunctionWrapper(n *Node) func(*Frame) reflect.Value {
 	var receiver func(*Frame) reflect.Value
 
 	if n.recv != nil {
-		if n.recv.node.typ.val.id() == defRecvType(def).id() {
+		if n.recv.node.typ.cat != defRecvType(def).cat {
 			receiver = genValueRecvIndirect(n)
 		} else {
 			receiver = genValueRecv(n)
@@ -426,7 +427,12 @@ func genFunctionWrapper(n *Node) func(*Frame) reflect.Value {
 
 			// Copy method receiver as first argument, if defined
 			if receiver != nil {
-				d[numRet].Set(receiver(f))
+				src, dest := receiver(f), d[numRet]
+				if src.Type().Kind() != dest.Type().Kind() {
+					dest.Set(src.Addr())
+				} else {
+					dest.Set(src)
+				}
 				d = d[numRet+1:]
 			} else {
 				d = d[numRet:]
@@ -469,10 +475,16 @@ func genInterfaceWrapper(n *Node, typ reflect.Type) func(*Frame) reflect.Value {
 		return value
 	}
 	mn := typ.NumMethod()
+	names := make([]string, mn)
 	methods := make([]*Node, mn)
 	indexes := make([][]int, mn)
 	for i := 0; i < mn; i++ {
-		methods[i], indexes[i] = n.typ.lookupMethod(typ.Method(i).Name)
+		names[i] = typ.Method(i).Name
+		methods[i], indexes[i] = n.typ.lookupMethod(names[i])
+		if methods[i] == nil && n.typ.cat != NilT {
+			// interpreted method not found, look for binary method, possibly embedded
+			_, indexes[i], _ = n.typ.lookupBinMethod(names[i])
+		}
 	}
 	wrap := n.interp.getWrapper(typ)
 
@@ -486,6 +498,14 @@ func genInterfaceWrapper(n *Node, typ reflect.Type) func(*Frame) reflect.Value {
 		}
 		w := reflect.New(wrap).Elem()
 		for i, m := range methods {
+			if m == nil {
+				if r := v.FieldByIndex(indexes[i]).MethodByName(names[i]); r.IsValid() {
+					w.Field(i).Set(v.FieldByIndex(indexes[i]).MethodByName(names[i]))
+				} else {
+					log.Println(n.cfgError("genInterfaceWrapper error, no method %s", names[i]))
+				}
+				continue
+			}
 			node := *m
 			node.recv = &Receiver{n, v, indexes[i]}
 			w.Field(i).Set(genFunctionWrapper(&node)(f))
@@ -692,7 +712,7 @@ func call(n *Node) {
 	}
 }
 
-// pindex returns defintion parameter index for function call
+// pindex returns definition parameter index for function call
 func pindex(i, variadic int) int {
 	if variadic < 0 || i <= variadic {
 		return i
@@ -1250,7 +1270,6 @@ func compositeLit(n *Node) {
 		child = n.child[1:]
 	}
 
-	a, _ := n.typ.zero()
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
 		convertLiteralValue(c, n.typ.field[i].typ.TypeOf())
@@ -1262,6 +1281,7 @@ func compositeLit(n *Node) {
 	}
 
 	n.exec = func(f *Frame) Builtin {
+		a := reflect.New(n.typ.TypeOf()).Elem()
 		for i, v := range values {
 			a.Field(i).Set(v(f))
 		}
@@ -1499,7 +1519,7 @@ func _case(n *Node) {
 }
 
 func appendSlice(n *Node) {
-	i := n.findex
+	dest := genValue(n)
 	next := getExec(n.tnext)
 	value := genValue(n.child[1])
 	value0 := genValue(n.child[2])
@@ -1507,12 +1527,12 @@ func appendSlice(n *Node) {
 	if isString(n.child[2].typ) {
 		typ := reflect.TypeOf([]byte{})
 		n.exec = func(f *Frame) Builtin {
-			f.data[i] = reflect.AppendSlice(value(f), value0(f).Convert(typ))
+			dest(f).Set(reflect.AppendSlice(value(f), value0(f).Convert(typ)))
 			return next
 		}
 	} else {
 		n.exec = func(f *Frame) Builtin {
-			f.data[i] = reflect.AppendSlice(value(f), value0(f))
+			dest(f).Set(reflect.AppendSlice(value(f), value0(f)))
 			return next
 		}
 	}
