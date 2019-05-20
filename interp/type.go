@@ -293,12 +293,21 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 	case InterfaceType:
 		t.cat = InterfaceT
 		for _, field := range n.child[0].child {
-			typ, err := nodeType(interp, scope, field.child[1])
-			if err != nil {
-				return nil, err
+			if len(field.child) == 1 {
+				typ, err := nodeType(interp, scope, field.child[0])
+				if err != nil {
+					return nil, err
+				}
+				t.field = append(t.field, StructField{name: fieldName(field.child[0]), embed: true, typ: typ})
+				t.incomplete = t.incomplete || typ.incomplete
+			} else {
+				typ, err := nodeType(interp, scope, field.child[1])
+				if err != nil {
+					return nil, err
+				}
+				t.field = append(t.field, StructField{name: field.child[0].ident, typ: typ})
+				t.incomplete = t.incomplete || typ.incomplete
 			}
-			t.field = append(t.field, StructField{name: field.child[0].ident, typ: typ})
-			t.incomplete = t.incomplete || typ.incomplete
 		}
 
 	case MapType:
