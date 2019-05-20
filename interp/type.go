@@ -287,6 +287,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 		if sym, _, found := scope.lookup(n.ident); found {
 			t = sym.typ
 		} else {
+			scope.sym[n.ident] = &Symbol{kind: Const, typ: t}
 			t.incomplete = true
 		}
 
@@ -354,6 +355,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 
 	case StructType:
 		t.cat = StructT
+		var incomplete bool
 		for _, c := range n.child[0].child {
 			if len(c.child) == 1 {
 				typ, err := nodeType(interp, scope, c.child[0])
@@ -361,19 +363,20 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 					return nil, err
 				}
 				t.field = append(t.field, StructField{name: fieldName(c.child[0]), embed: true, typ: typ})
-				t.incomplete = t.incomplete || typ.incomplete
+				incomplete = incomplete || typ.incomplete
 			} else {
 				l := len(c.child)
 				typ, err := nodeType(interp, scope, c.child[l-1])
 				if err != nil {
 					return nil, err
 				}
-				t.incomplete = t.incomplete || typ.incomplete
+				incomplete = incomplete || typ.incomplete
 				for _, d := range c.child[:l-1] {
 					t.field = append(t.field, StructField{name: d.ident, typ: typ})
 				}
 			}
 		}
+		t.incomplete = incomplete
 
 	default:
 		err = n.cfgError("type definition not implemented: %s", n.kind)
@@ -573,6 +576,10 @@ func exportName(s string) string {
 func (t *Type) TypeOf() reflect.Type {
 	if t.rtype != nil {
 		return t.rtype
+	}
+
+	if t.incomplete {
+		t, _ = nodeType(t.node.interp, t.scope, t.node)
 	}
 
 	switch t.cat {
