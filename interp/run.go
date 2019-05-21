@@ -700,13 +700,9 @@ func call(n *Node) {
 		runCfg(def.child[3].start, &nf)
 
 		// Handle branching according to boolean result
-		if fnext != nil {
-			if nf.data[0].Bool() {
-				return tnext
-			}
+		if fnext != nil && !nf.data[0].Bool() {
 			return fnext
 		}
-		// Propagate return values to caller frame
 		return tnext
 	}
 }
