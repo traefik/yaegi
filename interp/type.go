@@ -287,8 +287,8 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 		if sym, _, found := scope.lookup(n.ident); found {
 			t = sym.typ
 		} else {
-			scope.sym[n.ident] = &Symbol{kind: Const, typ: t}
 			t.incomplete = true
+			scope.sym[n.ident] = &Symbol{kind: Typ, typ: t}
 		}
 
 	case InterfaceType:
@@ -579,7 +579,7 @@ func (t *Type) TypeOf() reflect.Type {
 	}
 
 	if t.incomplete {
-		t, _ = nodeType(t.node.interp, t.scope, t.node)
+		t, _ = t.finalize()
 	}
 
 	switch t.cat {
