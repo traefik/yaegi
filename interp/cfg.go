@@ -524,10 +524,16 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				break
 			}
 			switch {
+			case n.typ != nil && n.typ.cat == BoolT && isAncBranch(n):
+				n.findex = -1
 			case n.anc.kind == AssignStmt && n.anc.action == Assign:
 				dest := n.anc.child[childPos(n)-n.anc.nright]
 				n.typ = dest.typ
 				n.findex = dest.findex
+			case n.anc.kind == ReturnStmt:
+				pos := childPos(n)
+				n.typ = scope.def.typ.ret[pos]
+				n.findex = pos
 			default:
 				if n.typ == nil {
 					n.typ, err = nodeType(interp, scope, n)
@@ -794,8 +800,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			n.start = n.child[3].start
 			n.types = scope.types
 			scope = scope.pop()
+			funcName := n.child[1].ident
 			if !isMethod(n) {
-				funcName := n.child[1].ident
 				interp.scope[pkgName].sym[funcName].index = -1 // to force value to n.val
 				interp.scope[pkgName].sym[funcName].typ = n.typ
 				interp.scope[pkgName].sym[funcName].kind = Func
@@ -1247,6 +1253,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		scope.pop()
 	}
 	return initNodes, err
+}
+
+func isAncBranch(n *Node) bool {
+	switch n.anc.kind {
+	case If0, If1, If2, If3:
+		return true
+	}
+	return false
 }
 
 func childPos(n *Node) int {

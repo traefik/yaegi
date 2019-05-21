@@ -542,11 +542,6 @@ func call(n *Node) {
 		}
 	}
 
-	// compute frame indexes for return values
-	ret := make([]int, len(n.child[0].typ.ret))
-	for i := range n.child[0].typ.ret {
-		ret[i] = n.findex + i
-	}
 	rvalues := make([]func(*Frame) reflect.Value, len(n.child[0].typ.ret))
 	switch n.anc.kind {
 	case DefineX, AssignXStmt:
@@ -573,9 +568,14 @@ func call(n *Node) {
 		nf := Frame{anc: anc, data: make([]reflect.Value, len(def.types))}
 		var vararg reflect.Value
 
+		// Init return values
+		for i, v := range rvalues {
+			nf.data[i] = v(f)
+		}
+
 		// Init local frame values
-		for i, t := range def.types {
-			nf.data[i] = reflect.New(t).Elem()
+		for i, t := range def.types[numRet:] {
+			nf.data[numRet+i] = reflect.New(t).Elem()
 		}
 
 		// Init variadic argument vector
@@ -635,11 +635,6 @@ func call(n *Node) {
 			return fnext
 		}
 		// Propagate return values to caller frame
-		for i, v := range rvalues {
-			if v != nil {
-				v(f).Set(nf.data[i])
-			}
-		}
 		return tnext
 	}
 }
@@ -1012,7 +1007,6 @@ func nop(n *Node) {
 	}
 }
 
-// TODO: optimize return according to nb of child
 func _return(n *Node) {
 	child := n.child
 	next := getExec(n.tnext)
@@ -1021,11 +1015,33 @@ func _return(n *Node) {
 		values[i] = genValue(c)
 	}
 
-	n.exec = func(f *Frame) Builtin {
-		for i, value := range values {
-			f.data[i] = value(f)
+	switch len(child) {
+	case 0:
+		n.exec = func(f *Frame) Builtin { return next }
+	case 1:
+		if child[0].kind == BinaryExpr {
+			n.exec = func(f *Frame) Builtin { return next }
+		} else {
+			v := values[0]
+			n.exec = func(f *Frame) Builtin {
+				f.data[0].Set(v(f))
+				return next
+			}
 		}
-		return next
+	case 2:
+		v0, v1 := values[0], values[1]
+		n.exec = func(f *Frame) Builtin {
+			f.data[0].Set(v0(f))
+			f.data[1].Set(v1(f))
+			return next
+		}
+	default:
+		n.exec = func(f *Frame) Builtin {
+			for i, value := range values {
+				f.data[i].Set(value(f))
+			}
+			return next
+		}
 	}
 }
 
