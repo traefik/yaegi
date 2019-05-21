@@ -26,5 +26,8 @@ func init() {
 
 		// type definitions
 		"Mode": reflect.ValueOf((*parser.Mode)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

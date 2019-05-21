@@ -25,5 +25,8 @@ func init() {
 		// type definitions
 		"CorruptInputError": reflect.ValueOf((*base64.CorruptInputError)(nil)),
 		"Encoding":          reflect.ValueOf((*base64.Encoding)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

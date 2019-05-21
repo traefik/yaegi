@@ -18,5 +18,8 @@ func init() {
 
 		// type definitions
 		"Handler": reflect.ValueOf((*cgi.Handler)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

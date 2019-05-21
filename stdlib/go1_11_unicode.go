@@ -283,5 +283,8 @@ func init() {
 		"Range32":     reflect.ValueOf((*unicode.Range32)(nil)),
 		"RangeTable":  reflect.ValueOf((*unicode.RangeTable)(nil)),
 		"SpecialCase": reflect.ValueOf((*unicode.SpecialCase)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

@@ -24,5 +24,8 @@ func init() {
 		// type definitions
 		"WordDecoder": reflect.ValueOf((*mime.WordDecoder)(nil)),
 		"WordEncoder": reflect.ValueOf((*mime.WordEncoder)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

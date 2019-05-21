@@ -49,5 +49,8 @@ func init() {
 		"Srcset":    reflect.ValueOf((*template.Srcset)(nil)),
 		"Template":  reflect.ValueOf((*template.Template)(nil)),
 		"URL":       reflect.ValueOf((*template.URL)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

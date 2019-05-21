@@ -24,5 +24,8 @@ func init() {
 		// type definitions
 		"GIF":     reflect.ValueOf((*gif.GIF)(nil)),
 		"Options": reflect.ValueOf((*gif.Options)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

@@ -19,5 +19,8 @@ func init() {
 
 		// type definitions
 		"Order": reflect.ValueOf((*lzw.Order)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

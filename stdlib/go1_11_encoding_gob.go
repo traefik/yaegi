@@ -23,5 +23,23 @@ func init() {
 		"Encoder":    reflect.ValueOf((*gob.Encoder)(nil)),
 		"GobDecoder": reflect.ValueOf((*gob.GobDecoder)(nil)),
 		"GobEncoder": reflect.ValueOf((*gob.GobEncoder)(nil)),
+
+		// interface wrapper definitions
+		"_GobDecoder": reflect.ValueOf((*_encoding_gob_GobDecoder)(nil)),
+		"_GobEncoder": reflect.ValueOf((*_encoding_gob_GobEncoder)(nil)),
 	}
 }
+
+// _encoding_gob_GobDecoder is an interface wrapper for GobDecoder type
+type _encoding_gob_GobDecoder struct {
+	WGobDecode func(a0 []byte) error
+}
+
+func (W _encoding_gob_GobDecoder) GobDecode(a0 []byte) error { return W.WGobDecode(a0) }
+
+// _encoding_gob_GobEncoder is an interface wrapper for GobEncoder type
+type _encoding_gob_GobEncoder struct {
+	WGobEncode func() ([]byte, error)
+}
+
+func (W _encoding_gob_GobEncoder) GobEncode() ([]byte, error) { return W.WGobEncode() }

@@ -23,5 +23,8 @@ func init() {
 
 		// type definitions
 		"Regexp": reflect.ValueOf((*regexp.Regexp)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

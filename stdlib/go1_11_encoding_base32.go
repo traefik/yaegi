@@ -23,5 +23,8 @@ func init() {
 		// type definitions
 		"CorruptInputError": reflect.ValueOf((*base32.CorruptInputError)(nil)),
 		"Encoding":          reflect.ValueOf((*base32.Encoding)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

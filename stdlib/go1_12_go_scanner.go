@@ -21,5 +21,8 @@ func init() {
 		"ErrorList":    reflect.ValueOf((*scanner.ErrorList)(nil)),
 		"Mode":         reflect.ValueOf((*scanner.Mode)(nil)),
 		"Scanner":      reflect.ValueOf((*scanner.Scanner)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

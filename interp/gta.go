@@ -51,18 +51,28 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 					}
 					val = src.val
 				}
-				if typ.cat == NilT {
-					err = n.cfgError("use of untyped nil")
-					return false
+				var index int
+				if !typ.incomplete {
+					if typ.cat == NilT {
+						err = n.cfgError("use of untyped nil")
+						return false
+					}
+					index = scope.add(typ)
 				}
-				scope.sym[dest.ident] = &Symbol{kind: Var, global: true, index: scope.add(typ), typ: typ, val: val}
+				scope.sym[dest.ident] = &Symbol{kind: Var, global: true, index: index, typ: typ, val: val}
 				if n.anc.kind == ConstDecl {
 					iotaValue++
 				}
 			}
 			return false
 
-		// TODO: add DefineX, ValueSpec ?
+		case DefineX:
+			// TODO: handle global DefineX
+			//err = n.cfgError("global DefineX not implemented")
+
+		case ValueSpec:
+			// TODO: handle global ValueSpec
+			//err = n.cfgError("global ValueSpec not implemented")
 
 		case FuncDecl:
 			if n.typ, err = nodeType(interp, scope, n.child[2]); err != nil {

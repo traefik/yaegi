@@ -16,5 +16,8 @@ func init() {
 
 		// type definitions
 		"Index": reflect.ValueOf((*suffixarray.Index)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

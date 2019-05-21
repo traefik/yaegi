@@ -29,5 +29,15 @@ func init() {
 		"Map":      reflect.ValueOf((*expvar.Map)(nil)),
 		"String":   reflect.ValueOf((*expvar.String)(nil)),
 		"Var":      reflect.ValueOf((*expvar.Var)(nil)),
+
+		// interface wrapper definitions
+		"_Var": reflect.ValueOf((*_expvar_Var)(nil)),
 	}
 }
+
+// _expvar_Var is an interface wrapper for Var type
+type _expvar_Var struct {
+	WString func() string
+}
+
+func (W _expvar_Var) String() string { return W.WString() }

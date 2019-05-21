@@ -6,6 +6,7 @@ package stdlib
 
 import (
 	"go/ast"
+	"go/token"
 	"reflect"
 )
 
@@ -114,5 +115,65 @@ func init() {
 		"UnaryExpr":      reflect.ValueOf((*ast.UnaryExpr)(nil)),
 		"ValueSpec":      reflect.ValueOf((*ast.ValueSpec)(nil)),
 		"Visitor":        reflect.ValueOf((*ast.Visitor)(nil)),
+
+		// interface wrapper definitions
+		"_Decl":    reflect.ValueOf((*_go_ast_Decl)(nil)),
+		"_Expr":    reflect.ValueOf((*_go_ast_Expr)(nil)),
+		"_Node":    reflect.ValueOf((*_go_ast_Node)(nil)),
+		"_Spec":    reflect.ValueOf((*_go_ast_Spec)(nil)),
+		"_Stmt":    reflect.ValueOf((*_go_ast_Stmt)(nil)),
+		"_Visitor": reflect.ValueOf((*_go_ast_Visitor)(nil)),
 	}
 }
+
+// _go_ast_Decl is an interface wrapper for Decl type
+type _go_ast_Decl struct {
+	WEnd func() token.Pos
+	WPos func() token.Pos
+}
+
+func (W _go_ast_Decl) End() token.Pos { return W.WEnd() }
+func (W _go_ast_Decl) Pos() token.Pos { return W.WPos() }
+
+// _go_ast_Expr is an interface wrapper for Expr type
+type _go_ast_Expr struct {
+	WEnd func() token.Pos
+	WPos func() token.Pos
+}
+
+func (W _go_ast_Expr) End() token.Pos { return W.WEnd() }
+func (W _go_ast_Expr) Pos() token.Pos { return W.WPos() }
+
+// _go_ast_Node is an interface wrapper for Node type
+type _go_ast_Node struct {
+	WEnd func() token.Pos
+	WPos func() token.Pos
+}
+
+func (W _go_ast_Node) End() token.Pos { return W.WEnd() }
+func (W _go_ast_Node) Pos() token.Pos { return W.WPos() }
+
+// _go_ast_Spec is an interface wrapper for Spec type
+type _go_ast_Spec struct {
+	WEnd func() token.Pos
+	WPos func() token.Pos
+}
+
+func (W _go_ast_Spec) End() token.Pos { return W.WEnd() }
+func (W _go_ast_Spec) Pos() token.Pos { return W.WPos() }
+
+// _go_ast_Stmt is an interface wrapper for Stmt type
+type _go_ast_Stmt struct {
+	WEnd func() token.Pos
+	WPos func() token.Pos
+}
+
+func (W _go_ast_Stmt) End() token.Pos { return W.WEnd() }
+func (W _go_ast_Stmt) Pos() token.Pos { return W.WPos() }
+
+// _go_ast_Visitor is an interface wrapper for Visitor type
+type _go_ast_Visitor struct {
+	WVisit func(node ast.Node) (w ast.Visitor)
+}
+
+func (W _go_ast_Visitor) Visit(node ast.Node) (w ast.Visitor) { return W.WVisit(node) }

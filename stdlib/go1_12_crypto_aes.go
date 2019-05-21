@@ -17,5 +17,8 @@ func init() {
 
 		// type definitions
 		"KeySizeError": reflect.ValueOf((*aes.KeySizeError)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

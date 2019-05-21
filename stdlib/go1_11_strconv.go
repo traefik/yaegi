@@ -49,5 +49,8 @@ func init() {
 
 		// type definitions
 		"NumError": reflect.ValueOf((*strconv.NumError)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

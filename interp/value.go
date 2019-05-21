@@ -22,6 +22,11 @@ func valueGenerator(n *Node, i int) func(*Frame) reflect.Value {
 	}
 }
 
+func genValueRecvIndirect(n *Node) func(*Frame) reflect.Value {
+	v := genValueRecv(n)
+	return func(f *Frame) reflect.Value { return v(f).Elem() }
+}
+
 func genValueRecv(n *Node) func(*Frame) reflect.Value {
 	v := genValue(n.recv.node)
 	fi := n.recv.index

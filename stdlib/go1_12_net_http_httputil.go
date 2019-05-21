@@ -31,5 +31,17 @@ func init() {
 		"ClientConn":   reflect.ValueOf((*httputil.ClientConn)(nil)),
 		"ReverseProxy": reflect.ValueOf((*httputil.ReverseProxy)(nil)),
 		"ServerConn":   reflect.ValueOf((*httputil.ServerConn)(nil)),
+
+		// interface wrapper definitions
+		"_BufferPool": reflect.ValueOf((*_net_http_httputil_BufferPool)(nil)),
 	}
 }
+
+// _net_http_httputil_BufferPool is an interface wrapper for BufferPool type
+type _net_http_httputil_BufferPool struct {
+	WGet func() []byte
+	WPut func(a0 []byte)
+}
+
+func (W _net_http_httputil_BufferPool) Get() []byte   { return W.WGet() }
+func (W _net_http_httputil_BufferPool) Put(a0 []byte) { W.WPut(a0) }

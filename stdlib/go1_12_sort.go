@@ -35,5 +35,19 @@ func init() {
 		"IntSlice":     reflect.ValueOf((*sort.IntSlice)(nil)),
 		"Interface":    reflect.ValueOf((*sort.Interface)(nil)),
 		"StringSlice":  reflect.ValueOf((*sort.StringSlice)(nil)),
+
+		// interface wrapper definitions
+		"_Interface": reflect.ValueOf((*_sort_Interface)(nil)),
 	}
 }
+
+// _sort_Interface is an interface wrapper for Interface type
+type _sort_Interface struct {
+	WLen  func() int
+	WLess func(i int, j int) bool
+	WSwap func(i int, j int)
+}
+
+func (W _sort_Interface) Len() int               { return W.WLen() }
+func (W _sort_Interface) Less(i int, j int) bool { return W.WLess(i, j) }
+func (W _sort_Interface) Swap(i int, j int)      { W.WSwap(i, j) }

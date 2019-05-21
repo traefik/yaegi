@@ -22,5 +22,8 @@ func init() {
 		// type definitions
 		"ResponseRecorder": reflect.ValueOf((*httptest.ResponseRecorder)(nil)),
 		"Server":           reflect.ValueOf((*httptest.Server)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

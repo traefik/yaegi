@@ -16,5 +16,8 @@ func init() {
 
 		// type definitions
 		"StructuralError": reflect.ValueOf((*bzip2.StructuralError)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

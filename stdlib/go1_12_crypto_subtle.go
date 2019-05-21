@@ -21,5 +21,7 @@ func init() {
 
 		// type definitions
 
+		// interface wrapper definitions
+
 	}
 }
