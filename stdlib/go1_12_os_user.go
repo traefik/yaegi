@@ -25,5 +25,8 @@ func init() {
 		"UnknownUserError":    reflect.ValueOf((*user.UnknownUserError)(nil)),
 		"UnknownUserIdError":  reflect.ValueOf((*user.UnknownUserIdError)(nil)),
 		"User":                reflect.ValueOf((*user.User)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

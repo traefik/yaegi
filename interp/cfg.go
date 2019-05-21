@@ -2,6 +2,7 @@ package interp
 
 import (
 	"fmt"
+	"log"
 	"path"
 	"reflect"
 	"unicode"
@@ -216,7 +217,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				// define receiver symbol
 				var typ *Type
 				recvName := n.child[0].child[0].child[0].ident
-				typ, err = nodeType(interp, scope, n.child[0].child[0].lastChild())
+				recvTypeNode := n.child[0].child[0].lastChild()
+				typ, err = nodeType(interp, scope, recvTypeNode)
+				recvTypeNode.typ = typ
 				scope.sym[recvName] = &Symbol{index: scope.add(typ), kind: Var, typ: typ}
 			}
 			for _, c := range n.child[2].child[0].child {
@@ -230,7 +233,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					scope.sym[cc.ident] = &Symbol{index: scope.add(typ), kind: Var, typ: typ}
 				}
 			}
-			if n.child[1].ident == "init" {
+			if n.child[1].ident == "init" && len(n.child[0].child) == 0 {
 				initNodes = append(initNodes, n)
 			}
 
@@ -941,6 +944,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case ReturnStmt:
 			wireChild(n)
 			n.tnext = nil
+			n.val = scope.def
 			for i, c := range n.child {
 				if c.typ.cat == NilT {
 					// nil: Set node value to zero of return type
@@ -964,7 +968,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				err = n.cfgError("undefined type")
 				break
 			}
-			if n.typ.cat == ValueT {
+			if n.typ.cat == ValueT || n.typ.cat == ErrorT {
 				// Handle object defined in runtime, try to find field or method
 				// Search for method first, as it applies both to types T and *T
 				// Search for field must then be performed on type T only (not *T)
@@ -993,7 +997,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				default:
 					err = n.cfgError("undefined field or method: %s", n.child[1].ident)
 				}
-			} else if n.typ.cat == PtrT && n.typ.val.cat == ValueT {
+			} else if n.typ.cat == PtrT && (n.typ.val.cat == ValueT || n.typ.val.cat == ErrorT) {
 				// Handle pointer on object defined in runtime
 				if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
 					n.typ = &Type{cat: ValueT, rtype: field.Type}
@@ -1387,7 +1391,7 @@ func isKey(n *Node) bool {
 	return n.anc.kind == File ||
 		(n.anc.kind == SelectorExpr && n.anc.child[0] != n) ||
 		(n.anc.kind == FuncDecl && isMethod(n.anc)) ||
-		(n.anc.kind == KeyValueExpr && n.anc.child[0] == n)
+		(n.anc.kind == KeyValueExpr && isStruct(n.anc.typ) && n.anc.child[0] == n)
 }
 
 // isNewDefine returns true if node refers to a new definition
@@ -1524,7 +1528,14 @@ func compositeGenerator(n *Node) (gen BuiltinGenerator) {
 			gen = compositeLit
 		}
 	case ValueT:
-		gen = compositeBin
+		switch k := n.typ.rtype.Kind(); k {
+		case reflect.Struct:
+			gen = compositeBinStruct
+		case reflect.Map:
+			gen = compositeBinMap
+		default:
+			log.Panic(n.cfgError("compositeGenerator not implemented for type kind: %s", k))
+		}
 	}
 	return
 }

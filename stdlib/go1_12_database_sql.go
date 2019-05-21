@@ -49,5 +49,25 @@ func init() {
 		"Stmt":           reflect.ValueOf((*sql.Stmt)(nil)),
 		"Tx":             reflect.ValueOf((*sql.Tx)(nil)),
 		"TxOptions":      reflect.ValueOf((*sql.TxOptions)(nil)),
+
+		// interface wrapper definitions
+		"_Result":  reflect.ValueOf((*_database_sql_Result)(nil)),
+		"_Scanner": reflect.ValueOf((*_database_sql_Scanner)(nil)),
 	}
 }
+
+// _database_sql_Result is an interface wrapper for Result type
+type _database_sql_Result struct {
+	WLastInsertId func() (int64, error)
+	WRowsAffected func() (int64, error)
+}
+
+func (W _database_sql_Result) LastInsertId() (int64, error) { return W.WLastInsertId() }
+func (W _database_sql_Result) RowsAffected() (int64, error) { return W.WRowsAffected() }
+
+// _database_sql_Scanner is an interface wrapper for Scanner type
+type _database_sql_Scanner struct {
+	WScan func(src interface{}) error
+}
+
+func (W _database_sql_Scanner) Scan(src interface{}) error { return W.WScan(src) }

@@ -43,5 +43,8 @@ func init() {
 		"Header": reflect.ValueOf((*tar.Header)(nil)),
 		"Reader": reflect.ValueOf((*tar.Reader)(nil)),
 		"Writer": reflect.ValueOf((*tar.Writer)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

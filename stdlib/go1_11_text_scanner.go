@@ -35,5 +35,8 @@ func init() {
 		// type definitions
 		"Position": reflect.ValueOf((*scanner.Position)(nil)),
 		"Scanner":  reflect.ValueOf((*scanner.Scanner)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

@@ -23,5 +23,8 @@ func init() {
 		"AddressParser": reflect.ValueOf((*mail.AddressParser)(nil)),
 		"Header":        reflect.ValueOf((*mail.Header)(nil)),
 		"Message":       reflect.ValueOf((*mail.Message)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

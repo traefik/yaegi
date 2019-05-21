@@ -1937,5 +1937,37 @@ func init() {
 		"Timespec":                 reflect.ValueOf((*syscall.Timespec)(nil)),
 		"Timeval":                  reflect.ValueOf((*syscall.Timeval)(nil)),
 		"WaitStatus":               reflect.ValueOf((*syscall.WaitStatus)(nil)),
+
+		// interface wrapper definitions
+		"_Conn":           reflect.ValueOf((*_syscall_Conn)(nil)),
+		"_RawConn":        reflect.ValueOf((*_syscall_RawConn)(nil)),
+		"_RoutingMessage": reflect.ValueOf((*_syscall_RoutingMessage)(nil)),
+		"_Sockaddr":       reflect.ValueOf((*_syscall_Sockaddr)(nil)),
 	}
+}
+
+// _syscall_Conn is an interface wrapper for Conn type
+type _syscall_Conn struct {
+	WSyscallConn func() (syscall.RawConn, error)
+}
+
+func (W _syscall_Conn) SyscallConn() (syscall.RawConn, error) { return W.WSyscallConn() }
+
+// _syscall_RawConn is an interface wrapper for RawConn type
+type _syscall_RawConn struct {
+	WControl func(f func(fd uintptr)) error
+	WRead    func(f func(fd uintptr) (done bool)) error
+	WWrite   func(f func(fd uintptr) (done bool)) error
+}
+
+func (W _syscall_RawConn) Control(f func(fd uintptr)) error           { return W.WControl(f) }
+func (W _syscall_RawConn) Read(f func(fd uintptr) (done bool)) error  { return W.WRead(f) }
+func (W _syscall_RawConn) Write(f func(fd uintptr) (done bool)) error { return W.WWrite(f) }
+
+// _syscall_RoutingMessage is an interface wrapper for RoutingMessage type
+type _syscall_RoutingMessage struct {
+}
+
+// _syscall_Sockaddr is an interface wrapper for Sockaddr type
+type _syscall_Sockaddr struct {
 }

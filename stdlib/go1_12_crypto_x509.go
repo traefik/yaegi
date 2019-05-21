@@ -113,5 +113,8 @@ func init() {
 		"UnhandledCriticalExtension": reflect.ValueOf((*x509.UnhandledCriticalExtension)(nil)),
 		"UnknownAuthorityError":      reflect.ValueOf((*x509.UnknownAuthorityError)(nil)),
 		"VerifyOptions":              reflect.ValueOf((*x509.VerifyOptions)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

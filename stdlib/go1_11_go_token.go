@@ -106,5 +106,8 @@ func init() {
 		"Pos":      reflect.ValueOf((*token.Pos)(nil)),
 		"Position": reflect.ValueOf((*token.Position)(nil)),
 		"Token":    reflect.ValueOf((*token.Token)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

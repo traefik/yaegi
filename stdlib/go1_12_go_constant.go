@@ -51,5 +51,19 @@ func init() {
 		// type definitions
 		"Kind":  reflect.ValueOf((*constant.Kind)(nil)),
 		"Value": reflect.ValueOf((*constant.Value)(nil)),
+
+		// interface wrapper definitions
+		"_Value": reflect.ValueOf((*_go_constant_Value)(nil)),
 	}
 }
+
+// _go_constant_Value is an interface wrapper for Value type
+type _go_constant_Value struct {
+	WExactString func() string
+	WKind        func() constant.Kind
+	WString      func() string
+}
+
+func (W _go_constant_Value) ExactString() string { return W.WExactString() }
+func (W _go_constant_Value) Kind() constant.Kind { return W.WKind() }
+func (W _go_constant_Value) String() string      { return W.WString() }

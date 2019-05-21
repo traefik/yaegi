@@ -21,5 +21,8 @@ func init() {
 		"DNSStartInfo":     reflect.ValueOf((*httptrace.DNSStartInfo)(nil)),
 		"GotConnInfo":      reflect.ValueOf((*httptrace.GotConnInfo)(nil)),
 		"WroteRequestInfo": reflect.ValueOf((*httptrace.WroteRequestInfo)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

@@ -15,5 +15,8 @@ func init() {
 
 		// type definitions
 		"Pointer": reflect.ValueOf((*unsafe.Pointer)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

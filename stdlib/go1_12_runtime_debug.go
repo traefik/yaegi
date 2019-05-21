@@ -28,5 +28,8 @@ func init() {
 		"BuildInfo": reflect.ValueOf((*debug.BuildInfo)(nil)),
 		"GCStats":   reflect.ValueOf((*debug.GCStats)(nil)),
 		"Module":    reflect.ValueOf((*debug.Module)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

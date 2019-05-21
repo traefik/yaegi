@@ -29,5 +29,8 @@ func init() {
 		"MultiplePackageError": reflect.ValueOf((*build.MultiplePackageError)(nil)),
 		"NoGoError":            reflect.ValueOf((*build.NoGoError)(nil)),
 		"Package":              reflect.ValueOf((*build.Package)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

@@ -16,5 +16,8 @@ func init() {
 
 		// type definitions
 		"Ring": reflect.ValueOf((*ring.Ring)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

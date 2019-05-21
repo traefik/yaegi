@@ -29,5 +29,8 @@ func init() {
 		"URL":              reflect.ValueOf((*url.URL)(nil)),
 		"Userinfo":         reflect.ValueOf((*url.Userinfo)(nil)),
 		"Values":           reflect.ValueOf((*url.Values)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

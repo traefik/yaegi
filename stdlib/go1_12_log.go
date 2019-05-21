@@ -38,5 +38,8 @@ func init() {
 
 		// type definitions
 		"Logger": reflect.ValueOf((*log.Logger)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

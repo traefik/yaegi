@@ -63,5 +63,8 @@ func init() {
 		"Builder":  reflect.ValueOf((*strings.Builder)(nil)),
 		"Reader":   reflect.ValueOf((*strings.Reader)(nil)),
 		"Replacer": reflect.ValueOf((*strings.Replacer)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

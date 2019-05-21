@@ -25,5 +25,8 @@ func init() {
 
 		// type definitions
 		"GCStats": reflect.ValueOf((*debug.GCStats)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

@@ -287,18 +287,28 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 		if sym, _, found := scope.lookup(n.ident); found {
 			t = sym.typ
 		} else {
+			scope.sym[n.ident] = &Symbol{kind: Const, typ: t}
 			t.incomplete = true
 		}
 
 	case InterfaceType:
 		t.cat = InterfaceT
 		for _, field := range n.child[0].child {
-			typ, err := nodeType(interp, scope, field.child[1])
-			if err != nil {
-				return nil, err
+			if len(field.child) == 1 {
+				typ, err := nodeType(interp, scope, field.child[0])
+				if err != nil {
+					return nil, err
+				}
+				t.field = append(t.field, StructField{name: fieldName(field.child[0]), embed: true, typ: typ})
+				t.incomplete = t.incomplete || typ.incomplete
+			} else {
+				typ, err := nodeType(interp, scope, field.child[1])
+				if err != nil {
+					return nil, err
+				}
+				t.field = append(t.field, StructField{name: field.child[0].ident, typ: typ})
+				t.incomplete = t.incomplete || typ.incomplete
 			}
-			t.field = append(t.field, StructField{name: field.child[0].ident, typ: typ})
-			t.incomplete = t.incomplete || typ.incomplete
 		}
 
 	case MapType:
@@ -345,6 +355,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 
 	case StructType:
 		t.cat = StructT
+		var incomplete bool
 		for _, c := range n.child[0].child {
 			if len(c.child) == 1 {
 				typ, err := nodeType(interp, scope, c.child[0])
@@ -352,19 +363,20 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 					return nil, err
 				}
 				t.field = append(t.field, StructField{name: fieldName(c.child[0]), embed: true, typ: typ})
-				t.incomplete = t.incomplete || typ.incomplete
+				incomplete = incomplete || typ.incomplete
 			} else {
 				l := len(c.child)
 				typ, err := nodeType(interp, scope, c.child[l-1])
 				if err != nil {
 					return nil, err
 				}
-				t.incomplete = t.incomplete || typ.incomplete
+				incomplete = incomplete || typ.incomplete
 				for _, d := range c.child[:l-1] {
 					t.field = append(t.field, StructField{name: d.ident, typ: typ})
 				}
 			}
 		}
+		t.incomplete = incomplete
 
 	default:
 		err = n.cfgError("type definition not implemented: %s", n.kind)
@@ -566,6 +578,10 @@ func (t *Type) TypeOf() reflect.Type {
 		return t.rtype
 	}
 
+	if t.incomplete {
+		t, _ = nodeType(t.node.interp, t.scope, t.node)
+	}
+
 	switch t.cat {
 	case ArrayT:
 		if t.size > 0 {
@@ -573,13 +589,10 @@ func (t *Type) TypeOf() reflect.Type {
 		} else {
 			t.rtype = reflect.SliceOf(t.val.TypeOf())
 		}
-
 	case ChanT:
 		t.rtype = reflect.ChanOf(reflect.BothDir, t.val.TypeOf())
-
 	case ErrorT:
 		t.rtype = reflect.TypeOf(new(error)).Elem()
-
 	case FuncT:
 		in := make([]reflect.Type, len(t.arg))
 		out := make([]reflect.Type, len(t.ret))
@@ -590,16 +603,12 @@ func (t *Type) TypeOf() reflect.Type {
 			out[i] = v.TypeOf()
 		}
 		t.rtype = reflect.FuncOf(in, out, false)
-
 	case InterfaceT:
 		t.rtype = reflect.TypeOf(new(interface{})).Elem()
-
 	case MapT:
 		t.rtype = reflect.MapOf(t.key.TypeOf(), t.val.TypeOf())
-
 	case PtrT:
 		t.rtype = reflect.PtrTo(t.val.TypeOf())
-
 	case StructT:
 		var fields []reflect.StructField
 		for _, f := range t.field {
@@ -607,13 +616,59 @@ func (t *Type) TypeOf() reflect.Type {
 			fields = append(fields, field)
 		}
 		t.rtype = reflect.StructOf(fields)
-
 	default:
 		if z, _ := t.zero(); z.IsValid() {
 			t.rtype = z.Type()
 		}
 	}
 	return t.rtype
+}
+
+func (t *Type) frameType() reflect.Type {
+	var r reflect.Type
+	switch t.cat {
+	case ArrayT:
+		if t.size > 0 {
+			r = reflect.ArrayOf(t.size, t.val.frameType())
+		} else {
+			r = reflect.SliceOf(t.val.frameType())
+		}
+	//case ChanT:
+	//	r = reflect.ChanOf(reflect.BothDir, t.val.frameType())
+	//case ErrorT:
+	//	r = reflect.TypeOf(new(error)).Elem()
+	case FuncT:
+		r = reflect.TypeOf((*Node)(nil))
+	case InterfaceT:
+		r = reflect.TypeOf((*valueInterface)(nil)).Elem()
+	//case MapT:
+	//	r = reflect.MapOf(t.key.frameType(), t.val.frameType())
+	//case PtrT:
+	//	r = reflect.PtrTo(t.val.frameType())
+	//case StructT:
+	//	var fields []reflect.StructField
+	//	for _, f := range t.field {
+	//		field := reflect.StructField{Name: exportName(f.name), Type: f.typ.frameType()}
+	//		fields = append(fields, field)
+	//	}
+	//	r = reflect.StructOf(fields)
+	default:
+		//	if z, _ := t.zero(); z.IsValid() {
+		//		r = z.Type()
+		//	}
+		r = t.TypeOf()
+	}
+	return r
+}
+
+func defRecvType(n *Node) *Type {
+	if n.kind != FuncDecl || len(n.child[0].child) == 0 {
+		return nil
+	}
+	if r := n.child[0].child[0].lastChild(); r != nil {
+		return r.typ
+	}
+	return nil
 }
 
 func isShiftOperand(n *Node) bool {
@@ -623,6 +678,8 @@ func isShiftOperand(n *Node) bool {
 	}
 	return false
 }
+
+func isStruct(t *Type) bool { return t.TypeOf().Kind() == reflect.Struct }
 
 func isInt(t *Type) bool {
 	switch t.TypeOf().Kind() {

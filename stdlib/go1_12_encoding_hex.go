@@ -26,5 +26,8 @@ func init() {
 
 		// type definitions
 		"InvalidByteError": reflect.ValueOf((*hex.InvalidByteError)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

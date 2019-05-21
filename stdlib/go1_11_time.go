@@ -81,5 +81,8 @@ func init() {
 		"Time":       reflect.ValueOf((*time.Time)(nil)),
 		"Timer":      reflect.ValueOf((*time.Timer)(nil)),
 		"Weekday":    reflect.ValueOf((*time.Weekday)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

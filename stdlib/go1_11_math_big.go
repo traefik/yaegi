@@ -39,5 +39,8 @@ func init() {
 		"Rat":          reflect.ValueOf((*big.Rat)(nil)),
 		"RoundingMode": reflect.ValueOf((*big.RoundingMode)(nil)),
 		"Word":         reflect.ValueOf((*big.Word)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

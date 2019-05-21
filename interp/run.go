@@ -4,6 +4,7 @@ package interp
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 )
 
@@ -185,7 +186,7 @@ func convert(n *Node) {
 
 	var value func(*Frame) reflect.Value
 	if c.typ.cat == FuncT {
-		value = genNodeWrapper(c)
+		value = genFunctionWrapper(c)
 	} else {
 		value = genValue(c)
 	}
@@ -212,7 +213,7 @@ func assign(n *Node) {
 		case dest.typ.cat == InterfaceT:
 			svalue[i] = genValueInterface(src)
 		case dest.typ.cat == ValueT && src.typ.cat == FuncT:
-			svalue[i] = genNodeWrapper(src)
+			svalue[i] = genFunctionWrapper(src)
 		case src.kind == BasicLit && src.val == nil:
 			t := dest.typ.TypeOf()
 			svalue[i] = func(*Frame) reflect.Value { return reflect.New(t).Elem() }
@@ -397,7 +398,7 @@ func _panic(n *Node) {
 	}
 }
 
-func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
+func genFunctionWrapper(n *Node) func(*Frame) reflect.Value {
 	def := n.val.(*Node)
 	setExec(def.child[3].start)
 	start := def.child[3].start
@@ -405,7 +406,11 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 	var receiver func(*Frame) reflect.Value
 
 	if n.recv != nil {
-		receiver = genValueRecv(n)
+		if n.recv.node.typ.cat != defRecvType(def).cat {
+			receiver = genValueRecvIndirect(n)
+		} else {
+			receiver = genValueRecv(n)
+		}
 	}
 
 	return func(f *Frame) reflect.Value {
@@ -422,7 +427,12 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 
 			// Copy method receiver as first argument, if defined
 			if receiver != nil {
-				d[numRet].Set(receiver(f))
+				src, dest := receiver(f), d[numRet]
+				if src.Type().Kind() != dest.Type().Kind() {
+					dest.Set(src.Addr())
+				} else {
+					dest.Set(src)
+				}
 				d = d[numRet+1:]
 			} else {
 				d = d[numRet:]
@@ -430,7 +440,11 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 
 			// Copy function input arguments in local frame
 			for i, arg := range in {
-				d[i].Set(arg)
+				if def.typ.arg[i].cat == InterfaceT {
+					d[i].Set(reflect.ValueOf(valueInterface{value: arg.Elem()}))
+				} else {
+					d[i].Set(arg)
+				}
 			}
 
 			// Interpreter code execution
@@ -439,11 +453,64 @@ func genNodeWrapper(n *Node) func(*Frame) reflect.Value {
 			result := frame.data[:numRet]
 			for i, r := range result {
 				if v, ok := r.Interface().(*Node); ok {
-					result[i] = genNodeWrapper(v)(f)
+					result[i] = genFunctionWrapper(v)(f)
+				}
+				if def.typ.ret[i].cat == InterfaceT {
+					x := result[i].Interface().(valueInterface).value
+					result[i] = reflect.New(reflect.TypeOf((*interface{})(nil)).Elem()).Elem()
+					result[i].Set(x)
 				}
 			}
 			return result
 		})
+	}
+}
+
+func genInterfaceWrapper(n *Node, typ reflect.Type) func(*Frame) reflect.Value {
+	value := genValue(n)
+	if typ == nil || typ.Kind() != reflect.Interface || typ.NumMethod() == 0 || n.typ.cat == ValueT {
+		return value
+	}
+	if nt := n.typ.TypeOf(); nt != nil && nt.Kind() == reflect.Interface {
+		return value
+	}
+	mn := typ.NumMethod()
+	names := make([]string, mn)
+	methods := make([]*Node, mn)
+	indexes := make([][]int, mn)
+	for i := 0; i < mn; i++ {
+		names[i] = typ.Method(i).Name
+		methods[i], indexes[i] = n.typ.lookupMethod(names[i])
+		if methods[i] == nil && n.typ.cat != NilT {
+			// interpreted method not found, look for binary method, possibly embedded
+			_, indexes[i], _ = n.typ.lookupBinMethod(names[i])
+		}
+	}
+	wrap := n.interp.getWrapper(typ)
+
+	return func(f *Frame) reflect.Value {
+		v := value(f)
+		switch v.Kind() {
+		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+			if v.IsNil() {
+				return reflect.New(typ).Elem()
+			}
+		}
+		w := reflect.New(wrap).Elem()
+		for i, m := range methods {
+			if m == nil {
+				if r := v.FieldByIndex(indexes[i]).MethodByName(names[i]); r.IsValid() {
+					w.Field(i).Set(v.FieldByIndex(indexes[i]).MethodByName(names[i]))
+				} else {
+					log.Println(n.cfgError("genInterfaceWrapper error, no method %s", names[i]))
+				}
+				continue
+			}
+			node := *m
+			node.recv = &Receiver{n, v, indexes[i]}
+			w.Field(i).Set(genFunctionWrapper(&node)(f))
+		}
+		return w
 	}
 }
 
@@ -454,7 +521,7 @@ func _defer(n *Node) {
 
 	for i, c := range n.child[0].child {
 		if c.typ.cat == FuncT {
-			values[i] = genNodeWrapper(c)
+			values[i] = genFunctionWrapper(c)
 		} else {
 			if c.recv != nil {
 				// defer a method on a binary obj
@@ -542,7 +609,8 @@ func call(n *Node) {
 		}
 	}
 
-	rvalues := make([]func(*Frame) reflect.Value, len(n.child[0].typ.ret))
+	rtypes := n.child[0].typ.ret
+	rvalues := make([]func(*Frame) reflect.Value, len(rtypes))
 	switch n.anc.kind {
 	case DefineX, AssignXStmt:
 		for i := range rvalues {
@@ -552,7 +620,7 @@ func call(n *Node) {
 			}
 		}
 	default:
-		for i := range n.child[0].typ.ret {
+		for i := range rtypes {
 			j := n.findex + i
 			rvalues[i] = func(f *Frame) reflect.Value { return f.data[j] }
 		}
@@ -570,7 +638,11 @@ func call(n *Node) {
 
 		// Init return values
 		for i, v := range rvalues {
-			nf.data[i] = v(f)
+			if v != nil {
+				nf.data[i] = v(f)
+			} else {
+				nf.data[i] = reflect.New(def.types[i]).Elem()
+			}
 		}
 
 		// Init local frame values
@@ -639,6 +711,14 @@ func call(n *Node) {
 	}
 }
 
+// pindex returns definition parameter index for function call
+func pindex(i, variadic int) int {
+	if variadic < 0 || i <= variadic {
+		return i
+	}
+	return variadic
+}
+
 // Call a function from a bin import, accessible through reflect
 func callBin(n *Node) {
 	tnext := getExec(n.tnext)
@@ -657,6 +737,7 @@ func callBin(n *Node) {
 	}
 
 	for i, c := range child {
+		defType := funcType.In(pindex(i, variadic))
 		switch {
 		case isBinCall(c):
 			// Handle nested function calls: pass returned values as arguments
@@ -687,11 +768,12 @@ func callBin(n *Node) {
 			}
 			switch c.typ.cat {
 			case FuncT:
-				values = append(values, genNodeWrapper(c))
+				values = append(values, genFunctionWrapper(c))
 			case InterfaceT:
 				values = append(values, genValueInterfaceValue(c))
 			default:
-				values = append(values, genValue(c))
+				//values = append(values, genValue(c))
+				values = append(values, genInterfaceWrapper(c, defType))
 			}
 		}
 	}
@@ -773,8 +855,8 @@ func getIndexBinMethod(n *Node) {
 // getIndexArray returns array value from index
 func getIndexArray(n *Node) {
 	tnext := getExec(n.tnext)
-	value0 := genValue(n.child[0])
-	value1 := genValueInt(n.child[1])
+	value0 := genValue(n.child[0])    // array
+	value1 := genValueInt(n.child[1]) // index
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
@@ -798,11 +880,12 @@ func getIndexMap(n *Node) {
 	value0 := genValue(n.child[0]) // map
 	value1 := genValue(n.child[1]) // index
 	tnext := getExec(n.tnext)
+	z := reflect.New(n.child[0].typ.val.TypeOf()).Elem()
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *Frame) Builtin {
-			if value0(f).MapIndex(value1(f)).Bool() {
+			if v := value0(f).MapIndex(value1(f)); v.IsValid() && v.Bool() {
 				return tnext
 			}
 			return fnext
@@ -810,7 +893,11 @@ func getIndexMap(n *Node) {
 	} else {
 		i := n.findex
 		n.exec = func(f *Frame) Builtin {
-			f.data[i] = value0(f).MapIndex(value1(f))
+			if v := value0(f).MapIndex(value1(f)); v.IsValid() {
+				f.data[i].Set(v)
+			} else {
+				f.data[i].Set(z)
+			}
 			return tnext
 		}
 	}
@@ -825,8 +912,11 @@ func getIndexMap2(n *Node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
-		f.data[i] = value0(f).MapIndex(value1(f))
-		value2(f).SetBool(f.data[i].IsValid())
+		v := value0(f).MapIndex(value1(f))
+		if v.IsValid() {
+			f.data[i].Set(v)
+		}
+		value2(f).SetBool(v.IsValid())
 		return next
 	}
 }
@@ -1010,9 +1100,17 @@ func nop(n *Node) {
 func _return(n *Node) {
 	child := n.child
 	next := getExec(n.tnext)
+	def := n.val.(*Node)
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
-		values[i] = genValue(c)
+		switch t := def.typ.ret[i]; t.cat {
+		case ErrorT:
+			values[i] = genInterfaceWrapper(c, t.TypeOf())
+		case InterfaceT:
+			values[i] = genValueInterface(c)
+		default:
+			values[i] = genValue(c)
+		}
 	}
 
 	switch len(child) {
@@ -1116,9 +1214,35 @@ func mapLit(n *Node) {
 		return next
 	}
 }
+func compositeBinMap(n *Node) {
+	value := valueGenerator(n, n.findex)
+	next := getExec(n.tnext)
+	child := n.child
+	if !n.typ.untyped {
+		child = n.child[1:]
+	}
+	typ := n.typ.TypeOf()
+	keys := make([]func(*Frame) reflect.Value, len(child))
+	values := make([]func(*Frame) reflect.Value, len(child))
+	for i, c := range child {
+		convertLiteralValue(c.child[0], typ.Key())
+		convertLiteralValue(c.child[1], typ.Elem())
+		keys[i] = genValue(c.child[0])
+		values[i] = genValue(c.child[1])
+	}
 
-// compositeBin creates and populats a struct object from a binary type
-func compositeBin(n *Node) {
+	n.exec = func(f *Frame) Builtin {
+		m := reflect.MakeMap(typ)
+		for i, k := range keys {
+			m.SetMapIndex(k(f), values[i](f))
+		}
+		value(f).Set(m)
+		return next
+	}
+}
+
+// compositeBinStruct creates and populates a struct object from a binary type
+func compositeBinStruct(n *Node) {
 	next := getExec(n.tnext)
 	value := valueGenerator(n, n.findex)
 	typ := n.typ.rtype
@@ -1131,7 +1255,7 @@ func compositeBin(n *Node) {
 				fieldIndex[i] = sf.Index
 				convertLiteralValue(c.child[1], sf.Type)
 				if c.child[1].typ.cat == FuncT {
-					values[i] = genNodeWrapper(c.child[1])
+					values[i] = genFunctionWrapper(c.child[1])
 				} else {
 					values[i] = genValue(c.child[1])
 				}
@@ -1140,7 +1264,7 @@ func compositeBin(n *Node) {
 			fieldIndex[i] = []int{i}
 			convertLiteralValue(c.child[1], typ.Field(i).Type)
 			if c.typ.cat == FuncT {
-				values[i] = genNodeWrapper(c.child[1])
+				values[i] = genFunctionWrapper(c.child[1])
 			} else {
 				values[i] = genValue(c)
 			}
@@ -1166,18 +1290,18 @@ func compositeLit(n *Node) {
 		child = n.child[1:]
 	}
 
-	a, _ := n.typ.zero()
 	values := make([]func(*Frame) reflect.Value, len(child))
 	for i, c := range child {
 		convertLiteralValue(c, n.typ.field[i].typ.TypeOf())
 		if c.typ.cat == FuncT {
-			values[i] = genNodeWrapper(c)
+			values[i] = genFunctionWrapper(c)
 		} else {
 			values[i] = genValue(c)
 		}
 	}
 
 	n.exec = func(f *Frame) Builtin {
+		a := reflect.New(n.typ.TypeOf()).Elem()
 		for i, v := range values {
 			a.Field(i).Set(v(f))
 		}
@@ -1201,7 +1325,7 @@ func compositeSparse(n *Node) {
 		field := n.typ.fieldIndex(c.child[0].ident)
 		convertLiteralValue(c.child[1], n.typ.field[field].typ.TypeOf())
 		if c.typ.cat == FuncT {
-			values[field] = genNodeWrapper(c.child[1])
+			values[field] = genFunctionWrapper(c.child[1])
 		} else {
 			values[field] = genValue(c.child[1])
 		}
@@ -1415,7 +1539,7 @@ func _case(n *Node) {
 }
 
 func appendSlice(n *Node) {
-	i := n.findex
+	dest := genValue(n)
 	next := getExec(n.tnext)
 	value := genValue(n.child[1])
 	value0 := genValue(n.child[2])
@@ -1423,12 +1547,12 @@ func appendSlice(n *Node) {
 	if isString(n.child[2].typ) {
 		typ := reflect.TypeOf([]byte{})
 		n.exec = func(f *Frame) Builtin {
-			f.data[i] = reflect.AppendSlice(value(f), value0(f).Convert(typ))
+			dest(f).Set(reflect.AppendSlice(value(f), value0(f).Convert(typ)))
 			return next
 		}
 	} else {
 		n.exec = func(f *Frame) Builtin {
-			f.data[i] = reflect.AppendSlice(value(f), value0(f))
+			dest(f).Set(reflect.AppendSlice(value(f), value0(f)))
 			return next
 		}
 	}

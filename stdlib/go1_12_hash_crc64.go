@@ -22,5 +22,8 @@ func init() {
 
 		// type definitions
 		"Table": reflect.ValueOf((*crc64.Table)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

@@ -27,5 +27,8 @@ func init() {
 		"Header": reflect.ValueOf((*gzip.Header)(nil)),
 		"Reader": reflect.ValueOf((*gzip.Reader)(nil)),
 		"Writer": reflect.ValueOf((*gzip.Writer)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

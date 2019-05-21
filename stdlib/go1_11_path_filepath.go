@@ -37,5 +37,8 @@ func init() {
 
 		// type definitions
 		"WalkFunc": reflect.ValueOf((*filepath.WalkFunc)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }

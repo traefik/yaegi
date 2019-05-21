@@ -18,5 +18,8 @@ func init() {
 
 		// type definitions
 		"Lookup": reflect.ValueOf((*importer.Lookup)(nil)),
+
+		// interface wrapper definitions
+
 	}
 }
