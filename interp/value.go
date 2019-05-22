@@ -116,6 +116,42 @@ func genValueInterfaceValue(n *Node) func(*Frame) reflect.Value {
 	}
 }
 
+func vInt(v reflect.Value) (i int64) {
+	switch v.Type().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		i = v.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		i = int64(v.Uint())
+	case reflect.Float32, reflect.Float64:
+		i = int64(v.Float())
+	}
+	return
+}
+
+func vUint(v reflect.Value) (i uint64) {
+	switch v.Type().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		i = uint64(v.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		i = v.Uint()
+	case reflect.Float32, reflect.Float64:
+		i = uint64(v.Float())
+	}
+	return
+}
+
+func vFloat(v reflect.Value) (i float64) {
+	switch v.Type().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		i = float64(v.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		i = float64(v.Uint())
+	case reflect.Float32, reflect.Float64:
+		i = v.Float()
+	}
+	return
+}
+
 func genValueInt(n *Node) func(*Frame) (reflect.Value, int64) {
 	value := genValue(n)
 
