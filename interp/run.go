@@ -857,7 +857,8 @@ func getIndexArray(n *Node) {
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *Frame) Builtin {
-			if value0(f).Index(int(value1(f))).Bool() {
+			_, vi := value1(f)
+			if value0(f).Index(int(vi)).Bool() {
 				return tnext
 			}
 			return fnext
@@ -865,7 +866,8 @@ func getIndexArray(n *Node) {
 	} else {
 		i := n.findex
 		n.exec = func(f *Frame) Builtin {
-			f.data[i] = value0(f).Index(int(value1(f)))
+			_, vi := value1(f)
+			f.data[i] = value0(f).Index(int(vi))
 			return tnext
 		}
 	}
