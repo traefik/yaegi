@@ -172,8 +172,8 @@ func initUniverse() *Scope {
 		"uintptr":     &Symbol{kind: Typ, typ: &Type{cat: UintptrT, name: "uintptr"}},
 
 		// predefined Go constants
-		"false": &Symbol{kind: Const, typ: &Type{cat: BoolT}, val: false},
-		"true":  &Symbol{kind: Const, typ: &Type{cat: BoolT}, val: true},
+		"false": &Symbol{kind: Const, typ: &Type{cat: BoolT}, rval: reflect.ValueOf(false)},
+		"true":  &Symbol{kind: Const, typ: &Type{cat: BoolT}, rval: reflect.ValueOf(true)},
 		"iota":  &Symbol{kind: Const, typ: &Type{cat: IntT}},
 
 		// predefined Go zero value

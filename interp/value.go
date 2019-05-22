@@ -53,7 +53,13 @@ func genValueAs(n *Node, t reflect.Type) func(*Frame) reflect.Value {
 
 func genValue(n *Node) func(*Frame) reflect.Value {
 	switch n.kind {
-	case BasicLit, FuncDecl:
+	case BasicLit:
+		v := n.rval
+		if !v.IsValid() {
+			v = reflect.New(reflect.TypeOf((*interface{})(nil)).Elem()).Elem()
+		}
+		return func(f *Frame) reflect.Value { return v }
+	case FuncDecl:
 		var v reflect.Value
 		if w, ok := n.val.(reflect.Value); ok {
 			v = w

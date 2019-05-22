@@ -137,13 +137,15 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 	case ArrayType:
 		t.cat = ArrayT
 		if len(n.child) > 1 {
-			// An array size is defined
-			var ok bool
-			if t.size, ok = n.child[0].val.(int); !ok {
+			if n.child[0].rval.IsValid() {
+				t.size = int(n.child[0].rval.Int())
+			} else {
 				if sym, _, ok := scope.lookup(n.child[0].ident); ok {
 					// Resolve symbol to get size value
 					if sym.typ != nil && sym.typ.cat == IntT {
-						if t.size, ok = sym.val.(int); !ok {
+						if v, ok := sym.rval.Interface().(int); ok {
+							t.size = v
+						} else {
 							t.incomplete = true
 						}
 					} else {
@@ -161,7 +163,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 		}
 
 	case BasicLit:
-		switch v := n.val.(type) {
+		switch v := n.rval.Interface().(type) {
 		case bool:
 			t.cat = BoolT
 			t.name = "bool"
@@ -181,7 +183,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 			if isShiftOperand(n) && v >= 0 {
 				t.cat = UintT
 				t.name = "uint"
-				n.val = uint(v)
+				n.rval = reflect.ValueOf(uint(v))
 			} else {
 				t.cat = IntT
 				t.name = "int"
@@ -196,7 +198,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 			t.name = "string"
 			t.untyped = true
 		default:
-			err = n.cfgError("missing support for type %T: %v", v, n.val)
+			err = n.cfgError("missing support for type %T: %v", v, n.rval)
 		}
 
 	case UnaryExpr:

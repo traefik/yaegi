@@ -252,10 +252,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case ImportSpec:
 			var name, ipath string
 			if len(n.child) == 2 {
-				ipath = n.child[1].val.(string)
+				ipath = n.child[1].rval.String()
 				name = n.child[0].ident
 			} else {
-				ipath = n.child[0].val.(string)
+				ipath = n.child[0].rval.String()
 				name = path.Base(ipath)
 			}
 			if interp.binValue[ipath] != nil && name != "." {
@@ -331,7 +331,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					dest.recv = src.recv
 					dest.findex = sym.index
 					if src.kind == BasicLit {
-						sym.val = src.val
+						sym.rval = src.rval
 					}
 				} else {
 					sym, level, _ = scope.lookup(dest.ident)
@@ -383,12 +383,13 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					// TODO: perform constant folding and propagation here
 					switch {
 					case dest.typ.cat == InterfaceT:
-						src.val = reflect.ValueOf(src.val)
-					case src.val == nil:
+						// value set in genValue
+					case !src.rval.IsValid():
 						// Assign to nil
+						src.rval = reflect.New(dest.typ.TypeOf()).Elem()
 					default:
 						// Convert literal value to destination type
-						src.val = reflect.ValueOf(src.val).Convert(dest.typ.TypeOf())
+						src.rval = src.rval.Convert(dest.typ.TypeOf())
 						src.typ = dest.typ
 					}
 				}
@@ -829,23 +830,22 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				} else {
 					n.sym = sym
 					switch {
-					case sym.kind == Const && sym.val != nil:
-						n.val = sym.val
+					case sym.kind == Const && sym.rval.IsValid():
+						n.rval = sym.rval
 						n.kind = BasicLit
 					case n.ident == "iota":
-						n.val = iotaValue
+						n.rval = reflect.ValueOf(iotaValue)
 						n.kind = BasicLit
 					case n.ident == "nil":
 						n.kind = BasicLit
-						n.val = nil
 					case sym.kind == Bin:
-						if sym.val == nil {
-							n.kind = Rtype
-						} else {
+						if sym.rval.IsValid() {
 							n.kind = Rvalue
+						} else {
+							n.kind = Rtype
 						}
 						n.typ = sym.typ
-						n.rval = sym.val.(reflect.Value)
+						n.rval = sym.rval
 					case sym.kind == Bltn:
 						if n.anc.kind != CallExpr {
 							err = n.cfgError("use of builtin %s not in function call", n.ident)
@@ -954,9 +954,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					if err != nil {
 						break
 					}
-					if c.val, err = typ.zero(); err != nil {
-						break
-					}
+					c.rval = reflect.New(typ.TypeOf()).Elem()
 				}
 			}
 

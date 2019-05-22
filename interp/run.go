@@ -176,7 +176,7 @@ func convert(n *Node) {
 	typ := n.child[0].typ.TypeOf()
 	next := getExec(n.tnext)
 
-	if c.kind == BasicLit && c.val == nil { // convert nil to type
+	if c.kind == BasicLit && !c.rval.IsValid() { // convert nil to type
 		n.exec = func(f *Frame) Builtin {
 			dest(f).Set(reflect.New(typ).Elem())
 			return next
@@ -1158,7 +1158,7 @@ func arrayLit(n *Node) {
 		if c.kind == KeyValueExpr {
 			convertLiteralValue(c.child[1], rtype)
 			values[i] = genValue(c.child[1])
-			index[i] = c.child[0].val.(int)
+			index[i] = int(c.child[0].rval.Int())
 		} else {
 			convertLiteralValue(c, rtype)
 			values[i] = genValue(c)
@@ -1833,10 +1833,10 @@ func convertLiteralValue(n *Node, t reflect.Type) {
 	if n.kind != BasicLit || t == nil || t.Kind() == reflect.Interface {
 		return
 	}
-	if n.val == nil {
-		n.val = reflect.New(t).Elem() // convert to type nil value
+	if n.rval.IsValid() {
+		n.rval = n.rval.Convert(t)
 	} else {
-		n.val = reflect.ValueOf(n.val).Convert(t)
+		n.rval = reflect.New(t).Elem() // convert to type nil value
 	}
 }
 
