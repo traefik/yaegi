@@ -303,12 +303,12 @@ func not(n *Node) {
 }
 
 func addr(n *Node) {
-	i := n.findex
+	dest := genValue(n)
 	value := genValue(n.child[0])
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
-		f.data[i] = value(f).Addr()
+		dest(f).Set(value(f).Addr())
 		return next
 	}
 }
@@ -837,12 +837,15 @@ func callBin(n *Node) {
 }
 
 func getIndexBinMethod(n *Node) {
+	//dest := genValue(n)
 	i := n.findex
 	m := n.val.(int)
 	value := genValue(n.child[0])
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
+		// Can not use .Set() because dest type contains the receiver and source not
+		//dest(f).Set(value(f).Method(m))
 		f.data[i] = value(f).Method(m)
 		return next
 	}
@@ -851,24 +854,46 @@ func getIndexBinMethod(n *Node) {
 // getIndexArray returns array value from index
 func getIndexArray(n *Node) {
 	tnext := getExec(n.tnext)
-	value0 := genValue(n.child[0])    // array
-	value1 := genValueInt(n.child[1]) // index
+	value0 := genValue(n.child[0]) // array
 
-	if n.fnext != nil {
-		fnext := getExec(n.fnext)
-		n.exec = func(f *Frame) Builtin {
-			_, vi := value1(f)
-			if value0(f).Index(int(vi)).Bool() {
+	if n.child[1].rval.IsValid() { // constant array index
+		ai := int(vInt(n.child[1].rval))
+		if n.fnext != nil {
+			fnext := getExec(n.fnext)
+			n.exec = func(f *Frame) Builtin {
+				if value0(f).Index(ai).Bool() {
+					return tnext
+				}
+				return fnext
+			}
+		} else {
+			i := n.findex
+			n.exec = func(f *Frame) Builtin {
+				// Can not use .Set due to constraint of being able to assign an array element
+				f.data[i] = value0(f).Index(ai)
 				return tnext
 			}
-			return fnext
 		}
 	} else {
-		i := n.findex
-		n.exec = func(f *Frame) Builtin {
-			_, vi := value1(f)
-			f.data[i] = value0(f).Index(int(vi))
-			return tnext
+		value1 := genValueInt(n.child[1]) // array index
+
+		if n.fnext != nil {
+			fnext := getExec(n.fnext)
+			n.exec = func(f *Frame) Builtin {
+				_, vi := value1(f)
+				if value0(f).Index(int(vi)).Bool() {
+					return tnext
+				}
+				return fnext
+			}
+		} else {
+			i := n.findex
+			n.exec = func(f *Frame) Builtin {
+				_, vi := value1(f)
+				// Can not use .Set due to constraint of being able to assign an array element
+				f.data[i] = value0(f).Index(int(vi))
+				return tnext
+			}
 		}
 	}
 }
