@@ -901,27 +901,52 @@ func getIndexArray(n *Node) {
 // getIndexMap retrieves map value from index
 func getIndexMap(n *Node) {
 	value0 := genValue(n.child[0]) // map
-	value1 := genValue(n.child[1]) // index
 	tnext := getExec(n.tnext)
 	z := reflect.New(n.child[0].typ.val.TypeOf()).Elem()
 
-	if n.fnext != nil {
-		fnext := getExec(n.fnext)
-		n.exec = func(f *Frame) Builtin {
-			if v := value0(f).MapIndex(value1(f)); v.IsValid() && v.Bool() {
+	if n.child[1].rval.IsValid() { // constant map index
+		mi := n.child[1].rval
+
+		if n.fnext != nil {
+			fnext := getExec(n.fnext)
+			n.exec = func(f *Frame) Builtin {
+				if v := value0(f).MapIndex(mi); v.IsValid() && v.Bool() {
+					return tnext
+				}
+				return fnext
+			}
+		} else {
+			i := n.findex
+			n.exec = func(f *Frame) Builtin {
+				if v := value0(f).MapIndex(mi); v.IsValid() {
+					f.data[i].Set(v)
+				} else {
+					f.data[i].Set(z)
+				}
 				return tnext
 			}
-			return fnext
 		}
 	} else {
-		i := n.findex
-		n.exec = func(f *Frame) Builtin {
-			if v := value0(f).MapIndex(value1(f)); v.IsValid() {
-				f.data[i].Set(v)
-			} else {
-				f.data[i].Set(z)
+		value1 := genValue(n.child[1]) // map index
+
+		if n.fnext != nil {
+			fnext := getExec(n.fnext)
+			n.exec = func(f *Frame) Builtin {
+				if v := value0(f).MapIndex(value1(f)); v.IsValid() && v.Bool() {
+					return tnext
+				}
+				return fnext
 			}
-			return tnext
+		} else {
+			i := n.findex
+			n.exec = func(f *Frame) Builtin {
+				if v := value0(f).MapIndex(value1(f)); v.IsValid() {
+					f.data[i].Set(v)
+				} else {
+					f.data[i].Set(z)
+				}
+				return tnext
+			}
 		}
 	}
 }
@@ -930,17 +955,29 @@ func getIndexMap(n *Node) {
 func getIndexMap2(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0])     // map
-	value1 := genValue(n.child[1])     // index
 	value2 := genValue(n.anc.child[1]) // status
 	next := getExec(n.tnext)
 
-	n.exec = func(f *Frame) Builtin {
-		v := value0(f).MapIndex(value1(f))
-		if v.IsValid() {
-			f.data[i].Set(v)
+	if n.child[1].rval.IsValid() { // constant map index
+		mi := n.child[1].rval
+		n.exec = func(f *Frame) Builtin {
+			v := value0(f).MapIndex(mi)
+			if v.IsValid() {
+				f.data[i].Set(v)
+			}
+			value2(f).SetBool(v.IsValid())
+			return next
 		}
-		value2(f).SetBool(v.IsValid())
-		return next
+	} else {
+		value1 := genValue(n.child[1]) // map index
+		n.exec = func(f *Frame) Builtin {
+			v := value0(f).MapIndex(value1(f))
+			if v.IsValid() {
+				f.data[i].Set(v)
+			}
+			value2(f).SetBool(v.IsValid())
+			return next
+		}
 	}
 }
 
