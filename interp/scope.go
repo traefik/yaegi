@@ -50,7 +50,7 @@ type Symbol struct {
 	from    []*Node          // list of nodes jumping to node if kind is label, or nil
 	recv    *Receiver        // receiver node value, if sym refers to a method
 	index   int              // index of value in frame or -1
-	val     interface{}      // default value (used for constants)
+	rval    reflect.Value    // default value (used for constants)
 	path    string           // package path if typ.cat is SrcPkgT or BinPkgT
 	builtin BuiltinGenerator // Builtin function or nil
 	global  bool             // true if symbol is defined in global space

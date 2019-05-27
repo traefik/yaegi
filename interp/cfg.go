@@ -252,10 +252,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case ImportSpec:
 			var name, ipath string
 			if len(n.child) == 2 {
-				ipath = n.child[1].val.(string)
+				ipath = n.child[1].rval.String()
 				name = n.child[0].ident
 			} else {
-				ipath = n.child[0].val.(string)
+				ipath = n.child[0].rval.String()
 				name = path.Base(ipath)
 			}
 			if interp.binValue[ipath] != nil && name != "." {
@@ -331,7 +331,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					dest.recv = src.recv
 					dest.findex = sym.index
 					if src.kind == BasicLit {
-						sym.val = src.val
+						sym.rval = src.rval
 					}
 				} else {
 					sym, level, _ = scope.lookup(dest.ident)
@@ -383,12 +383,13 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					// TODO: perform constant folding and propagation here
 					switch {
 					case dest.typ.cat == InterfaceT:
-						src.val = reflect.ValueOf(src.val)
-					case src.val == nil:
+						// value set in genValue
+					case !src.rval.IsValid():
 						// Assign to nil
+						src.rval = reflect.New(dest.typ.TypeOf()).Elem()
 					default:
 						// Convert literal value to destination type
-						src.val = reflect.ValueOf(src.val).Convert(dest.typ.TypeOf())
+						src.rval = src.rval.Convert(dest.typ.TypeOf())
 						src.typ = dest.typ
 					}
 				}
@@ -527,10 +528,16 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				break
 			}
 			switch {
+			case n.typ != nil && n.typ.cat == BoolT && isAncBranch(n):
+				n.findex = -1
 			case n.anc.kind == AssignStmt && n.anc.action == Assign:
 				dest := n.anc.child[childPos(n)-n.anc.nright]
 				n.typ = dest.typ
 				n.findex = dest.findex
+			case n.anc.kind == ReturnStmt:
+				pos := childPos(n)
+				n.typ = scope.def.typ.ret[pos]
+				n.findex = pos
 			default:
 				if n.typ == nil {
 					n.typ, err = nodeType(interp, scope, n)
@@ -797,8 +804,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			n.start = n.child[3].start
 			n.types = scope.types
 			scope = scope.pop()
+			funcName := n.child[1].ident
 			if !isMethod(n) {
-				funcName := n.child[1].ident
 				interp.scope[pkgName].sym[funcName].index = -1 // to force value to n.val
 				interp.scope[pkgName].sym[funcName].typ = n.typ
 				interp.scope[pkgName].sym[funcName].kind = Func
@@ -823,23 +830,22 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				} else {
 					n.sym = sym
 					switch {
-					case sym.kind == Const && sym.val != nil:
-						n.val = sym.val
+					case sym.kind == Const && sym.rval.IsValid():
+						n.rval = sym.rval
 						n.kind = BasicLit
 					case n.ident == "iota":
-						n.val = iotaValue
+						n.rval = reflect.ValueOf(iotaValue)
 						n.kind = BasicLit
 					case n.ident == "nil":
 						n.kind = BasicLit
-						n.val = nil
 					case sym.kind == Bin:
-						if sym.val == nil {
-							n.kind = Rtype
-						} else {
+						if sym.rval.IsValid() {
 							n.kind = Rvalue
+						} else {
+							n.kind = Rtype
 						}
 						n.typ = sym.typ
-						n.rval = sym.val.(reflect.Value)
+						n.rval = sym.rval
 					case sym.kind == Bltn:
 						if n.anc.kind != CallExpr {
 							err = n.cfgError("use of builtin %s not in function call", n.ident)
@@ -948,9 +954,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					if err != nil {
 						break
 					}
-					if c.val, err = typ.zero(); err != nil {
-						break
-					}
+					c.rval = reflect.New(typ.TypeOf()).Elem()
 				}
 			}
 
@@ -1251,6 +1255,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		scope.pop()
 	}
 	return initNodes, err
+}
+
+func isAncBranch(n *Node) bool {
+	switch n.anc.kind {
+	case If0, If1, If2, If3:
+		return true
+	}
+	return false
 }
 
 func childPos(n *Node) int {

@@ -2,6 +2,7 @@ package interp
 
 import (
 	"path"
+	"reflect"
 )
 
 // Gta performs a global types analysis on the AST, registering types,
@@ -43,13 +44,13 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 			for i := 0; i < n.nleft; i++ {
 				dest, src := n.child[i], n.child[sbase+i]
 				typ := atyp
-				var val interface{} = iotaValue
+				val := reflect.ValueOf(iotaValue)
 				if typ == nil {
 					typ, err = nodeType(interp, scope, src)
 					if err != nil {
 						return false
 					}
-					val = src.val
+					val = src.rval
 				}
 				var index int
 				if !typ.incomplete {
@@ -59,7 +60,7 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 					}
 					index = scope.add(typ)
 				}
-				scope.sym[dest.ident] = &Symbol{kind: Var, global: true, index: index, typ: typ, val: val}
+				scope.sym[dest.ident] = &Symbol{kind: Var, global: true, index: index, typ: typ, rval: val}
 				if n.anc.kind == ConstDecl {
 					iotaValue++
 				}
@@ -119,10 +120,10 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 		case ImportSpec:
 			var name, ipath string
 			if len(n.child) == 2 {
-				ipath = n.child[1].val.(string)
+				ipath = n.child[1].rval.String()
 				name = n.child[0].ident
 			} else {
-				ipath = n.child[0].val.(string)
+				ipath = n.child[0].rval.String()
 				name = path.Base(ipath)
 			}
 			if interp.binValue[ipath] != nil {
@@ -132,7 +133,7 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 						if isBinType(v) {
 							typ = typ.Elem()
 						}
-						scope.sym[n] = &Symbol{kind: Bin, typ: &Type{cat: ValueT, rtype: typ}, val: v}
+						scope.sym[n] = &Symbol{kind: Bin, typ: &Type{cat: ValueT, rtype: typ}, rval: v}
 					}
 				} else {
 					scope.sym[name] = &Symbol{kind: Package, typ: &Type{cat: BinPkgT}, path: ipath}

@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/scanner"
 	"go/token"
+	"reflect"
 	"strconv"
 )
 
@@ -450,17 +451,20 @@ func (interp *Interpreter) ast(src, name string) (string, *Node, error) {
 			n.ident = a.Value
 			switch a.Kind {
 			case token.CHAR:
-				n.val, _, _, _ = strconv.UnquoteChar(a.Value[1:len(a.Value)-1], '\'')
+				v, _, _, _ := strconv.UnquoteChar(a.Value[1:len(a.Value)-1], '\'')
+				n.rval = reflect.ValueOf(v)
 			case token.FLOAT:
-				n.val, _ = strconv.ParseFloat(a.Value, 64)
+				v, _ := strconv.ParseFloat(a.Value, 64)
+				n.rval = reflect.ValueOf(v)
 			case token.IMAG:
 				v, _ := strconv.ParseFloat(a.Value[:len(a.Value)-1], 64)
-				n.val = complex(0, v)
+				n.rval = reflect.ValueOf(complex(0, v))
 			case token.INT:
 				v, _ := strconv.ParseInt(a.Value, 0, 0)
-				n.val = int(v)
+				n.rval = reflect.ValueOf(int(v))
 			case token.STRING:
-				n.val, _ = strconv.Unquote(a.Value)
+				v, _ := strconv.Unquote(a.Value)
+				n.rval = reflect.ValueOf(v)
 			}
 			st.push(n, node)
 

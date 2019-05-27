@@ -176,7 +176,7 @@ func convert(n *Node) {
 	typ := n.child[0].typ.TypeOf()
 	next := getExec(n.tnext)
 
-	if c.kind == BasicLit && c.val == nil { // convert nil to type
+	if c.kind == BasicLit && !c.rval.IsValid() { // convert nil to type
 		n.exec = func(f *Frame) Builtin {
 			dest(f).Set(reflect.New(typ).Elem())
 			return next
@@ -303,12 +303,12 @@ func not(n *Node) {
 }
 
 func addr(n *Node) {
-	i := n.findex
+	dest := genValue(n)
 	value := genValue(n.child[0])
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
-		f.data[i] = value(f).Addr()
+		dest(f).Set(value(f).Addr())
 		return next
 	}
 }
@@ -609,12 +609,7 @@ func call(n *Node) {
 		}
 	}
 
-	// compute frame indexes for return values
 	rtypes := n.child[0].typ.ret
-	ret := make([]int, len(rtypes))
-	for i := range rtypes {
-		ret[i] = n.findex + i
-	}
 	rvalues := make([]func(*Frame) reflect.Value, len(rtypes))
 	switch n.anc.kind {
 	case DefineX, AssignXStmt:
@@ -641,9 +636,18 @@ func call(n *Node) {
 		nf := Frame{anc: anc, data: make([]reflect.Value, len(def.types))}
 		var vararg reflect.Value
 
+		// Init return values
+		for i, v := range rvalues {
+			if v != nil {
+				nf.data[i] = v(f)
+			} else {
+				nf.data[i] = reflect.New(def.types[i]).Elem()
+			}
+		}
+
 		// Init local frame values
-		for i, t := range def.types {
-			nf.data[i] = reflect.New(t).Elem()
+		for i, t := range def.types[numRet:] {
+			nf.data[numRet+i] = reflect.New(t).Elem()
 		}
 
 		// Init variadic argument vector
@@ -696,17 +700,8 @@ func call(n *Node) {
 		runCfg(def.child[3].start, &nf)
 
 		// Handle branching according to boolean result
-		if fnext != nil {
-			if nf.data[0].Bool() {
-				return tnext
-			}
+		if fnext != nil && !nf.data[0].Bool() {
 			return fnext
-		}
-		// Propagate return values to caller frame
-		for i, v := range rvalues {
-			if v != nil {
-				v(f).Set(nf.data[i])
-			}
 		}
 		return tnext
 	}
@@ -842,12 +837,15 @@ func callBin(n *Node) {
 }
 
 func getIndexBinMethod(n *Node) {
+	//dest := genValue(n)
 	i := n.findex
 	m := n.val.(int)
 	value := genValue(n.child[0])
 	next := getExec(n.tnext)
 
 	n.exec = func(f *Frame) Builtin {
+		// Can not use .Set() because dest type contains the receiver and source not
+		//dest(f).Set(value(f).Method(m))
 		f.data[i] = value(f).Method(m)
 		return next
 	}
@@ -856,22 +854,46 @@ func getIndexBinMethod(n *Node) {
 // getIndexArray returns array value from index
 func getIndexArray(n *Node) {
 	tnext := getExec(n.tnext)
-	value0 := genValue(n.child[0])    // array
-	value1 := genValueInt(n.child[1]) // index
+	value0 := genValue(n.child[0]) // array
 
-	if n.fnext != nil {
-		fnext := getExec(n.fnext)
-		n.exec = func(f *Frame) Builtin {
-			if value0(f).Index(int(value1(f))).Bool() {
+	if n.child[1].rval.IsValid() { // constant array index
+		ai := int(vInt(n.child[1].rval))
+		if n.fnext != nil {
+			fnext := getExec(n.fnext)
+			n.exec = func(f *Frame) Builtin {
+				if value0(f).Index(ai).Bool() {
+					return tnext
+				}
+				return fnext
+			}
+		} else {
+			i := n.findex
+			n.exec = func(f *Frame) Builtin {
+				// Can not use .Set due to constraint of being able to assign an array element
+				f.data[i] = value0(f).Index(ai)
 				return tnext
 			}
-			return fnext
 		}
 	} else {
-		i := n.findex
-		n.exec = func(f *Frame) Builtin {
-			f.data[i] = value0(f).Index(int(value1(f)))
-			return tnext
+		value1 := genValueInt(n.child[1]) // array index
+
+		if n.fnext != nil {
+			fnext := getExec(n.fnext)
+			n.exec = func(f *Frame) Builtin {
+				_, vi := value1(f)
+				if value0(f).Index(int(vi)).Bool() {
+					return tnext
+				}
+				return fnext
+			}
+		} else {
+			i := n.findex
+			n.exec = func(f *Frame) Builtin {
+				_, vi := value1(f)
+				// Can not use .Set due to constraint of being able to assign an array element
+				f.data[i] = value0(f).Index(int(vi))
+				return tnext
+			}
 		}
 	}
 }
@@ -879,27 +901,52 @@ func getIndexArray(n *Node) {
 // getIndexMap retrieves map value from index
 func getIndexMap(n *Node) {
 	value0 := genValue(n.child[0]) // map
-	value1 := genValue(n.child[1]) // index
 	tnext := getExec(n.tnext)
 	z := reflect.New(n.child[0].typ.val.TypeOf()).Elem()
 
-	if n.fnext != nil {
-		fnext := getExec(n.fnext)
-		n.exec = func(f *Frame) Builtin {
-			if v := value0(f).MapIndex(value1(f)); v.IsValid() && v.Bool() {
+	if n.child[1].rval.IsValid() { // constant map index
+		mi := n.child[1].rval
+
+		if n.fnext != nil {
+			fnext := getExec(n.fnext)
+			n.exec = func(f *Frame) Builtin {
+				if v := value0(f).MapIndex(mi); v.IsValid() && v.Bool() {
+					return tnext
+				}
+				return fnext
+			}
+		} else {
+			i := n.findex
+			n.exec = func(f *Frame) Builtin {
+				if v := value0(f).MapIndex(mi); v.IsValid() {
+					f.data[i].Set(v)
+				} else {
+					f.data[i].Set(z)
+				}
 				return tnext
 			}
-			return fnext
 		}
 	} else {
-		i := n.findex
-		n.exec = func(f *Frame) Builtin {
-			if v := value0(f).MapIndex(value1(f)); v.IsValid() {
-				f.data[i].Set(v)
-			} else {
-				f.data[i].Set(z)
+		value1 := genValue(n.child[1]) // map index
+
+		if n.fnext != nil {
+			fnext := getExec(n.fnext)
+			n.exec = func(f *Frame) Builtin {
+				if v := value0(f).MapIndex(value1(f)); v.IsValid() && v.Bool() {
+					return tnext
+				}
+				return fnext
 			}
-			return tnext
+		} else {
+			i := n.findex
+			n.exec = func(f *Frame) Builtin {
+				if v := value0(f).MapIndex(value1(f)); v.IsValid() {
+					f.data[i].Set(v)
+				} else {
+					f.data[i].Set(z)
+				}
+				return tnext
+			}
 		}
 	}
 }
@@ -908,17 +955,29 @@ func getIndexMap(n *Node) {
 func getIndexMap2(n *Node) {
 	i := n.findex
 	value0 := genValue(n.child[0])     // map
-	value1 := genValue(n.child[1])     // index
 	value2 := genValue(n.anc.child[1]) // status
 	next := getExec(n.tnext)
 
-	n.exec = func(f *Frame) Builtin {
-		v := value0(f).MapIndex(value1(f))
-		if v.IsValid() {
-			f.data[i].Set(v)
+	if n.child[1].rval.IsValid() { // constant map index
+		mi := n.child[1].rval
+		n.exec = func(f *Frame) Builtin {
+			v := value0(f).MapIndex(mi)
+			if v.IsValid() {
+				f.data[i].Set(v)
+			}
+			value2(f).SetBool(v.IsValid())
+			return next
 		}
-		value2(f).SetBool(v.IsValid())
-		return next
+	} else {
+		value1 := genValue(n.child[1]) // map index
+		n.exec = func(f *Frame) Builtin {
+			v := value0(f).MapIndex(value1(f))
+			if v.IsValid() {
+				f.data[i].Set(v)
+			}
+			value2(f).SetBool(v.IsValid())
+			return next
+		}
 	}
 }
 
@@ -1098,7 +1157,6 @@ func nop(n *Node) {
 	}
 }
 
-// TODO: optimize return according to nb of child
 func _return(n *Node) {
 	child := n.child
 	next := getExec(n.tnext)
@@ -1115,11 +1173,33 @@ func _return(n *Node) {
 		}
 	}
 
-	n.exec = func(f *Frame) Builtin {
-		for i, value := range values {
-			f.data[i] = value(f)
+	switch len(child) {
+	case 0:
+		n.exec = func(f *Frame) Builtin { return next }
+	case 1:
+		if child[0].kind == BinaryExpr {
+			n.exec = func(f *Frame) Builtin { return next }
+		} else {
+			v := values[0]
+			n.exec = func(f *Frame) Builtin {
+				f.data[0].Set(v(f))
+				return next
+			}
 		}
-		return next
+	case 2:
+		v0, v1 := values[0], values[1]
+		n.exec = func(f *Frame) Builtin {
+			f.data[0].Set(v0(f))
+			f.data[1].Set(v1(f))
+			return next
+		}
+	default:
+		n.exec = func(f *Frame) Builtin {
+			for i, value := range values {
+				f.data[i].Set(value(f))
+			}
+			return next
+		}
 	}
 }
 
@@ -1140,7 +1220,7 @@ func arrayLit(n *Node) {
 		if c.kind == KeyValueExpr {
 			convertLiteralValue(c.child[1], rtype)
 			values[i] = genValue(c.child[1])
-			index[i] = c.child[0].val.(int)
+			index[i] = int(c.child[0].rval.Int())
 		} else {
 			convertLiteralValue(c, rtype)
 			values[i] = genValue(c)
@@ -1815,10 +1895,10 @@ func convertLiteralValue(n *Node, t reflect.Type) {
 	if n.kind != BasicLit || t == nil || t.Kind() == reflect.Interface {
 		return
 	}
-	if n.val == nil {
-		n.val = reflect.New(t).Elem() // convert to type nil value
+	if n.rval.IsValid() {
+		n.rval = n.rval.Convert(t)
 	} else {
-		n.val = reflect.ValueOf(n.val).Convert(t)
+		n.rval = reflect.New(t).Elem() // convert to type nil value
 	}
 }
 

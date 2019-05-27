@@ -53,7 +53,13 @@ func genValueAs(n *Node, t reflect.Type) func(*Frame) reflect.Value {
 
 func genValue(n *Node) func(*Frame) reflect.Value {
 	switch n.kind {
-	case BasicLit, FuncDecl:
+	case BasicLit:
+		v := n.rval
+		if !v.IsValid() {
+			v = reflect.New(reflect.TypeOf((*interface{})(nil)).Elem()).Elem()
+		}
+		return func(f *Frame) reflect.Value { return v }
+	case FuncDecl:
 		var v reflect.Value
 		if w, ok := n.val.(reflect.Value); ok {
 			v = w
@@ -110,49 +116,85 @@ func genValueInterfaceValue(n *Node) func(*Frame) reflect.Value {
 	}
 }
 
-func genValueInt(n *Node) func(*Frame) int64 {
+func vInt(v reflect.Value) (i int64) {
+	switch v.Type().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		i = v.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		i = int64(v.Uint())
+	case reflect.Float32, reflect.Float64:
+		i = int64(v.Float())
+	}
+	return
+}
+
+func vUint(v reflect.Value) (i uint64) {
+	switch v.Type().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		i = uint64(v.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		i = v.Uint()
+	case reflect.Float32, reflect.Float64:
+		i = uint64(v.Float())
+	}
+	return
+}
+
+func vFloat(v reflect.Value) (i float64) {
+	switch v.Type().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		i = float64(v.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		i = float64(v.Uint())
+	case reflect.Float32, reflect.Float64:
+		i = v.Float()
+	}
+	return
+}
+
+func genValueInt(n *Node) func(*Frame) (reflect.Value, int64) {
 	value := genValue(n)
 
 	switch n.typ.TypeOf().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return func(f *Frame) int64 { return value(f).Int() }
+		return func(f *Frame) (reflect.Value, int64) { v := value(f); return v, v.Int() }
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return func(f *Frame) int64 { return int64(value(f).Uint()) }
+		return func(f *Frame) (reflect.Value, int64) { v := value(f); return v, int64(v.Uint()) }
 	case reflect.Float32, reflect.Float64:
-		return func(f *Frame) int64 { return int64(value(f).Float()) }
+		return func(f *Frame) (reflect.Value, int64) { v := value(f); return v, int64(v.Float()) }
 	}
 	return nil
 }
 
-func genValueUint(n *Node) func(*Frame) uint64 {
+func genValueUint(n *Node) func(*Frame) (reflect.Value, uint64) {
 	value := genValue(n)
 
 	switch n.typ.TypeOf().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return func(f *Frame) uint64 { return uint64(value(f).Int()) }
+		return func(f *Frame) (reflect.Value, uint64) { v := value(f); return v, uint64(v.Int()) }
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return func(f *Frame) uint64 { return value(f).Uint() }
+		return func(f *Frame) (reflect.Value, uint64) { v := value(f); return v, v.Uint() }
 	case reflect.Float32, reflect.Float64:
-		return func(f *Frame) uint64 { return uint64(value(f).Float()) }
+		return func(f *Frame) (reflect.Value, uint64) { v := value(f); return v, uint64(v.Float()) }
 	}
 	return nil
 }
 
-func genValueFloat(n *Node) func(*Frame) float64 {
+func genValueFloat(n *Node) func(*Frame) (reflect.Value, float64) {
 	value := genValue(n)
 
 	switch n.typ.TypeOf().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return func(f *Frame) float64 { return float64(value(f).Int()) }
+		return func(f *Frame) (reflect.Value, float64) { v := value(f); return v, float64(v.Int()) }
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return func(f *Frame) float64 { return float64(value(f).Uint()) }
+		return func(f *Frame) (reflect.Value, float64) { v := value(f); return v, float64(v.Uint()) }
 	case reflect.Float32, reflect.Float64:
-		return func(f *Frame) float64 { return value(f).Float() }
+		return func(f *Frame) (reflect.Value, float64) { v := value(f); return v, v.Float() }
 	}
 	return nil
 }
 
-func genValueString(n *Node) func(*Frame) string {
+func genValueString(n *Node) func(*Frame) (reflect.Value, string) {
 	value := genValue(n)
-	return func(f *Frame) string { return value(f).String() }
+	return func(f *Frame) (reflect.Value, string) { v := value(f); return v, v.String() }
 }
