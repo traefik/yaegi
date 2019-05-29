@@ -11,13 +11,11 @@ func main() {
 		ct = "some text"
 		ce = ""
 	)
-	println(cl, " ", ct, " ", ce)
 	if ce == "" && (cl == 0 || cl > 1000) && (ct == "" || f()) {
 		println("ok")
 	}
 }
 
 // Output:
-// 0   some text
 // in f
 // ok
