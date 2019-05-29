@@ -1257,13 +1257,13 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 	return initNodes, err
 }
 
-func isAncBranch(n *Node) bool {
-	switch n.anc.kind {
-	case If0, If1, If2, If3:
-		return true
-	}
-	return false
-}
+//func isAncBranch(n *Node) bool {
+//	switch n.anc.kind {
+//	case If0, If1, If2, If3:
+//		return true
+//	}
+//	return false
+//}
 
 func childPos(n *Node) int {
 	for i, c := range n.anc.child {
