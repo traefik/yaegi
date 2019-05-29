@@ -1257,6 +1257,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 	return initNodes, err
 }
 
+// used for allocation optimization, temporarily disabled
 //func isAncBranch(n *Node) bool {
 //	switch n.anc.kind {
 //	case If0, If1, If2, If3:
