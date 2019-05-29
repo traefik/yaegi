@@ -8,6 +8,8 @@ import (
 	"reflect"
 )
 
+func init() { log.SetFlags(log.Lshortfile) }
+
 // Builtin type defines functions which run at CFG execution
 type Builtin func(f *Frame) Builtin
 
@@ -700,6 +702,7 @@ func call(n *Node) {
 		runCfg(def.child[3].start, &nf)
 
 		// Handle branching according to boolean result
+		//log.Println(n.cfgError("call"), nf.data[0], "fnext:", fnext)
 		if fnext != nil && !nf.data[0].Bool() {
 			return fnext
 		}
@@ -1109,19 +1112,25 @@ func land(n *Node) {
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	tnext := getExec(n.tnext)
+	dest := genValue(n)
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *Frame) Builtin {
+			//log.Println(n.index, "land#1", n.child[0].findex, value0(f).Bool(), value1(f).Bool())
 			if value0(f).Bool() && value1(f).Bool() {
+				dest(f).SetBool(true)
 				return tnext
 			}
+			dest(f).SetBool(false)
 			return fnext
 		}
 	} else {
-		i := n.findex
+		//i := n.findex
 		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetBool(value0(f).Bool() && value1(f).Bool())
+			log.Println(n.index, "land#2")
+			//f.data[i].SetBool(value0(f).Bool() && value1(f).Bool())
+			dest(f).SetBool(value0(f).Bool() && value1(f).Bool())
 			return tnext
 		}
 	}
@@ -1131,19 +1140,24 @@ func lor(n *Node) {
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	tnext := getExec(n.tnext)
+	dest := genValue(n)
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *Frame) Builtin {
+			//log.Println(n.index, "lor#1")
 			if value0(f).Bool() || value1(f).Bool() {
+				dest(f).SetBool(true)
 				return tnext
 			}
+			dest(f).SetBool(false)
 			return fnext
 		}
 	} else {
-		i := n.findex
+		//i := n.findex
 		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetBool(value0(f).Bool() || value1(f).Bool())
+			dest(f).SetBool(value0(f).Bool() || value1(f).Bool())
+			//log.Println(n.index, "lor#2", dest(f))
 			return tnext
 		}
 	}

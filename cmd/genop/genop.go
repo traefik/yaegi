@@ -329,6 +329,7 @@ func {{$name}}(n *Node) {
 {{range $name, $op := .Comparison}}
 func {{$name}}(n *Node) {
 	tnext := getExec(n.tnext)
+	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ, c1.typ; {
@@ -342,15 +343,16 @@ func {{$name}}(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 {{$op.Name}} s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
-					f.data[i].SetBool(s0 {{$op.Name}} s1)
+					dest(f).SetBool(s0 {{$op.Name}} s1)
 					return tnext
 				}
 			}
@@ -362,15 +364,16 @@ func {{$name}}(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 {{$op.Name}} s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
-					f.data[i].SetBool(s0 {{$op.Name}} s1)
+					dest(f).SetBool(s0 {{$op.Name}} s1)
 					return tnext
 				}
 			}
@@ -383,16 +386,17 @@ func {{$name}}(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 {{$op.Name}} s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
-					f.data[i].SetBool(s0 {{$op.Name}} s1)
+					dest(f).SetBool(s0 {{$op.Name}} s1)
 					return tnext
 				}
 			}
@@ -407,12 +411,13 @@ func {{$name}}(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 {{$op.Name}} s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				dest := genValue(n)
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					dest(f).SetBool(s0 {{$op.Name}} s1)
@@ -427,8 +432,10 @@ func {{$name}}(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 {{$op.Name}} s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -448,8 +455,10 @@ func {{$name}}(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 {{$op.Name}} s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -472,8 +481,10 @@ func {{$name}}(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 {{$op.Name}} s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -492,8 +503,10 @@ func {{$name}}(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 {{$op.Name}} s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -513,8 +526,10 @@ func {{$name}}(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 {{$op.Name}} s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -537,8 +552,10 @@ func {{$name}}(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 {{$op.Name}} s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -557,8 +574,10 @@ func {{$name}}(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 {{$op.Name}} s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -578,8 +597,10 @@ func {{$name}}(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 {{$op.Name}} s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
