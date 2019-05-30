@@ -528,8 +528,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				break
 			}
 			switch {
-			case n.typ != nil && n.typ.cat == BoolT && isAncBranch(n):
-				n.findex = -1
+			//case n.typ != nil && n.typ.cat == BoolT && isAncBranch(n):
+			//	n.findex = -1
 			case n.anc.kind == AssignStmt && n.anc.action == Assign:
 				dest := n.anc.child[childPos(n)-n.anc.nright]
 				n.typ = dest.typ
@@ -1258,13 +1258,14 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 	return initNodes, err
 }
 
-func isAncBranch(n *Node) bool {
-	switch n.anc.kind {
-	case If0, If1, If2, If3:
-		return true
-	}
-	return false
-}
+// used for allocation optimization, temporarily disabled
+//func isAncBranch(n *Node) bool {
+//	switch n.anc.kind {
+//	case If0, If1, If2, If3:
+//		return true
+//	}
+//	return false
+//}
 
 func childPos(n *Node) int {
 	for i, c := range n.anc.child {

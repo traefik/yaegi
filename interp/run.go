@@ -1109,19 +1109,21 @@ func land(n *Node) {
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	tnext := getExec(n.tnext)
+	dest := genValue(n)
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *Frame) Builtin {
 			if value0(f).Bool() && value1(f).Bool() {
+				dest(f).SetBool(true)
 				return tnext
 			}
+			dest(f).SetBool(false)
 			return fnext
 		}
 	} else {
-		i := n.findex
 		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetBool(value0(f).Bool() && value1(f).Bool())
+			dest(f).SetBool(value0(f).Bool() && value1(f).Bool())
 			return tnext
 		}
 	}
@@ -1131,19 +1133,21 @@ func lor(n *Node) {
 	value0 := genValue(n.child[0])
 	value1 := genValue(n.child[1])
 	tnext := getExec(n.tnext)
+	dest := genValue(n)
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *Frame) Builtin {
 			if value0(f).Bool() || value1(f).Bool() {
+				dest(f).SetBool(true)
 				return tnext
 			}
+			dest(f).SetBool(false)
 			return fnext
 		}
 	} else {
-		i := n.findex
 		n.exec = func(f *Frame) Builtin {
-			f.data[i].SetBool(value0(f).Bool() || value1(f).Bool())
+			dest(f).SetBool(value0(f).Bool() || value1(f).Bool())
 			return tnext
 		}
 	}

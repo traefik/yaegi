@@ -1716,6 +1716,7 @@ func inc(n *Node) {
 
 func equal(n *Node) {
 	tnext := getExec(n.tnext)
+	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ, c1.typ; {
@@ -1729,15 +1730,16 @@ func equal(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 == s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
-					f.data[i].SetBool(s0 == s1)
+					dest(f).SetBool(s0 == s1)
 					return tnext
 				}
 			}
@@ -1749,15 +1751,16 @@ func equal(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 == s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
-					f.data[i].SetBool(s0 == s1)
+					dest(f).SetBool(s0 == s1)
 					return tnext
 				}
 			}
@@ -1770,16 +1773,17 @@ func equal(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 == s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
-					f.data[i].SetBool(s0 == s1)
+					dest(f).SetBool(s0 == s1)
 					return tnext
 				}
 			}
@@ -1794,12 +1798,13 @@ func equal(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 == s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				dest := genValue(n)
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					dest(f).SetBool(s0 == s1)
@@ -1814,8 +1819,10 @@ func equal(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 == s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -1835,8 +1842,10 @@ func equal(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 == s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -1859,8 +1868,10 @@ func equal(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 == s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -1879,8 +1890,10 @@ func equal(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 == s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -1900,8 +1913,10 @@ func equal(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 == s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -1924,8 +1939,10 @@ func equal(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 == s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -1944,8 +1961,10 @@ func equal(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 == s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -1965,8 +1984,10 @@ func equal(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 == s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -1984,6 +2005,7 @@ func equal(n *Node) {
 
 func greater(n *Node) {
 	tnext := getExec(n.tnext)
+	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ, c1.typ; {
@@ -1997,15 +2019,16 @@ func greater(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 > s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
-					f.data[i].SetBool(s0 > s1)
+					dest(f).SetBool(s0 > s1)
 					return tnext
 				}
 			}
@@ -2017,15 +2040,16 @@ func greater(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 > s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
-					f.data[i].SetBool(s0 > s1)
+					dest(f).SetBool(s0 > s1)
 					return tnext
 				}
 			}
@@ -2038,16 +2062,17 @@ func greater(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 > s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
-					f.data[i].SetBool(s0 > s1)
+					dest(f).SetBool(s0 > s1)
 					return tnext
 				}
 			}
@@ -2062,12 +2087,13 @@ func greater(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 > s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				dest := genValue(n)
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					dest(f).SetBool(s0 > s1)
@@ -2082,8 +2108,10 @@ func greater(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 > s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2103,8 +2131,10 @@ func greater(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 > s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2127,8 +2157,10 @@ func greater(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 > s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2147,8 +2179,10 @@ func greater(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 > s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2168,8 +2202,10 @@ func greater(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 > s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2192,8 +2228,10 @@ func greater(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 > s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2212,8 +2250,10 @@ func greater(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 > s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2233,8 +2273,10 @@ func greater(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 > s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2252,6 +2294,7 @@ func greater(n *Node) {
 
 func greaterEqual(n *Node) {
 	tnext := getExec(n.tnext)
+	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ, c1.typ; {
@@ -2265,15 +2308,16 @@ func greaterEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 >= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
-					f.data[i].SetBool(s0 >= s1)
+					dest(f).SetBool(s0 >= s1)
 					return tnext
 				}
 			}
@@ -2285,15 +2329,16 @@ func greaterEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 >= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
-					f.data[i].SetBool(s0 >= s1)
+					dest(f).SetBool(s0 >= s1)
 					return tnext
 				}
 			}
@@ -2306,16 +2351,17 @@ func greaterEqual(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 >= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
-					f.data[i].SetBool(s0 >= s1)
+					dest(f).SetBool(s0 >= s1)
 					return tnext
 				}
 			}
@@ -2330,12 +2376,13 @@ func greaterEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 >= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				dest := genValue(n)
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					dest(f).SetBool(s0 >= s1)
@@ -2350,8 +2397,10 @@ func greaterEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 >= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2371,8 +2420,10 @@ func greaterEqual(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 >= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2395,8 +2446,10 @@ func greaterEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 >= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2415,8 +2468,10 @@ func greaterEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 >= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2436,8 +2491,10 @@ func greaterEqual(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 >= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2460,8 +2517,10 @@ func greaterEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 >= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2480,8 +2539,10 @@ func greaterEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 >= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2501,8 +2562,10 @@ func greaterEqual(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 >= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2520,6 +2583,7 @@ func greaterEqual(n *Node) {
 
 func lower(n *Node) {
 	tnext := getExec(n.tnext)
+	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ, c1.typ; {
@@ -2533,15 +2597,16 @@ func lower(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 < s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
-					f.data[i].SetBool(s0 < s1)
+					dest(f).SetBool(s0 < s1)
 					return tnext
 				}
 			}
@@ -2553,15 +2618,16 @@ func lower(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 < s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
-					f.data[i].SetBool(s0 < s1)
+					dest(f).SetBool(s0 < s1)
 					return tnext
 				}
 			}
@@ -2574,16 +2640,17 @@ func lower(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 < s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
-					f.data[i].SetBool(s0 < s1)
+					dest(f).SetBool(s0 < s1)
 					return tnext
 				}
 			}
@@ -2598,12 +2665,13 @@ func lower(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 < s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				dest := genValue(n)
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					dest(f).SetBool(s0 < s1)
@@ -2618,8 +2686,10 @@ func lower(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 < s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2639,8 +2709,10 @@ func lower(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 < s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2663,8 +2735,10 @@ func lower(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 < s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2683,8 +2757,10 @@ func lower(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 < s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2704,8 +2780,10 @@ func lower(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 < s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2728,8 +2806,10 @@ func lower(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 < s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2748,8 +2828,10 @@ func lower(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 < s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2769,8 +2851,10 @@ func lower(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 < s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2788,6 +2872,7 @@ func lower(n *Node) {
 
 func lowerEqual(n *Node) {
 	tnext := getExec(n.tnext)
+	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ, c1.typ; {
@@ -2801,15 +2886,16 @@ func lowerEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 <= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
-					f.data[i].SetBool(s0 <= s1)
+					dest(f).SetBool(s0 <= s1)
 					return tnext
 				}
 			}
@@ -2821,15 +2907,16 @@ func lowerEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 <= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
-					f.data[i].SetBool(s0 <= s1)
+					dest(f).SetBool(s0 <= s1)
 					return tnext
 				}
 			}
@@ -2842,16 +2929,17 @@ func lowerEqual(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 <= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
-					f.data[i].SetBool(s0 <= s1)
+					dest(f).SetBool(s0 <= s1)
 					return tnext
 				}
 			}
@@ -2866,12 +2954,13 @@ func lowerEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 <= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				dest := genValue(n)
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					dest(f).SetBool(s0 <= s1)
@@ -2886,8 +2975,10 @@ func lowerEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 <= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2907,8 +2998,10 @@ func lowerEqual(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 <= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2931,8 +3024,10 @@ func lowerEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 <= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2951,8 +3046,10 @@ func lowerEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 <= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2972,8 +3069,10 @@ func lowerEqual(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 <= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -2996,8 +3095,10 @@ func lowerEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 <= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -3016,8 +3117,10 @@ func lowerEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 <= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -3037,8 +3140,10 @@ func lowerEqual(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 <= s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -3056,6 +3161,7 @@ func lowerEqual(n *Node) {
 
 func notEqual(n *Node) {
 	tnext := getExec(n.tnext)
+	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ, c1.typ; {
@@ -3069,15 +3175,16 @@ func notEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 != s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
-					f.data[i].SetBool(s0 != s1)
+					dest(f).SetBool(s0 != s1)
 					return tnext
 				}
 			}
@@ -3089,15 +3196,16 @@ func notEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 != s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
-					f.data[i].SetBool(s0 != s1)
+					dest(f).SetBool(s0 != s1)
 					return tnext
 				}
 			}
@@ -3110,16 +3218,17 @@ func notEqual(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 != s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				i := n.findex
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
-					f.data[i].SetBool(s0 != s1)
+					dest(f).SetBool(s0 != s1)
 					return tnext
 				}
 			}
@@ -3134,12 +3243,13 @@ func notEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 != s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
-				dest := genValue(n)
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					dest(f).SetBool(s0 != s1)
@@ -3154,8 +3264,10 @@ func notEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 != s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -3175,8 +3287,10 @@ func notEqual(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 != s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -3199,8 +3313,10 @@ func notEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 != s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -3219,8 +3335,10 @@ func notEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 != s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -3240,8 +3358,10 @@ func notEqual(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 != s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -3264,8 +3384,10 @@ func notEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s1 := v1(f)
 					if s0 != s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -3284,8 +3406,10 @@ func notEqual(n *Node) {
 				n.exec = func(f *Frame) Builtin {
 					_, s0 := v0(f)
 					if s0 != s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
@@ -3305,8 +3429,10 @@ func notEqual(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					if s0 != s1 {
+						dest(f).SetBool(true)
 						return tnext
 					}
+					dest(f).SetBool(false)
 					return fnext
 				}
 			} else {
