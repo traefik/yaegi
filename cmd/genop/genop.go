@@ -149,14 +149,14 @@ func {{$name}}(n *Node) {
 	case reflect.Complex64, reflect.Complex128:
 		switch {
 		case c0.rval.IsValid():
-			r0 := c0.rval.Complex()
+			r0 := vComplex(c0.rval)
 			v1 := genValue(c1)
 			n.exec = func(f *Frame) Builtin {
 				dest(f).SetComplex(r0 {{$op.Name}} v1(f).Complex())
 				return next
 			}
 		case c1.rval.IsValid():
-			r1 := c1.rval.Complex()
+			r1 := vComplex(c1.rval)
 			v0 := genValue(c0)
 			n.exec = func(f *Frame) Builtin {
 				dest(f).SetComplex(v0(f).Complex() {{$op.Name}} r1)
@@ -224,7 +224,7 @@ func {{$name}}Assign(n *Node) {
 			}
 		case reflect.Complex64, reflect.Complex128:
 			v0 := genValue(c0)
-			v1 := c1.rval.Complex()
+			v1 := vComplex(c1.rval)
 			n.exec = func(f *Frame) Builtin {
 				v := v0(f)
 				v.SetComplex(v.Complex() {{$op.Name}} v1)
@@ -401,6 +401,77 @@ func {{$name}}(n *Node) {
 				}
 			}
 		}
+	{{- if $op.Complex}}
+	case isComplex(t0) || isComplex(t1):
+		switch {
+		case c0.rval.IsValid():
+			s0 := vComplex(c0.rval)
+			v1 := genValueComplex(c1)
+			if n.fnext != nil {
+				fnext := getExec(n.fnext)
+				n.exec = func(f *Frame) Builtin {
+					_, s1 := v1(f)
+					if s0 {{$op.Name}} s1 {
+						dest(f).SetBool(true)
+						return tnext
+					}
+					dest(f).SetBool(false)
+					return fnext
+				}
+			} else {
+				n.exec = func(f *Frame) Builtin {
+					_, s1 := v1(f)
+					dest(f).SetBool(s0 {{$op.Name}} s1)
+					return tnext
+				}
+			}
+		case c1.rval.IsValid():
+			s1 := vComplex(c1.rval)
+			v0 := genValueComplex(c0)
+			if n.fnext != nil {
+				fnext := getExec(n.fnext)
+				n.exec = func(f *Frame) Builtin {
+					_, s0 := v0(f)
+					if s0 {{$op.Name}} s1 {
+						dest(f).SetBool(true)
+						return tnext
+					}
+					dest(f).SetBool(false)
+					return fnext
+				}
+			} else {
+				dest := genValue(n)
+				n.exec = func(f *Frame) Builtin {
+					_, s0 := v0(f)
+					dest(f).SetBool(s0 {{$op.Name}} s1)
+					return tnext
+				}
+			}
+		default:
+			v0 := genValueComplex(n.child[0])
+			v1 := genValueComplex(n.child[1])
+			if n.fnext != nil {
+				fnext := getExec(n.fnext)
+				n.exec = func(f *Frame) Builtin {
+					_, s0 := v0(f)
+					_, s1 := v1(f)
+					if s0 {{$op.Name}} s1 {
+						dest(f).SetBool(true)
+						return tnext
+					}
+					dest(f).SetBool(false)
+					return fnext
+				}
+			} else {
+				n.exec = func(f *Frame) Builtin {
+					_, s0 := v0(f)
+					_, s1 := v1(f)
+					dest(f).SetBool(s0 {{$op.Name}} s1)
+					return tnext
+				}
+			}
+		}
+		{{- end}}
 	case isFloat(t0) || isFloat(t1):
 		switch {
 		case c0.rval.IsValid():
@@ -620,10 +691,11 @@ func {{$name}}(n *Node) {
 
 // Op define operator name and properties
 type Op struct {
-	Name  string // +, -, ...
-	Str   bool   // true if operator applies to string
-	Float bool   // true if operator applies to float
-	Shift bool   // true if operator is a shift operation
+	Name    string // +, -, ...
+	Str     bool   // true if operator applies to string
+	Float   bool   // true if operator applies to float
+	Complex bool   // true if operator applies to complex
+	Shift   bool   // true if operator is a shift operation
 }
 
 func main() {
@@ -636,29 +708,29 @@ func main() {
 	b := &bytes.Buffer{}
 	data := map[string]interface{}{
 		"Arithmetic": map[string]Op{
-			"add":    {"+", true, true, false},
-			"sub":    {"-", false, true, false},
-			"mul":    {"*", false, true, false},
-			"quo":    {"/", false, true, false},
-			"rem":    {"%", false, false, false},
-			"shl":    {"<<", false, false, true},
-			"shr":    {">>", false, false, true},
-			"and":    {"&", false, false, false},
-			"or":     {"|", false, false, false},
-			"xor":    {"^", false, false, false},
-			"andnot": {"&^", false, false, false},
+			"add":    {"+", true, true, true, false},
+			"sub":    {"-", false, true, true, false},
+			"mul":    {"*", false, true, true, false},
+			"quo":    {"/", false, true, true, false},
+			"rem":    {"%", false, false, false, false},
+			"shl":    {"<<", false, false, false, true},
+			"shr":    {">>", false, false, false, true},
+			"and":    {"&", false, false, false, false},
+			"or":     {"|", false, false, false, false},
+			"xor":    {"^", false, false, false, false},
+			"andnot": {"&^", false, false, false, false},
 		},
 		"IncDec": map[string]Op{
 			"inc": {Name: "+"},
 			"dec": {Name: "-"},
 		},
 		"Comparison": map[string]Op{
-			"equal":        {Name: "=="},
-			"greater":      {Name: ">"},
-			"greaterEqual": {Name: ">="},
-			"lower":        {Name: "<"},
-			"lowerEqual":   {Name: "<="},
-			"notEqual":     {Name: "!="},
+			"equal":        {Name: "==", Complex: true},
+			"greater":      {Name: ">", Complex: false},
+			"greaterEqual": {Name: ">=", Complex: false},
+			"lower":        {Name: "<", Complex: false},
+			"lowerEqual":   {Name: "<=", Complex: false},
+			"notEqual":     {Name: "!=", Complex: true},
 		},
 	}
 	if err = parse.Execute(b, data); err != nil {

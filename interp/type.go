@@ -171,6 +171,13 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 			t.cat = ByteT
 			t.name = "byte"
 			t.untyped = true
+		case complex64:
+			t.cat = Complex64T
+			t.name = "complex64"
+		case complex128:
+			t.cat = Complex128T
+			t.name = "complex128"
+			t.untyped = true
 		case float32:
 			t.cat = Float32T
 			t.name = "float32"
@@ -699,6 +706,14 @@ func isUint(t *Type) bool {
 	return false
 }
 
+func isComplex(t *Type) bool {
+	switch t.TypeOf().Kind() {
+	case reflect.Complex64, reflect.Complex128:
+		return true
+	}
+	return false
+}
+
 func isFloat(t *Type) bool {
 	switch t.TypeOf().Kind() {
 	case reflect.Float32, reflect.Float64:
@@ -715,6 +730,6 @@ func isByteArray(t *Type) bool {
 
 func isFloat32(t *Type) bool       { return t.TypeOf().Kind() == reflect.Float32 }
 func isFloat64(t *Type) bool       { return t.TypeOf().Kind() == reflect.Float64 }
-func isUntypedNumber(t *Type) bool { return t.untyped && (isInt(t) || isFloat(t)) }
-func isNumber(t *Type) bool        { return isInt(t) || isFloat(t) }
+func isUntypedNumber(t *Type) bool { return t.untyped && (isInt(t) || isFloat(t) || isComplex(t)) }
+func isNumber(t *Type) bool        { return isInt(t) || isFloat(t) || isComplex(t) }
 func isString(t *Type) bool        { return t.TypeOf().Kind() == reflect.String }

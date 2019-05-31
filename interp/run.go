@@ -1095,13 +1095,26 @@ func getIndexSeqMethod(n *Node) {
 }
 
 func negate(n *Node) {
-	i := n.findex
+	dest := genValue(n)
 	value := genValue(n.child[0])
 	next := getExec(n.tnext)
 
-	n.exec = func(f *Frame) Builtin {
-		f.data[i].SetInt(-value(f).Int())
-		return next
+	switch n.typ.TypeOf().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		n.exec = func(f *Frame) Builtin {
+			dest(f).SetInt(-value(f).Int())
+			return next
+		}
+	case reflect.Float32, reflect.Float64:
+		n.exec = func(f *Frame) Builtin {
+			dest(f).SetFloat(-value(f).Float())
+			return next
+		}
+	case reflect.Complex64, reflect.Complex128:
+		n.exec = func(f *Frame) Builtin {
+			dest(f).SetComplex(-value(f).Complex())
+			return next
+		}
 	}
 }
 
