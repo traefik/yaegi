@@ -11,4 +11,4 @@ func main() {
 }
 
 // Output:
-// 0
+// Narg: 0
