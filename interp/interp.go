@@ -195,7 +195,6 @@ func initUniverse() *Scope {
 		"println": &Symbol{kind: Bltn, builtin: _println},
 		"real":    &Symbol{kind: Bltn, builtin: _real},
 		"recover": &Symbol{kind: Bltn, builtin: _recover},
-		// TODO: complex, copy, delete, imag, new, print, real
 	}}
 	return scope
 }

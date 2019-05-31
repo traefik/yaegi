@@ -1110,6 +1110,11 @@ func negate(n *Node) {
 			dest(f).SetFloat(-value(f).Float())
 			return next
 		}
+	case reflect.Complex64, reflect.Complex128:
+		n.exec = func(f *Frame) Builtin {
+			dest(f).SetComplex(-value(f).Complex())
+			return next
+		}
 	}
 }
 

@@ -124,14 +124,14 @@ func add(n *Node) {
 	case reflect.Complex64, reflect.Complex128:
 		switch {
 		case c0.rval.IsValid():
-			r0 := c0.rval.Complex()
+			r0 := vComplex(c0.rval)
 			v1 := genValue(c1)
 			n.exec = func(f *Frame) Builtin {
 				dest(f).SetComplex(r0 + v1(f).Complex())
 				return next
 			}
 		case c1.rval.IsValid():
-			r1 := c1.rval.Complex()
+			r1 := vComplex(c1.rval)
 			v0 := genValue(c0)
 			n.exec = func(f *Frame) Builtin {
 				dest(f).SetComplex(v0(f).Complex() + r1)
@@ -374,14 +374,14 @@ func mul(n *Node) {
 	case reflect.Complex64, reflect.Complex128:
 		switch {
 		case c0.rval.IsValid():
-			r0 := c0.rval.Complex()
+			r0 := vComplex(c0.rval)
 			v1 := genValue(c1)
 			n.exec = func(f *Frame) Builtin {
 				dest(f).SetComplex(r0 * v1(f).Complex())
 				return next
 			}
 		case c1.rval.IsValid():
-			r1 := c1.rval.Complex()
+			r1 := vComplex(c1.rval)
 			v0 := genValue(c0)
 			n.exec = func(f *Frame) Builtin {
 				dest(f).SetComplex(v0(f).Complex() * r1)
@@ -558,14 +558,14 @@ func quo(n *Node) {
 	case reflect.Complex64, reflect.Complex128:
 		switch {
 		case c0.rval.IsValid():
-			r0 := c0.rval.Complex()
+			r0 := vComplex(c0.rval)
 			v1 := genValue(c1)
 			n.exec = func(f *Frame) Builtin {
 				dest(f).SetComplex(r0 / v1(f).Complex())
 				return next
 			}
 		case c1.rval.IsValid():
-			r1 := c1.rval.Complex()
+			r1 := vComplex(c1.rval)
 			v0 := genValue(c0)
 			n.exec = func(f *Frame) Builtin {
 				dest(f).SetComplex(v0(f).Complex() / r1)
@@ -874,14 +874,14 @@ func sub(n *Node) {
 	case reflect.Complex64, reflect.Complex128:
 		switch {
 		case c0.rval.IsValid():
-			r0 := c0.rval.Complex()
+			r0 := vComplex(c0.rval)
 			v1 := genValue(c1)
 			n.exec = func(f *Frame) Builtin {
 				dest(f).SetComplex(r0 - v1(f).Complex())
 				return next
 			}
 		case c1.rval.IsValid():
-			r1 := c1.rval.Complex()
+			r1 := vComplex(c1.rval)
 			v0 := genValue(c0)
 			n.exec = func(f *Frame) Builtin {
 				dest(f).SetComplex(v0(f).Complex() - r1)
@@ -1007,7 +1007,7 @@ func addAssign(n *Node) {
 			}
 		case reflect.Complex64, reflect.Complex128:
 			v0 := genValue(c0)
-			v1 := c1.rval.Complex()
+			v1 := vComplex(c1.rval)
 			n.exec = func(f *Frame) Builtin {
 				v := v0(f)
 				v.SetComplex(v.Complex() + v1)
@@ -1192,7 +1192,7 @@ func mulAssign(n *Node) {
 			}
 		case reflect.Complex64, reflect.Complex128:
 			v0 := genValue(c0)
-			v1 := c1.rval.Complex()
+			v1 := vComplex(c1.rval)
 			n.exec = func(f *Frame) Builtin {
 				v := v0(f)
 				v.SetComplex(v.Complex() * v1)
@@ -1321,7 +1321,7 @@ func quoAssign(n *Node) {
 			}
 		case reflect.Complex64, reflect.Complex128:
 			v0 := genValue(c0)
-			v1 := c1.rval.Complex()
+			v1 := vComplex(c1.rval)
 			n.exec = func(f *Frame) Builtin {
 				v := v0(f)
 				v.SetComplex(v.Complex() / v1)
@@ -1546,7 +1546,7 @@ func subAssign(n *Node) {
 			}
 		case reflect.Complex64, reflect.Complex128:
 			v0 := genValue(c0)
-			v1 := c1.rval.Complex()
+			v1 := vComplex(c1.rval)
 			n.exec = func(f *Frame) Builtin {
 				v := v0(f)
 				v.SetComplex(v.Complex() - v1)
@@ -1767,6 +1767,75 @@ func equal(n *Node) {
 		default:
 			v0 := genValueString(n.child[0])
 			v1 := genValueString(n.child[1])
+			if n.fnext != nil {
+				fnext := getExec(n.fnext)
+				n.exec = func(f *Frame) Builtin {
+					_, s0 := v0(f)
+					_, s1 := v1(f)
+					if s0 == s1 {
+						dest(f).SetBool(true)
+						return tnext
+					}
+					dest(f).SetBool(false)
+					return fnext
+				}
+			} else {
+				n.exec = func(f *Frame) Builtin {
+					_, s0 := v0(f)
+					_, s1 := v1(f)
+					dest(f).SetBool(s0 == s1)
+					return tnext
+				}
+			}
+		}
+	case isComplex(t0) || isComplex(t1):
+		switch {
+		case c0.rval.IsValid():
+			s0 := vComplex(c0.rval)
+			v1 := genValueComplex(c1)
+			if n.fnext != nil {
+				fnext := getExec(n.fnext)
+				n.exec = func(f *Frame) Builtin {
+					_, s1 := v1(f)
+					if s0 == s1 {
+						dest(f).SetBool(true)
+						return tnext
+					}
+					dest(f).SetBool(false)
+					return fnext
+				}
+			} else {
+				n.exec = func(f *Frame) Builtin {
+					_, s1 := v1(f)
+					dest(f).SetBool(s0 == s1)
+					return tnext
+				}
+			}
+		case c1.rval.IsValid():
+			s1 := vComplex(c1.rval)
+			v0 := genValueComplex(c0)
+			if n.fnext != nil {
+				fnext := getExec(n.fnext)
+				n.exec = func(f *Frame) Builtin {
+					_, s0 := v0(f)
+					if s0 == s1 {
+						dest(f).SetBool(true)
+						return tnext
+					}
+					dest(f).SetBool(false)
+					return fnext
+				}
+			} else {
+				dest := genValue(n)
+				n.exec = func(f *Frame) Builtin {
+					_, s0 := v0(f)
+					dest(f).SetBool(s0 == s1)
+					return tnext
+				}
+			}
+		default:
+			v0 := genValueComplex(n.child[0])
+			v1 := genValueComplex(n.child[1])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *Frame) Builtin {
@@ -3212,6 +3281,75 @@ func notEqual(n *Node) {
 		default:
 			v0 := genValueString(n.child[0])
 			v1 := genValueString(n.child[1])
+			if n.fnext != nil {
+				fnext := getExec(n.fnext)
+				n.exec = func(f *Frame) Builtin {
+					_, s0 := v0(f)
+					_, s1 := v1(f)
+					if s0 != s1 {
+						dest(f).SetBool(true)
+						return tnext
+					}
+					dest(f).SetBool(false)
+					return fnext
+				}
+			} else {
+				n.exec = func(f *Frame) Builtin {
+					_, s0 := v0(f)
+					_, s1 := v1(f)
+					dest(f).SetBool(s0 != s1)
+					return tnext
+				}
+			}
+		}
+	case isComplex(t0) || isComplex(t1):
+		switch {
+		case c0.rval.IsValid():
+			s0 := vComplex(c0.rval)
+			v1 := genValueComplex(c1)
+			if n.fnext != nil {
+				fnext := getExec(n.fnext)
+				n.exec = func(f *Frame) Builtin {
+					_, s1 := v1(f)
+					if s0 != s1 {
+						dest(f).SetBool(true)
+						return tnext
+					}
+					dest(f).SetBool(false)
+					return fnext
+				}
+			} else {
+				n.exec = func(f *Frame) Builtin {
+					_, s1 := v1(f)
+					dest(f).SetBool(s0 != s1)
+					return tnext
+				}
+			}
+		case c1.rval.IsValid():
+			s1 := vComplex(c1.rval)
+			v0 := genValueComplex(c0)
+			if n.fnext != nil {
+				fnext := getExec(n.fnext)
+				n.exec = func(f *Frame) Builtin {
+					_, s0 := v0(f)
+					if s0 != s1 {
+						dest(f).SetBool(true)
+						return tnext
+					}
+					dest(f).SetBool(false)
+					return fnext
+				}
+			} else {
+				dest := genValue(n)
+				n.exec = func(f *Frame) Builtin {
+					_, s0 := v0(f)
+					dest(f).SetBool(s0 != s1)
+					return tnext
+				}
+			}
+		default:
+			v0 := genValueComplex(n.child[0])
+			v1 := genValueComplex(n.child[1])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *Frame) Builtin {
