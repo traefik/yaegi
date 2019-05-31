@@ -1203,6 +1203,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case TypeAssertExpr:
 			if len(n.child) > 1 {
+				wireChild(n)
 				if n.child[1].typ == nil {
 					n.child[1].typ = scope.getType(n.child[1].ident)
 				}
