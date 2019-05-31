@@ -46,6 +46,8 @@ func main() {
 	}
 
 	if len(args) > 0 {
+		// Skip first os arg to set command line as expected by interpreted main
+		os.Args = os.Args[1:]
 		b, err := ioutil.ReadFile(args[0])
 		if err != nil {
 			log.Fatal("Could not read file: ", args[0])
