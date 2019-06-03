@@ -1769,12 +1769,12 @@ func _len(n *Node) {
 }
 
 func _new(n *Node) {
-	i := n.findex
+	dest := genValue(n)
 	next := getExec(n.tnext)
 	typ := n.child[1].typ.TypeOf()
 
 	n.exec = func(f *Frame) Builtin {
-		f.data[i] = reflect.New(typ)
+		dest(f).Set(reflect.New(typ))
 		return next
 	}
 }
