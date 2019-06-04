@@ -880,6 +880,12 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 							err = n.cfgError("use of builtin %s not in function call", n.ident)
 						}
 					}
+					if sym.kind == Var && sym.typ != nil && sym.typ.TypeOf().Kind() == reflect.Bool {
+						switch n.anc.kind {
+						case If0, If1, If2, If3, For1, For2, For3, For4:
+							n.gen = branch
+						}
+					}
 				}
 				if n.sym != nil {
 					n.recv = n.sym.recv

@@ -1174,6 +1174,19 @@ func nop(n *Node) {
 	}
 }
 
+func branch(n *Node) {
+	tnext := getExec(n.tnext)
+	fnext := getExec(n.fnext)
+	value := genValue(n)
+
+	n.exec = func(f *Frame) Builtin {
+		if value(f).Bool() {
+			return tnext
+		}
+		return fnext
+	}
+}
+
 func _return(n *Node) {
 	child := n.child
 	next := getExec(n.tnext)
