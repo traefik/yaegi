@@ -11,6 +11,19 @@ import (
 // A CfgError represents an error during CFG build stage
 type CfgError error
 
+var constOp = map[Action]func(*Node){
+	Add:    addConst,
+	Sub:    subConst,
+	Mul:    mulConst,
+	Quo:    quoConst,
+	Rem:    remConst,
+	And:    andConst,
+	Or:     orConst,
+	Shl:    shlConst,
+	Shr:    shrConst,
+	AndNot: andnotConst,
+}
+
 // Cfg generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
@@ -336,7 +349,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				} else {
 					sym, level, _ = scope.lookup(dest.ident)
 				}
-				switch t0, t1 := dest.typ, src.typ; n.action {
+				switch t0, t1 := dest.typ.TypeOf(), src.typ.TypeOf(); n.action {
 				case AddAssign:
 					if !(isNumber(t0) && isNumber(t1) || isString(t0) && isString(t1)) || isInt(t0) && isFloat(t1) {
 						err = n.cfgError("illegal operand types for '%v' operator", n.action)
@@ -483,9 +496,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case BinaryExpr:
 			wireChild(n)
 			nilSym := interp.universe.sym["nil"]
-			t0, t1 := n.child[0].typ, n.child[1].typ
-			if !t0.untyped && !t1.untyped && t0.id() != t1.id() {
-				err = n.cfgError("mismatched types %s and %s", t0.id(), t1.id())
+			c0, c1 := n.child[0], n.child[1]
+			t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
+			if !c0.typ.untyped && !c1.typ.untyped && c0.typ.id() != c1.typ.id() {
+				err = n.cfgError("mismatched types %s and %s", c0.typ.id(), c1.typ.id())
 				break
 			}
 			switch n.action {
@@ -505,7 +519,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				if !(isInt(t0) && isUint(t1)) {
 					err = n.cfgError("illegal operand types for '%v' operator", n.action)
 				}
-				n.typ = t0
+				n.typ = c0.typ
 			case Equal, NotEqual:
 				if isNumber(t0) && !isNumber(t1) || isString(t0) && !isString(t1) {
 					err = n.cfgError("illegal operand types for '%v' operator", n.action)
@@ -524,12 +538,19 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				}
 				n.typ = scope.getType("bool")
 			}
+			if c0.rval.IsValid() && c1.rval.IsValid() && constOp[n.action] != nil {
+				constOp[n.action](n)
+				n.typ = &Type{cat: ValueT, rtype: n.rval.Type()}
+			}
 			if err != nil {
 				break
 			}
 			switch {
 			//case n.typ != nil && n.typ.cat == BoolT && isAncBranch(n):
 			//	n.findex = -1
+			case n.rval.IsValid():
+				n.gen = nop
+				n.findex = -1
 			case n.anc.kind == AssignStmt && n.anc.action == Assign:
 				dest := n.anc.child[childPos(n)-n.anc.nright]
 				n.typ = dest.typ
@@ -616,26 +637,27 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 					}
 					if len(n.child) == 3 {
 						if c2.typ.cat == ArrayT && c2.typ.val.id() == n.typ.val.id() ||
-							isByteArray(c1.typ) && isString(c2.typ) {
+							isByteArray(c1.typ.TypeOf()) && isString(c2.typ.TypeOf()) {
 							n.gen = appendSlice
 						}
 					}
 				case "cap", "copy", "len":
 					n.typ = scope.getType("int")
 				case "complex":
-					switch t0, t1 := n.child[1].typ, n.child[2].typ; {
+					c0, c1 := n.child[1], n.child[2]
+					switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 					case isFloat32(t0) && isFloat32(t1):
 						n.typ = scope.getType("complex64")
 					case isFloat64(t0) && isFloat64(t1):
 						n.typ = scope.getType("complex128")
-					case isUntypedNumber(t0) && isUntypedNumber(t1):
+					case c0.typ.untyped && isNumber(t0) && c1.typ.untyped && isNumber(t1):
 						n.typ = &Type{cat: ValueT, rtype: complexType}
-					case isUntypedNumber(t0) && isFloat32(t1) || isUntypedNumber(t1) && isFloat32(t0):
+					case c0.typ.untyped && isFloat32(t1) || c1.typ.untyped && isFloat32(t0):
 						n.typ = scope.getType("complex64")
-					case isUntypedNumber(t0) && isFloat64(t1) || isUntypedNumber(t1) && isFloat64(t0):
+					case c0.typ.untyped && isFloat64(t1) || c1.typ.untyped && isFloat64(t0):
 						n.typ = scope.getType("complex128")
 					default:
-						err = n.cfgError("invalid types %s and %s", t0.TypeOf().Kind(), t1.TypeOf().Kind())
+						err = n.cfgError("invalid types %s and %s", t0.Kind(), t1.Kind())
 					}
 				case "real", "imag":
 					switch k := n.child[1].typ.TypeOf().Kind(); {
@@ -643,7 +665,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 						n.typ = scope.getType("float32")
 					case k == reflect.Complex128:
 						n.typ = scope.getType("float64")
-					case isUntypedNumber(n.child[1].typ):
+					case n.child[1].typ.untyped && isNumber(n.child[1].typ.TypeOf()):
 						n.typ = &Type{cat: ValueT, rtype: floatType}
 					default:
 						err = n.cfgError("invalid complex type %s", k)
@@ -668,7 +690,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				}
 			case n.child[0].isType(scope):
 				// Type conversion expression
-				if isInt(n.child[0].typ) && n.child[1].kind == BasicLit && isFloat(n.child[1].typ) {
+				if isInt(n.child[0].typ.TypeOf()) && n.child[1].kind == BasicLit && isFloat(n.child[1].typ.TypeOf()) {
 					err = n.cfgError("truncated to integer")
 				}
 				n.gen = convert
@@ -916,8 +938,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case ParenExpr:
 			wireChild(n)
-			n.findex = n.lastChild().findex
-			n.typ = n.lastChild().typ
+			c := n.lastChild()
+			n.findex = c.findex
+			n.typ = c.typ
+			n.rval = c.rval
 
 		case RangeStmt:
 			if scope.rangeChanType(n) != nil {

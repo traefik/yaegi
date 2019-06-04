@@ -13,6 +13,7 @@ import (
 )
 
 func TestInterpConsistencyBuild(t *testing.T) {
+	t.Skip("slow")
 	dir := filepath.Join("..", "_test", "tmp")
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if err := os.Mkdir(dir, 0700); err != nil {

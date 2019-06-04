@@ -148,6 +148,23 @@ func add(n *Node) {
 	}
 }
 
+func addConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t0, t1 := v0.Type(), v1.Type()
+	switch {
+	case isString(t0) && isString(t1):
+		n.rval = reflect.ValueOf(v0.String() + v1.String())
+	case isComplex(t0) || isComplex(t1):
+		n.rval = reflect.ValueOf(vComplex(v0) + vComplex(v1))
+	case isFloat(t0) || isFloat(t1):
+		n.rval = reflect.ValueOf(vFloat(v0) + vFloat(v1))
+	case isUint(t0) && isUint(t1):
+		n.rval = reflect.ValueOf(vUint(v0) + vUint(v1))
+	case isInt(t0) && isInt(t1):
+		n.rval = reflect.ValueOf(vInt(v0) + vInt(v1))
+	}
+}
+
 func and(n *Node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
@@ -214,6 +231,17 @@ func and(n *Node) {
 	}
 }
 
+func andConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t0, t1 := v0.Type(), v1.Type()
+	switch {
+	case isUint(t0) && isUint(t1):
+		n.rval = reflect.ValueOf(vUint(v0) & vUint(v1))
+	case isInt(t0) && isInt(t1):
+		n.rval = reflect.ValueOf(vInt(v0) & vInt(v1))
+	}
+}
+
 func andnot(n *Node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
@@ -277,6 +305,17 @@ func andnot(n *Node) {
 				return next
 			}
 		}
+	}
+}
+
+func andnotConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t0, t1 := v0.Type(), v1.Type()
+	switch {
+	case isUint(t0) && isUint(t1):
+		n.rval = reflect.ValueOf(vUint(v0) &^ vUint(v1))
+	case isInt(t0) && isInt(t1):
+		n.rval = reflect.ValueOf(vInt(v0) &^ vInt(v1))
 	}
 }
 
@@ -398,6 +437,21 @@ func mul(n *Node) {
 	}
 }
 
+func mulConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t0, t1 := v0.Type(), v1.Type()
+	switch {
+	case isComplex(t0) || isComplex(t1):
+		n.rval = reflect.ValueOf(vComplex(v0) * vComplex(v1))
+	case isFloat(t0) || isFloat(t1):
+		n.rval = reflect.ValueOf(vFloat(v0) * vFloat(v1))
+	case isUint(t0) && isUint(t1):
+		n.rval = reflect.ValueOf(vUint(v0) * vUint(v1))
+	case isInt(t0) && isInt(t1):
+		n.rval = reflect.ValueOf(vInt(v0) * vInt(v1))
+	}
+}
+
 func or(n *Node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
@@ -461,6 +515,17 @@ func or(n *Node) {
 				return next
 			}
 		}
+	}
+}
+
+func orConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t0, t1 := v0.Type(), v1.Type()
+	switch {
+	case isUint(t0) && isUint(t1):
+		n.rval = reflect.ValueOf(vUint(v0) | vUint(v1))
+	case isInt(t0) && isInt(t1):
+		n.rval = reflect.ValueOf(vInt(v0) | vInt(v1))
 	}
 }
 
@@ -582,6 +647,21 @@ func quo(n *Node) {
 	}
 }
 
+func quoConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t0, t1 := v0.Type(), v1.Type()
+	switch {
+	case isComplex(t0) || isComplex(t1):
+		n.rval = reflect.ValueOf(vComplex(v0) / vComplex(v1))
+	case isFloat(t0) || isFloat(t1):
+		n.rval = reflect.ValueOf(vFloat(v0) / vFloat(v1))
+	case isUint(t0) && isUint(t1):
+		n.rval = reflect.ValueOf(vUint(v0) / vUint(v1))
+	case isInt(t0) && isInt(t1):
+		n.rval = reflect.ValueOf(vInt(v0) / vInt(v1))
+	}
+}
+
 func rem(n *Node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
@@ -645,6 +725,17 @@ func rem(n *Node) {
 				return next
 			}
 		}
+	}
+}
+
+func remConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t0, t1 := v0.Type(), v1.Type()
+	switch {
+	case isUint(t0) && isUint(t1):
+		n.rval = reflect.ValueOf(vUint(v0) % vUint(v1))
+	case isInt(t0) && isInt(t1):
+		n.rval = reflect.ValueOf(vInt(v0) % vInt(v1))
 	}
 }
 
@@ -714,6 +805,17 @@ func shl(n *Node) {
 	}
 }
 
+func shlConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t0, t1 := v0.Type(), v1.Type()
+	switch {
+	case isUint(t0) && isUint(t1):
+		n.rval = reflect.ValueOf(vUint(v0) << vUint(v1))
+	case isInt(t0) && isInt(t1):
+		n.rval = reflect.ValueOf(vInt(v0) << vUint(v1))
+	}
+}
+
 func shr(n *Node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
@@ -777,6 +879,17 @@ func shr(n *Node) {
 				return next
 			}
 		}
+	}
+}
+
+func shrConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t0, t1 := v0.Type(), v1.Type()
+	switch {
+	case isUint(t0) && isUint(t1):
+		n.rval = reflect.ValueOf(vUint(v0) >> vUint(v1))
+	case isInt(t0) && isInt(t1):
+		n.rval = reflect.ValueOf(vInt(v0) >> vUint(v1))
 	}
 }
 
@@ -898,6 +1011,21 @@ func sub(n *Node) {
 	}
 }
 
+func subConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t0, t1 := v0.Type(), v1.Type()
+	switch {
+	case isComplex(t0) || isComplex(t1):
+		n.rval = reflect.ValueOf(vComplex(v0) - vComplex(v1))
+	case isFloat(t0) || isFloat(t1):
+		n.rval = reflect.ValueOf(vFloat(v0) - vFloat(v1))
+	case isUint(t0) && isUint(t1):
+		n.rval = reflect.ValueOf(vUint(v0) - vUint(v1))
+	case isInt(t0) && isInt(t1):
+		n.rval = reflect.ValueOf(vInt(v0) - vInt(v1))
+	}
+}
+
 func xor(n *Node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
@@ -961,6 +1089,17 @@ func xor(n *Node) {
 				return next
 			}
 		}
+	}
+}
+
+func xorConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t0, t1 := v0.Type(), v1.Type()
+	switch {
+	case isUint(t0) && isUint(t1):
+		n.rval = reflect.ValueOf(vUint(v0) ^ vUint(v1))
+	case isInt(t0) && isInt(t1):
+		n.rval = reflect.ValueOf(vInt(v0) ^ vInt(v1))
 	}
 }
 
@@ -1719,7 +1858,7 @@ func equal(n *Node) {
 	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
-	switch t0, t1 := c0.typ, c1.typ; {
+	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
@@ -2077,7 +2216,7 @@ func greater(n *Node) {
 	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
-	switch t0, t1 := c0.typ, c1.typ; {
+	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
@@ -2366,7 +2505,7 @@ func greaterEqual(n *Node) {
 	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
-	switch t0, t1 := c0.typ, c1.typ; {
+	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
@@ -2655,7 +2794,7 @@ func lower(n *Node) {
 	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
-	switch t0, t1 := c0.typ, c1.typ; {
+	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
@@ -2944,7 +3083,7 @@ func lowerEqual(n *Node) {
 	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
-	switch t0, t1 := c0.typ, c1.typ; {
+	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
@@ -3233,7 +3372,7 @@ func notEqual(n *Node) {
 	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
-	switch t0, t1 := c0.typ, c1.typ; {
+	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
