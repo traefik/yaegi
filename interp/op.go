@@ -150,18 +150,19 @@ func add(n *Node) {
 
 func addConst(n *Node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
-	t0, t1 := v0.Type(), v1.Type()
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
 	switch {
-	case isString(t0) && isString(t1):
-		n.rval = reflect.ValueOf(v0.String() + v1.String())
-	case isComplex(t0) || isComplex(t1):
-		n.rval = reflect.ValueOf(vComplex(v0) + vComplex(v1))
-	case isFloat(t0) || isFloat(t1):
-		n.rval = reflect.ValueOf(vFloat(v0) + vFloat(v1))
-	case isUint(t0) && isUint(t1):
-		n.rval = reflect.ValueOf(vUint(v0) + vUint(v1))
-	case isInt(t0) && isInt(t1):
-		n.rval = reflect.ValueOf(vInt(v0) + vInt(v1))
+	case isString(t):
+		n.rval.SetString(v0.String() + v1.String())
+	case isComplex(t):
+		n.rval.SetComplex(vComplex(v0) + vComplex(v1))
+	case isFloat(t):
+		n.rval.SetFloat(vFloat(v0) + vFloat(v1))
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) + vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) + vInt(v1))
 	}
 }
 
@@ -233,12 +234,13 @@ func and(n *Node) {
 
 func andConst(n *Node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
-	t0, t1 := v0.Type(), v1.Type()
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
 	switch {
-	case isUint(t0) && isUint(t1):
-		n.rval = reflect.ValueOf(vUint(v0) & vUint(v1))
-	case isInt(t0) && isInt(t1):
-		n.rval = reflect.ValueOf(vInt(v0) & vInt(v1))
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) & vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) & vInt(v1))
 	}
 }
 
@@ -310,12 +312,13 @@ func andnot(n *Node) {
 
 func andnotConst(n *Node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
-	t0, t1 := v0.Type(), v1.Type()
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
 	switch {
-	case isUint(t0) && isUint(t1):
-		n.rval = reflect.ValueOf(vUint(v0) &^ vUint(v1))
-	case isInt(t0) && isInt(t1):
-		n.rval = reflect.ValueOf(vInt(v0) &^ vInt(v1))
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) &^ vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) &^ vInt(v1))
 	}
 }
 
@@ -439,16 +442,17 @@ func mul(n *Node) {
 
 func mulConst(n *Node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
-	t0, t1 := v0.Type(), v1.Type()
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
 	switch {
-	case isComplex(t0) || isComplex(t1):
-		n.rval = reflect.ValueOf(vComplex(v0) * vComplex(v1))
-	case isFloat(t0) || isFloat(t1):
-		n.rval = reflect.ValueOf(vFloat(v0) * vFloat(v1))
-	case isUint(t0) && isUint(t1):
-		n.rval = reflect.ValueOf(vUint(v0) * vUint(v1))
-	case isInt(t0) && isInt(t1):
-		n.rval = reflect.ValueOf(vInt(v0) * vInt(v1))
+	case isComplex(t):
+		n.rval.SetComplex(vComplex(v0) * vComplex(v1))
+	case isFloat(t):
+		n.rval.SetFloat(vFloat(v0) * vFloat(v1))
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) * vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) * vInt(v1))
 	}
 }
 
@@ -520,12 +524,13 @@ func or(n *Node) {
 
 func orConst(n *Node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
-	t0, t1 := v0.Type(), v1.Type()
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
 	switch {
-	case isUint(t0) && isUint(t1):
-		n.rval = reflect.ValueOf(vUint(v0) | vUint(v1))
-	case isInt(t0) && isInt(t1):
-		n.rval = reflect.ValueOf(vInt(v0) | vInt(v1))
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) | vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) | vInt(v1))
 	}
 }
 
@@ -649,16 +654,17 @@ func quo(n *Node) {
 
 func quoConst(n *Node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
-	t0, t1 := v0.Type(), v1.Type()
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
 	switch {
-	case isComplex(t0) || isComplex(t1):
-		n.rval = reflect.ValueOf(vComplex(v0) / vComplex(v1))
-	case isFloat(t0) || isFloat(t1):
-		n.rval = reflect.ValueOf(vFloat(v0) / vFloat(v1))
-	case isUint(t0) && isUint(t1):
-		n.rval = reflect.ValueOf(vUint(v0) / vUint(v1))
-	case isInt(t0) && isInt(t1):
-		n.rval = reflect.ValueOf(vInt(v0) / vInt(v1))
+	case isComplex(t):
+		n.rval.SetComplex(vComplex(v0) / vComplex(v1))
+	case isFloat(t):
+		n.rval.SetFloat(vFloat(v0) / vFloat(v1))
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) / vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) / vInt(v1))
 	}
 }
 
@@ -730,12 +736,13 @@ func rem(n *Node) {
 
 func remConst(n *Node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
-	t0, t1 := v0.Type(), v1.Type()
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
 	switch {
-	case isUint(t0) && isUint(t1):
-		n.rval = reflect.ValueOf(vUint(v0) % vUint(v1))
-	case isInt(t0) && isInt(t1):
-		n.rval = reflect.ValueOf(vInt(v0) % vInt(v1))
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) % vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) % vInt(v1))
 	}
 }
 
@@ -807,12 +814,13 @@ func shl(n *Node) {
 
 func shlConst(n *Node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
-	t0, t1 := v0.Type(), v1.Type()
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
 	switch {
-	case isUint(t0) && isUint(t1):
-		n.rval = reflect.ValueOf(vUint(v0) << vUint(v1))
-	case isInt(t0) && isInt(t1):
-		n.rval = reflect.ValueOf(vInt(v0) << vUint(v1))
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) << vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) << vUint(v1))
 	}
 }
 
@@ -884,12 +892,13 @@ func shr(n *Node) {
 
 func shrConst(n *Node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
-	t0, t1 := v0.Type(), v1.Type()
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
 	switch {
-	case isUint(t0) && isUint(t1):
-		n.rval = reflect.ValueOf(vUint(v0) >> vUint(v1))
-	case isInt(t0) && isInt(t1):
-		n.rval = reflect.ValueOf(vInt(v0) >> vUint(v1))
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) >> vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) >> vUint(v1))
 	}
 }
 
@@ -1013,16 +1022,17 @@ func sub(n *Node) {
 
 func subConst(n *Node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
-	t0, t1 := v0.Type(), v1.Type()
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
 	switch {
-	case isComplex(t0) || isComplex(t1):
-		n.rval = reflect.ValueOf(vComplex(v0) - vComplex(v1))
-	case isFloat(t0) || isFloat(t1):
-		n.rval = reflect.ValueOf(vFloat(v0) - vFloat(v1))
-	case isUint(t0) && isUint(t1):
-		n.rval = reflect.ValueOf(vUint(v0) - vUint(v1))
-	case isInt(t0) && isInt(t1):
-		n.rval = reflect.ValueOf(vInt(v0) - vInt(v1))
+	case isComplex(t):
+		n.rval.SetComplex(vComplex(v0) - vComplex(v1))
+	case isFloat(t):
+		n.rval.SetFloat(vFloat(v0) - vFloat(v1))
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) - vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) - vInt(v1))
 	}
 }
 
@@ -1094,12 +1104,13 @@ func xor(n *Node) {
 
 func xorConst(n *Node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
-	t0, t1 := v0.Type(), v1.Type()
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
 	switch {
-	case isUint(t0) && isUint(t1):
-		n.rval = reflect.ValueOf(vUint(v0) ^ vUint(v1))
-	case isInt(t0) && isInt(t1):
-		n.rval = reflect.ValueOf(vInt(v0) ^ vInt(v1))
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) ^ vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) ^ vInt(v1))
 	}
 }
 

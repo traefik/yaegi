@@ -6,6 +6,7 @@ import (
 	"go/build"
 	"go/scanner"
 	"go/token"
+	"log"
 	"os"
 	"reflect"
 )
@@ -282,6 +283,7 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 	for _, n := range initNodes {
 		i.run(n, i.Frame)
 	}
+	log.Println("root:", root.index, root.findex, root.rval)
 	v := genValue(root)
 	res = v(i.Frame)
 

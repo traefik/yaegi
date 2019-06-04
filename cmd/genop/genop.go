@@ -176,25 +176,26 @@ func {{$name}}(n *Node) {
 
 func {{$name}}Const(n *Node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
-	t0, t1 := v0.Type(), v1.Type()
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
 	switch {
 	{{- if $op.Str}}
-	case isString(t0) && isString(t1):
-		n.rval = reflect.ValueOf(v0.String() {{$op.Name}} v1.String())
+	case isString(t):
+		n.rval.SetString(v0.String() {{$op.Name}} v1.String())
 	{{- end}}
 	{{- if $op.Float}}
-	case isComplex(t0) || isComplex(t1):
-		n.rval = reflect.ValueOf(vComplex(v0) {{$op.Name}} vComplex(v1))
-	case isFloat(t0) || isFloat(t1):
-		n.rval = reflect.ValueOf(vFloat(v0) {{$op.Name}} vFloat(v1))
+	case isComplex(t):
+		n.rval.SetComplex(vComplex(v0) {{$op.Name}} vComplex(v1))
+	case isFloat(t):
+		n.rval.SetFloat(vFloat(v0) {{$op.Name}} vFloat(v1))
 	{{- end}}
-	case isUint(t0) && isUint(t1):
-		n.rval = reflect.ValueOf(vUint(v0) {{$op.Name}} vUint(v1))
-	case isInt(t0) && isInt(t1):
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) {{$op.Name}} vUint(v1))
+	case isInt(t):
 		{{- if $op.Shift}}
-		n.rval = reflect.ValueOf(vInt(v0) {{$op.Name}} vUint(v1))
+		n.rval.SetInt(vInt(v0) {{$op.Name}} vUint(v1))
 		{{- else}}
-		n.rval = reflect.ValueOf(vInt(v0) {{$op.Name}} vInt(v1))
+		n.rval.SetInt(vInt(v0) {{$op.Name}} vInt(v1))
 		{{- end}}
 	}
 }

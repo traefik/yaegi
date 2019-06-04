@@ -538,12 +538,16 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				}
 				n.typ = scope.getType("bool")
 			}
-			if c0.rval.IsValid() && c1.rval.IsValid() && constOp[n.action] != nil {
-				constOp[n.action](n)
-				n.typ = &Type{cat: ValueT, rtype: n.rval.Type()}
-			}
 			if err != nil {
 				break
+			}
+			if c0.rval.IsValid() && c1.rval.IsValid() && constOp[n.action] != nil {
+				if n.typ == nil {
+					n.typ, err = nodeType(interp, scope, n)
+				}
+				n.typ.TypeOf() // init reflect type
+				constOp[n.action](n)
+				log.Println(n.index, n.action, n.rval)
 			}
 			switch {
 			//case n.typ != nil && n.typ.cat == BoolT && isAncBranch(n):
@@ -580,10 +584,12 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case BlockStmt:
 			wireChild(n)
 			if len(n.child) > 0 {
-				n.findex = n.lastChild().findex
-				n.val = n.lastChild().val
-				n.sym = n.lastChild().sym
-				n.typ = n.lastChild().typ
+				l := n.lastChild()
+				n.findex = l.findex
+				n.val = l.val
+				n.sym = l.sym
+				n.typ = l.typ
+				n.rval = l.rval
 			}
 			scope = scope.pop()
 
@@ -596,10 +602,12 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case DeclStmt, ExprStmt, SendStmt:
 			wireChild(n)
-			n.findex = n.lastChild().findex
-			n.val = n.lastChild().val
-			n.sym = n.lastChild().sym
-			n.typ = n.lastChild().typ
+			l := n.lastChild()
+			n.findex = l.findex
+			n.val = l.val
+			n.sym = l.sym
+			n.typ = l.typ
+			n.rval = l.rval
 
 		case Break:
 			if len(n.child) > 0 {
