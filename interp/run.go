@@ -1621,7 +1621,7 @@ func appendSlice(n *Node) {
 	value := genValue(n.child[1])
 	value0 := genValue(n.child[2])
 
-	if isString(n.child[2].typ) {
+	if isString(n.child[2].typ.TypeOf()) {
 		typ := reflect.TypeOf([]byte{})
 		n.exec = func(f *Frame) Builtin {
 			dest(f).Set(reflect.AppendSlice(value(f), value0(f).Convert(typ)))

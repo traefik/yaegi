@@ -152,6 +152,11 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 						t.incomplete = true
 					}
 				} else {
+					// Evaluate constant array size expression
+					_, err = interp.Cfg(n.child[0])
+					if err != nil {
+						return nil, err
+					}
 					t.incomplete = true
 				}
 			}
@@ -222,7 +227,7 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 			if t.untyped {
 				var t1 *Type
 				t1, err = nodeType(interp, scope, n.child[1])
-				if !(t1.untyped && isInt(t1) && isFloat(t)) {
+				if !(t1.untyped && isInt(t1.TypeOf()) && isFloat(t.TypeOf())) {
 					t = t1
 				}
 			}
@@ -690,46 +695,44 @@ func isShiftOperand(n *Node) bool {
 
 func isStruct(t *Type) bool { return t.TypeOf().Kind() == reflect.Struct }
 
-func isInt(t *Type) bool {
-	switch t.TypeOf().Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+func isInt(t reflect.Type) bool {
+	switch t.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return true
 	}
 	return false
 }
 
-func isUint(t *Type) bool {
-	switch t.TypeOf().Kind() {
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+func isUint(t reflect.Type) bool {
+	switch t.Kind() {
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return true
 	}
 	return false
 }
 
-func isComplex(t *Type) bool {
-	switch t.TypeOf().Kind() {
+func isComplex(t reflect.Type) bool {
+	switch t.Kind() {
 	case reflect.Complex64, reflect.Complex128:
 		return true
 	}
 	return false
 }
 
-func isFloat(t *Type) bool {
-	switch t.TypeOf().Kind() {
+func isFloat(t reflect.Type) bool {
+	switch t.Kind() {
 	case reflect.Float32, reflect.Float64:
 		return true
 	}
 	return false
 }
 
-func isByteArray(t *Type) bool {
-	r := t.TypeOf()
-	k := r.Kind()
-	return (k == reflect.Array || k == reflect.Slice) && r.Elem().Kind() == reflect.Uint8
+func isByteArray(t reflect.Type) bool {
+	k := t.Kind()
+	return (k == reflect.Array || k == reflect.Slice) && t.Elem().Kind() == reflect.Uint8
 }
 
-func isFloat32(t *Type) bool       { return t.TypeOf().Kind() == reflect.Float32 }
-func isFloat64(t *Type) bool       { return t.TypeOf().Kind() == reflect.Float64 }
-func isUntypedNumber(t *Type) bool { return t.untyped && (isInt(t) || isFloat(t) || isComplex(t)) }
-func isNumber(t *Type) bool        { return isInt(t) || isFloat(t) || isComplex(t) }
-func isString(t *Type) bool        { return t.TypeOf().Kind() == reflect.String }
+func isFloat32(t reflect.Type) bool { return t.Kind() == reflect.Float32 }
+func isFloat64(t reflect.Type) bool { return t.Kind() == reflect.Float64 }
+func isNumber(t reflect.Type) bool  { return isInt(t) || isFloat(t) || isComplex(t) }
+func isString(t reflect.Type) bool  { return t.Kind() == reflect.String }

@@ -173,6 +173,32 @@ func {{$name}}(n *Node) {
 	{{- end}}
 	}
 }
+
+func {{$name}}Const(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
+	switch {
+	{{- if $op.Str}}
+	case isString(t):
+		n.rval.SetString(v0.String() {{$op.Name}} v1.String())
+	{{- end}}
+	{{- if $op.Float}}
+	case isComplex(t):
+		n.rval.SetComplex(vComplex(v0) {{$op.Name}} vComplex(v1))
+	case isFloat(t):
+		n.rval.SetFloat(vFloat(v0) {{$op.Name}} vFloat(v1))
+	{{- end}}
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) {{$op.Name}} vUint(v1))
+	case isInt(t):
+		{{- if $op.Shift}}
+		n.rval.SetInt(vInt(v0) {{$op.Name}} vUint(v1))
+		{{- else}}
+		n.rval.SetInt(vInt(v0) {{$op.Name}} vInt(v1))
+		{{- end}}
+	}
+}
 {{end}}
 // Assign operators
 {{range $name, $op := .Arithmetic}}
@@ -332,7 +358,7 @@ func {{$name}}(n *Node) {
 	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
-	switch t0, t1 := c0.typ, c1.typ; {
+	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
