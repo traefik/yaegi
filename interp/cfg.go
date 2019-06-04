@@ -547,7 +547,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				}
 				n.typ.TypeOf() // init reflect type
 				constOp[n.action](n)
-				log.Println(n.index, n.action, n.rval)
 			}
 			switch {
 			//case n.typ != nil && n.typ.cat == BoolT && isAncBranch(n):
