@@ -148,6 +148,24 @@ func add(n *Node) {
 	}
 }
 
+func addConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
+	switch {
+	case isString(t):
+		n.rval.SetString(v0.String() + v1.String())
+	case isComplex(t):
+		n.rval.SetComplex(vComplex(v0) + vComplex(v1))
+	case isFloat(t):
+		n.rval.SetFloat(vFloat(v0) + vFloat(v1))
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) + vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) + vInt(v1))
+	}
+}
+
 func and(n *Node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
@@ -214,6 +232,18 @@ func and(n *Node) {
 	}
 }
 
+func andConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
+	switch {
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) & vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) & vInt(v1))
+	}
+}
+
 func andnot(n *Node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
@@ -277,6 +307,18 @@ func andnot(n *Node) {
 				return next
 			}
 		}
+	}
+}
+
+func andnotConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
+	switch {
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) &^ vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) &^ vInt(v1))
 	}
 }
 
@@ -398,6 +440,22 @@ func mul(n *Node) {
 	}
 }
 
+func mulConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
+	switch {
+	case isComplex(t):
+		n.rval.SetComplex(vComplex(v0) * vComplex(v1))
+	case isFloat(t):
+		n.rval.SetFloat(vFloat(v0) * vFloat(v1))
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) * vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) * vInt(v1))
+	}
+}
+
 func or(n *Node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
@@ -461,6 +519,18 @@ func or(n *Node) {
 				return next
 			}
 		}
+	}
+}
+
+func orConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
+	switch {
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) | vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) | vInt(v1))
 	}
 }
 
@@ -582,6 +652,22 @@ func quo(n *Node) {
 	}
 }
 
+func quoConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
+	switch {
+	case isComplex(t):
+		n.rval.SetComplex(vComplex(v0) / vComplex(v1))
+	case isFloat(t):
+		n.rval.SetFloat(vFloat(v0) / vFloat(v1))
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) / vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) / vInt(v1))
+	}
+}
+
 func rem(n *Node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
@@ -645,6 +731,18 @@ func rem(n *Node) {
 				return next
 			}
 		}
+	}
+}
+
+func remConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
+	switch {
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) % vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) % vInt(v1))
 	}
 }
 
@@ -714,6 +812,18 @@ func shl(n *Node) {
 	}
 }
 
+func shlConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
+	switch {
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) << vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) << vUint(v1))
+	}
+}
+
 func shr(n *Node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
@@ -777,6 +887,18 @@ func shr(n *Node) {
 				return next
 			}
 		}
+	}
+}
+
+func shrConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
+	switch {
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) >> vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) >> vUint(v1))
 	}
 }
 
@@ -898,6 +1020,22 @@ func sub(n *Node) {
 	}
 }
 
+func subConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
+	switch {
+	case isComplex(t):
+		n.rval.SetComplex(vComplex(v0) - vComplex(v1))
+	case isFloat(t):
+		n.rval.SetFloat(vFloat(v0) - vFloat(v1))
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) - vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) - vInt(v1))
+	}
+}
+
 func xor(n *Node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
@@ -961,6 +1099,18 @@ func xor(n *Node) {
 				return next
 			}
 		}
+	}
+}
+
+func xorConst(n *Node) {
+	v0, v1 := n.child[0].rval, n.child[1].rval
+	t := n.typ.rtype
+	n.rval = reflect.New(t).Elem()
+	switch {
+	case isUint(t):
+		n.rval.SetUint(vUint(v0) ^ vUint(v1))
+	case isInt(t):
+		n.rval.SetInt(vInt(v0) ^ vInt(v1))
 	}
 }
 
@@ -1719,7 +1869,7 @@ func equal(n *Node) {
 	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
-	switch t0, t1 := c0.typ, c1.typ; {
+	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
@@ -2148,7 +2298,7 @@ func greater(n *Node) {
 	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
-	switch t0, t1 := c0.typ, c1.typ; {
+	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
@@ -2437,7 +2587,7 @@ func greaterEqual(n *Node) {
 	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
-	switch t0, t1 := c0.typ, c1.typ; {
+	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
@@ -2726,7 +2876,7 @@ func lower(n *Node) {
 	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
-	switch t0, t1 := c0.typ, c1.typ; {
+	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
@@ -3015,7 +3165,7 @@ func lowerEqual(n *Node) {
 	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
-	switch t0, t1 := c0.typ, c1.typ; {
+	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
@@ -3304,7 +3454,7 @@ func notEqual(n *Node) {
 	dest := genValue(n)
 	c0, c1 := n.child[0], n.child[1]
 
-	switch t0, t1 := c0.typ, c1.typ; {
+	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
