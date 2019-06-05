@@ -852,7 +852,6 @@ func getIndexBinMethod(n *Node) {
 }
 
 func getIndexBinPtrMethod(n *Node) {
-	//dest := genValue(n)
 	i := n.findex
 	m := n.val.(int)
 	value := genValue(n.child[0])
