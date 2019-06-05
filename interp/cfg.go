@@ -1027,7 +1027,16 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 						n.val = field.Index
 						n.gen = getIndexSeq
 					} else {
-						err = n.cfgError("undefined field or method: %s", n.child[1].ident)
+						// method lookup failed on type, now lookup on pointer to type
+						pt := reflect.PtrTo(n.typ.rtype)
+						if m2, ok2 := pt.MethodByName(n.child[1].ident); ok2 {
+							n.val = m2.Index
+							n.gen = getIndexBinPtrMethod
+							n.typ = &Type{cat: ValueT, rtype: m2.Type}
+							n.recv = &Receiver{node: n.child[0]}
+						} else {
+							err = n.cfgError("undefined field or method: %s", n.child[1].ident)
+						}
 					}
 				default:
 					err = n.cfgError("undefined field or method: %s", n.child[1].ident)

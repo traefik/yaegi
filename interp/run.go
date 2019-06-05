@@ -851,6 +851,21 @@ func getIndexBinMethod(n *Node) {
 	}
 }
 
+func getIndexBinPtrMethod(n *Node) {
+	//dest := genValue(n)
+	i := n.findex
+	m := n.val.(int)
+	value := genValue(n.child[0])
+	next := getExec(n.tnext)
+
+	n.exec = func(f *Frame) Builtin {
+		// Can not use .Set() because dest type contains the receiver and source not
+		//dest(f).Set(value(f).Method(m))
+		f.data[i] = value(f).Addr().Method(m)
+		return next
+	}
+}
+
 // getIndexArray returns array value from index
 func getIndexArray(n *Node) {
 	tnext := getExec(n.tnext)
