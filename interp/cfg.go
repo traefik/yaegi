@@ -1132,7 +1132,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			} else if s, lind, ok := n.typ.lookupBinField(n.child[1].ident); ok {
 				// Handle an embedded binary field into a struct field
 				n.gen = getIndexSeqField
-				n.val = append(lind, s.Index...)
+				lind = append(lind, s.Index...)
+				n.val = lind
 				n.typ = &Type{cat: ValueT, rtype: s.Type}
 			} else {
 				err = n.cfgError("undefined selector: %s", n.child[1].ident)
