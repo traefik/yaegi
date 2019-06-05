@@ -2007,6 +2007,77 @@ func equal(n *Node) {
 				}
 			}
 		}
+	default:
+		switch {
+		case c0.rval.IsValid():
+			i0 := c0.rval.Interface()
+			v1 := genValue(c1)
+			if n.fnext != nil {
+				fnext := getExec(n.fnext)
+				n.exec = func(f *Frame) Builtin {
+					i1 := v1(f).Interface()
+					if i0 == i1 {
+						dest(f).SetBool(true)
+						return tnext
+					}
+					dest(f).SetBool(false)
+					return fnext
+				}
+			} else {
+				dest := genValue(n)
+				n.exec = func(f *Frame) Builtin {
+					i1 := v1(f).Interface()
+					dest(f).SetBool(i0 == i1)
+					return tnext
+				}
+			}
+		case c1.rval.IsValid():
+			i1 := c1.rval.Interface()
+			v0 := genValue(c0)
+			if n.fnext != nil {
+				fnext := getExec(n.fnext)
+				n.exec = func(f *Frame) Builtin {
+					i0 := v0(f).Interface()
+					if i0 == i1 {
+						dest(f).SetBool(true)
+						return tnext
+					}
+					dest(f).SetBool(false)
+					return fnext
+				}
+			} else {
+				dest := genValue(n)
+				n.exec = func(f *Frame) Builtin {
+					i0 := v0(f).Interface()
+					dest(f).SetBool(i0 == i1)
+					return tnext
+				}
+			}
+		default:
+			v0 := genValue(c0)
+			v1 := genValue(c1)
+			if n.fnext != nil {
+				fnext := getExec(n.fnext)
+				n.exec = func(f *Frame) Builtin {
+					i0 := v0(f).Interface()
+					i1 := v1(f).Interface()
+					if i0 == i1 {
+						dest(f).SetBool(true)
+						return tnext
+					}
+					dest(f).SetBool(false)
+					return fnext
+				}
+			} else {
+				dest := genValue(n)
+				n.exec = func(f *Frame) Builtin {
+					i0 := v0(f).Interface()
+					i1 := v1(f).Interface()
+					dest(f).SetBool(i0 == i1)
+					return tnext
+				}
+			}
+		}
 	case isFloat(t0) || isFloat(t1):
 		switch {
 		case c0.rval.IsValid():
@@ -3517,6 +3588,77 @@ func notEqual(n *Node) {
 					_, s0 := v0(f)
 					_, s1 := v1(f)
 					dest(f).SetBool(s0 != s1)
+					return tnext
+				}
+			}
+		}
+	default:
+		switch {
+		case c0.rval.IsValid():
+			i0 := c0.rval.Interface()
+			v1 := genValue(c1)
+			if n.fnext != nil {
+				fnext := getExec(n.fnext)
+				n.exec = func(f *Frame) Builtin {
+					i1 := v1(f).Interface()
+					if i0 != i1 {
+						dest(f).SetBool(true)
+						return tnext
+					}
+					dest(f).SetBool(false)
+					return fnext
+				}
+			} else {
+				dest := genValue(n)
+				n.exec = func(f *Frame) Builtin {
+					i1 := v1(f).Interface()
+					dest(f).SetBool(i0 != i1)
+					return tnext
+				}
+			}
+		case c1.rval.IsValid():
+			i1 := c1.rval.Interface()
+			v0 := genValue(c0)
+			if n.fnext != nil {
+				fnext := getExec(n.fnext)
+				n.exec = func(f *Frame) Builtin {
+					i0 := v0(f).Interface()
+					if i0 != i1 {
+						dest(f).SetBool(true)
+						return tnext
+					}
+					dest(f).SetBool(false)
+					return fnext
+				}
+			} else {
+				dest := genValue(n)
+				n.exec = func(f *Frame) Builtin {
+					i0 := v0(f).Interface()
+					dest(f).SetBool(i0 != i1)
+					return tnext
+				}
+			}
+		default:
+			v0 := genValue(c0)
+			v1 := genValue(c1)
+			if n.fnext != nil {
+				fnext := getExec(n.fnext)
+				n.exec = func(f *Frame) Builtin {
+					i0 := v0(f).Interface()
+					i1 := v1(f).Interface()
+					if i0 != i1 {
+						dest(f).SetBool(true)
+						return tnext
+					}
+					dest(f).SetBool(false)
+					return fnext
+				}
+			} else {
+				dest := genValue(n)
+				n.exec = func(f *Frame) Builtin {
+					i0 := v0(f).Interface()
+					i1 := v1(f).Interface()
+					dest(f).SetBool(i0 != i1)
 					return tnext
 				}
 			}
