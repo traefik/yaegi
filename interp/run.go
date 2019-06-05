@@ -860,7 +860,6 @@ func getIndexBinPtrMethod(n *Node) {
 
 	n.exec = func(f *Frame) Builtin {
 		// Can not use .Set() because dest type contains the receiver and source not
-		//dest(f).Set(value(f).Method(m))
 		f.data[i] = value(f).Addr().Method(m)
 		return next
 	}
