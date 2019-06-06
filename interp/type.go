@@ -682,8 +682,7 @@ func (t *Type) frameType() reflect.Type {
 }
 
 func (t *Type) implements(it *Type) bool {
-	switch t.cat {
-	case ValueT:
+	if t.cat == ValueT {
 		return t.TypeOf().Implements(it.TypeOf())
 	}
 	// TODO: implement method check for interpreted types
