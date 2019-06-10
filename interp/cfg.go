@@ -337,7 +337,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 						// Do not overload existings symbols (defined in GTA) in global scope
 						sym, _, _ = scope.lookup(dest.ident)
 					} else {
-						sym = &Symbol{index: scope.add(dest.typ), kind: Var}
+						sym = &Symbol{index: scope.add(dest.typ), kind: Var, typ: dest.typ}
 						scope.sym[dest.ident] = sym
 					}
 					dest.val = src.val
@@ -571,13 +571,21 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 
 		case IndexExpr:
 			wireChild(n)
-			n.typ = n.child[0].typ.val
+			t := n.child[0].typ
+			if t.cat == ValueT {
+				n.typ = &Type{cat: ValueT, rtype: t.rtype.Elem()}
+			} else {
+				n.typ = t.val
+			}
 			n.findex = scope.add(n.typ)
 			n.recv = &Receiver{node: n}
-			if n.child[0].typ.cat == MapT {
+			switch k := t.TypeOf().Kind(); k {
+			case reflect.Map:
 				n.gen = getIndexMap
-			} else if n.child[0].typ.cat == ArrayT {
+			case reflect.Array, reflect.Slice:
 				n.gen = getIndexArray
+			default:
+				err = n.cfgError("type is not an array, slice or map: %v", t.id())
 			}
 
 		case BlockStmt:
