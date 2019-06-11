@@ -528,6 +528,26 @@ func (t *Type) lookupField(name string) []int {
 	return nil
 }
 
+// lookupBinField returns a structfield and a path to access an embedded binary field in a struct object
+func (t *Type) lookupBinField(name string) (reflect.StructField, []int, bool) {
+	if t.cat == PtrT {
+		return t.val.lookupBinField(name)
+	}
+	var index []int
+	s, ok := t.TypeOf().FieldByName(name)
+	if !ok {
+		for i, f := range t.field {
+			if f.embed {
+				if s2, index2, ok2 := f.typ.lookupBinField(name); ok2 {
+					index = append([]int{i}, index2...)
+					return s2, index, ok2
+				}
+			}
+		}
+	}
+	return s, index, ok
+}
+
 // getMethod returns a pointer to the method definition
 func (t *Type) getMethod(name string) *Node {
 	for _, m := range t.method {
