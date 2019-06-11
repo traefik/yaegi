@@ -708,9 +708,23 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				if isInt(n.child[0].typ.TypeOf()) && n.child[1].kind == BasicLit && isFloat(n.child[1].typ.TypeOf()) {
 					err = n.cfgError("truncated to integer")
 				}
-				n.gen = convert
-				n.typ = n.child[0].typ
-				n.findex = scope.add(n.typ)
+				if isInterface(n.child[0].typ) {
+					// Convert to interface: just check that all required methods are defined by concrete type.
+					c0, c1 := n.child[0], n.child[1]
+					if !c1.typ.implements(c0.typ) {
+						err = n.cfgError("type %v does not implement interface %v", c1.typ.id(), c0.typ.id())
+					}
+					// Pass value as is
+					n.gen = nop
+					n.typ = n.child[1].typ
+					n.findex = n.child[1].findex
+					n.val = n.child[1].val
+					n.rval = n.child[1].rval
+				} else {
+					n.gen = convert
+					n.typ = n.child[0].typ
+					n.findex = scope.add(n.typ)
+				}
 			case isBinCall(n):
 				n.gen = callBin
 				if typ := n.child[0].typ.rtype; typ.NumOut() > 0 {
@@ -1137,6 +1151,12 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 						n.typ = &Type{cat: ValueT, rtype: rtype}
 					}
 				}
+			} else if s, lind, ok := n.typ.lookupBinField(n.child[1].ident); ok {
+				// Handle an embedded binary field into a struct field
+				n.gen = getIndexSeqField
+				lind = append(lind, s.Index...)
+				n.val = lind
+				n.typ = &Type{cat: ValueT, rtype: s.Type}
 			} else {
 				err = n.cfgError("undefined selector: %s", n.child[1].ident)
 			}

@@ -96,7 +96,7 @@ func (interp *Interpreter) Gta(root *Node, rpath string) error {
 				}
 				if typeName == "" {
 					// The receiver is a pointer, retrieve typeName from indirection
-					typeName = receiver.child[1].child[0].ident
+					typeName = receiver.lastChild().child[0].ident
 					elementType := scope.getType(typeName)
 					if elementType == nil {
 						// Add type if necessary, so method can be registered
