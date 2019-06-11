@@ -572,9 +572,12 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 		case IndexExpr:
 			wireChild(n)
 			t := n.child[0].typ
-			if t.cat == ValueT {
+			switch t.cat {
+			case ValueT:
 				n.typ = &Type{cat: ValueT, rtype: t.rtype.Elem()}
-			} else {
+			case StringT:
+				n.typ = t
+			default:
 				n.typ = t.val
 			}
 			n.findex = scope.add(n.typ)
@@ -582,10 +585,10 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			switch k := t.TypeOf().Kind(); k {
 			case reflect.Map:
 				n.gen = getIndexMap
-			case reflect.Array, reflect.Slice:
+			case reflect.Array, reflect.Slice, reflect.String:
 				n.gen = getIndexArray
 			default:
-				err = n.cfgError("type is not an array, slice or map: %v", t.id())
+				err = n.cfgError("type is not an array, slice, string or map: %v", t.id())
 			}
 
 		case BlockStmt:
