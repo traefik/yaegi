@@ -335,6 +335,9 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 		}
 		t.incomplete = t.key.incomplete || t.val.incomplete
 
+	case ParenExpr:
+		t, err = nodeType(interp, scope, n.child[0])
+
 	case SelectorExpr:
 		pkg, name := n.child[0].ident, n.child[1].ident
 		if sym, _, found := scope.lookup(pkg); found {
@@ -456,9 +459,12 @@ func (t *Type) id() string {
 	// TODO: if res is nil, build identity from String()
 
 	res := ""
-	if t.cat == ValueT {
+	switch t.cat {
+	case ValueT:
 		res = t.rtype.PkgPath() + "." + t.rtype.Name()
-	} else {
+	case PtrT:
+		res = "*" + t.val.id()
+	default:
 		res = t.pkgPath + "." + t.name
 	}
 	return res
@@ -695,6 +701,14 @@ func (t *Type) frameType() reflect.Type {
 	return r
 }
 
+func (t *Type) implements(it *Type) bool {
+	if t.cat == ValueT {
+		return t.TypeOf().Implements(it.TypeOf())
+	}
+	// TODO: implement method check for interpreted types
+	return true
+}
+
 func defRecvType(n *Node) *Type {
 	if n.kind != FuncDecl || len(n.child[0].child) == 0 {
 		return nil
@@ -712,6 +726,8 @@ func isShiftOperand(n *Node) bool {
 	}
 	return false
 }
+
+func isInterface(t *Type) bool { return t.cat == InterfaceT || t.TypeOf().Kind() == reflect.Interface }
 
 func isStruct(t *Type) bool { return t.TypeOf().Kind() == reflect.Struct }
 
