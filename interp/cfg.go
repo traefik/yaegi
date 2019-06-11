@@ -74,6 +74,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 							n.anc.gen = rangeMap
 							ktyp = &Type{cat: ValueT, rtype: typ.Key()}
 							vtyp = &Type{cat: ValueT, rtype: typ.Elem()}
+						case reflect.String:
+							ktyp = scope.getType("int")
+							vtyp = scope.getType("byte")
 						case reflect.Array, reflect.Slice:
 							ktyp = scope.getType("int")
 							vtyp = &Type{cat: ValueT, rtype: typ.Elem()}
@@ -82,6 +85,9 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 						n.anc.gen = rangeMap
 						ktyp = o.typ.key
 						vtyp = o.typ.val
+					case StringT:
+						ktyp = scope.getType("int")
+						vtyp = scope.getType("byte")
 					case ArrayT:
 						ktyp = scope.getType("int")
 						vtyp = o.typ.val
