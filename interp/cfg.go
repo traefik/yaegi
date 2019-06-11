@@ -528,6 +528,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.typ = c0.typ
 			case Equal, NotEqual:
 				if isNumber(t0) && !isNumber(t1) || isString(t0) && !isString(t1) {
+					log.Println(n.cfgError("Equal"), t0, t1)
 					err = n.cfgError("illegal operand types for '%v' operator", n.action)
 				}
 				n.typ = scope.getType("bool")
@@ -582,7 +583,7 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 			case ValueT:
 				n.typ = &Type{cat: ValueT, rtype: t.rtype.Elem()}
 			case StringT:
-				n.typ = t
+				n.typ = scope.getType("byte")
 			default:
 				n.typ = t.val
 			}
