@@ -528,7 +528,6 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				n.typ = c0.typ
 			case Equal, NotEqual:
 				if isNumber(t0) && !isNumber(t1) || isString(t0) && !isString(t1) {
-					log.Println(n.cfgError("Equal"), t0, t1)
 					err = n.cfgError("illegal operand types for '%v' operator", n.action)
 				}
 				n.typ = scope.getType("bool")
