@@ -300,6 +300,12 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 	case Ident:
 		if sym, _, found := scope.lookup(n.ident); found {
 			t = sym.typ
+			if t.incomplete && t.node != n {
+				m := t.method
+				t, err = nodeType(interp, scope, t.node)
+				t.method = m
+				sym.typ = t
+			}
 		} else {
 			t.incomplete = true
 			scope.sym[n.ident] = &Symbol{kind: Typ, typ: t}
@@ -445,7 +451,9 @@ func init() {
 func (t *Type) finalize() (*Type, error) {
 	var err CfgError
 	if t.incomplete {
+		m := t.method
 		t, err = nodeType(t.node.interp, t.scope, t.node)
+		t.method = m
 		t.node.typ = t
 		if t.incomplete && err == nil {
 			err = t.node.cfgError("incomplete type")
