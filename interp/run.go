@@ -1086,6 +1086,25 @@ func getPtrIndexSeq(n *Node) {
 	}
 }
 
+func getIndexSeqField(n *Node) {
+	value := genValue(n.child[0])
+	index := n.val.([]int)
+	i := n.findex
+	next := getExec(n.tnext)
+
+	if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
+		n.exec = func(f *Frame) Builtin {
+			f.data[i] = value(f).Elem().FieldByIndex(index)
+			return next
+		}
+	} else {
+		n.exec = func(f *Frame) Builtin {
+			f.data[i] = value(f).FieldByIndex(index)
+			return next
+		}
+	}
+}
+
 func getIndexSeqMethod(n *Node) {
 	value := genValue(n.child[0])
 	index := n.val.([]int)
