@@ -94,6 +94,7 @@ func (c Cat) String() string {
 // StructField type defines a field in a struct
 type StructField struct {
 	name  string
+	tag   string
 	embed bool
 	typ   *Type
 }
@@ -380,22 +381,36 @@ func nodeType(interp *Interpreter, scope *Scope, n *Node) (*Type, error) {
 		t.cat = StructT
 		var incomplete bool
 		for _, c := range n.child[0].child {
-			if len(c.child) == 1 {
+			switch {
+			case len(c.child) == 1:
 				typ, err := nodeType(interp, scope, c.child[0])
 				if err != nil {
 					return nil, err
 				}
 				t.field = append(t.field, StructField{name: fieldName(c.child[0]), embed: true, typ: typ})
 				incomplete = incomplete || typ.incomplete
-			} else {
+			case len(c.child) == 2 && c.child[1].kind == BasicLit:
+				tag := c.child[1].rval.String()
+				typ, err := nodeType(interp, scope, c.child[0])
+				if err != nil {
+					return nil, err
+				}
+				t.field = append(t.field, StructField{name: fieldName(c.child[0]), embed: true, typ: typ, tag: tag})
+				incomplete = incomplete || typ.incomplete
+			default:
+				var tag string
 				l := len(c.child)
+				if c.lastChild().kind == BasicLit {
+					tag = c.lastChild().rval.String()
+					l--
+				}
 				typ, err := nodeType(interp, scope, c.child[l-1])
 				if err != nil {
 					return nil, err
 				}
 				incomplete = incomplete || typ.incomplete
 				for _, d := range c.child[:l-1] {
-					t.field = append(t.field, StructField{name: d.ident, typ: typ})
+					t.field = append(t.field, StructField{name: d.ident, typ: typ, tag: tag})
 				}
 			}
 		}
@@ -660,7 +675,7 @@ func (t *Type) TypeOf() reflect.Type {
 	case StructT:
 		var fields []reflect.StructField
 		for _, f := range t.field {
-			field := reflect.StructField{Name: exportName(f.name), Type: f.typ.TypeOf()}
+			field := reflect.StructField{Name: exportName(f.name), Type: f.typ.TypeOf(), Tag: reflect.StructTag(f.tag)}
 			fields = append(fields, field)
 		}
 		t.rtype = reflect.StructOf(fields)
