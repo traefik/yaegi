@@ -727,8 +727,9 @@ func callBin(n *Node) {
 	if funcType.IsVariadic() {
 		variadic = funcType.NumIn() - 1
 	}
+	// method signature obtained from reflect.Type include receiver as 1st arg, except for interface types
 	receiverOffset := 0
-	if n.child[0].recv != nil {
+	if recv := n.child[0].recv; recv != nil && recv.node.typ.TypeOf().Kind() != reflect.Interface {
 		receiverOffset = 1
 	}
 
