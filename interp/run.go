@@ -917,7 +917,7 @@ func getIndexArray(n *Node) {
 func getIndexMap(n *Node) {
 	value0 := genValue(n.child[0]) // map
 	tnext := getExec(n.tnext)
-	z := reflect.New(n.child[0].typ.val.TypeOf()).Elem()
+	z := reflect.New(n.child[0].typ.TypeOf().Elem()).Elem()
 
 	if n.child[1].rval.IsValid() { // constant map index
 		mi := n.child[1].rval
