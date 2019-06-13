@@ -103,6 +103,7 @@ func runCfg(n *Node, f *Frame) {
 			val[0].Call(val[1:])
 		}
 		if f.recovered != nil {
+			fmt.Println(n.cfgError("panic"))
 			panic(f.recovered)
 		}
 	}()
