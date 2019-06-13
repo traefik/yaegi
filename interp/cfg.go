@@ -1042,8 +1042,8 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				case ok:
 					n.val = method.Index
 					n.gen = getIndexBinMethod
-					n.typ = &Type{cat: ValueT, rtype: method.Type}
 					n.recv = &Receiver{node: n.child[0]}
+					n.typ = &Type{cat: ValueT, rtype: method.Type}
 				case n.typ.rtype.Kind() == reflect.Ptr:
 					if field, ok := n.typ.rtype.Elem().FieldByName(n.child[1].ident); ok {
 						n.typ = &Type{cat: ValueT, rtype: field.Type}
