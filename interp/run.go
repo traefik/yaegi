@@ -921,6 +921,7 @@ func getIndexArray(n *Node) {
 
 // getIndexMap retrieves map value from index
 func getIndexMap(n *Node) {
+	dest := genValue(n)
 	value0 := genValue(n.child[0]) // map
 	tnext := getExec(n.tnext)
 	z := reflect.New(n.child[0].typ.TypeOf().Elem()).Elem()
@@ -937,12 +938,11 @@ func getIndexMap(n *Node) {
 				return fnext
 			}
 		} else {
-			i := n.findex
 			n.exec = func(f *Frame) Builtin {
 				if v := value0(f).MapIndex(mi); v.IsValid() {
-					f.data[i].Set(v)
+					dest(f).Set(v)
 				} else {
-					f.data[i].Set(z)
+					dest(f).Set(z)
 				}
 				return tnext
 			}
@@ -959,12 +959,11 @@ func getIndexMap(n *Node) {
 				return fnext
 			}
 		} else {
-			i := n.findex
 			n.exec = func(f *Frame) Builtin {
 				if v := value0(f).MapIndex(value1(f)); v.IsValid() {
-					f.data[i].Set(v)
+					dest(f).Set(v)
 				} else {
-					f.data[i].Set(z)
+					dest(f).Set(z)
 				}
 				return tnext
 			}
@@ -974,7 +973,7 @@ func getIndexMap(n *Node) {
 
 // getIndexMap2 retrieves map value from index and set status
 func getIndexMap2(n *Node) {
-	i := n.findex
+	dest := genValue(n.anc.child[0])   // result
 	value0 := genValue(n.child[0])     // map
 	value2 := genValue(n.anc.child[1]) // status
 	next := getExec(n.tnext)
@@ -984,7 +983,7 @@ func getIndexMap2(n *Node) {
 		n.exec = func(f *Frame) Builtin {
 			v := value0(f).MapIndex(mi)
 			if v.IsValid() {
-				f.data[i].Set(v)
+				dest(f).Set(v)
 			}
 			value2(f).SetBool(v.IsValid())
 			return next
@@ -994,7 +993,7 @@ func getIndexMap2(n *Node) {
 		n.exec = func(f *Frame) Builtin {
 			v := value0(f).MapIndex(value1(f))
 			if v.IsValid() {
-				f.data[i].Set(v)
+				dest(f).Set(v)
 			}
 			value2(f).SetBool(v.IsValid())
 			return next
