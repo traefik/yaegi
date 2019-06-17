@@ -1151,6 +1151,11 @@ func (interp *Interpreter) Cfg(root *Node) ([]*Node, error) {
 				case PtrT:
 					n.typ = n.typ.fieldSeq(ti)
 					n.gen = getPtrIndexSeq
+					if n.typ.cat == FuncT {
+						// function in a struct field is always wrapped in reflect.Value
+						rtype := n.typ.TypeOf()
+						n.typ = &Type{cat: ValueT, rtype: rtype}
+					}
 				default:
 					n.gen = getIndexSeq
 					n.typ = n.typ.fieldSeq(ti)
