@@ -8,6 +8,8 @@ import (
 	"reflect"
 )
 
+func init() { log.SetFlags(log.Lshortfile) }
+
 // Builtin type defines functions which run at CFG execution
 type Builtin func(f *Frame) Builtin
 
@@ -400,7 +402,11 @@ func _panic(n *Node) {
 }
 
 func genFunctionWrapper(n *Node) func(*Frame) reflect.Value {
-	def := n.val.(*Node)
+	var def *Node
+	var ok bool
+	if def, ok = n.val.(*Node); !ok {
+		return genValueAsFunctionWrapper(n)
+	}
 	setExec(def.child[3].start)
 	start := def.child[3].start
 	numRet := len(def.typ.ret)
@@ -1445,12 +1451,13 @@ func compositeSparse(n *Node) {
 	values := make(map[int]func(*Frame) reflect.Value)
 	a, _ := n.typ.zero()
 	for _, c := range child {
+		c1 := c.child[1]
 		field := n.typ.fieldIndex(c.child[0].ident)
-		convertLiteralValue(c.child[1], n.typ.field[field].typ.TypeOf())
-		if c.typ.cat == FuncT {
-			values[field] = genFunctionWrapper(c.child[1])
+		convertLiteralValue(c1, n.typ.field[field].typ.TypeOf())
+		if c1.typ.cat == FuncT {
+			values[field] = genFunctionWrapper(c1)
 		} else {
-			values[field] = genValue(c.child[1])
+			values[field] = genValue(c1)
 		}
 	}
 
