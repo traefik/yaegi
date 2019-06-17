@@ -44,6 +44,13 @@ func genValueRecv(n *Node) func(*Frame) reflect.Value {
 	}
 }
 
+func genValueAsFunctionWrapper(n *Node) func(*Frame) reflect.Value {
+	v := genValue(n)
+	return func(f *Frame) reflect.Value {
+		return genFunctionWrapper(v(f).Interface().(*Node))(f)
+	}
+}
+
 func genValueAs(n *Node, t reflect.Type) func(*Frame) reflect.Value {
 	v := genValue(n)
 	return func(f *Frame) reflect.Value {
