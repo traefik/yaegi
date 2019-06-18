@@ -40,5 +40,4 @@ var Wrapper = map[string]map[string]reflect.Type{}
 //go:generate ../cmd/goexports/goexports runtime runtime/debug
 //go:generate ../cmd/goexports/goexports sort strconv strings sync sync/atomic
 //go:generate ../cmd/goexports/goexports text/scanner text/tabwriter text/template text/template/parse
-//go:generate ../cmd/goexports/goexports time unsafe
-//go:generate ../cmd/goexports/goexports unicode unicode/utf16 unicode/utf8
+//go:generate ../cmd/goexports/goexports time unicode unicode/utf16 unicode/utf8
