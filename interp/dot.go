@@ -8,24 +8,23 @@ import (
 	"strings"
 )
 
-// AstDot displays an AST in graphviz dot(1) format using dotty(1) co-process
-func (n *Node) AstDot(out io.Writer, name string) {
+// astDot displays an AST in graphviz dot(1) format using dotty(1) co-process
+func (n *node) astDot(out io.Writer, name string) {
 	fmt.Fprintf(out, "digraph ast {\n")
 	fmt.Fprintf(out, "labelloc=\"t\"\n")
 	fmt.Fprintf(out, "label=\"%s\"\n", name)
-	n.Walk(func(n *Node) bool {
+	n.Walk(func(n *node) bool {
 		var label string
 		switch n.kind {
-		case BasicLit, Ident:
+		case basicLit, identExpr:
 			label = strings.Replace(n.ident, "\"", "\\\"", -1)
 		default:
-			if n.action != Nop {
+			if n.action != aNop {
 				label = n.action.String()
 			} else {
 				label = n.kind.String()
 			}
 		}
-		//fmt.Fprintf(out, "%d [label=\"%d: %s\" shape=box]\n", n.index, n.index, label)
 		fmt.Fprintf(out, "%d [label=\"%d: %s\"]\n", n.index, n.index, label)
 		if n.anc != nil {
 			fmt.Fprintf(out, "%d -> %d\n", n.anc.index, n.index)
@@ -35,15 +34,15 @@ func (n *Node) AstDot(out io.Writer, name string) {
 	fmt.Fprintf(out, "}\n")
 }
 
-// CfgDot displays a CFG in graphviz dot(1) format using dotty(1) co-process
-func (n *Node) CfgDot(out io.Writer) {
+// cfgDot displays a CFG in graphviz dot(1) format using dotty(1) co-process
+func (n *node) cfgDot(out io.Writer) {
 	fmt.Fprintf(out, "digraph cfg {\n")
-	n.Walk(nil, func(n *Node) {
-		if n.kind == BasicLit || n.kind == Ident || n.tnext == nil {
+	n.Walk(nil, func(n *node) {
+		if n.kind == basicLit || n.kind == identExpr || n.tnext == nil {
 			return
 		}
 		var label string
-		if n.action == Nop {
+		if n.action == aNop {
 			label = "nop: end_" + n.kind.String()
 		} else {
 			label = n.action.String()
@@ -59,8 +58,8 @@ func (n *Node) CfgDot(out io.Writer) {
 	fmt.Fprintf(out, "}\n")
 }
 
-// DotX returns an output stream to a dot(1) co-process where to write data in .dot format
-func DotX() io.WriteCloser {
+// dotX returns an output stream to a dot(1) co-process where to write data in .dot format
+func dotX() io.WriteCloser {
 	cmd := exec.Command("dotty", "-")
 	//cmd := exec.Command("dot", "-T", "xlib")
 	dotin, err := cmd.StdinPipe()

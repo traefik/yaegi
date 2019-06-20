@@ -31,10 +31,10 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 		return err
 	}
 
-	var initNodes []*Node
-	var rootNodes []*Node
+	var initNodes []*node
+	var rootNodes []*node
 
-	var root *Node
+	var root *node
 	var pkgName string
 
 	// Parse source files
@@ -65,19 +65,19 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 		rootNodes = append(rootNodes, root)
 
 		if i.astDot {
-			root.AstDot(DotX(), name)
+			root.astDot(dotX(), name)
 		}
 
 		subRPath := effectivePkg(rPath, path)
-		if err = i.Gta(root, subRPath); err != nil {
+		if err = i.gta(root, subRPath); err != nil {
 			return err
 		}
 	}
 
 	// Generate control flow graphs
 	for _, root := range rootNodes {
-		var nodes []*Node
-		if nodes, err = i.Cfg(root); err != nil {
+		var nodes []*node
+		if nodes, err = i.cfg(root); err != nil {
 			return err
 		}
 		initNodes = append(initNodes, nodes...)
@@ -85,8 +85,8 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 
 	// Rename imported pkgName to alias if they are different
 	if pkgName != alias {
-		i.scope[alias] = i.scope[pkgName]
-		delete(i.scope, pkgName)
+		i.scopes[alias] = i.scopes[pkgName]
+		delete(i.scopes, pkgName)
 	}
 
 	if i.noRun {
@@ -109,7 +109,7 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 	}
 
 	for _, n := range initNodes {
-		i.run(n, i.Frame)
+		i.run(n, i.frame)
 	}
 
 	return nil

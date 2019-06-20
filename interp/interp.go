@@ -10,51 +10,51 @@ import (
 	"reflect"
 )
 
-// Node structure for AST and CFG
-type Node struct {
-	child  []*Node          // child subtrees (AST)
-	anc    *Node            // ancestor (AST)
-	start  *Node            // entry point in subtree (CFG)
-	tnext  *Node            // true branch successor (CFG)
-	fnext  *Node            // false branch successor (CFG)
-	interp *Interpreter     // interpreter context
-	frame  *Frame           // frame pointer used for closures only (TODO: suppress this)
-	index  int              // node index (dot display)
-	findex int              // index of value in frame or frame size (func def, type def)
-	level  int              // number of frame indirections to access value
-	nleft  int              // number of children in left part (assign)
-	nright int              // number of children in right part (assign)
-	kind   Kind             // kind of node
-	pos    token.Pos        // position in source code, relative to fset
-	sym    *Symbol          // associated symbol
-	typ    *Type            // type of value in frame, or nil
-	recv   *Receiver        // method receiver node for call, or nil
-	types  []reflect.Type   // frame types, used by function literals only
-	action Action           // action
-	exec   Builtin          // generated function to execute
-	gen    BuiltinGenerator // generator function to produce above bltn
-	val    interface{}      // static generic value (CFG execution)
-	rval   reflect.Value    // reflection value to let runtime access interpreter (CFG)
-	ident  string           // set if node is a var or func
+// Interpreter node structure for AST and CFG
+type node struct {
+	child  []*node        // child subtrees (AST)
+	anc    *node          // ancestor (AST)
+	start  *node          // entry point in subtree (CFG)
+	tnext  *node          // true branch successor (CFG)
+	fnext  *node          // false branch successor (CFG)
+	interp *Interpreter   // interpreter context
+	frame  *frame         // frame pointer used for closures only (TODO: suppress this)
+	index  int            // node index (dot display)
+	findex int            // index of value in frame or frame size (func def, type def)
+	level  int            // number of frame indirections to access value
+	nleft  int            // number of children in left part (assign)
+	nright int            // number of children in right part (assign)
+	kind   nkind          // kind of node
+	pos    token.Pos      // position in source code, relative to fset
+	sym    *symbol        // associated symbol
+	typ    *itype         // type of value in frame, or nil
+	recv   *receiver      // method receiver node for call, or nil
+	types  []reflect.Type // frame types, used by function literals only
+	action action         // action
+	exec   bltn           // generated function to execute
+	gen    bltnGenerator  // generator function to produce above bltn
+	val    interface{}    // static generic value (CFG execution)
+	rval   reflect.Value  // reflection value to let runtime access interpreter (CFG)
+	ident  string         // set if node is a var or func
 }
 
-// Receiver stores method receiver object access path
-type Receiver struct {
-	node  *Node         // receiver value for alias and struct types
+// receiver stores method receiver object access path
+type receiver struct {
+	node  *node         // receiver value for alias and struct types
 	val   reflect.Value // receiver value for interface type and value type
 	index []int         // path in receiver value for interface or value type
 }
 
-// Frame contains values for the current execution level (a function context)
-type Frame struct {
-	anc       *Frame            // ancestor frame (global space)
+// frame contains values for the current execution level (a function context)
+type frame struct {
+	anc       *frame            // ancestor frame (global space)
 	data      []reflect.Value   // values
 	deferred  [][]reflect.Value // defer stack
 	recovered interface{}       // to handle panic recover
 }
 
-// LibValueMap stores the map of external values per package
-type LibValueMap map[string]map[string]reflect.Value
+// PkgSet stores the map of external values per package
+type PkgSet map[string]map[string]reflect.Value
 
 // opt stores interpreter options
 type opt struct {
@@ -68,12 +68,12 @@ type opt struct {
 type Interpreter struct {
 	opt
 	Name     string            // program name
-	Frame    *Frame            // program data storage during execution
+	frame    *frame            // program data storage during execution
 	nindex   int               // next node index
 	fset     *token.FileSet    // fileset to locate node in source code
-	universe *Scope            // interpreter global level scope
-	scope    map[string]*Scope // package level scopes, indexed by package name
-	binValue LibValueMap       // runtime binary values used in interpreter
+	universe *scope            // interpreter global level scope
+	scopes   map[string]*scope // package level scopes, indexed by package name
+	binValue PkgSet            // runtime binary values used in interpreter
 }
 
 const (
@@ -82,7 +82,7 @@ const (
 )
 
 // ExportValue exposes interpreter values
-var ExportValue = LibValueMap{
+var ExportValue = PkgSet{
 	selfPath: map[string]reflect.Value{
 		"New": reflect.ValueOf(New),
 
@@ -102,7 +102,7 @@ func init() { ExportValue[selfPath]["ExportValue"] = reflect.ValueOf(ExportValue
 
 // Walk traverses AST n in depth first order, call cbin function
 // at node entry and cbout function at node exit.
-func (n *Node) Walk(in func(n *Node) bool, out func(n *Node)) {
+func (n *node) Walk(in func(n *node) bool, out func(n *node)) {
 	if in != nil && !in(n) {
 		return
 	}
@@ -120,9 +120,9 @@ func New(options ...func(*Interpreter)) *Interpreter {
 		opt:      opt{goPath: build.Default.GOPATH},
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
-		scope:    map[string]*Scope{},
-		binValue: LibValueMap{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
-		Frame:    &Frame{data: []reflect.Value{}},
+		scopes:   map[string]*scope{},
+		binValue: PkgSet{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
+		frame:    &frame{data: []reflect.Value{}},
 	}
 
 	for _, option := range options {
@@ -146,76 +146,76 @@ func CfgDot(i *Interpreter) { i.cfgDot = true }
 // NoRun disable the execution (but not the compilation) in the interpreter
 func NoRun(i *Interpreter) { i.noRun = true }
 
-func initUniverse() *Scope {
-	scope := &Scope{global: true, sym: SymMap{
+func initUniverse() *scope {
+	sc := &scope{global: true, sym: symMap{
 		// predefined Go types
-		"bool":        &Symbol{kind: Typ, typ: &Type{cat: BoolT, name: "bool"}},
-		"byte":        &Symbol{kind: Typ, typ: &Type{cat: ByteT, name: "byte"}},
-		"complex64":   &Symbol{kind: Typ, typ: &Type{cat: Complex64T, name: "complex64"}},
-		"complex128":  &Symbol{kind: Typ, typ: &Type{cat: Complex128T, name: "complex128"}},
-		"error":       &Symbol{kind: Typ, typ: &Type{cat: ErrorT, name: "error"}},
-		"float32":     &Symbol{kind: Typ, typ: &Type{cat: Float32T, name: "float32"}},
-		"float64":     &Symbol{kind: Typ, typ: &Type{cat: Float64T, name: "float64"}},
-		"int":         &Symbol{kind: Typ, typ: &Type{cat: IntT, name: "int"}},
-		"int8":        &Symbol{kind: Typ, typ: &Type{cat: Int8T, name: "int8"}},
-		"int16":       &Symbol{kind: Typ, typ: &Type{cat: Int16T, name: "int16"}},
-		"int32":       &Symbol{kind: Typ, typ: &Type{cat: Int32T, name: "int32"}},
-		"int64":       &Symbol{kind: Typ, typ: &Type{cat: Int64T, name: "int64"}},
-		"interface{}": &Symbol{kind: Typ, typ: &Type{cat: InterfaceT}},
-		"rune":        &Symbol{kind: Typ, typ: &Type{cat: RuneT, name: "rune"}},
-		"string":      &Symbol{kind: Typ, typ: &Type{cat: StringT, name: "string"}},
-		"uint":        &Symbol{kind: Typ, typ: &Type{cat: UintT, name: "uint"}},
-		"uint8":       &Symbol{kind: Typ, typ: &Type{cat: Uint8T, name: "uint8"}},
-		"uint16":      &Symbol{kind: Typ, typ: &Type{cat: Uint16T, name: "uint16"}},
-		"uint32":      &Symbol{kind: Typ, typ: &Type{cat: Uint32T, name: "uint32"}},
-		"uint64":      &Symbol{kind: Typ, typ: &Type{cat: Uint64T, name: "uint64"}},
-		"uintptr":     &Symbol{kind: Typ, typ: &Type{cat: UintptrT, name: "uintptr"}},
+		"bool":        &symbol{kind: typeSym, typ: &itype{cat: boolT, name: "bool"}},
+		"byte":        &symbol{kind: typeSym, typ: &itype{cat: byteT, name: "byte"}},
+		"complex64":   &symbol{kind: typeSym, typ: &itype{cat: complex64T, name: "complex64"}},
+		"complex128":  &symbol{kind: typeSym, typ: &itype{cat: complex128T, name: "complex128"}},
+		"error":       &symbol{kind: typeSym, typ: &itype{cat: errorT, name: "error"}},
+		"float32":     &symbol{kind: typeSym, typ: &itype{cat: float32T, name: "float32"}},
+		"float64":     &symbol{kind: typeSym, typ: &itype{cat: float64T, name: "float64"}},
+		"int":         &symbol{kind: typeSym, typ: &itype{cat: intT, name: "int"}},
+		"int8":        &symbol{kind: typeSym, typ: &itype{cat: int8T, name: "int8"}},
+		"int16":       &symbol{kind: typeSym, typ: &itype{cat: int16T, name: "int16"}},
+		"int32":       &symbol{kind: typeSym, typ: &itype{cat: int32T, name: "int32"}},
+		"int64":       &symbol{kind: typeSym, typ: &itype{cat: int64T, name: "int64"}},
+		"interface{}": &symbol{kind: typeSym, typ: &itype{cat: interfaceT}},
+		"rune":        &symbol{kind: typeSym, typ: &itype{cat: runeT, name: "rune"}},
+		"string":      &symbol{kind: typeSym, typ: &itype{cat: stringT, name: "string"}},
+		"uint":        &symbol{kind: typeSym, typ: &itype{cat: uintT, name: "uint"}},
+		"uint8":       &symbol{kind: typeSym, typ: &itype{cat: uint8T, name: "uint8"}},
+		"uint16":      &symbol{kind: typeSym, typ: &itype{cat: uint16T, name: "uint16"}},
+		"uint32":      &symbol{kind: typeSym, typ: &itype{cat: uint32T, name: "uint32"}},
+		"uint64":      &symbol{kind: typeSym, typ: &itype{cat: uint64T, name: "uint64"}},
+		"uintptr":     &symbol{kind: typeSym, typ: &itype{cat: uintptrT, name: "uintptr"}},
 
 		// predefined Go constants
-		"false": &Symbol{kind: Const, typ: &Type{cat: BoolT, name: "bool"}, rval: reflect.ValueOf(false)},
-		"true":  &Symbol{kind: Const, typ: &Type{cat: BoolT, name: "bool"}, rval: reflect.ValueOf(true)},
-		"iota":  &Symbol{kind: Const, typ: &Type{cat: IntT}},
+		"false": &symbol{kind: constSym, typ: &itype{cat: boolT, name: "bool"}, rval: reflect.ValueOf(false)},
+		"true":  &symbol{kind: constSym, typ: &itype{cat: boolT, name: "bool"}, rval: reflect.ValueOf(true)},
+		"iota":  &symbol{kind: constSym, typ: &itype{cat: intT}},
 
 		// predefined Go zero value
-		"nil": &Symbol{typ: &Type{cat: NilT, untyped: true}},
+		"nil": &symbol{typ: &itype{cat: nilT, untyped: true}},
 
 		// predefined Go builtins
-		"append":  &Symbol{kind: Bltn, builtin: _append},
-		"cap":     &Symbol{kind: Bltn, builtin: _cap},
-		"close":   &Symbol{kind: Bltn, builtin: _close},
-		"complex": &Symbol{kind: Bltn, builtin: _complex},
-		"imag":    &Symbol{kind: Bltn, builtin: _imag},
-		"copy":    &Symbol{kind: Bltn, builtin: _copy},
-		"delete":  &Symbol{kind: Bltn, builtin: _delete},
-		"len":     &Symbol{kind: Bltn, builtin: _len},
-		"make":    &Symbol{kind: Bltn, builtin: _make},
-		"new":     &Symbol{kind: Bltn, builtin: _new},
-		"panic":   &Symbol{kind: Bltn, builtin: _panic},
-		"print":   &Symbol{kind: Bltn, builtin: _print},
-		"println": &Symbol{kind: Bltn, builtin: _println},
-		"real":    &Symbol{kind: Bltn, builtin: _real},
-		"recover": &Symbol{kind: Bltn, builtin: _recover},
+		"append":  &symbol{kind: bltnSym, builtin: _append},
+		"cap":     &symbol{kind: bltnSym, builtin: _cap},
+		"close":   &symbol{kind: bltnSym, builtin: _close},
+		"complex": &symbol{kind: bltnSym, builtin: _complex},
+		"imag":    &symbol{kind: bltnSym, builtin: _imag},
+		"copy":    &symbol{kind: bltnSym, builtin: _copy},
+		"delete":  &symbol{kind: bltnSym, builtin: _delete},
+		"len":     &symbol{kind: bltnSym, builtin: _len},
+		"make":    &symbol{kind: bltnSym, builtin: _make},
+		"new":     &symbol{kind: bltnSym, builtin: _new},
+		"panic":   &symbol{kind: bltnSym, builtin: _panic},
+		"print":   &symbol{kind: bltnSym, builtin: _print},
+		"println": &symbol{kind: bltnSym, builtin: _println},
+		"real":    &symbol{kind: bltnSym, builtin: _real},
+		"recover": &symbol{kind: bltnSym, builtin: _recover},
 	}}
-	return scope
+	return sc
 }
 
 // resizeFrame resizes the global frame of interpreter
 func (i *Interpreter) resizeFrame() {
 	l := len(i.universe.types)
-	b := len(i.Frame.data)
+	b := len(i.frame.data)
 	if l-b <= 0 {
 		return
 	}
 	data := make([]reflect.Value, l)
-	copy(data, i.Frame.data)
+	copy(data, i.frame.data)
 	for j, t := range i.universe.types[b:] {
 		data[b+j] = reflect.New(t).Elem()
 	}
-	i.Frame.data = data
+	i.frame.data = data
 }
 
-func (i *Interpreter) main() *Node {
-	if m, ok := i.scope[mainID]; ok && m.sym[mainID] != nil {
+func (i *Interpreter) main() *node {
+	if m, ok := i.scopes[mainID]; ok && m.sym[mainID] != nil {
 		return m.sym[mainID].node
 	}
 	return nil
@@ -233,19 +233,19 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 	}
 
 	if i.astDot {
-		root.AstDot(DotX(), i.Name)
+		root.astDot(dotX(), i.Name)
 		if i.noRun {
 			return res, err
 		}
 	}
 
 	// Global type analysis
-	if err = i.Gta(root, pkgName); err != nil {
+	if err = i.gta(root, pkgName); err != nil {
 		return res, err
 	}
 
 	// Annotate AST with CFG infos
-	initNodes, err := i.Cfg(root)
+	initNodes, err := i.cfg(root)
 	if err != nil {
 		return res, err
 	}
@@ -255,17 +255,17 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 		initNodes = append(initNodes, m)
 	}
 
-	if root.kind != File {
+	if root.kind != fileStmt {
 		// REPL may skip package statement
 		setExec(root.start)
 	}
 	if i.universe.sym[pkgName] == nil {
 		// Make the package visible under a path identical to its name
-		i.universe.sym[pkgName] = &Symbol{typ: &Type{cat: SrcPkgT}, path: pkgName}
+		i.universe.sym[pkgName] = &symbol{typ: &itype{cat: srcPkgT}, path: pkgName}
 	}
 
 	if i.cfgDot {
-		root.CfgDot(DotX())
+		root.cfgDot(dotX())
 	}
 
 	if i.noRun {
@@ -280,15 +280,15 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 	i.run(root, nil)
 
 	for _, n := range initNodes {
-		i.run(n, i.Frame)
+		i.run(n, i.frame)
 	}
 	v := genValue(root)
-	res = v(i.Frame)
+	res = v(i.frame)
 
 	// If result is an interpreter node, wrap it in a runtime callable function
 	if res.IsValid() {
-		if n, ok := res.Interface().(*Node); ok {
-			res = genFunctionWrapper(n)(i.Frame)
+		if n, ok := res.Interface().(*node); ok {
+			res = genFunctionWrapper(n)(i.frame)
 		}
 	}
 
@@ -305,7 +305,7 @@ func (i *Interpreter) getWrapper(t reflect.Type) reflect.Type {
 
 // Use loads binary runtime symbols in the interpreter context so
 // they can be used in interpreted code
-func (i *Interpreter) Use(values LibValueMap) {
+func (i *Interpreter) Use(values PkgSet) {
 	for k, v := range values {
 		i.binValue[k] = v
 	}
