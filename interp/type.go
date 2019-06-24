@@ -132,7 +132,9 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	switch n.kind {
 	case addressExpr, starExpr:
 		t.cat = ptrT
-		t.val, err = nodeType(interp, sc, n.child[0])
+		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
+			return nil, err
+		}
 		t.incomplete = t.val.incomplete
 
 	case arrayType:
@@ -154,17 +156,20 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					}
 				} else {
 					// Evaluate constant array size expression
-					_, err = interp.cfg(n.child[0])
-					if err != nil {
+					if _, err = interp.cfg(n.child[0]); err != nil {
 						return nil, err
 					}
 					t.incomplete = true
 				}
 			}
-			t.val, err = nodeType(interp, sc, n.child[1])
+			if t.val, err = nodeType(interp, sc, n.child[1]); err != nil {
+				return nil, err
+			}
 			t.incomplete = t.incomplete || t.val.incomplete
 		} else {
-			t.val, err = nodeType(interp, sc, n.child[0])
+			if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
+				return nil, err
+			}
 			t.incomplete = t.val.incomplete
 		}
 
@@ -221,8 +226,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		if a := n.anc; a.kind == defineStmt && len(a.child) > a.nleft+a.nright {
 			t, err = nodeType(interp, sc, a.child[a.nleft])
 		} else {
-			t, err = nodeType(interp, sc, n.child[0])
-			if err != nil {
+			if t, err = nodeType(interp, sc, n.child[0]); err != nil {
 				return nil, err
 			}
 			if t.untyped {
@@ -235,8 +239,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		}
 
 	case callExpr:
-		t, err = nodeType(interp, sc, n.child[0])
-		if err != nil {
+		if t, err = nodeType(interp, sc, n.child[0]); err != nil {
 			return nil, err
 		}
 		switch t.cat {
@@ -255,11 +258,15 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 
 	case chanType:
 		t.cat = chanT
-		t.val, err = nodeType(interp, sc, n.child[0])
+		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
+			return nil, err
+		}
 		t.incomplete = t.val.incomplete
 
 	case ellipsisExpr:
-		t, err = nodeType(interp, sc, n.child[0])
+		if t, err = nodeType(interp, sc, n.child[0]); err != nil {
+			return nil, err
+		}
 		t.variadic = true
 
 	case funcLit:
@@ -303,7 +310,9 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			t = sym.typ
 			if t.incomplete && t.node != n {
 				m := t.method
-				t, err = nodeType(interp, sc, t.node)
+				if t, err = nodeType(interp, sc, t.node); err != nil {
+					return nil, err
+				}
 				t.method = m
 				sym.typ = t
 			}
@@ -467,7 +476,9 @@ func (t *itype) finalize() (*itype, error) {
 	var err cfgError
 	if t.incomplete {
 		m := t.method
-		t, err = nodeType(t.node.interp, t.scope, t.node)
+		if t, err = nodeType(t.node.interp, t.scope, t.node); err != nil {
+			return nil, err
+		}
 		t.method = m
 		t.node.typ = t
 		if t.incomplete && err == nil {

@@ -134,17 +134,17 @@ func New(options ...func(*Interpreter)) *Interpreter {
 
 // GoPath sets GOPATH for the interpreter
 func GoPath(s string) func(*Interpreter) {
-	return func(i *Interpreter) { i.goPath = s }
+	return func(interp *Interpreter) { interp.goPath = s }
 }
 
 // AstDot activates AST graph display for the interpreter
-func AstDot(i *Interpreter) { i.astDot = true }
+func AstDot(interp *Interpreter) { interp.astDot = true }
 
 // CfgDot activates AST graph display for the interpreter
-func CfgDot(i *Interpreter) { i.cfgDot = true }
+func CfgDot(interp *Interpreter) { interp.cfgDot = true }
 
 // NoRun disable the execution (but not the compilation) in the interpreter
-func NoRun(i *Interpreter) { i.noRun = true }
+func NoRun(interp *Interpreter) { interp.noRun = true }
 
 func initUniverse() *scope {
 	sc := &scope{global: true, sym: symMap{
@@ -200,22 +200,22 @@ func initUniverse() *scope {
 }
 
 // resizeFrame resizes the global frame of interpreter
-func (i *Interpreter) resizeFrame() {
-	l := len(i.universe.types)
-	b := len(i.frame.data)
+func (interp *Interpreter) resizeFrame() {
+	l := len(interp.universe.types)
+	b := len(interp.frame.data)
 	if l-b <= 0 {
 		return
 	}
 	data := make([]reflect.Value, l)
-	copy(data, i.frame.data)
-	for j, t := range i.universe.types[b:] {
+	copy(data, interp.frame.data)
+	for j, t := range interp.universe.types[b:] {
 		data[b+j] = reflect.New(t).Elem()
 	}
-	i.frame.data = data
+	interp.frame.data = data
 }
 
-func (i *Interpreter) main() *node {
-	if m, ok := i.scopes[mainID]; ok && m.sym[mainID] != nil {
+func (interp *Interpreter) main() *node {
+	if m, ok := interp.scopes[mainID]; ok && m.sym[mainID] != nil {
 		return m.sym[mainID].node
 	}
 	return nil
@@ -223,35 +223,35 @@ func (i *Interpreter) main() *node {
 
 // Eval evaluates Go code represented as a string. It returns a map on
 // current interpreted package exported symbols
-func (i *Interpreter) Eval(src string) (reflect.Value, error) {
+func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 	var res reflect.Value
 
 	// Parse source to AST
-	pkgName, root, err := i.ast(src, i.Name)
+	pkgName, root, err := interp.ast(src, interp.Name)
 	if err != nil || root == nil {
 		return res, err
 	}
 
-	if i.astDot {
-		root.astDot(dotX(), i.Name)
-		if i.noRun {
+	if interp.astDot {
+		root.astDot(dotX(), interp.Name)
+		if interp.noRun {
 			return res, err
 		}
 	}
 
 	// Global type analysis
-	if err = i.gta(root, pkgName); err != nil {
+	if err = interp.gta(root, pkgName); err != nil {
 		return res, err
 	}
 
 	// Annotate AST with CFG infos
-	initNodes, err := i.cfg(root)
+	initNodes, err := interp.cfg(root)
 	if err != nil {
 		return res, err
 	}
 
 	// Add main to list of functions to run, after all inits
-	if m := i.main(); m != nil {
+	if m := interp.main(); m != nil {
 		initNodes = append(initNodes, m)
 	}
 
@@ -259,16 +259,16 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 		// REPL may skip package statement
 		setExec(root.start)
 	}
-	if i.universe.sym[pkgName] == nil {
+	if interp.universe.sym[pkgName] == nil {
 		// Make the package visible under a path identical to its name
-		i.universe.sym[pkgName] = &symbol{typ: &itype{cat: srcPkgT}, path: pkgName}
+		interp.universe.sym[pkgName] = &symbol{typ: &itype{cat: srcPkgT}, path: pkgName}
 	}
 
-	if i.cfgDot {
+	if interp.cfgDot {
 		root.cfgDot(dotX())
 	}
 
-	if i.noRun {
+	if interp.noRun {
 		return res, err
 	}
 
@@ -276,19 +276,19 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 	if err = genRun(root); err != nil {
 		return res, err
 	}
-	i.resizeFrame()
-	i.run(root, nil)
+	interp.resizeFrame()
+	interp.run(root, nil)
 
 	for _, n := range initNodes {
-		i.run(n, i.frame)
+		interp.run(n, interp.frame)
 	}
 	v := genValue(root)
-	res = v(i.frame)
+	res = v(interp.frame)
 
 	// If result is an interpreter node, wrap it in a runtime callable function
 	if res.IsValid() {
 		if n, ok := res.Interface().(*node); ok {
-			res = genFunctionWrapper(n)(i.frame)
+			res = genFunctionWrapper(n)(interp.frame)
 		}
 	}
 
@@ -296,8 +296,8 @@ func (i *Interpreter) Eval(src string) (reflect.Value, error) {
 }
 
 // getWrapper returns the wrapper type of the corresponding interface, or nil if not found
-func (i *Interpreter) getWrapper(t reflect.Type) reflect.Type {
-	if p, ok := i.binValue[t.PkgPath()]; ok {
+func (interp *Interpreter) getWrapper(t reflect.Type) reflect.Type {
+	if p, ok := interp.binValue[t.PkgPath()]; ok {
 		return p["_"+t.Name()].Type().Elem()
 	}
 	return nil
@@ -305,22 +305,22 @@ func (i *Interpreter) getWrapper(t reflect.Type) reflect.Type {
 
 // Use loads binary runtime symbols in the interpreter context so
 // they can be used in interpreted code
-func (i *Interpreter) Use(values PkgSet) {
+func (interp *Interpreter) Use(values PkgSet) {
 	for k, v := range values {
-		i.binValue[k] = v
+		interp.binValue[k] = v
 	}
 }
 
 // Repl performs a Read-Eval-Print-Loop on input file descriptor.
 // Results are printed on output.
-func (i *Interpreter) Repl(in, out *os.File) {
+func (interp *Interpreter) Repl(in, out *os.File) {
 	s := bufio.NewScanner(in)
 	prompt := getPrompt(in, out)
 	prompt()
 	src := ""
 	for s.Scan() {
 		src += s.Text() + "\n"
-		if v, err := i.Eval(src); err != nil {
+		if v, err := interp.Eval(src); err != nil {
 			switch err.(type) {
 			case scanner.ErrorList:
 				// Early failure in the scanner: the source is incomplete

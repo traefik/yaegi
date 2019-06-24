@@ -54,6 +54,7 @@ type symbol struct {
 	path    string        // package path if typ.cat is SrcPkgT or BinPkgT
 	builtin bltnGenerator // Builtin function or nil
 	global  bool          // true if symbol is defined in global space
+	// TODO: implement constant checking
 	//constant bool             // true if symbol value is constant
 }
 

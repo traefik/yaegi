@@ -21,7 +21,8 @@ var constOp = map[action]func(*node){
 	aOr:     orConst,
 	aShl:    shlConst,
 	aShr:    shrConst,
-	aAndNot: andnotConst,
+	aAndNot: andNotConst,
+	aXor:    xorConst,
 }
 
 // cfg generates a control flow graph (CFG) from AST (wiring successors in AST)

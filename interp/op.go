@@ -244,7 +244,7 @@ func andConst(n *node) {
 	}
 }
 
-func andnot(n *node) {
+func andNot(n *node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
 	typ := n.typ.TypeOf()
@@ -310,7 +310,7 @@ func andnot(n *node) {
 	}
 }
 
-func andnotConst(n *node) {
+func andNotConst(n *node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
 	t := n.typ.rtype
 	n.rval = reflect.New(t).Elem()
@@ -1261,7 +1261,7 @@ func andAssign(n *node) {
 	}
 }
 
-func andnotAssign(n *node) {
+func andNotAssign(n *node) {
 	next := getExec(n.tnext)
 	typ := n.typ.TypeOf()
 	c0, c1 := n.child[0], n.child[1]

@@ -815,7 +815,7 @@ func main() {
 			"and":    {"&", false, false, false, false},
 			"or":     {"|", false, false, false, false},
 			"xor":    {"^", false, false, false, false},
-			"andnot": {"&^", false, false, false, false},
+			"andNot": {"&^", false, false, false, false},
 		},
 		"IncDec": map[string]Op{
 			"inc": {Name: "+"},
