@@ -185,7 +185,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 		case compositeLitExpr:
 			if n.child[0].isType(sc) {
 				// Get type from 1st child
-				n.typ, err = nodeType(interp, sc, n.child[0])
+				if n.typ, err = nodeType(interp, sc, n.child[0]); err != nil {
+					return false
+				}
 			} else {
 				// Get type from ancestor (implicit type)
 				if n.anc.kind == keyValueExpr && n == n.anc.child[0] {
@@ -210,7 +212,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case funcLit:
 			n.typ = nil // to force nodeType to recompute the type
-			n.typ, err = nodeType(interp, sc, n)
+			if n.typ, err = nodeType(interp, sc, n); err != nil {
+				return false
+			}
 			n.findex = sc.add(n.typ)
 			fallthrough
 
@@ -223,7 +227,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				// Allocate frame space for return values, define output symbols
 				for _, c := range n.child[2].child[1].child {
 					var typ *itype
-					typ, err = nodeType(interp, sc, c.lastChild())
+					if typ, err = nodeType(interp, sc, c.lastChild()); err != nil {
+						return false
+					}
 					if len(c.child) > 1 {
 						for _, cc := range c.child[:len(c.child)-1] {
 							sc.sym[cc.ident] = &symbol{index: sc.add(typ), kind: varSym, typ: typ}
@@ -238,14 +244,18 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				var typ *itype
 				recvName := n.child[0].child[0].child[0].ident
 				recvTypeNode := n.child[0].child[0].lastChild()
-				typ, err = nodeType(interp, sc, recvTypeNode)
+				if typ, err = nodeType(interp, sc, recvTypeNode); err != nil {
+					return false
+				}
 				recvTypeNode.typ = typ
 				sc.sym[recvName] = &symbol{index: sc.add(typ), kind: varSym, typ: typ}
 			}
 			for _, c := range n.child[2].child[0].child {
 				// define input parameter symbols
 				var typ *itype
-				typ, err = nodeType(interp, sc, c.lastChild())
+				if typ, err = nodeType(interp, sc, c.lastChild()); err != nil {
+					return false
+				}
 				if typ.variadic {
 					typ = &itype{cat: arrayT, val: typ}
 				}
@@ -317,7 +327,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			}
 			var atyp *itype
 			if n.nleft+n.nright < len(n.child) {
-				atyp, err = nodeType(interp, sc, n.child[n.nleft])
+				if atyp, err = nodeType(interp, sc, n.child[n.nleft]); err != nil {
+					return
+				}
 			}
 
 			var sbase int
@@ -550,7 +562,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			}
 			if c0.rval.IsValid() && c1.rval.IsValid() && constOp[n.action] != nil {
 				if n.typ == nil {
-					n.typ, err = nodeType(interp, sc, n)
+					if n.typ, err = nodeType(interp, sc, n); err != nil {
+						return
+					}
 				}
 				n.typ.TypeOf() // init reflect type
 				constOp[n.action](n)
@@ -571,7 +585,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				n.findex = pos
 			default:
 				if n.typ == nil {
-					n.typ, err = nodeType(interp, sc, n)
+					if n.typ, err = nodeType(interp, sc, n); err != nil {
+						return
+					}
 				}
 				n.findex = sc.add(n.typ)
 			}
@@ -658,7 +674,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				case "append":
 					c1, c2 := n.child[1], n.child[2]
 					if n.typ = sc.getType(c1.ident); n.typ == nil {
-						n.typ, err = nodeType(interp, sc, c1)
+						if n.typ, err = nodeType(interp, sc, c1); err != nil {
+							return
+						}
 					}
 					if len(n.child) == 3 {
 						if c2.typ.cat == arrayT && c2.typ.val.id() == n.typ.val.id() ||
@@ -697,12 +715,16 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					}
 				case "make":
 					if n.typ = sc.getType(n.child[1].ident); n.typ == nil {
-						n.typ, err = nodeType(interp, sc, n.child[1])
+						if n.typ, err = nodeType(interp, sc, n.child[1]); err != nil {
+							return
+						}
 					}
 					n.child[1].val = n.typ
 					n.child[1].kind = basicLit
 				case "new":
-					n.typ, err = nodeType(interp, sc, n.child[1])
+					if n.typ, err = nodeType(interp, sc, n.child[1]); err != nil {
+						return
+					}
 					n.typ = &itype{cat: ptrT, val: n.typ}
 				case "recover":
 					n.typ = sc.getType("interface{}")
@@ -1019,9 +1041,8 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					// nil: Set node value to zero of return type
 					f := sc.def
 					var typ *itype
-					typ, err = nodeType(interp, sc, f.child[2].child[1].child[i].lastChild())
-					if err != nil {
-						break
+					if typ, err = nodeType(interp, sc, f.child[2].child[1].child[i].lastChild()); err != nil {
+						return
 					}
 					c.rval = reflect.New(typ.TypeOf()).Elem()
 				}
@@ -1327,8 +1348,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			n.gen = reset
 			l := len(n.child) - 1
 			if n.typ = n.child[l].typ; n.typ == nil {
-				n.typ, err = nodeType(interp, sc, n.child[l])
-				if err != nil {
+				if n.typ, err = nodeType(interp, sc, n.child[l]); err != nil {
 					return
 				}
 			}

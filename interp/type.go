@@ -479,11 +479,11 @@ func (t *itype) finalize() (*itype, error) {
 		if t, err = nodeType(t.node.interp, t.scope, t.node); err != nil {
 			return nil, err
 		}
+		if t.incomplete {
+			return nil, t.node.cfgErrorf("incomplete type")
+		}
 		t.method = m
 		t.node.typ = t
-		if t.incomplete && err == nil {
-			err = t.node.cfgErrorf("incomplete type")
-		}
 	}
 	return t, err
 }

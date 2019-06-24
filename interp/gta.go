@@ -30,8 +30,7 @@ func (interp *Interpreter) gta(root *node, rpath string) error {
 		case defineStmt:
 			var atyp *itype
 			if n.nleft+n.nright < len(n.child) {
-				atyp, err = nodeType(interp, scope, n.child[n.nleft])
-				if err != nil {
+				if atyp, err = nodeType(interp, scope, n.child[n.nleft]); err != nil {
 					return false
 				}
 			}
@@ -46,8 +45,7 @@ func (interp *Interpreter) gta(root *node, rpath string) error {
 				typ := atyp
 				val := reflect.ValueOf(iotaValue)
 				if typ == nil {
-					typ, err = nodeType(interp, scope, src)
-					if err != nil {
+					if typ, err = nodeType(interp, scope, src); err != nil {
 						return false
 					}
 					val = src.rval
@@ -148,8 +146,7 @@ func (interp *Interpreter) gta(root *node, rpath string) error {
 		case typeSpec:
 			typeName := n.child[0].ident
 			var typ *itype
-			typ, err = nodeType(interp, scope, n.child[1])
-			if err != nil {
+			if typ, err = nodeType(interp, scope, n.child[1]); err != nil {
 				return false
 			}
 			if n.child[1].kind == identExpr {
