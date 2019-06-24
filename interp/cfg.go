@@ -1367,7 +1367,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 	return initNodes, err
 }
 
-// used for allocation optimization, temporarily disabled
+// TODO used for allocation optimization, temporarily disabled
 //func isAncBranch(n *node) bool {
 //	switch n.anc.kind {
 //	case If0, If1, If2, If3:

@@ -63,7 +63,7 @@ type symMap map[string]*symbol
 
 // scope type stores symbols in maps, and frame layout as array of types
 // The purposes of scopes are to manage the visibility of each symbol
-// and to store the memory frame layout informations (type and index in frame)
+// and to store the memory frame layout information (type and index in frame)
 // at each level (global, package, functions)
 //
 // scopes are organized in a stack fashion: a first scope (universe) is created
@@ -71,7 +71,7 @@ type symMap map[string]*symbol
 // scope is pushed at entry, and poped at exit.
 //
 // Nested scopes with the same level value use the same frame: it allows to have
-// eaxctly one frame per function, with a fixed position for each variable (named
+// exactly one frame per function, with a fixed position for each variable (named
 // or not), no matter the inner complexity (number of nested blocks in the function)
 //
 // In symbols, the index value corresponds to the index in scope.types, and at
