@@ -8,12 +8,12 @@ import (
 	"strings"
 )
 
-func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
+func (interp *Interpreter) importSrcFile(rPath, path, alias string) error {
 	var dir string
 	var err error
 
 	// For relative import paths in the form "./xxx" or "../xxx", the initial
-	// base path is the directory of the interprer input file, or "." if no file
+	// base path is the directory of the interpreter input file, or "." if no file
 	// was provided.
 	// In all other cases, absolute import paths are resolved from the GOPATH
 	// and the nested "vendor" directories.
@@ -21,8 +21,8 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 		if rPath == "main" {
 			rPath = "."
 		}
-		dir = filepath.Join(filepath.Dir(i.Name), rPath, path)
-	} else if dir, rPath, err = pkgDir(i.goPath, rPath, path); err != nil {
+		dir = filepath.Join(filepath.Dir(interp.Name), rPath, path)
+	} else if dir, rPath, err = pkgDir(interp.goPath, rPath, path); err != nil {
 		return err
 	}
 
@@ -51,7 +51,7 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 		}
 
 		var pname string
-		if pname, root, err = i.ast(string(buf), name); err != nil {
+		if pname, root, err = interp.ast(string(buf), name); err != nil {
 			return err
 		}
 		if root == nil {
@@ -64,12 +64,12 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 		}
 		rootNodes = append(rootNodes, root)
 
-		if i.astDot {
+		if interp.astDot {
 			root.astDot(dotX(), name)
 		}
 
 		subRPath := effectivePkg(rPath, path)
-		if err = i.gta(root, subRPath); err != nil {
+		if err = interp.gta(root, subRPath); err != nil {
 			return err
 		}
 	}
@@ -77,7 +77,7 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 	// Generate control flow graphs
 	for _, root := range rootNodes {
 		var nodes []*node
-		if nodes, err = i.cfg(root); err != nil {
+		if nodes, err = interp.cfg(root); err != nil {
 			return err
 		}
 		initNodes = append(initNodes, nodes...)
@@ -85,31 +85,31 @@ func (i *Interpreter) importSrcFile(rPath, path, alias string) error {
 
 	// Rename imported pkgName to alias if they are different
 	if pkgName != alias {
-		i.scopes[alias] = i.scopes[pkgName]
-		delete(i.scopes, pkgName)
+		interp.scopes[alias] = interp.scopes[pkgName]
+		delete(interp.scopes, pkgName)
 	}
 
-	if i.noRun {
+	if interp.noRun {
 		return nil
 	}
 
-	i.resizeFrame()
+	interp.resizeFrame()
 
 	// Once all package sources have been parsed, execute entry points then init functions
 	for _, n := range rootNodes {
 		if err = genRun(n); err != nil {
 			return err
 		}
-		i.run(n, nil)
+		interp.run(n, nil)
 	}
 
 	// Add main to list of functions to run, after all inits
-	if m := i.main(); m != nil {
+	if m := interp.main(); m != nil {
 		initNodes = append(initNodes, m)
 	}
 
 	for _, n := range initNodes {
-		i.run(n, i.frame)
+		interp.run(n, interp.frame)
 	}
 
 	return nil
