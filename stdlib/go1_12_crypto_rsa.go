@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["crypto/rsa"] = map[string]reflect.Value{
+	Symbols["crypto/rsa"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"DecryptOAEP":               reflect.ValueOf(rsa.DecryptOAEP),
 		"DecryptPKCS1v15":           reflect.ValueOf(rsa.DecryptPKCS1v15),

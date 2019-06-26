@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["regexp/syntax"] = map[string]reflect.Value{
+	Symbols["regexp/syntax"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ClassNL":                  reflect.ValueOf(syntax.ClassNL),
 		"Compile":                  reflect.ValueOf(syntax.Compile),

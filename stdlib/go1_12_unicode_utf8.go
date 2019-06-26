@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["unicode/utf8"] = map[string]reflect.Value{
+	Symbols["unicode/utf8"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"DecodeLastRune":         reflect.ValueOf(utf8.DecodeLastRune),
 		"DecodeLastRuneInString": reflect.ValueOf(utf8.DecodeLastRuneInString),

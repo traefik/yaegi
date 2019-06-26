@@ -2,7 +2,6 @@ package interp
 
 import (
 	"reflect"
-	"strconv"
 )
 
 // tcat defines interpreter type categories
@@ -46,50 +45,6 @@ const (
 	valueT
 	maxT
 )
-
-var cats = [...]string{
-	nilT:        "nilT",
-	aliasT:      "aliasT",
-	arrayT:      "arrayT",
-	binT:        "binT",
-	binPkgT:     "binPkgT",
-	byteT:       "byteT",
-	boolT:       "boolT",
-	builtinT:    "builtinT",
-	chanT:       "chanT",
-	complex64T:  "complex64T",
-	complex128T: "complex128T",
-	errorT:      "errorT",
-	float32T:    "float32",
-	float64T:    "float64T",
-	funcT:       "funcT",
-	interfaceT:  "interfaceT",
-	intT:        "intT",
-	int8T:       "int8T",
-	int16T:      "int16T",
-	int32T:      "int32T",
-	int64T:      "int64T",
-	mapT:        "mapT",
-	ptrT:        "ptrT",
-	runeT:       "runeT",
-	srcPkgT:     "srcPkgT",
-	stringT:     "stringT",
-	structT:     "structT",
-	uintT:       "uintT",
-	uint8T:      "uint8T",
-	uint16T:     "uint16T",
-	uint32T:     "uint32T",
-	uint64T:     "uint64T",
-	uintptrT:    "uintptrT",
-	valueT:      "valueT",
-}
-
-func (c tcat) String() string {
-	if c < tcat(len(cats)) {
-		return cats[c]
-	}
-	return "Cat(" + strconv.Itoa(int(c)) + ")"
-}
 
 // structField type defines a field in a struct
 type structField struct {
@@ -363,7 +318,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			}
 			switch sym.typ.cat {
 			case binPkgT:
-				pkg := interp.binValue[sym.path]
+				pkg := interp.binPkg[sym.path]
 				if v, ok := pkg[name]; ok {
 					t.cat = valueT
 					t.rtype = v.Type()

@@ -124,9 +124,9 @@ func (interp *Interpreter) gta(root *node, rpath string) error {
 				ipath = n.child[0].rval.String()
 				name = path.Base(ipath)
 			}
-			if interp.binValue[ipath] != nil {
+			if interp.binPkg[ipath] != nil {
 				if name == "." {
-					for n, v := range interp.binValue[ipath] {
+					for n, v := range interp.binPkg[ipath] {
 						typ := v.Type()
 						if isBinType(v) {
 							typ = typ.Elem()

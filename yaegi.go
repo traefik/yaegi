@@ -19,32 +19,13 @@ import (
 )
 
 func main() {
-	var interactive, astDot, cfgDot, noRun bool
-	flag.BoolVar(&astDot, "a", false, "display AST graph")
-	flag.BoolVar(&cfgDot, "c", false, "display CFG graph")
-	flag.BoolVar(&interactive, "i", false, "start an interactive REPL")
-	flag.BoolVar(&noRun, "n", false, "do not run")
-	flag.Usage = func() {
-		fmt.Println("Usage:", os.Args[0], "[options] [script] [args]")
-		fmt.Println("Options:")
-		flag.PrintDefaults()
-	}
+	flag.Usage = func() { fmt.Println("Usage:", os.Args[0], "[script] [args]") }
 	flag.Parse()
 	args := flag.Args()
-	log.SetFlags(log.Lshortfile)
 
 	i := interp.New()
-	i.Use(stdlib.Value)
-	i.Use(interp.ExportValue)
-	if astDot {
-		interp.AstDot(i)
-	}
-	if cfgDot {
-		interp.CfgDot(i)
-	}
-	if noRun {
-		interp.NoRun(i)
-	}
+	i.Use(stdlib.Symbols)
+	i.Use(interp.Symbols)
 
 	if len(args) > 0 {
 		// Skip first os arg to set command line as expected by interpreted main
@@ -61,9 +42,6 @@ func main() {
 		i.Name = args[0]
 		if _, err := i.Eval(s); err != nil {
 			fmt.Println(err)
-		}
-		if interactive {
-			i.Repl(os.Stdin, os.Stdout)
 		}
 	} else {
 		i.Repl(os.Stdin, os.Stdout)

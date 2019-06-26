@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["image/jpeg"] = map[string]reflect.Value{
+	Symbols["image/jpeg"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Decode":         reflect.ValueOf(jpeg.Decode),
 		"DecodeConfig":   reflect.ValueOf(jpeg.DecodeConfig),

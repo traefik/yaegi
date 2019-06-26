@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["hash/fnv"] = map[string]reflect.Value{
+	Symbols["hash/fnv"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"New128":  reflect.ValueOf(fnv.New128),
 		"New128a": reflect.ValueOf(fnv.New128a),

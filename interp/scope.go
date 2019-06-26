@@ -58,9 +58,6 @@ type symbol struct {
 	//constant bool             // true if symbol value is constant
 }
 
-// A symMap stores symbols indexed by name
-type symMap map[string]*symbol
-
 // scope type stores symbols in maps, and frame layout as array of types
 // The purposes of scopes are to manage the visibility of each symbol
 // and to store the memory frame layout information (type and index in frame)
@@ -78,12 +75,12 @@ type symMap map[string]*symbol
 // execution to the index in frame, created exactly from the types layout.
 //
 type scope struct {
-	anc    *scope         // Ancestor upper scope
-	def    *node          // function definition node this scope belongs to, or nil
-	types  []reflect.Type // Frame layout, may be shared by same level scopes
-	level  int            // Frame level: number of frame indirections to access var during execution
-	sym    symMap         // Map of symbols defined in this current scope
-	global bool           // true if scope refers to global space (single frame for universe and package level scopes)
+	anc    *scope             // Ancestor upper scope
+	def    *node              // function definition node this scope belongs to, or nil
+	types  []reflect.Type     // Frame layout, may be shared by same level scopes
+	level  int                // Frame level: number of frame indirections to access var during execution
+	sym    map[string]*symbol // Map of symbols defined in this current scope
+	global bool               // true if scope refers to global space (single frame for universe and package level scopes)
 }
 
 // push creates a new scope and chain it to the current one

@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["hash/crc32"] = map[string]reflect.Value{
+	Symbols["hash/crc32"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Castagnoli":   reflect.ValueOf(uint32(crc32.Castagnoli)),
 		"Checksum":     reflect.ValueOf(crc32.Checksum),

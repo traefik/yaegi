@@ -8,8 +8,9 @@ import (
 )
 
 func TestFunctionCall(t *testing.T) {
-	i := interp.New(interp.GoPath("./_pkg"))
-	i.Use(stdlib.Value)
+	i := interp.New()
+	i.GoPath("./_pkg")
+	i.Use(stdlib.Symbols)
 
 	_, err := i.Eval(`import "foo/bar"`)
 	if err != nil {

@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Value["go/ast"] = map[string]reflect.Value{
+	Symbols["go/ast"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Bad":                        reflect.ValueOf(ast.Bad),
 		"Con":                        reflect.ValueOf(ast.Con),
