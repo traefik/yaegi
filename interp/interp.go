@@ -19,6 +19,7 @@ type node struct {
 	fnext  *node          // false branch successor (CFG)
 	interp *Interpreter   // interpreter context
 	frame  *frame         // frame pointer used for closures only (TODO: suppress this)
+	index  int            // node index (dot display)
 	findex int            // index of value in frame or frame size (func def, type def)
 	level  int            // number of frame indirections to access value
 	nleft  int            // number of children in left part (assign)
@@ -52,8 +53,8 @@ type frame struct {
 	recovered interface{}       // to handle panic recover
 }
 
-// Exports stores the map of external values per package
-type Exports map[string]map[string]reflect.Value
+// PkgSet stores the map of external values per package
+type PkgSet map[string]map[string]reflect.Value
 
 // opt stores interpreter options
 type opt struct {
@@ -68,10 +69,11 @@ type Interpreter struct {
 	opt
 	Name     string            // program name
 	frame    *frame            // program data storage during execution
+	nindex   int               // next node index
 	fset     *token.FileSet    // fileset to locate node in source code
 	universe *scope            // interpreter global level scope
 	scopes   map[string]*scope // package level scopes, indexed by package name
-	binPkg   Exports           // runtime binary symbols, indexed by package name
+	binPkg   PkgSet            // runtime binary values used in interpreter
 }
 
 const (
@@ -80,11 +82,12 @@ const (
 )
 
 // Symbols exposes interpreter values
-var Symbols = Exports{
+var Symbols = PkgSet{
 	selfPath: map[string]reflect.Value{
 		"New": reflect.ValueOf(New),
 
 		"Interpreter": reflect.ValueOf((*Interpreter)(nil)),
+		"Opt":         reflect.ValueOf((*opt)(nil)),
 	},
 }
 
@@ -112,19 +115,36 @@ func (n *node) Walk(in func(n *node) bool, out func(n *node)) {
 }
 
 // New returns a new interpreter
-func New() *Interpreter {
-	return &Interpreter{
+func New(options ...func(*Interpreter)) *Interpreter {
+	i := Interpreter{
 		opt:      opt{goPath: build.Default.GOPATH},
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
 		scopes:   map[string]*scope{},
-		binPkg:   Exports{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
+		binPkg:   PkgSet{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
 		frame:    &frame{data: []reflect.Value{}},
 	}
+
+	for _, option := range options {
+		option(&i)
+	}
+
+	return &i
 }
 
 // GoPath sets GOPATH for the interpreter
-func (interp *Interpreter) GoPath(s string) { interp.goPath = s }
+func GoPath(s string) func(*Interpreter) {
+	return func(interp *Interpreter) { interp.goPath = s }
+}
+
+// AstDot activates AST graph display for the interpreter
+func AstDot(interp *Interpreter) { interp.astDot = true }
+
+// CfgDot activates AST graph display for the interpreter
+func CfgDot(interp *Interpreter) { interp.cfgDot = true }
+
+// NoRun disable the execution (but not the compilation) in the interpreter
+func NoRun(interp *Interpreter) { interp.noRun = true }
 
 func initUniverse() *scope {
 	sc := &scope{global: true, sym: map[string]*symbol{
@@ -212,6 +232,13 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 		return res, err
 	}
 
+	if interp.astDot {
+		root.astDot(dotX(), interp.Name)
+		if interp.noRun {
+			return res, err
+		}
+	}
+
 	// Global type analysis
 	if err = interp.gta(root, pkgName); err != nil {
 		return res, err
@@ -235,6 +262,14 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 	if interp.universe.sym[pkgName] == nil {
 		// Make the package visible under a path identical to its name
 		interp.universe.sym[pkgName] = &symbol{typ: &itype{cat: srcPkgT}, path: pkgName}
+	}
+
+	if interp.cfgDot {
+		root.cfgDot(dotX())
+	}
+
+	if interp.noRun {
+		return res, err
 	}
 
 	// Execute CFG
@@ -270,8 +305,8 @@ func (interp *Interpreter) getWrapper(t reflect.Type) reflect.Type {
 
 // Use loads binary runtime symbols in the interpreter context so
 // they can be used in interpreted code
-func (interp *Interpreter) Use(symbols Exports) {
-	for k, v := range symbols {
+func (interp *Interpreter) Use(values PkgSet) {
+	for k, v := range values {
 		interp.binPkg[k] = v
 	}
 }

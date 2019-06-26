@@ -93,6 +93,92 @@ const (
 	varDecl
 )
 
+var kinds = [...]string{
+	undefNode:        "undefNode",
+	addressExpr:      "addressExpr",
+	arrayType:        "arrayType",
+	assignStmt:       "assignStmt",
+	assignXStmt:      "assignXStmt",
+	basicLit:         "basicLit",
+	binaryExpr:       "binaryExpr",
+	blockStmt:        "blockStmt",
+	branchStmt:       "branchStmt",
+	breakStmt:        "breakStmt",
+	callExpr:         "callExpr",
+	caseBody:         "caseBody",
+	caseClause:       "caseClause",
+	chanType:         "chanType",
+	commClause:       "commClause",
+	compositeLitExpr: "compositeLitExpr",
+	constDecl:        "constDecl",
+	continueStmt:     "continueStmt",
+	declStmt:         "declStmt",
+	deferStmt:        "deferStmt",
+	defineStmt:       "defineStmt",
+	defineXStmt:      "defineXStmt",
+	ellipsisExpr:     "ellipsisExpr",
+	exprStmt:         "exprStmt",
+	fallthroughtStmt: "fallthroughStmt",
+	fieldExpr:        "fieldExpr",
+	fieldList:        "fieldList",
+	fileStmt:         "fileStmt",
+	forStmt0:         "forStmt0",
+	forStmt1:         "forStmt1",
+	forStmt2:         "forStmt2",
+	forStmt3:         "forStmt3",
+	forStmt3a:        "forStmt3a",
+	forStmt4:         "forStmt4",
+	forRangeStmt:     "forRangeStmt",
+	funcDecl:         "funcDecl",
+	funcType:         "funcType",
+	funcLit:          "funcLit",
+	goStmt:           "goStmt",
+	gotoStmt:         "gotoStmt",
+	identExpr:        "identExpr",
+	ifStmt0:          "ifStmt0",
+	ifStmt1:          "ifStmt1",
+	ifStmt2:          "ifStmt2",
+	ifStmt3:          "ifStmt3",
+	importDecl:       "importDecl",
+	importSpec:       "importSpec",
+	incDecStmt:       "incDecStmt",
+	indexExpr:        "indexExpr",
+	interfaceType:    "interfaceType",
+	keyValueExpr:     "keyValueExpr",
+	labeledStmt:      "labeledStmt",
+	landExpr:         "landExpr",
+	lorExpr:          "lorExpr",
+	mapType:          "mapType",
+	parenExpr:        "parenExpr",
+	rangeStmt:        "rangeStmt",
+	returnStmt:       "returnStmt",
+	rvalueExpr:       "rvalueExpr",
+	rtypeExpr:        "rtypeExpr",
+	selectStmt:       "selectStmt",
+	selectorExpr:     "selectorExpr",
+	selectorImport:   "selectorImport",
+	sendStmt:         "sendStmt",
+	sliceExpr:        "sliceExpr",
+	starExpr:         "starExpr",
+	structType:       "structType",
+	switchStmt:       "switchStmt",
+	switchIfStmt:     "switchIfStmt",
+	typeAssertExpr:   "typeAssertExpr",
+	typeDecl:         "typeDecl",
+	typeSpec:         "typeSpec",
+	typeSwitch:       "typeSwitch",
+	unaryExpr:        "unaryExpr",
+	valueSpec:        "valueSpec",
+	varDecl:          "varDecl",
+}
+
+func (k nkind) String() string {
+	if k < nkind(len(kinds)) {
+		return kinds[k]
+	}
+	return "nKind(" + strconv.Itoa(int(k)) + ")"
+}
+
 // astError represents an error during AST build stage
 type astError error
 
@@ -157,43 +243,63 @@ const (
 )
 
 var actions = [...]string{
+	aNop:          "nop",
 	aAddr:         "&",
+	aAssign:       "=",
+	aAssignX:      "X=",
 	aAdd:          "+",
 	aAddAssign:    "+=",
 	aAnd:          "&",
 	aAndAssign:    "&=",
 	aAndNot:       "&^",
 	aAndNotAssign: "&^=",
+	aCall:         "call",
+	aCase:         "case",
+	aCompositeLit: "compositeLit",
 	aDec:          "--",
+	aDefer:        "defer",
 	aEqual:        "==",
 	aGreater:      ">",
-	aGreaterEqual: ">=",
+	aGetFunc:      "getFunc",
+	aGetIndex:     "getIndex",
 	aInc:          "++",
+	aLand:         "&&",
+	aLor:          "||",
 	aLower:        "<",
-	aLowerEqual:   "<=",
+	aMethod:       "Method",
 	aMul:          "*",
 	aMulAssign:    "*=",
 	aNegate:       "-",
 	aNot:          "!",
 	aNotEqual:     "!=",
-	aOr:           "|",
-	aOrAssign:     "|=",
 	aQuo:          "/",
 	aQuoAssign:    "/=",
+	aRange:        "range",
+	aRecv:         "<-",
 	aRem:          "%",
 	aRemAssign:    "%=",
+	aReturn:       "return",
+	aSend:         "<~",
 	aShl:          "<<",
 	aShlAssign:    "<<=",
 	aShr:          ">>",
 	aShrAssign:    ">>=",
+	aSlice:        "slice",
+	aSlice0:       "slice0",
 	aStar:         "*",
 	aSub:          "-",
 	aSubAssign:    "-=",
+	aTypeAssert:   "TypeAssert",
 	aXor:          "^",
 	aXorAssign:    "^=",
 }
 
-func (a action) String() string { return actions[a] }
+func (a action) String() string {
+	if a < action(len(actions)) {
+		return actions[a]
+	}
+	return "Action(" + strconv.Itoa(int(a)) + ")"
+}
 
 func (interp *Interpreter) firstToken(src string) token.Token {
 	var s scanner.Scanner
@@ -240,8 +346,9 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 	var pkgName string
 
 	addChild := func(root **node, anc astNode, pos token.Pos, kind nkind, act action) *node {
+		interp.nindex++
 		var i interface{}
-		n := &node{anc: anc.node, interp: interp, pos: pos, kind: kind, action: act, val: &i, gen: builtin[act]}
+		n := &node{anc: anc.node, interp: interp, index: interp.nindex, pos: pos, kind: kind, action: act, val: &i, gen: builtin[act]}
 		n.start = n
 		if anc.node == nil {
 			*root = n
@@ -252,13 +359,15 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 				if len(ancAst.List)+len(ancAst.Body) == len(anc.node.child) {
 					// All case clause children are collected.
 					// Split children in condition and body nodes to desambiguify the AST.
-					body := &node{anc: anc.node, interp: interp, pos: pos, kind: caseBody, action: aNop, val: &i, gen: nop}
+					interp.nindex++
+					body := &node{anc: anc.node, interp: interp, index: interp.nindex, pos: pos, kind: caseBody, action: aNop, val: &i, gen: nop}
 
 					if ts := anc.node.anc.anc; ts.kind == typeSwitch && ts.child[1].action == aAssign {
 						// In type switch clause, if a switch guard is assigned, duplicate the switch guard symbol
 						// in each clause body, so a different guard type can be set in each clause
 						name := ts.child[1].child[0].ident
-						gn := &node{anc: body, interp: interp, ident: name, pos: pos, kind: identExpr, action: aNop, val: &i, gen: nop}
+						interp.nindex++
+						gn := &node{anc: body, interp: interp, ident: name, index: interp.nindex, pos: pos, kind: identExpr, action: aNop, val: &i, gen: nop}
 						body.child = append(body.child, gn)
 					}
 
@@ -719,7 +828,9 @@ func (s *nodestack) top() astNode {
 
 // dup returns a duplicated node subtree
 func (interp *Interpreter) dup(nod, anc *node) *node {
+	interp.nindex++
 	n := *nod
+	n.index = interp.nindex
 	n.anc = anc
 	n.start = &n
 	n.pos = anc.pos
