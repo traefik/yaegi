@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Value["compress/zlib"] = map[string]reflect.Value{
+	Symbols["compress/zlib"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"BestCompression":    reflect.ValueOf(zlib.BestCompression),
 		"BestSpeed":          reflect.ValueOf(zlib.BestSpeed),

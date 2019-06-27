@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["hash"] = map[string]reflect.Value{
+	Symbols["hash"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 
 		// type definitions

@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["sort"] = map[string]reflect.Value{
+	Symbols["sort"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Float64s":          reflect.ValueOf(sort.Float64s),
 		"Float64sAreSorted": reflect.ValueOf(sort.Float64sAreSorted),

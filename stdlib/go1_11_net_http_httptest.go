@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["net/http/httptest"] = map[string]reflect.Value{
+	Symbols["net/http/httptest"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"DefaultRemoteAddr":  reflect.ValueOf(httptest.DefaultRemoteAddr),
 		"NewRecorder":        reflect.ValueOf(httptest.NewRecorder),

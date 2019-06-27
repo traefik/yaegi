@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	Value["net/http"] = map[string]reflect.Value{
+	Symbols["net/http"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"CanonicalHeaderKey":                  reflect.ValueOf(http.CanonicalHeaderKey),
 		"DefaultClient":                       reflect.ValueOf(&http.DefaultClient).Elem(),

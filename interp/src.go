@@ -64,10 +64,6 @@ func (interp *Interpreter) importSrcFile(rPath, path, alias string) error {
 		}
 		rootNodes = append(rootNodes, root)
 
-		if interp.astDot {
-			root.astDot(dotX(), name)
-		}
-
 		subRPath := effectivePkg(rPath, path)
 		if err = interp.gta(root, subRPath); err != nil {
 			return err
@@ -87,10 +83,6 @@ func (interp *Interpreter) importSrcFile(rPath, path, alias string) error {
 	if pkgName != alias {
 		interp.scopes[alias] = interp.scopes[pkgName]
 		delete(interp.scopes, pkgName)
-	}
-
-	if interp.noRun {
-		return nil
 	}
 
 	interp.resizeFrame()

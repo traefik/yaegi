@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["net/smtp"] = map[string]reflect.Value{
+	Symbols["net/smtp"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"CRAMMD5Auth": reflect.ValueOf(smtp.CRAMMD5Auth),
 		"Dial":        reflect.ValueOf(smtp.Dial),

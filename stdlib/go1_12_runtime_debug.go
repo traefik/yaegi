@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["runtime/debug"] = map[string]reflect.Value{
+	Symbols["runtime/debug"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"FreeOSMemory":    reflect.ValueOf(debug.FreeOSMemory),
 		"PrintStack":      reflect.ValueOf(debug.PrintStack),

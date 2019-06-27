@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["os/exec"] = map[string]reflect.Value{
+	Symbols["os/exec"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Command":        reflect.ValueOf(exec.Command),
 		"CommandContext": reflect.ValueOf(exec.CommandContext),

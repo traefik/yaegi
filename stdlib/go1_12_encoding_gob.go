@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["encoding/gob"] = map[string]reflect.Value{
+	Symbols["encoding/gob"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"NewDecoder":   reflect.ValueOf(gob.NewDecoder),
 		"NewEncoder":   reflect.ValueOf(gob.NewEncoder),

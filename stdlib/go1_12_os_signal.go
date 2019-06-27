@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["os/signal"] = map[string]reflect.Value{
+	Symbols["os/signal"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Ignore":  reflect.ValueOf(signal.Ignore),
 		"Ignored": reflect.ValueOf(signal.Ignored),

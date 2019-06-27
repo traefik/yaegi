@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["unsafe"] = map[string]reflect.Value{
+	Symbols["unsafe"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 
 		// type definitions

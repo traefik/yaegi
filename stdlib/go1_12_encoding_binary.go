@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["encoding/binary"] = map[string]reflect.Value{
+	Symbols["encoding/binary"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"BigEndian":      reflect.ValueOf(&binary.BigEndian).Elem(),
 		"LittleEndian":   reflect.ValueOf(&binary.LittleEndian).Elem(),

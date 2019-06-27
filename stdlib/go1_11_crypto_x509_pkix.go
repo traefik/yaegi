@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["crypto/x509/pkix"] = map[string]reflect.Value{
+	Symbols["crypto/x509/pkix"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 
 		// type definitions

@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["math"] = map[string]reflect.Value{
+	Symbols["math"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Abs":                    reflect.ValueOf(math.Abs),
 		"Acos":                   reflect.ValueOf(math.Acos),

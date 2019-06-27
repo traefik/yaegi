@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["encoding/asn1"] = map[string]reflect.Value{
+	Symbols["encoding/asn1"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ClassApplication":     reflect.ValueOf(asn1.ClassApplication),
 		"ClassContextSpecific": reflect.ValueOf(asn1.ClassContextSpecific),

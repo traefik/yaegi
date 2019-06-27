@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Value["compress/flate"] = map[string]reflect.Value{
+	Symbols["compress/flate"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"BestCompression":    reflect.ValueOf(flate.BestCompression),
 		"BestSpeed":          reflect.ValueOf(flate.BestSpeed),
