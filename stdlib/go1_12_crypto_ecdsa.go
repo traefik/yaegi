@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["crypto/ecdsa"] = map[string]reflect.Value{
+	Symbols["crypto/ecdsa"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"GenerateKey": reflect.ValueOf(ecdsa.GenerateKey),
 		"Sign":        reflect.ValueOf(ecdsa.Sign),

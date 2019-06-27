@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["encoding/csv"] = map[string]reflect.Value{
+	Symbols["encoding/csv"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ErrBareQuote":     reflect.ValueOf(&csv.ErrBareQuote).Elem(),
 		"ErrFieldCount":    reflect.ValueOf(&csv.ErrFieldCount).Elem(),

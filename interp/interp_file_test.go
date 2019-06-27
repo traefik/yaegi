@@ -53,8 +53,8 @@ func runCheck(t *testing.T, p string) {
 
 	i := interp.New()
 	i.Name = p
-	i.Use(interp.ExportValue)
-	i.Use(stdlib.Value)
+	i.Use(interp.Symbols)
+	i.Use(stdlib.Symbols)
 
 	_, err = i.Eval(string(src))
 	if errWanted {

@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["unicode"] = map[string]reflect.Value{
+	Symbols["unicode"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ASCII_Hex_Digit":                    reflect.ValueOf(&unicode.ASCII_Hex_Digit).Elem(),
 		"Adlam":                              reflect.ValueOf(&unicode.Adlam).Elem(),

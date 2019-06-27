@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["encoding"] = map[string]reflect.Value{
+	Symbols["encoding"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 
 		// type definitions

@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["text/template"] = map[string]reflect.Value{
+	Symbols["text/template"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"HTMLEscape":       reflect.ValueOf(template.HTMLEscape),
 		"HTMLEscapeString": reflect.ValueOf(template.HTMLEscapeString),

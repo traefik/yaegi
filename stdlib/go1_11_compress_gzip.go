@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["compress/gzip"] = map[string]reflect.Value{
+	Symbols["compress/gzip"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"BestCompression":    reflect.ValueOf(gzip.BestCompression),
 		"BestSpeed":          reflect.ValueOf(gzip.BestSpeed),

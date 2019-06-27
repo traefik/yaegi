@@ -53,8 +53,8 @@ type frame struct {
 	recovered interface{}       // to handle panic recover
 }
 
-// PkgSet stores the map of external values per package
-type PkgSet map[string]map[string]reflect.Value
+// Exports stores the map of external values per package
+type Exports map[string]map[string]reflect.Value
 
 // opt stores interpreter options
 type opt struct {
@@ -73,7 +73,7 @@ type Interpreter struct {
 	fset     *token.FileSet    // fileset to locate node in source code
 	universe *scope            // interpreter global level scope
 	scopes   map[string]*scope // package level scopes, indexed by package name
-	binValue PkgSet            // runtime binary values used in interpreter
+	binPkg   Exports           // runtime binary values used in interpreter
 }
 
 const (
@@ -81,8 +81,8 @@ const (
 	selfPath = "github.com/containous/yaegi/interp"
 )
 
-// ExportValue exposes interpreter values
-var ExportValue = PkgSet{
+// Symbols exposes interpreter values
+var Symbols = Exports{
 	selfPath: map[string]reflect.Value{
 		"New": reflect.ValueOf(New),
 
@@ -91,14 +91,14 @@ var ExportValue = PkgSet{
 	},
 }
 
+func init() { Symbols[selfPath]["Symbols"] = reflect.ValueOf(Symbols) }
+
 // _error is a wrapper of error interface type
 type _error struct {
 	WError func() string
 }
 
 func (w _error) Error() string { return w.WError() }
-
-func init() { ExportValue[selfPath]["ExportValue"] = reflect.ValueOf(ExportValue) }
 
 // Walk traverses AST n in depth first order, call cbin function
 // at node entry and cbout function at node exit.
@@ -121,7 +121,7 @@ func New(options ...func(*Interpreter)) *Interpreter {
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
 		scopes:   map[string]*scope{},
-		binValue: PkgSet{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
+		binPkg:   Exports{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
 		frame:    &frame{data: []reflect.Value{}},
 	}
 
@@ -147,54 +147,54 @@ func CfgDot(interp *Interpreter) { interp.cfgDot = true }
 func NoRun(interp *Interpreter) { interp.noRun = true }
 
 func initUniverse() *scope {
-	sc := &scope{global: true, sym: symMap{
+	sc := &scope{global: true, sym: map[string]*symbol{
 		// predefined Go types
-		"bool":        &symbol{kind: typeSym, typ: &itype{cat: boolT, name: "bool"}},
-		"byte":        &symbol{kind: typeSym, typ: &itype{cat: byteT, name: "byte"}},
-		"complex64":   &symbol{kind: typeSym, typ: &itype{cat: complex64T, name: "complex64"}},
-		"complex128":  &symbol{kind: typeSym, typ: &itype{cat: complex128T, name: "complex128"}},
-		"error":       &symbol{kind: typeSym, typ: &itype{cat: errorT, name: "error"}},
-		"float32":     &symbol{kind: typeSym, typ: &itype{cat: float32T, name: "float32"}},
-		"float64":     &symbol{kind: typeSym, typ: &itype{cat: float64T, name: "float64"}},
-		"int":         &symbol{kind: typeSym, typ: &itype{cat: intT, name: "int"}},
-		"int8":        &symbol{kind: typeSym, typ: &itype{cat: int8T, name: "int8"}},
-		"int16":       &symbol{kind: typeSym, typ: &itype{cat: int16T, name: "int16"}},
-		"int32":       &symbol{kind: typeSym, typ: &itype{cat: int32T, name: "int32"}},
-		"int64":       &symbol{kind: typeSym, typ: &itype{cat: int64T, name: "int64"}},
-		"interface{}": &symbol{kind: typeSym, typ: &itype{cat: interfaceT}},
-		"rune":        &symbol{kind: typeSym, typ: &itype{cat: runeT, name: "rune"}},
-		"string":      &symbol{kind: typeSym, typ: &itype{cat: stringT, name: "string"}},
-		"uint":        &symbol{kind: typeSym, typ: &itype{cat: uintT, name: "uint"}},
-		"uint8":       &symbol{kind: typeSym, typ: &itype{cat: uint8T, name: "uint8"}},
-		"uint16":      &symbol{kind: typeSym, typ: &itype{cat: uint16T, name: "uint16"}},
-		"uint32":      &symbol{kind: typeSym, typ: &itype{cat: uint32T, name: "uint32"}},
-		"uint64":      &symbol{kind: typeSym, typ: &itype{cat: uint64T, name: "uint64"}},
-		"uintptr":     &symbol{kind: typeSym, typ: &itype{cat: uintptrT, name: "uintptr"}},
+		"bool":        {kind: typeSym, typ: &itype{cat: boolT, name: "bool"}},
+		"byte":        {kind: typeSym, typ: &itype{cat: byteT, name: "byte"}},
+		"complex64":   {kind: typeSym, typ: &itype{cat: complex64T, name: "complex64"}},
+		"complex128":  {kind: typeSym, typ: &itype{cat: complex128T, name: "complex128"}},
+		"error":       {kind: typeSym, typ: &itype{cat: errorT, name: "error"}},
+		"float32":     {kind: typeSym, typ: &itype{cat: float32T, name: "float32"}},
+		"float64":     {kind: typeSym, typ: &itype{cat: float64T, name: "float64"}},
+		"int":         {kind: typeSym, typ: &itype{cat: intT, name: "int"}},
+		"int8":        {kind: typeSym, typ: &itype{cat: int8T, name: "int8"}},
+		"int16":       {kind: typeSym, typ: &itype{cat: int16T, name: "int16"}},
+		"int32":       {kind: typeSym, typ: &itype{cat: int32T, name: "int32"}},
+		"int64":       {kind: typeSym, typ: &itype{cat: int64T, name: "int64"}},
+		"interface{}": {kind: typeSym, typ: &itype{cat: interfaceT}},
+		"rune":        {kind: typeSym, typ: &itype{cat: runeT, name: "rune"}},
+		"string":      {kind: typeSym, typ: &itype{cat: stringT, name: "string"}},
+		"uint":        {kind: typeSym, typ: &itype{cat: uintT, name: "uint"}},
+		"uint8":       {kind: typeSym, typ: &itype{cat: uint8T, name: "uint8"}},
+		"uint16":      {kind: typeSym, typ: &itype{cat: uint16T, name: "uint16"}},
+		"uint32":      {kind: typeSym, typ: &itype{cat: uint32T, name: "uint32"}},
+		"uint64":      {kind: typeSym, typ: &itype{cat: uint64T, name: "uint64"}},
+		"uintptr":     {kind: typeSym, typ: &itype{cat: uintptrT, name: "uintptr"}},
 
 		// predefined Go constants
-		"false": &symbol{kind: constSym, typ: &itype{cat: boolT, name: "bool"}, rval: reflect.ValueOf(false)},
-		"true":  &symbol{kind: constSym, typ: &itype{cat: boolT, name: "bool"}, rval: reflect.ValueOf(true)},
-		"iota":  &symbol{kind: constSym, typ: &itype{cat: intT}},
+		"false": {kind: constSym, typ: &itype{cat: boolT, name: "bool"}, rval: reflect.ValueOf(false)},
+		"true":  {kind: constSym, typ: &itype{cat: boolT, name: "bool"}, rval: reflect.ValueOf(true)},
+		"iota":  {kind: constSym, typ: &itype{cat: intT}},
 
 		// predefined Go zero value
-		"nil": &symbol{typ: &itype{cat: nilT, untyped: true}},
+		"nil": {typ: &itype{cat: nilT, untyped: true}},
 
 		// predefined Go builtins
-		"append":  &symbol{kind: bltnSym, builtin: _append},
-		"cap":     &symbol{kind: bltnSym, builtin: _cap},
-		"close":   &symbol{kind: bltnSym, builtin: _close},
-		"complex": &symbol{kind: bltnSym, builtin: _complex},
-		"imag":    &symbol{kind: bltnSym, builtin: _imag},
-		"copy":    &symbol{kind: bltnSym, builtin: _copy},
-		"delete":  &symbol{kind: bltnSym, builtin: _delete},
-		"len":     &symbol{kind: bltnSym, builtin: _len},
-		"make":    &symbol{kind: bltnSym, builtin: _make},
-		"new":     &symbol{kind: bltnSym, builtin: _new},
-		"panic":   &symbol{kind: bltnSym, builtin: _panic},
-		"print":   &symbol{kind: bltnSym, builtin: _print},
-		"println": &symbol{kind: bltnSym, builtin: _println},
-		"real":    &symbol{kind: bltnSym, builtin: _real},
-		"recover": &symbol{kind: bltnSym, builtin: _recover},
+		"append":  {kind: bltnSym, builtin: _append},
+		"cap":     {kind: bltnSym, builtin: _cap},
+		"close":   {kind: bltnSym, builtin: _close},
+		"complex": {kind: bltnSym, builtin: _complex},
+		"imag":    {kind: bltnSym, builtin: _imag},
+		"copy":    {kind: bltnSym, builtin: _copy},
+		"delete":  {kind: bltnSym, builtin: _delete},
+		"len":     {kind: bltnSym, builtin: _len},
+		"make":    {kind: bltnSym, builtin: _make},
+		"new":     {kind: bltnSym, builtin: _new},
+		"panic":   {kind: bltnSym, builtin: _panic},
+		"print":   {kind: bltnSym, builtin: _print},
+		"println": {kind: bltnSym, builtin: _println},
+		"real":    {kind: bltnSym, builtin: _real},
+		"recover": {kind: bltnSym, builtin: _recover},
 	}}
 	return sc
 }
@@ -297,7 +297,7 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 
 // getWrapper returns the wrapper type of the corresponding interface, or nil if not found
 func (interp *Interpreter) getWrapper(t reflect.Type) reflect.Type {
-	if p, ok := interp.binValue[t.PkgPath()]; ok {
+	if p, ok := interp.binPkg[t.PkgPath()]; ok {
 		return p["_"+t.Name()].Type().Elem()
 	}
 	return nil
@@ -305,9 +305,9 @@ func (interp *Interpreter) getWrapper(t reflect.Type) reflect.Type {
 
 // Use loads binary runtime symbols in the interpreter context so
 // they can be used in interpreted code
-func (interp *Interpreter) Use(values PkgSet) {
+func (interp *Interpreter) Use(values Exports) {
 	for k, v := range values {
-		interp.binValue[k] = v
+		interp.binPkg[k] = v
 	}
 }
 

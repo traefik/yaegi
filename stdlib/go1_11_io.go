@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["io"] = map[string]reflect.Value{
+	Symbols["io"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Copy":             reflect.ValueOf(io.Copy),
 		"CopyBuffer":       reflect.ValueOf(io.CopyBuffer),

@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["image/color"] = map[string]reflect.Value{
+	Symbols["image/color"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Alpha16Model": reflect.ValueOf(&color.Alpha16Model).Elem(),
 		"AlphaModel":   reflect.ValueOf(&color.AlphaModel).Elem(),

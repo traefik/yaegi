@@ -9,7 +9,7 @@ import (
 func main() {
 	log.SetFlags(log.Lshortfile)
 	i := interp.New()
-	i.Use(interp.ExportValue)
+	i.Use(interp.Symbols)
 	if _, err := i.Eval(`import "github.com/containous/yaegi/interp"`); err != nil {
 		log.Fatal(err)
 	}

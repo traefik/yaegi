@@ -288,7 +288,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				ipath = n.child[0].rval.String()
 				name = path.Base(ipath)
 			}
-			if interp.binValue[ipath] != nil && name != "." {
+			if interp.binPkg[ipath] != nil && name != "." {
 				sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT}, path: ipath}
 			} else {
 				sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT}, path: ipath}
@@ -1081,7 +1081,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				// Resolve binary package symbol: a type or a value
 				name := n.child[1].ident
 				pkg := n.child[0].sym.path
-				if s, ok := interp.binValue[pkg][name]; ok {
+				if s, ok := interp.binPkg[pkg][name]; ok {
 					if isBinType(s) {
 						n.kind = rtypeExpr
 						n.typ = &itype{cat: valueT, rtype: s.Type().Elem()}
@@ -1453,7 +1453,7 @@ func (n *node) isType(sc *scope) bool {
 	case selectorExpr:
 		pkg, name := n.child[0].ident, n.child[1].ident
 		if sym, _, ok := sc.lookup(pkg); ok {
-			if p, ok := n.interp.binValue[sym.path]; ok && isBinType(p[name]) {
+			if p, ok := n.interp.binPkg[sym.path]; ok && isBinType(p[name]) {
 				return true // Imported binary type
 			}
 			if p, ok := n.interp.scopes[pkg]; ok && p.sym[name] != nil && p.sym[name].kind == typeSym {

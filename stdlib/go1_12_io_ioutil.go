@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["io/ioutil"] = map[string]reflect.Value{
+	Symbols["io/ioutil"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Discard":   reflect.ValueOf(&ioutil.Discard).Elem(),
 		"NopCloser": reflect.ValueOf(ioutil.NopCloser),

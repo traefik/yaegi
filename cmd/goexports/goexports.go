@@ -39,7 +39,7 @@ import (
 )
 
 func init() {
-	Value["{{.PkgName}}"] = map[string]reflect.Value{
+	Symbols["{{.PkgName}}"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		{{range $key, $value := .Val -}}
 			{{- if $value.Addr -}}

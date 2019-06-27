@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["html/template"] = map[string]reflect.Value{
+	Symbols["html/template"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ErrAmbigContext":      reflect.ValueOf(template.ErrAmbigContext),
 		"ErrBadHTML":           reflect.ValueOf(template.ErrBadHTML),

@@ -79,8 +79,8 @@ func TestInterpConsistencyBuild(t *testing.T) {
 
 			i := interp.New()
 			i.Name = filePath
-			i.Use(stdlib.Value)
-			i.Use(interp.ExportValue)
+			i.Use(stdlib.Symbols)
+			i.Use(interp.Symbols)
 
 			_, err = i.Eval(string(src))
 			if err != nil {
@@ -174,7 +174,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 
 			i := interp.New()
 			i.Name = filePath
-			i.Use(stdlib.Value)
+			i.Use(stdlib.Symbols)
 
 			_, errEval := i.Eval(string(src))
 			if errEval == nil {

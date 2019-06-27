@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["crypto/md5"] = map[string]reflect.Value{
+	Symbols["crypto/md5"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"BlockSize": reflect.ValueOf(md5.BlockSize),
 		"New":       reflect.ValueOf(md5.New),

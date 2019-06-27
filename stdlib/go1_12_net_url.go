@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["net/url"] = map[string]reflect.Value{
+	Symbols["net/url"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Parse":           reflect.ValueOf(url.Parse),
 		"ParseQuery":      reflect.ValueOf(url.ParseQuery),

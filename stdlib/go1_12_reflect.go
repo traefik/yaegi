@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	Value["reflect"] = map[string]reflect.Value{
+	Symbols["reflect"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Append":          reflect.ValueOf(reflect.Append),
 		"AppendSlice":     reflect.ValueOf(reflect.AppendSlice),

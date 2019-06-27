@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Value["os"] = map[string]reflect.Value{
+	Symbols["os"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Args":              reflect.ValueOf(&os.Args).Elem(),
 		"Chdir":             reflect.ValueOf(os.Chdir),

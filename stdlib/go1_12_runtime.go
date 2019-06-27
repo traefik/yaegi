@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["runtime"] = map[string]reflect.Value{
+	Symbols["runtime"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"BlockProfile":            reflect.ValueOf(runtime.BlockProfile),
 		"Breakpoint":              reflect.ValueOf(runtime.Breakpoint),

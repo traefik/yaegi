@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Value["image"] = map[string]reflect.Value{
+	Symbols["image"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Black":                  reflect.ValueOf(&image.Black).Elem(),
 		"Decode":                 reflect.ValueOf(image.Decode),

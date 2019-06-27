@@ -363,7 +363,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			}
 			switch sym.typ.cat {
 			case binPkgT:
-				pkg := interp.binValue[sym.path]
+				pkg := interp.binPkg[sym.path]
 				if v, ok := pkg[name]; ok {
 					t.cat = valueT
 					t.rtype = v.Type()

@@ -272,6 +272,8 @@ var actions = [...]string{
 	aNegate:       "-",
 	aNot:          "!",
 	aNotEqual:     "!=",
+	aOr:           "|",
+	aOrAssign:     "|=",
 	aQuo:          "/",
 	aQuoAssign:    "/=",
 	aRange:        "range",

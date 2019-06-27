@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["bytes"] = map[string]reflect.Value{
+	Symbols["bytes"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Compare":         reflect.ValueOf(bytes.Compare),
 		"Contains":        reflect.ValueOf(bytes.Contains),

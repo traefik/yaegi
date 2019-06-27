@@ -34,8 +34,8 @@ func main() {
 	log.SetFlags(log.Lshortfile)
 
 	i := interp.New()
-	i.Use(stdlib.Value)
-	i.Use(interp.ExportValue)
+	i.Use(stdlib.Symbols)
+	i.Use(interp.Symbols)
 	if astDot {
 		interp.AstDot(i)
 	}

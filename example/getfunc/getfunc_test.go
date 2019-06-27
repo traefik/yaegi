@@ -10,7 +10,7 @@ import (
 
 func TestGetFunc(t *testing.T) {
 	i := interp.New(interp.GoPath("./_gopath/"))
-	i.Use(stdlib.Value)
+	i.Use(stdlib.Symbols)
 
 	if _, err := i.Eval(`import "github.com/foo/bar"`); err != nil {
 		t.Fatal(err)
