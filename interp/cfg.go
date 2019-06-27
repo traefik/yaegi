@@ -470,47 +470,11 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case defineXStmt:
 			wireChild(n)
-			l := len(n.child) - 1
-			var types []*itype
-			switch n.child[l].kind {
-			case callExpr:
-				if funtype := n.child[l].child[0].typ; funtype.cat == valueT {
-					// Handle functions imported from runtime
-					for i := 0; i < funtype.rtype.NumOut(); i++ {
-						types = append(types, &itype{cat: valueT, rtype: funtype.rtype.Out(i)})
-					}
-				} else {
-					types = funtype.ret
-				}
-				n.gen = nop
-
-			case indexExpr:
-				types = append(types, n.child[l].child[0].typ.val, sc.getType("bool"))
-				n.child[l].gen = getIndexMap2
-				n.gen = nop
-
-			case typeAssertExpr:
-				types = append(types, n.child[l].child[1].typ, sc.getType("bool"))
-				n.child[l].gen = typeAssert2
-				n.gen = nop
-
-			case unaryExpr:
-				if n.child[l].action == aRecv {
-					types = append(types, n.child[l].child[0].typ.val, sc.getType("bool"))
-					n.child[l].gen = recv2
-					n.gen = nop
-				}
-
-			default:
-				err = n.cfgErrorf("unsupported assign expression")
-				return
+			if sc.def == nil {
+				// in global scope, type definition already handled by GTA
+				break
 			}
-			for i, t := range types {
-				index := sc.add(t)
-				sc.sym[n.child[i].ident] = &symbol{index: index, kind: varSym, typ: t}
-				n.child[i].typ = t
-				n.child[i].findex = index
-			}
+			err = compDefineX(sc, n)
 
 		case binaryExpr:
 			wireChild(n)
@@ -1365,6 +1329,57 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 		sc.pop()
 	}
 	return initNodes, err
+}
+
+func compDefineX(sc *scope, n *node) error {
+	l := len(n.child) - 1
+	types := []*itype{}
+
+	switch n.child[l].kind {
+	case callExpr:
+		funtype, err := nodeType(n.interp, sc, n.child[l].child[0])
+		if err != nil {
+			return err
+		}
+		if funtype.cat == valueT {
+			// Handle functions imported from runtime
+			for i := 0; i < funtype.rtype.NumOut(); i++ {
+				types = append(types, &itype{cat: valueT, rtype: funtype.rtype.Out(i)})
+			}
+		} else {
+			types = funtype.ret
+		}
+		n.gen = nop
+
+	case indexExpr:
+		types = append(types, n.child[l].child[0].typ.val, sc.getType("bool"))
+		n.child[l].gen = getIndexMap2
+		n.gen = nop
+
+	case typeAssertExpr:
+		types = append(types, n.child[l].child[1].typ, sc.getType("bool"))
+		n.child[l].gen = typeAssert2
+		n.gen = nop
+
+	case unaryExpr:
+		if n.child[l].action == aRecv {
+			types = append(types, n.child[l].child[0].typ.val, sc.getType("bool"))
+			n.child[l].gen = recv2
+			n.gen = nop
+		}
+
+	default:
+		return n.cfgErrorf("unsupported assign expression")
+	}
+
+	for i, t := range types {
+		index := sc.add(t)
+		sc.sym[n.child[i].ident] = &symbol{index: index, kind: varSym, typ: t}
+		n.child[i].typ = t
+		n.child[i].findex = index
+	}
+
+	return nil
 }
 
 // TODO used for allocation optimization, temporarily disabled

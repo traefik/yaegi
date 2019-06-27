@@ -66,8 +66,8 @@ type opt struct {
 
 // Interpreter contains global resources and state
 type Interpreter struct {
+	Name string // program name
 	opt
-	Name     string            // program name
 	frame    *frame            // program data storage during execution
 	nindex   int               // next node index
 	fset     *token.FileSet    // fileset to locate node in source code
