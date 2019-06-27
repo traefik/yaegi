@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["text/scanner"] = map[string]reflect.Value{
+	Symbols["text/scanner"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Char":           reflect.ValueOf(scanner.Char),
 		"Comment":        reflect.ValueOf(scanner.Comment),

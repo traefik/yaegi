@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["go/build"] = map[string]reflect.Value{
+	Symbols["go/build"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"AllowBinary":   reflect.ValueOf(build.AllowBinary),
 		"ArchChar":      reflect.ValueOf(build.ArchChar),

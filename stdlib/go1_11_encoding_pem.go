@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["encoding/pem"] = map[string]reflect.Value{
+	Symbols["encoding/pem"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Decode":         reflect.ValueOf(pem.Decode),
 		"Encode":         reflect.ValueOf(pem.Encode),

@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["go/printer"] = map[string]reflect.Value{
+	Symbols["go/printer"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Fprint":    reflect.ValueOf(printer.Fprint),
 		"RawFormat": reflect.ValueOf(printer.RawFormat),

@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Value["crypto/elliptic"] = map[string]reflect.Value{
+	Symbols["crypto/elliptic"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"GenerateKey": reflect.ValueOf(elliptic.GenerateKey),
 		"Marshal":     reflect.ValueOf(elliptic.Marshal),

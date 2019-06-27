@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["mime/quotedprintable"] = map[string]reflect.Value{
+	Symbols["mime/quotedprintable"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"NewReader": reflect.ValueOf(quotedprintable.NewReader),
 		"NewWriter": reflect.ValueOf(quotedprintable.NewWriter),

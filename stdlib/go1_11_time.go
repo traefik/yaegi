@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["time"] = map[string]reflect.Value{
+	Symbols["time"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ANSIC":                  reflect.ValueOf(time.ANSIC),
 		"After":                  reflect.ValueOf(time.After),

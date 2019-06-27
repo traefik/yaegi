@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["math/bits"] = map[string]reflect.Value{
+	Symbols["math/bits"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"LeadingZeros":    reflect.ValueOf(bits.LeadingZeros),
 		"LeadingZeros16":  reflect.ValueOf(bits.LeadingZeros16),

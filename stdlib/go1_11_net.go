@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Value["net"] = map[string]reflect.Value{
+	Symbols["net"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"CIDRMask":                   reflect.ValueOf(net.CIDRMask),
 		"DefaultResolver":            reflect.ValueOf(&net.DefaultResolver).Elem(),
