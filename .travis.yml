@@ -1,0 +1,48 @@
+language: go
+
+dist: xenial
+
+env:
+  - GO111MODULE=on
+
+notifications:
+  email:
+    on_success: never
+    on_failure: change
+
+go:
+  - 1.11.x
+  - 1.12.x
+#  - 1.x
+
+go_import_path: github.com/containous/yaegi
+
+before_install:
+  # Install linters and misspell
+  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin v1.16.0
+  - golangci-lint --version
+
+install:
+  - echo "TRAVIS_GO_VERSION=$TRAVIS_GO_VERSION"
+  - go mod download
+
+before_script:
+  - rm -f interp/op.go interp/interp_test.go
+  - make generate
+  - git update-index -q --refresh
+  - CHANGED=$(git diff-index --name-only HEAD --)
+  - test -z "$CHANGED" || echo $CHANGED
+  - test -z "$CHANGED"
+
+script:
+  - make check
+  - go build -v ./...
+  - GO111MODULE=off go test -v ./...
+
+deploy:
+  - provider: script
+    skip_cleanup: true
+    script: curl -sL https://git.io/goreleaser | bash
+    on:
+      tags: true
+      condition: $TRAVIS_GO_VERSION =~ ^1\.x$
