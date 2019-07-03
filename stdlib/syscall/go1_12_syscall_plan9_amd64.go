@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["syscall"] = map[string]reflect.Value{
+	Symbols["syscall"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Await":               reflect.ValueOf(syscall.Await),
 		"Bind":                reflect.ValueOf(syscall.Bind),
