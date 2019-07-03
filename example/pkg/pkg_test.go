@@ -76,7 +76,7 @@ func TestPackages(t *testing.T) {
 			}
 
 			// Init go interpreter
-			i := interp.New(interp.GoPath(goPath))
+			i := interp.New(interp.Options{GoPath: goPath})
 			i.Use(stdlib.Symbols) // Use binary standard library
 
 			// Load pkg from sources
@@ -118,7 +118,7 @@ func TestPackagesError(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 
 			// Init go interpreter
-			i := interp.New(interp.GoPath(test.goPath))
+			i := interp.New(interp.Options{GoPath: test.goPath})
 			i.Use(stdlib.Symbols) // Use binary standard library
 
 			// Load pkg from sources

@@ -27,7 +27,7 @@ type testCase struct {
 }
 
 func TestEvalArithmetic(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{desc: "add_II", src: "2 + 3", res: "5"},
 		{desc: "add_FI", src: "2.3 + 3", res: "5.3"},
@@ -53,7 +53,7 @@ func TestEvalArithmetic(t *testing.T) {
 }
 
 func TestEvalAssign(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{src: `a := "Hello"; a += " world"`, res: "Hello world"},
 		{src: `b := "Hello"; b += 1`, err: "1:42: illegal operand types for '+=' operator"},
@@ -66,7 +66,7 @@ func TestEvalAssign(t *testing.T) {
 }
 
 func TestEvalBuiltin(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{src: `a := []int{}; a = append(a, 1); a`, res: "[1]"},
 		{src: `a := []int{1}; a = append(a, 2, 3); a`, res: "[1 2 3]"},
@@ -78,7 +78,7 @@ func TestEvalBuiltin(t *testing.T) {
 }
 
 func TestEvalDecl(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{pre: func() { eval(t, i, "var i int = 2") }, src: "i", res: "2"},
 		{pre: func() { eval(t, i, "var j, k int = 2, 3") }, src: "j", res: "2"},
@@ -90,7 +90,7 @@ func TestEvalDecl(t *testing.T) {
 }
 
 func TestEvalFunc(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{src: `(func () string {return "ok"})()`, res: "ok"},
 		{src: `(func () (res string) {res = "ok"; return})()`, res: "ok"},
@@ -101,7 +101,7 @@ func TestEvalFunc(t *testing.T) {
 }
 
 func TestEvalImport(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	i.Use(stdlib.Symbols)
 	runTests(t, i, []testCase{
 		{pre: func() { eval(t, i, `import "time"`) }, src: "2 * time.Second", res: "2s"},
@@ -109,7 +109,7 @@ func TestEvalImport(t *testing.T) {
 }
 
 func TestEvalNil(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	i.Use(stdlib.Symbols)
 	runTests(t, i, []testCase{
 		{desc: "assign nil", src: "a := nil", err: "1:28: use of untyped nil"},
@@ -157,7 +157,7 @@ func TestEvalNil(t *testing.T) {
 }
 
 func TestEvalStruct0(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{
 			desc: "func field in struct",
@@ -205,7 +205,7 @@ func TestEvalStruct0(t *testing.T) {
 }
 
 func TestEvalStruct1(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	eval(t, i, `
 type Fromage struct {
 	Name string
@@ -229,7 +229,7 @@ func f() string {
 }
 
 func TestEvalComposite0(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	eval(t, i, `
 type T struct {
 	a, b, c, d, e, f, g, h, i, j, k, l, m, n string
@@ -249,7 +249,7 @@ var a = T{
 }
 
 func TestEvalCompositeBin0(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	i.Use(stdlib.Symbols)
 	eval(t, i, `
 import (
@@ -270,7 +270,7 @@ func Foo() {
 }
 
 func TestEvalComparison(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{src: `"hhh" > "ggg"`, res: "true"},
 		{
@@ -289,14 +289,14 @@ func TestEvalComparison(t *testing.T) {
 }
 
 func TestEvalCompositeArray(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{src: "a := []int{1, 2, 7: 20, 30}", res: "[1 2 0 0 0 0 0 20 30]"},
 	})
 }
 
 func TestEvalUnary(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{src: "a := -1", res: "-1"},
 		{src: "b := +1", res: "1", skip: "BUG"},
@@ -305,7 +305,7 @@ func TestEvalUnary(t *testing.T) {
 }
 
 func TestEvalMethod(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	eval(t, i, `
 		type Root struct {
 			Name string
@@ -337,7 +337,7 @@ func TestEvalMethod(t *testing.T) {
 }
 
 func TestEvalChan(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{
 			src: `(func () string {

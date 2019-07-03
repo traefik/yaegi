@@ -3,11 +3,11 @@ package interp
 import (
 	"bufio"
 	"fmt"
-	"go/build"
 	"go/scanner"
 	"go/token"
 	"os"
 	"reflect"
+	"strconv"
 )
 
 // Interpreter node structure for AST and CFG
@@ -87,7 +87,7 @@ var Symbols = Exports{
 		"New": reflect.ValueOf(New),
 
 		"Interpreter": reflect.ValueOf((*Interpreter)(nil)),
-		"Opt":         reflect.ValueOf((*opt)(nil)),
+		"Options":     reflect.ValueOf((*Options)(nil)),
 	},
 }
 
@@ -114,10 +114,16 @@ func (n *node) Walk(in func(n *node) bool, out func(n *node)) {
 	}
 }
 
+// Options are the interpreter options.
+type Options struct {
+	// GoPath sets GOPATH for the interpreter
+	GoPath string
+}
+
 // New returns a new interpreter
-func New(options ...func(*Interpreter)) *Interpreter {
+func New(options Options) *Interpreter {
 	i := Interpreter{
-		opt:      opt{goPath: build.Default.GOPATH},
+		opt:      opt{goPath: getGoPath(options)},
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
 		scopes:   map[string]*scope{},
@@ -125,26 +131,29 @@ func New(options ...func(*Interpreter)) *Interpreter {
 		frame:    &frame{data: []reflect.Value{}},
 	}
 
-	for _, option := range options {
-		option(&i)
-	}
+	// AstDot activates AST graph display for the interpreter
+	i.opt.astDot, _ = strconv.ParseBool(os.Getenv("YAEGI_AST_DOT"))
+
+	// CfgDot activates AST graph display for the interpreter
+	i.opt.cfgDot, _ = strconv.ParseBool(os.Getenv("YAEGI_CFG_DOT"))
+
+	// NoRun disable the execution (but not the compilation) in the interpreter
+	i.opt.noRun, _ = strconv.ParseBool(os.Getenv("YAEGI_NO_RUN"))
 
 	return &i
 }
 
-// GoPath sets GOPATH for the interpreter
-func GoPath(s string) func(*Interpreter) {
-	return func(interp *Interpreter) { interp.goPath = s }
+func getGoPath(options Options) string {
+	if options.GoPath != "" {
+		return options.GoPath
+	}
+
+	goPath, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	return goPath
 }
-
-// AstDot activates AST graph display for the interpreter
-func AstDot(interp *Interpreter) { interp.astDot = true }
-
-// CfgDot activates AST graph display for the interpreter
-func CfgDot(interp *Interpreter) { interp.cfgDot = true }
-
-// NoRun disable the execution (but not the compilation) in the interpreter
-func NoRun(interp *Interpreter) { interp.noRun = true }
 
 func initUniverse() *scope {
 	sc := &scope{global: true, sym: map[string]*symbol{

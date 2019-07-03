@@ -51,7 +51,7 @@ func runCheck(t *testing.T, p string) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	i.Name = p
 	i.Use(interp.Symbols)
 	i.Use(stdlib.Symbols)

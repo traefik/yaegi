@@ -8,7 +8,7 @@ import (
 
 func main() {
 	log.SetFlags(log.Lshortfile)
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	if _, err := i.Eval(`func f() (int, int) { return 1, 2 }`); err != nil {
 		log.Fatal(err)
 	}
