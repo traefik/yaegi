@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Value["syscall"] = map[string]reflect.Value{
+	Symbols["syscall"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"AF_ALG":                           reflect.ValueOf(syscall.AF_ALG),
 		"AF_APPLETALK":                     reflect.ValueOf(syscall.AF_APPLETALK),
