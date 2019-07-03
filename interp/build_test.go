@@ -32,7 +32,7 @@ func TestBuildTag(t *testing.T) {
 		{"// +build linux\n// +build i386", false},
 	}
 
-	i := New()
+	i := New(Options{})
 	for _, test := range tests {
 		test := test
 		src := test.src + "\npackage x"

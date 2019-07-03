@@ -195,6 +195,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				} else if n.anc.typ != nil {
 					n.typ = n.anc.typ.val
 				}
+				// FIXME n.typ can be nil.
 				n.typ.untyped = true
 			}
 			// Propagate type to children, to handle implicit types

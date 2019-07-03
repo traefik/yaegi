@@ -77,7 +77,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
-			i := interp.New()
+			i := interp.New(interp.Options{})
 			i.Name = filePath
 			i.Use(stdlib.Symbols)
 			i.Use(interp.Symbols)
@@ -172,7 +172,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			i := interp.New()
+			i := interp.New(interp.Options{})
 			i.Name = filePath
 			i.Use(stdlib.Symbols)
 

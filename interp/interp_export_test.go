@@ -42,7 +42,7 @@ type Wrap struct {
 func (w Wrap) Hello() { w.DoHello() }
 
 func TestInterface(t *testing.T) {
-	i := interp.New()
+	i := interp.New(interp.Options{})
 	// export the Wrap type to the interpreter under virtual "wrap" package
 	i.Use(interp.Exports{
 		"wrap": {
