@@ -107,6 +107,17 @@ func genValue(n *node) func(*frame) reflect.Value {
 	}
 }
 
+func genValueInterfacePtr(n *node) func(*frame) reflect.Value {
+	value := genValue(n)
+	it := reflect.TypeOf((*interface{})(nil)).Elem()
+
+	return func(f *frame) reflect.Value {
+		v := reflect.New(it).Elem()
+		v.Set(value(f))
+		return v.Addr()
+	}
+}
+
 func genValueInterface(n *node) func(*frame) reflect.Value {
 	value := genValue(n)
 
