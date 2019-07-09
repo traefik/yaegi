@@ -308,6 +308,11 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	case identExpr:
 		if sym, _, found := sc.lookup(n.ident); found {
 			t = sym.typ
+			if sym.recursive && t.incomplete {
+				t.incomplete = false
+				t.rtype = reflect.TypeOf((*interface{})(nil)).Elem()
+				sym.typ = t
+			}
 			if t.incomplete && t.node != n {
 				m := t.method
 				if t, err = nodeType(interp, sc, t.node); err != nil {
@@ -388,7 +393,13 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 
 	case structType:
 		t.cat = structT
-		var incomplete bool
+		var incomplete, found bool
+		var sym *symbol
+		if sname := structName(n); sname != "" {
+			if sym, _, found = sc.lookup(sname); found && sym.kind == typeSym {
+				sym.recursive = true
+			}
+		}
 		for _, c := range n.child[0].child {
 			switch {
 			case len(c.child) == 1:
@@ -430,6 +441,14 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	}
 
 	return t, err
+}
+
+// struct name returns the name of a struct type
+func structName(n *node) string {
+	if n.anc.kind == typeSpec {
+		return n.anc.child[0].ident
+	}
+	return ""
 }
 
 // fieldName returns an implicit struct field name according to node kind

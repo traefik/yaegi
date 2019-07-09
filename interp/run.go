@@ -198,6 +198,16 @@ func convert(n *node) {
 	}
 }
 
+func isRecursiveStruct(t *itype) bool {
+	if t.cat == structT && t.rtype.Kind() == reflect.Interface {
+		return true
+	}
+	if t.cat == ptrT {
+		return isRecursiveStruct(t.val)
+	}
+	return false
+}
+
 func assign(n *node) {
 	next := getExec(n.tnext)
 	dvalue := make([]func(*frame) reflect.Value, n.nleft)
@@ -218,6 +228,8 @@ func assign(n *node) {
 		case src.kind == basicLit && src.val == nil:
 			t := dest.typ.TypeOf()
 			svalue[i] = func(*frame) reflect.Value { return reflect.New(t).Elem() }
+		case isRecursiveStruct(dest.typ):
+			svalue[i] = genValueInterfacePtr(src)
 		default:
 			svalue[i] = genValue(src)
 		}
@@ -1071,8 +1083,14 @@ func getIndexSeq(n *node) {
 
 func getPtrIndexSeq(n *node) {
 	index := n.val.([]int)
-	value := genValue(n.child[0])
 	tnext := getExec(n.tnext)
+	var value func(*frame) reflect.Value
+	if isRecursiveStruct(n.child[0].typ) {
+		v := genValue(n.child[0])
+		value = func(f *frame) reflect.Value { return v(f).Elem().Elem() }
+	} else {
+		value = genValue(n.child[0])
+	}
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
@@ -1341,6 +1359,7 @@ func mapLit(n *node) {
 		return next
 	}
 }
+
 func compositeBinMap(n *node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
@@ -1697,9 +1716,12 @@ func _append(n *node) {
 		l := len(args)
 		values := make([]func(*frame) reflect.Value, l)
 		for i, arg := range args {
-			if arg.typ.untyped {
+			switch {
+			case isRecursiveStruct(n.typ.val):
+				values[i] = genValueInterfacePtr(arg)
+			case arg.typ.untyped:
 				values[i] = genValueAs(arg, n.child[1].typ.TypeOf().Elem())
-			} else {
+			default:
 				values[i] = genValue(arg)
 			}
 		}
@@ -1713,9 +1735,14 @@ func _append(n *node) {
 			return next
 		}
 	} else {
-		value0 := genValue(n.child[2])
-		if n.child[2].typ.untyped {
+		var value0 func(*frame) reflect.Value
+		switch {
+		case isRecursiveStruct(n.typ.val):
+			value0 = genValueInterfacePtr(n.child[2])
+		case n.child[2].typ.untyped:
 			value0 = genValueAs(n.child[2], n.child[1].typ.TypeOf().Elem())
+		default:
+			value0 = genValue(n.child[2])
 		}
 
 		n.exec = func(f *frame) bltn {
