@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"go/build"
 	"io/ioutil"
 	"log"
 	"os"
@@ -24,13 +25,15 @@ func main() {
 	args := flag.Args()
 	log.SetFlags(log.Lshortfile)
 
-	i := interp.New(interp.Options{})
+	i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
 	i.Use(stdlib.Symbols)
 	i.Use(interp.Symbols)
 
 	if len(args) > 0 {
 		// Skip first os arg to set command line as expected by interpreted main
 		os.Args = os.Args[1:]
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
 		b, err := ioutil.ReadFile(args[0])
 		if err != nil {
 			log.Fatal("Could not read file: ", args[0])
