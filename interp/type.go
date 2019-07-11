@@ -115,6 +115,7 @@ type itype struct {
 	variadic   bool          // true if type is variadic
 	incomplete bool          // true if type must be parsed again (out of order declarations)
 	untyped    bool          // true for a literal value (string or number)
+	sizedef    bool          // true if array size is computed from type definition
 	node       *node         // root AST node of type definition
 	scope      *scope        // type declaration scope (in case of re-parse incomplete type)
 }
@@ -140,9 +141,14 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	case arrayType:
 		t.cat = arrayT
 		if len(n.child) > 1 {
-			if n.child[0].rval.IsValid() {
+			switch {
+			case n.child[0].rval.IsValid():
+				// constant size
 				t.size = int(n.child[0].rval.Int())
-			} else {
+			case n.child[0].kind == ellipsisExpr:
+				// [...]T expression
+				t.sizedef = true
+			default:
 				if sym, _, ok := sc.lookup(n.child[0].ident); ok {
 					// Resolve symbol to get size value
 					if sym.typ != nil && sym.typ.cat == intT {
@@ -672,7 +678,10 @@ func (t *itype) TypeOf() reflect.Type {
 	}
 
 	if t.incomplete {
-		t, _ = t.finalize()
+		var err error
+		if t, err = t.finalize(); err != nil {
+			panic(err)
+		}
 	}
 
 	switch t.cat {

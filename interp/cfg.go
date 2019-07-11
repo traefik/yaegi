@@ -353,6 +353,10 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					} else {
 						dest.typ = src.typ
 					}
+					if dest.typ.sizedef {
+						dest.typ.size = compositeArrayLen(src)
+						dest.typ.rtype = nil
+					}
 					if sc.global {
 						// Do not overload existings symbols (defined in GTA) in global scope
 						sym, _, _ = sc.lookup(dest.ident)
@@ -363,9 +367,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					dest.val = src.val
 					dest.recv = src.recv
 					dest.findex = sym.index
-					if src.kind == basicLit {
-						sym.rval = src.rval
-					}
+					sym.rval = src.rval
 				} else {
 					sym, level, _ = sc.lookup(dest.ident)
 				}
@@ -394,8 +396,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					}
 				}
 				n.findex = dest.findex
-				n.val = dest.val
-				n.rval = dest.rval
+
 				// Propagate type
 				// TODO: Check that existing destination type matches source type
 				switch {
@@ -1663,4 +1664,19 @@ func compositeGenerator(n *node) (gen bltnGenerator) {
 		}
 	}
 	return
+}
+
+// compositeArrayLen return the litteral array length, computed from definition
+func compositeArrayLen(n *node) int {
+	max := -1
+	for i, c := range n.child[1:] {
+		r := i
+		if c.kind == keyValueExpr {
+			r = int(c.child[0].rval.Int())
+		}
+		if r > max {
+			max = r
+		}
+	}
+	return max + 1
 }
