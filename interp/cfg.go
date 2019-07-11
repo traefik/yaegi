@@ -750,9 +750,13 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case caseBody:
 			wireChild(n)
-			if typeSwichAssign(n) && len(n.child) > 1 {
+			switch {
+			case typeSwichAssign(n) && len(n.child) > 1:
 				n.start = n.child[1].start
-			} else {
+			case len(n.child) == 0:
+				// empty case body: jump to switch node (exit node)
+				n.start = n.anc.anc.anc
+			default:
 				n.start = n.child[0].start
 			}
 
