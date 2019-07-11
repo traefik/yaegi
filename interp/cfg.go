@@ -396,8 +396,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					}
 				}
 				n.findex = dest.findex
-				n.val = dest.val
-				//n.rval = dest.rval
+
 				// Propagate type
 				// TODO: Check that existing destination type matches source type
 				switch {
