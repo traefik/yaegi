@@ -60,6 +60,7 @@ func (interp *Interpreter) gta(root *node, rpath string) error {
 				}
 				sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: index, typ: typ, rval: val}
 				if n.anc.kind == constDecl {
+					sc.sym[dest.ident].kind = constSym
 					iotaValue++
 				}
 			}

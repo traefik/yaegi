@@ -367,9 +367,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					dest.val = src.val
 					dest.recv = src.recv
 					dest.findex = sym.index
-					if src.kind == basicLit {
-						sym.rval = src.rval
-					}
+					sym.rval = src.rval
 				} else {
 					sym, level, _ = sc.lookup(dest.ident)
 				}
@@ -399,7 +397,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				}
 				n.findex = dest.findex
 				n.val = dest.val
-				n.rval = dest.rval
+				//n.rval = dest.rval
 				// Propagate type
 				// TODO: Check that existing destination type matches source type
 				switch {
