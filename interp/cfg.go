@@ -752,6 +752,8 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			wireChild(n)
 			if typeSwichAssign(n) && len(n.child) > 1 {
 				n.start = n.child[1].start
+			} else if len(n.child) == 0 {
+				n.start = n.anc.anc.anc
 			} else {
 				n.start = n.child[0].start
 			}
