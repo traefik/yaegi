@@ -1,3 +1,31 @@
+/*
+Yaegi interprets Go programs.
+
+Yaegi reads Go language programs from its standard input or from a file
+and evaluates them.
+
+If invoked with no arguments, it processes the standard input
+in a Read-Eval-Print-Loop. A prompt is displayed if standard input
+is a terminal.
+
+Given a file, it operates on that file. if the first line starts with
+"#!/usr/bin/env yaegi", and the file has exec permission, then the file
+can be invoked directly from the shell.
+
+In file mode, as in standard Go, files are read entirely, then parsed,
+then evaluated. In REPL mode, each line is parsed and evaluated separately,
+at global level in an implicit main package.
+
+Options:
+    -i
+	   start an interactive REPL after file execution
+
+Debugging support (may be removed at any time):
+  YAEGI_AST_DOT=1
+    Generate and display graphviz dot of AST with dotty(1)
+  YAEGI_CFG_DOT=1
+    Generate and display graphviz dot of CFG with dotty(1)
+*/
 package main
 
 import (
