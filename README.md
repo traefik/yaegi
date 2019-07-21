@@ -2,9 +2,11 @@
 <img width="400" src="doc/images/yaegi.png" alt="Yaegi" title="Yaegi" />
 </p>
 
-[![Build Status](https://semaphoreci.com/api/v1/projects/8a9d3e41-0a4f-408e-a477-3c9c7418314d/2583906/badge.svg)](https://semaphoreci.com/containous/yaegi)
+[![release](https://img.shields.io/github/tag-date/containous/yaegi.svg?label=alpha)](https://github.com/containous/yaegi/releases)
+[![Build Status](https://travis-ci.com/containous/yaegi.svg?branch=master)](https://travis-ci.com/containous/yaegi)
 
-Yaegi is Another Elegant Go Interpreter. It powers executable Go scripts and plugins, in embedded interpreters or interactive shells, on top of the Go runtime.
+Yaegi is Another Elegant Go Interpreter.
+It powers executable Go scripts and plugins, in embedded interpreters or interactive shells, on top of the Go runtime.
 
 ## Features
 
@@ -17,7 +19,7 @@ Yaegi is Another Elegant Go Interpreter. It powers executable Go scripts and plu
 
 ## Install
 
-```console
+```bash
 go get -u github.com/containous/yaegi
 ```
 
@@ -58,9 +60,18 @@ import (
 
 func main() {
 	i := interp.New(interp.Options{})
+
 	i.Use(stdlib.Symbols)
-	i.Eval(`import "fmt"`)
-	i.Eval(`fmt.Println("hello")`)
+
+	_, err := i.Eval(`import "fmt"`)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = i.Eval(`fmt.Println("hello")`)
+	if err != nil {
+		panic(err)
+	}
 }
 ```
 
@@ -69,7 +80,7 @@ func main() {
 The following program is compiled ahead of time, except `bar()` which is interpreted, with the following steps:
 
 1. use of `i.Eval(src)` to evaluate the script in the context of interpreter
-2. use of `v, _ := i.Eval("foo.Bar")` to get the symbol from the interpreter context,  as a `reflect.Value`
+2. use of `v, err := i.Eval("foo.Bar")` to get the symbol from the interpreter context,  as a `reflect.Value`
 3. application of `Interface()` method and type assertion to convert `v` into `bar`, as if it was compiled
 
 ```go
@@ -82,8 +93,17 @@ func Bar(s string) string { return s + "-Foo" }`
 
 func main() {
 	i := interp.New(interp.Options{})
-	i.Eval(src)
-	v, _ := i.Eval("foo.Bar")
+
+	_, err := i.Eval(src)
+	if err != nil {
+		panic(err)
+	}
+
+	v, err := i.Eval("foo.Bar")
+	if err != nil {
+		panic(err)
+	}
+
 	bar := v.Interface().(func(string) string)
 
 	r := bar("Kung")
