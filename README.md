@@ -19,8 +19,16 @@ It powers executable Go scripts and plugins, in embedded interpreters or interac
 
 ## Install
 
+### As library
+
+```go
+import "github.com/containous/yaegi/interp"
+```
+
+### REPL
+
 ```bash
-go get -u github.com/containous/yaegi
+go get -u github.com/containous/yaegi/cmd
 ```
 
 ## Usage
@@ -113,7 +121,7 @@ func main() {
 
 ## Documentation
 
-Documentation about yaegi commands and libraries can be found at usual [godoc.org][docs].
+Documentation about Yaegi commands and libraries can be found at usual [godoc.org][docs].
 
 ## Contributing
 
