@@ -343,7 +343,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				dest, src := n.child[i], n.child[sbase+i]
 				var sym *symbol
 				var level int
-				if n.kind == defineStmt {
+				if n.kind == defineStmt || (n.kind == assignStmt && dest.ident == "_") {
 					if src.typ != nil && src.typ.cat == nilT {
 						err = src.cfgErrorf("use of untyped nil")
 						break
