@@ -16,6 +16,7 @@ It powers executable Go scripts and plugins, in embedded interpreters or interac
 * works everywhere Go works
 * All Go & runtime resources accessible from script (with control)
 * Security: `unsafe` and `syscall` packages not used or exported by default
+* Support Go 1.11 and Go 1.12 (the latest 2 major releases)
 
 ## Install
 
@@ -30,6 +31,9 @@ import "github.com/containous/yaegi/interp"
 ```bash
 go get -u github.com/containous/yaegi/cmd
 ```
+
+Note that you can use [rlwrap](https://github.com/hanslub42/rlwrap) (install with your favorite package manager),
+and alias the `yaegi` command in `alias yaegi='rlwrap yaegi'` in your `~/.bashrc`, to have history and command line edition.
 
 ## Usage
 
