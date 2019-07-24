@@ -13,7 +13,6 @@ notifications:
 go:
   - 1.11.x
   - 1.12.x
-#  - 1.x
 
 go_import_path: github.com/containous/yaegi
 
@@ -45,4 +44,4 @@ deploy:
     script: curl -sL https://git.io/goreleaser | bash
     on:
       tags: true
-      condition: $TRAVIS_GO_VERSION =~ ^1\.x$
+      condition: $TRAVIS_GO_VERSION =~ ^1\.12\.x$

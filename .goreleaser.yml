@@ -43,7 +43,3 @@ archive:
       format: zip
   files:
     - LICENSE
-#    - CHANGELOG.md
-
-release:
-  disable: true
