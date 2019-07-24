@@ -28,7 +28,7 @@ import "github.com/containous/yaegi/interp"
 ### REPL
 
 ```bash
-go get -u github.com/containous/yaegi/cmd
+go get -u github.com/containous/yaegi/cmd/yaegi
 ```
 
 ## Usage
