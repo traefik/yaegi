@@ -143,18 +143,6 @@ func New(options Options) *Interpreter {
 	return &i
 }
 
-func getGoPath(options Options) string {
-	if options.GoPath != "" {
-		return options.GoPath
-	}
-
-	goPath, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-	return goPath
-}
-
 func initUniverse() *scope {
 	sc := &scope{global: true, sym: map[string]*symbol{
 		// predefined Go types
