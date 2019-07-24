@@ -29,7 +29,7 @@ import "github.com/containous/yaegi/interp"
 ### REPL
 
 ```bash
-go get -u github.com/containous/yaegi/cmd
+go get -u github.com/containous/yaegi/cmd/yaegi
 ```
 
 Note that you can use [rlwrap](https://github.com/hanslub42/rlwrap) (install with your favorite package manager),
