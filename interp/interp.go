@@ -123,7 +123,7 @@ type Options struct {
 // New returns a new interpreter
 func New(options Options) *Interpreter {
 	i := Interpreter{
-		opt:      opt{goPath: getGoPath(options)},
+		opt:      opt{goPath: options.GoPath},
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
 		scopes:   map[string]*scope{},
@@ -141,18 +141,6 @@ func New(options Options) *Interpreter {
 	i.opt.noRun, _ = strconv.ParseBool(os.Getenv("YAEGI_NO_RUN"))
 
 	return &i
-}
-
-func getGoPath(options Options) string {
-	if options.GoPath != "" {
-		return options.GoPath
-	}
-
-	goPath, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-	return goPath
 }
 
 func initUniverse() *scope {

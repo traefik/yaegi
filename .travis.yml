@@ -36,7 +36,7 @@ before_script:
 script:
   - make check
   - go build -v ./...
-  - GO111MODULE=off go test -v ./...
+  - make tests
 
 deploy:
   - provider: script
