@@ -38,27 +38,6 @@ and alias the `yaegi` command in `alias yaegi='rlwrap yaegi'` in your `~/.bashrc
 
 ## Usage
 
-### As a command line interpreter
-
-The Yaegi command can run an interactive Read-Eval-Print-Loop:
-
-```console
-$ yaegi
-> 1 + 2
-3
-> import "fmt"
-> fmt.Println("Hello World")
-Hello World
->
-```
-
-Or interpret Go files:
-
-```console
-$ yaegi cmd/yaegi/yaegi.go
->
-```
-
 ### As an embedded interpreter
 
 Create an interpreter with `New()`, run Go code with `Eval()`:
@@ -81,12 +60,14 @@ func main() {
 		panic(err)
 	}
 
-	_, err = i.Eval(`fmt.Println("hello")`)
+	_, err = i.Eval(`fmt.Println("Hello Yaegi")`)
 	if err != nil {
 		panic(err)
 	}
 }
 ```
+
+[Go Playground](https://play.golang.org/p/zzvw4VlerLP)
 
 ### As a dynamic extension framework
 
@@ -122,6 +103,29 @@ func main() {
 	r := bar("Kung")
 	println(r)
 }
+```
+
+[Go Playground](https://play.golang.org/p/6SEAoaO7n0U)
+
+### As a command line interpreter
+
+The Yaegi command can run an interactive Read-Eval-Print-Loop:
+
+```console
+$ yaegi
+> 1 + 2
+3
+> import "fmt"
+> fmt.Println("Hello World")
+Hello World
+>
+```
+
+Or interpret Go files:
+
+```console
+$ yaegi cmd/yaegi/yaegi.go
+>
 ```
 
 ## Documentation
