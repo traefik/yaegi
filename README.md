@@ -6,15 +6,15 @@
 [![Build Status](https://travis-ci.com/containous/yaegi.svg?branch=master)](https://travis-ci.com/containous/yaegi)
 [![GoDoc](https://godoc.org/github.com/containous/yaegi?status.svg)](https://godoc.org/github.com/containous/yaegi)
 
-Yaegi is Another Elegant Go Interpreter.
+Yaegi is Yet Another Elegant Go Interpreter.
 It powers executable Go scripts and plugins, in embedded interpreters or interactive shells, on top of the Go runtime.
 
 ## Features
 
 * Complete support of [Go specification][specs]
-* In pure Go, using only standard library
+* Written in pure Go, using only the standard library
 * Simple interpreter API: `New()`, `Eval()`, `Use()`
-* works everywhere Go works
+* Works everywhere Go works
 * All Go & runtime resources accessible from script (with control)
 * Security: `unsafe` and `syscall` packages not used or exported by default
 * Support Go 1.11 and Go 1.12 (the latest 2 major releases)
