@@ -123,7 +123,7 @@ type Options struct {
 // New returns a new interpreter
 func New(options Options) *Interpreter {
 	i := Interpreter{
-		opt:      opt{goPath: getGoPath(options)},
+		opt:      opt{goPath: options.GoPath},
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
 		scopes:   map[string]*scope{},
