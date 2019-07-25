@@ -1,4 +1,4 @@
-// +build go1.12,!go1.13
+// +build go1.12,!go1.13,!windows,!nacl,!plan9
 
 package stdlib
 
