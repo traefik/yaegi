@@ -16,4 +16,7 @@ cmd/goexports/goexports: cmd/goexports/goexports.go
 generate: gen_all_syscall
 	go generate
 
+tests:
+	GO111MODULE=off go test -v ./...
+
 .PHONY: check gen_all_syscall gen_tests
