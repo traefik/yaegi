@@ -4,6 +4,7 @@
 
 [![release](https://img.shields.io/github/tag-date/containous/yaegi.svg?label=alpha)](https://github.com/containous/yaegi/releases)
 [![Build Status](https://travis-ci.com/containous/yaegi.svg?branch=master)](https://travis-ci.com/containous/yaegi)
+[![GoDoc](https://godoc.org/github.com/containous/yaegi?status.svg)](https://godoc.org/github.com/containous/yaegi)
 
 Yaegi is Another Elegant Go Interpreter.
 It powers executable Go scripts and plugins, in embedded interpreters or interactive shells, on top of the Go runtime.
