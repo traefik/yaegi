@@ -223,6 +223,8 @@ func assign(n *node) {
 		switch {
 		case dest.typ.cat == interfaceT:
 			svalue[i] = genValueInterface(src)
+		case dest.typ.cat == valueT && dest.typ.rtype.Kind() == reflect.Interface:
+			svalue[i] = genInterfaceWrapper(src, dest.typ.rtype)
 		case dest.typ.cat == valueT && src.typ.cat == funcT:
 			svalue[i] = genFunctionWrapper(src)
 		case src.kind == basicLit && src.val == nil:
