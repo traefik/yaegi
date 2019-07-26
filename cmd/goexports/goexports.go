@@ -1,8 +1,21 @@
 //go:generate go build
 
-// This program generates code to register binary program symbols to the interpreter.
-// See stdlib.go for usage
+/*
+Goexports generates wrappers of package exported symbols
 
+Output files are written in the current directory, and prefixed with the go version.
+
+Usage:
+
+    goexports package...
+
+Example:
+
+    goexports github.com/containous/yaegi/interp
+
+The same goexport program is used for all target operating systems and architectures.
+The GOOS and GOARCH environment variables set the desired target.
+*/
 package main
 
 import (
