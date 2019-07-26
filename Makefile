@@ -14,7 +14,11 @@ cmd/goexports/goexports: cmd/goexports/goexports.go
 	go generate cmd/goexports/goexports.go
 
 generate: gen_all_syscall
-	go generate
+	@cd stdlib && \
+	for v in $$(go tool dist list); do \
+		echo stdlib_$${v%/*}_$${v#*/}; \
+		GOOS=$${v%/*} GOARCH=$${v#*/} go generate; \
+	done
 
 tests:
 	GO111MODULE=off go test -v ./...

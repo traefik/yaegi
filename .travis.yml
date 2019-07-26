@@ -25,14 +25,6 @@ install:
   - echo "TRAVIS_GO_VERSION=$TRAVIS_GO_VERSION"
   - go mod download
 
-before_script:
-  - rm -f interp/op.go interp/interp_test.go
-  - make generate
-  - git update-index -q --refresh
-  - CHANGED=$(git diff-index --name-only HEAD --)
-  - test -z "$CHANGED" || echo $CHANGED
-  - test -z "$CHANGED"
-
 script:
   - make check
   - go build -v ./...
