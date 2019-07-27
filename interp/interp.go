@@ -317,7 +317,8 @@ func (interp *Interpreter) Repl(in, out *os.File) {
 	src := ""
 	for s.Scan() {
 		src += s.Text() + "\n"
-		if v, err := interp.Eval(src); err != nil {
+		// call Eval wrapper so session can resume in an interactive session after panics
+		if v, err := interp.TrapEval(in, src); err != nil {
 			switch err.(type) {
 			case scanner.ErrorList:
 				// Early failure in the scanner: the source is incomplete
@@ -335,9 +336,29 @@ func (interp *Interpreter) Repl(in, out *os.File) {
 	}
 }
 
+// wrapper around Eval that traps a panic if the input is a terminal
+func (interp *Interpreter) TrapEval(in *os.File, src string) (reflect.Value, error) {
+	if runningInTerminal(in) {
+		defer func() {
+			if err := recover(); err != nil {
+				fmt.Println("TrapEval: ", err)
+			}
+		}()
+	}
+	return interp.Eval(src)
+}
+
+// runningInTerminal returns true only if input is a terminal
+func runningInTerminal(in *os.File) bool {
+	if stat, err := in.Stat(); err == nil && stat.Mode()&os.ModeCharDevice != 0 {
+		return true
+	}
+	return false
+}
+
 // getPrompt returns a function which prints a prompt only if input is a terminal
 func getPrompt(in, out *os.File) func() {
-	if stat, err := in.Stat(); err == nil && stat.Mode()&os.ModeCharDevice != 0 {
+	if runningInTerminal(in) {
 		return func() { fmt.Fprint(out, "> ") }
 	}
 	return func() {}
