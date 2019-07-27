@@ -351,10 +351,8 @@ func (interp *Interpreter) trapEval(inTerminal bool, src string) (reflect.Value,
 
 // runningInTerminal returns true only if input is a terminal
 func runningInTerminal(in *os.File) bool {
-	if stat, err := in.Stat(); err == nil && stat.Mode()&os.ModeCharDevice != 0 {
-		return true
-	}
-	return false
+	stat, err := in.Stat()
+	return err == nil && stat.Mode()&os.ModeCharDevice != 0
 }
 
 // getPrompt returns a function which prints a prompt only if input is a terminal
