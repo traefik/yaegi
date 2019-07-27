@@ -35,7 +35,7 @@ import (
 	"text/template"
 )
 
-const model = `// +build {{.CurrentGoVersion}},!{{.NextGoVersion}}
+const model = `// +build {{.CurrentGoVersion}},!{{.NextGoVersion}}{{if eq .PkgName "log/syslog"}},!windows,!nacl,!plan9{{end}}
 
 package {{.Dest}}
 
@@ -133,7 +133,6 @@ func genContent(dest, pkgName string) ([]byte, error) {
 		if !o.Exported() {
 			continue
 		}
-
 		pname := path.Base(pkgName) + "." + name
 		switch o := o.(type) {
 		case *types.Const:
@@ -151,12 +150,11 @@ func genContent(dest, pkgName string) ([]byte, error) {
 					if !f.Exported() {
 						continue
 					}
-
-					sign := f.Type().(*types.Signature)
-					args := make([]string, sign.Params().Len())
+					sig := f.Type().(*types.Signature)
+					args := make([]string, sig.Params().Len())
 					params := make([]string, len(args))
 					for j := range args {
-						v := sign.Params().At(j)
+						v := sig.Params().At(j)
 						if args[j] = v.Name(); args[j] == "" {
 							args[j] = fmt.Sprintf("a%d", j)
 						}
@@ -164,14 +162,14 @@ func genContent(dest, pkgName string) ([]byte, error) {
 					}
 					arg := "(" + strings.Join(args, ", ") + ")"
 					param := "(" + strings.Join(params, ", ") + ")"
-					results := make([]string, sign.Results().Len())
+					results := make([]string, sig.Results().Len())
 					for j := range results {
-						v := sign.Results().At(j)
+						v := sig.Results().At(j)
 						results[j] = v.Name() + " " + types.TypeString(v.Type(), qualify)
 					}
 					result := "(" + strings.Join(results, ", ") + ")"
 					ret := ""
-					if sign.Results().Len() > 0 {
+					if sig.Results().Len() > 0 {
 						ret = "return"
 					}
 					methods = append(methods, Method{f.Name(), param, result, arg, ret})
@@ -256,8 +254,13 @@ func main() {
 			log.Fatal(err)
 		}
 
-		suffix := "_" + os.Getenv("GOOS") + "_" + os.Getenv("GOARCH")
-		oFile := strings.Replace(pkg, "/", "_", -1) + suffix + ".go"
+		var oFile string
+		if pkg == "syscall" {
+			goos, arch := os.Getenv("GOOS"), os.Getenv("GOARCH")
+			oFile = strings.Replace(pkg, "/", "_", -1) + "_" + goos + "_" + arch + ".go"
+		} else {
+			oFile = strings.Replace(pkg, "/", "_", -1) + ".go"
+		}
 
 		parts := strings.Split(runtime.Version(), ".")
 
