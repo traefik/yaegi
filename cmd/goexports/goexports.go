@@ -35,7 +35,7 @@ import (
 	"text/template"
 )
 
-const model = `// +build {{.CurrentGoVersion}},!{{.NextGoVersion}}
+const model = `// +build {{.BuildTags}}
 
 package {{.Dest}}
 
@@ -164,16 +164,19 @@ func genContent(dest, pkgName string) ([]byte, error) {
 					}
 					arg := "(" + strings.Join(args, ", ") + ")"
 					param := "(" + strings.Join(params, ", ") + ")"
+
 					results := make([]string, sign.Results().Len())
 					for j := range results {
 						v := sign.Results().At(j)
 						results[j] = v.Name() + " " + types.TypeString(v.Type(), qualify)
 					}
 					result := "(" + strings.Join(results, ", ") + ")"
+
 					ret := ""
 					if sign.Results().Len() > 0 {
 						ret = "return"
 					}
+
 					methods = append(methods, Method{f.Name(), param, result, arg, ret})
 				}
 				wrap[name] = Wrap{prefix + name, methods}
@@ -196,16 +199,20 @@ func genContent(dest, pkgName string) ([]byte, error) {
 		return nil, fmt.Errorf("template parsing error: %v", err)
 	}
 
+	buildTags := currentGoVersion + ",!" + nextGoVersion
+	if pkgName == "log/syslog" {
+		buildTags += ",!windows,!nacl,!plan9"
+	}
+
 	b := &bytes.Buffer{}
 	data := map[string]interface{}{
-		"Dest":             dest,
-		"Imports":          imports,
-		"PkgName":          pkgName,
-		"Val":              val,
-		"Typ":              typ,
-		"Wrap":             wrap,
-		"CurrentGoVersion": currentGoVersion,
-		"NextGoVersion":    nextGoVersion,
+		"Dest":      dest,
+		"Imports":   imports,
+		"PkgName":   pkgName,
+		"Val":       val,
+		"Typ":       typ,
+		"Wrap":      wrap,
+		"BuildTags": buildTags,
 	}
 	err = parse.Execute(b, data)
 	if err != nil {
@@ -256,8 +263,13 @@ func main() {
 			log.Fatal(err)
 		}
 
-		suffix := "_" + os.Getenv("GOOS") + "_" + os.Getenv("GOARCH")
-		oFile := strings.Replace(pkg, "/", "_", -1) + suffix + ".go"
+		var oFile string
+		if pkg == "syscall" {
+			goos, arch := os.Getenv("GOOS"), os.Getenv("GOARCH")
+			oFile = strings.Replace(pkg, "/", "_", -1) + "_" + goos + "_" + arch + ".go"
+		} else {
+			oFile = strings.Replace(pkg, "/", "_", -1) + ".go"
+		}
 
 		parts := strings.Split(runtime.Version(), ".")
 
