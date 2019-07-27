@@ -16,18 +16,18 @@ It powers executable Go scripts and plugins, in embedded interpreters or interac
 * Simple interpreter API: `New()`, `Eval()`, `Use()`
 * Works everywhere Go works
 * All Go & runtime resources accessible from script (with control)
-* Security: `unsafe` and `syscall` packages not used or exported by default
+* Security: `unsafe` and `syscall` packages neither used nor exported by default
 * Support Go 1.11 and Go 1.12 (the latest 2 major releases)
 
 ## Install
 
-### As library
+### Go package
 
 ```go
 import "github.com/containous/yaegi/interp"
 ```
 
-### REPL
+### Command-line executable
 
 ```bash
 go get -u github.com/containous/yaegi/cmd/yaegi
@@ -107,7 +107,7 @@ func main() {
 
 [Go Playground](https://play.golang.org/p/6SEAoaO7n0U)
 
-### As a command line interpreter
+### As a command-line interpreter
 
 The Yaegi command can run an interactive Read-Eval-Print-Loop:
 
@@ -132,6 +132,16 @@ $ yaegi cmd/yaegi/yaegi.go
 
 Documentation about Yaegi commands and libraries can be found at usual [godoc.org][docs].
 
+## Limitations
+
+Beside the known [bugs] which are supposed to be fixed in the short term, there are some limitations not planned to be addressed soon:
+
+- assembly files (`.s`) are not supported
+- calling C code is not supported (no virtual "C" package)
+- interfaces to be used from the pre-compiled code can not be added dynamically, as it is required to pre-compile interface wrappers
+- representation of types by `reflect` and printing values using %T may give different results between compiled mode and interpreted mode
+- interpreting computation intensive code is likely to remain significantly slower than in compiled mode
+
 ## Contributing
 
 Yaegi is an open source project, and your feedback and contributions are needed and always welcome.
@@ -148,3 +158,4 @@ Yaegi is an open source project, and your feedback and contributions are needed 
 [github]: https://github.com/containous/yaegi
 [Issues]: https://github.com/containous/yaegi/issues
 [pull requests]: https://github.com/containous/yaegi/issues
+[bugs]: https://github.com/containous/yaegi/issues?q=is%3Aissue+is%3Aopen+label%3Abug
