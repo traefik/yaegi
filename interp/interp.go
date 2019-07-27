@@ -318,7 +318,7 @@ func (interp *Interpreter) Repl(in, out *os.File) {
 	for s.Scan() {
 		src += s.Text() + "\n"
 		// call Eval wrapper so session can resume in an interactive session after panics
-		if v, err := interp.TrapEval(in, src); err != nil {
+		if v, err := interp.trapEval(in, src); err != nil {
 			switch err.(type) {
 			case scanner.ErrorList:
 				// Early failure in the scanner: the source is incomplete
@@ -336,8 +336,8 @@ func (interp *Interpreter) Repl(in, out *os.File) {
 	}
 }
 
-// TrapEval is a wrapper around Eval that traps a panic if the input is a terminal
-func (interp *Interpreter) TrapEval(in *os.File, src string) (reflect.Value, error) {
+// trapEval is a wrapper around Eval that traps a panic if the input is a terminal
+func (interp *Interpreter) trapEval(in *os.File, src string) (reflect.Value, error) {
 	if runningInTerminal(in) {
 		defer func() {
 			if err := recover(); err != nil {
