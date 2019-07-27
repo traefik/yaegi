@@ -336,7 +336,7 @@ func (interp *Interpreter) Repl(in, out *os.File) {
 	}
 }
 
-// wrapper around Eval that traps a panic if the input is a terminal
+// TrapEval is a wrapper around Eval that traps a panic if the input is a terminal
 func (interp *Interpreter) TrapEval(in *os.File, src string) (reflect.Value, error) {
 	if runningInTerminal(in) {
 		defer func() {
