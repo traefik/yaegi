@@ -312,13 +312,14 @@ func (interp *Interpreter) Use(values Exports) {
 // Results are printed on output.
 func (interp *Interpreter) Repl(in, out *os.File) {
 	s := bufio.NewScanner(in)
-	prompt := getPrompt(in, out)
+	inTerminal := runningInTerminal(in) // only do the check once
+	prompt := getPrompt(inTerminal, out)
 	prompt()
 	src := ""
 	for s.Scan() {
 		src += s.Text() + "\n"
 		// call Eval wrapper so session can resume in an interactive session after panics
-		if v, err := interp.trapEval(in, src); err != nil {
+		if v, err := interp.trapEval(inTerminal, src); err != nil {
 			switch err.(type) {
 			case scanner.ErrorList:
 				// Early failure in the scanner: the source is incomplete
@@ -337,8 +338,8 @@ func (interp *Interpreter) Repl(in, out *os.File) {
 }
 
 // trapEval is a wrapper around Eval that traps a panic if the input is a terminal
-func (interp *Interpreter) trapEval(in *os.File, src string) (reflect.Value, error) {
-	if runningInTerminal(in) {
+func (interp *Interpreter) trapEval(inTerminal bool, src string) (reflect.Value, error) {
+	if inTerminal {
 		defer func() {
 			if err := recover(); err != nil {
 				fmt.Println("TrapEval: ", err)
@@ -357,8 +358,8 @@ func runningInTerminal(in *os.File) bool {
 }
 
 // getPrompt returns a function which prints a prompt only if input is a terminal
-func getPrompt(in, out *os.File) func() {
-	if runningInTerminal(in) {
+func getPrompt(inTerminal bool, out *os.File) func() {
+	if inTerminal {
 		return func() { fmt.Fprint(out, "> ") }
 	}
 	return func() {}
