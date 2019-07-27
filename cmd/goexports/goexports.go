@@ -35,7 +35,7 @@ import (
 	"text/template"
 )
 
-const model = `// +build {{.CurrentGoVersion}},!{{.NextGoVersion}}{{if eq .PkgName "log/syslog"}},!windows,!nacl,!plan9{{end}}
+const model = `// +build {{.BuildTags}}
 
 package {{.Dest}}
 
@@ -133,6 +133,7 @@ func genContent(dest, pkgName string) ([]byte, error) {
 		if !o.Exported() {
 			continue
 		}
+
 		pname := path.Base(pkgName) + "." + name
 		switch o := o.(type) {
 		case *types.Const:
@@ -150,11 +151,12 @@ func genContent(dest, pkgName string) ([]byte, error) {
 					if !f.Exported() {
 						continue
 					}
-					sig := f.Type().(*types.Signature)
-					args := make([]string, sig.Params().Len())
+
+					sign := f.Type().(*types.Signature)
+					args := make([]string, sign.Params().Len())
 					params := make([]string, len(args))
 					for j := range args {
-						v := sig.Params().At(j)
+						v := sign.Params().At(j)
 						if args[j] = v.Name(); args[j] == "" {
 							args[j] = fmt.Sprintf("a%d", j)
 						}
@@ -162,16 +164,19 @@ func genContent(dest, pkgName string) ([]byte, error) {
 					}
 					arg := "(" + strings.Join(args, ", ") + ")"
 					param := "(" + strings.Join(params, ", ") + ")"
-					results := make([]string, sig.Results().Len())
+
+					results := make([]string, sign.Results().Len())
 					for j := range results {
-						v := sig.Results().At(j)
+						v := sign.Results().At(j)
 						results[j] = v.Name() + " " + types.TypeString(v.Type(), qualify)
 					}
 					result := "(" + strings.Join(results, ", ") + ")"
+
 					ret := ""
-					if sig.Results().Len() > 0 {
+					if sign.Results().Len() > 0 {
 						ret = "return"
 					}
+
 					methods = append(methods, Method{f.Name(), param, result, arg, ret})
 				}
 				wrap[name] = Wrap{prefix + name, methods}
@@ -194,16 +199,20 @@ func genContent(dest, pkgName string) ([]byte, error) {
 		return nil, fmt.Errorf("template parsing error: %v", err)
 	}
 
+	buildTags := currentGoVersion + ",!" + nextGoVersion
+	if pkgName == "log/syslog" {
+		buildTags += ",!windows,!nacl,!plan9"
+	}
+
 	b := &bytes.Buffer{}
 	data := map[string]interface{}{
-		"Dest":             dest,
-		"Imports":          imports,
-		"PkgName":          pkgName,
-		"Val":              val,
-		"Typ":              typ,
-		"Wrap":             wrap,
-		"CurrentGoVersion": currentGoVersion,
-		"NextGoVersion":    nextGoVersion,
+		"Dest":      dest,
+		"Imports":   imports,
+		"PkgName":   pkgName,
+		"Val":       val,
+		"Typ":       typ,
+		"Wrap":      wrap,
+		"BuildTags": buildTags,
 	}
 	err = parse.Execute(b, data)
 	if err != nil {
