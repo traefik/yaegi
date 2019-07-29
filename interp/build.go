@@ -57,7 +57,7 @@ func buildOptionOk(tag string) bool {
 var (
 	goos      = runtime.GOOS
 	goarch    = runtime.GOARCH
-	goversion = goNumVersion()
+	goversion = goNumVersion(runtime.Version())
 )
 
 // buildTagOk returns true if a build tag matches, false otherwise
@@ -86,9 +86,16 @@ func buildTagOk(s string) (r bool) {
 }
 
 // goNumVersion returns the go minor version number
-func goNumVersion() int {
-	v := strings.Split(runtime.Version(), ".")
-	n, _ := strconv.Atoi(v[1])
+func goNumVersion(version string) int {
+	v := strings.Split(version, ".")
+	if len(v) < 2 {
+		panic("unsupported Go version: " + version)
+	}
+
+	n, err := strconv.Atoi(v[1])
+	if err != nil {
+		panic("unsupported Go version: " + version)
+	}
 	return n
 }
 
