@@ -57,6 +57,7 @@ import (
 
 func init() {
 	Symbols["{{.PkgName}}"] = map[string]reflect.Value{
+		{{- if len .Val | ne 0}}
 		// function, constant and variable definitions
 		{{range $key, $value := .Val -}}
 			{{- if $value.Addr -}}
@@ -65,16 +66,21 @@ func init() {
 				"{{$key}}": reflect.ValueOf({{$value.Name}}),
 			{{end -}}
 		{{end}}
+		{{- end}}
 
+		{{- if len .Typ | ne 0}}
 		// type definitions
 		{{range $key, $value := .Typ -}}
 			"{{$key}}": reflect.ValueOf((*{{$value}})(nil)),
 		{{end}}
+		{{- end}}
 
+		{{- if len .Wrap | ne 0}}
 		// interface wrapper definitions
 		{{range $key, $value := .Wrap -}}
 			"_{{$key}}": reflect.ValueOf((*{{$value.Name}})(nil)),
 		{{end}}
+		{{- end}}
 	}
 }
 {{range $key, $value := .Wrap -}}
