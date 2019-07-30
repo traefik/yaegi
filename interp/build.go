@@ -1,8 +1,8 @@
 package interp
 
 import (
+	"go/build"
 	"go/parser"
-	"math"
 	"path"
 	"runtime"
 	"strconv"
@@ -58,7 +58,7 @@ func buildOptionOk(tag string) bool {
 var (
 	goos      = runtime.GOOS
 	goarch    = runtime.GOARCH
-	goversion = goNumVersion(runtime.Version())
+	goversion = goMinorVersion(build.Default)
 )
 
 // buildTagOk returns true if a build tag matches, false otherwise
@@ -86,31 +86,20 @@ func buildTagOk(s string) (r bool) {
 	return
 }
 
-// goNumVersion returns the go minor version number
-func goNumVersion(version string) int {
-	if version == "devel" {
-		return math.MaxInt16
-	}
+// goMinorVersion returns the go minor version number
+func goMinorVersion(ctx build.Context) int {
+	current := ctx.ReleaseTags[len(ctx.ReleaseTags)-1]
 
-	v := strings.Split(version, ".")
+	v := strings.Split(current, ".")
 	if len(v) < 2 {
-		panic("unsupported Go version: " + version)
+		panic("unsupported Go version: " + current)
 	}
 
-	minor := v[1]
-	index := strings.Index(minor, "beta")
-	if index < 0 {
-		index = strings.Index(minor, "rc")
-	}
-	if index > 0 {
-		minor = minor[:index]
-	}
-
-	n, err := strconv.Atoi(minor)
+	m, err := strconv.Atoi(v[1])
 	if err != nil {
-		panic("unsupported Go version: " + version)
+		panic("unsupported Go version: " + current)
 	}
-	return n
+	return m
 }
 
 // skipFile returns true if file should be skipped

@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"go/build"
 	"math"
 	"testing"
 )
@@ -109,21 +110,32 @@ func TestBuildFile(t *testing.T) {
 	}
 }
 
-func Test_goNumVersion(t *testing.T) {
+func Test_goMinorVersion(t *testing.T) {
 	tests := []struct {
-		version  string
+		desc     string
+		context  build.Context
 		expected int
 	}{
-		{version: "go1.12", expected: 12},
-		{version: "go1.13beta1", expected: 13},
-		{version: "go1.13rc1", expected: 13},
-		{version: "devel", expected: math.MaxInt16},
+		{
+			desc: "stable",
+			context: build.Context{ReleaseTags: []string{
+				"go1.1", "go1.2", "go1.3", "go1.4", "go1.5", "go1.6", "go1.7", "go1.8", "go1.9", "go1.10", "go1.11", "go1.12",
+			}},
+			expected: 12,
+		},
+		{
+			desc: "devel/beta/rc",
+			context: build.Context{ReleaseTags: []string{
+				"go1.1", "go1.2", "go1.3", "go1.4", "go1.5", "go1.6", "go1.7", "go1.8", "go1.9", "go1.10", "go1.11", "go1.12", "go1.13",
+			}},
+			expected: 13,
+		},
 	}
 
 	for _, test := range tests {
 		test := test
-		t.Run(test.version, func(t *testing.T) {
-			minor := goNumVersion(test.version)
+		t.Run(test.desc, func(t *testing.T) {
+			minor := goMinorVersion(test.context)
 
 			if minor != test.expected {
 				t.Errorf("got %v, want %v", minor, test.expected)
