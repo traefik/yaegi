@@ -40,7 +40,7 @@ func (interp *Interpreter) importSrcFile(rPath, path, alias string) error {
 	// Parse source files
 	for _, file := range files {
 		name := file.Name()
-		if skipFile(name) {
+		if skipFile(interp.context, name) {
 			continue
 		}
 

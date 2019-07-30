@@ -333,7 +333,7 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 		src = "package main; func main() {" + src + "}"
 	}
 
-	if !interp.buildOk(name, src) {
+	if !interp.buildOk(interp.context, name, src) {
 		return "", nil, nil // skip source not matching build constraints
 	}
 

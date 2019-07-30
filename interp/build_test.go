@@ -2,7 +2,6 @@ package interp
 
 import (
 	"go/build"
-	"math"
 	"testing"
 )
 
@@ -13,9 +12,12 @@ type testBuild struct {
 
 func TestBuildTag(t *testing.T) {
 	// Assume a specific OS, arch and go version no matter the real underlying system
-	oo, oa, ov := goos, goarch, goversion
-	goos, goarch, goversion = "linux", "amd64", 11
-	defer func() { goos, goarch, goversion = oo, oa, ov }()
+	ctx := build.Context{
+		GOARCH:      "amd64",
+		GOOS:        "linux",
+		BuildTags:   []string{"foo"},
+		ReleaseTags: []string{"go1.11"},
+	}
 
 	tests := []testBuild{
 		{"// +build linux", true},
@@ -32,6 +34,9 @@ func TestBuildTag(t *testing.T) {
 		{"// +build linux\n// +build amd64", true},
 		{"// +build linux\n\n\n// +build amd64", true},
 		{"// +build linux\n// +build i386", false},
+		{"// +build foo", true},
+		{"// +build !foo", false},
+		{"// +build bar", false},
 	}
 
 	i := New(Options{})
@@ -39,42 +44,7 @@ func TestBuildTag(t *testing.T) {
 		test := test
 		src := test.src + "\npackage x"
 		t.Run(test.src, func(t *testing.T) {
-			if r := i.buildOk("", src); r != test.res {
-				t.Errorf("got %v, want %v", r, test.res)
-			}
-		})
-	}
-}
-
-func TestBuildTagDevel(t *testing.T) {
-	// Assume a specific OS, arch and go version no matter the real underlying system
-	oo, oa, ov := goos, goarch, goversion
-	goos, goarch, goversion = "linux", "amd64", math.MaxInt16
-	defer func() { goos, goarch, goversion = oo, oa, ov }()
-
-	tests := []testBuild{
-		{"// +build linux", true},
-		{"// +build windows", false},
-		{"// +build go1.11", true},
-		{"// +build !go1.12", false},
-		{"// +build go1.12", true},
-		{"// +build !go1.10", false},
-		{"// +build go1.9", true},
-		{"// +build ignore", false},
-		{"// +build linux,amd64", true},
-		{"// +build linux,i386", false},
-		{"// +build linux,i386 go1.11", true},
-		{"// +build linux\n// +build amd64", true},
-		{"// +build linux\n\n\n// +build amd64", true},
-		{"// +build linux\n// +build i386", false},
-	}
-
-	i := New(Options{})
-	for _, test := range tests {
-		test := test
-		src := test.src + "\npackage x"
-		t.Run(test.src, func(t *testing.T) {
-			if r := i.buildOk("", src); r != test.res {
+			if r := i.buildOk(ctx, "", src); r != test.res {
 				t.Errorf("got %v, want %v", r, test.res)
 			}
 		})
@@ -83,9 +53,10 @@ func TestBuildTagDevel(t *testing.T) {
 
 func TestBuildFile(t *testing.T) {
 	// Assume a specific OS, arch and go pattern no matter the real underlying system
-	oo, oa := goos, goarch
-	goos, goarch = "linux", "amd64"
-	defer func() { goos, goarch = oo, oa }()
+	ctx := build.Context{
+		GOARCH: "amd64",
+		GOOS:   "linux",
+	}
 
 	tests := []testBuild{
 		{"foo/bar_linux_amd64.go", false},
@@ -103,7 +74,7 @@ func TestBuildFile(t *testing.T) {
 	for _, test := range tests {
 		test := test
 		t.Run(test.src, func(t *testing.T) {
-			if r := skipFile(test.src); r != test.res {
+			if r := skipFile(ctx, test.src); r != test.res {
 				t.Errorf("got %v, want %v", r, test.res)
 			}
 		})
