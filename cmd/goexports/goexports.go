@@ -35,7 +35,7 @@ import (
 	"text/template"
 )
 
-const model = `// +build {{.BuildTags}}
+const model = `{{if .BuildTags}}// +build {{.BuildTags}}{{end}}
 
 package {{.Dest}}
 
@@ -184,14 +184,23 @@ func genContent(dest, pkgName string) ([]byte, error) {
 		}
 	}
 
-	parts := strings.Split(runtime.Version(), ".")
-	currentGoVersion := parts[0] + "." + parts[1]
+	var buildTags string
+	if runtime.Version() != "devel" {
+		parts := strings.Split(runtime.Version(), ".")
 
-	minor, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse version: %v", err)
+		minorRaw := getMinor(parts[1])
+
+		currentGoVersion := parts[0] + "." + minorRaw
+
+		minor, errParse := strconv.Atoi(minorRaw)
+		if errParse != nil {
+			return nil, fmt.Errorf("failed to parse version: %v", errParse)
+		}
+
+		nextGoVersion := parts[0] + "." + strconv.Itoa(minor+1)
+
+		buildTags = currentGoVersion + ",!" + nextGoVersion
 	}
-	nextGoVersion := parts[0] + "." + strconv.Itoa(minor+1)
 
 	base := template.New("goexports")
 	parse, err := base.Parse(model)
@@ -199,7 +208,6 @@ func genContent(dest, pkgName string) ([]byte, error) {
 		return nil, fmt.Errorf("template parsing error: %v", err)
 	}
 
-	buildTags := currentGoVersion + ",!" + nextGoVersion
 	if pkgName == "log/syslog" {
 		buildTags += ",!windows,!nacl,!plan9"
 	}
@@ -271,11 +279,29 @@ func main() {
 			oFile = strings.Replace(pkg, "/", "_", -1) + ".go"
 		}
 
-		parts := strings.Split(runtime.Version(), ".")
+		prefix := runtime.Version()
+		if runtime.Version() != "devel" {
+			parts := strings.Split(runtime.Version(), ".")
 
-		err = ioutil.WriteFile(parts[0]+"_"+parts[1]+"_"+oFile, content, 0666)
+			prefix = parts[0] + "_" + getMinor(parts[1])
+		}
+
+		err = ioutil.WriteFile(prefix+"_"+oFile, content, 0666)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
+}
+
+func getMinor(part string) string {
+	minor := part
+	index := strings.Index(minor, "beta")
+	if index < 0 {
+		index = strings.Index(minor, "rc")
+	}
+	if index > 0 {
+		minor = minor[:index]
+	}
+
+	return minor
 }
