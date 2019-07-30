@@ -2,6 +2,7 @@ package interp
 
 import (
 	"go/parser"
+	"math"
 	"path"
 	"runtime"
 	"strconv"
@@ -87,12 +88,25 @@ func buildTagOk(s string) (r bool) {
 
 // goNumVersion returns the go minor version number
 func goNumVersion(version string) int {
+	if version == "devel" {
+		return math.MaxInt16
+	}
+
 	v := strings.Split(version, ".")
 	if len(v) < 2 {
 		panic("unsupported Go version: " + version)
 	}
 
-	n, err := strconv.Atoi(v[1])
+	minor := v[1]
+	index := strings.Index(minor, "beta")
+	if index < 0 {
+		index = strings.Index(minor, "rc")
+	}
+	if index > 0 {
+		minor = minor[:index]
+	}
+
+	n, err := strconv.Atoi(minor)
 	if err != nil {
 		panic("unsupported Go version: " + version)
 	}
