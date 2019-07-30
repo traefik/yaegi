@@ -1,3 +1,5 @@
+// +build go1.11,!go1.13
+
 package unsafe
 
 import "reflect"

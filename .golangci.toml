@@ -44,7 +44,6 @@
     path = "cmd/goexports/goexports.go"
     text = "SA1019: importer.For is deprecated: use ForCompiler, which populates a FileSet with the positions of objects created by the importer."
 
-  # structcheck false-positive
   [[issues.exclude-rules]]
-    path = "interp/interp.go"
-    text = "`(astDot|cfgDot|noRun)` is unused"
+    path = "interp/.+_test\\.go"
+    linters = ["goconst"]
