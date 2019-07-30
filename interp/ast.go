@@ -696,7 +696,13 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 		case *ast.RangeStmt:
 			// Insert a missing ForRangeStmt for AST correctness
 			n := addChild(&root, anc, pos, forRangeStmt, aNop)
-			st.push(addChild(&root, astNode{n, nod}, pos, rangeStmt, aRange), nod)
+			r := addChild(&root, astNode{n, nod}, pos, rangeStmt, aRange)
+			st.push(r, nod)
+			if a.Key == nil {
+				// range not in an assign expression: insert a "_" key variable to store iteration index
+				k := addChild(&root, astNode{r, nod}, pos, identExpr, aNop)
+				k.ident = "_"
+			}
 
 		case *ast.ReturnStmt:
 			st.push(addChild(&root, anc, pos, returnStmt, aReturn), nod)
