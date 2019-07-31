@@ -3,6 +3,7 @@ package interp
 import (
 	"bufio"
 	"fmt"
+	"go/build"
 	"go/scanner"
 	"go/token"
 	"os"
@@ -58,10 +59,10 @@ type Exports map[string]map[string]reflect.Value
 
 // opt stores interpreter options
 type opt struct {
-	astDot bool   // display AST graph (debug)
-	cfgDot bool   // display CFG graph (debug)
-	noRun  bool   // compile, but do not run
-	goPath string // custom GOPATH
+	astDot  bool          // display AST graph (debug)
+	cfgDot  bool          // display CFG graph (debug)
+	noRun   bool          // compile, but do not run
+	context build.Context // build context: GOPATH, build constraints
 }
 
 // Interpreter contains global resources and state
@@ -118,17 +119,24 @@ func (n *node) Walk(in func(n *node) bool, out func(n *node)) {
 type Options struct {
 	// GoPath sets GOPATH for the interpreter
 	GoPath string
+	// BuildTags sets build constraints for the interpreter
+	BuildTags []string
 }
 
 // New returns a new interpreter
 func New(options Options) *Interpreter {
 	i := Interpreter{
-		opt:      opt{goPath: options.GoPath},
+		opt:      opt{context: build.Default},
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
 		scopes:   map[string]*scope{},
 		binPkg:   Exports{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
 		frame:    &frame{data: []reflect.Value{}},
+	}
+
+	i.opt.context.GOPATH = options.GoPath
+	if len(options.BuildTags) > 0 {
+		i.opt.context.BuildTags = options.BuildTags
 	}
 
 	// AstDot activates AST graph display for the interpreter
