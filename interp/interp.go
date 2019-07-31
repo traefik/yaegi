@@ -59,11 +59,10 @@ type Exports map[string]map[string]reflect.Value
 
 // opt stores interpreter options
 type opt struct {
-	astDot  bool   // display AST graph (debug)
-	cfgDot  bool   // display CFG graph (debug)
-	noRun   bool   // compile, but do not run
-	goPath  string // custom GOPATH
-	context build.Context
+	astDot  bool          // display AST graph (debug)
+	cfgDot  bool          // display CFG graph (debug)
+	noRun   bool          // compile, but do not run
+	context build.Context // build context: GOPATH, build constraints
 }
 
 // Interpreter contains global resources and state
@@ -127,7 +126,7 @@ type Options struct {
 // New returns a new interpreter
 func New(options Options) *Interpreter {
 	i := Interpreter{
-		opt:      opt{goPath: options.GoPath, context: build.Default},
+		opt:      opt{context: build.Default},
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
 		scopes:   map[string]*scope{},
@@ -135,6 +134,7 @@ func New(options Options) *Interpreter {
 		frame:    &frame{data: []reflect.Value{}},
 	}
 
+	i.opt.context.GOPATH = options.GoPath
 	if len(options.BuildTags) > 0 {
 		i.opt.context.BuildTags = options.BuildTags
 	}

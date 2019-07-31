@@ -22,7 +22,7 @@ func (interp *Interpreter) importSrcFile(rPath, path, alias string) error {
 			rPath = "."
 		}
 		dir = filepath.Join(filepath.Dir(interp.Name), rPath, path)
-	} else if dir, rPath, err = pkgDir(interp.goPath, rPath, path); err != nil {
+	} else if dir, rPath, err = pkgDir(interp.context.GOPATH, rPath, path); err != nil {
 		return err
 	}
 
