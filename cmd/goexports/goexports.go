@@ -57,7 +57,7 @@ import (
 
 func init() {
 	Symbols["{{.PkgName}}"] = map[string]reflect.Value{
-		{{- if len .Val | ne 0}}
+		{{- if .Val}}
 		// function, constant and variable definitions
 		{{range $key, $value := .Val -}}
 			{{- if $value.Addr -}}
@@ -67,15 +67,13 @@ func init() {
 			{{end -}}
 		{{end}}
 		{{- end}}
-
-		{{- if len .Typ | ne 0}}
+		{{- if .Typ}}
 		// type definitions
 		{{range $key, $value := .Typ -}}
 			"{{$key}}": reflect.ValueOf((*{{$value}})(nil)),
 		{{end}}
 		{{- end}}
-
-		{{- if len .Wrap | ne 0}}
+		{{- if .Wrap}}
 		// interface wrapper definitions
 		{{range $key, $value := .Wrap -}}
 			"_{{$key}}": reflect.ValueOf((*{{$value.Name}})(nil)),
@@ -276,21 +274,20 @@ func genLicense(fname string) (string, error) {
 		return "", nil
 	}
 
-	raw, err := ioutil.ReadFile(fname)
+	f, err := os.Open(fname)
 	if err != nil {
-		return "", fmt.Errorf("could not read LICENSE file content: %v", err)
+		return "", fmt.Errorf("could not open LICENSE file: %v", err)
 	}
+	defer func() { _ = f.Close() }()
 
 	license := new(strings.Builder)
-	sc := bufio.NewScanner(bytes.NewReader(raw))
+	sc := bufio.NewScanner(f)
 	for sc.Scan() {
 		txt := sc.Text()
-		switch txt {
-		case "":
-			license.WriteString("//\n")
-		default:
-			license.WriteString("// " + txt + "\n")
+		if txt != "" {
+			txt = " " + txt
 		}
+		license.WriteString("//" + txt + "\n")
 	}
 	if sc.Err() != nil {
 		return "", fmt.Errorf("could not scan LICENSE file: %v", err)
