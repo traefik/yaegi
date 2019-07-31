@@ -51,7 +51,7 @@ import (
 	"{{$key}}"
 	{{- end}}
 {{- end}}
-	"{{.PkgName}}"
+	{{if .BlankImport}}_ {{end}}"{{.PkgName}}"
 	"reflect"
 )
 
@@ -224,14 +224,15 @@ func genContent(dest, pkgName, license string) ([]byte, error) {
 
 	b := new(bytes.Buffer)
 	data := map[string]interface{}{
-		"Dest":      dest,
-		"Imports":   imports,
-		"PkgName":   pkgName,
-		"Val":       val,
-		"Typ":       typ,
-		"Wrap":      wrap,
-		"BuildTags": buildTags,
-		"License":   license,
+		"Dest":        dest,
+		"Imports":     imports,
+		"PkgName":     pkgName,
+		"Val":         val,
+		"Typ":         typ,
+		"Wrap":        wrap,
+		"BuildTags":   buildTags,
+		"License":     license,
+		"BlankImport": len(val)+len(typ)+len(wrap) == 0,
 	}
 	err = parse.Execute(b, data)
 	if err != nil {
