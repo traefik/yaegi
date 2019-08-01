@@ -35,7 +35,7 @@ go get -u github.com/containous/yaegi/cmd/yaegi
 ```
 
 Note that you can use [rlwrap](https://github.com/hanslub42/rlwrap) (install with your favorite package manager),
-and alias the `yaegi` command in `alias yaegi='rlwrap yaegi'` in your `~/.bashrc`, to have history and command line edition.
+and alias the `yaegi` command in `alias yaegi='rlwrap /Users/your-username/your-workspace-dir/bin/yaegi'` in your `~/.bash_profile`, to have history and command line edition.
 
 ## Usage
 
