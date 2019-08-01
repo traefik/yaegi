@@ -1,8 +1,34 @@
 project_name: yaegi
 
 builds:
-  - binary: yaegi
+  - id: yaegi
+    binary: yaegi
     main: ./cmd/yaegi/yaegi.go
+
+    goos:
+      - darwin
+      - linux
+#      - windows
+      - freebsd
+      - openbsd
+      - solaris
+    goarch:
+      - amd64
+      - 386
+      - arm
+      - arm64
+    goarm:
+      - 7
+      - 6
+      - 5
+
+    ignore:
+      - goos: darwin
+        goarch: 386
+
+  - id: goexports
+    binary: goexports
+    main: ./cmd/goexports/goexports.go
 
     goos:
       - darwin
@@ -35,11 +61,12 @@ changelog:
       - '^test:'
       - '^tests:'
 
-archive:
-  name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
-  format: tar.gz
-  format_overrides:
-    - goos: windows
-      format: zip
-  files:
-    - LICENSE
+archives:
+  - id: archive
+    name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
