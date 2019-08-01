@@ -66,12 +66,14 @@ func init() {
 				"{{$key}}": reflect.ValueOf({{$value.Name}}),
 			{{end -}}
 		{{end}}
+
 		{{- end}}
 		{{- if .Typ}}
 		// type definitions
 		{{range $key, $value := .Typ -}}
 			"{{$key}}": reflect.ValueOf((*{{$value}})(nil)),
 		{{end}}
+
 		{{- end}}
 		{{- if .Wrap}}
 		// interface wrapper definitions
