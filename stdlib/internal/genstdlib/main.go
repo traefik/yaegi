@@ -1,5 +1,3 @@
-// +build ignore
-
 // generate symbols to provide access to Go stdlib (https://golang.org/pkg).
 package main
 

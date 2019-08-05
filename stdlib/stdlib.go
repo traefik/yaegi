@@ -15,4 +15,4 @@ func init() {
 
 // Provide access to go standard library (http://golang.org/pkg/)
 
-//go:generate go run ./generate.go
+//go:generate go run ./internal/genstdlib/main.go
