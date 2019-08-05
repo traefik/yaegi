@@ -14,7 +14,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not create top-level temporary directory: %v", err)
 	}
-	defer os.RemoveAll(tmpdir)
+	defer func() { _ = os.RemoveAll(tmpdir) }()
 
 	export := filepath.Join(tmpdir, "goexports")
 
