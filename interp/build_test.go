@@ -44,7 +44,7 @@ func TestBuildTag(t *testing.T) {
 		test := test
 		src := test.src + "\npackage x"
 		t.Run(test.src, func(t *testing.T) {
-			if r := i.buildOk(ctx, "", src); r != test.res {
+			if r, _ := i.buildOk(ctx, "", src); r != test.res {
 				t.Errorf("got %v, want %v", r, test.res)
 			}
 		})
