@@ -318,7 +318,7 @@ func (interp *Interpreter) firstToken(src string) token.Token {
 // ast parses src string containing Go code and generates the corresponding AST.
 // The package name and the AST root node are returned.
 func (interp *Interpreter) ast(src, name string) (string, *node, error) {
-	var inRepl bool = name == ""
+	inRepl := name == ""
 	var inFunc bool
 
 	// Allow incremental parsing of declarations or statements, by inserting
