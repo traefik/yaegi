@@ -31,6 +31,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 
 	for _, file := range files {
 		if filepath.Ext(file.Name()) != ".go" ||
+			file.Name() == "bad0.go" || // expect error
 			file.Name() == "export1.go" || // non-main package
 			file.Name() == "export0.go" || // non-main package
 			file.Name() == "io0.go" || // use random number
@@ -128,6 +129,11 @@ func TestInterpErrorConsistency(t *testing.T) {
 		expectedInterp string
 		expectedExec   string
 	}{
+		{
+			fileName:       "bad0.go",
+			expectedInterp: "1:1: expected 'package', found println",
+			expectedExec:   "1:1: expected 'package', found println",
+		},
 		{
 			fileName:       "op1.go",
 			expectedInterp: "5:2: illegal operand types for '+=' operator",
