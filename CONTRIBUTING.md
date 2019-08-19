@@ -3,8 +3,7 @@
 Yaegi is an open source project, and your feedback and contributions
 are needed and always welcome.
 
-[Issues] and [Pull Requests] are opened at
-https://github.com/containous/yaegi
+[Issues] and [Pull Requests] are opened at https://github.com/containous/yaegi.
 
 Non trivial changes should be discussed with the project maintainers by
 opening a [Feature Request] clearly explaining rationale, background
@@ -13,7 +12,8 @@ discussions.
 
 ## Implementation
 
-Once the proposal is approved, a Pull Request can be opened. If you want to provide early visibility to reviewers, create a [Draft Pull Request].
+Once the proposal is approved, a Pull Request can be opened. If you want
+to provide early visibility to reviewers, create a [Draft Pull Request].
 
 [Issues]: https://github.com/containous/yaegi/issues
 [Pull Requests]: https://github.com/containous/yaegi/issues
