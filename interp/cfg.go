@@ -310,6 +310,14 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 		if err != nil {
 			return
 		}
+
+		defer func() {
+			if r := recover(); r != nil {
+				// Display the exact location in input source which triggered the panic
+				panic(n.cfgErrorf("CFG post-order panic: %v", r))
+			}
+		}()
+
 		switch n.kind {
 		case addressExpr:
 			wireChild(n)
