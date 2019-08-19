@@ -145,9 +145,7 @@ Beside the known [bugs] which are supposed to be fixed in the short term, there 
 
 ## Contributing
 
-Yaegi is an open source project, and your feedback and contributions are needed and always welcome.
-
-[Issues] and [pull requests] are opened at https://github.com/containous/yaegi
+[Contributing guide](CONTRIBUTING.md).
 
 ## License
 
@@ -157,6 +155,4 @@ Yaegi is an open source project, and your feedback and contributions are needed 
 [docs]: https://godoc.org/github.com/containous/yaegi
 [license]: https://github.com/containous/yaegi/blob/master/LICENSE
 [github]: https://github.com/containous/yaegi
-[Issues]: https://github.com/containous/yaegi/issues
-[pull requests]: https://github.com/containous/yaegi/issues
 [bugs]: https://github.com/containous/yaegi/issues?q=is%3Aissue+is%3Aopen+label%3Abug
