@@ -10,8 +10,6 @@ opening a [Feature Request] clearly explaining rationale, background
 and possible implementation ideas. Feel free to provide code in such
 discussions.
 
-## Implementation
-
 Once the proposal is approved, a Pull Request can be opened. If you want
 to provide early visibility to reviewers, create a [Draft Pull Request].
 
