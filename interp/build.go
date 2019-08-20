@@ -9,22 +9,23 @@ import (
 )
 
 // buildOk returns true if a file or script matches build constraints
-// as specified in https://golang.org/pkg/go/build/#hdr-Build_Constraints
-func (interp *Interpreter) buildOk(ctx build.Context, name, src string) bool {
+// as specified in https://golang.org/pkg/go/build/#hdr-Build_Constraints.
+// An error from parser is returned as well.
+func (interp *Interpreter) buildOk(ctx build.Context, name, src string) (bool, error) {
 	// Extract comments before the first clause
 	f, err := parser.ParseFile(interp.fset, name, src, parser.PackageClauseOnly|parser.ParseComments)
 	if err != nil {
-		return false
+		return false, err
 	}
 	for _, g := range f.Comments {
 		// in file, evaluate the AND of multiple line build constraints
 		for _, line := range strings.Split(strings.TrimSpace(g.Text()), "\n") {
 			if !buildLineOk(ctx, line) {
-				return false
+				return false, nil
 			}
 		}
 	}
-	return true
+	return true, nil
 }
 
 // buildLineOk returns true if line is not a build constraint or

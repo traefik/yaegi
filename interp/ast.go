@@ -318,23 +318,26 @@ func (interp *Interpreter) firstToken(src string) token.Token {
 // ast parses src string containing Go code and generates the corresponding AST.
 // The package name and the AST root node are returned.
 func (interp *Interpreter) ast(src, name string) (string, *node, error) {
+	inRepl := name == ""
 	var inFunc bool
 
 	// Allow incremental parsing of declarations or statements, by inserting
 	// them in a pseudo file package or function. Those statements or
 	// declarations will be always evaluated in the global scope
-	switch interp.firstToken(src) {
-	case token.PACKAGE:
-		// nothing to do
-	case token.CONST, token.FUNC, token.IMPORT, token.TYPE, token.VAR:
-		src = "package main;" + src
-	default:
-		inFunc = true
-		src = "package main; func main() {" + src + "}"
+	if inRepl {
+		switch interp.firstToken(src) {
+		case token.PACKAGE:
+			// nothing to do
+		case token.CONST, token.FUNC, token.IMPORT, token.TYPE, token.VAR:
+			src = "package main;" + src
+		default:
+			inFunc = true
+			src = "package main; func main() {" + src + "}"
+		}
 	}
 
-	if !interp.buildOk(interp.context, name, src) {
-		return "", nil, nil // skip source not matching build constraints
+	if ok, err := interp.buildOk(interp.context, name, src); !ok || err != nil {
+		return "", nil, err // skip source not matching build constraints
 	}
 
 	f, err := parser.ParseFile(interp.fset, name, src, 0)
