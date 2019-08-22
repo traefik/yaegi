@@ -13,3 +13,6 @@ func (*Hello) Hi() string {
 func main() {
 	fmt.Println(&Hello{})
 }
+
+// Output:
+// &{}

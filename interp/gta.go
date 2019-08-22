@@ -9,10 +9,11 @@ import (
 // variables and functions symbols at package level, prior to CFG.
 // All function bodies are skipped. GTA is necessary to handle out of
 // order declarations and multiple source files packages.
-func (interp *Interpreter) gta(root *node, rpath string) error {
+func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 	sc, _ := interp.initScopePkg(root)
 	var err error
 	var iotaValue int
+	var revisit []*node
 
 	root.Walk(func(n *node) bool {
 		if err != nil {
@@ -42,23 +43,24 @@ func (interp *Interpreter) gta(root *node, rpath string) error {
 
 			for i := 0; i < n.nleft; i++ {
 				dest, src := n.child[i], n.child[sbase+i]
-				typ := atyp
 				val := reflect.ValueOf(iotaValue)
+				typ := atyp
 				if typ == nil {
 					if typ, err = nodeType(interp, sc, src); err != nil {
 						return false
 					}
 					val = src.rval
 				}
-				var index int
-				if !typ.incomplete {
-					if typ.cat == nilT {
-						err = n.cfgErrorf("use of untyped nil")
-						return false
-					}
-					index = sc.add(typ)
+				if typ.incomplete {
+					// Come back when type is known
+					revisit = append(revisit, n)
+					return false
 				}
-				sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: index, typ: typ, rval: val}
+				if typ.cat == nilT {
+					err = n.cfgErrorf("use of untyped nil")
+					return false
+				}
+				sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val}
 				if n.anc.kind == constDecl {
 					sc.sym[dest.ident].kind = constSym
 					iotaValue++
@@ -171,5 +173,5 @@ func (interp *Interpreter) gta(root *node, rpath string) error {
 	if sc != interp.universe {
 		sc.pop()
 	}
-	return err
+	return revisit, err
 }

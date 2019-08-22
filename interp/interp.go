@@ -245,8 +245,14 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 	}
 
 	// Global type analysis
-	if err = interp.gta(root, pkgName); err != nil {
+	revisit, err := interp.gta(root, pkgName)
+	if err != nil {
 		return res, err
+	}
+	for _, n := range revisit {
+		if _, err = interp.gta(n, pkgName); err != nil {
+			return res, err
+		}
 	}
 
 	// Annotate AST with CFG infos

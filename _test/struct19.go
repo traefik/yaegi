@@ -21,3 +21,6 @@ func main() {
 	c := CreateConfig()
 	fmt.Println(c)
 }
+
+// Output:
+// &{[]   false }

@@ -33,6 +33,7 @@ func (interp *Interpreter) importSrcFile(rPath, path, alias string) error {
 
 	var initNodes []*node
 	var rootNodes []*node
+	revisit := make(map[string][]*node)
 
 	var root *node
 	var pkgName string
@@ -65,8 +66,20 @@ func (interp *Interpreter) importSrcFile(rPath, path, alias string) error {
 		rootNodes = append(rootNodes, root)
 
 		subRPath := effectivePkg(rPath, path)
-		if err = interp.gta(root, subRPath); err != nil {
+		var list []*node
+		list, err = interp.gta(root, subRPath)
+		if err != nil {
 			return err
+		}
+		revisit[subRPath] = append(revisit[subRPath], list...)
+	}
+
+	// revisit incomplete nodes where GTA could not complete
+	for pkg, nodes := range revisit {
+		for _, n := range nodes {
+			if _, err = interp.gta(n, pkg); err != nil {
+				return err
+			}
 		}
 	}
 
