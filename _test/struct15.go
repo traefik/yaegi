@@ -21,3 +21,6 @@ func (w GzipResponseWriterWithCloseNotify) CloseNotify() <-chan bool {
 func main() {
 	fmt.Println("hello")
 }
+
+// Output:
+// hello

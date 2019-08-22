@@ -13,3 +13,6 @@ type S2 struct {
 func main() {
 	fmt.Println(S2{})
 }
+
+// Output:
+// {<nil>}

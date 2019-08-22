@@ -25,3 +25,6 @@ func main() {
 	t := &T1{}
 	println(t.Get())
 }
+
+// Output:
+// no name
