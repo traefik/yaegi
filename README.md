@@ -4,6 +4,7 @@
 
 [![release](https://img.shields.io/github/tag-date/containous/yaegi.svg?label=alpha)](https://github.com/containous/yaegi/releases)
 [![Build Status](https://travis-ci.com/containous/yaegi.svg?branch=master)](https://travis-ci.com/containous/yaegi)
+[![fuzzit](https://app.fuzzit.dev/badge?org_id=containous)](https://app.fuzzit.dev/orgs/containous/dashboard)
 [![GoDoc](https://godoc.org/github.com/containous/yaegi?status.svg)](https://godoc.org/github.com/containous/yaegi)
 [![Discourse status](https://img.shields.io/discourse/https/community.containo.us/status?label=Community&style=social)](https://community.containo.us/c/yaegi)
 
