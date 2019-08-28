@@ -162,8 +162,8 @@ func (interp *Interpreter) initScopePkg(n *node) (*scope, string) {
 	sc := interp.universe
 	pkgName := mainID
 
-	if n.kind == fileStmt {
-		pkgName = n.child[0].ident
+	if p := fileNode(n); p != nil {
+		pkgName = p.child[0].ident
 	}
 
 	if _, ok := interp.scopes[pkgName]; !ok {

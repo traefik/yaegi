@@ -183,7 +183,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			}
 
 		case compositeLitExpr:
-			if n.child[0].isType(sc) {
+			if len(n.child) > 0 && n.child[0].isType(sc) {
 				// Get type from 1st child
 				if n.typ, err = nodeType(interp, sc, n.child[0]); err != nil {
 					return false
@@ -352,10 +352,6 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				var sym *symbol
 				var level int
 				if n.kind == defineStmt || (n.kind == assignStmt && dest.ident == "_") {
-					if src.typ != nil && src.typ.cat == nilT {
-						err = src.cfgErrorf("use of untyped nil")
-						break
-					}
 					if atyp != nil {
 						dest.typ = atyp
 					} else {
@@ -1074,11 +1070,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				}
 			} else if n.typ.cat == ptrT && (n.typ.val.cat == valueT || n.typ.val.cat == errorT) {
 				// Handle pointer on object defined in runtime
-				if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
-					n.typ = &itype{cat: valueT, rtype: field.Type}
-					n.val = field.Index
-					n.gen = getPtrIndexSeq
-				} else if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
+				if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
 					n.val = method.Index
 					n.typ = &itype{cat: valueT, rtype: method.Type}
 					n.recv = &receiver{node: n.child[0]}
@@ -1088,6 +1080,11 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					n.gen = getIndexBinMethod
 					n.typ = &itype{cat: valueT, rtype: method.Type}
 					n.recv = &receiver{node: n.child[0]}
+				} else if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
+					n.typ = &itype{cat: valueT, rtype: field.Type}
+					n.val = field.Index
+					n.gen = getPtrIndexSeq
+
 				} else {
 					err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
 				}
@@ -1600,6 +1597,13 @@ func getExec(n *node) bltn {
 	return n.exec
 }
 
+func fileNode(n *node) *node {
+	if n == nil || n.kind == fileStmt {
+		return n
+	}
+	return fileNode(n.anc)
+}
+
 // setExec recursively sets the node exec builtin function by walking the CFG
 // from the entry point (first node to exec).
 func setExec(n *node) {
@@ -1652,7 +1656,8 @@ func gotoLabel(s *symbol) {
 
 func compositeGenerator(n *node) (gen bltnGenerator) {
 	switch n.typ.cat {
-	case aliasT:
+	case aliasT, ptrT:
+		n.typ.val.untyped = n.typ.untyped
 		n.typ = n.typ.val
 		gen = compositeGenerator(n)
 	case arrayT:
@@ -1660,7 +1665,7 @@ func compositeGenerator(n *node) (gen bltnGenerator) {
 	case mapT:
 		gen = mapLit
 	case structT:
-		if n.lastChild().kind == keyValueExpr {
+		if len(n.child) > 0 && n.lastChild().kind == keyValueExpr {
 			gen = compositeSparse
 		} else {
 			gen = compositeLit

@@ -1453,7 +1453,11 @@ func compositeLit(n *node) {
 		for i, v := range values {
 			a.Field(i).Set(v(f))
 		}
-		value(f).Set(a)
+		if d := value(f); d.Type().Kind() == reflect.Ptr {
+			d.Set(a.Addr())
+		} else {
+			d.Set(a)
+		}
 		return next
 	}
 }
@@ -1484,7 +1488,11 @@ func compositeSparse(n *node) {
 		for i, v := range values {
 			a.Field(i).Set(v(f))
 		}
-		value(f).Set(a)
+		if d := value(f); d.Type().Kind() == reflect.Ptr {
+			d.Set(a.Addr())
+		} else {
+			d.Set(a)
+		}
 		return next
 	}
 }

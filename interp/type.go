@@ -392,6 +392,19 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				} else {
 					t.incomplete = true
 				}
+
+			default:
+				if m, _ := sym.typ.lookupMethod(name); m != nil {
+					t, err = nodeType(interp, sc, m.child[2])
+				} else if bm, _, ok := sym.typ.lookupBinMethod(name); ok {
+					t = &itype{cat: valueT, rtype: bm.Type}
+				} else if ti := sym.typ.lookupField(name); len(ti) > 0 {
+					t = sym.typ.fieldSeq(ti)
+				} else if bs, _, ok := sym.typ.lookupBinField(name); ok {
+					t = &itype{cat: valueT, rtype: bs.Type}
+				} else {
+					err = sym.typ.node.cfgErrorf("undefined selector %s", name)
+				}
 			}
 		} else {
 			err = n.cfgErrorf("undefined package: %s", pkg)
@@ -444,6 +457,10 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 
 	default:
 		err = n.cfgErrorf("type definition not implemented: %s", n.kind)
+	}
+
+	if t.cat == nilT && !t.incomplete {
+		err = n.cfgErrorf("use of untyped nil")
 	}
 
 	return t, err
@@ -594,12 +611,14 @@ func (t *itype) lookupField(name string) []int {
 }
 
 // lookupBinField returns a structfield and a path to access an embedded binary field in a struct object
-func (t *itype) lookupBinField(name string) (reflect.StructField, []int, bool) {
+func (t *itype) lookupBinField(name string) (s reflect.StructField, index []int, ok bool) {
 	if t.cat == ptrT {
 		return t.val.lookupBinField(name)
 	}
-	var index []int
-	s, ok := t.TypeOf().FieldByName(name)
+	if !isStruct(t) {
+		return
+	}
+	s, ok = t.TypeOf().FieldByName(name)
 	if !ok {
 		for i, f := range t.field {
 			if f.embed {
@@ -677,7 +696,7 @@ func (t *itype) TypeOf() reflect.Type {
 		return t.rtype
 	}
 
-	if t.incomplete {
+	if t.incomplete || t.cat == nilT {
 		var err error
 		if t, err = t.finalize(); err != nil {
 			panic(err)
@@ -710,6 +729,13 @@ func (t *itype) TypeOf() reflect.Type {
 	case mapT:
 		t.rtype = reflect.MapOf(t.key.TypeOf(), t.val.TypeOf())
 	case ptrT:
+		// FIXME: the following should probably be done in nodeType() instead
+		if t.val.cat == nilT {
+			t.val.incomplete = true
+			if s, _, ok := t.scope.lookup(t.val.name); ok {
+				t.val = s.typ
+			}
+		}
 		t.rtype = reflect.PtrTo(t.val.TypeOf())
 	case structT:
 		var fields []reflect.StructField

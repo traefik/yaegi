@@ -112,7 +112,7 @@ func TestEvalNil(t *testing.T) {
 	i := interp.New(interp.Options{})
 	i.Use(stdlib.Symbols)
 	runTests(t, i, []testCase{
-		{desc: "assign nil", src: "a := nil", err: "1:28: use of untyped nil"},
+		{desc: "assign nil", src: "a := nil", err: "1:33: use of untyped nil"},
 		{desc: "return nil", pre: func() { eval(t, i, "func getNil() error {return nil}") }, src: "getNil()", res: "<nil>"},
 		{
 			desc: "return func which return error",

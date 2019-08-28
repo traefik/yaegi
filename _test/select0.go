@@ -9,6 +9,9 @@ func forever() {
 
 func main() {
 	go forever()
-	time.Sleep(1e9)
+	time.Sleep(1e4)
 	println("bye")
 }
+
+// Output:
+// bye
