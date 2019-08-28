@@ -1656,7 +1656,8 @@ func gotoLabel(s *symbol) {
 
 func compositeGenerator(n *node) (gen bltnGenerator) {
 	switch n.typ.cat {
-	case aliasT:
+	case aliasT, ptrT:
+		n.typ.val.untyped = n.typ.untyped
 		n.typ = n.typ.val
 		gen = compositeGenerator(n)
 	case arrayT:
@@ -1664,12 +1665,9 @@ func compositeGenerator(n *node) (gen bltnGenerator) {
 	case mapT:
 		gen = mapLit
 	case structT:
-		switch {
-		case len(n.child) == 0:
-			gen = nop
-		case n.lastChild().kind == keyValueExpr:
+		if len(n.child) > 0 && n.lastChild().kind == keyValueExpr {
 			gen = compositeSparse
-		default:
+		} else {
 			gen = compositeLit
 		}
 	case valueT:
