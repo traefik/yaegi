@@ -1929,7 +1929,7 @@ func reset(n *node) {
 
 	switch l := len(n.child) - 1; l {
 	case 1:
-		typ := n.child[0].typ.TypeOf()
+		typ := n.child[0].typ.frameType()
 		i := n.child[0].findex
 		n.exec = func(f *frame) bltn {
 			f.data[i] = reflect.New(typ).Elem()
@@ -1938,7 +1938,7 @@ func reset(n *node) {
 	case 2:
 		c0, c1 := n.child[0], n.child[1]
 		i0, i1 := c0.findex, c1.findex
-		t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
+		t0, t1 := c0.typ.frameType(), c1.typ.frameType()
 		n.exec = func(f *frame) bltn {
 			f.data[i0] = reflect.New(t0).Elem()
 			f.data[i1] = reflect.New(t1).Elem()
@@ -1949,7 +1949,7 @@ func reset(n *node) {
 		index := make([]int, l)
 		for i, c := range n.child[:l] {
 			index[i] = c.findex
-			types[i] = c.typ.TypeOf()
+			types[i] = c.typ.frameType()
 		}
 		n.exec = func(f *frame) bltn {
 			for i, ind := range index {
