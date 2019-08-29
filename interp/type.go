@@ -752,8 +752,11 @@ func (t *itype) TypeOf() reflect.Type {
 	return t.rtype
 }
 
-func (t *itype) frameType() reflect.Type {
-	var r reflect.Type
+func (t *itype) frameType() (r reflect.Type) {
+	var err error
+	if t, err = t.finalize(); err != nil {
+		panic(err)
+	}
 	switch t.cat {
 	case arrayT:
 		if t.size > 0 {
