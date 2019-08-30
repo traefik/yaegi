@@ -79,41 +79,36 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 			if n.typ, err = nodeType(interp, sc, n.child[2]); err != nil {
 				return false
 			}
-			if !isMethod(n) {
-				sc.sym[n.child[1].ident] = &symbol{kind: funcSym, typ: n.typ, node: n, index: -1}
-			}
-			if len(n.child[0].child) > 0 {
-				// function is a method, add it to the related type
+			if isMethod(n) {
+				// Add a method symbol in the receiver type name space
 				var rcvrtype *itype
-				var typeName string
 				n.ident = n.child[1].ident
 				rcvr := n.child[0].child[0]
-				if len(rcvr.child) < 2 {
-					// Receiver var name is skipped in method declaration (fix that in AST ?)
-					typeName = rcvr.child[0].ident
-				} else {
-					typeName = rcvr.child[1].ident
-				}
+				rtn := rcvr.lastChild()
+				typeName := rtn.ident
 				if typeName == "" {
 					// The receiver is a pointer, retrieve typeName from indirection
-					typeName = rcvr.lastChild().child[0].ident
+					typeName = rtn.child[0].ident
 					elementType := sc.getType(typeName)
 					if elementType == nil {
 						// Add type if necessary, so method can be registered
-						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, pkgPath: rpath}}
+						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, pkgPath: rpath, incomplete: true, node: rtn.child[0], scope: sc}}
 						elementType = sc.sym[typeName].typ
 					}
-					rcvrtype = &itype{cat: ptrT, val: elementType}
+					rcvrtype = &itype{cat: ptrT, val: elementType, incomplete: elementType.incomplete, node: rtn, scope: sc}
 					elementType.method = append(elementType.method, n)
 				} else {
 					rcvrtype = sc.getType(typeName)
 					if rcvrtype == nil {
 						// Add type if necessary, so method can be registered
-						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, pkgPath: rpath}}
+						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, pkgPath: rpath, incomplete: true, node: rtn, scope: sc}}
 						rcvrtype = sc.sym[typeName].typ
 					}
 				}
 				rcvrtype.method = append(rcvrtype.method, n)
+			} else {
+				// Add a function symbol in the package name space
+				sc.sym[n.child[1].ident] = &symbol{kind: funcSym, typ: n.typ, node: n, index: -1}
 			}
 			return false
 
@@ -165,6 +160,9 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 				n.typ.method = append(n.typ.method, sc.sym[typeName].typ.method...)
 			}
 			sc.sym[typeName].typ = n.typ
+			if n.typ.incomplete {
+				revisit = append(revisit, n)
+			}
 			return false
 		}
 		return true

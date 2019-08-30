@@ -517,15 +517,23 @@ func init() {
 func (t *itype) finalize() (*itype, error) {
 	var err cfgError
 	if t.incomplete {
+		sym, _, found := t.scope.lookup(t.name)
+		if found && !sym.typ.incomplete {
+			sym.typ.method = append(sym.typ.method, t.method...)
+			return sym.typ, nil
+		}
 		m := t.method
 		if t, err = nodeType(t.node.interp, t.scope, t.node); err != nil {
 			return nil, err
 		}
 		if t.incomplete {
-			return nil, t.node.cfgErrorf("incomplete type")
+			return nil, t.node.cfgErrorf("incomplete type %s", t.name)
 		}
 		t.method = m
 		t.node.typ = t
+		if sym != nil {
+			sym.typ = t
+		}
 	}
 	return t, err
 }
