@@ -416,14 +416,13 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 
 	case structType:
 		t.cat = structT
-		var incomplete bool
-		//var incomplete, found bool
-		//var sym *symbol
-		//if sname := structName(n); sname != "" {
-		//	if sym, _, found = sc.lookup(sname); found && sym.kind == typeSym {
-		//		sym.typ = t
-		//	}
-		//}
+		var incomplete, found bool
+		var sym *symbol
+		if sname := structName(n); sname != "" {
+			if sym, _, found = sc.lookup(sname); found && sym.kind == typeSym {
+				sym.typ = t
+			}
+		}
 		for _, c := range n.child[0].child {
 			switch {
 			case len(c.child) == 1:
