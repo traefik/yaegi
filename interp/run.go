@@ -198,12 +198,12 @@ func convert(n *node) {
 	}
 }
 
-func isRecursiveStruct(t *itype) bool {
-	if t.cat == structT && t.rtype.Kind() == reflect.Interface {
+func isRecursiveStruct(t *itype, rtype reflect.Type) bool {
+	if t.cat == structT && rtype.Kind() == reflect.Interface {
 		return true
 	}
 	if t.cat == ptrT {
-		return isRecursiveStruct(t.val)
+		return isRecursiveStruct(t.val, t.rtype.Elem())
 	}
 	return false
 }
@@ -230,7 +230,7 @@ func assign(n *node) {
 		case src.kind == basicLit && src.val == nil:
 			t := dest.typ.TypeOf()
 			svalue[i] = func(*frame) reflect.Value { return reflect.New(t).Elem() }
-		case isRecursiveStruct(dest.typ):
+		case isRecursiveStruct(dest.typ, dest.typ.rtype):
 			svalue[i] = genValueInterfacePtr(src)
 		default:
 			svalue[i] = genValue(src)
@@ -1087,7 +1087,7 @@ func getPtrIndexSeq(n *node) {
 	index := n.val.([]int)
 	tnext := getExec(n.tnext)
 	var value func(*frame) reflect.Value
-	if isRecursiveStruct(n.child[0].typ) {
+	if isRecursiveStruct(n.child[0].typ, n.child[0].typ.rtype) {
 		v := genValue(n.child[0])
 		value = func(f *frame) reflect.Value { return v(f).Elem().Elem() }
 	} else {
@@ -1727,7 +1727,7 @@ func _append(n *node) {
 		values := make([]func(*frame) reflect.Value, l)
 		for i, arg := range args {
 			switch {
-			case isRecursiveStruct(n.typ.val):
+			case isRecursiveStruct(n.typ.val, n.typ.val.rtype):
 				values[i] = genValueInterfacePtr(arg)
 			case arg.typ.untyped:
 				values[i] = genValueAs(arg, n.child[1].typ.TypeOf().Elem())
@@ -1747,7 +1747,7 @@ func _append(n *node) {
 	} else {
 		var value0 func(*frame) reflect.Value
 		switch {
-		case isRecursiveStruct(n.typ.val):
+		case isRecursiveStruct(n.typ.val, n.typ.val.rtype):
 			value0 = genValueInterfacePtr(n.child[2])
 		case n.child[2].typ.untyped:
 			value0 = genValueAs(n.child[2], n.child[1].typ.TypeOf().Elem())
