@@ -132,9 +132,10 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 
 	if n.anc.kind == typeSpec {
 		name := n.anc.child[0].ident
-		if sc.sym[name] != nil {
+		if sym := sc.sym[name]; sym != nil {
 			// recover previously declared methods
-			t.method = sc.sym[name].typ.method
+			t.method = sym.typ.method
+			t.pkgPath = sym.typ.pkgPath
 			t.name = name
 		}
 	}

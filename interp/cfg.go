@@ -491,6 +491,8 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			c0, c1 := n.child[0], n.child[1]
 			t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 			if !c0.typ.untyped && !c1.typ.untyped && c0.typ.id() != c1.typ.id() {
+				log.Println(c0.typ.pkgPath)
+				log.Println(c1.typ.pkgPath)
 				err = n.cfgErrorf("mismatched types %s and %s", c0.typ.id(), c1.typ.id())
 				break
 			}
