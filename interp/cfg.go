@@ -355,6 +355,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					if atyp != nil {
 						dest.typ = atyp
 					} else {
+						if src.typ, err = nodeType(interp, sc, src); err != nil {
+							return
+						}
 						dest.typ = src.typ
 					}
 					if dest.typ.sizedef {

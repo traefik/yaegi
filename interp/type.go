@@ -130,6 +130,16 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 
 	var t = &itype{node: n, scope: sc}
 
+	if n.anc.kind == typeSpec {
+		name := n.anc.child[0].ident
+		if sym := sc.sym[name]; sym != nil {
+			// recover previously declared methods
+			t.method = sym.typ.method
+			t.pkgPath = sym.typ.pkgPath
+			t.name = name
+		}
+	}
+
 	switch n.kind {
 	case addressExpr, starExpr:
 		t.cat = ptrT
@@ -314,11 +324,6 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	case identExpr:
 		if sym, _, found := sc.lookup(n.ident); found {
 			t = sym.typ
-			if sym.recursive && t.incomplete {
-				t.incomplete = false
-				t.rtype = reflect.TypeOf((*interface{})(nil)).Elem()
-				sym.typ = t
-			}
 			if t.incomplete && t.node != n {
 				m := t.method
 				if t, err = nodeType(interp, sc, t.node); err != nil {
@@ -416,7 +421,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		var sym *symbol
 		if sname := structName(n); sname != "" {
 			if sym, _, found = sc.lookup(sname); found && sym.kind == typeSym {
-				sym.recursive = true
+				sym.typ = t
 			}
 		}
 		for _, c := range n.child[0].child {
@@ -460,7 +465,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	}
 
 	if t.cat == nilT && !t.incomplete {
-		err = n.cfgErrorf("use of untyped nil")
+		err = n.cfgErrorf("use of untyped nil %s", t.name)
 	}
 
 	return t, err
@@ -517,15 +522,23 @@ func init() {
 func (t *itype) finalize() (*itype, error) {
 	var err cfgError
 	if t.incomplete {
+		sym, _, found := t.scope.lookup(t.name)
+		if found && !sym.typ.incomplete {
+			sym.typ.method = append(sym.typ.method, t.method...)
+			return sym.typ, nil
+		}
 		m := t.method
 		if t, err = nodeType(t.node.interp, t.scope, t.node); err != nil {
 			return nil, err
 		}
 		if t.incomplete {
-			return nil, t.node.cfgErrorf("incomplete type")
+			return nil, t.node.cfgErrorf("incomplete type %s", t.name)
 		}
 		t.method = m
 		t.node.typ = t
+		if sym != nil {
+			sym.typ = t
+		}
 	}
 	return t, err
 }
@@ -691,7 +704,7 @@ func exportName(s string) string {
 }
 
 // TypeOf returns the reflection type of dynamic interpreter type t.
-func (t *itype) TypeOf() reflect.Type {
+func (t *itype) Type(name string) reflect.Type {
 	if t.rtype != nil {
 		return t.rtype
 	}
@@ -702,26 +715,29 @@ func (t *itype) TypeOf() reflect.Type {
 			panic(err)
 		}
 	}
+	if name == "" {
+		name = t.name
+	}
 
 	switch t.cat {
 	case arrayT:
 		if t.size > 0 {
-			t.rtype = reflect.ArrayOf(t.size, t.val.TypeOf())
+			t.rtype = reflect.ArrayOf(t.size, t.val.Type(name))
 		} else {
-			t.rtype = reflect.SliceOf(t.val.TypeOf())
+			t.rtype = reflect.SliceOf(t.val.Type(name))
 		}
 	case chanT:
-		t.rtype = reflect.ChanOf(reflect.BothDir, t.val.TypeOf())
+		t.rtype = reflect.ChanOf(reflect.BothDir, t.val.Type(name))
 	case errorT:
 		t.rtype = reflect.TypeOf(new(error)).Elem()
 	case funcT:
 		in := make([]reflect.Type, len(t.arg))
 		out := make([]reflect.Type, len(t.ret))
 		for i, v := range t.arg {
-			in[i] = v.TypeOf()
+			in[i] = v.Type(name)
 		}
 		for i, v := range t.ret {
-			out[i] = v.TypeOf()
+			out[i] = v.Type(name)
 		}
 		t.rtype = reflect.FuncOf(in, out, false)
 	case interfaceT:
@@ -729,18 +745,14 @@ func (t *itype) TypeOf() reflect.Type {
 	case mapT:
 		t.rtype = reflect.MapOf(t.key.TypeOf(), t.val.TypeOf())
 	case ptrT:
-		// FIXME: the following should probably be done in nodeType() instead
-		if t.val.cat == nilT {
-			t.val.incomplete = true
-			if s, _, ok := t.scope.lookup(t.val.name); ok {
-				t.val = s.typ
-			}
+		if t.val != nil && name != "" && t.val.name == name {
+			t.val.rtype = reflect.TypeOf(new(interface{})).Elem()
 		}
-		t.rtype = reflect.PtrTo(t.val.TypeOf())
+		t.rtype = reflect.PtrTo(t.val.Type(name))
 	case structT:
 		var fields []reflect.StructField
 		for _, f := range t.field {
-			field := reflect.StructField{Name: exportName(f.name), Type: f.typ.TypeOf(), Tag: reflect.StructTag(f.tag)}
+			field := reflect.StructField{Name: exportName(f.name), Type: f.typ.Type(name), Tag: reflect.StructTag(f.tag)}
 			fields = append(fields, field)
 		}
 		t.rtype = reflect.StructOf(fields)
@@ -750,6 +762,10 @@ func (t *itype) TypeOf() reflect.Type {
 		}
 	}
 	return t.rtype
+}
+
+func (t *itype) TypeOf() reflect.Type {
+	return t.Type(t.name)
 }
 
 func (t *itype) frameType() (r reflect.Type) {
@@ -764,29 +780,11 @@ func (t *itype) frameType() (r reflect.Type) {
 		} else {
 			r = reflect.SliceOf(t.val.frameType())
 		}
-	//case ChanT:
-	//	r = reflect.ChanOf(reflect.BothDir, t.val.frameType())
-	//case ErrorT:
-	//	r = reflect.TypeOf(new(error)).Elem()
 	case funcT:
 		r = reflect.TypeOf((*node)(nil))
 	case interfaceT:
 		r = reflect.TypeOf((*valueInterface)(nil)).Elem()
-	//case MapT:
-	//	r = reflect.MapOf(t.key.frameType(), t.val.frameType())
-	//case PtrT:
-	//	r = reflect.PtrTo(t.val.frameType())
-	//case StructT:
-	//	var fields []reflect.StructField
-	//	for _, f := range t.field {
-	//		field := reflect.StructField{Name: exportName(f.name), Type: f.typ.frameType()}
-	//		fields = append(fields, field)
-	//	}
-	//	r = reflect.StructOf(fields)
 	default:
-		//	if z, _ := t.zero(); z.IsValid() {
-		//		r = z.Type()
-		//	}
 		r = t.TypeOf()
 	}
 	return r
