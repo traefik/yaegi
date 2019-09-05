@@ -358,6 +358,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					if atyp != nil {
 						dest.typ = atyp
 					} else {
+						if src.typ, err = nodeType(interp, sc, src); err != nil {
+							return
+						}
 						dest.typ = src.typ
 					}
 					if dest.typ.sizedef {
@@ -1202,7 +1205,11 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			default:
 				// dereference expression
 				wireChild(n)
-				n.typ = n.child[0].typ.val
+				if c0 := n.child[0]; c0.typ.cat == valueT {
+					n.typ = &itype{cat: valueT, rtype: c0.typ.rtype.Elem()}
+				} else {
+					n.typ = c0.typ.val
+				}
 				n.findex = sc.add(n.typ)
 			}
 

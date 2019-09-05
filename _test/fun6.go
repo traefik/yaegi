@@ -1,18 +1,21 @@
 package main
 
 import (
-	goflag "flag"
 	"fmt"
+	"sync"
 )
 
-func Foo(goflag *goflag.Flag) {
-	fmt.Println(goflag)
+func NewPool() Pool { return Pool{} }
+
+type Pool struct {
+	p *sync.Pool
 }
 
+var _pool = NewPool()
+
 func main() {
-	g := &goflag.Flag{}
-	Foo(g)
+	fmt.Println(_pool)
 }
 
 // Output:
-// &{  <nil> }
+// {<nil>}
