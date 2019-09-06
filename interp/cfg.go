@@ -221,6 +221,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case funcDecl:
 			n.val = n
+			// Compute function type before entering local scope to avoid
+			// possible collisions with function argument names.
+			n.child[2].typ, err = nodeType(interp, sc, n.child[2])
 			// Add a frame indirection level as we enter in a func
 			sc = sc.pushFunc()
 			sc.def = n
