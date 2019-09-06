@@ -121,7 +121,8 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 				ipath = n.child[0].rval.String()
 				name = path.Base(ipath)
 			}
-			if interp.binPkg[ipath] != nil {
+			switch {
+			case interp.binPkg[ipath] != nil:
 				if name == "." {
 					for n, v := range interp.binPkg[ipath] {
 						typ := v.Type()
@@ -133,11 +134,14 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 				} else {
 					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT}, path: ipath}
 				}
-			} else {
-				// TODO: make sure we do not import a src package more than once
-				err = interp.importSrcFile(rpath, ipath, name)
-				sc.types = interp.universe.types
-				sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT}, path: ipath}
+			case interp.srcPkg[ipath] != nil:
+				sc.sym[name] = interp.srcPkg[ipath]
+			default:
+				if err = interp.importSrc(rpath, ipath, name); err == nil {
+					sc.types = interp.universe.types
+					interp.srcPkg[ipath] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT}, path: ipath}
+					sc.sym[name] = interp.srcPkg[ipath]
+				}
 			}
 
 		case typeSpec:

@@ -69,12 +69,13 @@ type opt struct {
 type Interpreter struct {
 	Name string // program name
 	opt
-	frame    *frame            // program data storage during execution
-	nindex   int               // next node index
-	fset     *token.FileSet    // fileset to locate node in source code
-	universe *scope            // interpreter global level scope
-	scopes   map[string]*scope // package level scopes, indexed by package name
-	binPkg   Exports           // runtime binary values used in interpreter
+	frame    *frame             // program data storage during execution
+	nindex   int                // next node index
+	fset     *token.FileSet     // fileset to locate node in source code
+	universe *scope             // interpreter global level scope
+	scopes   map[string]*scope  // package level scopes, indexed by package name
+	binPkg   Exports            // binary packages used in interpreter, indexed by path
+	srcPkg   map[string]*symbol // source packages used in interpreter, indexed by path
 }
 
 const (
@@ -127,11 +128,12 @@ type Options struct {
 func New(options Options) *Interpreter {
 	i := Interpreter{
 		opt:      opt{context: build.Default},
+		frame:    &frame{data: []reflect.Value{}},
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
 		scopes:   map[string]*scope{},
 		binPkg:   Exports{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
-		frame:    &frame{data: []reflect.Value{}},
+		srcPkg:   map[string]*symbol{},
 	}
 
 	i.opt.context.GOPATH = options.GoPath

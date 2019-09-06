@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func (interp *Interpreter) importSrcFile(rPath, path, alias string) error {
+func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 	var dir string
 	var err error
 
