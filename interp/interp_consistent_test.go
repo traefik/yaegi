@@ -35,6 +35,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "export1.go" || // non-main package
 			file.Name() == "export0.go" || // non-main package
 			file.Name() == "io0.go" || // use random number
+			file.Name() == "import4.go" || // not compatible with go1.13
 			file.Name() == "op1.go" || // expect error
 			file.Name() == "bltn0.go" || // expect error
 			file.Name() == "method16.go" || // private struct field
