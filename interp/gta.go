@@ -142,10 +142,9 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 				case "_": // no import of symbols
 				case ".": // import symbols in current namespace
 					for k, v := range interp.srcPkg[ipath] {
-						if !canExport(k) {
-							continue
+						if canExport(k) {
+							sc.sym[k] = v
 						}
-						sc.sym[k] = v
 					}
 				default: // import symbols in package namespace
 					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT}, path: ipath}
