@@ -11,8 +11,8 @@ type Fromage struct {
 
 func main() {
 	a := Fromage{}
-	fmt.Println(a.Server)
+	fmt.Println(a.Server.WriteTimeout)
 }
 
 // Output:
-// { <nil> <nil> 0s 0s 0s 0s 0 map[] <nil> <nil> 0 0 {{0 0} 0} <nil> {0 0} map[] map[] <nil> []}
+// 0s
