@@ -12,6 +12,10 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 	var dir string
 	var err error
 
+	if interp.srcPkg[path] != nil {
+		return nil
+	}
+
 	// For relative import paths in the form "./xxx" or "../xxx", the initial
 	// base path is the directory of the interpreter input file, or "." if no file
 	// was provided.
@@ -91,6 +95,10 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 		}
 		initNodes = append(initNodes, nodes...)
 	}
+
+	// Register source package in the interpreter. The package contains only
+	// the global symbols in the package scope.
+	interp.srcPkg[path] = interp.scopes[pkgName].sym
 
 	// Rename imported pkgName to alias if they are different
 	if pkgName != alias {

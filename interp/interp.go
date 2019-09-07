@@ -54,8 +54,11 @@ type frame struct {
 	recovered interface{}       // to handle panic recover
 }
 
-// Exports stores the map of external values per package
+// Exports stores the map of binary packages per package path
 type Exports map[string]map[string]reflect.Value
+
+// imports stores the map of source packages per package path
+type imports map[string]map[string]*symbol
 
 // opt stores interpreter options
 type opt struct {
@@ -69,13 +72,13 @@ type opt struct {
 type Interpreter struct {
 	Name string // program name
 	opt
-	frame    *frame             // program data storage during execution
-	nindex   int                // next node index
-	fset     *token.FileSet     // fileset to locate node in source code
-	universe *scope             // interpreter global level scope
-	scopes   map[string]*scope  // package level scopes, indexed by package name
-	binPkg   Exports            // binary packages used in interpreter, indexed by path
-	srcPkg   map[string]*symbol // source packages used in interpreter, indexed by path
+	frame    *frame            // program data storage during execution
+	nindex   int               // next node index
+	fset     *token.FileSet    // fileset to locate node in source code
+	universe *scope            // interpreter global level scope
+	scopes   map[string]*scope // package level scopes, indexed by package name
+	binPkg   Exports           // binary packages used in interpreter, indexed by path
+	srcPkg   imports           // source packages used in interpreter, indexed by path
 }
 
 const (
@@ -133,7 +136,7 @@ func New(options Options) *Interpreter {
 		universe: initUniverse(),
 		scopes:   map[string]*scope{},
 		binPkg:   Exports{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
-		srcPkg:   map[string]*symbol{},
+		srcPkg:   imports{},
 	}
 
 	i.opt.context.GOPATH = options.GoPath
