@@ -1,6 +1,7 @@
 package interp_test
 
 import (
+	"go/build"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -35,7 +36,6 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "export1.go" || // non-main package
 			file.Name() == "export0.go" || // non-main package
 			file.Name() == "io0.go" || // use random number
-			file.Name() == "import4.go" || // not compatible with go1.13
 			file.Name() == "op1.go" || // expect error
 			file.Name() == "bltn0.go" || // expect error
 			file.Name() == "method16.go" || // private struct field
@@ -79,7 +79,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
-			i := interp.New(interp.Options{})
+			i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
 			i.Name = filePath
 			i.Use(stdlib.Symbols)
 			i.Use(interp.Symbols)
@@ -179,7 +179,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			i := interp.New(interp.Options{})
+			i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
 			i.Name = filePath
 			i.Use(stdlib.Symbols)
 

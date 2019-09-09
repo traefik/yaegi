@@ -121,8 +121,11 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 				ipath = n.child[0].rval.String()
 				name = path.Base(ipath)
 			}
+			// Try to import a binary package first, or a source package
 			if interp.binPkg[ipath] != nil {
-				if name == "." {
+				switch name {
+				case "_": // no import of symbols
+				case ".": // import symbols in current scope
 					for n, v := range interp.binPkg[ipath] {
 						typ := v.Type()
 						if isBinType(v) {
@@ -130,14 +133,22 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 						}
 						sc.sym[n] = &symbol{kind: binSym, typ: &itype{cat: valueT, rtype: typ}, rval: v}
 					}
-				} else {
+				default: // import symbols in package namespace
 					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT}, path: ipath}
 				}
-			} else {
-				// TODO: make sure we do not import a src package more than once
-				err = interp.importSrcFile(rpath, ipath, name)
+			} else if err = interp.importSrc(rpath, ipath, name); err == nil {
 				sc.types = interp.universe.types
-				sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT}, path: ipath}
+				switch name {
+				case "_": // no import of symbols
+				case ".": // import symbols in current namespace
+					for k, v := range interp.srcPkg[ipath] {
+						if canExport(k) {
+							sc.sym[k] = v
+						}
+					}
+				default: // import symbols in package namespace
+					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT}, path: ipath}
+				}
 			}
 
 		case typeSpec:

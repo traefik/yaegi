@@ -383,7 +383,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				if v, ok := pkg[name]; ok {
 					t.cat = valueT
 					t.rtype = v.Type()
-					if isBinType(v) {
+					if isBinType(v) { // a bin type is encoded as a pointer on nil value
 						t.rtype = t.rtype.Elem()
 					}
 				} else {
@@ -391,9 +391,9 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				}
 
 			case srcPkgT:
-				spkg := interp.scopes[pkg]
-				if st, ok := spkg.sym[name]; ok {
-					t = st.typ
+				pkg := interp.srcPkg[sym.path]
+				if s, ok := pkg[name]; ok {
+					t = s.typ
 				} else {
 					t.incomplete = true
 				}

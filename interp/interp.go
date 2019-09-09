@@ -54,8 +54,11 @@ type frame struct {
 	recovered interface{}       // to handle panic recover
 }
 
-// Exports stores the map of external values per package
+// Exports stores the map of binary packages per package path
 type Exports map[string]map[string]reflect.Value
+
+// imports stores the map of source packages per package path
+type imports map[string]map[string]*symbol
 
 // opt stores interpreter options
 type opt struct {
@@ -74,7 +77,8 @@ type Interpreter struct {
 	fset     *token.FileSet    // fileset to locate node in source code
 	universe *scope            // interpreter global level scope
 	scopes   map[string]*scope // package level scopes, indexed by package name
-	binPkg   Exports           // runtime binary values used in interpreter
+	binPkg   Exports           // binary packages used in interpreter, indexed by path
+	srcPkg   imports           // source packages used in interpreter, indexed by path
 }
 
 const (
@@ -127,11 +131,12 @@ type Options struct {
 func New(options Options) *Interpreter {
 	i := Interpreter{
 		opt:      opt{context: build.Default},
+		frame:    &frame{data: []reflect.Value{}},
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
 		scopes:   map[string]*scope{},
 		binPkg:   Exports{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
-		frame:    &frame{data: []reflect.Value{}},
+		srcPkg:   imports{},
 	}
 
 	i.opt.context.GOPATH = options.GoPath
