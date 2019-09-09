@@ -1,6 +1,7 @@
 package interp_test
 
 import (
+	"go/build"
 	"go/parser"
 	"go/token"
 	"io/ioutil"
@@ -51,7 +52,7 @@ func runCheck(t *testing.T, p string) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	i := interp.New(interp.Options{})
+	i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
 	i.Name = p
 	i.Use(interp.Symbols)
 	i.Use(stdlib.Symbols)

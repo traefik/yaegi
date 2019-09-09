@@ -1,6 +1,6 @@
 package foo
 
-import "./boo"
+import "github.com/containous/yaegi/_test/foo/boo"
 
 var Bar = "BARR"
 var Boo = boo.Boo
