@@ -44,6 +44,7 @@ const (
 	uint64T
 	uintptrT
 	valueT
+	variadicT
 	maxT
 )
 
@@ -82,6 +83,7 @@ var cats = [...]string{
 	uint64T:     "uint64T",
 	uintptrT:    "uintptrT",
 	valueT:      "valueT",
+	variadicT:   "variadicT",
 }
 
 func (c tcat) String() string {
@@ -102,17 +104,16 @@ type structField struct {
 // itype defines the internal representation of types in the interpreter
 type itype struct {
 	cat        tcat          // Type category
-	field      []structField // Array of struct fields if StrucT or InterfaceT
+	field      []structField // Array of struct fields if structT or interfaceT
 	key        *itype        // Type of key element if MapT or nil
-	val        *itype        // Type of value element if ChanT, MapT, PtrT, AliasT or ArrayT
-	arg        []*itype      // Argument types if FuncT or nil
-	ret        []*itype      // Return types if FuncT or nil
+	val        *itype        // Type of value element if chanT, mapT, ptrT, aliasT, arrayT or variadicT
+	arg        []*itype      // Argument types if funcT or nil
+	ret        []*itype      // Return types if funcT or nil
 	method     []*node       // Associated methods or nil
 	name       string        // name of type within its package for a defined type
 	pkgPath    string        // for a defined type, the package import path
 	size       int           // Size of array if ArrayT
 	rtype      reflect.Type  // Reflection type if ValueT, or nil
-	variadic   bool          // true if type is variadic
 	incomplete bool          // true if type must be parsed again (out of order declarations)
 	untyped    bool          // true for a literal value (string or number)
 	sizedef    bool          // true if array size is computed from type definition
@@ -280,10 +281,11 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		t.incomplete = t.val.incomplete
 
 	case ellipsisExpr:
-		if t, err = nodeType(interp, sc, n.child[0]); err != nil {
+		t.cat = variadicT
+		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
 			return nil, err
 		}
-		t.variadic = true
+		t.incomplete = t.val.incomplete
 
 	case funcLit:
 		t, err = nodeType(interp, sc, n.child[2])
@@ -720,7 +722,7 @@ func (t *itype) Type(name string) reflect.Type {
 	}
 
 	switch t.cat {
-	case arrayT:
+	case arrayT, variadicT:
 		if t.size > 0 {
 			t.rtype = reflect.ArrayOf(t.size, t.val.Type(name))
 		} else {
@@ -774,7 +776,7 @@ func (t *itype) frameType() (r reflect.Type) {
 		panic(err)
 	}
 	switch t.cat {
-	case arrayT:
+	case arrayT, variadicT:
 		if t.size > 0 {
 			r = reflect.ArrayOf(t.size, t.val.frameType())
 		} else {

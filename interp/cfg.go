@@ -89,7 +89,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					case stringT:
 						ktyp = sc.getType("int")
 						vtyp = sc.getType("byte")
-					case arrayT:
+					case arrayT, variadicT:
 						ktyp = sc.getType("int")
 						vtyp = o.typ.val
 					}
@@ -259,9 +259,6 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				var typ *itype
 				if typ, err = nodeType(interp, sc, c.lastChild()); err != nil {
 					return false
-				}
-				if typ.variadic {
-					typ = &itype{cat: arrayT, val: typ}
 				}
 				for _, cc := range c.child[:len(c.child)-1] {
 					sc.sym[cc.ident] = &symbol{index: sc.add(typ), kind: varSym, typ: typ}
@@ -1584,7 +1581,7 @@ func variadicPos(n *node) int {
 		return -1
 	}
 	last := len(n.child[0].typ.arg) - 1
-	if n.child[0].typ.arg[last].variadic {
+	if n.child[0].typ.arg[last].cat == variadicT {
 		return last
 	}
 	return -1

@@ -614,7 +614,7 @@ func call(n *node) {
 			if c.kind == basicLit {
 				var argType reflect.Type
 				if variadic >= 0 && i >= variadic {
-					argType = n.child[0].typ.arg[variadic].TypeOf()
+					argType = n.child[0].typ.arg[variadic].val.TypeOf()
 				} else {
 					argType = n.child[0].typ.arg[i].TypeOf()
 				}
