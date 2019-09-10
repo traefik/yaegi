@@ -277,7 +277,8 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 	}
 	if interp.universe.sym[pkgName] == nil {
 		// Make the package visible under a path identical to its name
-		interp.universe.sym[pkgName] = &symbol{typ: &itype{cat: srcPkgT}, path: pkgName}
+		interp.srcPkg[pkgName] = interp.scopes[pkgName].sym
+		interp.universe.sym[pkgName] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT}, path: pkgName}
 	}
 
 	if interp.cfgDot {

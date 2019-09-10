@@ -1109,16 +1109,16 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					err = n.cfgErrorf("package %s \"%s\" has no symbol %s", n.child[0].ident, pkg, name)
 				}
 			} else if n.typ.cat == srcPkgT {
-				pkg, name := n.child[0].ident, n.child[1].ident
+				pkg, name := n.child[0].sym.path, n.child[1].ident
 				// Resolve source package symbol
-				if sym, ok := interp.scopes[pkg].sym[name]; ok {
+				if sym, ok := interp.srcPkg[pkg][name]; ok {
 					n.findex = sym.index
 					n.val = sym.node
 					n.gen = nop
 					n.typ = sym.typ
 					n.sym = sym
 				} else {
-					err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
+					err = n.cfgErrorf("undefined selector: %s.%s", pkg, name)
 				}
 			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
 				if n.child[0].isType(sc) {
@@ -1474,7 +1474,7 @@ func (n *node) isType(sc *scope) bool {
 			if p, ok := n.interp.binPkg[sym.path]; ok && isBinType(p[name]) {
 				return true // Imported binary type
 			}
-			if p, ok := n.interp.scopes[pkg]; ok && p.sym[name] != nil && p.sym[name].kind == typeSym {
+			if p, ok := n.interp.srcPkg[sym.path]; ok && p[name] != nil && p[name].kind == typeSym {
 				return true // Imported source type
 			}
 		}
