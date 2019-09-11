@@ -72,8 +72,15 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 			err = compDefineX(sc, n)
 
 		case valueSpec:
-			// TODO: handle global ValueSpec
-			//err = n.cfgError("global ValueSpec not implemented")
+			l := len(n.child) - 1
+			if n.typ = n.child[l].typ; n.typ == nil {
+				if n.typ, err = nodeType(interp, sc, n.child[l]); err != nil {
+					return false
+				}
+			}
+			for _, c := range n.child[:l] {
+				sc.sym[c.ident] = &symbol{index: sc.add(n.typ), kind: varSym, global: true, typ: n.typ}
+			}
 
 		case funcDecl:
 			if n.typ, err = nodeType(interp, sc, n.child[2]); err != nil {
