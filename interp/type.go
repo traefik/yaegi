@@ -111,7 +111,7 @@ type itype struct {
 	ret        []*itype      // Return types if funcT or nil
 	method     []*node       // Associated methods or nil
 	name       string        // name of type within its package for a defined type
-	pkgPath    string        // for a defined type, the package import path
+	path       string        // for a defined type, the package import path
 	size       int           // Size of array if ArrayT
 	rtype      reflect.Type  // Reflection type if ValueT, or nil
 	incomplete bool          // true if type must be parsed again (out of order declarations)
@@ -136,7 +136,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		if sym := sc.sym[name]; sym != nil {
 			// recover previously declared methods
 			t.method = sym.typ.method
-			t.pkgPath = sym.typ.pkgPath
+			t.path = sym.typ.path
 			t.name = name
 		}
 	}
@@ -373,48 +373,48 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		t, err = nodeType(interp, sc, n.child[0])
 
 	case selectorExpr:
-		pkg, name := n.child[0].ident, n.child[1].ident
-		if sym, _, found := sc.lookup(pkg); found {
-			if sym.typ == nil {
-				t.incomplete = true
-				break
+		// Resolve the left part of selector, then lookup the right part on it
+		var lt *itype
+		if lt, err = nodeType(interp, sc, n.child[0]); err != nil {
+			return nil, err
+		}
+		if lt.incomplete {
+			t.incomplete = true
+			break
+		}
+		name := n.child[1].ident
+		switch lt.cat {
+		case binPkgT:
+			pkg := interp.binPkg[lt.path]
+			if v, ok := pkg[name]; ok {
+				t.cat = valueT
+				t.rtype = v.Type()
+				if isBinType(v) { // a bin type is encoded as a pointer on nil value
+					t.rtype = t.rtype.Elem()
+				}
+			} else {
+				err = n.cfgErrorf("undefined selector %s.%s", lt.path, name)
+				panic(err)
 			}
-			switch sym.typ.cat {
-			case binPkgT:
-				pkg := interp.binPkg[sym.path]
-				if v, ok := pkg[name]; ok {
-					t.cat = valueT
-					t.rtype = v.Type()
-					if isBinType(v) { // a bin type is encoded as a pointer on nil value
-						t.rtype = t.rtype.Elem()
-					}
-				} else {
-					t.incomplete = true
-				}
-
-			case srcPkgT:
-				pkg := interp.srcPkg[sym.path]
-				if s, ok := pkg[name]; ok {
-					t = s.typ
-				} else {
-					t.incomplete = true
-				}
-
-			default:
-				if m, _ := sym.typ.lookupMethod(name); m != nil {
-					t, err = nodeType(interp, sc, m.child[2])
-				} else if bm, _, ok := sym.typ.lookupBinMethod(name); ok {
-					t = &itype{cat: valueT, rtype: bm.Type}
-				} else if ti := sym.typ.lookupField(name); len(ti) > 0 {
-					t = sym.typ.fieldSeq(ti)
-				} else if bs, _, ok := sym.typ.lookupBinField(name); ok {
-					t = &itype{cat: valueT, rtype: bs.Type}
-				} else {
-					err = sym.typ.node.cfgErrorf("undefined selector %s", name)
-				}
+		case srcPkgT:
+			pkg := interp.srcPkg[lt.path]
+			if s, ok := pkg[name]; ok {
+				t = s.typ
+			} else {
+				err = n.cfgErrorf("undefined selector %s.%s", lt.path, name)
 			}
-		} else {
-			err = n.cfgErrorf("undefined package: %s", pkg)
+		default:
+			if m, _ := lt.lookupMethod(name); m != nil {
+				t, err = nodeType(interp, sc, m.child[2])
+			} else if bm, _, ok := lt.lookupBinMethod(name); ok {
+				t = &itype{cat: valueT, rtype: bm.Type}
+			} else if ti := lt.lookupField(name); len(ti) > 0 {
+				t = lt.fieldSeq(ti)
+			} else if bs, _, ok := lt.lookupBinField(name); ok {
+				t = &itype{cat: valueT, rtype: bs.Type}
+			} else {
+				err = lt.node.cfgErrorf("undefined selector %s", name)
+			}
 		}
 
 	case structType:
@@ -466,7 +466,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		err = n.cfgErrorf("type definition not implemented: %s", n.kind)
 	}
 
-	if t.cat == nilT && !t.incomplete {
+	if err == nil && t.cat == nilT && !t.incomplete {
 		err = n.cfgErrorf("use of untyped nil %s", t.name)
 	}
 
@@ -556,7 +556,7 @@ func (t *itype) id() string {
 	case ptrT:
 		res = "*" + t.val.id()
 	default:
-		res = t.pkgPath + "." + t.name
+		res = t.path + "." + t.name
 	}
 	return res
 }

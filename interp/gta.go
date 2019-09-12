@@ -99,7 +99,7 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 					elementType := sc.getType(typeName)
 					if elementType == nil {
 						// Add type if necessary, so method can be registered
-						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, pkgPath: rpath, incomplete: true, node: rtn.child[0], scope: sc}}
+						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: rpath, incomplete: true, node: rtn.child[0], scope: sc}}
 						elementType = sc.sym[typeName].typ
 					}
 					rcvrtype = &itype{cat: ptrT, val: elementType, incomplete: elementType.incomplete, node: rtn, scope: sc}
@@ -108,7 +108,7 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 					rcvrtype = sc.getType(typeName)
 					if rcvrtype == nil {
 						// Add type if necessary, so method can be registered
-						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, pkgPath: rpath, incomplete: true, node: rtn, scope: sc}}
+						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: rpath, incomplete: true, node: rtn, scope: sc}}
 						rcvrtype = sc.sym[typeName].typ
 					}
 				}
@@ -141,7 +141,7 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 						sc.sym[n] = &symbol{kind: binSym, typ: &itype{cat: valueT, rtype: typ}, rval: v}
 					}
 				default: // import symbols in package namespace
-					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT}, path: ipath}
+					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath}}
 				}
 			} else if err = interp.importSrc(rpath, ipath, name); err == nil {
 				sc.types = interp.universe.types
@@ -154,7 +154,7 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 						}
 					}
 				default: // import symbols in package namespace
-					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT}, path: ipath}
+					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: ipath}}
 				}
 			}
 
@@ -165,11 +165,11 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 				return false
 			}
 			if n.child[1].kind == identExpr {
-				n.typ = &itype{cat: aliasT, val: typ, name: typeName, pkgPath: rpath}
+				n.typ = &itype{cat: aliasT, val: typ, name: typeName, path: rpath}
 			} else {
 				n.typ = typ
 				n.typ.name = typeName
-				n.typ.pkgPath = rpath
+				n.typ.path = rpath
 			}
 			// Type may already be declared for a receiver in a method function
 			if sc.sym[typeName] == nil {
