@@ -705,8 +705,9 @@ func exportName(s string) string {
 	return "X" + s
 }
 
-// TypeOf returns the reflection type of dynamic interpreter type t.
-func (t *itype) Type(name string) reflect.Type {
+var interf = reflect.TypeOf(new(interface{})).Elem()
+
+func (t *itype) refType(defined map[string]bool) reflect.Type {
 	if t.rtype != nil {
 		return t.rtype
 	}
@@ -717,44 +718,49 @@ func (t *itype) Type(name string) reflect.Type {
 			panic(err)
 		}
 	}
-	if name == "" {
-		name = t.name
+	if t.val != nil && defined[t.val.name] {
+		t.val.rtype = interf
 	}
-
 	switch t.cat {
 	case arrayT, variadicT:
 		if t.size > 0 {
-			t.rtype = reflect.ArrayOf(t.size, t.val.Type(name))
+			t.rtype = reflect.ArrayOf(t.size, t.val.refType(defined))
 		} else {
-			t.rtype = reflect.SliceOf(t.val.Type(name))
+			t.rtype = reflect.SliceOf(t.val.refType(defined))
 		}
 	case chanT:
-		t.rtype = reflect.ChanOf(reflect.BothDir, t.val.Type(name))
+		t.rtype = reflect.ChanOf(reflect.BothDir, t.val.refType(defined))
 	case errorT:
 		t.rtype = reflect.TypeOf(new(error)).Elem()
 	case funcT:
 		in := make([]reflect.Type, len(t.arg))
 		out := make([]reflect.Type, len(t.ret))
 		for i, v := range t.arg {
-			in[i] = v.Type(name)
+			if defined[v.name] {
+				v.rtype = interf
+			}
+			in[i] = v.refType(defined)
 		}
 		for i, v := range t.ret {
-			out[i] = v.Type(name)
+			if defined[v.name] {
+				v.rtype = interf
+			}
+			out[i] = v.refType(defined)
 		}
 		t.rtype = reflect.FuncOf(in, out, false)
 	case interfaceT:
-		t.rtype = reflect.TypeOf(new(interface{})).Elem()
+		t.rtype = interf
 	case mapT:
 		t.rtype = reflect.MapOf(t.key.TypeOf(), t.val.TypeOf())
 	case ptrT:
-		if t.val != nil && name != "" && t.val.name == name {
-			t.val.rtype = reflect.TypeOf(new(interface{})).Elem()
-		}
-		t.rtype = reflect.PtrTo(t.val.Type(name))
+		t.rtype = reflect.PtrTo(t.val.refType(defined))
 	case structT:
+		if t.name != "" {
+			defined[t.name] = true
+		}
 		var fields []reflect.StructField
 		for _, f := range t.field {
-			field := reflect.StructField{Name: exportName(f.name), Type: f.typ.Type(name), Tag: reflect.StructTag(f.tag)}
+			field := reflect.StructField{Name: exportName(f.name), Type: f.typ.refType(defined), Tag: reflect.StructTag(f.tag)}
 			fields = append(fields, field)
 		}
 		t.rtype = reflect.StructOf(fields)
@@ -766,8 +772,9 @@ func (t *itype) Type(name string) reflect.Type {
 	return t.rtype
 }
 
+// TypeOf returns the reflection type of dynamic interpreter type t.
 func (t *itype) TypeOf() reflect.Type {
-	return t.Type(t.name)
+	return t.refType(map[string]bool{})
 }
 
 func (t *itype) frameType() (r reflect.Type) {
