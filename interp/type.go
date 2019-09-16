@@ -402,6 +402,11 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 
 	case interfaceType:
 		t.cat = interfaceT
+		if sname := typeName(n); sname != "" {
+			if sym, _, found := sc.lookup(sname); found && sym.kind == typeSym {
+				sym.typ = t
+			}
+		}
 		for _, field := range n.child[0].child {
 			if len(field.child) == 1 {
 				typ, err := nodeType(interp, sc, field.child[0])
@@ -480,10 +485,9 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 
 	case structType:
 		t.cat = structT
-		var incomplete, found bool
-		var sym *symbol
-		if sname := structName(n); sname != "" {
-			if sym, _, found = sc.lookup(sname); found && sym.kind == typeSym {
+		var incomplete bool
+		if sname := typeName(n); sname != "" {
+			if sym, _, found := sc.lookup(sname); found && sym.kind == typeSym {
 				sym.typ = t
 			}
 		}
@@ -543,7 +547,7 @@ func (interp *Interpreter) isBuiltinCall(n *node) bool {
 }
 
 // struct name returns the name of a struct type
-func structName(n *node) string {
+func typeName(n *node) string {
 	if n.anc.kind == typeSpec {
 		return n.anc.child[0].ident
 	}
