@@ -29,6 +29,10 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 	} else if dir, rPath, err = pkgDir(interp.context.GOPATH, rPath, path); err != nil {
 		return err
 	}
+	if interp.rdir[path] {
+		return fmt.Errorf("import cycle not allowed\n\timports %s", path)
+	}
+	interp.rdir[path] = true
 
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
