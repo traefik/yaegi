@@ -640,73 +640,17 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 		case callExpr:
 			wireChild(n)
 			switch {
-			case isBuiltinCall(n):
+			case interp.isBuiltinCall(n):
 				n.gen = n.child[0].sym.builtin
 				n.child[0].typ = &itype{cat: builtinT}
-				switch n.child[0].ident {
-				case "append":
-					c1, c2 := n.child[1], n.child[2]
-					if n.typ = sc.getType(c1.ident); n.typ == nil {
-						if n.typ, err = nodeType(interp, sc, c1); err != nil {
-							return
-						}
-					}
-					if len(n.child) == 3 {
-						if c2.typ.cat == arrayT && c2.typ.val.id() == n.typ.val.id() ||
-							isByteArray(c1.typ.TypeOf()) && isString(c2.typ.TypeOf()) {
-							n.gen = appendSlice
-						}
-					}
-				case "cap", "copy", "len":
-					n.typ = sc.getType("int")
-				case "complex":
-					c0, c1 := n.child[1], n.child[2]
-					switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
-					case isFloat32(t0) && isFloat32(t1):
-						n.typ = sc.getType("complex64")
-					case isFloat64(t0) && isFloat64(t1):
-						n.typ = sc.getType("complex128")
-					case c0.typ.untyped && isNumber(t0) && c1.typ.untyped && isNumber(t1):
-						n.typ = &itype{cat: valueT, rtype: complexType}
-					case c0.typ.untyped && isFloat32(t1) || c1.typ.untyped && isFloat32(t0):
-						n.typ = sc.getType("complex64")
-					case c0.typ.untyped && isFloat64(t1) || c1.typ.untyped && isFloat64(t0):
-						n.typ = sc.getType("complex128")
-					default:
-						err = n.cfgErrorf("invalid types %s and %s", t0.Kind(), t1.Kind())
-					}
-				case "real", "imag":
-					switch k := n.child[1].typ.TypeOf().Kind(); {
-					case k == reflect.Complex64:
-						n.typ = sc.getType("float32")
-					case k == reflect.Complex128:
-						n.typ = sc.getType("float64")
-					case n.child[1].typ.untyped && isNumber(n.child[1].typ.TypeOf()):
-						n.typ = &itype{cat: valueT, rtype: floatType}
-					default:
-						err = n.cfgErrorf("invalid complex type %s", k)
-					}
-				case "make":
-					if n.typ = sc.getType(n.child[1].ident); n.typ == nil {
-						if n.typ, err = nodeType(interp, sc, n.child[1]); err != nil {
-							return
-						}
-					}
-					n.child[1].val = n.typ
-					n.child[1].kind = basicLit
-				case "new":
-					if n.typ, err = nodeType(interp, sc, n.child[1]); err != nil {
-						return
-					}
-					n.typ = &itype{cat: ptrT, val: n.typ}
-				case "recover":
-					n.typ = sc.getType("interface{}")
+				if n.typ, err = nodeType(interp, sc, n); err != nil {
+					return
 				}
-				if n.typ != nil {
-					n.findex = sc.add(n.typ)
-				} else {
+				if n.typ.cat == builtinT {
 					n.findex = -1
 					n.val = nil
+				} else {
+					n.findex = sc.add(n.typ)
 				}
 			case n.child[0].isType(sc):
 				// Type conversion expression
@@ -1563,10 +1507,6 @@ func isMethod(n *node) bool {
 
 func isMapEntry(n *node) bool {
 	return n.action == aGetIndex && n.child[0].typ.cat == mapT
-}
-
-func isBuiltinCall(n *node) bool {
-	return n.kind == callExpr && n.child[0].sym != nil && n.child[0].sym.kind == bltnSym
 }
 
 func isBinCall(n *node) bool {

@@ -256,17 +256,78 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		}
 
 	case callExpr:
-		if t, err = nodeType(interp, sc, n.child[0]); err != nil {
-			return nil, err
-		}
-		switch t.cat {
-		case valueT:
-			if t.rtype.NumOut() == 1 {
-				t = &itype{cat: valueT, rtype: t.rtype.Out(0)}
+		if interp.isBuiltinCall(n) {
+			// builtin types are special and may depend from their call arguments
+			t.cat = builtinT
+			switch n.child[0].ident {
+			case "complex":
+				var nt0, nt1 *itype
+				if nt0, err = nodeType(interp, sc, n.child[1]); err != nil {
+					return nil, err
+				}
+				if nt1, err = nodeType(interp, sc, n.child[2]); err != nil {
+					return nil, err
+				}
+				if nt0.incomplete || nt1.incomplete {
+					t.incomplete = true
+				} else {
+					switch t0, t1 := nt0.TypeOf(), nt1.TypeOf(); {
+					case isFloat32(t0) && isFloat32(t1):
+						t = sc.getType("complex64")
+					case isFloat64(t0) && isFloat64(t1):
+						t = sc.getType("complex128")
+					case nt0.untyped && isNumber(t0) && nt1.untyped && isNumber(t1):
+						t = &itype{cat: valueT, rtype: complexType}
+					case nt0.untyped && isFloat32(t1) || nt1.untyped && isFloat32(t0):
+						t = sc.getType("complex64")
+					case nt0.untyped && isFloat64(t1) || nt1.untyped && isFloat64(t0):
+						t = sc.getType("complex128")
+					default:
+						err = n.cfgErrorf("invalid types %s and %s", t0.Kind(), t1.Kind())
+					}
+				}
+			case "real", "imag":
+				if t, err = nodeType(interp, sc, n.child[1]); err != nil {
+					return nil, err
+				}
+				if !t.incomplete {
+					switch k := t.TypeOf().Kind(); {
+					case k == reflect.Complex64:
+						t = sc.getType("float32")
+					case k == reflect.Complex128:
+						t = sc.getType("float64")
+					case t.untyped && isNumber(t.TypeOf()):
+						t = &itype{cat: valueT, rtype: floatType}
+					default:
+						err = n.cfgErrorf("invalid complex type %s", k)
+					}
+				}
+			case "cap", "copy", "len":
+				t = sc.getType("int")
+			case "append", "make":
+				t, err = nodeType(interp, sc, n.child[1])
+			case "new":
+				t, err = nodeType(interp, sc, n.child[1])
+				t = &itype{cat: ptrT, val: t, incomplete: t.incomplete}
+			case "recover":
+				t = sc.getType("interface{}")
 			}
-		default:
-			if len(t.ret) == 1 {
-				t = t.ret[0]
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			if t, err = nodeType(interp, sc, n.child[0]); err != nil {
+				return nil, err
+			}
+			switch t.cat {
+			case valueT:
+				if t.rtype.NumOut() == 1 {
+					t = &itype{cat: valueT, rtype: t.rtype.Out(0)}
+				}
+			default:
+				if len(t.ret) == 1 {
+					t = t.ret[0]
+				}
 			}
 		}
 
@@ -471,6 +532,14 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	}
 
 	return t, err
+}
+
+func (interp *Interpreter) isBuiltinCall(n *node) bool {
+	if n.kind != callExpr {
+		return false
+	}
+	s := interp.universe.sym[n.child[0].ident]
+	return s != nil && s.kind == bltnSym
 }
 
 // struct name returns the name of a struct type
