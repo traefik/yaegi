@@ -79,6 +79,7 @@ type Interpreter struct {
 	scopes   map[string]*scope // package level scopes, indexed by package name
 	binPkg   Exports           // binary packages used in interpreter, indexed by path
 	srcPkg   imports           // source packages used in interpreter, indexed by path
+	rdir     map[string]bool   // for src import cycle detection
 }
 
 const (
@@ -137,6 +138,7 @@ func New(options Options) *Interpreter {
 		scopes:   map[string]*scope{},
 		binPkg:   Exports{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
 		srcPkg:   imports{},
+		rdir:     map[string]bool{},
 	}
 
 	i.opt.context.GOPATH = options.GoPath

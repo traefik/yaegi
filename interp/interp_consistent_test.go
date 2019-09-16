@@ -35,6 +35,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "bad0.go" || // expect error
 			file.Name() == "export1.go" || // non-main package
 			file.Name() == "export0.go" || // non-main package
+			file.Name() == "import6.go" || // expect error
 			file.Name() == "io0.go" || // use random number
 			file.Name() == "op1.go" || // expect error
 			file.Name() == "bltn0.go" || // expect error
@@ -143,6 +144,11 @@ func TestInterpErrorConsistency(t *testing.T) {
 		{
 			fileName:       "bltn0.go",
 			expectedInterp: "4:7: use of builtin println not in function call",
+		},
+		{
+			fileName:       "import6.go",
+			expectedInterp: "import cycle not allowed",
+			expectedExec:   "import cycle not allowed",
 		},
 		{
 			fileName:       "switch8.go",
