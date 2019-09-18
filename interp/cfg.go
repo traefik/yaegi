@@ -86,6 +86,14 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 						n.anc.gen = rangeMap
 						ktyp = o.typ.key
 						vtyp = o.typ.val
+					case ptrT:
+						ktyp = sc.getType("int")
+						vtyp = o.typ.val
+						if vtyp.cat == valueT {
+							vtyp = &itype{cat: valueT, rtype: vtyp.rtype.Elem()}
+						} else {
+							vtyp = vtyp.val
+						}
 					case stringT:
 						ktyp = sc.getType("int")
 						vtyp = sc.getType("byte")
@@ -569,20 +577,34 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			wireChild(n)
 			t := n.child[0].typ
 			switch t.cat {
-			case valueT:
-				n.typ = &itype{cat: valueT, rtype: t.rtype.Elem()}
+			case ptrT:
+				n.typ = t.val
+				if t.val.cat == valueT {
+					n.typ = &itype{cat: valueT, rtype: t.val.rtype.Elem()}
+				} else {
+					n.typ = t.val.val
+				}
 			case stringT:
 				n.typ = sc.getType("byte")
+			case valueT:
+				n.typ = &itype{cat: valueT, rtype: t.rtype.Elem()}
 			default:
 				n.typ = t.val
 			}
 			n.findex = sc.add(n.typ)
 			n.recv = &receiver{node: n}
-			switch k := t.TypeOf().Kind(); k {
+			typ := t.TypeOf()
+			switch k := typ.Kind(); k {
 			case reflect.Map:
 				n.gen = getIndexMap
 			case reflect.Array, reflect.Slice, reflect.String:
 				n.gen = getIndexArray
+			case reflect.Ptr:
+				if typ2 := typ.Elem(); typ2.Kind() == reflect.Array {
+					n.gen = getIndexArray
+				} else {
+					err = n.cfgErrorf("type %v does not support indexing", typ)
+				}
 			default:
 				err = n.cfgErrorf("type is not an array, slice, string or map: %v", t.id())
 			}
@@ -1253,7 +1275,11 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case sliceExpr:
 			wireChild(n)
-			if ctyp := n.child[0].typ; ctyp.size != 0 {
+			ctyp := n.child[0].typ
+			if ctyp.cat == ptrT {
+				ctyp = ctyp.val
+			}
+			if ctyp.size != 0 {
 				// Create a slice type from an array type
 				n.typ = &itype{}
 				*n.typ = *ctyp

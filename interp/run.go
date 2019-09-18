@@ -887,7 +887,7 @@ func getIndexBinPtrMethod(n *node) {
 // getIndexArray returns array value from index
 func getIndexArray(n *node) {
 	tnext := getExec(n.tnext)
-	value0 := genValue(n.child[0]) // array
+	value0 := genValueArray(n.child[0]) // array
 
 	if n.child[1].rval.IsValid() { // constant array index
 		ai := int(vInt(n.child[1].rval))
@@ -1505,8 +1505,8 @@ func _range(n *node) {
 	tnext := getExec(n.tnext)
 
 	if len(n.child) == 4 {
-		index1 := n.child[1].findex   // array value location in frame
-		value := genValue(n.child[2]) // array
+		index1 := n.child[1].findex        // array value location in frame
+		value := genValueArray(n.child[2]) // array
 		n.exec = func(f *frame) bltn {
 			a := value(f)
 			v0 := f.data[index0]
@@ -1519,7 +1519,7 @@ func _range(n *node) {
 			return tnext
 		}
 	} else {
-		value := genValue(n.child[1]) // array
+		value := genValueArray(n.child[1]) // array
 		n.exec = func(f *frame) bltn {
 			a := value(f)
 			v0 := f.data[index0]
@@ -1780,7 +1780,7 @@ func _cap(n *node) {
 
 func _copy(n *node) {
 	dest := genValue(n)
-	value0 := genValue(n.child[1])
+	value0 := genValueArray(n.child[1])
 	value1 := genValue(n.child[2])
 	next := getExec(n.tnext)
 
@@ -2109,8 +2109,8 @@ func _select(n *node) {
 func slice(n *node) {
 	i := n.findex
 	next := getExec(n.tnext)
-	value0 := genValue(n.child[0]) // array
-	value1 := genValue(n.child[1]) // low (if 2 or 3 args) or high (if 1 arg)
+	value0 := genValueArray(n.child[0]) // array
+	value1 := genValue(n.child[1])      // low (if 2 or 3 args) or high (if 1 arg)
 
 	switch len(n.child) {
 	case 2:
@@ -2143,7 +2143,7 @@ func slice(n *node) {
 func slice0(n *node) {
 	i := n.findex
 	next := getExec(n.tnext)
-	value0 := genValue(n.child[0])
+	value0 := genValueArray(n.child[0])
 
 	switch len(n.child) {
 	case 1:
