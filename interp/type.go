@@ -224,6 +224,10 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				t.name = "int"
 			}
 			t.untyped = true
+		case uint:
+			t.cat = uintT
+			t.name = "uint"
+			t.untyped = true
 		case rune:
 			t.cat = runeT
 			t.name = "rune"
@@ -246,7 +250,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			if t, err = nodeType(interp, sc, n.child[0]); err != nil {
 				return nil, err
 			}
-			if t.untyped {
+			if t.untyped && !isShiftNode(n) {
 				var t1 *itype
 				t1, err = nodeType(interp, sc, n.child[1])
 				if !(t1.untyped && isInt(t1.TypeOf()) && isFloat(t.TypeOf())) {
@@ -890,9 +894,16 @@ func defRecvType(n *node) *itype {
 	return nil
 }
 
-func isShiftOperand(n *node) bool {
-	switch n.anc.action {
+func isShiftNode(n *node) bool {
+	switch n.action {
 	case aShl, aShr, aShlAssign, aShrAssign:
+		return true
+	}
+	return false
+}
+
+func isShiftOperand(n *node) bool {
+	if isShiftNode(n.anc) {
 		return n.anc.lastChild() == n
 	}
 	return false

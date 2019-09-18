@@ -498,7 +498,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			nilSym := interp.universe.sym["nil"]
 			c0, c1 := n.child[0], n.child[1]
 			t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
-			if !c0.typ.untyped && !c1.typ.untyped && c0.typ.id() != c1.typ.id() {
+			if !isShiftNode(n) && !c0.typ.untyped && !c1.typ.untyped && c0.typ.id() != c1.typ.id() {
 				err = n.cfgErrorf("mismatched types %s and %s", c0.typ.id(), c1.typ.id())
 				break
 			}
