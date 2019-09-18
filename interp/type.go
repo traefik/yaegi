@@ -250,6 +250,8 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			if t, err = nodeType(interp, sc, n.child[0]); err != nil {
 				return nil, err
 			}
+			// Shift operator type is inherited from first parameter only
+			// For other operators, infer type in from 2nd parameter in case of untyped first
 			if t.untyped && !isShiftNode(n) {
 				var t1 *itype
 				t1, err = nodeType(interp, sc, n.child[1])
