@@ -671,7 +671,11 @@ func call(n *node) {
 
 		// Init variadic argument vector
 		if variadic >= 0 {
-			vararg = nf.data[numRet+variadic]
+			if method {
+				vararg = nf.data[numRet+variadic+1]
+			} else {
+				vararg = nf.data[numRet+variadic]
+			}
 		}
 
 		// Copy input parameters from caller
