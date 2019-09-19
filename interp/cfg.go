@@ -1104,8 +1104,12 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					n.typ = m.typ
 					n.recv = &receiver{node: n.child[0], index: lind}
 				}
-			} else if m, lind, ok := n.typ.lookupBinMethod(n.child[1].ident); ok {
-				n.gen = getIndexSeqMethod
+			} else if m, lind, isPtr, ok := n.typ.lookupBinMethod(n.child[1].ident); ok {
+				if isPtr {
+					n.gen = getIndexSeqPtrMethod
+				} else {
+					n.gen = getIndexSeqMethod
+				}
 				n.val = append([]int{m.Index}, lind...)
 				n.typ = &itype{cat: valueT, rtype: m.Type}
 			} else if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {

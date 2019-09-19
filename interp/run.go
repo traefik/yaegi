@@ -502,7 +502,7 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 		methods[i], indexes[i] = n.typ.lookupMethod(names[i])
 		if methods[i] == nil && n.typ.cat != nilT {
 			// interpreted method not found, look for binary method, possibly embedded
-			_, indexes[i], _ = n.typ.lookupBinMethod(names[i])
+			_, indexes[i], _, _ = n.typ.lookupBinMethod(names[i])
 		}
 	}
 	wrap := n.interp.getWrapper(typ)
@@ -1125,6 +1125,27 @@ func getIndexSeqField(n *node) {
 	} else {
 		n.exec = func(f *frame) bltn {
 			f.data[i] = value(f).FieldByIndex(index)
+			return next
+		}
+	}
+}
+
+func getIndexSeqPtrMethod(n *node) {
+	value := genValue(n.child[0])
+	index := n.val.([]int)
+	fi := index[1:]
+	mi := index[0]
+	i := n.findex
+	next := getExec(n.tnext)
+
+	if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
+		n.exec = func(f *frame) bltn {
+			f.data[i] = value(f).Elem().FieldByIndex(fi).Addr().Method(mi)
+			return next
+		}
+	} else {
+		n.exec = func(f *frame) bltn {
+			f.data[i] = value(f).FieldByIndex(fi).Addr().Method(mi)
 			return next
 		}
 	}

@@ -478,7 +478,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		default:
 			if m, _ := lt.lookupMethod(name); m != nil {
 				t, err = nodeType(interp, sc, m.child[2])
-			} else if bm, _, ok := lt.lookupBinMethod(name); ok {
+			} else if bm, _, _, ok := lt.lookupBinMethod(name); ok {
 				t = &itype{cat: valueT, rtype: bm.Type}
 			} else if ti := lt.lookupField(name); len(ti) > 0 {
 				t = lt.fieldSeq(ti)
@@ -758,23 +758,28 @@ func (t *itype) lookupMethod(name string) (*node, []int) {
 }
 
 // lookupBinMethod returns a method and a path to access a field in a struct object (the receiver)
-func (t *itype) lookupBinMethod(name string) (reflect.Method, []int, bool) {
+func (t *itype) lookupBinMethod(name string) (reflect.Method, []int, bool, bool) {
+	var isPtr bool
 	if t.cat == ptrT {
 		return t.val.lookupBinMethod(name)
 	}
 	var index []int
 	m, ok := t.TypeOf().MethodByName(name)
 	if !ok {
+		m, ok = reflect.PtrTo(t.TypeOf()).MethodByName(name)
+		isPtr = ok
+	}
+	if !ok {
 		for i, f := range t.field {
 			if f.embed {
-				if m2, index2, ok2 := f.typ.lookupBinMethod(name); ok2 {
+				if m2, index2, isPtr2, ok2 := f.typ.lookupBinMethod(name); ok2 {
 					index = append([]int{i}, index2...)
-					return m2, index, ok2
+					return m2, index, isPtr2, ok2
 				}
 			}
 		}
 	}
-	return m, index, ok
+	return m, index, isPtr, ok
 }
 
 func exportName(s string) string {
