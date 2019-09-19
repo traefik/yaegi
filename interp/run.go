@@ -1524,14 +1524,22 @@ func compositeSparse(n *node) {
 
 func empty(n *node) {}
 
+var rat = reflect.ValueOf((*[]rune)(nil)).Type().Elem() // runes array type
+
 func _range(n *node) {
 	index0 := n.child[0].findex // array index location in frame
 	fnext := getExec(n.fnext)
 	tnext := getExec(n.tnext)
 
+	var value func(*frame) reflect.Value
 	if len(n.child) == 4 {
-		index1 := n.child[1].findex        // array value location in frame
-		value := genValueArray(n.child[2]) // array
+		an := n.child[2]
+		index1 := n.child[1].findex // array value location in frame
+		if isString(an.typ.TypeOf()) {
+			value = genValueAs(an, rat) // range on string iterates over runes
+		} else {
+			value = genValueArray(an)
+		}
 		n.exec = func(f *frame) bltn {
 			a := value(f)
 			v0 := f.data[index0]
@@ -1544,7 +1552,12 @@ func _range(n *node) {
 			return tnext
 		}
 	} else {
-		value := genValueArray(n.child[1]) // array
+		an := n.child[1]
+		if isString(an.typ.TypeOf()) {
+			value = genValueAs(an, rat) // range on string iterates over runes
+		} else {
+			value = genValueArray(an)
+		}
 		n.exec = func(f *frame) bltn {
 			a := value(f)
 			v0 := f.data[index0]
