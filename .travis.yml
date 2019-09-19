@@ -5,6 +5,7 @@ dist: xenial
 branches:
   only:
     - master
+    - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 
 notifications:
   email:
