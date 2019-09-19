@@ -11,3 +11,9 @@ func main() {
 		fmt.Printf("rune %d: %d\n", i, r)
 	}
 }
+
+// Output:
+// byte 0: 228
+// byte 1: 184
+// byte 2: 137
+// rune 0: 19977
