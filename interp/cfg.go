@@ -77,7 +77,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 							vtyp = &itype{cat: valueT, rtype: typ.Elem()}
 						case reflect.String:
 							ktyp = sc.getType("int")
-							vtyp = sc.getType("byte")
+							vtyp = sc.getType("rune")
 						case reflect.Array, reflect.Slice:
 							ktyp = sc.getType("int")
 							vtyp = &itype{cat: valueT, rtype: typ.Elem()}
@@ -96,7 +96,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 						}
 					case stringT:
 						ktyp = sc.getType("int")
-						vtyp = sc.getType("byte")
+						vtyp = sc.getType("rune")
 					case arrayT, variadicT:
 						ktyp = sc.getType("int")
 						vtyp = o.typ.val
