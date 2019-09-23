@@ -1274,6 +1274,12 @@ func _return(n *node) {
 		switch t := def.typ.ret[i]; t.cat {
 		case errorT:
 			values[i] = genInterfaceWrapper(c, t.TypeOf())
+		case aliasT:
+			if isInterfaceSrc(t) {
+				values[i] = genValueInterface(c)
+			} else {
+				values[i] = genValue(c)
+			}
 		case interfaceT:
 			values[i] = genValueInterface(c)
 		default:

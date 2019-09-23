@@ -694,7 +694,7 @@ func (t *itype) lookupField(name string) []int {
 
 	for i, f := range t.field {
 		switch f.typ.cat {
-		case ptrT, structT:
+		case ptrT, structT, interfaceT, aliasT:
 			if index2 := f.typ.lookupField(name); len(index2) > 0 {
 				return append([]int{i}, index2...)
 			}
@@ -806,6 +806,8 @@ func (t *itype) refType(defined map[string]bool) reflect.Type {
 		t.val.rtype = interf
 	}
 	switch t.cat {
+	case aliasT:
+		t.rtype = t.val.refType(defined)
 	case arrayT, variadicT:
 		if t.size > 0 {
 			t.rtype = reflect.ArrayOf(t.size, t.val.refType(defined))
@@ -867,6 +869,8 @@ func (t *itype) frameType() (r reflect.Type) {
 		panic(err)
 	}
 	switch t.cat {
+	case aliasT:
+		r = t.val.frameType()
 	case arrayT, variadicT:
 		if t.size > 0 {
 			r = reflect.ArrayOf(t.size, t.val.frameType())
@@ -916,7 +920,13 @@ func isShiftOperand(n *node) bool {
 	return false
 }
 
-func isInterface(t *itype) bool { return t.cat == interfaceT || t.TypeOf().Kind() == reflect.Interface }
+func isInterfaceSrc(t *itype) bool {
+	return t.cat == interfaceT || (t.cat == aliasT && isInterfaceSrc(t.val))
+}
+
+func isInterface(t *itype) bool {
+	return isInterfaceSrc(t) || t.TypeOf().Kind() == reflect.Interface
+}
 
 func isStruct(t *itype) bool { return t.TypeOf().Kind() == reflect.Struct }
 

@@ -1115,12 +1115,12 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			} else if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
 				// Handle struct field
 				n.val = ti
-				switch n.typ.cat {
-				case interfaceT:
+				switch {
+				case isInterfaceSrc(n.typ):
 					n.typ = n.typ.fieldSeq(ti)
 					n.gen = getMethodByName
 					n.action = aMethod
-				case ptrT:
+				case n.typ.cat == ptrT:
 					n.typ = n.typ.fieldSeq(ti)
 					n.gen = getPtrIndexSeq
 					if n.typ.cat == funcT {

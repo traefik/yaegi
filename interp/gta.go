@@ -156,6 +156,8 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 				default: // import symbols in package namespace
 					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: ipath}}
 				}
+			} else {
+				err = n.cfgErrorf("import %q error: %s", ipath, err.Error())
 			}
 
 		case typeSpec:
@@ -165,7 +167,8 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 				return false
 			}
 			if n.child[1].kind == identExpr {
-				n.typ = &itype{cat: aliasT, val: typ, name: typeName, path: rpath}
+				n.typ = &itype{cat: aliasT, val: typ, name: typeName, path: rpath, field: typ.field}
+				copy(n.typ.method, typ.method)
 			} else {
 				n.typ = typ
 				n.typ.name = typeName
