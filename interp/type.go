@@ -903,13 +903,6 @@ func isShiftNode(n *node) bool {
 	return false
 }
 
-func isShiftOperand(n *node) bool {
-	if isShiftNode(n.anc) {
-		return n.anc.lastChild() == n
-	}
-	return false
-}
-
 func isInterface(t *itype) bool { return t.cat == interfaceT || t.TypeOf().Kind() == reflect.Interface }
 
 func isStruct(t *itype) bool { return t.TypeOf().Kind() == reflect.Struct }
