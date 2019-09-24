@@ -3,6 +3,7 @@ package interp
 import (
 	"fmt"
 	"log"
+	"math"
 	"path"
 	"reflect"
 	"unicode"
@@ -403,7 +404,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 						err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
 					}
 				case aShlAssign, aShrAssign:
-					if !(isInt(t0) && isUint(t1)) {
+					if !(dest.isInteger() && src.isNatural()) {
 						err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
 					}
 				default:
@@ -521,7 +522,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
 				}
 			case aShl, aShr:
-				if !(isInt(t0) && isUint(t1)) {
+				if !(c0.isInteger() && c1.isNatural()) {
 					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
 				}
 				n.typ = c0.typ
@@ -1506,7 +1507,57 @@ func wireChild(n *node) {
 	}
 }
 
-// last returns the last child of a node
+// isInteger returns true if node type is integer, false otherwise
+func (n *node) isInteger() bool {
+	if isInt(n.typ.TypeOf()) {
+		return true
+	}
+	if n.typ.untyped && n.rval.IsValid() {
+		t := n.rval.Type()
+		if isInt(t) {
+			return true
+		}
+		if isFloat(t) {
+			// untyped float constant with null decimal part is ok
+			f := n.rval.Float()
+			if f == math.Round(f) {
+				n.rval = reflect.ValueOf(int(f))
+				n.typ.rtype = n.rval.Type()
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// isNatural returns true if node type is natural, false otherwise
+func (n *node) isNatural() bool {
+	if isUint(n.typ.TypeOf()) {
+		return true
+	}
+	if n.typ.untyped && n.rval.IsValid() {
+		t := n.rval.Type()
+		if isUint(t) {
+			return true
+		}
+		if isInt(t) && n.rval.Int() >= 0 {
+			// positive untyped integer constant is ok
+			return true
+		}
+		if isFloat(t) {
+			// positive untyped float constant with null decimal part is ok
+			f := n.rval.Float()
+			if f == math.Round(f) && f >= 0 {
+				n.rval = reflect.ValueOf(uint(f))
+				n.typ.rtype = n.rval.Type()
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// lastChild returns the last child of a node
 func (n *node) lastChild() *node { return n.child[len(n.child)-1] }
 
 func isKey(n *node) bool {

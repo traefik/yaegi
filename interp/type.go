@@ -215,14 +215,8 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			t.name = "float64"
 			t.untyped = true
 		case int:
-			if isShiftOperand(n) && v >= 0 {
-				t.cat = uintT
-				t.name = "uint"
-				n.rval = reflect.ValueOf(uint(v))
-			} else {
-				t.cat = intT
-				t.name = "int"
-			}
+			t.cat = intT
+			t.name = "int"
 			t.untyped = true
 		case uint:
 			t.cat = uintT
