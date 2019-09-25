@@ -174,7 +174,7 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 				n.typ.name = typeName
 				n.typ.path = rpath
 			}
-			// Type may already be declared for a receiver in a method function
+			// Type may be already declared for a receiver in a method function
 			if sc.sym[typeName] == nil {
 				sc.sym[typeName] = &symbol{kind: typeSym}
 			} else {
