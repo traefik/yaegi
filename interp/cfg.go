@@ -309,7 +309,21 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			return false
 
 		case typeSpec:
-			// processing already done in GTA pass
+			// processing already done in GTA pass for global types, only parses inlined types
+			if sc.def != nil {
+				typeName := n.child[0].ident
+				var typ *itype
+				if typ, err = nodeType(interp, sc, n.child[1]); err != nil {
+					return false
+				}
+				if n.child[1].kind == identExpr {
+					n.typ = &itype{cat: aliasT, val: typ, name: typeName}
+				} else {
+					n.typ = typ
+					n.typ.name = typeName
+				}
+				sc.sym[typeName] = &symbol{kind: typeSym, typ: n.typ}
+			}
 			return false
 
 		case arrayType, basicLit, chanType, funcType, mapType, structType:
