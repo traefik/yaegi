@@ -316,6 +316,10 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				if typ, err = nodeType(interp, sc, n.child[1]); err != nil {
 					return false
 				}
+				if typ.incomplete {
+					err = n.cfgErrorf("invalid type declaration")
+					return false
+				}
 				if n.child[1].kind == identExpr {
 					n.typ = &itype{cat: aliasT, val: typ, name: typeName}
 				} else {
