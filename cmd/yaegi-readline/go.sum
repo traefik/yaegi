@@ -1,0 +1,6 @@
+github.com/containous/yaegi v0.6.0 h1:KeXfkUf8X5oWv1TCbnAkXgy+IfLlDIyxeYBOaeHDnGU=
+github.com/containous/yaegi v0.6.0/go.mod h1:RLj4MAvN8JB1w40l4fn9dd/U1hH23CXABvro3D3gOBE=
+github.com/mattn/go-runewidth v0.0.3 h1:a+kO+98RDGEfo6asOGMmpodZq4FNtnGP54yps8BzLR4=
+github.com/mattn/go-runewidth v0.0.3/go.mod h1:LwmH8dsx7+W8Uxz3IHJYH5QSwggIsqBzpuz5H//U1FU=
+github.com/peterh/liner v1.1.0 h1:f+aAedNJA6uk7+6rXsYBnhdo4Xux7ESLe+kcuVUF5os=
+github.com/peterh/liner v1.1.0/go.mod h1:CRroGNssyjTd/qIG2FyxByd2S8JEAZXBl4qUrZf8GS0=
