@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"context"
 	"reflect"
 )
 
@@ -44,10 +45,10 @@ func genValueRecv(n *node) func(*frame) reflect.Value {
 	}
 }
 
-func genValueAsFunctionWrapper(n *node) func(*frame) reflect.Value {
+func genValueAsFunctionWrapper(ctx context.Context, n *node) func(*frame) reflect.Value {
 	v := genValue(n)
 	return func(f *frame) reflect.Value {
-		return genFunctionWrapper(v(f).Interface().(*node))(f)
+		return genFunctionWrapper(ctx, v(f).Interface().(*node))(f)
 	}
 }
 
@@ -107,10 +108,10 @@ func genValue(n *node) func(*frame) reflect.Value {
 	}
 }
 
-func genValueArray(n *node) func(*frame) reflect.Value {
+func genValueArray(ctx context.Context, n *node) func(*frame) reflect.Value {
 	value := genValue(n)
 	// dereference array pointer, to support array operations on array pointer
-	if n.typ.TypeOf().Kind() == reflect.Ptr {
+	if n.typ.TypeOf(ctx).Kind() == reflect.Ptr {
 		return func(f *frame) reflect.Value {
 			return value(f).Elem()
 		}
@@ -118,10 +119,10 @@ func genValueArray(n *node) func(*frame) reflect.Value {
 	return value
 }
 
-func genValueRangeArray(n *node) func(*frame) reflect.Value {
+func genValueRangeArray(ctx context.Context, n *node) func(*frame) reflect.Value {
 	value := genValue(n)
 	// dereference array pointer, to support array operations on array pointer
-	if n.typ.TypeOf().Kind() == reflect.Ptr {
+	if n.typ.TypeOf(ctx).Kind() == reflect.Ptr {
 		return func(f *frame) reflect.Value {
 			return value(f).Elem()
 		}
@@ -211,10 +212,10 @@ func vFloat(v reflect.Value) (i float64) {
 	return
 }
 
-func genValueInt(n *node) func(*frame) (reflect.Value, int64) {
+func genValueInt(ctx context.Context, n *node) func(*frame) (reflect.Value, int64) {
 	value := genValue(n)
 
-	switch n.typ.TypeOf().Kind() {
+	switch n.typ.TypeOf(ctx).Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return func(f *frame) (reflect.Value, int64) { v := value(f); return v, v.Int() }
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -225,10 +226,10 @@ func genValueInt(n *node) func(*frame) (reflect.Value, int64) {
 	return nil
 }
 
-func genValueUint(n *node) func(*frame) (reflect.Value, uint64) {
+func genValueUint(ctx context.Context, n *node) func(*frame) (reflect.Value, uint64) {
 	value := genValue(n)
 
-	switch n.typ.TypeOf().Kind() {
+	switch n.typ.TypeOf(ctx).Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return func(f *frame) (reflect.Value, uint64) { v := value(f); return v, uint64(v.Int()) }
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -239,10 +240,10 @@ func genValueUint(n *node) func(*frame) (reflect.Value, uint64) {
 	return nil
 }
 
-func genValueFloat(n *node) func(*frame) (reflect.Value, float64) {
+func genValueFloat(ctx context.Context, n *node) func(*frame) (reflect.Value, float64) {
 	value := genValue(n)
 
-	switch n.typ.TypeOf().Kind() {
+	switch n.typ.TypeOf(ctx).Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return func(f *frame) (reflect.Value, float64) { v := value(f); return v, float64(v.Int()) }
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -253,10 +254,10 @@ func genValueFloat(n *node) func(*frame) (reflect.Value, float64) {
 	return nil
 }
 
-func genValueComplex(n *node) func(*frame) (reflect.Value, complex128) {
+func genValueComplex(ctx context.Context, n *node) func(*frame) (reflect.Value, complex128) {
 	value := genValue(n)
 
-	switch n.typ.TypeOf().Kind() {
+	switch n.typ.TypeOf(ctx).Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return func(f *frame) (reflect.Value, complex128) { v := value(f); return v, complex(float64(v.Int()), 0) }
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:

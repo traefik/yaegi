@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"context"
 	"path"
 	"reflect"
 )
@@ -9,7 +10,7 @@ import (
 // variables and functions symbols at package level, prior to CFG.
 // All function bodies are skipped. GTA is necessary to handle out of
 // order declarations and multiple source files packages.
-func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
+func (interp *Interpreter) gta(ctx context.Context, root *node, rpath string) ([]*node, error) {
 	sc, _ := interp.initScopePkg(root)
 	var err error
 	var iotaValue int
@@ -31,7 +32,7 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 		case defineStmt:
 			var atyp *itype
 			if n.nleft+n.nright < len(n.child) {
-				if atyp, err = nodeType(interp, sc, n.child[n.nleft]); err != nil {
+				if atyp, err = nodeType(ctx, interp, sc, n.child[n.nleft]); err != nil {
 					return false
 				}
 			}
@@ -46,7 +47,7 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 				val := reflect.ValueOf(iotaValue)
 				typ := atyp
 				if typ == nil {
-					if typ, err = nodeType(interp, sc, src); err != nil {
+					if typ, err = nodeType(ctx, interp, sc, src); err != nil {
 						return false
 					}
 					val = src.rval
@@ -60,7 +61,7 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 					err = n.cfgErrorf("use of untyped nil")
 					return false
 				}
-				sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val}
+				sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(ctx, typ), typ: typ, rval: val}
 				if n.anc.kind == constDecl {
 					sc.sym[dest.ident].kind = constSym
 					iotaValue++
@@ -69,21 +70,21 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 			return false
 
 		case defineXStmt:
-			err = compDefineX(sc, n)
+			err = compDefineX(ctx, sc, n)
 
 		case valueSpec:
 			l := len(n.child) - 1
 			if n.typ = n.child[l].typ; n.typ == nil {
-				if n.typ, err = nodeType(interp, sc, n.child[l]); err != nil {
+				if n.typ, err = nodeType(ctx, interp, sc, n.child[l]); err != nil {
 					return false
 				}
 			}
 			for _, c := range n.child[:l] {
-				sc.sym[c.ident] = &symbol{index: sc.add(n.typ), kind: varSym, global: true, typ: n.typ}
+				sc.sym[c.ident] = &symbol{index: sc.add(ctx, n.typ), kind: varSym, global: true, typ: n.typ}
 			}
 
 		case funcDecl:
-			if n.typ, err = nodeType(interp, sc, n.child[2]); err != nil {
+			if n.typ, err = nodeType(ctx, interp, sc, n.child[2]); err != nil {
 				return false
 			}
 			if isMethod(n) {
@@ -143,7 +144,7 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 				default: // import symbols in package namespace
 					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath}}
 				}
-			} else if err = interp.importSrc(rpath, ipath, name); err == nil {
+			} else if err = interp.importSrc(ctx, rpath, ipath, name); err == nil {
 				sc.types = interp.universe.types
 				switch name {
 				case "_": // no import of symbols
@@ -163,7 +164,7 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 		case typeSpec:
 			typeName := n.child[0].ident
 			var typ *itype
-			if typ, err = nodeType(interp, sc, n.child[1]); err != nil {
+			if typ, err = nodeType(ctx, interp, sc, n.child[1]); err != nil {
 				return false
 			}
 			if n.child[1].kind == identExpr {

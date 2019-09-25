@@ -2,6 +2,7 @@ package interp
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"go/build"
 	"go/scanner"
@@ -234,8 +235,14 @@ func (interp *Interpreter) main() *node {
 }
 
 // Eval evaluates Go code represented as a string. It returns a map on
-// current interpreted package exported symbols
+// current interpreted package exported symbols.
 func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
+	return interp.EvalWithContext(context.Background(), src)
+}
+
+// EvalWithContext evaluates Go code represented as a string. It returns
+// a map on current interpreted package exported symbols.
+func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (reflect.Value, error) {
 	var res reflect.Value
 
 	// Parse source to AST
@@ -252,18 +259,18 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 	}
 
 	// Global type analysis
-	revisit, err := interp.gta(root, pkgName)
+	revisit, err := interp.gta(ctx, root, pkgName)
 	if err != nil {
 		return res, err
 	}
 	for _, n := range revisit {
-		if _, err = interp.gta(n, pkgName); err != nil {
+		if _, err = interp.gta(ctx, n, pkgName); err != nil {
 			return res, err
 		}
 	}
 
 	// Annotate AST with CFG infos
-	initNodes, err := interp.cfg(root)
+	initNodes, err := interp.cfg(ctx, root)
 	if err != nil {
 		return res, err
 	}
@@ -275,7 +282,7 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 
 	if root.kind != fileStmt {
 		// REPL may skip package statement
-		setExec(root.start)
+		setExec(ctx, root.start)
 	}
 	if interp.universe.sym[pkgName] == nil {
 		// Make the package visible under a path identical to its name
@@ -292,14 +299,14 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 	}
 
 	// Execute CFG
-	if err = genRun(root); err != nil {
+	if err = genRun(ctx, root); err != nil {
 		return res, err
 	}
 	interp.resizeFrame()
-	interp.run(root, nil)
+	interp.run(ctx, root, nil)
 
 	for _, n := range initNodes {
-		interp.run(n, interp.frame)
+		interp.run(ctx, n, interp.frame)
 	}
 	v := genValue(root)
 	res = v(interp.frame)
@@ -307,7 +314,7 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 	// If result is an interpreter node, wrap it in a runtime callable function
 	if res.IsValid() {
 		if n, ok := res.Interface().(*node); ok {
-			res = genFunctionWrapper(n)(interp.frame)
+			res = genFunctionWrapper(ctx, n)(interp.frame)
 		}
 	}
 

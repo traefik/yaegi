@@ -1,6 +1,7 @@
 package interp_test
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -393,6 +394,27 @@ func TestEvalMissingSymbol(t *testing.T) {
 	_, err = i.Eval(`p.S1{F: p.S2{}}`)
 	if err == nil {
 		t.Error("unexpected nil error for expression with undefined type")
+	}
+}
+
+func TestEvalWithContext(t *testing.T) {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		i := interp.New(interp.Options{})
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+		_, err := i.EvalWithContext(ctx, `(func() {
+			for {}
+		})()`)
+		if err != nil {
+			t.Errorf("failed to evaluate expression: %v", err)
+		}
+	}()
+	select {
+	case <-time.After(time.Second):
+		t.Error("timeout failed to terminate execution")
+	case <-done:
 	}
 }
 

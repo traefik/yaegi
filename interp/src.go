@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -8,7 +9,7 @@ import (
 	"strings"
 )
 
-func (interp *Interpreter) importSrc(rPath, path, alias string) error {
+func (interp *Interpreter) importSrc(ctx context.Context, rPath, path, alias string) error {
 	var dir string
 	var err error
 
@@ -75,7 +76,7 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 
 		subRPath := effectivePkg(rPath, path)
 		var list []*node
-		list, err = interp.gta(root, subRPath)
+		list, err = interp.gta(ctx, root, subRPath)
 		if err != nil {
 			return err
 		}
@@ -85,7 +86,7 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 	// revisit incomplete nodes where GTA could not complete
 	for pkg, nodes := range revisit {
 		for _, n := range nodes {
-			if _, err = interp.gta(n, pkg); err != nil {
+			if _, err = interp.gta(ctx, n, pkg); err != nil {
 				return err
 			}
 		}
@@ -94,7 +95,7 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 	// Generate control flow graphs
 	for _, root := range rootNodes {
 		var nodes []*node
-		if nodes, err = interp.cfg(root); err != nil {
+		if nodes, err = interp.cfg(ctx, root); err != nil {
 			return err
 		}
 		initNodes = append(initNodes, nodes...)
@@ -114,10 +115,10 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 
 	// Once all package sources have been parsed, execute entry points then init functions
 	for _, n := range rootNodes {
-		if err = genRun(n); err != nil {
+		if err = genRun(ctx, n); err != nil {
 			return err
 		}
-		interp.run(n, nil)
+		interp.run(ctx, n, nil)
 	}
 
 	// Add main to list of functions to run, after all inits
@@ -126,7 +127,7 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 	}
 
 	for _, n := range initNodes {
-		interp.run(n, interp.frame)
+		interp.run(ctx, n, interp.frame)
 	}
 
 	return nil
