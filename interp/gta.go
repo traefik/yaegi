@@ -157,7 +157,7 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: ipath}}
 				}
 			} else {
-				err = n.cfgErrorf("import %q error: %s", ipath, err.Error())
+				err = n.cfgErrorf("import %q error: %v", ipath, err)
 			}
 
 		case typeSpec:
