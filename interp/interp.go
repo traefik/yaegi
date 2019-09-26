@@ -237,12 +237,32 @@ func (interp *Interpreter) main() *node {
 // Eval evaluates Go code represented as a string. It returns a map on
 // current interpreted package exported symbols.
 func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
-	return interp.EvalWithContext(context.Background(), src)
+	return interp.evalWithContext(context.Background(), src)
 }
 
 // EvalWithContext evaluates Go code represented as a string. It returns
 // a map on current interpreted package exported symbols.
+//
+// If EvalWithContext returns context.Canceled or context.DeadlineExceeded
+// errors, it is possible blocked operations will continue to wait after
+// the call to EvalWithContext returns.
 func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (reflect.Value, error) {
+	var v reflect.Value
+	var err error
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		v, err = interp.evalWithContext(ctx, src)
+	}()
+	select {
+	case <-ctx.Done():
+		return reflect.Value{}, ctx.Err()
+	case <-done:
+		return v, err
+	}
+}
+
+func (interp *Interpreter) evalWithContext(ctx context.Context, src string) (reflect.Value, error) {
 	var res reflect.Value
 
 	// Parse source to AST

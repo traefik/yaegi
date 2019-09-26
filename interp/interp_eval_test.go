@@ -398,23 +398,86 @@ func TestEvalMissingSymbol(t *testing.T) {
 }
 
 func TestEvalWithContext(t *testing.T) {
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		i := interp.New(interp.Options{})
-		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-		defer cancel()
-		_, err := i.EvalWithContext(ctx, `(func() {
-			for {}
-		})()`)
-		if err != nil {
-			t.Errorf("failed to evaluate expression: %v", err)
+	tests := []testCase{
+		{
+			desc: "for {}",
+			src: `(func() {
+					for {}
+				})()`,
+		},
+		{
+			desc: "select {}",
+			src: `(func() {
+					select {}
+				})()`,
+		},
+		{
+			desc: "blocked chan send",
+			src: `(func() {
+					c := make(chan int)
+					c <- 1
+				})()`,
+		},
+		{
+			desc: "blocked chan recv",
+			src: `(func() {
+					c := make(chan int)
+					<-c
+				})()`,
+		},
+		{
+			desc: "blocked chan recv2",
+			src: `(func() {
+					c := make(chan int)
+					_, _ = <-c
+				})()`,
+		},
+		{
+			desc: "blocked range chan",
+			src: `(func() {
+					c := make(chan int)
+					for range c {}
+				})()`,
+		},
+		{
+			desc: "double lock",
+			src: `(func() {
+					var mu sync.Mutex
+					mu.Lock()
+					mu.Lock()
+				})()`,
+		},
+	}
+
+	for _, test := range tests {
+		done := make(chan struct{})
+		src := test.src
+		go func() {
+			defer close(done)
+			i := interp.New(interp.Options{})
+			i.Use(stdlib.Symbols)
+			_, err := i.Eval(`import "sync"`)
+			if err != nil {
+				t.Errorf(`failed to import "sync": %v`, err)
+				return
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+			_, err = i.EvalWithContext(ctx, src)
+			switch err {
+			case context.DeadlineExceeded:
+				// Successful cancellation.
+			case nil:
+				t.Errorf("unexpected success evaluating expression %q", test.desc)
+			default:
+				t.Errorf("failed to evaluate expression %q: %v", test.desc, err)
+			}
+		}()
+		select {
+		case <-time.After(time.Second):
+			t.Errorf("timeout failed to terminate execution of %q", test.desc)
+		case <-done:
 		}
-	}()
-	select {
-	case <-time.After(time.Second):
-		t.Error("timeout failed to terminate execution")
-	case <-done:
 	}
 }
 
