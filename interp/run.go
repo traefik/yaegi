@@ -502,7 +502,7 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 		methods[i], indexes[i] = n.typ.lookupMethod(names[i])
 		if methods[i] == nil && n.typ.cat != nilT {
 			// interpreted method not found, look for binary method, possibly embedded
-			_, indexes[i], _ = n.typ.lookupBinMethod(names[i])
+			_, indexes[i], _, _ = n.typ.lookupBinMethod(names[i])
 		}
 	}
 	wrap := n.interp.getWrapper(typ)
@@ -614,7 +614,7 @@ func call(n *node) {
 			if c.kind == basicLit {
 				var argType reflect.Type
 				if variadic >= 0 && i >= variadic {
-					argType = n.child[0].typ.arg[variadic].TypeOf()
+					argType = n.child[0].typ.arg[variadic].val.TypeOf()
 				} else {
 					argType = n.child[0].typ.arg[i].TypeOf()
 				}
@@ -671,7 +671,11 @@ func call(n *node) {
 
 		// Init variadic argument vector
 		if variadic >= 0 {
-			vararg = nf.data[numRet+variadic]
+			if method {
+				vararg = nf.data[numRet+variadic+1]
+			} else {
+				vararg = nf.data[numRet+variadic]
+			}
 		}
 
 		// Copy input parameters from caller
@@ -887,7 +891,7 @@ func getIndexBinPtrMethod(n *node) {
 // getIndexArray returns array value from index
 func getIndexArray(n *node) {
 	tnext := getExec(n.tnext)
-	value0 := genValue(n.child[0]) // array
+	value0 := genValueArray(n.child[0]) // array
 
 	if n.child[1].rval.IsValid() { // constant array index
 		ai := int(vInt(n.child[1].rval))
@@ -1130,6 +1134,27 @@ func getIndexSeqField(n *node) {
 	}
 }
 
+func getIndexSeqPtrMethod(n *node) {
+	value := genValue(n.child[0])
+	index := n.val.([]int)
+	fi := index[1:]
+	mi := index[0]
+	i := n.findex
+	next := getExec(n.tnext)
+
+	if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
+		n.exec = func(f *frame) bltn {
+			f.data[i] = value(f).Elem().FieldByIndex(fi).Addr().Method(mi)
+			return next
+		}
+	} else {
+		n.exec = func(f *frame) bltn {
+			f.data[i] = value(f).FieldByIndex(fi).Addr().Method(mi)
+			return next
+		}
+	}
+}
+
 func getIndexSeqMethod(n *node) {
 	value := genValue(n.child[0])
 	index := n.val.([]int)
@@ -1253,6 +1278,12 @@ func _return(n *node) {
 		switch t := def.typ.ret[i]; t.cat {
 		case errorT:
 			values[i] = genInterfaceWrapper(c, t.TypeOf())
+		case aliasT:
+			if isInterfaceSrc(t) {
+				values[i] = genValueInterface(c)
+			} else {
+				values[i] = genValue(c)
+			}
 		case interfaceT:
 			values[i] = genValueInterface(c)
 		default:
@@ -1499,14 +1530,22 @@ func compositeSparse(n *node) {
 
 func empty(n *node) {}
 
+var rat = reflect.ValueOf((*[]rune)(nil)).Type().Elem() // runes array type
+
 func _range(n *node) {
 	index0 := n.child[0].findex // array index location in frame
 	fnext := getExec(n.fnext)
 	tnext := getExec(n.tnext)
 
+	var value func(*frame) reflect.Value
 	if len(n.child) == 4 {
-		index1 := n.child[1].findex   // array value location in frame
-		value := genValue(n.child[2]) // array
+		an := n.child[2]
+		index1 := n.child[1].findex // array value location in frame
+		if isString(an.typ.TypeOf()) {
+			value = genValueAs(an, rat) // range on string iterates over runes
+		} else {
+			value = genValueArray(an)
+		}
 		n.exec = func(f *frame) bltn {
 			a := value(f)
 			v0 := f.data[index0]
@@ -1519,7 +1558,12 @@ func _range(n *node) {
 			return tnext
 		}
 	} else {
-		value := genValue(n.child[1]) // array
+		an := n.child[1]
+		if isString(an.typ.TypeOf()) {
+			value = genValueAs(an, rat) // range on string iterates over runes
+		} else {
+			value = genValueArray(an)
+		}
 		n.exec = func(f *frame) bltn {
 			a := value(f)
 			v0 := f.data[index0]
@@ -1717,6 +1761,11 @@ func appendSlice(n *node) {
 }
 
 func _append(n *node) {
+	if c1, c2 := n.child[1], n.child[2]; len(n.child) == 3 && c2.typ.cat == arrayT && c2.typ.val.id() == n.typ.val.id() ||
+		isByteArray(c1.typ.TypeOf()) && isString(c2.typ.TypeOf()) {
+		appendSlice(n)
+		return
+	}
 	dest := genValue(n)
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
@@ -1775,7 +1824,7 @@ func _cap(n *node) {
 
 func _copy(n *node) {
 	dest := genValue(n)
-	value0 := genValue(n.child[1])
+	value0 := genValueArray(n.child[1])
 	value1 := genValue(n.child[2])
 	next := getExec(n.tnext)
 
@@ -2104,8 +2153,8 @@ func _select(n *node) {
 func slice(n *node) {
 	i := n.findex
 	next := getExec(n.tnext)
-	value0 := genValue(n.child[0]) // array
-	value1 := genValue(n.child[1]) // low (if 2 or 3 args) or high (if 1 arg)
+	value0 := genValueArray(n.child[0]) // array
+	value1 := genValue(n.child[1])      // low (if 2 or 3 args) or high (if 1 arg)
 
 	switch len(n.child) {
 	case 2:
@@ -2138,7 +2187,7 @@ func slice(n *node) {
 func slice0(n *node) {
 	i := n.findex
 	next := getExec(n.tnext)
-	value0 := genValue(n.child[0])
+	value0 := genValueArray(n.child[0])
 
 	switch len(n.child) {
 	case 1:

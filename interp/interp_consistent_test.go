@@ -1,6 +1,7 @@
 package interp_test
 
 import (
+	"go/build"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -34,6 +35,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "bad0.go" || // expect error
 			file.Name() == "export1.go" || // non-main package
 			file.Name() == "export0.go" || // non-main package
+			file.Name() == "import6.go" || // expect error
 			file.Name() == "io0.go" || // use random number
 			file.Name() == "op1.go" || // expect error
 			file.Name() == "bltn0.go" || // expect error
@@ -78,7 +80,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
-			i := interp.New(interp.Options{})
+			i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
 			i.Name = filePath
 			i.Use(stdlib.Symbols)
 			i.Use(interp.Symbols)
@@ -144,6 +146,11 @@ func TestInterpErrorConsistency(t *testing.T) {
 			expectedInterp: "4:7: use of builtin println not in function call",
 		},
 		{
+			fileName:       "import6.go",
+			expectedInterp: "import cycle not allowed",
+			expectedExec:   "import cycle not allowed",
+		},
+		{
 			fileName:       "switch8.go",
 			expectedInterp: "5:2: fallthrough statement out of place",
 			expectedExec:   "5:2: fallthrough statement out of place",
@@ -178,7 +185,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			i := interp.New(interp.Options{})
+			i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
 			i.Name = filePath
 			i.Use(stdlib.Symbols)
 

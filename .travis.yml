@@ -2,23 +2,37 @@ language: go
 
 dist: xenial
 
-env:
-  - GO111MODULE=on
+branches:
+  only:
+    - master
+    - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 
 notifications:
   email:
     on_success: never
     on_failure: change
 
-go:
-  - 1.11.x
-  - 1.12.x
+cache:
+  directories:
+    - $GOPATH/pkg/mod
+
+matrix:
+  fast_finish: true
+  include:
+    - go: 1.11.x
+    - go: 1.12.x
+    - go: 1.13.x
+      env: STABLE=true
+
+env:
+  global:
+    - GO111MODULE=on
 
 go_import_path: github.com/containous/yaegi
 
 before_install:
   # Install linters and misspell
-  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin v1.16.0
+  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin ${GOLANGCI_LINT_VERSION}
   - golangci-lint --version
 
 install:
@@ -44,4 +58,4 @@ deploy:
     script: curl -sL https://git.io/goreleaser | bash
     on:
       tags: true
-      condition: $TRAVIS_GO_VERSION =~ ^1\.12\.x$
+      condition: $STABLE = true

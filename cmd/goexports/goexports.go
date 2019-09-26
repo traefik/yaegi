@@ -322,7 +322,8 @@ func main() {
 	for _, pkg := range flag.Args() {
 		content, err := genContent(dest, pkg, license)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			continue
 		}
 
 		var oFile string

@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	t := time.Unix(1e9, 0)
+	t := time.Unix(1e9, 0).In(time.UTC)
 	fmt.Println(t.Minute())
 }
 

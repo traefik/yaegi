@@ -107,6 +107,17 @@ func genValue(n *node) func(*frame) reflect.Value {
 	}
 }
 
+func genValueArray(n *node) func(*frame) reflect.Value {
+	value := genValue(n)
+	// dereference array pointer, to support array operations on array pointer
+	if n.typ.TypeOf().Kind() == reflect.Ptr {
+		return func(f *frame) reflect.Value {
+			return value(f).Elem()
+		}
+	}
+	return value
+}
+
 func genValueInterfacePtr(n *node) func(*frame) reflect.Value {
 	value := genValue(n)
 	it := reflect.TypeOf((*interface{})(nil)).Elem()

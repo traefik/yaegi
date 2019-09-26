@@ -44,11 +44,13 @@ func TestEvalArithmetic(t *testing.T) {
 		{desc: "rem_FI", src: "8.0 % 4", err: "1:28: illegal operand types for '%' operator"},
 		{desc: "shl_II", src: "1 << 8", res: "256"},
 		{desc: "shl_IN", src: "1 << -1", err: "1:28: illegal operand types for '<<' operator"},
-		{desc: "shl_IF", src: "1 << 1.0", err: "1:28: illegal operand types for '<<' operator"},
-		{desc: "shl_IF", src: "1.0 << 1", err: "1:28: illegal operand types for '<<' operator"},
+		{desc: "shl_IF", src: "1 << 1.0", res: "2"},
+		{desc: "shl_IF1", src: "1 << 1.1", err: "1:28: illegal operand types for '<<' operator"},
+		{desc: "shl_IF", src: "1.0 << 1", res: "2"},
 		{desc: "shr_II", src: "1 >> 8", res: "0"},
 		{desc: "shr_IN", src: "1 >> -1", err: "1:28: illegal operand types for '>>' operator"},
-		{desc: "shr_IF", src: "1 >> 1.0", err: "1:28: illegal operand types for '>>' operator"},
+		{desc: "shr_IF", src: "1 >> 1.0", res: "0"},
+		{desc: "shr_IF1", src: "1 >> 1.1", err: "1:28: illegal operand types for '>>' operator"},
 	})
 }
 
@@ -366,6 +368,32 @@ func TestEvalChan(t *testing.T) {
 			})()`, res: "true",
 		},
 	})
+}
+
+func TestEvalMissingSymbol(t *testing.T) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			t.Errorf("unexpected panic: %v", r)
+		}
+	}()
+
+	type S2 struct{}
+	type S1 struct {
+		F S2
+	}
+	i := interp.New(interp.Options{})
+	i.Use(interp.Exports{"p": map[string]reflect.Value{
+		"S1": reflect.Zero(reflect.TypeOf(&S1{})),
+	}})
+	_, err := i.Eval(`import "p"`)
+	if err != nil {
+		t.Fatalf("failed to import package: %v", err)
+	}
+	_, err = i.Eval(`p.S1{F: p.S2{}}`)
+	if err == nil {
+		t.Error("unexpected nil error for expression with undefined type")
+	}
 }
 
 func runTests(t *testing.T, i *interp.Interpreter, tests []testCase) {
