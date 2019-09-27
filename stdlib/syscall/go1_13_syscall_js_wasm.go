@@ -306,7 +306,6 @@ func init() {
 		"TimespecToNsec":      reflect.ValueOf(syscall.TimespecToNsec),
 		"TimevalToNsec":       reflect.ValueOf(syscall.TimevalToNsec),
 		"Truncate":            reflect.ValueOf(syscall.Truncate),
-		"Umask":               reflect.ValueOf(syscall.Umask),
 		"Unlink":              reflect.ValueOf(syscall.Unlink),
 		"Unsetenv":            reflect.ValueOf(syscall.Unsetenv),
 		"UtimesNano":          reflect.ValueOf(syscall.UtimesNano),
