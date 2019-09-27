@@ -84,7 +84,7 @@ func (interp *Interpreter) run(n *node, cf *frame) {
 	if cf == nil {
 		f = interp.frame
 	} else {
-		f = &frame{anc: cf, data: make([]reflect.Value, len(n.types)), runid: interp.runid()}
+		f = &frame{anc: cf, data: make([]reflect.Value, len(n.types)), runid: interp.runid(), done: interp.done}
 	}
 
 	for i, t := range n.types {
@@ -438,7 +438,7 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 		}
 		return reflect.MakeFunc(n.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
 			// Allocate and init local frame. All values to be settable and addressable.
-			fr := frame{anc: f, data: make([]reflect.Value, len(def.types)), runid: f.runid}
+			fr := frame{anc: f, data: make([]reflect.Value, len(def.types)), runid: f.runid, done: f.done}
 			d := fr.data
 			for i, t := range def.types {
 				d[i] = reflect.New(t).Elem()
@@ -652,7 +652,7 @@ func call(n *node) {
 		if def.frame != nil {
 			anc = def.frame
 		}
-		nf := frame{anc: anc, data: make([]reflect.Value, len(def.types)), runid: anc.runid}
+		nf := frame{anc: anc, data: make([]reflect.Value, len(def.types)), runid: anc.runid, done: anc.done}
 		var vararg reflect.Value
 
 		// Init return values
@@ -1591,7 +1591,13 @@ func rangeChan(n *node) {
 	tnext := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		v, ok := value(f).Recv()
+		chosen, v, ok := reflect.Select([]reflect.SelectCase{
+			{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(f.done)},
+			{Dir: reflect.SelectRecv, Chan: value(f)},
+		})
+		if chosen == 0 {
+			return nil
+		}
 		if !ok {
 			return fnext
 		}
@@ -2027,7 +2033,14 @@ func recv(n *node) {
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
-			if v, _ := value(f).Recv(); v.Bool() {
+			chosen, v, _ := reflect.Select([]reflect.SelectCase{
+				{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(f.done)},
+				{Dir: reflect.SelectRecv, Chan: value(f)},
+			})
+			if chosen == 0 {
+				return nil
+			}
+			if v.Bool() {
 				return tnext
 			}
 			return fnext
@@ -2035,7 +2048,14 @@ func recv(n *node) {
 	} else {
 		i := n.findex
 		n.exec = func(f *frame) bltn {
-			f.data[i], _ = value(f).Recv()
+			var chosen int
+			chosen, f.data[i], _ = reflect.Select([]reflect.SelectCase{
+				{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(f.done)},
+				{Dir: reflect.SelectRecv, Chan: value(f)},
+			})
+			if chosen == 0 {
+				return nil
+			}
 			return tnext
 		}
 	}
@@ -2048,7 +2068,13 @@ func recv2(n *node) {
 	tnext := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		v, ok := vchan(f).Recv()
+		chosen, v, ok := reflect.Select([]reflect.SelectCase{
+			{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(f.done)},
+			{Dir: reflect.SelectRecv, Chan: vchan(f)},
+		})
+		if chosen == 0 {
+			return nil
+		}
 		vres(f).Set(v)
 		vok(f).SetBool(ok)
 		return tnext
@@ -2074,7 +2100,13 @@ func send(n *node) {
 	value1 := genValue(n.child[1]) // value to send
 
 	n.exec = func(f *frame) bltn {
-		value0(f).Send(value1(f))
+		chosen, _, _ := reflect.Select([]reflect.SelectCase{
+			{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(f.done)},
+			{Dir: reflect.SelectSend, Chan: value0(f), Send: value1(f)},
+		})
+		if chosen == 0 {
+			return nil
+		}
 		return next
 	}
 }
@@ -2117,7 +2149,7 @@ func _select(n *node) {
 	chanValues := make([]func(*frame) reflect.Value, nbClause)
 	assignedValues := make([]func(*frame) reflect.Value, nbClause)
 	okValues := make([]func(*frame) reflect.Value, nbClause)
-	cases := make([]reflect.SelectCase, nbClause)
+	cases := make([]reflect.SelectCase, nbClause+1)
 
 	for i := 0; i < nbClause; i++ {
 		if len(n.child[i].child) > 1 {
@@ -2137,7 +2169,8 @@ func _select(n *node) {
 	}
 
 	n.exec = func(f *frame) bltn {
-		for i := range cases {
+		cases[nbClause] = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(f.done)}
+		for i := range cases[:nbClause] {
 			switch cases[i].Dir {
 			case reflect.SelectRecv:
 				cases[i].Chan = chanValues[i](f)
@@ -2149,6 +2182,9 @@ func _select(n *node) {
 			}
 		}
 		j, v, s := reflect.Select(cases)
+		if j == nbClause {
+			return nil
+		}
 		if cases[j].Dir == reflect.SelectRecv && assignedValues[j] != nil {
 			assignedValues[j](f).Set(v)
 			if ok[j] != nil {

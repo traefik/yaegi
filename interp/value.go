@@ -7,19 +7,29 @@ import (
 func valueGenerator(n *node, i int) func(*frame) reflect.Value {
 	switch n.level {
 	case 0:
-		return func(f *frame) reflect.Value { return f.data[i] }
+		return func(f *frame) reflect.Value { return valueOf(f.data, i) }
 	case 1:
-		return func(f *frame) reflect.Value { return f.anc.data[i] }
+		return func(f *frame) reflect.Value { return valueOf(f.anc.data, i) }
 	case 2:
-		return func(f *frame) reflect.Value { return f.anc.anc.data[i] }
+		return func(f *frame) reflect.Value { return valueOf(f.anc.anc.data, i) }
 	default:
 		return func(f *frame) reflect.Value {
 			for level := n.level; level > 0; level-- {
 				f = f.anc
 			}
-			return f.data[i]
+			return valueOf(f.data, i)
 		}
 	}
+}
+
+// valueOf safely recovers the ith element of data. This is necessary
+// because a cancellation prior to any evaluation result may leave
+// the frame's data empty.
+func valueOf(data []reflect.Value, i int) reflect.Value {
+	if i < len(data) {
+		return data[i]
+	}
+	return reflect.Value{}
 }
 
 func genValueRecvIndirect(n *node) func(*frame) reflect.Value {

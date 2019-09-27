@@ -56,6 +56,7 @@ type frame struct {
 	deferred  [][]reflect.Value // defer stack
 	recovered interface{}       // to handle panic recover
 	runid     uint64            // for cancellation
+	done      chan struct{}     // for cancellation of channel operations
 }
 
 // Exports stores the map of binary packages per package path
@@ -85,6 +86,7 @@ type Interpreter struct {
 	srcPkg   imports           // source packages used in interpreter, indexed by path
 	rdir     map[string]bool   // for src import cycle detection
 	id       uint64            // for cancellation
+	done     chan struct{}     // for cancellation of channel operations
 }
 
 const (
@@ -302,6 +304,7 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 	}
 	interp.resizeFrame()
 	interp.frame.runid = interp.runid()
+	interp.frame.done = interp.done
 	interp.run(root, nil)
 
 	for _, n := range initNodes {
@@ -325,6 +328,7 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (reflect.Value, error) {
 	var v reflect.Value
 	var err error
+	interp.done = make(chan struct{})
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
@@ -340,7 +344,13 @@ func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (ref
 	}
 }
 
-func (interp *Interpreter) stop() { atomic.AddUint64(&interp.id, 1) }
+// stop sends a semaphore to all running frames and closes the chan
+// operation short circuit channel. stop may only be called once per
+// invocation of EvalWithContext.
+func (interp *Interpreter) stop() {
+	atomic.AddUint64(&interp.id, 1)
+	close(interp.done)
+}
 
 func (interp *Interpreter) runid() uint64 { return atomic.LoadUint64(&interp.id) }
 
@@ -367,17 +377,14 @@ func (interp *Interpreter) Repl(in, out *os.File) {
 	prompt := getPrompt(in, out)
 	prompt()
 	src := ""
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt)
-
-	go func() {
-		<-c
-		interp.stop()
-	}()
-
 	for s.Scan() {
 		src += s.Text() + "\n"
-		if v, err := interp.Eval(src); err != nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		handleSignal(ctx, cancel)
+		v, err := interp.EvalWithContext(ctx, src)
+		signal.Reset()
+		if err != nil {
 			switch err.(type) {
 			case scanner.ErrorList:
 				// Early failure in the scanner: the source is incomplete
@@ -401,4 +408,17 @@ func getPrompt(in, out *os.File) func() {
 		return func() { fmt.Fprint(out, "> ") }
 	}
 	return func() {}
+}
+
+// handleSignal wraps signal handling for eval cancellation.
+func handleSignal(ctx context.Context, cancel context.CancelFunc) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		select {
+		case <-c:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
 }
