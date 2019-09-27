@@ -147,7 +147,12 @@ func genContent(dest, pkgName, license string) ([]byte, error) {
 		pname := path.Base(pkgName) + "." + name
 		switch o := o.(type) {
 		case *types.Const:
-			val[name] = Val{fixConst(pname, o.Val()), false}
+			if b, ok := o.Type().(*types.Basic); ok && (b.Info()&types.IsUntyped) != 0 {
+				// convert untyped constant to right type to avoid overflow
+				val[name] = Val{fixConst(pname, o.Val()), false}
+			} else {
+				val[name] = Val{pname, false}
+			}
 		case *types.Func:
 			val[name] = Val{pname, false}
 		case *types.Var:
