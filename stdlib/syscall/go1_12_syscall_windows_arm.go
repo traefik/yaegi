@@ -514,7 +514,7 @@ func init() {
 		"IP_TOS":                                       reflect.ValueOf(syscall.IP_TOS),
 		"IP_TTL":                                       reflect.ValueOf(syscall.IP_TTL),
 		"ImplementsGetwd":                              reflect.ValueOf(syscall.ImplementsGetwd),
-		"InvalidHandle":                                reflect.ValueOf(uint32(syscall.InvalidHandle)),
+		"InvalidHandle":                                reflect.ValueOf(syscall.InvalidHandle),
 		"KEY_ALL_ACCESS":                               reflect.ValueOf(syscall.KEY_ALL_ACCESS),
 		"KEY_CREATE_LINK":                              reflect.ValueOf(syscall.KEY_CREATE_LINK),
 		"KEY_CREATE_SUB_KEY":                           reflect.ValueOf(syscall.KEY_CREATE_SUB_KEY),
