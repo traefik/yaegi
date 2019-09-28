@@ -1538,16 +1538,16 @@ func _range(n *node) {
 	tnext := getExec(n.tnext)
 
 	var value func(*frame) reflect.Value
+	var a reflect.Value
 	if len(n.child) == 4 {
 		an := n.child[2]
 		index1 := n.child[1].findex // array value location in frame
 		if isString(an.typ.TypeOf()) {
 			value = genValueAs(an, rat) // range on string iterates over runes
 		} else {
-			value = genValueArray(an)
+			value = genValueRangeArray(an)
 		}
 		n.exec = func(f *frame) bltn {
-			a := value(f)
 			v0 := f.data[index0]
 			v0.SetInt(v0.Int() + 1)
 			i := int(v0.Int())
@@ -1562,10 +1562,9 @@ func _range(n *node) {
 		if isString(an.typ.TypeOf()) {
 			value = genValueAs(an, rat) // range on string iterates over runes
 		} else {
-			value = genValueArray(an)
+			value = genValueRangeArray(an)
 		}
 		n.exec = func(f *frame) bltn {
-			a := value(f)
 			v0 := f.data[index0]
 			v0.SetInt(v0.Int() + 1)
 			if int(v0.Int()) >= a.Len() {
@@ -1578,6 +1577,7 @@ func _range(n *node) {
 	// Init sequence
 	next := n.exec
 	n.child[0].exec = func(f *frame) bltn {
+		a = value(f)
 		f.data[index0].SetInt(-1)
 		return next
 	}
