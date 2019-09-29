@@ -1743,14 +1743,16 @@ func compositeGenerator(n *node) (gen bltnGenerator) {
 // array variable it is determined from the value's type, otherwise it is
 // computed from the source definition.
 func arrayTypeLen(n *node) int {
-	if n.typ.size != 0 {
+	if n.typ != nil && n.typ.sizedef {
 		return n.typ.size
 	}
 	max := -1
 	for i, c := range n.child[1:] {
 		r := i
 		if c.kind == keyValueExpr {
-			r = int(c.child[0].rval.Int())
+			if v := c.child[0].rval; v.IsValid() {
+				r = int(c.child[0].rval.Int())
+			}
 		}
 		if r > max {
 			max = r

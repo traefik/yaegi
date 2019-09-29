@@ -123,10 +123,11 @@ type itype struct {
 
 // nodeType returns a type definition for the corresponding AST subtree
 func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
-	var err cfgError
-
 	if n.typ != nil && !n.typ.incomplete {
-		return n.typ, err
+		if n.kind == sliceExpr {
+			n.typ.sizedef = false
+		}
+		return n.typ, nil
 	}
 
 	var t = &itype{node: n, scope: sc}
@@ -141,6 +142,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		}
 	}
 
+	var err cfgError
 	switch n.kind {
 	case addressExpr, starExpr:
 		t.cat = ptrT
@@ -158,7 +160,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				t.size = int(n.child[0].rval.Int())
 			case n.child[0].kind == ellipsisExpr:
 				// [...]T expression
-				t.sizedef = true
+				t.size = arrayTypeLen(n.anc)
 			default:
 				if sym, _, ok := sc.lookup(n.child[0].ident); ok {
 					// Resolve symbol to get size value
@@ -182,6 +184,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			if t.val, err = nodeType(interp, sc, n.child[1]); err != nil {
 				return nil, err
 			}
+			t.sizedef = true
 			t.incomplete = t.incomplete || t.val.incomplete
 		} else {
 			if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
@@ -803,7 +806,7 @@ func (t *itype) refType(defined map[string]bool) reflect.Type {
 	case aliasT:
 		t.rtype = t.val.refType(defined)
 	case arrayT, variadicT:
-		if t.size > 0 {
+		if t.sizedef {
 			t.rtype = reflect.ArrayOf(t.size, t.val.refType(defined))
 		} else {
 			t.rtype = reflect.SliceOf(t.val.refType(defined))
@@ -866,7 +869,7 @@ func (t *itype) frameType() (r reflect.Type) {
 	case aliasT:
 		r = t.val.frameType()
 	case arrayT, variadicT:
-		if t.size > 0 {
+		if t.sizedef {
 			r = reflect.ArrayOf(t.size, t.val.frameType())
 		} else {
 			r = reflect.SliceOf(t.val.frameType())

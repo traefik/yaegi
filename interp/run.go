@@ -1351,7 +1351,7 @@ func arrayLit(n *node) {
 	}
 
 	var a reflect.Value
-	if n.typ.size > 0 {
+	if n.typ.sizedef {
 		a, _ = n.typ.zero()
 	} else {
 		a = reflect.MakeSlice(n.typ.TypeOf(), max, max)
