@@ -395,11 +395,11 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 						dest.typ = src.typ
 					}
 					if dest.typ.sizedef {
-						dest.typ.size = compositeArrayLen(src)
+						dest.typ.size = arrayTypeLen(src)
 						dest.typ.rtype = nil
 					}
 					if sc.global {
-						// Do not overload existings symbols (defined in GTA) in global scope
+						// Do not overload existing symbols (defined in GTA) in global scope
 						sym, _, _ = sc.lookup(dest.ident)
 					} else {
 						sym = &symbol{index: sc.add(dest.typ), kind: varSym, typ: dest.typ}
@@ -1739,13 +1739,20 @@ func compositeGenerator(n *node) (gen bltnGenerator) {
 	return
 }
 
-// compositeArrayLen return the litteral array length, computed from definition
-func compositeArrayLen(n *node) int {
+// arrayTypeLen returns the node's array length. If the expression is an
+// array variable it is determined from the value's type, otherwise it is
+// computed from the source definition.
+func arrayTypeLen(n *node) int {
+	if n.typ != nil && n.typ.sizedef {
+		return n.typ.size
+	}
 	max := -1
 	for i, c := range n.child[1:] {
 		r := i
 		if c.kind == keyValueExpr {
-			r = int(c.child[0].rval.Int())
+			if v := c.child[0].rval; v.IsValid() {
+				r = int(c.child[0].rval.Int())
+			}
 		}
 		if r > max {
 			max = r
