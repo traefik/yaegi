@@ -77,9 +77,11 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 							ktyp = &itype{cat: valueT, rtype: typ.Key()}
 							vtyp = &itype{cat: valueT, rtype: typ.Elem()}
 						case reflect.String:
+							sc.add(sc.getType("int")) // Add a dummy type to store array shallow copy for range
 							ktyp = sc.getType("int")
 							vtyp = sc.getType("rune")
 						case reflect.Array, reflect.Slice:
+							sc.add(sc.getType("int")) // Add a dummy type to store array shallow copy for range
 							ktyp = sc.getType("int")
 							vtyp = &itype{cat: valueT, rtype: typ.Elem()}
 						}
@@ -96,9 +98,11 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 							vtyp = vtyp.val
 						}
 					case stringT:
+						sc.add(sc.getType("int")) // Add a dummy type to store array shallow copy for range
 						ktyp = sc.getType("int")
 						vtyp = sc.getType("rune")
 					case arrayT, variadicT:
+						sc.add(sc.getType("int")) // Add a dummy type to store array shallow copy for range
 						ktyp = sc.getType("int")
 						vtyp = o.typ.val
 					}

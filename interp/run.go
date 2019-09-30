@@ -1534,6 +1534,7 @@ var rat = reflect.ValueOf((*[]rune)(nil)).Type().Elem() // runes array type
 
 func _range(n *node) {
 	index0 := n.child[0].findex // array index location in frame
+	index2 := index0 - 1        // shallow array for range, always just behind index0
 	fnext := getExec(n.fnext)
 	tnext := getExec(n.tnext)
 
@@ -1544,10 +1545,10 @@ func _range(n *node) {
 		if isString(an.typ.TypeOf()) {
 			value = genValueAs(an, rat) // range on string iterates over runes
 		} else {
-			value = genValueArray(an)
+			value = genValueRangeArray(an)
 		}
 		n.exec = func(f *frame) bltn {
-			a := value(f)
+			a := f.data[index2]
 			v0 := f.data[index0]
 			v0.SetInt(v0.Int() + 1)
 			i := int(v0.Int())
@@ -1562,13 +1563,12 @@ func _range(n *node) {
 		if isString(an.typ.TypeOf()) {
 			value = genValueAs(an, rat) // range on string iterates over runes
 		} else {
-			value = genValueArray(an)
+			value = genValueRangeArray(an)
 		}
 		n.exec = func(f *frame) bltn {
-			a := value(f)
 			v0 := f.data[index0]
 			v0.SetInt(v0.Int() + 1)
-			if int(v0.Int()) >= a.Len() {
+			if int(v0.Int()) >= f.data[index2].Len() {
 				return fnext
 			}
 			return tnext
@@ -1578,7 +1578,8 @@ func _range(n *node) {
 	// Init sequence
 	next := n.exec
 	n.child[0].exec = func(f *frame) bltn {
-		f.data[index0].SetInt(-1)
+		f.data[index2] = value(f) // set array shallow copy for range
+		f.data[index0].SetInt(-1) // assing index value
 		return next
 	}
 }
