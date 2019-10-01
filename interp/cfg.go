@@ -88,6 +88,8 @@ func (interp *Interpreter) cfg(ctx context.Context, root *node) ([]*node, error)
 						}
 					case mapT:
 						n.anc.gen = rangeMap
+						ityp := &itype{cat: valueT, rtype: reflect.TypeOf((*reflect.MapIter)(nil))}
+						sc.add(ctx, ityp)
 						ktyp = o.typ.key
 						vtyp = o.typ.val
 					case ptrT:

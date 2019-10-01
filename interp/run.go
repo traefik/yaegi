@@ -1613,31 +1613,40 @@ func rangeChan(ctx context.Context, n *node) {
 }
 
 func rangeMap(ctx context.Context, n *node) {
-	index0 := n.child[0].findex   // array index location in frame
-	index1 := n.child[1].findex   // array value location in frame
-	value := genValue(n.child[2]) // array
+	index0 := n.child[0].findex // map index location in frame
+	index2 := index0 - 1        // iterator for range, always just behind index0
 	fnext := getExec(ctx, n.fnext)
 	tnext := getExec(ctx, n.tnext)
-	// TODO: move i and keys to frame
-	var i int
-	var keys []reflect.Value
 
-	n.exec = func(f *frame) bltn {
-		a := value(f)
-		i++
-		if i >= a.Len() {
-			return fnext
+	var value func(*frame) reflect.Value
+	if len(n.child) == 4 {
+		index1 := n.child[1].findex  // map value location in frame
+		value = genValue(n.child[2]) // map
+		n.exec = func(f *frame) bltn {
+			iter := f.data[index2].Interface().(*reflect.MapIter)
+			if !iter.Next() {
+				return fnext
+			}
+			f.data[index0].Set(iter.Key())
+			f.data[index1].Set(iter.Value())
+			return tnext
 		}
-		f.data[index0].Set(keys[i])
-		f.data[index1].Set(a.MapIndex(keys[i]))
-		return tnext
+	} else {
+		value = genValue(n.child[1]) // map
+		n.exec = func(f *frame) bltn {
+			iter := f.data[index2].Interface().(*reflect.MapIter)
+			if !iter.Next() {
+				return fnext
+			}
+			f.data[index0].Set(iter.Key())
+			return tnext
+		}
 	}
 
 	// Init sequence
 	next := n.exec
 	n.child[0].exec = func(f *frame) bltn {
-		keys = value(f).MapKeys()
-		i = -1
+		f.data[index2].Set(reflect.ValueOf(value(f).MapRange()))
 		return next
 	}
 }
