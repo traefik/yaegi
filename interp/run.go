@@ -109,13 +109,19 @@ func runCfg(ctx context.Context, n *node, f *frame) {
 		}
 	}()
 
+	c := 999
 	for exec := n.exec; exec != nil; {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			exec = exec(f)
+		// Check cancel only every 1000 instructions, to mitigate overhead
+		if c <= 0 {
+			c = 999
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 		}
+		exec = exec(f)
+		c--
 	}
 }
 
