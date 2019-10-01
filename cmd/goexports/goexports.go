@@ -26,6 +26,7 @@ import (
 	"go/constant"
 	"go/format"
 	"go/importer"
+	"go/token"
 	"go/types"
 	"io/ioutil"
 	"log"
@@ -114,7 +115,7 @@ type Wrap struct {
 }
 
 func genContent(dest, pkgName, license string) ([]byte, error) {
-	p, err := importer.For("source", nil).Import(pkgName)
+	p, err := importer.ForCompiler(token.NewFileSet(), "source", nil).Import(pkgName)
 	if err != nil {
 		return nil, err
 	}
