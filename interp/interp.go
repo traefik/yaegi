@@ -330,9 +330,9 @@ func (interp *Interpreter) Use(values Exports) {
 	}
 }
 
-// Repl performs a Read-Eval-Print-Loop on input file descriptor.
+// REPL performs a Read-Eval-Print-Loop on input file descriptor.
 // Results are printed on output.
-func (interp *Interpreter) Repl(in, out *os.File) {
+func (interp *Interpreter) REPL(in, out *os.File) {
 	s := bufio.NewScanner(in)
 	prompt := getPrompt(in, out)
 	prompt()
