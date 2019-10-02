@@ -871,7 +871,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 		case funcLit:
 			n.types = sc.types
 			sc = sc.pop()
-			genRun(n)
+			err = genRun(n)
 
 		case goStmt:
 			wireChild(n)
