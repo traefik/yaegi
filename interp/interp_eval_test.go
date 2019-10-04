@@ -461,6 +461,9 @@ func TestEvalStop(t *testing.T) {
 				return
 			}
 			_, err = i.EvalTimeout(src, 100*time.Millisecond)
+			if err == nil {
+				t.Errorf("should have failed")
+			}
 		}()
 		select {
 		case <-time.After(time.Second):
