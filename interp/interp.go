@@ -7,8 +7,10 @@ import (
 	"go/scanner"
 	"go/token"
 	"os"
+	"os/signal"
 	"reflect"
 	"strconv"
+	"time"
 )
 
 // Interpreter node structure for AST and CFG
@@ -46,12 +48,15 @@ type receiver struct {
 	index []int         // path in receiver value for interface or value type
 }
 
+type runid uint
+
 // frame contains values for the current execution level (a function context)
 type frame struct {
 	anc       *frame            // ancestor frame (global space)
 	data      []reflect.Value   // values
 	deferred  [][]reflect.Value // defer stack
 	recovered interface{}       // to handle panic recover
+	runid                       // for cancellation
 }
 
 // Exports stores the map of binary packages per package path
@@ -80,6 +85,7 @@ type Interpreter struct {
 	binPkg   Exports           // binary packages used in interpreter, indexed by path
 	srcPkg   imports           // source packages used in interpreter, indexed by path
 	rdir     map[string]bool   // for src import cycle detection
+	runid                      // for cancellation
 }
 
 const (
@@ -296,6 +302,7 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 		return res, err
 	}
 	interp.resizeFrame()
+	interp.frame.runid = interp.runid
 	interp.run(root, nil)
 
 	for _, n := range initNodes {
@@ -312,6 +319,26 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 	}
 
 	return res, err
+}
+
+// Stop stops the execution of the interpreter
+func (interp *Interpreter) Stop() { interp.runid++ }
+
+func (interp *Interpreter) EvalTimeout(src string, d time.Duration) (v reflect.Value, err error) {
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+		v, err = interp.Eval(src)
+	}()
+
+	select {
+	case <-time.After(d):
+		interp.Stop()
+		err = fmt.Errorf("timeout")
+	case <-done:
+	}
+	return
 }
 
 // getWrapper returns the wrapper type of the corresponding interface, or nil if not found
@@ -337,6 +364,14 @@ func (interp *Interpreter) Repl(in, out *os.File) {
 	prompt := getPrompt(in, out)
 	prompt()
 	src := ""
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		<-c
+		interp.Stop()
+	}()
+
 	for s.Scan() {
 		src += s.Text() + "\n"
 		if v, err := interp.Eval(src); err != nil {

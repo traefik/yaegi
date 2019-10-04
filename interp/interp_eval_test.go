@@ -396,6 +396,80 @@ func TestEvalMissingSymbol(t *testing.T) {
 	}
 }
 
+func TestEvalStop(t *testing.T) {
+	tests := []testCase{
+		{
+			desc: "for {}",
+			src: `(func() {
+				      for {}
+			      })()`,
+		},
+		{
+			desc: "select {}",
+			src: `(func() {
+				     select {}
+			     })()`,
+		},
+		{
+			desc: "blocked chan send",
+			src: `(func() {
+			         c := make(chan int)
+				     c <- 1
+				 })()`,
+		},
+		{
+			desc: "blocked chan recv",
+			src: `(func() {
+			         c := make(chan int)
+				     <-c
+			     })()`,
+		},
+		{
+			desc: "blocked chan recv2",
+			src: `(func() {
+			         c := make(chan int)
+				     _, _ = <-c
+			     })()`,
+		},
+		{
+			desc: "blocked range chan",
+			src: `(func() {
+			         c := make(chan int)
+				     for range c {}
+			     })()`,
+		},
+		{
+			desc: "double lock",
+			src: `(func() {
+			         var mu sync.Mutex
+				     mu.Lock()
+				     mu.Lock()
+			      })()`,
+		},
+	}
+
+	for _, test := range tests {
+		done := make(chan struct{})
+		src := test.src
+		go func() {
+			defer close(done)
+			i := interp.New(interp.Options{})
+			i.Use(stdlib.Symbols)
+			_, err := i.Eval(`import "sync"`)
+			if err != nil {
+				t.Errorf(`failed to import "sync": %v`, err)
+				return
+			}
+			_, err = i.EvalTimeout(src, 100*time.Millisecond)
+		}()
+		select {
+		case <-time.After(time.Second):
+			t.Errorf("timeout failed to terminate execution of %q", test.desc)
+		case <-done:
+		}
+	}
+}
+
 func runTests(t *testing.T, i *interp.Interpreter, tests []testCase) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
