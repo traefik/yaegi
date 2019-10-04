@@ -324,6 +324,8 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 // Stop stops the execution of the interpreter
 func (interp *Interpreter) Stop() { interp.runid++ }
 
+// EvalTimeout is the same as Eval, except it will return after a timeout it the
+// execution is not complete.
 func (interp *Interpreter) EvalTimeout(src string, d time.Duration) (v reflect.Value, err error) {
 	done := make(chan struct{})
 
