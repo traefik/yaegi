@@ -164,6 +164,8 @@ func (interp *Interpreter) initScopePkg(n *node) (*scope, string) {
 		pkgName = p.child[0].ident
 	}
 
+	interp.mutex.Lock()
+	defer interp.mutex.Unlock()
 	if _, ok := interp.scopes[pkgName]; !ok {
 		interp.scopes[pkgName] = sc.pushBloc()
 	}

@@ -102,6 +102,7 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 
 	// Register source package in the interpreter. The package contains only
 	// the global symbols in the package scope.
+	interp.mutex.Lock()
 	interp.srcPkg[path] = interp.scopes[pkgName].sym
 
 	// Rename imported pkgName to alias if they are different
@@ -110,7 +111,10 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 		delete(interp.scopes, pkgName)
 	}
 
+	interp.frame.mutex.Lock()
 	interp.resizeFrame()
+	interp.frame.mutex.Unlock()
+	interp.mutex.Unlock()
 
 	// Once all package sources have been parsed, execute entry points then init functions
 	for _, n := range rootNodes {

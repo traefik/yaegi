@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"reflect"
 	"strconv"
+	"sync"
 	"sync/atomic"
 )
 
@@ -23,7 +24,7 @@ type node struct {
 	fnext  *node          // false branch successor (CFG)
 	interp *Interpreter   // interpreter context
 	frame  *frame         // frame pointer used for closures only (TODO: suppress this)
-	index  int            // node index (dot display)
+	index  int64          // node index (dot display)
 	findex int            // index of value in frame or frame size (func def, type def)
 	level  int            // number of frame indirections to access value
 	nleft  int            // number of children in left part (assign)
@@ -57,6 +58,7 @@ type frame struct {
 	recovered interface{}       // to handle panic recover
 	runid     uint64            // for cancellation
 	done      chan struct{}     // for cancellation of channel operations
+	mutex     sync.Mutex
 }
 
 // Exports stores the map of binary packages per package path
@@ -78,7 +80,7 @@ type Interpreter struct {
 	Name string // program name
 	opt
 	frame    *frame            // program data storage during execution
-	nindex   int               // next node index
+	nindex   int64             // next node index
 	fset     *token.FileSet    // fileset to locate node in source code
 	universe *scope            // interpreter global level scope
 	scopes   map[string]*scope // package level scopes, indexed by package name
@@ -87,6 +89,7 @@ type Interpreter struct {
 	rdir     map[string]bool   // for src import cycle detection
 	id       uint64            // for cancellation
 	done     chan struct{}     // for cancellation of channel operations
+	mutex    sync.Mutex
 }
 
 const (
@@ -234,6 +237,8 @@ func (interp *Interpreter) resizeFrame() {
 }
 
 func (interp *Interpreter) main() *node {
+	interp.mutex.Lock()
+	defer interp.mutex.Unlock()
 	if m, ok := interp.scopes[mainID]; ok && m.sym[mainID] != nil {
 		return m.sym[mainID].node
 	}
@@ -284,11 +289,13 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 		// REPL may skip package statement
 		setExec(root.start)
 	}
+	interp.mutex.Lock()
 	if interp.universe.sym[pkgName] == nil {
 		// Make the package visible under a path identical to its name
 		interp.srcPkg[pkgName] = interp.scopes[pkgName].sym
 		interp.universe.sym[pkgName] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: pkgName}}
 	}
+	interp.mutex.Unlock()
 
 	if interp.cfgDot {
 		root.cfgDot(dotX())
@@ -298,13 +305,21 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 		return res, err
 	}
 
-	// Execute CFG
+	// Generate node exec closures
 	if err = genRun(root); err != nil {
 		return res, err
 	}
-	interp.resizeFrame()
+
+	// Init interpreter execution memory frame
+	interp.frame.mutex.Lock()
 	interp.frame.runid = interp.runid()
+	interp.mutex.Lock()
 	interp.frame.done = interp.done
+	interp.resizeFrame()
+	interp.mutex.Unlock()
+	interp.frame.mutex.Unlock()
+
+	// Execute node closures
 	interp.run(root, nil)
 
 	for _, n := range initNodes {
@@ -328,7 +343,11 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (reflect.Value, error) {
 	var v reflect.Value
 	var err error
+
+	interp.mutex.Lock()
 	interp.done = make(chan struct{})
+	interp.mutex.Unlock()
+
 	done := make(chan struct{})
 	go func() {
 		defer close(done)

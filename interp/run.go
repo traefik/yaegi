@@ -98,14 +98,17 @@ func (interp *Interpreter) run(n *node, cf *frame) {
 // runCfg executes a node AST by walking its CFG and running node builtin at each step
 func runCfg(n *node, f *frame) {
 	defer func() {
+		f.mutex.Lock()
 		f.recovered = recover()
 		for _, val := range f.deferred {
 			val[0].Call(val[1:])
 		}
 		if f.recovered != nil {
 			fmt.Println(n.cfgErrorf("panic"))
+			f.mutex.Unlock()
 			panic(f.recovered)
 		}
+		f.mutex.Unlock()
 	}()
 
 	for exec := n.exec; exec != nil && f.runid == n.interp.runid(); {
