@@ -486,6 +486,18 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			}
 		}
 
+	case sliceExpr:
+		t, err = nodeType(interp, sc, n.child[0])
+		if t.cat == ptrT {
+			t = t.val
+		}
+		if err == nil && t.size != 0 {
+			t1 := *t
+			t1.size = 0
+			t1.rtype = nil
+			t = &t1
+		}
+
 	case structType:
 		t.cat = structT
 		var incomplete bool
