@@ -2,13 +2,16 @@ package interp
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"go/build"
 	"go/scanner"
 	"go/token"
 	"os"
+	"os/signal"
 	"reflect"
 	"strconv"
+	"sync/atomic"
 )
 
 // Interpreter node structure for AST and CFG
@@ -52,6 +55,7 @@ type frame struct {
 	data      []reflect.Value   // values
 	deferred  [][]reflect.Value // defer stack
 	recovered interface{}       // to handle panic recover
+	runid     uint64            // for cancellation
 }
 
 // Exports stores the map of binary packages per package path
@@ -80,6 +84,7 @@ type Interpreter struct {
 	binPkg   Exports           // binary packages used in interpreter, indexed by path
 	srcPkg   imports           // source packages used in interpreter, indexed by path
 	rdir     map[string]bool   // for src import cycle detection
+	id       uint64            // for cancellation
 }
 
 const (
@@ -296,6 +301,7 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 		return res, err
 	}
 	interp.resizeFrame()
+	interp.frame.runid = interp.runid()
 	interp.run(root, nil)
 
 	for _, n := range initNodes {
@@ -313,6 +319,30 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 
 	return res, err
 }
+
+// EvalWithContext evaluates Go code represented as a string. It returns
+// a map on current interpreted package exported symbols.
+func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (reflect.Value, error) {
+	var v reflect.Value
+	var err error
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		v, err = interp.Eval(src)
+	}()
+
+	select {
+	case <-ctx.Done():
+		interp.stop()
+		return reflect.Value{}, ctx.Err()
+	case <-done:
+		return v, err
+	}
+}
+
+func (interp *Interpreter) stop() { atomic.AddUint64(&interp.id, 1) }
+
+func (interp *Interpreter) runid() uint64 { return atomic.LoadUint64(&interp.id) }
 
 // getWrapper returns the wrapper type of the corresponding interface, or nil if not found
 func (interp *Interpreter) getWrapper(t reflect.Type) reflect.Type {
@@ -337,6 +367,14 @@ func (interp *Interpreter) Repl(in, out *os.File) {
 	prompt := getPrompt(in, out)
 	prompt()
 	src := ""
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		<-c
+		interp.stop()
+	}()
+
 	for s.Scan() {
 		src += s.Text() + "\n"
 		if v, err := interp.Eval(src); err != nil {

@@ -84,7 +84,7 @@ func (interp *Interpreter) run(n *node, cf *frame) {
 	if cf == nil {
 		f = interp.frame
 	} else {
-		f = &frame{anc: cf, data: make([]reflect.Value, len(n.types))}
+		f = &frame{anc: cf, data: make([]reflect.Value, len(n.types)), runid: interp.runid()}
 	}
 
 	for i, t := range n.types {
@@ -108,7 +108,7 @@ func runCfg(n *node, f *frame) {
 		}
 	}()
 
-	for exec := n.exec; exec != nil; {
+	for exec := n.exec; exec != nil && f.runid == n.interp.runid(); {
 		exec = exec(f)
 	}
 }
@@ -438,7 +438,7 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 		}
 		return reflect.MakeFunc(n.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
 			// Allocate and init local frame. All values to be settable and addressable.
-			fr := frame{anc: f, data: make([]reflect.Value, len(def.types))}
+			fr := frame{anc: f, data: make([]reflect.Value, len(def.types)), runid: f.runid}
 			d := fr.data
 			for i, t := range def.types {
 				d[i] = reflect.New(t).Elem()
@@ -652,7 +652,7 @@ func call(n *node) {
 		if def.frame != nil {
 			anc = def.frame
 		}
-		nf := frame{anc: anc, data: make([]reflect.Value, len(def.types))}
+		nf := frame{anc: anc, data: make([]reflect.Value, len(def.types)), runid: anc.runid}
 		var vararg reflect.Value
 
 		// Init return values
