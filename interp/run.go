@@ -1025,7 +1025,7 @@ func getFunc(n *node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		fr := *f
+		fr := frame{anc: f.anc, data: f.data, deferred: f.deferred, recovered: f.recovered, runid: f.runid, done: f.done}
 		nod := *n
 		nod.val = &nod
 		nod.frame = &fr
@@ -1039,7 +1039,7 @@ func getMethod(n *node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		fr := *f
+		fr := frame{anc: f.anc, data: f.data, deferred: f.deferred, recovered: f.recovered, runid: f.runid, done: f.done}
 		nod := *(n.val.(*node))
 		nod.val = &nod
 		nod.recv = n.recv
@@ -1058,7 +1058,7 @@ func getMethodByName(n *node) {
 	n.exec = func(f *frame) bltn {
 		val := value0(f).Interface().(valueInterface)
 		m, li := val.node.typ.lookupMethod(name)
-		fr := *f
+		fr := frame{anc: f.anc, data: f.data, deferred: f.deferred, recovered: f.recovered, runid: f.runid, done: f.done}
 		nod := *m
 		nod.val = &nod
 		nod.recv = &receiver{nil, val.value, li}
