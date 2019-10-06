@@ -165,11 +165,10 @@ func (interp *Interpreter) initScopePkg(n *node) (*scope, string) {
 	}
 
 	interp.mutex.Lock()
-	defer interp.mutex.Unlock()
 	if _, ok := interp.scopes[pkgName]; !ok {
 		interp.scopes[pkgName] = sc.pushBloc()
 	}
-
 	sc = interp.scopes[pkgName]
+	interp.mutex.Unlock()
 	return sc, pkgName
 }

@@ -52,13 +52,14 @@ type receiver struct {
 
 // frame contains values for the current execution level (a function context)
 type frame struct {
-	anc       *frame            // ancestor frame (global space)
-	data      []reflect.Value   // values
+	anc  *frame          // ancestor frame (global space)
+	data []reflect.Value // values
+
+	mutex     sync.Mutex
 	deferred  [][]reflect.Value // defer stack
 	recovered interface{}       // to handle panic recover
 	runid     uint64            // for cancellation
 	done      chan struct{}     // for cancellation of channel operations
-	mutex     sync.Mutex
 }
 
 // Exports stores the map of binary packages per package path
@@ -78,18 +79,21 @@ type opt struct {
 // Interpreter contains global resources and state
 type Interpreter struct {
 	Name string // program name
+
 	opt
+	nindex int64           // next node index
+	fset   *token.FileSet  // fileset to locate node in source code
+	binPkg Exports         // binary packages used in interpreter, indexed by path
+	rdir   map[string]bool // for src import cycle detection
+
+	id uint64 // for cancellation, only accessed via runid/stop
+
+	mutex    sync.RWMutex
 	frame    *frame            // program data storage during execution
-	nindex   int64             // next node index
-	fset     *token.FileSet    // fileset to locate node in source code
 	universe *scope            // interpreter global level scope
 	scopes   map[string]*scope // package level scopes, indexed by package name
-	binPkg   Exports           // binary packages used in interpreter, indexed by path
 	srcPkg   imports           // source packages used in interpreter, indexed by path
-	rdir     map[string]bool   // for src import cycle detection
-	id       uint64            // for cancellation
 	done     chan struct{}     // for cancellation of channel operations
-	mutex    sync.Mutex
 }
 
 const (
@@ -237,8 +241,8 @@ func (interp *Interpreter) resizeFrame() {
 }
 
 func (interp *Interpreter) main() *node {
-	interp.mutex.Lock()
-	defer interp.mutex.Unlock()
+	interp.mutex.RLock()
+	defer interp.mutex.RUnlock()
 	if m, ok := interp.scopes[mainID]; ok && m.sym[mainID] != nil {
 		return m.sym[mainID].node
 	}
