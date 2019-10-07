@@ -55,11 +55,36 @@ type frame struct {
 	anc  *frame          // ancestor frame (global space)
 	data []reflect.Value // values
 
-	mutex     sync.Mutex
+	id uint64 // for cancellation, only access via newFrame/runid/setrunid/clone.
+
+	mutex     sync.RWMutex
 	deferred  [][]reflect.Value // defer stack
 	recovered interface{}       // to handle panic recover
-	runid     uint64            // for cancellation
 	done      chan struct{}     // for cancellation of channel operations
+}
+
+func newFrame(anc *frame, len int, id uint64, done chan struct{}) *frame {
+	return &frame{
+		anc:  anc,
+		data: make([]reflect.Value, len),
+		id:   id,
+		done: done,
+	}
+}
+
+func (f *frame) runid() uint64      { return atomic.LoadUint64(&f.id) }
+func (f *frame) setrunid(id uint64) { atomic.StoreUint64(&f.id, id) }
+func (f *frame) clone() *frame {
+	f.mutex.RLock()
+	defer f.mutex.RUnlock()
+	return &frame{
+		anc:       f.anc,
+		data:      f.data,
+		deferred:  f.deferred,
+		recovered: f.recovered,
+		id:        f.runid(),
+		done:      f.done,
+	}
 }
 
 // Exports stores the map of binary packages per package path
@@ -315,8 +340,8 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 	}
 
 	// Init interpreter execution memory frame
+	interp.frame.setrunid(interp.runid())
 	interp.frame.mutex.Lock()
-	interp.frame.runid = interp.runid()
 	interp.mutex.Lock()
 	interp.frame.done = interp.done
 	interp.resizeFrame()
