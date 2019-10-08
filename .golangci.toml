@@ -44,3 +44,10 @@
   [[issues.exclude-rules]]
     path = "interp/.+_test\\.go"
     linters = ["goconst"]
+
+  [[issues.exclude-rules]]
+    path = "interp/interp.go"
+    text = "`in` can be `io.Reader`"
+  [[issues.exclude-rules]]
+    path = "interp/interp.go"
+    text = "`out` can be `io.Writer`"

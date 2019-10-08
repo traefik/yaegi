@@ -361,8 +361,9 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 // Repl performs a Read-Eval-Print-Loop on input file descriptor.
 // Results are printed on output.
 // Deprecated: use REPL instead
-//nolint: interfacer
-func (interp *Interpreter) Repl(in, out *os.File) { interp.REPL(in, out) }
+func (interp *Interpreter) Repl(in, out *os.File) {
+	interp.REPL(in, out)
+}
 
 // getPrompt returns a function which prints a prompt only if input is a terminal.
 func getPrompt(in io.Reader, out io.Writer) func() {
