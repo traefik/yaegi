@@ -84,7 +84,8 @@ func (interp *Interpreter) run(n *node, cf *frame) {
 	if cf == nil {
 		f = interp.frame
 	} else {
-		f = &frame{anc: cf, data: make([]reflect.Value, len(n.types)), runid: interp.runid(), done: interp.done}
+		f = &frame{anc: cf, data: make([]reflect.Value, len(n.types)), runid: interp.runid()}
+		f.done = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(interp.done)}
 	}
 
 	for i, t := range n.types {
@@ -1594,10 +1595,7 @@ func rangeChan(n *node) {
 	tnext := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		chosen, v, ok := reflect.Select([]reflect.SelectCase{
-			{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(f.done)},
-			{Dir: reflect.SelectRecv, Chan: value(f)},
-		})
+		chosen, v, ok := reflect.Select([]reflect.SelectCase{f.done, {Dir: reflect.SelectRecv, Chan: value(f)}})
 		if chosen == 0 {
 			return nil
 		}
@@ -2036,10 +2034,16 @@ func recv(n *node) {
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
-			chosen, v, _ := reflect.Select([]reflect.SelectCase{
-				{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(f.done)},
-				{Dir: reflect.SelectRecv, Chan: value(f)},
-			})
+			ch := value(f)
+			// Fast: channel read doesn't block
+			if x, ok := ch.TryRecv(); ok {
+				if x.Bool() {
+					return tnext
+				}
+				return fnext
+			}
+			// Slow: channel read blocks, allow cancel
+			chosen, v, _ := reflect.Select([]reflect.SelectCase{f.done, {Dir: reflect.SelectRecv, Chan: ch}})
 			if chosen == 0 {
 				return nil
 			}
@@ -2051,11 +2055,15 @@ func recv(n *node) {
 	} else {
 		i := n.findex
 		n.exec = func(f *frame) bltn {
+			// Fast: channel read doesn't block
+			var ok bool
+			ch := value(f)
+			if f.data[i], ok = ch.TryRecv(); ok {
+				return tnext
+			}
+			// Slow: channel is blocked, allow cancel
 			var chosen int
-			chosen, f.data[i], _ = reflect.Select([]reflect.SelectCase{
-				{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(f.done)},
-				{Dir: reflect.SelectRecv, Chan: value(f)},
-			})
+			chosen, f.data[i], _ = reflect.Select([]reflect.SelectCase{f.done, {Dir: reflect.SelectRecv, Chan: ch}})
 			if chosen == 0 {
 				return nil
 			}
@@ -2071,15 +2079,20 @@ func recv2(n *node) {
 	tnext := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		chosen, v, ok := reflect.Select([]reflect.SelectCase{
-			{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(f.done)},
-			{Dir: reflect.SelectRecv, Chan: vchan(f)},
-		})
+		ch, result, status := vchan(f), vres(f), vok(f)
+		//  Fast: channel read doesn't block
+		if v, ok := ch.TryRecv(); ok {
+			result.Set(v)
+			status.SetBool(true)
+			return tnext
+		}
+		// Slow: channel is blocked, allow cancel
+		chosen, v, ok := reflect.Select([]reflect.SelectCase{f.done, {Dir: reflect.SelectRecv, Chan: ch}})
 		if chosen == 0 {
 			return nil
 		}
-		vres(f).Set(v)
-		vok(f).SetBool(ok)
+		result.Set(v)
+		status.SetBool(ok)
 		return tnext
 	}
 }
@@ -2103,10 +2116,13 @@ func send(n *node) {
 	value1 := genValue(n.child[1]) // value to send
 
 	n.exec = func(f *frame) bltn {
-		chosen, _, _ := reflect.Select([]reflect.SelectCase{
-			{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(f.done)},
-			{Dir: reflect.SelectSend, Chan: value0(f), Send: value1(f)},
-		})
+		ch, data := value0(f), value1(f)
+		// Fast: send on channel doesn't block
+		if ok := ch.TrySend(data); ok {
+			return next
+		}
+		// Slow: send on channel blocks, allow cancel
+		chosen, _, _ := reflect.Select([]reflect.SelectCase{f.done, {Dir: reflect.SelectSend, Chan: ch, Send: data}})
 		if chosen == 0 {
 			return nil
 		}
@@ -2172,7 +2188,7 @@ func _select(n *node) {
 	}
 
 	n.exec = func(f *frame) bltn {
-		cases[nbClause] = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(f.done)}
+		cases[nbClause] = f.done
 		for i := range cases[:nbClause] {
 			switch cases[i].Dir {
 			case reflect.SelectRecv:

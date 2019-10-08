@@ -56,10 +56,10 @@ type frame struct {
 	data []reflect.Value // values
 
 	mutex     sync.Mutex
-	deferred  [][]reflect.Value // defer stack
-	recovered interface{}       // to handle panic recover
-	runid     uint64            // for cancellation
-	done      chan struct{}     // for cancellation of channel operations
+	deferred  [][]reflect.Value  // defer stack
+	recovered interface{}        // to handle panic recover
+	runid     uint64             // for cancellation
+	done      reflect.SelectCase // for cancellation of channel operations
 }
 
 // Exports stores the map of binary packages per package path
@@ -318,7 +318,7 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 	interp.frame.mutex.Lock()
 	interp.frame.runid = interp.runid()
 	interp.mutex.Lock()
-	interp.frame.done = interp.done
+	interp.frame.done = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(interp.done)}
 	interp.resizeFrame()
 	interp.mutex.Unlock()
 	interp.frame.mutex.Unlock()
