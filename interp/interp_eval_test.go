@@ -1,15 +1,10 @@
 package interp_test
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -472,6 +467,16 @@ func TestEvalWithContext(t *testing.T) {
 			switch err {
 			case context.DeadlineExceeded:
 				// Successful cancellation.
+
+				// Check we can still execute an expression.
+				v, err := i.EvalWithContext(context.Background(), "1+1\n") //nolint:govet
+				if err != nil {
+					t.Errorf("failed to evaluate expression after cancellation: %v", err)
+				}
+				got := v.Interface()
+				if got != 2 {
+					t.Errorf("unexpected result of eval(1+1): got %v, want 2", got)
+				}
 			case nil:
 				t.Errorf("unexpected success evaluating expression %q", test.desc)
 			default:
@@ -482,86 +487,6 @@ func TestEvalWithContext(t *testing.T) {
 		case <-time.After(time.Second):
 			t.Errorf("timeout failed to terminate execution of %q", test.desc)
 		case <-done:
-		}
-	}
-}
-
-func TestYaegiCmd(t *testing.T) {
-	tmp, err := ioutil.TempDir("", "yaegi-")
-	if err != nil {
-		t.Fatalf("failed to create tmp directory: %v", err)
-	}
-	defer func() {
-		err = os.RemoveAll(tmp)
-		if err != nil {
-			t.Errorf("failed to clean up %v: %v", tmp, err)
-		}
-	}()
-
-	yaegi := filepath.Join(tmp, "yaegi")
-	build := exec.Command("go", "build", "-race", "-o", yaegi, "../cmd/yaegi")
-	err = build.Run()
-	if err != nil {
-		t.Fatalf("failed to build yaegi command: %v", err)
-	}
-
-	// Test src must be terminated by a single newline.
-	tests := []testCase{
-		{src: "for {}\n"},
-		{src: "select {}\n"},
-	}
-	for _, test := range tests {
-		cmd := exec.Command(yaegi)
-		in, err := cmd.StdinPipe()
-		if err != nil {
-			t.Errorf("failed to get stdin pipe to yaegi command: %v", err)
-		}
-		var outBuf, errBuf bytes.Buffer
-		cmd.Stdout = &outBuf
-		cmd.Stderr = &errBuf
-
-		// https://golang.org/doc/articles/race_detector.html#Options
-		cmd.Env = []string{`GORACE="halt_on_error=1"`}
-
-		err = cmd.Start()
-		if err != nil {
-			t.Fatalf("failed to start yaegi command: %v", err)
-		}
-
-		_, err = in.Write([]byte(test.src))
-		if err != nil {
-			t.Errorf("failed pipe test source to yaegi command: %v", err)
-		}
-		time.Sleep(100 * time.Millisecond)
-		err = cmd.Process.Signal(os.Interrupt)
-		if err != nil {
-			t.Errorf("failed to send os.Interrupt to yaegi command: %v", err)
-		}
-
-		_, err = in.Write([]byte("1+1\n"))
-		if err != nil {
-			t.Errorf("failed to probe race: %v", err)
-		}
-		err = in.Close()
-		if err != nil {
-			t.Errorf("failed to close stdin pipe: %v", err)
-		}
-
-		err = cmd.Wait()
-		if err != nil {
-			if cmd.ProcessState.ExitCode() == 66 { // See race_detector.html article.
-				t.Errorf("race detected running yaegi command canceling %q: %v", test.src, err)
-				if testing.Verbose() {
-					t.Log(&errBuf)
-				}
-			} else {
-				t.Errorf("error running yaegi command for %q: %v", test.src, err)
-			}
-			continue
-		}
-
-		if outBuf.String() != "context canceled\n2\n" {
-			t.Errorf("unexpected output: %q", &outBuf)
 		}
 	}
 }

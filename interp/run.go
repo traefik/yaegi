@@ -84,9 +84,11 @@ func (interp *Interpreter) run(n *node, cf *frame) {
 	if cf == nil {
 		f = interp.frame
 	} else {
-		f = &frame{anc: cf, data: make([]reflect.Value, len(n.types)), runid: interp.runid()}
-		f.done = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(interp.done)}
+		f = newFrame(cf, len(n.types), interp.runid())
 	}
+	interp.mutex.Lock()
+	f.done = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(interp.done)}
+	interp.mutex.Unlock()
 
 	for i, t := range n.types {
 		f.data[i] = reflect.New(t).Elem()
@@ -112,7 +114,7 @@ func runCfg(n *node, f *frame) {
 		f.mutex.Unlock()
 	}()
 
-	for exec := n.exec; exec != nil && f.runid == n.interp.runid(); {
+	for exec := n.exec; exec != nil && f.runid() == n.interp.runid(); {
 		exec = exec(f)
 	}
 }
@@ -442,7 +444,7 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 		}
 		return reflect.MakeFunc(n.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
 			// Allocate and init local frame. All values to be settable and addressable.
-			fr := frame{anc: f, data: make([]reflect.Value, len(def.types)), runid: f.runid, done: f.done}
+			fr := newFrame(f, len(def.types), f.runid())
 			d := fr.data
 			for i, t := range def.types {
 				d[i] = reflect.New(t).Elem()
@@ -471,7 +473,7 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 			}
 
 			// Interpreter code execution
-			runCfg(start, &fr)
+			runCfg(start, fr)
 
 			result := fr.data[:numRet]
 			for i, r := range result {
@@ -656,7 +658,7 @@ func call(n *node) {
 		if def.frame != nil {
 			anc = def.frame
 		}
-		nf := frame{anc: anc, data: make([]reflect.Value, len(def.types)), runid: anc.runid, done: anc.done}
+		nf := newFrame(anc, len(def.types), anc.runid())
 		var vararg reflect.Value
 
 		// Init return values
@@ -721,10 +723,10 @@ func call(n *node) {
 
 		// Execute function body
 		if goroutine {
-			go runCfg(def.child[3].start, &nf)
+			go runCfg(def.child[3].start, nf)
 			return tnext
 		}
-		runCfg(def.child[3].start, &nf)
+		runCfg(def.child[3].start, nf)
 
 		// Handle branching according to boolean result
 		if fnext != nil && !nf.data[0].Bool() {
@@ -1026,10 +1028,10 @@ func getFunc(n *node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		fr := frame{anc: f.anc, data: f.data, deferred: f.deferred, recovered: f.recovered, runid: f.runid, done: f.done}
+		fr := f.clone()
 		nod := *n
 		nod.val = &nod
-		nod.frame = &fr
+		nod.frame = fr
 		dest(f).Set(reflect.ValueOf(&nod))
 		return next
 	}
@@ -1040,11 +1042,11 @@ func getMethod(n *node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		fr := frame{anc: f.anc, data: f.data, deferred: f.deferred, recovered: f.recovered, runid: f.runid, done: f.done}
+		fr := f.clone()
 		nod := *(n.val.(*node))
 		nod.val = &nod
 		nod.recv = n.recv
-		nod.frame = &fr
+		nod.frame = fr
 		f.data[i] = reflect.ValueOf(&nod)
 		return next
 	}
@@ -1059,11 +1061,11 @@ func getMethodByName(n *node) {
 	n.exec = func(f *frame) bltn {
 		val := value0(f).Interface().(valueInterface)
 		m, li := val.node.typ.lookupMethod(name)
-		fr := frame{anc: f.anc, data: f.data, deferred: f.deferred, recovered: f.recovered, runid: f.runid, done: f.done}
+		fr := f.clone()
 		nod := *m
 		nod.val = &nod
 		nod.recv = &receiver{nil, val.value, li}
-		nod.frame = &fr
+		nod.frame = fr
 		f.data[i] = reflect.ValueOf(&nod)
 		return next
 	}
