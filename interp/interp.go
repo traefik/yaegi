@@ -98,10 +98,11 @@ type imports map[string]map[string]*symbol
 
 // opt stores interpreter options
 type opt struct {
-	astDot  bool          // display AST graph (debug)
-	cfgDot  bool          // display CFG graph (debug)
-	noRun   bool          // compile, but do not run
-	context build.Context // build context: GOPATH, build constraints
+	astDot     bool          // display AST graph (debug)
+	cfgDot     bool          // display CFG graph (debug)
+	noRun      bool          // compile, but do not run
+	cancelChan bool          // allow to cancel blocking channel send and receive
+	context    build.Context // build context: GOPATH, build constraints
 }
 
 // Interpreter contains global resources and state
@@ -345,10 +346,7 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 	// Init interpreter execution memory frame
 	interp.frame.setrunid(interp.runid())
 	interp.frame.mutex.Lock()
-	interp.mutex.Lock()
-	interp.frame.done = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(interp.done)}
 	interp.resizeFrame()
-	interp.mutex.Unlock()
 	interp.frame.mutex.Unlock()
 
 	// Execute node closures
@@ -428,6 +426,7 @@ func (interp *Interpreter) Repl(in, out *os.File) {
 	prompt := getPrompt(in, out)
 	prompt()
 	src := ""
+	interp.opt.cancelChan = true
 	for s.Scan() {
 		src += s.Text() + "\n"
 		ctx, cancel := context.WithCancel(context.Background())
