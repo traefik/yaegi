@@ -6,6 +6,7 @@ import (
 	"go/build"
 	"go/scanner"
 	"go/token"
+	"io"
 	"os"
 	"reflect"
 	"strconv"
@@ -330,9 +331,9 @@ func (interp *Interpreter) Use(values Exports) {
 	}
 }
 
-// REPL performs a Read-Eval-Print-Loop on input file descriptor.
-// Results are printed on output.
-func (interp *Interpreter) REPL(in, out *os.File) {
+// REPL performs a Read-Eval-Print-Loop on input reader.
+// Results are printed on output writer.
+func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 	s := bufio.NewScanner(in)
 	prompt := getPrompt(in, out)
 	prompt()
@@ -357,9 +358,20 @@ func (interp *Interpreter) REPL(in, out *os.File) {
 	}
 }
 
-// getPrompt returns a function which prints a prompt only if input is a terminal
-func getPrompt(in, out *os.File) func() {
-	if stat, err := in.Stat(); err == nil && stat.Mode()&os.ModeCharDevice != 0 {
+// Repl performs a Read-Eval-Print-Loop on input file descriptor.
+// Results are printed on output.
+// Deprecated: use REPL instead
+//nolint: interfacer
+func (interp *Interpreter) Repl(in, out *os.File) { interp.REPL(in, out) }
+
+// getPrompt returns a function which prints a prompt only if input is a terminal.
+func getPrompt(in io.Reader, out io.Writer) func() {
+	s, ok := in.(interface{ Stat() (os.FileInfo, error) })
+	if !ok {
+		return func() {}
+	}
+	stat, err := s.Stat()
+	if err == nil && stat.Mode()&os.ModeCharDevice != 0 {
 		return func() { fmt.Fprint(out, "> ") }
 	}
 	return func() {}
