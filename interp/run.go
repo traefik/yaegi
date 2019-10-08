@@ -1767,7 +1767,6 @@ func appendSlice(n *node) {
 			return next
 		}
 	}
-
 }
 
 func _append(n *node) {
