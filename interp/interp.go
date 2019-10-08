@@ -331,9 +331,9 @@ func (interp *Interpreter) Use(values Exports) {
 	}
 }
 
-// Repl performs a Read-Eval-Print-Loop on input file descriptor.
-// Results are printed on output.
-func (interp *Interpreter) Repl(in io.Reader, out io.Writer) {
+// REPL performs a Read-Eval-Print-Loop on input reader.
+// Results are printed on output writer.
+func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 	s := bufio.NewScanner(in)
 	prompt := getPrompt(in, out)
 	prompt()
@@ -356,6 +356,13 @@ func (interp *Interpreter) Repl(in io.Reader, out io.Writer) {
 		src = ""
 		prompt()
 	}
+}
+
+// Repl performs a Read-Eval-Print-Loop on input file descriptor.
+// Results are printed on output.
+// Deprecated: use REPL instead
+func (interp *Interpreter) Repl(in, out *os.File) {
+	interp.REPL(in, out)
 }
 
 // getPrompt returns a function which prints a prompt only if input is a terminal.
