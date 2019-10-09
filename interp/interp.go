@@ -98,22 +98,23 @@ type imports map[string]map[string]*symbol
 
 // opt stores interpreter options
 type opt struct {
-	astDot     bool          // display AST graph (debug)
-	cfgDot     bool          // display CFG graph (debug)
-	noRun      bool          // compile, but do not run
-	cancelChan bool          // allow to cancel blocking channel send and receive
-	context    build.Context // build context: GOPATH, build constraints
+	astDot   bool          // display AST graph (debug)
+	cfgDot   bool          // display CFG graph (debug)
+	noRun    bool          // compile, but do not run
+	fastChan bool          // disable cancellable chan operations
+	context  build.Context // build context: GOPATH, build constraints
 }
 
 // Interpreter contains global resources and state
 type Interpreter struct {
 	Name string // program name
 
-	opt
-	nindex int64           // next node index
-	fset   *token.FileSet  // fileset to locate node in source code
-	binPkg Exports         // binary packages used in interpreter, indexed by path
-	rdir   map[string]bool // for src import cycle detection
+	opt                        // user settable options
+	cancelChan bool            // enables cancellable chan operations
+	nindex     int64           // next node index
+	fset       *token.FileSet  // fileset to locate node in source code
+	binPkg     Exports         // binary packages used in interpreter, indexed by path
+	rdir       map[string]bool // for src import cycle detection
 
 	id uint64 // for cancellation, only accessed via runid/stop
 
@@ -189,15 +190,17 @@ func New(options Options) *Interpreter {
 		i.opt.context.BuildTags = options.BuildTags
 	}
 
-	// AstDot activates AST graph display for the interpreter
+	// astDot activates AST graph display for the interpreter
 	i.opt.astDot, _ = strconv.ParseBool(os.Getenv("YAEGI_AST_DOT"))
 
-	// CfgDot activates AST graph display for the interpreter
+	// cfgDot activates AST graph display for the interpreter
 	i.opt.cfgDot, _ = strconv.ParseBool(os.Getenv("YAEGI_CFG_DOT"))
 
-	// NoRun disable the execution (but not the compilation) in the interpreter
+	// noRun disables the execution (but not the compilation) in the interpreter
 	i.opt.noRun, _ = strconv.ParseBool(os.Getenv("YAEGI_NO_RUN"))
 
+	// fastChan disables the cancellable version of channel operations in evalWithContext
+	i.opt.fastChan, _ = strconv.ParseBool(os.Getenv("YAEGI_FAST_CHAN"))
 	return &i
 }
 
@@ -376,6 +379,7 @@ func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (ref
 
 	interp.mutex.Lock()
 	interp.done = make(chan struct{})
+	interp.cancelChan = !interp.opt.fastChan
 	interp.mutex.Unlock()
 
 	done := make(chan struct{})
@@ -426,7 +430,6 @@ func (interp *Interpreter) Repl(in, out *os.File) {
 	prompt := getPrompt(in, out)
 	prompt()
 	src := ""
-	interp.opt.cancelChan = true
 	for s.Scan() {
 		src += s.Text() + "\n"
 		ctx, cancel := context.WithCancel(context.Background())
