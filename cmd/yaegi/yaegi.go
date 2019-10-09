@@ -79,9 +79,9 @@ func main() {
 		}
 
 		if interactive {
-			i.Repl(os.Stdin, os.Stdout)
+			i.REPL(os.Stdin, os.Stdout)
 		}
 	} else {
-		i.Repl(os.Stdin, os.Stdout)
+		i.REPL(os.Stdin, os.Stdout)
 	}
 }

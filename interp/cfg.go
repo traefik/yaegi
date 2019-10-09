@@ -871,6 +871,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 		case funcLit:
 			n.types = sc.types
 			sc = sc.pop()
+			err = genRun(n)
 
 		case goStmt:
 			wireChild(n)
@@ -1083,7 +1084,6 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					n.typ = &itype{cat: valueT, rtype: field.Type}
 					n.val = field.Index
 					n.gen = getPtrIndexSeq
-
 				} else {
 					err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
 				}
@@ -1309,18 +1309,8 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case sliceExpr:
 			wireChild(n)
-			ctyp := n.child[0].typ
-			if ctyp.cat == ptrT {
-				ctyp = ctyp.val
-			}
-			if ctyp.size != 0 {
-				// Create a slice type from an array type
-				n.typ = &itype{}
-				*n.typ = *ctyp
-				n.typ.size = 0
-				n.typ.rtype = nil
-			} else {
-				n.typ = ctyp
+			if n.typ, err = nodeType(interp, sc, n); err != nil {
+				return
 			}
 			n.findex = sc.add(n.typ)
 
