@@ -69,7 +69,6 @@ func TestPackages(t *testing.T) {
 	for _, test := range testCases {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
-
 			goPath, err := filepath.Abs(test.goPath)
 			if err != nil {
 				t.Fatal(err)
@@ -116,7 +115,6 @@ func TestPackagesError(t *testing.T) {
 	for _, test := range testCases {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
-
 			// Init go interpreter
 			i := interp.New(interp.Options{GoPath: test.goPath})
 			i.Use(stdlib.Symbols) // Use binary standard library

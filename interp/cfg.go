@@ -1084,7 +1084,6 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					n.typ = &itype{cat: valueT, rtype: field.Type}
 					n.val = field.Index
 					n.gen = getPtrIndexSeq
-
 				} else {
 					err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
 				}
