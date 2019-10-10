@@ -8,7 +8,7 @@ If invoked with no arguments, it processes the standard input
 in a Read-Eval-Print-Loop. A prompt is displayed if standard input
 is a terminal.
 
-Given a file, it operates on that file. if the first line starts with
+Given a file, it operates on that file. If the first line starts with
 "#!/usr/bin/env yaegi", and the file has exec permission, then the file
 can be invoked directly from the shell.
 
