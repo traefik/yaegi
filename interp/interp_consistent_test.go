@@ -104,7 +104,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 
 			bin := filepath.Join(dir, strings.TrimSuffix(file.Name(), ".go"))
 
-			cmdBuild := exec.Command("go", "build", "-o", bin, filePath)
+			cmdBuild := exec.Command("go", "build", "-tags=dummy", "-o", bin, filePath)
 			outBuild, err := cmdBuild.CombinedOutput()
 			if err != nil {
 				t.Log(string(outBuild))

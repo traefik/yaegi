@@ -44,7 +44,7 @@ func TestBuildTag(t *testing.T) {
 		test := test
 		src := test.src + "\npackage x"
 		t.Run(test.src, func(t *testing.T) {
-			if r, _ := i.buildOk(ctx, "", src); r != test.res {
+			if r, _ := i.buildOk(&ctx, "", src); r != test.res {
 				t.Errorf("got %v, want %v", r, test.res)
 			}
 		})
@@ -74,7 +74,7 @@ func TestBuildFile(t *testing.T) {
 	for _, test := range tests {
 		test := test
 		t.Run(test.src, func(t *testing.T) {
-			if r := skipFile(ctx, test.src); r != test.res {
+			if r := skipFile(&ctx, test.src); r != test.res {
 				t.Errorf("got %v, want %v", r, test.res)
 			}
 		})
@@ -106,7 +106,7 @@ func Test_goMinorVersion(t *testing.T) {
 	for _, test := range tests {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
-			minor := goMinorVersion(test.context)
+			minor := goMinorVersion(&test.context)
 
 			if minor != test.expected {
 				t.Errorf("got %v, want %v", minor, test.expected)
