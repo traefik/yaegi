@@ -18,7 +18,10 @@ at global level in an implicit main package.
 
 Options:
     -i
-	   start an interactive REPL after file execution
+	   start an interactive REPL after file execution.
+	-tags tag,list
+	   a comma-separated list of build tags to consider satisfied during
+	   the interpretation.
 
 Debugging support (may be removed at any time):
   YAEGI_AST_DOT=1
@@ -43,7 +46,9 @@ import (
 
 func main() {
 	var interactive bool
+	var tags string
 	flag.BoolVar(&interactive, "i", false, "start an interactive REPL")
+	flag.StringVar(&tags, "tags", "", "set a list of build tags")
 	flag.Usage = func() {
 		fmt.Println("Usage:", os.Args[0], "[options] [script] [args]")
 		fmt.Println("Options:")
@@ -53,7 +58,7 @@ func main() {
 	args := flag.Args()
 	log.SetFlags(log.Lshortfile)
 
-	i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
+	i := interp.New(interp.Options{GoPath: build.Default.GOPATH, BuildTags: strings.Split(tags, ",")})
 	i.Use(stdlib.Symbols)
 	i.Use(interp.Symbols)
 
