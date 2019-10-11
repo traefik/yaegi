@@ -13,14 +13,14 @@ future imports of the session.
 
 A build tag is a line comment that begins
 
-	// yaegi:tags:
+	// yaegi:tags
 
 that lists the build constraints to be satisfied by the further
 imports of source packages.
 
 For example the following custom build tag
 
-	// yaegi:tags: noasm
+	// yaegi:tags noasm
 
 Will ensure that an import of a package will exclude files containing
 
