@@ -84,15 +84,16 @@ func buildTagOk(ctx *build.Context, s string) (r bool) {
 	return
 }
 
-// setYaegiTags scans a comment group for "yaegi-tags: tag ..." lines
+// setYaegiTags scans a comment group for "yaegi:tags tag1 tag2 ..." lines
 // and adds the corresponding tags to the interpreter build tags.
 func setYaegiTags(ctx *build.Context, comments []*ast.CommentGroup) {
 	for _, g := range comments {
 		for _, line := range strings.Split(strings.TrimSpace(g.Text()), "\n") {
-			if len(line) < 12 || line[:12] != "yaegi-tags: " {
+			if len(line) < 11 || line[:11] != "yaegi:tags " {
 				continue
 			}
-			tags := strings.Split(strings.TrimSpace(line[11:]), " ")
+
+			tags := strings.Split(strings.TrimSpace(line[10:]), " ")
 			for _, tag := range tags {
 				if !contains(ctx.BuildTags, tag) {
 					ctx.BuildTags = append(ctx.BuildTags, tag)
