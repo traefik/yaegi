@@ -254,14 +254,7 @@ func genContent(dest, pkgName, license string) ([]byte, error) {
 
 // fixConst checks untyped constant value, converting it if necessary to avoid overflow
 func fixConst(name string, val constant.Value) string {
-	switch val.Kind() {
-	case constant.Float:
-		str := val.ExactString()
-		if _, err := strconv.ParseFloat(str, 32); err == nil {
-			return "float32(" + name + ")"
-		}
-		return name
-	case constant.Int:
+	if val.Kind() == constant.Int {
 		str := val.ExactString()
 		i, err := strconv.ParseInt(str, 0, 64)
 		if err == nil {
@@ -278,10 +271,8 @@ func fixConst(name string, val constant.Value) string {
 		if err == nil {
 			return "uint64(" + name + ")"
 		}
-		return name
-	default:
-		return name
 	}
+	return name
 }
 
 // genLicense generates the correct LICENSE header text from the provided

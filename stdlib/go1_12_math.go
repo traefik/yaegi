@@ -61,7 +61,7 @@ func init() {
 		"Log2E":                  reflect.ValueOf(math.Log2E),
 		"Logb":                   reflect.ValueOf(math.Logb),
 		"Max":                    reflect.ValueOf(math.Max),
-		"MaxFloat32":             reflect.ValueOf(float32(math.MaxFloat32)),
+		"MaxFloat32":             reflect.ValueOf(math.MaxFloat32),
 		"MaxFloat64":             reflect.ValueOf(math.MaxFloat64),
 		"MaxInt16":               reflect.ValueOf(math.MaxInt16),
 		"MaxInt32":               reflect.ValueOf(math.MaxInt32),
