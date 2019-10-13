@@ -264,13 +264,16 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			if len(n.child[0].child) > 0 {
 				// define receiver symbol
 				var typ *itype
-				recvName := n.child[0].child[0].child[0].ident
-				recvTypeNode := n.child[0].child[0].lastChild()
+				fr := n.child[0].child[0]
+				recvTypeNode := fr.lastChild()
 				if typ, err = nodeType(interp, sc, recvTypeNode); err != nil {
 					return false
 				}
 				recvTypeNode.typ = typ
-				sc.sym[recvName] = &symbol{index: sc.add(typ), kind: varSym, typ: typ}
+				index := sc.add(typ)
+				if len(fr.child) > 1 {
+					sc.sym[fr.child[0].ident] = &symbol{index: index, kind: varSym, typ: typ}
+				}
 			}
 			for _, c := range n.child[2].child[0].child {
 				// define input parameter symbols
