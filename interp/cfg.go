@@ -26,6 +26,12 @@ var constOp = map[action]func(*node){
 	aXor:    xorConst,
 }
 
+var constBltn = map[string]func(*node){
+	"complex": complexConst,
+	"imag":    imagConst,
+	"real":    realConst,
+}
+
 // cfg generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
@@ -450,6 +456,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					n.gen = nop
 					src.level = level
 					src.findex = dest.findex
+					if src.typ.untyped && !dest.typ.untyped {
+						src.typ = dest.typ
+					}
 				case n.action == aAssign && src.action == aRecv:
 					// Assign by reading from a receiving channel
 					n.gen = nop
@@ -463,6 +472,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					// TODO: perform constant folding and propagation here
 					switch {
 					case dest.typ.cat == interfaceT:
+					case isComplex(dest.typ.TypeOf()):
 						// value set in genValue
 					case !src.rval.IsValid():
 						// Assign to nil
@@ -707,6 +717,10 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				} else {
 					n.findex = sc.add(n.typ)
 				}
+				if op, ok := constBltn[n.child[0].ident]; ok && n.anc.action != aAssign {
+					op(n) // pre-compute non-assigned constant builtin calls
+				}
+
 			case n.child[0].isType(sc):
 				// Type conversion expression
 				if isInt(n.child[0].typ.TypeOf()) && n.child[1].kind == basicLit && isFloat(n.child[1].typ.TypeOf()) {
