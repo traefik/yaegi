@@ -321,6 +321,7 @@ func (interp *Interpreter) firstToken(src string) token.Token {
 func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 	inRepl := name == ""
 	var inFunc bool
+	var mode parser.Mode
 
 	// Allow incremental parsing of declarations or statements, by inserting
 	// them in a pseudo file package or function. Those statements or
@@ -335,16 +336,20 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 			inFunc = true
 			src = "package main; func main() {" + src + "}"
 		}
+		// Parse comments in REPL mode, to allow tag setting
+		mode |= parser.ParseComments
 	}
 
-	if ok, err := interp.buildOk(interp.context, name, src); !ok || err != nil {
+	if ok, err := interp.buildOk(&interp.context, name, src); !ok || err != nil {
 		return "", nil, err // skip source not matching build constraints
 	}
 
-	f, err := parser.ParseFile(interp.fset, name, src, 0)
+	f, err := parser.ParseFile(interp.fset, name, src, mode)
 	if err != nil {
 		return "", nil, err
 	}
+
+	setYaegiTags(&interp.context, f.Comments)
 
 	var root *node
 	var anc astNode
