@@ -265,7 +265,7 @@ func genValueFloat(n *node) func(*frame) (reflect.Value, float64) {
 		return func(f *frame) (reflect.Value, float64) { v := value(f); return v, v.Float() }
 	case reflect.Complex64, reflect.Complex128:
 		if n.typ.untyped && n.rval.IsValid() && imag(n.rval.Complex()) == 0 {
-			return func(f *frame) (reflect.Value, float64) { v := value(f); return v, float64(real(v.Complex())) }
+			return func(f *frame) (reflect.Value, float64) { v := value(f); return v, real(v.Complex()) }
 		}
 	}
 	return nil
