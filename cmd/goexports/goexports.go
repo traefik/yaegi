@@ -1,7 +1,7 @@
 //go:generate go build
 
 /*
-Goexports generates wrappers of package exported symbols
+Goexports generates wrappers of package exported symbols.
 
 Output files are written in the current directory, and prefixed with the go version.
 
