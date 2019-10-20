@@ -232,6 +232,8 @@ func assign(n *node) {
 			svalue[i] = func(*frame) reflect.Value { return reflect.New(t).Elem() }
 		case isRecursiveStruct(dest.typ, dest.typ.rtype):
 			svalue[i] = genValueInterfacePtr(src)
+		case src.typ.untyped && !dest.typ.untyped:
+			svalue[i] = genValueAs(src, dest.typ.TypeOf())
 		default:
 			svalue[i] = genValue(src)
 		}
