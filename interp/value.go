@@ -171,6 +171,14 @@ func genValueInterfaceValue(n *node) func(*frame) reflect.Value {
 	}
 }
 
+func genValueNode(n *node) func(*frame) reflect.Value {
+	value := genValue(n)
+
+	return func(f *frame) reflect.Value {
+		return reflect.ValueOf(&node{rval: value(f)})
+	}
+}
+
 func vInt(v reflect.Value) (i int64) {
 	switch v.Type().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:

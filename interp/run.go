@@ -233,11 +233,15 @@ func assign(n *node) {
 			svalue[i] = genInterfaceWrapper(src, dest.typ.rtype)
 		case dest.typ.cat == valueT && src.typ.cat == funcT:
 			svalue[i] = genFunctionWrapper(src)
+		case dest.typ.cat == funcT && src.typ.cat == valueT:
+			svalue[i] = genValueNode(src)
 		case src.kind == basicLit && src.val == nil:
 			t := dest.typ.TypeOf()
 			svalue[i] = func(*frame) reflect.Value { return reflect.New(t).Elem() }
 		case isRecursiveStruct(dest.typ, dest.typ.rtype):
 			svalue[i] = genValueInterfacePtr(src)
+		case src.typ.untyped && !dest.typ.untyped:
+			svalue[i] = genValueAs(src, dest.typ.TypeOf())
 		default:
 			svalue[i] = genValue(src)
 		}
@@ -653,6 +657,29 @@ func call(n *node) {
 
 	n.exec = func(f *frame) bltn {
 		def := value(f).Interface().(*node)
+
+		// Call bin func if defined
+		if def.rval.IsValid() {
+			in := make([]reflect.Value, len(values))
+			for i, v := range values {
+				in[i] = v(f)
+			}
+			if goroutine {
+				go def.rval.Call(in)
+				return tnext
+			}
+			out := def.rval.Call(in)
+			for i, v := range rvalues {
+				if v != nil {
+					v(f).Set(out[i])
+				}
+			}
+			if fnext != nil && !out[0].Bool() {
+				return fnext
+			}
+			return tnext
+		}
+
 		anc := f
 		// Get closure frame context (if any)
 		if def.frame != nil {
