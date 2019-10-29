@@ -554,6 +554,9 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 		case *ast.CommClause:
 			st.push(addChild(&root, anc, pos, commClause, aNop), nod)
 
+		case *ast.CommentGroup:
+			return false
+
 		case *ast.CompositeLit:
 			st.push(addChild(&root, anc, pos, compositeLitExpr, aCompositeLit), nod)
 
