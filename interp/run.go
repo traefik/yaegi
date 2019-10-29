@@ -240,6 +240,8 @@ func assign(n *node) {
 			svalue[i] = func(*frame) reflect.Value { return reflect.New(t).Elem() }
 		case isRecursiveStruct(dest.typ, dest.typ.rtype):
 			svalue[i] = genValueInterfacePtr(src)
+		case src.typ.untyped && isComplex(dest.typ.TypeOf()):
+			svalue[i] = genValueComplex(src)
 		case src.typ.untyped && !dest.typ.untyped:
 			svalue[i] = genValueAs(src, dest.typ.TypeOf())
 		default:
@@ -1891,15 +1893,24 @@ func _close(n *node) {
 
 func _complex(n *node) {
 	i := n.findex
-	convertLiteralValue(n.child[1], floatType)
-	convertLiteralValue(n.child[2], floatType)
-	value0 := genValue(n.child[1])
-	value1 := genValue(n.child[2])
+	c1, c2 := n.child[1], n.child[2]
+	convertLiteralValue(c1, floatType)
+	convertLiteralValue(c2, floatType)
+	value0 := genValue(c1)
+	value1 := genValue(c2)
 	next := getExec(n.tnext)
 
-	n.exec = func(f *frame) bltn {
-		f.data[i].SetComplex(complex(value0(f).Float(), value1(f).Float()))
-		return next
+	if typ := n.typ.TypeOf(); isComplex(typ) {
+		n.exec = func(f *frame) bltn {
+			f.data[i].SetComplex(complex(value0(f).Float(), value1(f).Float()))
+			return next
+		}
+	} else {
+		// Not a complex type: ignore imaginary part
+		n.exec = func(f *frame) bltn {
+			f.data[i].Set(value0(f).Convert(typ))
+			return next
+		}
 	}
 }
 
@@ -2386,5 +2397,26 @@ func isNotNil(n *node) {
 			f.data[i].SetBool(!value(f).IsNil())
 			return tnext
 		}
+	}
+}
+
+func complexConst(n *node) {
+	if v0, v1 := n.child[1].rval, n.child[2].rval; v0.IsValid() && v1.IsValid() {
+		n.rval = reflect.ValueOf(complex(vFloat(v0), vFloat(v1)))
+		n.gen = nop
+	}
+}
+
+func imagConst(n *node) {
+	if v := n.child[1].rval; v.IsValid() {
+		n.rval = reflect.ValueOf(imag(v.Complex()))
+		n.gen = nop
+	}
+}
+
+func realConst(n *node) {
+	if v := n.child[1].rval; v.IsValid() {
+		n.rval = reflect.ValueOf(real(v.Complex()))
+		n.gen = nop
 	}
 }

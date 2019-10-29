@@ -288,6 +288,9 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					default:
 						err = n.cfgErrorf("invalid types %s and %s", t0.Kind(), t1.Kind())
 					}
+					if nt0.untyped && nt1.untyped {
+						t.untyped = true
+					}
 				}
 			case "real", "imag":
 				if t, err = nodeType(interp, sc, n.child[1]); err != nil {
@@ -300,7 +303,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					case k == reflect.Complex128:
 						t = sc.getType("float64")
 					case t.untyped && isNumber(t.TypeOf()):
-						t = &itype{cat: valueT, rtype: floatType}
+						t = &itype{cat: valueT, rtype: floatType, untyped: true}
 					default:
 						err = n.cfgErrorf("invalid complex type %s", k)
 					}

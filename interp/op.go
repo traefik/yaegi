@@ -2154,11 +2154,11 @@ func equal(n *node) {
 		switch {
 		case c0.rval.IsValid():
 			s0 := vComplex(c0.rval)
-			v1 := genValueComplex(c1)
+			v1 := genComplex(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
-					_, s1 := v1(f)
+					s1 := v1(f)
 					if s0 == s1 {
 						dest(f).SetBool(true)
 						return tnext
@@ -2168,18 +2168,18 @@ func equal(n *node) {
 				}
 			} else {
 				n.exec = func(f *frame) bltn {
-					_, s1 := v1(f)
+					s1 := v1(f)
 					dest(f).SetBool(s0 == s1)
 					return tnext
 				}
 			}
 		case c1.rval.IsValid():
 			s1 := vComplex(c1.rval)
-			v0 := genValueComplex(c0)
+			v0 := genComplex(c0)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
-					_, s0 := v0(f)
+					s0 := v0(f)
 					if s0 == s1 {
 						dest(f).SetBool(true)
 						return tnext
@@ -2190,19 +2190,19 @@ func equal(n *node) {
 			} else {
 				dest := genValue(n)
 				n.exec = func(f *frame) bltn {
-					_, s0 := v0(f)
+					s0 := v0(f)
 					dest(f).SetBool(s0 == s1)
 					return tnext
 				}
 			}
 		default:
-			v0 := genValueComplex(n.child[0])
-			v1 := genValueComplex(n.child[1])
+			v0 := genComplex(n.child[0])
+			v1 := genComplex(n.child[1])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
-					_, s0 := v0(f)
-					_, s1 := v1(f)
+					s0 := v0(f)
+					s1 := v1(f)
 					if s0 == s1 {
 						dest(f).SetBool(true)
 						return tnext
@@ -2212,8 +2212,8 @@ func equal(n *node) {
 				}
 			} else {
 				n.exec = func(f *frame) bltn {
-					_, s0 := v0(f)
-					_, s1 := v1(f)
+					s0 := v0(f)
+					s1 := v1(f)
 					dest(f).SetBool(s0 == s1)
 					return tnext
 				}
@@ -3739,11 +3739,11 @@ func notEqual(n *node) {
 		switch {
 		case c0.rval.IsValid():
 			s0 := vComplex(c0.rval)
-			v1 := genValueComplex(c1)
+			v1 := genComplex(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
-					_, s1 := v1(f)
+					s1 := v1(f)
 					if s0 != s1 {
 						dest(f).SetBool(true)
 						return tnext
@@ -3753,18 +3753,18 @@ func notEqual(n *node) {
 				}
 			} else {
 				n.exec = func(f *frame) bltn {
-					_, s1 := v1(f)
+					s1 := v1(f)
 					dest(f).SetBool(s0 != s1)
 					return tnext
 				}
 			}
 		case c1.rval.IsValid():
 			s1 := vComplex(c1.rval)
-			v0 := genValueComplex(c0)
+			v0 := genComplex(c0)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
-					_, s0 := v0(f)
+					s0 := v0(f)
 					if s0 != s1 {
 						dest(f).SetBool(true)
 						return tnext
@@ -3775,19 +3775,19 @@ func notEqual(n *node) {
 			} else {
 				dest := genValue(n)
 				n.exec = func(f *frame) bltn {
-					_, s0 := v0(f)
+					s0 := v0(f)
 					dest(f).SetBool(s0 != s1)
 					return tnext
 				}
 			}
 		default:
-			v0 := genValueComplex(n.child[0])
-			v1 := genValueComplex(n.child[1])
+			v0 := genComplex(n.child[0])
+			v1 := genComplex(n.child[1])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
-					_, s0 := v0(f)
-					_, s1 := v1(f)
+					s0 := v0(f)
+					s1 := v1(f)
 					if s0 != s1 {
 						dest(f).SetBool(true)
 						return tnext
@@ -3797,8 +3797,8 @@ func notEqual(n *node) {
 				}
 			} else {
 				n.exec = func(f *frame) bltn {
-					_, s0 := v0(f)
-					_, s1 := v1(f)
+					s0 := v0(f)
+					s1 := v1(f)
 					dest(f).SetBool(s0 != s1)
 					return tnext
 				}
