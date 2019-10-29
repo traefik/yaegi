@@ -2,14 +2,18 @@ package interp
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"go/build"
 	"go/scanner"
 	"go/token"
 	"io"
 	"os"
+	"os/signal"
 	"reflect"
 	"strconv"
+	"sync"
+	"sync/atomic"
 )
 
 // Interpreter node structure for AST and CFG
@@ -21,7 +25,7 @@ type node struct {
 	fnext  *node          // false branch successor (CFG)
 	interp *Interpreter   // interpreter context
 	frame  *frame         // frame pointer used for closures only (TODO: suppress this)
-	index  int            // node index (dot display)
+	index  int64          // node index (dot display)
 	findex int            // index of value in frame or frame size (func def, type def)
 	level  int            // number of frame indirections to access value
 	nleft  int            // number of children in left part (assign)
@@ -49,10 +53,42 @@ type receiver struct {
 
 // frame contains values for the current execution level (a function context)
 type frame struct {
-	anc       *frame            // ancestor frame (global space)
-	data      []reflect.Value   // values
-	deferred  [][]reflect.Value // defer stack
-	recovered interface{}       // to handle panic recover
+	anc  *frame          // ancestor frame (global space)
+	data []reflect.Value // values
+
+	id uint64 // for cancellation, only access via newFrame/runid/setrunid/clone.
+
+	mutex     sync.RWMutex
+	deferred  [][]reflect.Value  // defer stack
+	recovered interface{}        // to handle panic recover
+	done      reflect.SelectCase // for cancellation of channel operations
+}
+
+func newFrame(anc *frame, len int, id uint64) *frame {
+	f := &frame{
+		anc:  anc,
+		data: make([]reflect.Value, len),
+		id:   id,
+	}
+	if anc != nil {
+		f.done = anc.done
+	}
+	return f
+}
+
+func (f *frame) runid() uint64      { return atomic.LoadUint64(&f.id) }
+func (f *frame) setrunid(id uint64) { atomic.StoreUint64(&f.id, id) }
+func (f *frame) clone() *frame {
+	f.mutex.RLock()
+	defer f.mutex.RUnlock()
+	return &frame{
+		anc:       f.anc,
+		data:      f.data,
+		deferred:  f.deferred,
+		recovered: f.recovered,
+		id:        f.runid(),
+		done:      f.done,
+	}
 }
 
 // Exports stores the map of binary packages per package path
@@ -63,24 +99,32 @@ type imports map[string]map[string]*symbol
 
 // opt stores interpreter options
 type opt struct {
-	astDot  bool          // display AST graph (debug)
-	cfgDot  bool          // display CFG graph (debug)
-	noRun   bool          // compile, but do not run
-	context build.Context // build context: GOPATH, build constraints
+	astDot   bool          // display AST graph (debug)
+	cfgDot   bool          // display CFG graph (debug)
+	noRun    bool          // compile, but do not run
+	fastChan bool          // disable cancellable chan operations
+	context  build.Context // build context: GOPATH, build constraints
 }
 
 // Interpreter contains global resources and state
 type Interpreter struct {
 	Name string // program name
-	opt
+
+	opt                        // user settable options
+	cancelChan bool            // enables cancellable chan operations
+	nindex     int64           // next node index
+	fset       *token.FileSet  // fileset to locate node in source code
+	binPkg     Exports         // binary packages used in interpreter, indexed by path
+	rdir       map[string]bool // for src import cycle detection
+
+	id uint64 // for cancellation, only accessed via runid/stop
+
+	mutex    sync.RWMutex
 	frame    *frame            // program data storage during execution
-	nindex   int               // next node index
-	fset     *token.FileSet    // fileset to locate node in source code
 	universe *scope            // interpreter global level scope
 	scopes   map[string]*scope // package level scopes, indexed by package name
-	binPkg   Exports           // binary packages used in interpreter, indexed by path
 	srcPkg   imports           // source packages used in interpreter, indexed by path
-	rdir     map[string]bool   // for src import cycle detection
+	done     chan struct{}     // for cancellation of channel operations
 }
 
 const (
@@ -147,15 +191,17 @@ func New(options Options) *Interpreter {
 		i.opt.context.BuildTags = options.BuildTags
 	}
 
-	// AstDot activates AST graph display for the interpreter
+	// astDot activates AST graph display for the interpreter
 	i.opt.astDot, _ = strconv.ParseBool(os.Getenv("YAEGI_AST_DOT"))
 
-	// CfgDot activates AST graph display for the interpreter
+	// cfgDot activates AST graph display for the interpreter
 	i.opt.cfgDot, _ = strconv.ParseBool(os.Getenv("YAEGI_CFG_DOT"))
 
-	// NoRun disable the execution (but not the compilation) in the interpreter
+	// noRun disables the execution (but not the compilation) in the interpreter
 	i.opt.noRun, _ = strconv.ParseBool(os.Getenv("YAEGI_NO_RUN"))
 
+	// fastChan disables the cancellable version of channel operations in evalWithContext
+	i.opt.fastChan, _ = strconv.ParseBool(os.Getenv("YAEGI_FAST_CHAN"))
 	return &i
 }
 
@@ -228,6 +274,8 @@ func (interp *Interpreter) resizeFrame() {
 }
 
 func (interp *Interpreter) main() *node {
+	interp.mutex.RLock()
+	defer interp.mutex.RUnlock()
 	if m, ok := interp.scopes[mainID]; ok && m.sym[mainID] != nil {
 		return m.sym[mainID].node
 	}
@@ -278,11 +326,13 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 		// REPL may skip package statement
 		setExec(root.start)
 	}
+	interp.mutex.Lock()
 	if interp.universe.sym[pkgName] == nil {
 		// Make the package visible under a path identical to its name
 		interp.srcPkg[pkgName] = interp.scopes[pkgName].sym
 		interp.universe.sym[pkgName] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: pkgName}}
 	}
+	interp.mutex.Unlock()
 
 	if interp.cfgDot {
 		root.cfgDot(dotX())
@@ -292,11 +342,18 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 		return res, err
 	}
 
-	// Execute CFG
+	// Generate node exec closures
 	if err = genRun(root); err != nil {
 		return res, err
 	}
+
+	// Init interpreter execution memory frame
+	interp.frame.setrunid(interp.runid())
+	interp.frame.mutex.Lock()
 	interp.resizeFrame()
+	interp.frame.mutex.Unlock()
+
+	// Execute node closures
 	interp.run(root, nil)
 
 	for _, n := range initNodes {
@@ -314,6 +371,42 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 
 	return res, err
 }
+
+// EvalWithContext evaluates Go code represented as a string. It returns
+// a map on current interpreted package exported symbols.
+func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (reflect.Value, error) {
+	var v reflect.Value
+	var err error
+
+	interp.mutex.Lock()
+	interp.done = make(chan struct{})
+	interp.cancelChan = !interp.opt.fastChan
+	interp.mutex.Unlock()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		v, err = interp.Eval(src)
+	}()
+
+	select {
+	case <-ctx.Done():
+		interp.stop()
+		return reflect.Value{}, ctx.Err()
+	case <-done:
+		return v, err
+	}
+}
+
+// stop sends a semaphore to all running frames and closes the chan
+// operation short circuit channel. stop may only be called once per
+// invocation of EvalWithContext.
+func (interp *Interpreter) stop() {
+	atomic.AddUint64(&interp.id, 1)
+	close(interp.done)
+}
+
+func (interp *Interpreter) runid() uint64 { return atomic.LoadUint64(&interp.id) }
 
 // getWrapper returns the wrapper type of the corresponding interface, or nil if not found
 func (interp *Interpreter) getWrapper(t reflect.Type) reflect.Type {
@@ -340,7 +433,12 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 	src := ""
 	for s.Scan() {
 		src += s.Text() + "\n"
-		if v, err := interp.Eval(src); err != nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		handleSignal(ctx, cancel)
+		v, err := interp.EvalWithContext(ctx, src)
+		signal.Reset()
+		if err != nil {
 			switch err.(type) {
 			case scanner.ErrorList:
 				// Early failure in the scanner: the source is incomplete
@@ -376,4 +474,17 @@ func getPrompt(in io.Reader, out io.Writer) func() {
 		return func() { fmt.Fprint(out, "> ") }
 	}
 	return func() {}
+}
+
+// handleSignal wraps signal handling for eval cancellation.
+func handleSignal(ctx context.Context, cancel context.CancelFunc) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		select {
+		case <-c:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
 }
