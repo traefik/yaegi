@@ -17,11 +17,11 @@ func main() {
 Expected result:
 ```console
 $ go run ./sample.go
-// ouput
+// output
 ```
 
 Got:
 ```console
 $ yaegi ./sample.go
-// ouput
+// output
 ```
