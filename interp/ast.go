@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/scanner"
 	"go/token"
+	"math"
 	"reflect"
 	"strconv"
 	"sync/atomic"
@@ -465,7 +466,11 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 				n.rval = reflect.ValueOf(v)
 			case token.FLOAT:
 				v, _ := strconv.ParseFloat(a.Value, 64)
-				n.rval = reflect.ValueOf(v)
+				if math.Round(v) == v {
+					n.rval = reflect.ValueOf(int(v))
+				} else {
+					n.rval = reflect.ValueOf(v)
+				}
 			case token.IMAG:
 				v, _ := strconv.ParseFloat(a.Value[:len(a.Value)-1], 64)
 				n.rval = reflect.ValueOf(complex(0, v))
