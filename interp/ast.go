@@ -466,7 +466,7 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 				n.rval = reflect.ValueOf(v)
 			case token.FLOAT:
 				v, _ := strconv.ParseFloat(a.Value, 64)
-				if math.Round(v) == v {
+				if math.Trunc(v) == v {
 					n.rval = reflect.ValueOf(int(v))
 				} else {
 					n.rval = reflect.ValueOf(v)

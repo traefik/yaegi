@@ -1551,7 +1551,7 @@ func (n *node) isInteger() bool {
 		if isFloat(t) {
 			// untyped float constant with null decimal part is ok
 			f := n.rval.Float()
-			if f == math.Round(f) {
+			if f == math.Trunc(f) {
 				n.rval = reflect.ValueOf(int(f))
 				n.typ.rtype = n.rval.Type()
 				return true
@@ -1578,7 +1578,7 @@ func (n *node) isNatural() bool {
 		if isFloat(t) {
 			// positive untyped float constant with null decimal part is ok
 			f := n.rval.Float()
-			if f == math.Round(f) && f >= 0 {
+			if f == math.Trunc(f) && f >= 0 {
 				n.rval = reflect.ValueOf(uint(f))
 				n.typ.rtype = n.rval.Type()
 				return true
