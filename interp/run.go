@@ -1495,6 +1495,15 @@ func compositeBinStruct(n *node) {
 	}
 }
 
+func destType(n *node) *itype {
+	switch n.anc.kind {
+	case assignStmt, defineStmt:
+		return n.anc.child[0].typ
+	default:
+		return n.typ
+	}
+}
+
 // compositeLit creates and populates a struct object
 func compositeLit(n *node) {
 	value := valueGenerator(n, n.findex)
@@ -1503,6 +1512,7 @@ func compositeLit(n *node) {
 	if !n.typ.untyped {
 		child = n.child[1:]
 	}
+	destInterface := destType(n).cat == interfaceT
 
 	values := make([]func(*frame) reflect.Value, len(child))
 	for i, c := range child {
@@ -1519,9 +1529,12 @@ func compositeLit(n *node) {
 		for i, v := range values {
 			a.Field(i).Set(v(f))
 		}
-		if d := value(f); d.Type().Kind() == reflect.Ptr {
+		switch d := value(f); {
+		case d.Type().Kind() == reflect.Ptr:
 			d.Set(a.Addr())
-		} else {
+		case destInterface:
+			d.Set(reflect.ValueOf(valueInterface{n, a}))
+		default:
 			d.Set(a)
 		}
 		return next
