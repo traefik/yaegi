@@ -53,10 +53,13 @@ type receiver struct {
 
 // frame contains values for the current execution level (a function context)
 type frame struct {
+	// id is an atomic counter used for cancellation, only access
+	// via newFrame/runid/setrunid/clone.
+	// Located at start of struct to ensure proper aligment.
+	id uint64
+
 	anc  *frame          // ancestor frame (global space)
 	data []reflect.Value // values
-
-	id uint64 // for cancellation, only access via newFrame/runid/setrunid/clone.
 
 	mutex     sync.RWMutex
 	deferred  [][]reflect.Value  // defer stack
@@ -108,6 +111,12 @@ type opt struct {
 
 // Interpreter contains global resources and state
 type Interpreter struct {
+	// id is an atomic counter counter used for run cancellation,
+	// only accessed via runid/stop
+	// Located at start of struct to ensure proper alignment on 32 bit
+	// architectures.
+	id uint64
+
 	Name string // program name
 
 	opt                        // user settable options
@@ -116,8 +125,6 @@ type Interpreter struct {
 	fset       *token.FileSet  // fileset to locate node in source code
 	binPkg     Exports         // binary packages used in interpreter, indexed by path
 	rdir       map[string]bool // for src import cycle detection
-
-	id uint64 // for cancellation, only accessed via runid/stop
 
 	mutex    sync.RWMutex
 	frame    *frame            // program data storage during execution
