@@ -517,7 +517,11 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				n.child[l].gen = getIndexMap2
 				n.gen = nop
 			case typeAssertExpr:
-				n.child[l].gen = typeAssert2
+				if n.child[0].ident == "_" {
+					n.child[l].gen = typeAssertStatus
+				} else {
+					n.child[l].gen = typeAssert2
+				}
 				n.gen = nop
 			case unaryExpr:
 				if n.child[l].action == aRecv {
@@ -1314,7 +1318,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			if len(n.child) > 1 {
 				wireChild(n)
 				if n.child[1].typ == nil {
-					n.child[1].typ = sc.getType(n.child[1].ident)
+					if n.child[1].typ, err = nodeType(interp, sc, n.child[1]); err != nil {
+						return
+					}
 				}
 				if n.anc.action != aAssignX {
 					n.typ = n.child[1].typ
@@ -1386,8 +1392,12 @@ func compDefineX(sc *scope, n *node) error {
 		n.gen = nop
 
 	case typeAssertExpr:
+		if n.child[0].ident == "_" {
+			n.child[l].gen = typeAssertStatus
+		} else {
+			n.child[l].gen = typeAssert2
+		}
 		types = append(types, n.child[l].child[1].typ, sc.getType("bool"))
-		n.child[l].gen = typeAssert2
 		n.gen = nop
 
 	case unaryExpr:
@@ -1595,7 +1605,8 @@ func isKey(n *node) bool {
 	return n.anc.kind == fileStmt ||
 		(n.anc.kind == selectorExpr && n.anc.child[0] != n) ||
 		(n.anc.kind == funcDecl && isMethod(n.anc)) ||
-		(n.anc.kind == keyValueExpr && isStruct(n.anc.typ) && n.anc.child[0] == n)
+		(n.anc.kind == keyValueExpr && isStruct(n.anc.typ) && n.anc.child[0] == n) ||
+		(n.anc.kind == fieldExpr && len(n.anc.child) > 1 && n.anc.child[0] == n)
 }
 
 // isNewDefine returns true if node refers to a new definition
