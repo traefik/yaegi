@@ -1354,7 +1354,7 @@ func _return(n *node) {
 			values[i] = genValueInterface(c)
 		default:
 			if c.typ.untyped {
-				values[i] = genValueAs(c, def.typ.ret[i].rtype)
+				values[i] = genValueAs(c, def.typ.ret[i].TypeOf())
 			} else {
 				values[i] = genValue(c)
 			}
