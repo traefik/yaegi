@@ -1353,7 +1353,11 @@ func _return(n *node) {
 		case interfaceT:
 			values[i] = genValueInterface(c)
 		default:
-			values[i] = genValue(c)
+			if c.typ.untyped {
+				values[i] = genValueAs(c, def.typ.ret[i].rtype)
+			} else {
+				values[i] = genValue(c)
+			}
 		}
 	}
 
