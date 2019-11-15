@@ -820,6 +820,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case forStmt1: // for cond {}
 			cond, body := n.child[0], n.child[1]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as for condition")
+			}
 			n.start = cond.start
 			cond.tnext = body.start
 			cond.fnext = n
@@ -829,6 +832,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case forStmt2: // for init; cond; {}
 			init, cond, body := n.child[0], n.child[1], n.child[2]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as for condition")
+			}
 			n.start = init.start
 			init.tnext = cond.start
 			cond.tnext = body.start
@@ -839,6 +845,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case forStmt3: // for ; cond; post {}
 			cond, post, body := n.child[0], n.child[1], n.child[2]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as for condition")
+			}
 			n.start = cond.start
 			cond.tnext = body.start
 			cond.fnext = n
@@ -858,6 +867,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case forStmt4: // for init; cond; post {}
 			init, cond, post, body := n.child[0], n.child[1], n.child[2], n.child[3]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as for condition")
+			}
 			n.start = init.start
 			init.tnext = cond.start
 			cond.tnext = body.start
@@ -941,6 +953,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case ifStmt0: // if cond {}
 			cond, tbody := n.child[0], n.child[1]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as if condition")
+			}
 			n.start = cond.start
 			cond.tnext = tbody.start
 			cond.fnext = n
@@ -949,6 +964,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case ifStmt1: // if cond {} else {}
 			cond, tbody, fbody := n.child[0], n.child[1], n.child[2]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as if condition")
+			}
 			n.start = cond.start
 			cond.tnext = tbody.start
 			cond.fnext = fbody.start
@@ -958,6 +976,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case ifStmt2: // if init; cond {}
 			init, cond, tbody := n.child[0], n.child[1], n.child[2]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as if condition")
+			}
 			n.start = init.start
 			tbody.tnext = n
 			init.tnext = cond.start
@@ -967,6 +988,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case ifStmt3: // if init; cond {} else {}
 			init, cond, tbody, fbody := n.child[0], n.child[1], n.child[2], n.child[3]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as if condition")
+			}
 			n.start = init.start
 			init.tnext = cond.start
 			cond.tnext = tbody.start

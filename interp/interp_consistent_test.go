@@ -35,6 +35,8 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "bad0.go" || // expect error
 			file.Name() == "export1.go" || // non-main package
 			file.Name() == "export0.go" || // non-main package
+			file.Name() == "for7.go" || // expect error
+			file.Name() == "if2.go" || // expect error
 			file.Name() == "import6.go" || // expect error
 			file.Name() == "io0.go" || // use random number
 			file.Name() == "op1.go" || // expect error
@@ -135,6 +137,16 @@ func TestInterpErrorConsistency(t *testing.T) {
 			fileName:       "bad0.go",
 			expectedInterp: "1:1: expected 'package', found println",
 			expectedExec:   "1:1: expected 'package', found println",
+		},
+		{
+			fileName:       "if2.go",
+			expectedInterp: "7:5: non-bool used as if condition",
+			expectedExec:   "7:2: non-bool i % 1000000 (type int) used as if condition",
+		},
+		{
+			fileName:       "for7.go",
+			expectedInterp: "4:14: non-bool used as for condition",
+			expectedExec:   "4:2: non-bool i (type int) used as for condition",
 		},
 		{
 			fileName:       "op1.go",
