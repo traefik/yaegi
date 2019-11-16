@@ -173,6 +173,10 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					switch sym, _, ok := sc.lookup(n.child[0].ident); {
 					case ok && sym.kind == typeSym:
 						typ = sym.typ
+					case n.child[0].kind == selectorExpr:
+						if typ, err = nodeType(interp, sc, n.child[0]); err != nil {
+							return false
+						}
 					case n.child[0].ident == "nil":
 						typ = sc.getType("interface{}")
 					default:
