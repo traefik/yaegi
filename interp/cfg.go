@@ -463,7 +463,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					// Assign by reading from a receiving channel
 					n.gen = nop
 					src.findex = dest.findex // Set recv address to LHS
-					dest.typ = src.typ.val
+					dest.typ = src.typ
 				case n.action == aAssign && src.action == aCompositeLit:
 					n.gen = nop
 					src.findex = dest.findex
@@ -1358,6 +1358,14 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 		case unaryExpr:
 			wireChild(n)
 			n.typ = n.child[0].typ
+			if n.action == aRecv {
+				// Channel receive operation: set type to the channel data type
+				if n.typ.cat == valueT {
+					n.typ = &itype{cat: valueT, rtype: n.typ.rtype.Elem()}
+				} else {
+					n.typ = n.typ.val
+				}
+			}
 			// TODO: Optimisation: avoid allocation if boolean branch op (i.e. '!' in an 'if' expr)
 			n.findex = sc.add(n.typ)
 
@@ -1388,9 +1396,9 @@ func compDefineX(sc *scope, n *node) error {
 	l := len(n.child) - 1
 	types := []*itype{}
 
-	switch n.child[l].kind {
+	switch src := n.child[l]; src.kind {
 	case callExpr:
-		funtype, err := nodeType(n.interp, sc, n.child[l].child[0])
+		funtype, err := nodeType(n.interp, sc, src.child[0])
 		if err != nil {
 			return err
 		}
@@ -1405,18 +1413,18 @@ func compDefineX(sc *scope, n *node) error {
 		n.gen = nop
 
 	case indexExpr:
-		types = append(types, n.child[l].child[0].typ.val, sc.getType("bool"))
+		types = append(types, src.typ, sc.getType("bool"))
 		n.child[l].gen = getIndexMap2
 		n.gen = nop
 
 	case typeAssertExpr:
-		types = append(types, n.child[l].child[1].typ, sc.getType("bool"))
+		types = append(types, src.child[1].typ, sc.getType("bool"))
 		n.child[l].gen = typeAssert2
 		n.gen = nop
 
 	case unaryExpr:
 		if n.child[l].action == aRecv {
-			types = append(types, n.child[l].child[0].typ.val, sc.getType("bool"))
+			types = append(types, src.typ, sc.getType("bool"))
 			n.child[l].gen = recv2
 			n.gen = nop
 		}
