@@ -119,6 +119,37 @@ func runCfg(n *node, f *frame) {
 	}
 }
 
+func typeAssertStatus(n *node) {
+	value := genValue(n.child[0])      // input value
+	value1 := genValue(n.anc.child[1]) // returned status
+	next := getExec(n.tnext)
+
+	switch {
+	case n.child[0].typ.cat == valueT:
+		n.exec = func(f *frame) bltn {
+			if !value(f).IsValid() || value(f).IsNil() {
+				value1(f).SetBool(false)
+			}
+			value1(f).SetBool(true)
+			return next
+		}
+	case n.child[1].typ.cat == interfaceT:
+		n.exec = func(f *frame) bltn {
+			_, ok := value(f).Interface().(valueInterface)
+			//value0(f).Set(reflect.ValueOf(valueInterface{v.node, v.value}))
+			value1(f).SetBool(ok)
+			return next
+		}
+	default:
+		n.exec = func(f *frame) bltn {
+			_, ok := value(f).Interface().(valueInterface)
+			//value0(f).Set(v.value)
+			value1(f).SetBool(ok)
+			return next
+		}
+	}
+}
+
 func typeAssert(n *node) {
 	value := genValue(n.child[0])
 	i := n.findex
