@@ -634,7 +634,11 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			case stringT:
 				n.typ = sc.getType("byte")
 			case valueT:
-				n.typ = &itype{cat: valueT, rtype: t.rtype.Elem()}
+				if t.rtype.Kind() == reflect.String {
+					n.typ = sc.getType("byte")
+				} else {
+					n.typ = &itype{cat: valueT, rtype: t.rtype.Elem()}
+				}
 			default:
 				n.typ = t.val
 			}
