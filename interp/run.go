@@ -119,6 +119,37 @@ func runCfg(n *node, f *frame) {
 	}
 }
 
+func typeAssertStatus(n *node) {
+	value := genValue(n.child[0])      // input value
+	value1 := genValue(n.anc.child[1]) // returned status
+	next := getExec(n.tnext)
+
+	switch {
+	case n.child[0].typ.cat == valueT:
+		n.exec = func(f *frame) bltn {
+			if !value(f).IsValid() || value(f).IsNil() {
+				value1(f).SetBool(false)
+			}
+			value1(f).SetBool(true)
+			return next
+		}
+	case n.child[1].typ.cat == interfaceT:
+		n.exec = func(f *frame) bltn {
+			_, ok := value(f).Interface().(valueInterface)
+			//value0(f).Set(reflect.ValueOf(valueInterface{v.node, v.value}))
+			value1(f).SetBool(ok)
+			return next
+		}
+	default:
+		n.exec = func(f *frame) bltn {
+			_, ok := value(f).Interface().(valueInterface)
+			//value0(f).Set(v.value)
+			value1(f).SetBool(ok)
+			return next
+		}
+	}
+}
+
 func typeAssert(n *node) {
 	value := genValue(n.child[0])
 	i := n.findex
@@ -1326,7 +1357,11 @@ func _return(n *node) {
 		case interfaceT:
 			values[i] = genValueInterface(c)
 		default:
-			values[i] = genValue(c)
+			if c.typ.untyped {
+				values[i] = genValueAs(c, def.typ.ret[i].TypeOf())
+			} else {
+				values[i] = genValue(c)
+			}
 		}
 	}
 
@@ -1499,6 +1534,15 @@ func compositeBinStruct(n *node) {
 	}
 }
 
+func destType(n *node) *itype {
+	switch n.anc.kind {
+	case assignStmt, defineStmt:
+		return n.anc.child[0].typ
+	default:
+		return n.typ
+	}
+}
+
 // compositeLit creates and populates a struct object
 func compositeLit(n *node) {
 	value := valueGenerator(n, n.findex)
@@ -1507,6 +1551,7 @@ func compositeLit(n *node) {
 	if !n.typ.untyped {
 		child = n.child[1:]
 	}
+	destInterface := destType(n).cat == interfaceT
 
 	values := make([]func(*frame) reflect.Value, len(child))
 	for i, c := range child {
@@ -1523,9 +1568,12 @@ func compositeLit(n *node) {
 		for i, v := range values {
 			a.Field(i).Set(v(f))
 		}
-		if d := value(f); d.Type().Kind() == reflect.Ptr {
+		switch d := value(f); {
+		case d.Type().Kind() == reflect.Ptr:
 			d.Set(a.Addr())
-		} else {
+		case destInterface:
+			d.Set(reflect.ValueOf(valueInterface{n, a}))
+		default:
 			d.Set(a)
 		}
 		return next
