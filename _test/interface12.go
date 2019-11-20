@@ -1,32 +1,18 @@
 package main
 
-import (
-	"fmt"
-)
-
-type X struct{}
-
-func (X) Foo() int {
-	return 1
-}
-func (X) Bar() int {
-	return 2
+type I1 interface {
+	Truc()
 }
 
-type Foo interface {
-	Foo() int
-}
-type Bar interface {
-	Bar() int
-}
+type T1 struct{}
+
+func (T1) Truc() { println("in T1 truc") }
+
+var x I1 = T1{}
 
 func main() {
-	var x X
-	var i Foo = x
-	j := i.(Bar)
-
-	fmt.Println(j.Bar())
+	x.Truc()
 }
 
 // Output:
-// 2
+// in T1 truc
