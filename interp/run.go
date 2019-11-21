@@ -1354,6 +1354,8 @@ func _return(n *node) {
 			} else {
 				values[i] = genValue(c)
 			}
+		case funcT:
+			values[i] = genValue(c)
 		case interfaceT:
 			values[i] = genValueInterface(c)
 		default:
