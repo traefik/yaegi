@@ -1043,7 +1043,12 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					if typ, err = nodeType(interp, sc, f.child[2].child[1].child[i].lastChild()); err != nil {
 						return
 					}
-					c.rval = reflect.New(typ.TypeOf()).Elem()
+					if typ.cat == funcT {
+						// Wrap the typed nil value in a node, as per other interpreter functions
+						c.rval = reflect.ValueOf(&node{kind: basicLit, rval: reflect.New(typ.TypeOf()).Elem()})
+					} else {
+						c.rval = reflect.New(typ.TypeOf()).Elem()
+					}
 				}
 			}
 

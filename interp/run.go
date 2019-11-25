@@ -459,6 +459,10 @@ func _panic(n *node) {
 func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 	var def *node
 	var ok bool
+
+	if n.kind == basicLit {
+		return func(f *frame) reflect.Value { return n.rval }
+	}
 	if def, ok = n.val.(*node); !ok {
 		return genValueAsFunctionWrapper(n)
 	}
@@ -1350,6 +1354,8 @@ func _return(n *node) {
 			} else {
 				values[i] = genValue(c)
 			}
+		case funcT:
+			values[i] = genValue(c)
 		case interfaceT:
 			values[i] = genValueInterface(c)
 		default:
@@ -2407,7 +2413,12 @@ func slice0(n *node) {
 }
 
 func isNil(n *node) {
-	value := genValue(n.child[0])
+	var value func(*frame) reflect.Value
+	if n.child[0].typ.cat == funcT {
+		value = genValueAsFunctionWrapper(n.child[0])
+	} else {
+		value = genValue(n.child[0])
+	}
 	tnext := getExec(n.tnext)
 
 	if n.fnext != nil {
@@ -2428,7 +2439,12 @@ func isNil(n *node) {
 }
 
 func isNotNil(n *node) {
-	value := genValue(n.child[0])
+	var value func(*frame) reflect.Value
+	if n.child[0].typ.cat == funcT {
+		value = genValueAsFunctionWrapper(n.child[0])
+	} else {
+		value = genValue(n.child[0])
+	}
 	tnext := getExec(n.tnext)
 
 	if n.fnext != nil {
