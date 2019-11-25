@@ -156,6 +156,14 @@ func TestEvalNil(t *testing.T) {
 			src: "Hello()",
 			res: "<nil>",
 		},
+		{
+			desc: "return nil func",
+			pre: func() {
+				eval(t, i, `func Bar() func() { return nil }`)
+			},
+			src: "Bar()",
+			res: "<nil>",
+		},
 	})
 }
 
