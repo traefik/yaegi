@@ -935,6 +935,8 @@ func isInterface(t *itype) bool {
 
 func isStruct(t *itype) bool { return t.TypeOf().Kind() == reflect.Struct }
 
+func isBool(t *itype) bool { return t.TypeOf().Kind() == reflect.Bool }
+
 func isInt(t reflect.Type) bool {
 	switch t.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:

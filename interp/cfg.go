@@ -467,7 +467,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					// Assign by reading from a receiving channel
 					n.gen = nop
 					src.findex = dest.findex // Set recv address to LHS
-					dest.typ = src.typ.val
+					dest.typ = src.typ
 				case n.action == aAssign && src.action == aCompositeLit:
 					n.gen = nop
 					src.findex = dest.findex
@@ -832,6 +832,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case forStmt1: // for cond {}
 			cond, body := n.child[0], n.child[1]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as for condition")
+			}
 			n.start = cond.start
 			cond.tnext = body.start
 			cond.fnext = n
@@ -841,6 +844,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case forStmt2: // for init; cond; {}
 			init, cond, body := n.child[0], n.child[1], n.child[2]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as for condition")
+			}
 			n.start = init.start
 			init.tnext = cond.start
 			cond.tnext = body.start
@@ -851,6 +857,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case forStmt3: // for ; cond; post {}
 			cond, post, body := n.child[0], n.child[1], n.child[2]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as for condition")
+			}
 			n.start = cond.start
 			cond.tnext = body.start
 			cond.fnext = n
@@ -870,6 +879,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case forStmt4: // for init; cond; post {}
 			init, cond, post, body := n.child[0], n.child[1], n.child[2], n.child[3]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as for condition")
+			}
 			n.start = init.start
 			init.tnext = cond.start
 			cond.tnext = body.start
@@ -953,6 +965,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case ifStmt0: // if cond {}
 			cond, tbody := n.child[0], n.child[1]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as if condition")
+			}
 			n.start = cond.start
 			cond.tnext = tbody.start
 			cond.fnext = n
@@ -961,6 +976,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case ifStmt1: // if cond {} else {}
 			cond, tbody, fbody := n.child[0], n.child[1], n.child[2]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as if condition")
+			}
 			n.start = cond.start
 			cond.tnext = tbody.start
 			cond.fnext = fbody.start
@@ -970,6 +988,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case ifStmt2: // if init; cond {}
 			init, cond, tbody := n.child[0], n.child[1], n.child[2]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as if condition")
+			}
 			n.start = init.start
 			tbody.tnext = n
 			init.tnext = cond.start
@@ -979,6 +1000,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 
 		case ifStmt3: // if init; cond {} else {}
 			init, cond, tbody, fbody := n.child[0], n.child[1], n.child[2], n.child[3]
+			if !isBool(cond.typ) {
+				err = cond.cfgErrorf("non-bool used as if condition")
+			}
 			n.start = init.start
 			init.tnext = cond.start
 			cond.tnext = tbody.start
@@ -1353,6 +1377,14 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 		case unaryExpr:
 			wireChild(n)
 			n.typ = n.child[0].typ
+			if n.action == aRecv {
+				// Channel receive operation: set type to the channel data type
+				if n.typ.cat == valueT {
+					n.typ = &itype{cat: valueT, rtype: n.typ.rtype.Elem()}
+				} else {
+					n.typ = n.typ.val
+				}
+			}
 			// TODO: Optimisation: avoid allocation if boolean branch op (i.e. '!' in an 'if' expr)
 			n.findex = sc.add(n.typ)
 
@@ -1383,9 +1415,9 @@ func compDefineX(sc *scope, n *node) error {
 	l := len(n.child) - 1
 	types := []*itype{}
 
-	switch n.child[l].kind {
+	switch src := n.child[l]; src.kind {
 	case callExpr:
-		funtype, err := nodeType(n.interp, sc, n.child[l].child[0])
+		funtype, err := nodeType(n.interp, sc, src.child[0])
 		if err != nil {
 			return err
 		}
@@ -1400,7 +1432,7 @@ func compDefineX(sc *scope, n *node) error {
 		n.gen = nop
 
 	case indexExpr:
-		types = append(types, n.child[l].child[0].typ.val, sc.getType("bool"))
+		types = append(types, src.typ, sc.getType("bool"))
 		n.child[l].gen = getIndexMap2
 		n.gen = nop
 
@@ -1415,7 +1447,7 @@ func compDefineX(sc *scope, n *node) error {
 
 	case unaryExpr:
 		if n.child[l].action == aRecv {
-			types = append(types, n.child[l].child[0].typ.val, sc.getType("bool"))
+			types = append(types, src.typ, sc.getType("bool"))
 			n.child[l].gen = recv2
 			n.gen = nop
 		}
