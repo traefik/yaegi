@@ -55,9 +55,15 @@ func genValueRecv(n *node) func(*frame) reflect.Value {
 }
 
 func genValueAsFunctionWrapper(n *node) func(*frame) reflect.Value {
-	v := genValue(n)
+	value := genValue(n)
+	typ := n.typ.TypeOf()
+
 	return func(f *frame) reflect.Value {
-		return genFunctionWrapper(v(f).Interface().(*node))(f)
+		v := value(f)
+		if v.IsNil() {
+			return reflect.New(typ).Elem()
+		}
+		return genFunctionWrapper(v.Interface().(*node))(f)
 	}
 }
 
@@ -159,7 +165,18 @@ func genValueInterface(n *node) func(*frame) reflect.Value {
 	value := genValue(n)
 
 	return func(f *frame) reflect.Value {
-		return reflect.ValueOf(valueInterface{n, value(f)})
+		v := value(f)
+		nod := n
+		for {
+			// traverse interface indirections to find out concrete type
+			vi, ok := v.Interface().(valueInterface)
+			if !ok {
+				break
+			}
+			v = vi.value
+			nod = vi.node
+		}
+		return reflect.ValueOf(valueInterface{nod, v})
 	}
 }
 
