@@ -170,22 +170,20 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				var typ *itype
 				if len(n.child) == 2 {
 					// 1 type in clause: define the var with this type in the case clause scope
-					switch sym, _, ok := sc.lookup(n.child[0].ident); {
-					case ok && sym.kind == typeSym:
-						typ = sym.typ
-					case n.child[0].kind == selectorExpr:
-						if typ, err = nodeType(interp, sc, n.child[0]); err != nil {
-							return false
-						}
+					switch {
 					case n.child[0].ident == "nil":
 						typ = sc.getType("interface{}")
-					default:
+					case !n.child[0].isType(sc):
 						err = n.cfgErrorf("%s is not a type", n.child[0].ident)
-						return false
+					default:
+						typ, err = nodeType(interp, sc, n.child[0])
 					}
 				} else {
 					// define the var with the type in the switch guard expression
 					typ = sn.child[1].child[1].child[0].typ
+				}
+				if err != nil {
+					return false
 				}
 				nod := n.lastChild().child[0]
 				index := sc.add(typ)
@@ -1528,7 +1526,7 @@ func isBinType(v reflect.Value) bool { return v.IsValid() && v.Kind() == reflect
 // isType returns true if node refers to a type definition, false otherwise
 func (n *node) isType(sc *scope) bool {
 	switch n.kind {
-	case arrayType, chanType, funcType, mapType, structType, rtypeExpr:
+	case arrayType, chanType, funcType, interfaceType, mapType, structType, rtypeExpr:
 		return true
 	case parenExpr, starExpr:
 		if len(n.child) == 1 {
