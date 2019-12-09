@@ -636,6 +636,47 @@ func (t *itype) finalize() (*itype, error) {
 	return t, err
 }
 
+// identical returns true if the given type is identical to the receiver one
+func (t *itype) identical(o *itype) bool {
+	if isInterface(t) || isInterface(o) {
+		// Check for identical methods sets
+		return reflect.DeepEqual(t.methods(), o.methods())
+	}
+	return t.id() == o.id()
+}
+
+// methods returns a map of method type strings, indexed by method names
+func (t *itype) methods() map[string]string {
+	res := make(map[string]string)
+	switch t.cat {
+	case interfaceT:
+		// Get methods from recursive analysis of interface fields
+		for _, f := range t.field {
+			if f.typ.cat == funcT {
+				res[f.name] = f.typ.TypeOf().String()
+			} else {
+				for k, v := range f.typ.methods() {
+					res[k] = v
+				}
+			}
+		}
+	case valueT, errorT:
+		// Get method from corresponding reflect.Type
+		for i := t.rtype.NumMethod() - 1; i >= 0; i-- {
+			m := t.rtype.Method(i)
+			res[m.Name] = m.Type.String()
+		}
+	case ptrT:
+		// Consider only methods where receiver is a pointer to type t
+		for _, m := range t.val.method {
+			if m.child[0].child[0].lastChild().typ.cat == ptrT {
+				res[m.ident] = m.typ.TypeOf().String()
+			}
+		}
+	}
+	return res
+}
+
 // id returns a unique type identificator string
 func (t *itype) id() string {
 	// TODO: if res is nil, build identity from String()
