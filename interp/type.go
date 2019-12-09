@@ -636,8 +636,8 @@ func (t *itype) finalize() (*itype, error) {
 	return t, err
 }
 
-// identical returns true if the given type is identical to the receiver one
-func (t *itype) identical(o *itype) bool {
+// equal returns true if the given type is identical to the receiver one
+func (t *itype) equal(o *itype) bool {
 	if isInterface(t) || isInterface(o) {
 		// Check for identical methods sets
 		return reflect.DeepEqual(t.methods(), o.methods())
@@ -672,6 +672,10 @@ func (t *itype) methods() map[string]string {
 			if m.child[0].child[0].lastChild().typ.cat == ptrT {
 				res[m.ident] = m.typ.TypeOf().String()
 			}
+		}
+	default:
+		for _, m := range t.method {
+			res[m.ident] = m.typ.TypeOf().String()
 		}
 	}
 	return res
