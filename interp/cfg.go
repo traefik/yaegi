@@ -547,7 +547,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 			// Shift operator type is inherited from first parameter only
 			// All other binary operators require both parameter types to be the same
-			if !isShiftNode(n) && !c0.typ.untyped && !c1.typ.untyped && c0.typ.id() != c1.typ.id() {
+			if !isShiftNode(n) && !c0.typ.untyped && !c1.typ.untyped && !c0.typ.equal(c1.typ) {
 				err = n.cfgErrorf("mismatched types %s and %s", c0.typ.id(), c1.typ.id())
 				break
 			}
