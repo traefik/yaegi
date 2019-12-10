@@ -636,18 +636,41 @@ func (t *itype) finalize() (*itype, error) {
 	return t, err
 }
 
-// equal returns true if the given type is identical to the receiver one
+// Equal returns true if the given type is identical to the receiver one.
 func (t *itype) equal(o *itype) bool {
-	if isInterface(t) || isInterface(o) {
-		// Check for identical methods sets
-		return reflect.DeepEqual(t.methods(), o.methods())
+	switch ti, oi := isInterface(t), isInterface(o); {
+	case ti && oi:
+		return t.methods().equal(o.methods())
+	case ti && !oi:
+		return o.methods().contain(t.methods())
+	case oi && !ti:
+		return t.methods().contain(o.methods())
+	default:
+		return t.id() == o.id()
 	}
-	return t.id() == o.id()
 }
 
-// methods returns a map of method type strings, indexed by method names
-func (t *itype) methods() map[string]string {
-	res := make(map[string]string)
+// MethodSet defines the set of methods signatures as strings, indexed per method name.
+type methodSet map[string]string
+
+// Contain returns true if the method set m contains the method set n.
+func (m methodSet) contain(n methodSet) bool {
+	for k, v := range n {
+		if m[k] != v {
+			return false
+		}
+	}
+	return true
+}
+
+// Equal returns true if the method set m is equal to the method set n.
+func (m methodSet) equal(n methodSet) bool {
+	return m.contain(n) && n.contain(m)
+}
+
+// Methods returns a map of method type strings, indexed by method names.
+func (t *itype) methods() methodSet {
+	res := make(methodSet)
 	switch t.cat {
 	case interfaceT:
 		// Get methods from recursive analysis of interface fields
@@ -879,15 +902,9 @@ func (t *itype) refType(defined map[string]bool) reflect.Type {
 		in := make([]reflect.Type, len(t.arg))
 		out := make([]reflect.Type, len(t.ret))
 		for i, v := range t.arg {
-			if defined[v.name] {
-				v.rtype = interf
-			}
 			in[i] = v.refType(defined)
 		}
 		for i, v := range t.ret {
-			if defined[v.name] {
-				v.rtype = interf
-			}
 			out[i] = v.refType(defined)
 		}
 		t.rtype = reflect.FuncOf(in, out, false)
