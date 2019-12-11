@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"path"
 	"reflect"
+	"regexp"
 	"unicode"
 )
 
@@ -31,6 +31,8 @@ var constBltn = map[string]func(*node){
 	"imag":    imagConst,
 	"real":    realConst,
 }
+
+var identifier = regexp.MustCompile(`([\pL_][\pL_\d]*)$`)
 
 // cfg generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
@@ -316,7 +318,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				name = n.child[0].ident
 			} else {
 				ipath = n.child[0].rval.String()
-				name = path.Base(ipath)
+				name = identifier.FindString(ipath)
 			}
 			if interp.binPkg[ipath] != nil && name != "." {
 				sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath}}

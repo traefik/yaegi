@@ -1,7 +1,6 @@
 package interp
 
 import (
-	"path"
 	"reflect"
 )
 
@@ -126,7 +125,7 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 				name = n.child[0].ident
 			} else {
 				ipath = n.child[0].rval.String()
-				name = path.Base(ipath)
+				name = identifier.FindString(ipath)
 			}
 			// Try to import a binary package first, or a source package
 			if interp.binPkg[ipath] != nil {
