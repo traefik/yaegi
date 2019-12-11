@@ -636,15 +636,15 @@ func (t *itype) finalize() (*itype, error) {
 	return t, err
 }
 
-// Equal returns true if the given type is identical to the receiver one.
-func (t *itype) equal(o *itype) bool {
+// Equals returns true if the given type is identical to the receiver one.
+func (t *itype) equals(o *itype) bool {
 	switch ti, oi := isInterface(t), isInterface(o); {
 	case ti && oi:
-		return t.methods().equal(o.methods())
+		return t.methods().equals(o.methods())
 	case ti && !oi:
-		return o.methods().contain(t.methods())
+		return o.methods().contains(t.methods())
 	case oi && !ti:
-		return t.methods().contain(o.methods())
+		return t.methods().contains(o.methods())
 	default:
 		return t.id() == o.id()
 	}
@@ -653,8 +653,8 @@ func (t *itype) equal(o *itype) bool {
 // MethodSet defines the set of methods signatures as strings, indexed per method name.
 type methodSet map[string]string
 
-// Contain returns true if the method set m contains the method set n.
-func (m methodSet) contain(n methodSet) bool {
+// Contains returns true if the method set m contains the method set n.
+func (m methodSet) contains(n methodSet) bool {
 	for k, v := range n {
 		if m[k] != v {
 			return false
@@ -664,8 +664,8 @@ func (m methodSet) contain(n methodSet) bool {
 }
 
 // Equal returns true if the method set m is equal to the method set n.
-func (m methodSet) equal(n methodSet) bool {
-	return m.contain(n) && n.contain(m)
+func (m methodSet) equals(n methodSet) bool {
+	return m.contains(n) && n.contains(m)
 }
 
 // Methods returns a map of method type strings, indexed by method names.
