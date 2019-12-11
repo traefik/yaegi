@@ -32,7 +32,7 @@ var constBltn = map[string]func(*node){
 	"real":    realConst,
 }
 
-var identifier = regexp.MustCompile("([\\pL_][\\pL_\\d]*)$")
+var identifier = regexp.MustCompile(`([\pL_][\pL_\d]*)$`)
 
 // cfg generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
