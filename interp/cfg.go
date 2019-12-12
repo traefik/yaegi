@@ -1536,7 +1536,7 @@ func (n *node) isType(sc *scope) bool {
 		}
 	case selectorExpr:
 		pkg, name := n.child[0].ident, n.child[1].ident
-		if sym, _, ok := sc.lookup(pkg); ok {
+		if sym, _, ok := sc.lookup(pkg); ok && sym.kind == pkgSym {
 			path := sym.typ.path
 			if p, ok := n.interp.binPkg[path]; ok && isBinType(p[name]) {
 				return true // Imported binary type

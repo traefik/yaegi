@@ -401,6 +401,9 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				t.method = m
 				sym.typ = t
 			}
+			if t.node == nil {
+				t.node = n
+			}
 		} else {
 			t.incomplete = true
 			sc.sym[n.ident] = &symbol{kind: typeSym, typ: t}
@@ -995,7 +998,11 @@ func isInterface(t *itype) bool {
 	return isInterfaceSrc(t) || t.TypeOf().Kind() == reflect.Interface
 }
 
-func isStruct(t *itype) bool { return t.TypeOf().Kind() == reflect.Struct }
+func isStruct(t *itype) bool {
+	// Test first for a struct category, because a recursive interpreter struct may be
+	// represented by an interface{} at reflect level.
+	return t.cat == structT || t.TypeOf().Kind() == reflect.Struct
+}
 
 func isBool(t *itype) bool { return t.TypeOf().Kind() == reflect.Bool }
 
