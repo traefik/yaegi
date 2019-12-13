@@ -1155,7 +1155,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 						n.typ = &itype{cat: valueT, rtype: s.Type().Elem()}
 					} else {
 						n.kind = rvalueExpr
-						n.typ = &itype{cat: valueT, rtype: s.Type()}
+						n.typ = &itype{cat: valueT, rtype: s.Type(), untyped: isValueUntyped(s)}
 						n.rval = s
 					}
 					n.gen = nop
@@ -1824,4 +1824,18 @@ func arrayTypeLen(n *node) int {
 		}
 	}
 	return max + 1
+}
+
+// isValueUntyped returns true if value is untyped
+func isValueUntyped(v reflect.Value) bool {
+	// Consider only untyped constant values.
+	if v.CanSet() {
+		return false
+	}
+	// Consider only values of default numerical types.
+	switch v.Type().Kind() {
+	case reflect.Int, reflect.Int32, reflect.Int64, reflect.Uint32, reflect.Uint64, reflect.Float64, reflect.Complex128:
+		return true
+	}
+	return false
 }
