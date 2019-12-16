@@ -30,7 +30,7 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 		case defineStmt:
 			var atyp *itype
 			if n.nleft+n.nright < len(n.child) {
-				// Type is declared explicetly in the assign expression.
+				// Type is declared explicitly in the assign expression.
 				if atyp, err = nodeType(interp, sc, n.child[n.nleft]); err != nil {
 					return false
 				}
