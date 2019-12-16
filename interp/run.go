@@ -239,7 +239,7 @@ func isRecursiveStruct(t *itype, rtype reflect.Type) bool {
 	if t.cat == structT && rtype.Kind() == reflect.Interface {
 		return true
 	}
-	if t.cat == ptrT {
+	if t.cat == ptrT && t.rtype != nil {
 		return isRecursiveStruct(t.val, t.rtype.Elem())
 	}
 	return false
