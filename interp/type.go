@@ -885,7 +885,9 @@ func (t *itype) refType(defined map[string]bool) reflect.Type {
 			panic(err)
 		}
 	}
-	if t.val != nil && defined[t.val.name] {
+	if t.val != nil && defined[t.val.name] && !t.val.incomplete && t.val.rtype == nil {
+		// Replace reference to self (direct or indirect) by an interface{} to handle
+		// recursive types with reflect.
 		t.val.rtype = interf
 	}
 	switch t.cat {
