@@ -1068,7 +1068,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					// nil: Set node value to zero of return type
 					f := sc.def
 					var typ *itype
-					if typ, err = nodeType(interp, sc, f.child[2].child[1].child[i].lastChild()); err != nil {
+					if typ, err = nodeType(interp, sc, f.child[2].child[1].fieldType(i)); err != nil {
 						return
 					}
 					if typ.cat == funcT {
@@ -1641,6 +1641,29 @@ func (n *node) isNatural() bool {
 		}
 	}
 	return false
+}
+
+// fieldType returns the nth parameter field node (type) of a fieldList node
+func (n *node) fieldType(m int) *node {
+	k := 0
+	l := len(n.child)
+	for i := 0; i < l; i++ {
+		cl := len(n.child[i].child)
+		if cl < 2 {
+			if k == m {
+				return n.child[i].lastChild()
+			}
+			k++
+			continue
+		}
+		for j := 0; j < cl-1; j++ {
+			if k == m {
+				return n.child[i].lastChild()
+			}
+			k++
+		}
+	}
+	return nil
 }
 
 // lastChild returns the last child of a node
