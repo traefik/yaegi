@@ -602,8 +602,6 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				constOp[n.action](n)
 			}
 			switch {
-			//case n.typ != nil && n.typ.cat == BoolT && isAncBranch(n):
-			//	n.findex = -1
 			case n.rval.IsValid():
 				n.gen = nop
 				n.findex = -1
@@ -1851,14 +1849,10 @@ func arrayTypeLen(n *node) int {
 
 // isValueUntyped returns true if value is untyped
 func isValueUntyped(v reflect.Value) bool {
-	// Consider only untyped constant values.
+	// Consider only constant values.
 	if v.CanSet() {
 		return false
 	}
-	// Consider only values of default numerical types.
-	switch v.Type().Kind() {
-	case reflect.Int, reflect.Int32, reflect.Int64, reflect.Uint32, reflect.Uint64, reflect.Float64, reflect.Complex128:
-		return true
-	}
-	return false
+	t := v.Type()
+	return t.String() == t.Kind().String()
 }
