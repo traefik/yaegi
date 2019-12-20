@@ -1,6 +1,6 @@
 // +build go1.12,!go1.14
 
-// Syscall provides wrappers of standard library syscall packages for native import in Yaegi.
+// Package syscall provides wrappers of standard library syscall packages for native import in Yaegi.
 package syscall
 
 import "reflect"
