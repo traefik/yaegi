@@ -1019,6 +1019,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			n.child[1].tnext = n
 			n.typ = n.child[0].typ
 			n.findex = sc.add(n.typ)
+			if n.start.action == aNop {
+				n.start.gen = branch
+			}
 
 		case lorExpr:
 			n.start = n.child[0].start
@@ -1027,6 +1030,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			n.child[1].tnext = n
 			n.typ = n.child[0].typ
 			n.findex = sc.add(n.typ)
+			if n.start.action == aNop {
+				n.start.gen = branch
+			}
 
 		case parenExpr:
 			wireChild(n)
