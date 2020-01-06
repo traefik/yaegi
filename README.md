@@ -129,6 +129,24 @@ $ yaegi cmd/yaegi/yaegi.go
 >
 ```
 
+Or for Go scripting in the shebang line:
+
+```console
+$ cat /tmp/test
+#!/usr/bin/env yaegi
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("test")
+}
+$ ls -la /tmp/test
+-rwxr-xr-x 1 dow184 dow184 93 Jan  6 13:38 /tmp/test
+$ /tmp/test
+test
+```
+
 ## Documentation
 
 Documentation about Yaegi commands and libraries can be found at usual [godoc.org][docs].
