@@ -345,13 +345,16 @@ func not(n *node) {
 	dest := genValue(n)
 	value := genValue(n.child[0])
 	tnext := getExec(n.tnext)
+	i := n.findex
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
 			if !value(f).Bool() {
+				f.data[i].SetBool(true)
 				return tnext
 			}
+			f.data[i].SetBool(false)
 			return fnext
 		}
 	} else {

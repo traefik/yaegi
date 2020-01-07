@@ -38,7 +38,7 @@ func (n *node) astDot(out io.Writer, name string) {
 func (n *node) cfgDot(out io.Writer) {
 	fmt.Fprintf(out, "digraph cfg {\n")
 	n.Walk(nil, func(n *node) {
-		if n.kind == basicLit || n.kind == identExpr || n.tnext == nil {
+		if n.kind == basicLit || n.tnext == nil {
 			return
 		}
 		var label string
