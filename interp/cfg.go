@@ -24,6 +24,7 @@ var constOp = map[action]func(*node){
 	aShr:    shrConst,
 	aAndNot: andNotConst,
 	aXor:    xorConst,
+	aNot:    notConst,
 	aBitNot: bitNotConst,
 	aNeg:    negConst,
 	aPos:    posConst,
