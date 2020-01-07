@@ -47,11 +47,17 @@ func TestEvalArithmetic(t *testing.T) {
 		{desc: "shl_IN", src: "1 << -1", err: "1:28: illegal operand types for '<<' operator"},
 		{desc: "shl_IF", src: "1 << 1.0", res: "2"},
 		{desc: "shl_IF1", src: "1 << 1.1", err: "1:28: illegal operand types for '<<' operator"},
-		{desc: "shl_IF", src: "1.0 << 1", res: "2"},
+		{desc: "shl_IF2", src: "1.0 << 1", res: "2"},
 		{desc: "shr_II", src: "1 >> 8", res: "0"},
 		{desc: "shr_IN", src: "1 >> -1", err: "1:28: illegal operand types for '>>' operator"},
 		{desc: "shr_IF", src: "1 >> 1.0", res: "0"},
 		{desc: "shr_IF1", src: "1 >> 1.1", err: "1:28: illegal operand types for '>>' operator"},
+		{desc: "neg_I", src: "-2", res: "-2"},
+		{desc: "pos_I", src: "+2", res: "2"},
+		{desc: "bitnot_I", src: "^2", res: "-3"},
+		{desc: "bitnot_F", src: "^0.2", err: "1:28: illegal operand type for '^' operator"},
+		{desc: "not_B", src: "!false", res: "true"},
+		{desc: "not_I", src: "!0", err: "1:28: illegal operand type for '!' operator"},
 	})
 }
 

@@ -352,6 +352,30 @@ func {{$name}}(n *node) {
 	}
 }
 {{end}}
+{{range $name, $op := .Unary}}
+func {{$name}}Const(n *node) {
+	t := n.typ.rtype
+	v := n.child[0].rval
+	n.rval = reflect.New(t).Elem()
+
+	{{- if $op.Bool}}
+	n.rval.SetBool({{$op.Name}} v.Bool())
+	{{- else}}
+	switch t.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		n.rval.SetInt({{$op.Name}} v.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		n.rval.SetUint({{$op.Name}} v.Uint())
+	{{- if $op.Float}}
+	case reflect.Float32, reflect.Float64:
+		n.rval.SetFloat({{$op.Name}} v.Float())
+	case reflect.Complex64, reflect.Complex128:
+		n.rval.SetComplex({{$op.Name}} v.Complex())
+	{{- end}}
+	}
+	{{- end}}
+}
+{{end}}
 {{range $name, $op := .Comparison}}
 func {{$name}}(n *node) {
 	tnext := getExec(n.tnext)
@@ -793,6 +817,7 @@ type Op struct {
 	Float   bool   // true if operator applies to float
 	Complex bool   // true if operator applies to complex
 	Shift   bool   // true if operator is a shift operation
+	Bool    bool   // true if operator applies to bool
 }
 
 func main() {
@@ -805,17 +830,17 @@ func main() {
 	b := &bytes.Buffer{}
 	data := map[string]interface{}{
 		"Arithmetic": map[string]Op{
-			"add":    {"+", true, true, true, false},
-			"sub":    {"-", false, true, true, false},
-			"mul":    {"*", false, true, true, false},
-			"quo":    {"/", false, true, true, false},
-			"rem":    {"%", false, false, false, false},
-			"shl":    {"<<", false, false, false, true},
-			"shr":    {">>", false, false, false, true},
-			"and":    {"&", false, false, false, false},
-			"or":     {"|", false, false, false, false},
-			"xor":    {"^", false, false, false, false},
-			"andNot": {"&^", false, false, false, false},
+			"add":    {"+", true, true, true, false, false},
+			"sub":    {"-", false, true, true, false, false},
+			"mul":    {"*", false, true, true, false, false},
+			"quo":    {"/", false, true, true, false, false},
+			"rem":    {"%", false, false, false, false, false},
+			"shl":    {"<<", false, false, false, true, false},
+			"shr":    {">>", false, false, false, true, false},
+			"and":    {"&", false, false, false, false, false},
+			"or":     {"|", false, false, false, false, false},
+			"xor":    {"^", false, false, false, false, false},
+			"andNot": {"&^", false, false, false, false, false},
 		},
 		"IncDec": map[string]Op{
 			"inc": {Name: "+"},
@@ -828,6 +853,12 @@ func main() {
 			"lower":        {Name: "<", Complex: false},
 			"lowerEqual":   {Name: "<=", Complex: false},
 			"notEqual":     {Name: "!=", Complex: true},
+		},
+		"Unary": map[string]Op{
+			"not":    {Name: "!", Float: false, Bool: true},
+			"neg":    {Name: "-", Float: true, Bool: false},
+			"pos":    {Name: "+", Float: true, Bool: false},
+			"bitNot": {Name: "^", Float: false, Bool: false},
 		},
 	}
 	if err = parse.Execute(b, data); err != nil {
