@@ -199,6 +199,7 @@ const (
 	aAndAssign
 	aAndNot
 	aAndNotAssign
+	aBitNot
 	aCall
 	aCase
 	aCompositeLit
@@ -217,11 +218,12 @@ const (
 	aMethod
 	aMul
 	aMulAssign
-	aNegate
+	aNeg
 	aNot
 	aNotEqual
 	aOr
 	aOrAssign
+	aPos
 	aQuo
 	aQuoAssign
 	aRange
@@ -255,6 +257,7 @@ var actions = [...]string{
 	aAndAssign:    "&=",
 	aAndNot:       "&^",
 	aAndNotAssign: "&^=",
+	aBitNot:       "^",
 	aCall:         "call",
 	aCase:         "case",
 	aCompositeLit: "compositeLit",
@@ -271,11 +274,12 @@ var actions = [...]string{
 	aMethod:       "Method",
 	aMul:          "*",
 	aMulAssign:    "*=",
-	aNegate:       "-",
+	aNeg:          "-",
 	aNot:          "!",
 	aNotEqual:     "!=",
 	aOr:           "|",
 	aOrAssign:     "|=",
+	aPos:          "+",
 	aQuo:          "/",
 	aQuoAssign:    "/=",
 	aRange:        "range",
@@ -771,6 +775,8 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 			var kind = unaryExpr
 			var act action
 			switch a.Op {
+			case token.ADD:
+				act = aPos
 			case token.AND:
 				kind = addressExpr
 				act = aAddr
@@ -779,7 +785,9 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 			case token.NOT:
 				act = aNot
 			case token.SUB:
-				act = aNegate
+				act = aNeg
+			case token.XOR:
+				act = aBitNot
 			}
 			st.push(addChild(&root, anc, pos, kind, act), nod)
 

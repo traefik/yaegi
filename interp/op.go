@@ -1864,6 +1864,57 @@ func inc(n *node) {
 	}
 }
 
+func bitNotConst(n *node) {
+	t := n.typ.rtype
+	v := n.child[0].rval
+	n.rval = reflect.New(t).Elem()
+	switch t.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		n.rval.SetInt(^v.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		n.rval.SetUint(^v.Uint())
+	}
+}
+
+func negConst(n *node) {
+	t := n.typ.rtype
+	v := n.child[0].rval
+	n.rval = reflect.New(t).Elem()
+	switch t.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		n.rval.SetInt(-v.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		n.rval.SetUint(-v.Uint())
+	case reflect.Float32, reflect.Float64:
+		n.rval.SetFloat(-v.Float())
+	case reflect.Complex64, reflect.Complex128:
+		n.rval.SetComplex(-v.Complex())
+	}
+}
+
+func notConst(n *node) {
+	t := n.typ.rtype
+	v := n.child[0].rval
+	n.rval = reflect.New(t).Elem()
+	n.rval.SetBool(!v.Bool())
+}
+
+func posConst(n *node) {
+	t := n.typ.rtype
+	v := n.child[0].rval
+	n.rval = reflect.New(t).Elem()
+	switch t.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		n.rval.SetInt(+v.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		n.rval.SetUint(+v.Uint())
+	case reflect.Float32, reflect.Float64:
+		n.rval.SetFloat(+v.Float())
+	case reflect.Complex64, reflect.Complex128:
+		n.rval.SetComplex(+v.Complex())
+	}
+}
+
 func equal(n *node) {
 	tnext := getExec(n.tnext)
 	dest := genValue(n)
