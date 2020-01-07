@@ -24,6 +24,10 @@ var constOp = map[action]func(*node){
 	aShr:    shrConst,
 	aAndNot: andNotConst,
 	aXor:    xorConst,
+	aNot:    notConst,
+	aBitNot: bitNotConst,
+	aNeg:    negConst,
+	aPos:    posConst,
 }
 
 var constBltn = map[string]func(*node){
@@ -1381,12 +1385,28 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 		case unaryExpr:
 			wireChild(n)
 			n.typ = n.child[0].typ
-			if n.action == aRecv {
+			switch n.action {
+			case aRecv:
 				// Channel receive operation: set type to the channel data type
 				if n.typ.cat == valueT {
 					n.typ = &itype{cat: valueT, rtype: n.typ.rtype.Elem()}
 				} else {
 					n.typ = n.typ.val
+				}
+			case aBitNot:
+				if !isInt(n.typ.TypeOf()) {
+					err = n.cfgErrorf("illegal operand type for '^' operator")
+					return
+				}
+			case aNot:
+				if !isBool(n.typ) {
+					err = n.cfgErrorf("illegal operand type for '!' operator")
+					return
+				}
+			case aNeg, aPos:
+				if !isNumber(n.typ.TypeOf()) {
+					err = n.cfgErrorf("illegal operand type for '%v' operator", n.action)
+					return
 				}
 			}
 			// TODO: Optimisation: avoid allocation if boolean branch op (i.e. '!' in an 'if' expr)
