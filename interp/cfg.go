@@ -1410,7 +1410,35 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				}
 			}
 			// TODO: Optimisation: avoid allocation if boolean branch op (i.e. '!' in an 'if' expr)
-			n.findex = sc.add(n.typ)
+			if n.child[0].rval.IsValid() && constOp[n.action] != nil {
+				if n.typ == nil {
+					if n.typ, err = nodeType(interp, sc, n); err != nil {
+						return
+					}
+				}
+				n.typ.TypeOf() // init reflect type
+				constOp[n.action](n)
+			}
+			switch {
+			case n.rval.IsValid():
+				n.gen = nop
+				n.findex = -1
+			case n.anc.kind == assignStmt && n.anc.action == aAssign:
+				dest := n.anc.child[childPos(n)-n.anc.nright]
+				n.typ = dest.typ
+				n.findex = dest.findex
+			case n.anc.kind == returnStmt:
+				pos := childPos(n)
+				n.typ = sc.def.typ.ret[pos]
+				n.findex = pos
+			default:
+				if n.typ == nil {
+					if n.typ, err = nodeType(interp, sc, n); err != nil {
+						return
+					}
+				}
+				n.findex = sc.add(n.typ)
+			}
 
 		case valueSpec:
 			n.gen = reset
