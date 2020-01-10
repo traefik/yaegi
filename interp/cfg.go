@@ -44,7 +44,6 @@ var identifier = regexp.MustCompile(`([\pL_][\pL_\d]*)$`)
 // Following this pass, the CFG is ready to run
 func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 	sc, pkgName := interp.initScopePkg(root)
-	var loop, loopRestart *node
 	var initNodes []*node
 	var iotaValue int
 	var err error
@@ -236,12 +235,12 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			}
 
 		case forStmt0, forRangeStmt:
-			loop, loopRestart = n, n.child[0]
 			sc = sc.pushBloc()
+			sc.loop, sc.loopRestart = n, n.child[0]
 
 		case forStmt1, forStmt2, forStmt3, forStmt3a, forStmt4:
-			loop, loopRestart = n, n.lastChild()
 			sc = sc.pushBloc()
+			sc.loop, sc.loopRestart = n, n.lastChild()
 
 		case funcLit:
 			n.typ = nil // to force nodeType to recompute the type
@@ -313,7 +312,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				c[i], c[l] = c[l], c[i]
 			}
 			sc = sc.pushBloc()
-			loop = n
+			sc.loop = n
 
 		case importSpec:
 			var name, ipath string
@@ -698,14 +697,14 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			if len(n.child) > 0 {
 				gotoLabel(n.sym)
 			} else {
-				n.tnext = loop
+				n.tnext = sc.loop
 			}
 
 		case continueStmt:
 			if len(n.child) > 0 {
 				gotoLabel(n.sym)
 			} else {
-				n.tnext = loopRestart
+				n.tnext = sc.loopRestart
 			}
 
 		case gotoStmt:
@@ -829,7 +828,6 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			body := n.child[0]
 			n.start = body.start
 			body.tnext = n.start
-			loop, loopRestart = nil, nil
 			sc = sc.pop()
 
 		case forStmt1: // for cond {}
@@ -841,7 +839,6 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			cond.tnext = body.start
 			cond.fnext = n
 			body.tnext = cond.start
-			loop, loopRestart = nil, nil
 			sc = sc.pop()
 
 		case forStmt2: // for init; cond; {}
@@ -854,7 +851,6 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			cond.tnext = body.start
 			cond.fnext = n
 			body.tnext = cond.start
-			loop, loopRestart = nil, nil
 			sc = sc.pop()
 
 		case forStmt3: // for ; cond; post {}
@@ -867,7 +863,6 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			cond.fnext = n
 			body.tnext = post.start
 			post.tnext = cond.start
-			loop, loopRestart = nil, nil
 			sc = sc.pop()
 
 		case forStmt3a: // for int; ; post {}
@@ -876,7 +871,6 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			init.tnext = body.start
 			body.tnext = post.start
 			post.tnext = body.start
-			loop, loopRestart = nil, nil
 			sc = sc.pop()
 
 		case forStmt4: // for init; cond; post {}
@@ -890,11 +884,9 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			cond.fnext = n
 			body.tnext = post.start
 			post.tnext = cond.start
-			loop, loopRestart = nil, nil
 			sc = sc.pop()
 
 		case forRangeStmt:
-			loop, loopRestart = nil, nil
 			n.start = n.child[0].start
 			n.child[0].fnext = n
 			sc = sc.pop()
@@ -1320,7 +1312,6 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				n.start = sbn.start
 			}
 			sc = sc.pop()
-			loop = nil
 
 		case switchIfStmt: // like an if-else chain
 			sbn := n.lastChild() // switch block node
@@ -1357,7 +1348,6 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				n.start = sbn.start
 			}
 			sc = sc.pop()
-			loop = nil
 
 		case typeAssertExpr:
 			if len(n.child) > 1 {
