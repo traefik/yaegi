@@ -60,6 +60,9 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 					err = n.cfgErrorf("use of untyped nil")
 					return false
 				}
+				if typ.isBinMethod {
+					typ = &itype{cat: valueT, rtype: typ.methodCallType(), isBinMethod: true}
+				}
 				sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val}
 				if n.anc.kind == constDecl {
 					sc.sym[dest.ident].kind = constSym

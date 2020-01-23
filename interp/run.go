@@ -828,7 +828,9 @@ func callBin(n *node) {
 	// method signature obtained from reflect.Type include receiver as 1st arg, except for interface types
 	rcvrOffset := 0
 	if recv := n.child[0].recv; recv != nil && recv.node.typ.TypeOf().Kind() != reflect.Interface {
-		rcvrOffset = 1
+		if funcType.NumIn() > len(child) {
+			rcvrOffset = 1
+		}
 	}
 
 	for i, c := range child {
@@ -867,7 +869,6 @@ func callBin(n *node) {
 			case interfaceT:
 				values = append(values, genValueInterfaceValue(c))
 			default:
-				//values = append(values, genValue(c))
 				values = append(values, genInterfaceWrapper(c, defType))
 			}
 		}
