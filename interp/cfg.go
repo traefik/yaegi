@@ -1787,13 +1787,6 @@ func getExec(n *node) bltn {
 	return n.exec
 }
 
-func fileNode(n *node) *node {
-	if n == nil || n.kind == fileStmt {
-		return n
-	}
-	return fileNode(n.anc)
-}
-
 // setExec recursively sets the node exec builtin function by walking the CFG
 // from the entry point (first node to exec).
 func setExec(n *node) {
