@@ -8,8 +8,8 @@ import (
 // variables and functions symbols at package level, prior to CFG.
 // All function bodies are skipped. GTA is necessary to handle out of
 // order declarations and multiple source files packages.
-func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
-	sc, _ := interp.initScopePkg(root)
+func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error) {
+	sc := interp.initScopePkg(pkgID)
 	var err error
 	var iotaValue int
 	var revisit []*node

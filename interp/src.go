@@ -29,6 +29,7 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 	} else if dir, rPath, err = pkgDir(interp.context.GOPATH, rPath, path); err != nil {
 		return err
 	}
+
 	if interp.rdir[path] {
 		return fmt.Errorf("import cycle not allowed\n\timports %s", path)
 	}
@@ -66,6 +67,9 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 		if root == nil {
 			continue
 		}
+		if interp.astDot {
+			root.astDot(dotX(), name)
+		}
 		if pkgName == "" {
 			pkgName = pname
 		} else if pkgName != pname {
@@ -75,7 +79,7 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 
 		subRPath := effectivePkg(rPath, path)
 		var list []*node
-		list, err = interp.gta(root, subRPath)
+		list, err = interp.gta(root, subRPath, path)
 		if err != nil {
 			return err
 		}
@@ -85,7 +89,7 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 	// revisit incomplete nodes where GTA could not complete
 	for pkg, nodes := range revisit {
 		for _, n := range nodes {
-			if _, err = interp.gta(n, pkg); err != nil {
+			if _, err = interp.gta(n, pkg, path); err != nil {
 				return err
 			}
 		}
@@ -94,7 +98,7 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 	// Generate control flow graphs
 	for _, root := range rootNodes {
 		var nodes []*node
-		if nodes, err = interp.cfg(root); err != nil {
+		if nodes, err = interp.cfg(root, path); err != nil {
 			return err
 		}
 		initNodes = append(initNodes, nodes...)
@@ -103,13 +107,7 @@ func (interp *Interpreter) importSrc(rPath, path, alias string) error {
 	// Register source package in the interpreter. The package contains only
 	// the global symbols in the package scope.
 	interp.mutex.Lock()
-	interp.srcPkg[path] = interp.scopes[pkgName].sym
-
-	// Rename imported pkgName to alias if they are different
-	if pkgName != alias {
-		interp.scopes[alias] = interp.scopes[pkgName]
-		delete(interp.scopes, pkgName)
-	}
+	interp.srcPkg[path] = interp.scopes[path].sym
 
 	interp.frame.mutex.Lock()
 	interp.resizeFrame()
@@ -189,7 +187,7 @@ func effectivePkg(root, path string) string {
 	for i := 0; i < len(splitPath); i++ {
 		part := splitPath[len(splitPath)-1-i]
 
-		if part == splitRoot[len(splitRoot)-1-rootIndex] {
+		if part == splitRoot[len(splitRoot)-1-rootIndex] && i != 0 {
 			prevRootIndex = rootIndex
 			rootIndex++
 		} else if prevRootIndex == rootIndex {

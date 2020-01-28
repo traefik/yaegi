@@ -78,6 +78,7 @@ type scope struct {
 	def         *node              // function definition node this scope belongs to, or nil
 	loop        *node              // loop exit node for break statement
 	loopRestart *node              // loop restart node for continue statement
+	pkgID       string             // unique id of package in which scope is defined
 	types       []reflect.Type     // Frame layout, may be shared by same level scopes
 	level       int                // Frame level: number of frame indirections to access var during execution
 	sym         map[string]*symbol // Map of symbols defined in this current scope
@@ -97,8 +98,8 @@ func (s *scope) push(indirect bool) *scope {
 		sc.global = s.global
 		sc.level = s.level
 	}
-	// inherit loop state from ancestor
-	sc.loop, sc.loopRestart = s.loop, s.loopRestart
+	// inherit loop state and pkgID from ancestor
+	sc.loop, sc.loopRestart, sc.pkgID = s.loop, s.loopRestart, s.pkgID
 	return &sc
 }
 
@@ -160,19 +161,15 @@ func (s *scope) add(typ *itype) (index int) {
 	return
 }
 
-func (interp *Interpreter) initScopePkg(n *node) (*scope, string) {
+func (interp *Interpreter) initScopePkg(pkgID string) *scope {
 	sc := interp.universe
-	pkgName := mainID
-
-	if p := fileNode(n); p != nil {
-		pkgName = p.child[0].ident
-	}
 
 	interp.mutex.Lock()
-	if _, ok := interp.scopes[pkgName]; !ok {
-		interp.scopes[pkgName] = sc.pushBloc()
+	if _, ok := interp.scopes[pkgID]; !ok {
+		interp.scopes[pkgID] = sc.pushBloc()
 	}
-	sc = interp.scopes[pkgName]
+	sc = interp.scopes[pkgID]
+	sc.pkgID = pkgID
 	interp.mutex.Unlock()
-	return sc, pkgName
+	return sc
 }

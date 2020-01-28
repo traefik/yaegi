@@ -42,8 +42,8 @@ var identifier = regexp.MustCompile(`([\pL_][\pL_\d]*)$`)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
 // Following this pass, the CFG is ready to run
-func (interp *Interpreter) cfg(root *node) ([]*node, error) {
-	sc, pkgName := interp.initScopePkg(root)
+func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
+	sc := interp.initScopePkg(pkgID)
 	var initNodes []*node
 	var iotaValue int
 	var err error
@@ -901,10 +901,10 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			sc = sc.pop()
 			funcName := n.child[1].ident
 			if !isMethod(n) {
-				interp.scopes[pkgName].sym[funcName].index = -1 // to force value to n.val
-				interp.scopes[pkgName].sym[funcName].typ = n.typ
-				interp.scopes[pkgName].sym[funcName].kind = funcSym
-				interp.scopes[pkgName].sym[funcName].node = n
+				interp.scopes[pkgID].sym[funcName].index = -1 // to force value to n.val
+				interp.scopes[pkgID].sym[funcName].typ = n.typ
+				interp.scopes[pkgID].sym[funcName].kind = funcSym
+				interp.scopes[pkgID].sym[funcName].node = n
 			}
 
 		case funcLit:

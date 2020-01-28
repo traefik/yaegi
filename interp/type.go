@@ -176,7 +176,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					}
 				} else {
 					// Evaluate constant array size expression
-					if _, err = interp.cfg(n.child[0]); err != nil {
+					if _, err = interp.cfg(n.child[0], sc.pkgID); err != nil {
 						return nil, err
 					}
 					t.incomplete = true
