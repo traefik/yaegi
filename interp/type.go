@@ -103,22 +103,23 @@ type structField struct {
 
 // itype defines the internal representation of types in the interpreter
 type itype struct {
-	cat        tcat          // Type category
-	field      []structField // Array of struct fields if structT or interfaceT
-	key        *itype        // Type of key element if MapT or nil
-	val        *itype        // Type of value element if chanT, mapT, ptrT, aliasT, arrayT or variadicT
-	arg        []*itype      // Argument types if funcT or nil
-	ret        []*itype      // Return types if funcT or nil
-	method     []*node       // Associated methods or nil
-	name       string        // name of type within its package for a defined type
-	path       string        // for a defined type, the package import path
-	size       int           // Size of array if ArrayT
-	rtype      reflect.Type  // Reflection type if ValueT, or nil
-	incomplete bool          // true if type must be parsed again (out of order declarations)
-	untyped    bool          // true for a literal value (string or number)
-	sizedef    bool          // true if array size is computed from type definition
-	node       *node         // root AST node of type definition
-	scope      *scope        // type declaration scope (in case of re-parse incomplete type)
+	cat         tcat          // Type category
+	field       []structField // Array of struct fields if structT or interfaceT
+	key         *itype        // Type of key element if MapT or nil
+	val         *itype        // Type of value element if chanT, mapT, ptrT, aliasT, arrayT or variadicT
+	arg         []*itype      // Argument types if funcT or nil
+	ret         []*itype      // Return types if funcT or nil
+	method      []*node       // Associated methods or nil
+	name        string        // name of type within its package for a defined type
+	path        string        // for a defined type, the package import path
+	size        int           // Size of array if ArrayT
+	rtype       reflect.Type  // Reflection type if ValueT, or nil
+	incomplete  bool          // true if type must be parsed again (out of order declarations)
+	untyped     bool          // true for a literal value (string or number)
+	sizedef     bool          // true if array size is computed from type definition
+	isBinMethod bool          // true if the type refers to a bin method function
+	node        *node         // root AST node of type definition
+	scope       *scope        // type declaration scope (in case of re-parse incomplete type)
 }
 
 // nodeType returns a type definition for the corresponding AST subtree
@@ -482,7 +483,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			if m, _ := lt.lookupMethod(name); m != nil {
 				t, err = nodeType(interp, sc, m.child[2])
 			} else if bm, _, _, ok := lt.lookupBinMethod(name); ok {
-				t = &itype{cat: valueT, rtype: bm.Type}
+				t = &itype{cat: valueT, rtype: bm.Type, isBinMethod: true}
 			} else if ti := lt.lookupField(name); len(ti) > 0 {
 				t = lt.fieldSeq(ti)
 			} else if bs, _, ok := lt.lookupBinField(name); ok {
@@ -807,6 +808,22 @@ func (t *itype) lookupBinField(name string) (s reflect.StructField, index []int,
 		}
 	}
 	return s, index, ok
+}
+
+// methodCallType returns a method function type without the receiver defined.
+// The input type must be a method function type with the receiver as the first input argument.
+func (t *itype) methodCallType() reflect.Type {
+	it := []reflect.Type{}
+	ni := t.rtype.NumIn()
+	for i := 1; i < ni; i++ {
+		it = append(it, t.rtype.In(i))
+	}
+	ot := []reflect.Type{}
+	no := t.rtype.NumOut()
+	for i := 0; i < no; i++ {
+		ot = append(ot, t.rtype.Out(i))
+	}
+	return reflect.FuncOf(it, ot, t.rtype.IsVariadic())
 }
 
 // getMethod returns a pointer to the method definition

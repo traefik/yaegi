@@ -410,7 +410,11 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 						if src.typ, err = nodeType(interp, sc, src); err != nil {
 							return
 						}
-						dest.typ = src.typ
+						if src.typ.isBinMethod {
+							dest.typ = &itype{cat: valueT, rtype: src.typ.methodCallType()}
+						} else {
+							dest.typ = src.typ
+						}
 					}
 					if dest.typ.sizedef {
 						dest.typ.size = arrayTypeLen(src)
@@ -1097,7 +1101,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					n.val = method.Index
 					n.gen = getIndexBinMethod
 					n.recv = &receiver{node: n.child[0]}
-					n.typ = &itype{cat: valueT, rtype: method.Type}
+					n.typ = &itype{cat: valueT, rtype: method.Type, isBinMethod: true}
 				case n.typ.rtype.Kind() == reflect.Ptr:
 					if field, ok := n.typ.rtype.Elem().FieldByName(n.child[1].ident); ok {
 						n.typ = &itype{cat: valueT, rtype: field.Type}
