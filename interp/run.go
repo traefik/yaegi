@@ -293,12 +293,17 @@ func assign(n *node) {
 	}
 
 	if n.nleft == 1 {
-		if s, d, i := svalue[0], dvalue[0], ivalue[0]; i != nil {
+		switch s, d, i := svalue[0], dvalue[0], ivalue[0]; {
+		case n.child[0].ident == "_":
+			n.exec = func(f *frame) bltn {
+				return next
+			}
+		case i != nil:
 			n.exec = func(f *frame) bltn {
 				d(f).SetMapIndex(i(f), s(f))
 				return next
 			}
-		} else {
+		default:
 			n.exec = func(f *frame) bltn {
 				d(f).Set(s(f))
 				return next
@@ -316,7 +321,6 @@ func assign(n *node) {
 			default:
 				t = typ.TypeOf()
 			}
-			//types[i] = n.child[sbase+i].typ.TypeOf()
 			types[i] = t
 		}
 
@@ -326,10 +330,16 @@ func assign(n *node) {
 		n.exec = func(f *frame) bltn {
 			t := make([]reflect.Value, len(svalue))
 			for i, s := range svalue {
+				if n.child[i].ident == "_" {
+					continue
+				}
 				t[i] = reflect.New(types[i]).Elem()
 				t[i].Set(s(f))
 			}
 			for i, d := range dvalue {
+				if n.child[i].ident == "_" {
+					continue
+				}
 				if j := ivalue[i]; j != nil {
 					d(f).SetMapIndex(j(f), t[i]) // Assign a map entry
 				} else {
