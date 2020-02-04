@@ -11,8 +11,6 @@ type server struct {
 }
 
 func main() {
-	//s := &server{}
-	//m := cmap{servers: map[int64]*server{1: s}}
 	m := cmap{}
 	fmt.Println(m)
 }
