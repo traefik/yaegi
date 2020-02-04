@@ -933,7 +933,7 @@ func (t *itype) refType(defined map[string]bool) reflect.Type {
 	case interfaceT:
 		t.rtype = interf
 	case mapT:
-		t.rtype = reflect.MapOf(t.key.TypeOf(), t.val.TypeOf())
+		t.rtype = reflect.MapOf(t.key.refType(defined), t.val.refType(defined))
 	case ptrT:
 		t.rtype = reflect.PtrTo(t.val.refType(defined))
 	case structT:
