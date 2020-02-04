@@ -180,9 +180,9 @@ func genValueInterface(n *node) func(*frame) reflect.Value {
 	}
 }
 
-func zeroInterfaceValue(interp *Interpreter) reflect.Value {
+func zeroInterfaceValue() reflect.Value {
+	n := &node{kind: basicLit, typ: &itype{cat: nilT, untyped: true}}
 	v := reflect.New(reflect.TypeOf((*interface{})(nil)).Elem()).Elem()
-	n := &node{interp: interp, kind: basicLit, typ: &itype{cat: nilT, untyped: true}}
 	return reflect.ValueOf(valueInterface{n, v})
 }
 
@@ -193,7 +193,7 @@ func genValueInterfaceValue(n *node) func(*frame) reflect.Value {
 		v := value(f)
 		if v.Interface().(valueInterface).node == nil {
 			// Uninitialized interface value, set it to a correct zero value.
-			v.Set(zeroInterfaceValue(n.interp))
+			v.Set(zeroInterfaceValue())
 			v = value(f)
 		}
 		return v.Interface().(valueInterface).value
