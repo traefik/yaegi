@@ -1439,8 +1439,14 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 				}
 			}
 			for _, c := range n.child[:l] {
-				index := sc.add(n.typ)
-				sc.sym[c.ident] = &symbol{index: index, kind: varSym, typ: n.typ}
+				var index int
+				if sc.global {
+					// Global object allocation is already performed in GTA.
+					index = sc.sym[c.ident].index
+				} else {
+					index = sc.add(n.typ)
+					sc.sym[c.ident] = &symbol{index: index, kind: varSym, typ: n.typ}
+				}
 				c.typ = n.typ
 				c.findex = index
 			}
