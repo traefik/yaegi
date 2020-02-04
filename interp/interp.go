@@ -283,7 +283,7 @@ func (interp *Interpreter) resizeFrame() {
 func (interp *Interpreter) main() *node {
 	interp.mutex.RLock()
 	defer interp.mutex.RUnlock()
-	if m, ok := interp.scopes[mainID]; ok && m.sym[mainID] != nil {
+	if m, ok := interp.scopes[interp.Name]; ok && m.sym[mainID] != nil {
 		return m.sym[mainID].node
 	}
 	return nil
@@ -308,18 +308,18 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 	}
 
 	// Global type analysis
-	revisit, err := interp.gta(root, pkgName)
+	revisit, err := interp.gta(root, pkgName, interp.Name)
 	if err != nil {
 		return res, err
 	}
 	for _, n := range revisit {
-		if _, err = interp.gta(n, pkgName); err != nil {
+		if _, err = interp.gta(n, pkgName, interp.Name); err != nil {
 			return res, err
 		}
 	}
 
 	// Annotate AST with CFG infos
-	initNodes, err := interp.cfg(root)
+	initNodes, err := interp.cfg(root, interp.Name)
 	if err != nil {
 		return res, err
 	}
@@ -336,7 +336,7 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 	interp.mutex.Lock()
 	if interp.universe.sym[pkgName] == nil {
 		// Make the package visible under a path identical to its name
-		interp.srcPkg[pkgName] = interp.scopes[pkgName].sym
+		interp.srcPkg[pkgName] = interp.scopes[interp.Name].sym
 		interp.universe.sym[pkgName] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: pkgName}}
 	}
 	interp.mutex.Unlock()

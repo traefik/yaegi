@@ -8,8 +8,8 @@ import (
 // variables and functions symbols at package level, prior to CFG.
 // All function bodies are skipped. GTA is necessary to handle out of
 // order declarations and multiple source files packages.
-func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
-	sc, _ := interp.initScopePkg(root)
+func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error) {
+	sc := interp.initScopePkg(pkgID)
 	var err error
 	var iotaValue int
 	var revisit []*node
@@ -52,13 +52,16 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 					val = src.rval
 				}
 				if typ.incomplete {
-					// Come back when type is known
+					// Come back when type is known.
 					revisit = append(revisit, n)
 					return false
 				}
 				if typ.cat == nilT {
 					err = n.cfgErrorf("use of untyped nil")
 					return false
+				}
+				if typ.isBinMethod {
+					typ = &itype{cat: valueT, rtype: typ.methodCallType(), isBinMethod: true}
 				}
 				sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val}
 				if n.anc.kind == constDecl {
@@ -75,6 +78,11 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 			l := len(n.child) - 1
 			if n.typ = n.child[l].typ; n.typ == nil {
 				if n.typ, err = nodeType(interp, sc, n.child[l]); err != nil {
+					return false
+				}
+				if n.typ.incomplete {
+					// Come back when type is known.
+					revisit = append(revisit, n)
 					return false
 				}
 			}
@@ -143,7 +151,7 @@ func (interp *Interpreter) gta(root *node, rpath string) ([]*node, error) {
 				default: // import symbols in package namespace
 					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath}}
 				}
-			} else if err = interp.importSrc(rpath, ipath, name); err == nil {
+			} else if err = interp.importSrc(rpath, ipath); err == nil {
 				sc.types = interp.universe.types
 				switch name {
 				case "_": // no import of symbols

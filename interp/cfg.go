@@ -42,8 +42,8 @@ var identifier = regexp.MustCompile(`([\pL_][\pL_\d]*)$`)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
 // Following this pass, the CFG is ready to run
-func (interp *Interpreter) cfg(root *node) ([]*node, error) {
-	sc, pkgName := interp.initScopePkg(root)
+func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
+	sc := interp.initScopePkg(pkgID)
 	var initNodes []*node
 	var iotaValue int
 	var err error
@@ -410,7 +410,11 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 						if src.typ, err = nodeType(interp, sc, src); err != nil {
 							return
 						}
-						dest.typ = src.typ
+						if src.typ.isBinMethod {
+							dest.typ = &itype{cat: valueT, rtype: src.typ.methodCallType()}
+						} else {
+							dest.typ = src.typ
+						}
 					}
 					if dest.typ.sizedef {
 						dest.typ.size = arrayTypeLen(src)
@@ -897,10 +901,10 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 			sc = sc.pop()
 			funcName := n.child[1].ident
 			if !isMethod(n) {
-				interp.scopes[pkgName].sym[funcName].index = -1 // to force value to n.val
-				interp.scopes[pkgName].sym[funcName].typ = n.typ
-				interp.scopes[pkgName].sym[funcName].kind = funcSym
-				interp.scopes[pkgName].sym[funcName].node = n
+				interp.scopes[pkgID].sym[funcName].index = -1 // to force value to n.val
+				interp.scopes[pkgID].sym[funcName].typ = n.typ
+				interp.scopes[pkgID].sym[funcName].kind = funcSym
+				interp.scopes[pkgID].sym[funcName].node = n
 			}
 
 		case funcLit:
@@ -1097,7 +1101,7 @@ func (interp *Interpreter) cfg(root *node) ([]*node, error) {
 					n.val = method.Index
 					n.gen = getIndexBinMethod
 					n.recv = &receiver{node: n.child[0]}
-					n.typ = &itype{cat: valueT, rtype: method.Type}
+					n.typ = &itype{cat: valueT, rtype: method.Type, isBinMethod: true}
 				case n.typ.rtype.Kind() == reflect.Ptr:
 					if field, ok := n.typ.rtype.Elem().FieldByName(n.child[1].ident); ok {
 						n.typ = &itype{cat: valueT, rtype: field.Type}
@@ -1787,13 +1791,6 @@ func getExec(n *node) bltn {
 		setExec(n)
 	}
 	return n.exec
-}
-
-func fileNode(n *node) *node {
-	if n == nil || n.kind == fileStmt {
-		return n
-	}
-	return fileNode(n.anc)
 }
 
 // setExec recursively sets the node exec builtin function by walking the CFG
