@@ -743,7 +743,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				if isInt(n.child[0].typ.TypeOf()) && n.child[1].kind == basicLit && isFloat(n.child[1].typ.TypeOf()) {
 					err = n.cfgErrorf("truncated to integer")
 				}
-				if isInterface(n.child[0].typ) {
+				if isInterface(n.child[0].typ) && !n.child[1].isNil() {
 					// Convert to interface: just check that all required methods are defined by concrete type.
 					c0, c1 := n.child[0], n.child[1]
 					if !c1.typ.implements(c0.typ) {
@@ -1694,6 +1694,9 @@ func (n *node) isNatural() bool {
 	}
 	return false
 }
+
+// isNil returns true if node is a literal nil value, false otherwise
+func (n *node) isNil() bool { return n.kind == basicLit && !n.rval.IsValid() }
 
 // fieldType returns the nth parameter field node (type) of a fieldList node
 func (n *node) fieldType(m int) *node {
