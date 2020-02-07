@@ -125,6 +125,9 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				// Add a function symbol in the package name space
 				sc.sym[n.child[1].ident] = &symbol{kind: funcSym, typ: n.typ, node: n, index: -1}
 			}
+			if n.typ.incomplete {
+				revisit = append(revisit, n)
+			}
 			return false
 
 		case importSpec:
