@@ -216,7 +216,7 @@ func convert(n *node) {
 	typ := n.child[0].typ.TypeOf()
 	next := getExec(n.tnext)
 
-	if c.kind == basicLit && !c.rval.IsValid() { // convert nil to type
+	if c.isNil() { // convert nil to type
 		n.exec = func(f *frame) bltn {
 			dest(f).Set(reflect.New(typ).Elem())
 			return next
