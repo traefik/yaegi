@@ -216,7 +216,7 @@ func initUniverse() *scope {
 	sc := &scope{global: true, sym: map[string]*symbol{
 		// predefined Go types
 		"bool":        {kind: typeSym, typ: &itype{cat: boolT, name: "bool"}},
-		"byte":        {kind: typeSym, typ: &itype{cat: byteT, name: "byte"}},
+		"byte":        {kind: typeSym, typ: &itype{cat: uint8T, name: "uint8"}},
 		"complex64":   {kind: typeSym, typ: &itype{cat: complex64T, name: "complex64"}},
 		"complex128":  {kind: typeSym, typ: &itype{cat: complex128T, name: "complex128"}},
 		"error":       {kind: typeSym, typ: &itype{cat: errorT, name: "error"}},
@@ -228,7 +228,7 @@ func initUniverse() *scope {
 		"int32":       {kind: typeSym, typ: &itype{cat: int32T, name: "int32"}},
 		"int64":       {kind: typeSym, typ: &itype{cat: int64T, name: "int64"}},
 		"interface{}": {kind: typeSym, typ: &itype{cat: interfaceT}},
-		"rune":        {kind: typeSym, typ: &itype{cat: runeT, name: "rune"}},
+		"rune":        {kind: typeSym, typ: &itype{cat: int32T, name: "int32"}},
 		"string":      {kind: typeSym, typ: &itype{cat: stringT, name: "string"}},
 		"uint":        {kind: typeSym, typ: &itype{cat: uintT, name: "uint"}},
 		"uint8":       {kind: typeSym, typ: &itype{cat: uint8T, name: "uint8"}},

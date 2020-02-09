@@ -17,7 +17,6 @@ const (
 	binPkgT
 	boolT
 	builtinT
-	byteT
 	chanT
 	complex64T
 	complex128T
@@ -33,7 +32,6 @@ const (
 	int64T
 	mapT
 	ptrT
-	runeT
 	srcPkgT
 	stringT
 	structT
@@ -54,7 +52,6 @@ var cats = [...]string{
 	arrayT:      "arrayT",
 	binT:        "binT",
 	binPkgT:     "binPkgT",
-	byteT:       "byteT",
 	boolT:       "boolT",
 	builtinT:    "builtinT",
 	chanT:       "chanT",
@@ -72,7 +69,6 @@ var cats = [...]string{
 	int64T:      "int64T",
 	mapT:        "mapT",
 	ptrT:        "ptrT",
-	runeT:       "runeT",
 	srcPkgT:     "srcPkgT",
 	stringT:     "stringT",
 	structT:     "structT",
@@ -200,8 +196,8 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			t.cat = boolT
 			t.name = "bool"
 		case byte:
-			t.cat = byteT
-			t.name = "byte"
+			t.cat = uint8T
+			t.name = "uint8"
 			t.untyped = true
 		case complex64:
 			t.cat = complex64T
@@ -227,8 +223,8 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			t.name = "uint"
 			t.untyped = true
 		case rune:
-			t.cat = runeT
-			t.name = "rune"
+			t.cat = int32T
+			t.name = "int32"
 			t.untyped = true
 		case string:
 			t.cat = stringT
@@ -594,7 +590,6 @@ var zeroValues [maxT]reflect.Value
 
 func init() {
 	zeroValues[boolT] = reflect.ValueOf(false)
-	zeroValues[byteT] = reflect.ValueOf(byte(0))
 	zeroValues[complex64T] = reflect.ValueOf(complex64(0))
 	zeroValues[complex128T] = reflect.ValueOf(complex128(0))
 	zeroValues[errorT] = reflect.ValueOf(new(error)).Elem()
@@ -605,7 +600,6 @@ func init() {
 	zeroValues[int16T] = reflect.ValueOf(int16(0))
 	zeroValues[int32T] = reflect.ValueOf(int32(0))
 	zeroValues[int64T] = reflect.ValueOf(int64(0))
-	zeroValues[runeT] = reflect.ValueOf(rune(0))
 	zeroValues[stringT] = reflect.ValueOf("")
 	zeroValues[uintT] = reflect.ValueOf(uint(0))
 	zeroValues[uint8T] = reflect.ValueOf(uint8(0))
