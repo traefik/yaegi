@@ -231,7 +231,13 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			}
 			// Propagate type to children, to handle implicit types
 			for _, c := range n.child {
-				c.typ = n.typ
+				switch c.kind {
+				case binaryExpr, unaryExpr:
+					// Do not attempt to propagate composite type to operator expressions,
+					// it breaks constant folding.
+				default:
+					c.typ = n.typ
+				}
 			}
 
 		case forStmt0, forRangeStmt:
@@ -1175,6 +1181,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.gen = nop
 					n.typ = sym.typ
 					n.sym = sym
+					n.rval = sym.rval
 				} else {
 					err = n.cfgErrorf("undefined selector: %s.%s", pkg, name)
 				}
