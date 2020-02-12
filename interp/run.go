@@ -1461,7 +1461,7 @@ func arrayLit(n *node) {
 		if c.kind == keyValueExpr {
 			convertLiteralValue(c.child[1], rtype)
 			values[i] = genValue(c.child[1])
-			index[i] = int(c.child[0].rval.Int())
+			index[i] = int(vInt(c.child[0].rval))
 		} else {
 			convertLiteralValue(c, rtype)
 			values[i] = genValue(c)
