@@ -90,9 +90,6 @@ func genValue(n *node) func(*frame) reflect.Value {
 			v = reflect.ValueOf(n.val)
 		}
 		return func(f *frame) reflect.Value { return v }
-	case rvalueExpr:
-		v := n.rval
-		return func(f *frame) reflect.Value { return v }
 	default:
 		if n.rval.IsValid() {
 			v := n.rval

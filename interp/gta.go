@@ -21,6 +21,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 		switch n.kind {
 		case constDecl:
 			iotaValue = 0
+			_, err = interp.cfg(n, pkgID)
 
 		case blockStmt:
 			if n != root {
@@ -63,7 +64,9 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				if typ.isBinMethod {
 					typ = &itype{cat: valueT, rtype: typ.methodCallType(), isBinMethod: true}
 				}
-				sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val}
+				if sc.sym[dest.ident] == nil {
+					sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val}
+				}
 				if n.anc.kind == constDecl {
 					sc.sym[dest.ident].kind = constSym
 					iotaValue++
