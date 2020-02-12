@@ -429,7 +429,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					if sc.global {
 						// Do not overload existing symbols (defined in GTA) in global scope
 						sym, _, _ = sc.lookup(dest.ident)
-					} else {
+					}
+					if sym == nil {
 						sym = &symbol{index: sc.add(dest.typ), kind: varSym, typ: dest.typ}
 						sc.sym[dest.ident] = sym
 					}
@@ -509,9 +510,10 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				if isMapEntry(dest) {
 					dest.gen = nop // skip getIndexMap
 				}
-			}
-			if n.anc.kind == constDecl {
-				iotaValue++
+				if n.anc.kind == constDecl {
+					sc.sym[dest.ident].kind = constSym
+					iotaValue++
+				}
 			}
 
 		case incDecStmt:
@@ -924,7 +926,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		case identExpr:
 			if isKey(n) || isNewDefine(n, sc) {
 				break
-			} else if sym, level, ok := sc.lookup(n.ident); ok {
+			}
+			if sym, level, ok := sc.lookup(n.ident); ok {
 				// Found symbol, populate node info
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
 				if n.findex < 0 {
@@ -941,11 +944,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					case n.ident == "nil":
 						n.kind = basicLit
 					case sym.kind == binSym:
-						if sym.rval.IsValid() {
-							n.kind = rvalueExpr
-						} else {
-							n.kind = rtypeExpr
-						}
 						n.typ = sym.typ
 						n.rval = sym.rval
 					case sym.kind == bltnSym:
@@ -1161,10 +1159,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				pkg := n.child[0].sym.typ.path
 				if s, ok := interp.binPkg[pkg][name]; ok {
 					if isBinType(s) {
-						n.kind = rtypeExpr
 						n.typ = &itype{cat: valueT, rtype: s.Type().Elem()}
 					} else {
-						n.kind = rvalueExpr
 						n.typ = &itype{cat: valueT, rtype: s.Type(), untyped: isValueUntyped(s)}
 						n.rval = s
 					}
@@ -1587,7 +1583,7 @@ func isBinType(v reflect.Value) bool { return v.IsValid() && v.Kind() == reflect
 // isType returns true if node refers to a type definition, false otherwise
 func (n *node) isType(sc *scope) bool {
 	switch n.kind {
-	case arrayType, chanType, funcType, interfaceType, mapType, structType, rtypeExpr:
+	case arrayType, chanType, funcType, interfaceType, mapType, structType:
 		return true
 	case parenExpr, starExpr:
 		if len(n.child) == 1 {
