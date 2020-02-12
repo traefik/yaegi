@@ -21,6 +21,8 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 		switch n.kind {
 		case constDecl:
 			iotaValue = 0
+			// Early parse of constDecl subtree, to compute all constant
+			// values which may be necessary in further declarations.
 			_, err = interp.cfg(n, pkgID)
 
 		case blockStmt:
