@@ -391,8 +391,10 @@ func deref(n *node) {
 	tnext := getExec(n.tnext)
 
 	if n.fnext != nil {
+		i := n.findex
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
+			f.data[i] = value(f).Elem()
 			if value(f).Elem().Bool() {
 				return tnext
 			}
@@ -1157,8 +1159,10 @@ func getIndexSeq(n *node) {
 	tnext := getExec(n.tnext)
 
 	if n.fnext != nil {
+		i := n.findex
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
+			f.data[i] = value(f).FieldByIndex(index)
 			if value(f).FieldByIndex(index).Bool() {
 				return tnext
 			}
@@ -1185,8 +1189,10 @@ func getPtrIndexSeq(n *node) {
 	}
 
 	if n.fnext != nil {
+		i := n.findex
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
+			f.data[i] = value(f).Elem().FieldByIndex(index)
 			if value(f).Elem().FieldByIndex(index).Bool() {
 				return tnext
 			}

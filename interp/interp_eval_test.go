@@ -245,6 +245,76 @@ func f() string {
 	}
 }
 
+func TestEvalStruct2(t *testing.T) {
+	i := interp.New(interp.Options{})
+	eval(t, i, `
+type Fromage struct {
+	Done bool
+}
+
+func f() bool {
+	a := Fromage{
+		true,
+	}
+
+	return a.Done && true
+}
+`)
+
+	v := eval(t, i, `f()`)
+	time.Sleep(time.Second)
+	if v.Interface().(bool) != true {
+		t.Fatalf("got %v, want true", v)
+	}
+}
+
+func TestEvalStruct3(t *testing.T) {
+	i := interp.New(interp.Options{})
+	eval(t, i, `
+type Fromage struct {
+	Done bool
+}
+
+func f() bool {
+	a := &Fromage{
+		true,
+	}
+
+	return a.Done && true
+}
+`)
+
+	v := eval(t, i, `f()`)
+	time.Sleep(time.Second)
+	if v.Interface().(bool) != true {
+		t.Fatalf("got %v, want true", v)
+	}
+}
+
+func TestEvalStruct4(t *testing.T) {
+	i := interp.New(interp.Options{})
+	eval(t, i, `
+type Fromage struct {
+	Done *bool
+}
+
+func f() bool {
+	t := true
+	a := &Fromage{
+		&t,
+	}
+
+	return *(a.Done) && true
+}
+`)
+
+	v := eval(t, i, `f()`)
+	time.Sleep(time.Second)
+	if v.Interface().(bool) != true {
+		t.Fatalf("got %v, want true", v)
+	}
+}
+
 func TestEvalComposite0(t *testing.T) {
 	i := interp.New(interp.Options{})
 	eval(t, i, `
