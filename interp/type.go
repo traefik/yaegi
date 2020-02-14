@@ -431,6 +431,9 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			}
 		}
 
+	case landExpr, lorExpr:
+		t.cat = boolT
+
 	case mapType:
 		t.cat = mapT
 		if t.key, err = nodeType(interp, sc, n.child[0]); err != nil {
