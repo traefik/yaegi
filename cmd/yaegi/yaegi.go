@@ -47,8 +47,10 @@ import (
 func main() {
 	var interactive bool
 	var tags string
+	var cmd string
 	flag.BoolVar(&interactive, "i", false, "start an interactive REPL")
 	flag.StringVar(&tags, "tags", "", "set a list of build tags")
+	flag.StringVar(&cmd, "e", "", "set the command to be executed (instead of script or/and shell)")
 	flag.Usage = func() {
 		fmt.Println("Usage:", os.Args[0], "[options] [script] [args]")
 		fmt.Println("Options:")
@@ -62,34 +64,41 @@ func main() {
 	i.Use(stdlib.Symbols)
 	i.Use(interp.Symbols)
 
-	if len(args) > 0 {
-		// Skip first os arg to set command line as expected by interpreted main
-		os.Args = os.Args[1:]
-		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	if cmd != `` {
+		i.REPL(strings.NewReader(cmd), os.Stderr)
+	}
 
-		b, err := ioutil.ReadFile(args[0])
-		if err != nil {
-			log.Fatal("Could not read file: ", args[0])
-		}
-
-		s := string(b)
-		if s[:2] == "#!" {
-			// Allow executable go scripts, but fix them prior to parse
-			s = strings.Replace(s, "#!", "//", 1)
-		}
-
-		i.Name = args[0]
-		if _, err := i.Eval(s); err != nil {
-			fmt.Println(err)
-			if p, ok := err.(interp.Panic); ok {
-				fmt.Println(string(p.Stack))
-			}
-		}
-
-		if interactive {
+	if len(args) == 0 {
+		if interactive || cmd == `` {
 			i.REPL(os.Stdin, os.Stdout)
 		}
-	} else {
+		return
+	}
+
+	// Skip first os arg to set command line as expected by interpreted main
+	os.Args = os.Args[1:]
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+	b, err := ioutil.ReadFile(args[0])
+	if err != nil {
+		log.Fatal("Could not read file: ", args[0])
+	}
+
+	s := string(b)
+	if s[:2] == "#!" {
+		// Allow executable go scripts, but fix them prior to parse
+		s = strings.Replace(s, "#!", "//", 1)
+	}
+
+	i.Name = args[0]
+	if _, err := i.Eval(s); err != nil {
+		fmt.Println(err)
+		if p, ok := err.(interp.Panic); ok {
+			fmt.Println(string(p.Stack))
+		}
+	}
+
+	if interactive {
 		i.REPL(os.Stdin, os.Stdout)
 	}
 }
