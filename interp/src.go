@@ -47,7 +47,7 @@ func (interp *Interpreter) importSrc(rPath, path string) error {
 	var root *node
 	var pkgName string
 
-	// Parse source files
+	// Parse source files.
 	for _, file := range files {
 		name := file.Name()
 		if skipFile(&interp.context, name) {
@@ -86,12 +86,10 @@ func (interp *Interpreter) importSrc(rPath, path string) error {
 		revisit[subRPath] = append(revisit[subRPath], list...)
 	}
 
-	// revisit incomplete nodes where GTA could not complete
+	// Revisit incomplete nodes where GTA could not complete.
 	for pkg, nodes := range revisit {
-		for _, n := range nodes {
-			if _, err = interp.gta(n, pkg, path); err != nil {
-				return err
-			}
+		if err = interp.gtaRetry(nodes, pkg, path); err != nil {
+			return err
 		}
 	}
 

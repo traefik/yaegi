@@ -10,7 +10,12 @@ import (
 )
 
 // A cfgError represents an error during CFG build stage
-type cfgError error
+type cfgError struct {
+	*node
+	error
+}
+
+func (c *cfgError) Error() string { return c.error.Error() }
 
 var constOp = map[action]func(*node){
 	aAdd:    addConst,
@@ -1539,13 +1544,13 @@ func childPos(n *node) int {
 	return -1
 }
 
-func (n *node) cfgErrorf(format string, a ...interface{}) cfgError {
+func (n *node) cfgErrorf(format string, a ...interface{}) *cfgError {
 	a = append([]interface{}{n.interp.fset.Position(n.pos)}, a...)
-	return cfgError(fmt.Errorf("%s: "+format, a...))
+	return &cfgError{n, fmt.Errorf("%s: "+format, a...)}
 }
 
 func genRun(nod *node) error {
-	var err cfgError
+	var err error
 
 	nod.Walk(func(n *node) bool {
 		if err != nil {

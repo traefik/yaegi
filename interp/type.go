@@ -139,7 +139,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		}
 	}
 
-	var err cfgError
+	var err error
 	switch n.kind {
 	case addressExpr, starExpr:
 		t.cat = ptrT
@@ -614,7 +614,7 @@ func init() {
 
 // if type is incomplete, re-parse it.
 func (t *itype) finalize() (*itype, error) {
-	var err cfgError
+	var err error
 	if t.incomplete {
 		sym, _, found := t.scope.lookup(t.name)
 		if found && !sym.typ.incomplete {

@@ -9,5 +9,5 @@ func main() {
 	fmt.Println(buf)
 }
 
-// Output
+// Output:
 // []
