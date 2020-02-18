@@ -23,8 +23,10 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 			iotaValue = 0
 			// Early parse of constDecl subtree, to compute all constant
 			// values which may be necessary in further declarations.
-			// No error processing here, to allow recovery in subtree nodes.
-			interp.cfg(n, pkgID)
+			if _, err = interp.cfg(n, pkgID); err != nil {
+				// No error processing here, to allow recovery in subtree nodes.
+				err = nil
+			}
 
 		case blockStmt:
 			if n != root {
@@ -225,11 +227,11 @@ func (interp *Interpreter) gtaRetry(nodes []*node, rpath, pkgID string) error {
 	revisit := []*node{}
 	for {
 		for _, n := range nodes {
-			v, err := interp.gta(n, rpath, pkgID)
+			list, err := interp.gta(n, rpath, pkgID)
 			if err != nil {
 				return err
 			}
-			revisit = append(revisit, v...)
+			revisit = append(revisit, list...)
 		}
 
 		if len(revisit) == 0 || equalNodes(nodes, revisit) {
@@ -246,7 +248,7 @@ func (interp *Interpreter) gtaRetry(nodes []*node, rpath, pkgID string) error {
 	return nil
 }
 
-// equalNodes returns true if two slices of nodes are identical
+// equalNodes returns true if two slices of nodes are identical.
 func equalNodes(a, b []*node) bool {
 	if len(a) != len(b) {
 		return false
