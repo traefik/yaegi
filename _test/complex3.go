@@ -7,5 +7,5 @@ func main() {
 	fmt.Printf("%T %v\n", s, s)
 }
 
-// Output
+// Output:
 // int 2

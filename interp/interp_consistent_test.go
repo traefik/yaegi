@@ -33,6 +33,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 	for _, file := range files {
 		if filepath.Ext(file.Name()) != ".go" ||
 			file.Name() == "bad0.go" || // expect error
+			file.Name() == "const9.go" || // expect error
 			file.Name() == "export1.go" || // non-main package
 			file.Name() == "export0.go" || // non-main package
 			file.Name() == "for7.go" || // expect error
@@ -137,6 +138,11 @@ func TestInterpErrorConsistency(t *testing.T) {
 			fileName:       "bad0.go",
 			expectedInterp: "1:1: expected 'package', found println",
 			expectedExec:   "1:1: expected 'package', found println",
+		},
+		{
+			fileName:       "const9.go",
+			expectedInterp: "5:2: constant definition loop",
+			expectedExec:   "5:2: constant definition loop",
 		},
 		{
 			fileName:       "if2.go",

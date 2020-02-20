@@ -294,7 +294,7 @@ func (interp *Interpreter) main() *node {
 func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 	var res reflect.Value
 
-	// Parse source to AST
+	// Parse source to AST.
 	pkgName, root, err := interp.ast(src, interp.Name)
 	if err != nil || root == nil {
 		return res, err
@@ -307,15 +307,9 @@ func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
 		}
 	}
 
-	// Global type analysis
-	revisit, err := interp.gta(root, pkgName, interp.Name)
-	if err != nil {
+	// Perform global types analysis.
+	if err = interp.gtaRetry([]*node{root}, pkgName, interp.Name); err != nil {
 		return res, err
-	}
-	for _, n := range revisit {
-		if _, err = interp.gta(n, pkgName, interp.Name); err != nil {
-			return res, err
-		}
 	}
 
 	// Annotate AST with CFG infos
