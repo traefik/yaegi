@@ -1017,7 +1017,12 @@ func isInterface(t *itype) bool {
 func isStruct(t *itype) bool {
 	// Test first for a struct category, because a recursive interpreter struct may be
 	// represented by an interface{} at reflect level.
-	return t.cat == structT || t.TypeOf().Kind() == reflect.Struct
+	if t.cat == structT {
+		return true
+	}
+	rt := t.TypeOf()
+	k := rt.Kind()
+	return k == reflect.Struct || (k == reflect.Ptr && rt.Elem().Kind() == reflect.Struct)
 }
 
 func isBool(t *itype) bool { return t.TypeOf().Kind() == reflect.Bool }
