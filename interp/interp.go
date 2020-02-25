@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"reflect"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -167,6 +168,9 @@ type Panic struct {
 	// Callers is the call stack obtained from the recover call.
 	// It may be used as the parameter to runtime.CallersFrames.
 	Callers []uintptr
+
+	// Stack is the call stack buffer for debug.
+	Stack []byte
 }
 
 // TODO: Capture interpreter stack frames also and remove
@@ -313,7 +317,7 @@ func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
 		if r != nil {
 			var pc [64]uintptr // 64 frames should be enough.
 			n := runtime.Callers(1, pc[:])
-			err = Panic{Value: r, Callers: pc[:n]}
+			err = Panic{Value: r, Callers: pc[:n], Stack: debug.Stack()}
 		}
 	}()
 
@@ -463,12 +467,15 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		v, err := interp.EvalWithContext(ctx, src)
 		signal.Reset()
 		if err != nil {
-			switch err.(type) {
+			switch e := err.(type) {
 			case scanner.ErrorList:
 				// Early failure in the scanner: the source is incomplete
 				// and no AST could be produced, neither compiled / run.
 				// Get one more line, and retry
 				continue
+			case Panic:
+				fmt.Fprintln(out, e.Value)
+				fmt.Fprintln(out, string(e.Stack))
 			default:
 				fmt.Fprintln(out, err)
 			}
