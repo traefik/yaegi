@@ -20,10 +20,8 @@ matrix:
   fast_finish: true
   include:
     - go: 1.13.x
-      env: STABLE=true
     - go: 1.14.x
-  allow_failures:
-    - go: 1.14.x # FIXME currently golangci-lint doesn't work with go1.14
+      env: STABLE=true
 
 env:
   global:
