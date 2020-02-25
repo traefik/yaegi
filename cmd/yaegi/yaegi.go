@@ -81,6 +81,9 @@ func main() {
 		i.Name = args[0]
 		if _, err := i.Eval(s); err != nil {
 			fmt.Println(err)
+			if p, ok := err.(interp.Panic); ok {
+				fmt.Println(string(p.Stack))
+			}
 		}
 
 		if interactive {

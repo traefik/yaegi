@@ -11,6 +11,8 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
+	"runtime"
+	"runtime/debug"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -158,6 +160,24 @@ type _error struct {
 
 func (w _error) Error() string { return w.WError() }
 
+// Panic is an error recovered from a panic call in interpreted code.
+type Panic struct {
+	// Value is the recovered value of a call to panic.
+	Value interface{}
+
+	// Callers is the call stack obtained from the recover call.
+	// It may be used as the parameter to runtime.CallersFrames.
+	Callers []uintptr
+
+	// Stack is the call stack buffer for debug.
+	Stack []byte
+}
+
+// TODO: Capture interpreter stack frames also and remove
+// fmt.Println(n.cfgErrorf("panic")) in runCfg.
+
+func (e Panic) Error() string { return fmt.Sprint(e.Value) }
+
 // Walk traverses AST n in depth first order, call cbin function
 // at node entry and cbout function at node exit.
 func (n *node) Walk(in func(n *node) bool, out func(n *node)) {
@@ -291,8 +311,15 @@ func (interp *Interpreter) main() *node {
 
 // Eval evaluates Go code represented as a string. It returns a map on
 // current interpreted package exported symbols
-func (interp *Interpreter) Eval(src string) (reflect.Value, error) {
-	var res reflect.Value
+func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			var pc [64]uintptr // 64 frames should be enough.
+			n := runtime.Callers(1, pc[:])
+			err = Panic{Value: r, Callers: pc[:n], Stack: debug.Stack()}
+		}
+	}()
 
 	// Parse source to AST.
 	pkgName, root, err := interp.ast(src, interp.Name)
@@ -440,12 +467,15 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		v, err := interp.EvalWithContext(ctx, src)
 		signal.Reset()
 		if err != nil {
-			switch err.(type) {
+			switch e := err.(type) {
 			case scanner.ErrorList:
 				// Early failure in the scanner: the source is incomplete
 				// and no AST could be produced, neither compiled / run.
 				// Get one more line, and retry
 				continue
+			case Panic:
+				fmt.Fprintln(out, e.Value)
+				fmt.Fprintln(out, string(e.Stack))
 			default:
 				fmt.Fprintln(out, err)
 			}
