@@ -10,7 +10,12 @@ import (
 )
 
 // A cfgError represents an error during CFG build stage
-type cfgError error
+type cfgError struct {
+	*node
+	error
+}
+
+func (c *cfgError) Error() string { return c.error.Error() }
 
 var constOp = map[action]func(*node){
 	aAdd:    addConst,
@@ -231,7 +236,13 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			}
 			// Propagate type to children, to handle implicit types
 			for _, c := range n.child {
-				c.typ = n.typ
+				switch c.kind {
+				case binaryExpr, unaryExpr:
+					// Do not attempt to propagate composite type to operator expressions,
+					// it breaks constant folding.
+				default:
+					c.typ = n.typ
+				}
 			}
 
 		case forStmt0, forRangeStmt:
@@ -423,7 +434,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					if sc.global {
 						// Do not overload existing symbols (defined in GTA) in global scope
 						sym, _, _ = sc.lookup(dest.ident)
-					} else {
+					}
+					if sym == nil {
 						sym = &symbol{index: sc.add(dest.typ), kind: varSym, typ: dest.typ}
 						sc.sym[dest.ident] = sym
 					}
@@ -503,9 +515,10 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				if isMapEntry(dest) {
 					dest.gen = nop // skip getIndexMap
 				}
-			}
-			if n.anc.kind == constDecl {
-				iotaValue++
+				if n.anc.kind == constDecl {
+					sc.sym[dest.ident].kind = constSym
+					iotaValue++
+				}
 			}
 
 		case incDecStmt:
@@ -743,7 +756,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				if isInt(n.child[0].typ.TypeOf()) && n.child[1].kind == basicLit && isFloat(n.child[1].typ.TypeOf()) {
 					err = n.cfgErrorf("truncated to integer")
 				}
-				if isInterface(n.child[0].typ) {
+				if isInterface(n.child[0].typ) && !n.child[1].isNil() {
 					// Convert to interface: just check that all required methods are defined by concrete type.
 					c0, c1 := n.child[0], n.child[1]
 					if !c1.typ.implements(c0.typ) {
@@ -918,7 +931,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		case identExpr:
 			if isKey(n) || isNewDefine(n, sc) {
 				break
-			} else if sym, level, ok := sc.lookup(n.ident); ok {
+			}
+			if sym, level, ok := sc.lookup(n.ident); ok {
 				// Found symbol, populate node info
 				n.typ, n.findex, n.level = sym.typ, sym.index, level
 				if n.findex < 0 {
@@ -935,11 +949,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					case n.ident == "nil":
 						n.kind = basicLit
 					case sym.kind == binSym:
-						if sym.rval.IsValid() {
-							n.kind = rvalueExpr
-						} else {
-							n.kind = rtypeExpr
-						}
 						n.typ = sym.typ
 						n.rval = sym.rval
 					case sym.kind == bltnSym:
@@ -1155,10 +1164,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				pkg := n.child[0].sym.typ.path
 				if s, ok := interp.binPkg[pkg][name]; ok {
 					if isBinType(s) {
-						n.kind = rtypeExpr
 						n.typ = &itype{cat: valueT, rtype: s.Type().Elem()}
 					} else {
-						n.kind = rvalueExpr
 						n.typ = &itype{cat: valueT, rtype: s.Type(), untyped: isValueUntyped(s)}
 						n.rval = s
 					}
@@ -1175,6 +1182,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.gen = nop
 					n.typ = sym.typ
 					n.sym = sym
+					n.rval = sym.rval
 				} else {
 					err = n.cfgErrorf("undefined selector: %s.%s", pkg, name)
 				}
@@ -1536,13 +1544,13 @@ func childPos(n *node) int {
 	return -1
 }
 
-func (n *node) cfgErrorf(format string, a ...interface{}) cfgError {
+func (n *node) cfgErrorf(format string, a ...interface{}) *cfgError {
 	a = append([]interface{}{n.interp.fset.Position(n.pos)}, a...)
-	return cfgError(fmt.Errorf("%s: "+format, a...))
+	return &cfgError{n, fmt.Errorf("%s: "+format, a...)}
 }
 
 func genRun(nod *node) error {
-	var err cfgError
+	var err error
 
 	nod.Walk(func(n *node) bool {
 		if err != nil {
@@ -1580,7 +1588,7 @@ func isBinType(v reflect.Value) bool { return v.IsValid() && v.Kind() == reflect
 // isType returns true if node refers to a type definition, false otherwise
 func (n *node) isType(sc *scope) bool {
 	switch n.kind {
-	case arrayType, chanType, funcType, interfaceType, mapType, structType, rtypeExpr:
+	case arrayType, chanType, funcType, interfaceType, mapType, structType:
 		return true
 	case parenExpr, starExpr:
 		if len(n.child) == 1 {
@@ -1694,6 +1702,9 @@ func (n *node) isNatural() bool {
 	}
 	return false
 }
+
+// isNil returns true if node is a literal nil value, false otherwise
+func (n *node) isNil() bool { return n.kind == basicLit && !n.rval.IsValid() }
 
 // fieldType returns the nth parameter field node (type) of a fieldList node
 func (n *node) fieldType(m int) *node {

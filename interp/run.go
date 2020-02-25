@@ -216,7 +216,7 @@ func convert(n *node) {
 	typ := n.child[0].typ.TypeOf()
 	next := getExec(n.tnext)
 
-	if c.kind == basicLit && !c.rval.IsValid() { // convert nil to type
+	if c.isNil() { // convert nil to type
 		n.exec = func(f *frame) bltn {
 			dest(f).Set(reflect.New(typ).Elem())
 			return next
@@ -355,16 +355,15 @@ func not(n *node) {
 	dest := genValue(n)
 	value := genValue(n.child[0])
 	tnext := getExec(n.tnext)
-	i := n.findex
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
 			if !value(f).Bool() {
-				f.data[i].SetBool(true)
+				dest(f).SetBool(true)
 				return tnext
 			}
-			f.data[i].SetBool(false)
+			dest(f).SetBool(false)
 			return fnext
 		}
 	} else {
@@ -389,17 +388,18 @@ func addr(n *node) {
 func deref(n *node) {
 	value := genValue(n.child[0])
 	tnext := getExec(n.tnext)
+	i := n.findex
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
-			if value(f).Elem().Bool() {
+			f.data[i] = value(f).Elem()
+			if f.data[i].Bool() {
 				return tnext
 			}
 			return fnext
 		}
 	} else {
-		i := n.findex
 		n.exec = func(f *frame) bltn {
 			f.data[i] = value(f).Elem()
 			return tnext
@@ -978,21 +978,21 @@ func getIndexBinPtrMethod(n *node) {
 func getIndexArray(n *node) {
 	tnext := getExec(n.tnext)
 	value0 := genValueArray(n.child[0]) // array
+	i := n.findex
 
 	if n.child[1].rval.IsValid() { // constant array index
 		ai := int(vInt(n.child[1].rval))
 		if n.fnext != nil {
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
-				if value0(f).Index(ai).Bool() {
+				f.data[i] = value0(f).Index(ai)
+				if f.data[i].Bool() {
 					return tnext
 				}
 				return fnext
 			}
 		} else {
-			i := n.findex
 			n.exec = func(f *frame) bltn {
-				// Can not use .Set due to constraint of being able to assign an array element
 				f.data[i] = value0(f).Index(ai)
 				return tnext
 			}
@@ -1004,16 +1004,15 @@ func getIndexArray(n *node) {
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
 				_, vi := value1(f)
-				if value0(f).Index(int(vi)).Bool() {
+				f.data[i] = value0(f).Index(int(vi))
+				if f.data[i].Bool() {
 					return tnext
 				}
 				return fnext
 			}
 		} else {
-			i := n.findex
 			n.exec = func(f *frame) bltn {
 				_, vi := value1(f)
-				// Can not use .Set due to constraint of being able to assign an array element
 				f.data[i] = value0(f).Index(int(vi))
 				return tnext
 			}
@@ -1035,8 +1034,10 @@ func getIndexMap(n *node) {
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
 				if v := value0(f).MapIndex(mi); v.IsValid() && v.Bool() {
+					dest(f).SetBool(true)
 					return tnext
 				}
+				dest(f).Set(z)
 				return fnext
 			}
 		} else {
@@ -1056,8 +1057,10 @@ func getIndexMap(n *node) {
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
 				if v := value0(f).MapIndex(value1(f)); v.IsValid() && v.Bool() {
+					dest(f).SetBool(true)
 					return tnext
 				}
+				dest(f).Set(z)
 				return fnext
 			}
 		} else {
@@ -1155,17 +1158,28 @@ func getIndexSeq(n *node) {
 	value := genValue(n.child[0])
 	index := n.val.([]int)
 	tnext := getExec(n.tnext)
+	i := n.findex
+
+	// Note:
+	// Here we have to store the result using
+	//    f.data[i] = value(...)
+	// instead of normal
+	//    dest(f).Set(value(...)
+	// because the value returned by FieldByIndex() must be preserved
+	// for possible future Set operations on the struct field (avoid a
+	// dereference from Set, resulting in setting a copy of the
+	// original field).
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
-			if value(f).FieldByIndex(index).Bool() {
+			f.data[i] = value(f).FieldByIndex(index)
+			if f.data[i].Bool() {
 				return tnext
 			}
 			return fnext
 		}
 	} else {
-		i := n.findex
 		n.exec = func(f *frame) bltn {
 			f.data[i] = value(f).FieldByIndex(index)
 			return tnext
@@ -1183,17 +1197,18 @@ func getPtrIndexSeq(n *node) {
 	} else {
 		value = genValue(n.child[0])
 	}
+	i := n.findex
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
-			if value(f).Elem().FieldByIndex(index).Bool() {
+			f.data[i] = value(f).Elem().FieldByIndex(index)
+			if f.data[i].Bool() {
 				return tnext
 			}
 			return fnext
 		}
 	} else {
-		i := n.findex
 		n.exec = func(f *frame) bltn {
 			f.data[i] = value(f).Elem().FieldByIndex(index)
 			return tnext
@@ -1205,17 +1220,38 @@ func getIndexSeqField(n *node) {
 	value := genValue(n.child[0])
 	index := n.val.([]int)
 	i := n.findex
-	next := getExec(n.tnext)
+	tnext := getExec(n.tnext)
 
-	if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
-		n.exec = func(f *frame) bltn {
-			f.data[i] = value(f).Elem().FieldByIndex(index)
-			return next
+	if n.fnext != nil {
+		fnext := getExec(n.fnext)
+		if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
+			n.exec = func(f *frame) bltn {
+				f.data[i] = value(f).Elem().FieldByIndex(index)
+				if f.data[i].Bool() {
+					return tnext
+				}
+				return fnext
+			}
+		} else {
+			n.exec = func(f *frame) bltn {
+				f.data[i] = value(f).FieldByIndex(index)
+				if f.data[i].Bool() {
+					return tnext
+				}
+				return fnext
+			}
 		}
 	} else {
-		n.exec = func(f *frame) bltn {
-			f.data[i] = value(f).FieldByIndex(index)
-			return next
+		if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
+			n.exec = func(f *frame) bltn {
+				f.data[i] = value(f).Elem().FieldByIndex(index)
+				return tnext
+			}
+		} else {
+			n.exec = func(f *frame) bltn {
+				f.data[i] = value(f).FieldByIndex(index)
+				return tnext
+			}
 		}
 	}
 }
@@ -1461,7 +1497,7 @@ func arrayLit(n *node) {
 		if c.kind == keyValueExpr {
 			convertLiteralValue(c.child[1], rtype)
 			values[i] = genValue(c.child[1])
-			index[i] = int(c.child[0].rval.Int())
+			index[i] = int(vInt(c.child[0].rval))
 		} else {
 			convertLiteralValue(c, rtype)
 			values[i] = genValue(c)
@@ -2170,16 +2206,18 @@ func reset(n *node) {
 func recv(n *node) {
 	value := genValue(n.child[0])
 	tnext := getExec(n.tnext)
+	i := n.findex
 
 	if n.interp.cancelChan {
 		// Cancellable channel read
 		if n.fnext != nil {
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
-				ch := value(f)
 				// Fast: channel read doesn't block
-				if x, ok := ch.TryRecv(); ok {
-					if x.Bool() {
+				var ok bool
+				ch := value(f)
+				if f.data[i], ok = ch.TryRecv(); ok {
+					if f.data[i].Bool() {
 						return tnext
 					}
 					return fnext
@@ -2195,7 +2233,6 @@ func recv(n *node) {
 				return fnext
 			}
 		} else {
-			i := n.findex
 			n.exec = func(f *frame) bltn {
 				// Fast: channel read doesn't block
 				var ok bool
@@ -2217,7 +2254,7 @@ func recv(n *node) {
 		if n.fnext != nil {
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
-				if v, _ := value(f).Recv(); v.Bool() {
+				if f.data[i], _ = value(f).Recv(); f.data[i].Bool() {
 					return tnext
 				}
 				return fnext

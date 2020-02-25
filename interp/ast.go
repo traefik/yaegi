@@ -75,8 +75,6 @@ const (
 	parenExpr
 	rangeStmt
 	returnStmt
-	rvalueExpr
-	rtypeExpr
 	selectStmt
 	selectorExpr
 	selectorImport
@@ -154,8 +152,6 @@ var kinds = [...]string{
 	parenExpr:        "parenExpr",
 	rangeStmt:        "rangeStmt",
 	returnStmt:       "returnStmt",
-	rvalueExpr:       "rvalueExpr",
-	rtypeExpr:        "rtypeExpr",
 	selectStmt:       "selectStmt",
 	selectorExpr:     "selectorExpr",
 	selectorImport:   "selectorImport",
