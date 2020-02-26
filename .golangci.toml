@@ -37,6 +37,7 @@
     "funlen",
     "gocognit",
     "stylecheck",
+    "gomnd",
   ]
 
 [issues]

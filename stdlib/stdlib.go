@@ -1,4 +1,4 @@
-// +build go1.12,!go1.14
+// +build go1.13,!go1.15
 
 // Package stdlib provides wrappers of standard library packages to be imported natively in Yaegi.
 package stdlib
@@ -15,6 +15,7 @@ func init() {
 }
 
 // Provide access to go standard library (http://golang.org/pkg/)
+// go list std | grep -v internal | grep -v '\.' | grep -v unsafe | grep -v syscall
 
 //go:generate ../cmd/goexports/goexports archive/tar archive/zip
 //go:generate ../cmd/goexports/goexports bufio bytes
@@ -32,11 +33,11 @@ func init() {
 //go:generate ../cmd/goexports/goexports errors expvar flag fmt
 //go:generate ../cmd/goexports/goexports go/ast go/build go/constant go/doc go/format go/importer
 //go:generate ../cmd/goexports/goexports go/parser go/printer go/scanner go/token go/types
-//go:generate ../cmd/goexports/goexports hash hash/adler32 hash/crc32 hash/crc64 hash/fnv
+//go:generate ../cmd/goexports/goexports hash hash/adler32 hash/crc32 hash/crc64 hash/fnv hash/maphash
 //go:generate ../cmd/goexports/goexports html html/template
 //go:generate ../cmd/goexports/goexports image image/color image/color/palette
-//go:generate ../cmd/goexports/goexports image/draw image/gif image/jpeg image/png
-//go:generate ../cmd/goexports/goexports index/suffixarray io io/ioutil log log/syslog
+//go:generate ../cmd/goexports/goexports image/draw image/gif image/jpeg image/png index/suffixarray
+//go:generate ../cmd/goexports/goexports io io/ioutil log log/syslog
 //go:generate ../cmd/goexports/goexports math math/big math/bits math/cmplx math/rand
 //go:generate ../cmd/goexports/goexports mime mime/multipart mime/quotedprintable
 //go:generate ../cmd/goexports/goexports net net/http net/http/cgi net/http/cookiejar net/http/fcgi
