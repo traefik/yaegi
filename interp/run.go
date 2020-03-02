@@ -1025,12 +1025,13 @@ func getIndexMap(n *node) {
 	dest := genValue(n)
 	value0 := genValue(n.child[0]) // map
 	tnext := getExec(n.tnext)
-	z := reflect.New(n.child[0].typ.TypeOf().Elem()).Elem()
+	z := reflect.New(n.child[0].typ.frameType().Elem()).Elem()
 
 	if n.child[1].rval.IsValid() { // constant map index
 		mi := n.child[1].rval
 
-		if n.fnext != nil {
+		switch {
+		case n.fnext != nil:
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
 				if v := value0(f).MapIndex(mi); v.IsValid() && v.Bool() {
@@ -1040,7 +1041,17 @@ func getIndexMap(n *node) {
 				dest(f).Set(z)
 				return fnext
 			}
-		} else {
+		case n.typ.cat == interfaceT:
+			z = reflect.New(n.child[0].typ.val.frameType()).Elem()
+			n.exec = func(f *frame) bltn {
+				if v := value0(f).MapIndex(mi); v.IsValid() {
+					dest(f).Set(v.Elem())
+				} else {
+					dest(f).Set(z)
+				}
+				return tnext
+			}
+		default:
 			n.exec = func(f *frame) bltn {
 				if v := value0(f).MapIndex(mi); v.IsValid() {
 					dest(f).Set(v)
@@ -1053,7 +1064,8 @@ func getIndexMap(n *node) {
 	} else {
 		value1 := genValue(n.child[1]) // map index
 
-		if n.fnext != nil {
+		switch {
+		case n.fnext != nil:
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
 				if v := value0(f).MapIndex(value1(f)); v.IsValid() && v.Bool() {
@@ -1063,7 +1075,17 @@ func getIndexMap(n *node) {
 				dest(f).Set(z)
 				return fnext
 			}
-		} else {
+		case n.typ.cat == interfaceT:
+			z = reflect.New(n.child[0].typ.val.frameType()).Elem()
+			n.exec = func(f *frame) bltn {
+				if v := value0(f).MapIndex(value1(f)); v.IsValid() {
+					dest(f).Set(v.Elem())
+				} else {
+					dest(f).Set(z)
+				}
+				return tnext
+			}
+		default:
 			n.exec = func(f *frame) bltn {
 				if v := value0(f).MapIndex(value1(f)); v.IsValid() {
 					dest(f).Set(v)
@@ -1082,26 +1104,49 @@ func getIndexMap2(n *node) {
 	value0 := genValue(n.child[0])     // map
 	value2 := genValue(n.anc.child[1]) // status
 	next := getExec(n.tnext)
+	typ := n.anc.child[0].typ
 
 	if n.child[1].rval.IsValid() { // constant map index
 		mi := n.child[1].rval
-		n.exec = func(f *frame) bltn {
-			v := value0(f).MapIndex(mi)
-			if v.IsValid() {
-				dest(f).Set(v)
+		if typ.cat == interfaceT {
+			n.exec = func(f *frame) bltn {
+				v := value0(f).MapIndex(mi)
+				if v.IsValid() {
+					dest(f).Set(v.Elem())
+				}
+				value2(f).SetBool(v.IsValid())
+				return next
 			}
-			value2(f).SetBool(v.IsValid())
-			return next
+		} else {
+			n.exec = func(f *frame) bltn {
+				v := value0(f).MapIndex(mi)
+				if v.IsValid() {
+					dest(f).Set(v)
+				}
+				value2(f).SetBool(v.IsValid())
+				return next
+			}
 		}
 	} else {
 		value1 := genValue(n.child[1]) // map index
-		n.exec = func(f *frame) bltn {
-			v := value0(f).MapIndex(value1(f))
-			if v.IsValid() {
-				dest(f).Set(v)
+		if typ.cat == interfaceT {
+			n.exec = func(f *frame) bltn {
+				v := value0(f).MapIndex(value1(f))
+				if v.IsValid() {
+					dest(f).Set(v.Elem())
+				}
+				value2(f).SetBool(v.IsValid())
+				return next
 			}
-			value2(f).SetBool(v.IsValid())
-			return next
+		} else {
+			n.exec = func(f *frame) bltn {
+				v := value0(f).MapIndex(value1(f))
+				if v.IsValid() {
+					dest(f).Set(v)
+				}
+				value2(f).SetBool(v.IsValid())
+				return next
+			}
 		}
 	}
 }
@@ -1960,6 +2005,8 @@ func _append(n *node) {
 		values := make([]func(*frame) reflect.Value, l)
 		for i, arg := range args {
 			switch {
+			case n.typ.val.cat == interfaceT:
+				values[i] = genValueInterface(arg)
 			case isRecursiveStruct(n.typ.val, n.typ.val.rtype):
 				values[i] = genValueInterfacePtr(arg)
 			case arg.typ.untyped:
@@ -1980,6 +2027,8 @@ func _append(n *node) {
 	} else {
 		var value0 func(*frame) reflect.Value
 		switch {
+		case n.typ.val.cat == interfaceT:
+			value0 = genValueInterface(n.child[2])
 		case isRecursiveStruct(n.typ.val, n.typ.val.rtype):
 			value0 = genValueInterfacePtr(n.child[2])
 		case n.child[2].typ.untyped:
@@ -2113,7 +2162,7 @@ func _new(n *node) {
 func _make(n *node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
-	typ := n.child[1].typ.TypeOf()
+	typ := n.child[1].typ.frameType()
 
 	switch typ.Kind() {
 	case reflect.Array, reflect.Slice:
