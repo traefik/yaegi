@@ -3,6 +3,7 @@ package interp
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -60,6 +61,7 @@ func (interp *Interpreter) importSrc(rPath, path string) error {
 			return err
 		}
 
+		log.Println("read", name)
 		var pname string
 		if pname, root, err = interp.ast(string(buf), name); err != nil {
 			return err

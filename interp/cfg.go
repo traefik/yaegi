@@ -777,10 +777,20 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			case isBinCall(n):
 				n.gen = callBin
 				if typ := n.child[0].typ.rtype; typ.NumOut() > 0 {
-					n.typ = &itype{cat: valueT, rtype: typ.Out(0)}
-					n.findex = sc.add(n.typ)
-					for i := 1; i < typ.NumOut(); i++ {
-						sc.add(&itype{cat: valueT, rtype: typ.Out(i)})
+					if funcType := internalFuncType(n.child[0]); funcType != nil {
+						// Use the original unwrapped function type, to allow future field and
+						// methods resolutions, otherwise impossible on the opaque bin type.
+						n.typ = funcType.ret[0]
+						n.findex = sc.add(n.typ)
+						for i := 1; i < len(funcType.ret); i++ {
+							sc.add(funcType.ret[i])
+						}
+					} else {
+						n.typ = &itype{cat: valueT, rtype: typ.Out(0)}
+						n.findex = sc.add(n.typ)
+						for i := 1; i < typ.NumOut(); i++ {
+							sc.add(&itype{cat: valueT, rtype: typ.Out(i)})
+						}
 					}
 				}
 			default:
@@ -1225,7 +1235,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					if n.typ.cat == funcT {
 						// function in a struct field is always wrapped in reflect.Value
 						rtype := n.typ.TypeOf()
-						n.typ = &itype{cat: valueT, rtype: rtype}
+						n.typ = &itype{cat: valueT, rtype: rtype, val: n.typ}
 					}
 				default:
 					n.gen = getIndexSeq
@@ -1233,7 +1243,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					if n.typ.cat == funcT {
 						// function in a struct field is always wrapped in reflect.Value
 						rtype := n.typ.TypeOf()
-						n.typ = &itype{cat: valueT, rtype: rtype}
+						n.typ = &itype{cat: valueT, rtype: rtype, val: n.typ}
 					}
 				}
 			} else if s, lind, ok := n.typ.lookupBinField(n.child[1].ident); ok {
@@ -1741,6 +1751,10 @@ func isKey(n *node) bool {
 		(n.anc.kind == fieldExpr && len(n.anc.child) > 1 && n.anc.child[0] == n)
 }
 
+func isField(n *node) bool {
+	return n.kind == selectorExpr && len(n.child) > 0 && n.child[0].typ != nil && isStruct(n.child[0].typ)
+}
+
 // isNewDefine returns true if node refers to a new definition
 func isNewDefine(n *node, sc *scope) bool {
 	if n.ident == "_" {
@@ -1914,4 +1928,13 @@ func isValueUntyped(v reflect.Value) bool {
 	}
 	t := v.Type()
 	return t.String() == t.Kind().String()
+}
+
+// InternalFuncType returns an interpreter defined function type if matched, or nil.
+// It is meant to be called on binary function nodes to unwrap their original type.
+func internalFuncType(n *node) *itype {
+	if n.kind == selectorExpr && len(n.child) > 0 && n.child[0].typ.cat == structT {
+		return n.typ.val
+	}
+	return nil
 }

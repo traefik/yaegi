@@ -264,7 +264,9 @@ func assign(n *node) {
 			svalue[i] = genValueInterface(src)
 		case (dest.typ.cat == valueT || dest.typ.cat == errorT) && dest.typ.rtype.Kind() == reflect.Interface:
 			svalue[i] = genInterfaceWrapper(src, dest.typ.rtype)
-		case dest.typ.cat == valueT && src.typ.cat == funcT:
+		case src.typ.cat == funcT && dest.typ.cat == valueT:
+			svalue[i] = genFunctionWrapper(src)
+		case src.typ.cat == funcT && isField(dest):
 			svalue[i] = genFunctionWrapper(src)
 		case dest.typ.cat == funcT && src.typ.cat == valueT:
 			svalue[i] = genValueNode(src)
@@ -708,19 +710,24 @@ func call(n *node) {
 	}
 
 	n.exec = func(f *frame) bltn {
-		def := value(f).Interface().(*node)
+		var def *node
+		var ok bool
+		bf := value(f)
+		if def, ok = bf.Interface().(*node); ok {
+			bf = def.rval
+		}
 
 		// Call bin func if defined
-		if def.rval.IsValid() {
+		if bf.IsValid() {
 			in := make([]reflect.Value, len(values))
 			for i, v := range values {
 				in[i] = v(f)
 			}
 			if goroutine {
-				go def.rval.Call(in)
+				go bf.Call(in)
 				return tnext
 			}
-			out := def.rval.Call(in)
+			out := bf.Call(in)
 			for i, v := range rvalues {
 				if v != nil {
 					v(f).Set(out[i])

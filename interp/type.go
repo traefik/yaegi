@@ -619,6 +619,8 @@ func (t *itype) finalize() (*itype, error) {
 		sym, _, found := t.scope.lookup(t.name)
 		if found && !sym.typ.incomplete {
 			sym.typ.method = append(sym.typ.method, t.method...)
+			t.method = sym.typ.method
+			t.incomplete = false
 			return sym.typ, nil
 		}
 		m := t.method
@@ -1017,12 +1019,17 @@ func isInterface(t *itype) bool {
 func isStruct(t *itype) bool {
 	// Test first for a struct category, because a recursive interpreter struct may be
 	// represented by an interface{} at reflect level.
-	if t.cat == structT {
+	switch t.cat {
+	case structT:
 		return true
+	case aliasT, ptrT:
+		return isStruct(t.val)
+	case valueT:
+		k := t.rtype.Kind()
+		return k == reflect.Struct || (k == reflect.Ptr && t.rtype.Elem().Kind() == reflect.Struct)
+	default:
+		return false
 	}
-	rt := t.TypeOf()
-	k := rt.Kind()
-	return k == reflect.Struct || (k == reflect.Ptr && rt.Elem().Kind() == reflect.Struct)
 }
 
 func isBool(t *itype) bool { return t.TypeOf().Kind() == reflect.Bool }
