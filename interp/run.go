@@ -1830,14 +1830,26 @@ func rangeMap(n *node) {
 	if len(n.child) == 4 {
 		index1 := n.child[1].findex  // map value location in frame
 		value = genValue(n.child[2]) // map
-		n.exec = func(f *frame) bltn {
-			iter := f.data[index2].Interface().(*reflect.MapIter)
-			if !iter.Next() {
-				return fnext
+		if n.child[1].typ.cat == interfaceT {
+			n.exec = func(f *frame) bltn {
+				iter := f.data[index2].Interface().(*reflect.MapIter)
+				if !iter.Next() {
+					return fnext
+				}
+				f.data[index0].Set(iter.Key())
+				f.data[index1].Set(iter.Value().Elem())
+				return tnext
 			}
-			f.data[index0].Set(iter.Key())
-			f.data[index1].Set(iter.Value())
-			return tnext
+		} else {
+			n.exec = func(f *frame) bltn {
+				iter := f.data[index2].Interface().(*reflect.MapIter)
+				if !iter.Next() {
+					return fnext
+				}
+				f.data[index0].Set(iter.Key())
+				f.data[index1].Set(iter.Value())
+				return tnext
+			}
 		}
 	} else {
 		value = genValue(n.child[1]) // map
