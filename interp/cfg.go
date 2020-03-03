@@ -464,7 +464,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
 					}
 				default:
-					// Detect invalid float truncate
+					// Detect invalid float truncate.
 					if isInt(t0) && isFloat(t1) {
 						err = src.cfgErrorf("invalid float truncate")
 						return
@@ -475,7 +475,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				// Propagate type
 				// TODO: Check that existing destination type matches source type
 				switch {
-				case n.action == aAssign && src.action == aCall:
+				case n.action == aAssign && src.action == aCall && dest.typ.cat != interfaceT:
+					// Call action may perform the assignment directly.
 					n.gen = nop
 					src.level = level
 					src.findex = dest.findex
@@ -483,7 +484,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						src.typ = dest.typ
 					}
 				case n.action == aAssign && src.action == aRecv:
-					// Assign by reading from a receiving channel
+					// Assign by reading from a receiving channel.
 					n.gen = nop
 					src.findex = dest.findex // Set recv address to LHS
 					dest.typ = src.typ
@@ -492,16 +493,16 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					src.findex = dest.findex
 					src.level = level
 				case src.kind == basicLit:
-					// TODO: perform constant folding and propagation here
+					// TODO: perform constant folding and propagation here.
 					switch {
 					case dest.typ.cat == interfaceT:
 					case isComplex(dest.typ.TypeOf()):
-						// value set in genValue
+						// Value set in genValue.
 					case !src.rval.IsValid():
-						// Assign to nil
+						// Assign to nil.
 						src.rval = reflect.New(dest.typ.TypeOf()).Elem()
 					default:
-						// Convert literal value to destination type
+						// Convert literal value to destination type.
 						src.rval = src.rval.Convert(dest.typ.TypeOf())
 						src.typ = dest.typ
 					}
