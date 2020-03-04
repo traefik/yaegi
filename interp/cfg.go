@@ -777,7 +777,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			case isBinCall(n):
 				n.gen = callBin
 				if typ := n.child[0].typ.rtype; typ.NumOut() > 0 {
-					if funcType := internalFuncType(n.child[0]); funcType != nil {
+					if funcType := n.child[0].typ.val; funcType != nil {
 						// Use the original unwrapped function type, to allow future field and
 						// methods resolutions, otherwise impossible on the opaque bin type.
 						n.typ = funcType.ret[0]
@@ -1928,13 +1928,4 @@ func isValueUntyped(v reflect.Value) bool {
 	}
 	t := v.Type()
 	return t.String() == t.Kind().String()
-}
-
-// InternalFuncType returns an interpreter defined function type if matched, or nil.
-// It is meant to be called on binary function nodes to unwrap their original type.
-func internalFuncType(n *node) *itype {
-	if n.kind == selectorExpr && len(n.child) > 0 && n.child[0].typ.cat == structT {
-		return n.typ.val
-	}
-	return nil
 }
