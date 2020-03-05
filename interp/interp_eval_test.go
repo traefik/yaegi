@@ -525,7 +525,11 @@ func eval(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
 	t.Helper()
 	res, err := i.Eval(src)
 	if err != nil {
-		t.Fatal(err)
+		t.Logf("Error: %v", err)
+		if e, ok := err.(interp.Panic); ok {
+			t.Logf(string(e.Stack))
+		}
+		t.FailNow()
 	}
 	return res
 }
@@ -541,7 +545,11 @@ func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expecte
 	}
 
 	if err != nil {
-		t.Fatalf("got an error %v", err)
+		t.Logf("got an error: %v", err)
+		if e, ok := err.(interp.Panic); ok {
+			t.Logf(string(e.Stack))
+		}
+		t.FailNow()
 	}
 
 	if fmt.Sprintf("%v", res) != expectedRes {
