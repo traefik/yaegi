@@ -1680,12 +1680,12 @@ func destType(n *node) *itype {
 	}
 }
 
-// compositeLit creates and populates a struct object
-func compositeLit(n *node) {
+// doCompositeLit creates and populates a struct object
+func doCompositeLit(n *node, hasType bool) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child
-	if !n.typ.untyped {
+	if hasType {
 		child = n.child[1:]
 	}
 	destInterface := destType(n).cat == interfaceT
@@ -1717,12 +1717,15 @@ func compositeLit(n *node) {
 	}
 }
 
-// compositeSparse creates a struct Object, filling fields from sparse key-values
-func compositeSparse(n *node) {
+func compositeLit(n *node)       { doCompositeLit(n, true) }
+func compositeLitNotype(n *node) { doCompositeLit(n, false) }
+
+// doCompositeSparse creates a struct Object, filling fields from sparse key-values
+func doCompositeSparse(n *node, hasType bool) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child
-	if !n.typ.untyped {
+	if hasType {
 		child = n.child[1:]
 	}
 
@@ -1751,6 +1754,9 @@ func compositeSparse(n *node) {
 		return next
 	}
 }
+
+func compositeSparse(n *node)       { doCompositeSparse(n, true) }
+func compositeSparseNotype(n *node) { doCompositeSparse(n, false) }
 
 func empty(n *node) {}
 
