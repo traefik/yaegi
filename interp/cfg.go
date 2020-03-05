@@ -1906,7 +1906,7 @@ func compositeGenerator(n *node, sc *scope) (gen bltnGenerator) {
 			log.Panic(n.cfgErrorf("compositeGenerator not implemented for type kind: %s", k))
 		}
 	}
-	return
+	return gen
 }
 
 // arrayTypeLen returns the node's array length. If the expression is an
