@@ -406,6 +406,20 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			sc.sym[n.ident] = &symbol{kind: typeSym, typ: t}
 		}
 
+	case indexExpr:
+		var lt *itype
+		if lt, err = nodeType(interp, sc, n.child[0]); err != nil {
+			return nil, err
+		}
+		if lt.incomplete {
+			t.incomplete = true
+			break
+		}
+		switch lt.cat {
+		case arrayT, mapT:
+			t = lt.val
+		}
+
 	case interfaceType:
 		t.cat = interfaceT
 		if sname := typeName(n); sname != "" {

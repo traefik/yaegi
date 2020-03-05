@@ -840,7 +840,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				n.findex = sc.add(n.typ)
 			}
 			// TODO: Check that composite literal expr matches corresponding type
-			n.gen = compositeGenerator(n)
+			n.gen = compositeGenerator(n, sc)
 
 		case fallthroughtStmt:
 			if n.anc.kind != caseBody {
@@ -1869,21 +1869,32 @@ func gotoLabel(s *symbol) {
 	}
 }
 
-func compositeGenerator(n *node) (gen bltnGenerator) {
+func compositeGenerator(n *node, sc *scope) (gen bltnGenerator) {
 	switch n.typ.cat {
 	case aliasT, ptrT:
 		n.typ.val.untyped = n.typ.untyped
 		n.typ = n.typ.val
-		gen = compositeGenerator(n)
+		gen = compositeGenerator(n, sc)
 	case arrayT:
 		gen = arrayLit
 	case mapT:
 		gen = mapLit
 	case structT:
-		if len(n.child) > 0 && n.lastChild().kind == keyValueExpr {
-			gen = compositeSparse
-		} else {
-			gen = compositeLit
+		switch {
+		case len(n.child) == 0:
+			gen = compositeLitNotype
+		case n.lastChild().kind == keyValueExpr:
+			if n.child[0].isType(sc) {
+				gen = compositeSparse
+			} else {
+				gen = compositeSparseNotype
+			}
+		default:
+			if n.child[0].isType(sc) {
+				gen = compositeLit
+			} else {
+				gen = compositeLitNotype
+			}
 		}
 	case valueT:
 		switch k := n.typ.rtype.Kind(); k {
@@ -1895,7 +1906,7 @@ func compositeGenerator(n *node) (gen bltnGenerator) {
 			log.Panic(n.cfgErrorf("compositeGenerator not implemented for type kind: %s", k))
 		}
 	}
-	return
+	return gen
 }
 
 // arrayTypeLen returns the node's array length. If the expression is an
