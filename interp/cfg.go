@@ -1132,7 +1132,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					}
 				case n.typ.rtype.Kind() == reflect.Struct:
 					if field, ok := n.typ.rtype.FieldByName(n.child[1].ident); ok {
-						log.Println(n.index, "selector bin method #2.1")
 						n.typ = &itype{cat: valueT, rtype: field.Type}
 						n.val = field.Index
 						n.gen = getIndexSeq
@@ -1140,7 +1139,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						// method lookup failed on type, now lookup on pointer to type
 						pt := reflect.PtrTo(n.typ.rtype)
 						if m2, ok2 := pt.MethodByName(n.child[1].ident); ok2 {
-							log.Println(n.index, "selector bin method #2.2")
 							n.val = m2.Index
 							n.gen = getIndexBinPtrMethod
 							n.typ = &itype{cat: valueT, rtype: m2.Type}
