@@ -668,8 +668,7 @@ func call(n *node) {
 	}
 
 	if n.anc.kind == deferStmt {
-		// Resolve function and input args, but instead of executing,
-		// store function call in frame for deferred execution.
+		// Store function call in frame for deferred execution.
 		value = genFunctionWrapper(n.child[0])
 		n.exec = func(f *frame) bltn {
 			val := make([]reflect.Value, len(values)+1)
@@ -868,8 +867,7 @@ func callBin(n *node) {
 
 	switch {
 	case n.anc.kind == deferStmt:
-		// Resolve function and input args, but instead of executing,
-		// store function call in frame for deferred execution.
+		// Store function call in frame for deferred execution.
 		n.exec = func(f *frame) bltn {
 			val := make([]reflect.Value, l+1)
 			val[0] = value(f)
