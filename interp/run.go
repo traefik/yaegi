@@ -29,7 +29,6 @@ var builtin = [...]bltnGenerator{
 	aCase:         _case,
 	aCompositeLit: arrayLit,
 	aDec:          dec,
-	aDefer:        _defer,
 	aEqual:        equal,
 	aGetFunc:      getFunc,
 	aGreater:      greater,
@@ -597,47 +596,6 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 	}
 }
 
-func _defer(n *node) {
-	tnext := getExec(n.tnext)
-	values := make([]func(*frame) reflect.Value, len(n.child[0].child))
-	var method func(*frame) reflect.Value
-
-	for i, c := range n.child[0].child {
-		if c.typ.cat == funcT {
-			values[i] = genFunctionWrapper(c)
-		} else {
-			if c.recv != nil {
-				// defer a method on a binary obj
-				mi := c.val.(int)
-				m := genValue(c.child[0])
-				method = func(f *frame) reflect.Value { return m(f).Method(mi) }
-			}
-			values[i] = genValue(c)
-		}
-	}
-
-	if method != nil {
-		n.exec = func(f *frame) bltn {
-			val := make([]reflect.Value, len(values))
-			val[0] = method(f)
-			for i, v := range values[1:] {
-				val[i+1] = v(f)
-			}
-			f.deferred = append([][]reflect.Value{val}, f.deferred...)
-			return tnext
-		}
-	} else {
-		n.exec = func(f *frame) bltn {
-			val := make([]reflect.Value, len(values))
-			for i, v := range values {
-				val[i] = v(f)
-			}
-			f.deferred = append([][]reflect.Value{val}, f.deferred...)
-			return tnext
-		}
-	}
-}
-
 func call(n *node) {
 	goroutine := n.anc.kind == goStmt
 	var method bool
@@ -707,6 +665,22 @@ func call(n *node) {
 			j := n.findex + i
 			rvalues[i] = func(f *frame) reflect.Value { return f.data[j] }
 		}
+	}
+
+	if n.anc.kind == deferStmt {
+		// Resolve function and input args, but instead of executing,
+		// store function call in frame for deferred execution.
+		value = genFunctionWrapper(n.child[0])
+		n.exec = func(f *frame) bltn {
+			val := make([]reflect.Value, len(values)+1)
+			val[0] = value(f)
+			for i, v := range values {
+				val[i+1] = v(f)
+			}
+			f.deferred = append([][]reflect.Value{val}, f.deferred...)
+			return tnext
+		}
+		return
 	}
 
 	n.exec = func(f *frame) bltn {
@@ -893,8 +867,20 @@ func callBin(n *node) {
 	l := len(values)
 
 	switch {
+	case n.anc.kind == deferStmt:
+		// Resolve function and input args, but instead of executing,
+		// store function call in frame for deferred execution.
+		n.exec = func(f *frame) bltn {
+			val := make([]reflect.Value, l+1)
+			val[0] = value(f)
+			for i, v := range values {
+				val[i+1] = v(f)
+			}
+			f.deferred = append([][]reflect.Value{val}, f.deferred...)
+			return tnext
+		}
 	case n.anc.kind == goStmt:
-		// Execute function in a goroutine, discard results
+		// Execute function in a goroutine, discard results.
 		n.exec = func(f *frame) bltn {
 			in := make([]reflect.Value, l)
 			for i, v := range values {
@@ -904,7 +890,7 @@ func callBin(n *node) {
 			return tnext
 		}
 	case fnext != nil:
-		// Handle branching according to boolean result
+		// Handle branching according to boolean result.
 		n.exec = func(f *frame) bltn {
 			in := make([]reflect.Value, l)
 			for i, v := range values {
