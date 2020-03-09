@@ -1326,14 +1326,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			}
 			c := clauses[l-1]
 			c.tnext = c.lastChild().start
-			if n.child[0].action == aAssign &&
-				(n.child[0].child[0].kind != typeAssertExpr || len(n.child[0].child[0].child) > 1) {
-				// switch init statement is defined
-				n.start = n.child[0].start
-				n.child[0].tnext = sbn.start
-			} else {
-				n.start = sbn.start
-			}
+			n.start = n.child[0].start
+			n.child[0].tnext = sbn.start
 			sc = sc.pop()
 
 		case switchIfStmt: // like an if-else chain
@@ -1360,16 +1354,13 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				// If last case body statement is a fallthrough, then jump to next case body
 				if i < l-1 && len(body.child) > 0 && body.lastChild().kind == fallthroughtStmt {
 					body.tnext = clauses[i+1].lastChild().start
+				} else {
+					body.tnext = n
 				}
 			}
 			sbn.start = clauses[0].start
-			if n.child[0].action == aAssign {
-				// switch init statement is defined
-				n.start = n.child[0].start
-				n.child[0].tnext = sbn.start
-			} else {
-				n.start = sbn.start
-			}
+			n.start = n.child[0].start
+			n.child[0].tnext = sbn.start
 			sc = sc.pop()
 
 		case typeAssertExpr:
