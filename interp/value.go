@@ -164,7 +164,7 @@ func genValueInterface(n *node) func(*frame) reflect.Value {
 	return func(f *frame) reflect.Value {
 		v := value(f)
 		nod := n
-		for {
+		for v.IsValid() {
 			// traverse interface indirections to find out concrete type
 			vi, ok := v.Interface().(valueInterface)
 			if !ok {

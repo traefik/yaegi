@@ -1096,46 +1096,74 @@ func getIndexMap2(n *node) {
 	value2 := genValue(n.anc.child[1]) // status
 	next := getExec(n.tnext)
 	typ := n.anc.child[0].typ
+	doValue := n.anc.child[0].ident != "_"
+	doStatus := n.anc.child[1].ident != "_"
 
+	if !doValue && !doStatus {
+		nop(n)
+		return
+	}
 	if n.child[1].rval.IsValid() { // constant map index
 		mi := n.child[1].rval
-		if typ.cat == interfaceT {
+		switch {
+		case !doValue:
+			n.exec = func(f *frame) bltn {
+				v := value0(f).MapIndex(mi)
+				value2(f).SetBool(v.IsValid())
+				return next
+			}
+		case typ.cat == interfaceT:
 			n.exec = func(f *frame) bltn {
 				v := value0(f).MapIndex(mi)
 				if v.IsValid() {
 					dest(f).Set(v.Elem())
 				}
-				value2(f).SetBool(v.IsValid())
+				if doStatus {
+					value2(f).SetBool(v.IsValid())
+				}
 				return next
 			}
-		} else {
+		default:
 			n.exec = func(f *frame) bltn {
 				v := value0(f).MapIndex(mi)
 				if v.IsValid() {
 					dest(f).Set(v)
 				}
-				value2(f).SetBool(v.IsValid())
+				if doStatus {
+					value2(f).SetBool(v.IsValid())
+				}
 				return next
 			}
 		}
 	} else {
 		value1 := genValue(n.child[1]) // map index
-		if typ.cat == interfaceT {
+		switch {
+		case !doValue:
+			n.exec = func(f *frame) bltn {
+				v := value0(f).MapIndex(value1(f))
+				value2(f).SetBool(v.IsValid())
+				return next
+			}
+		case typ.cat == interfaceT:
 			n.exec = func(f *frame) bltn {
 				v := value0(f).MapIndex(value1(f))
 				if v.IsValid() {
 					dest(f).Set(v.Elem())
 				}
-				value2(f).SetBool(v.IsValid())
+				if doStatus {
+					value2(f).SetBool(v.IsValid())
+				}
 				return next
 			}
-		} else {
+		default:
 			n.exec = func(f *frame) bltn {
 				v := value0(f).MapIndex(value1(f))
 				if v.IsValid() {
 					dest(f).Set(v)
 				}
-				value2(f).SetBool(v.IsValid())
+				if doStatus {
+					value2(f).SetBool(v.IsValid())
+				}
 				return next
 			}
 		}
