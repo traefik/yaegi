@@ -936,7 +936,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			sc = sc.pop()
 			err = genRun(n)
 
-		case goStmt:
+		case deferStmt, goStmt:
 			wireChild(n)
 
 		case identExpr:
