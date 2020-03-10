@@ -482,7 +482,6 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 	if def, ok = n.val.(*node); !ok {
 		return genValueAsFunctionWrapper(n)
 	}
-	setExec(def.child[3].start)
 	start := def.child[3].start
 	numRet := len(def.typ.ret)
 	var rcvr func(*frame) reflect.Value
