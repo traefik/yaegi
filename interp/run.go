@@ -901,8 +901,10 @@ func callBin(n *node) {
 			return fnext
 		}
 	default:
-		switch n.anc.kind {
-		case defineStmt, assignStmt, defineXStmt, assignXStmt:
+		switch n.anc.action {
+		case aAssign, aAssignX:
+			// The function call is part of an assign expression, we write results direcly
+			// to assigned location, to avoid an additional assign operation.
 			rvalues := make([]func(*frame) reflect.Value, funcType.NumOut())
 			for i := range rvalues {
 				c := n.anc.child[i]
