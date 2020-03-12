@@ -1219,6 +1219,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				} else {
 					n.gen = getIndexSeqMethod
 				}
+				n.recv = &receiver{node: n.child[0], index: lind}
 				n.val = append([]int{m.Index}, lind...)
 				n.typ = &itype{cat: valueT, rtype: m.Type}
 			} else if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {

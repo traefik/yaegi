@@ -871,13 +871,11 @@ func (t *itype) lookupMethod(name string) (*node, []int) {
 }
 
 // lookupBinMethod returns a method and a path to access a field in a struct object (the receiver)
-func (t *itype) lookupBinMethod(name string) (reflect.Method, []int, bool, bool) {
-	var isPtr bool
+func (t *itype) lookupBinMethod(name string) (m reflect.Method, index []int, isPtr bool, ok bool) {
 	if t.cat == ptrT {
 		return t.val.lookupBinMethod(name)
 	}
-	var index []int
-	m, ok := t.TypeOf().MethodByName(name)
+	m, ok = t.TypeOf().MethodByName(name)
 	if !ok {
 		m, ok = reflect.PtrTo(t.TypeOf()).MethodByName(name)
 		isPtr = ok

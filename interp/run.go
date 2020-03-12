@@ -803,7 +803,7 @@ func pindex(i, variadic int) int {
 	return variadic
 }
 
-// Call a function from a bin import, accessible through reflect
+// Callbin calls a function from a bin import, accessible through reflect.
 func callBin(n *node) {
 	tnext := getExec(n.tnext)
 	fnext := getExec(n.fnext)
@@ -815,9 +815,9 @@ func callBin(n *node) {
 	if funcType.IsVariadic() {
 		variadic = funcType.NumIn() - 1
 	}
-	// method signature obtained from reflect.Type include receiver as 1st arg, except for interface types
+	// A method signature obtained from reflect.Type includes receiver as 1st arg, except for interface types.
 	rcvrOffset := 0
-	if recv := n.child[0].recv; recv != nil && recv.node.typ.TypeOf().Kind() != reflect.Interface {
+	if recv := n.child[0].recv; recv != nil && !isInterface(recv.node.typ) {
 		if funcType.NumIn() > len(child) {
 			rcvrOffset = 1
 		}
