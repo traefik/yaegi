@@ -565,7 +565,7 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 		methods[i], indexes[i] = n.typ.lookupMethod(names[i])
 		if methods[i] == nil && n.typ.cat != nilT {
 			// interpreted method not found, look for binary method, possibly embedded
-			_, indexes[i], _, _ = n.typ.lookupBinMethod(names[i])
+			_, indexes[i], _, _, _ = n.typ.lookupBinMethod(names[i])
 		}
 	}
 	wrap := n.interp.getWrapper(typ)
