@@ -495,7 +495,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		default:
 			if m, _ := lt.lookupMethod(name); m != nil {
 				t, err = nodeType(interp, sc, m.child[2])
-			} else if bm, _, _, _, ok := lt.lookupBinMethod(name); ok {
+			} else if bm, _, _, ok := lt.lookupBinMethod(name); ok {
 				t = &itype{cat: valueT, rtype: bm.Type, isBinMethod: true}
 			} else if ti := lt.lookupField(name); len(ti) > 0 {
 				t = lt.fieldSeq(ti)
@@ -871,7 +871,7 @@ func (t *itype) lookupMethod(name string) (*node, []int) {
 }
 
 // lookupBinMethod returns a method and a path to access a field in a struct object (the receiver)
-func (t *itype) lookupBinMethod(name string) (m reflect.Method, index []int, isPtr bool, hasRecvr bool, ok bool) {
+func (t *itype) lookupBinMethod(name string) (m reflect.Method, index []int, isPtr bool, ok bool) {
 	if t.cat == ptrT {
 		return t.val.lookupBinMethod(name)
 	}
@@ -883,18 +883,14 @@ func (t *itype) lookupBinMethod(name string) (m reflect.Method, index []int, isP
 	if !ok {
 		for i, f := range t.field {
 			if f.embed {
-				if m2, index2, isPtr2, hasRecvr2, ok2 := f.typ.lookupBinMethod(name); ok2 {
+				if m2, index2, isPtr2, ok2 := f.typ.lookupBinMethod(name); ok2 {
 					index = append([]int{i}, index2...)
-					return m2, index, isPtr2, hasRecvr2, ok2
+					return m2, index, isPtr2, ok2
 				}
 			}
 		}
 	}
-	// The method returned by reflect.Type.MethodByName() includes
-	// a receiver for non interface types as first argument.
-	// For interface types, the receiver must not be provided.
-	hasRecvr = !isInterface(t)
-	return m, index, isPtr, hasRecvr, ok
+	return m, index, isPtr, ok
 }
 
 func exportName(s string) string {
