@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
+	"strings"
 )
 
 type S struct {
@@ -11,8 +11,9 @@ type S struct {
 
 func main() {
 	var s S
-	_, err := s.Get("url")
-	fmt.Println(err)
+	if _, err := s.Get("url"); err != nil {
+		println(strings.Contains(err.Error(), "unsupported protocol scheme"))
+	}
 	return
 }
 
