@@ -18,4 +18,4 @@ func main() {
 }
 
 // Output:
-// Get "url": unsupported protocol scheme ""
+// true
