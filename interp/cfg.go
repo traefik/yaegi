@@ -1214,7 +1214,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.recv = &receiver{node: n.child[0], index: lind}
 				}
 			} else if m, lind, isPtr, ok := n.typ.lookupBinMethod(n.child[1].ident); ok {
-				if isPtr {
+				if isPtr && n.typ.fieldSeq(lind).cat != ptrT {
 					n.gen = getIndexSeqPtrMethod
 				} else {
 					n.gen = getIndexSeqMethod
