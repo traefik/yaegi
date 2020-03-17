@@ -111,6 +111,7 @@ type itype struct {
 	size        int           // Size of array if ArrayT
 	rtype       reflect.Type  // Reflection type if ValueT, or nil
 	incomplete  bool          // true if type must be parsed again (out of order declarations)
+	recursive   bool          // true if the type has an element which refer to itself
 	untyped     bool          // true for a literal value (string or number)
 	sizedef     bool          // true if array size is computed from type definition
 	isBinMethod bool          // true if the type refers to a bin method function
@@ -902,7 +903,7 @@ func exportName(s string) string {
 
 var interf = reflect.TypeOf(new(interface{})).Elem()
 
-func (t *itype) refType(defined map[string]bool) reflect.Type {
+func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.Type {
 	if t.rtype != nil {
 		return t.rtype
 	}
@@ -913,50 +914,56 @@ func (t *itype) refType(defined map[string]bool) reflect.Type {
 			panic(err)
 		}
 	}
-	if t.val != nil && defined[t.val.name] && !t.val.incomplete && t.val.rtype == nil {
+	if t.val != nil && defined[t.val.name] != nil && !t.val.incomplete && t.val.rtype == nil {
 		// Replace reference to self (direct or indirect) by an interface{} to handle
 		// recursive types with reflect.
 		t.val.rtype = interf
+		defined[t.val.name].recursive = true
 	}
 	switch t.cat {
 	case aliasT:
-		t.rtype = t.val.refType(defined)
+		t.rtype = t.val.refType(defined, wrapRecursive)
 	case arrayT, variadicT:
 		if t.sizedef {
-			t.rtype = reflect.ArrayOf(t.size, t.val.refType(defined))
+			t.rtype = reflect.ArrayOf(t.size, t.val.refType(defined, wrapRecursive))
 		} else {
-			t.rtype = reflect.SliceOf(t.val.refType(defined))
+			t.rtype = reflect.SliceOf(t.val.refType(defined, wrapRecursive))
 		}
 	case chanT:
-		t.rtype = reflect.ChanOf(reflect.BothDir, t.val.refType(defined))
+		t.rtype = reflect.ChanOf(reflect.BothDir, t.val.refType(defined, wrapRecursive))
 	case errorT:
 		t.rtype = reflect.TypeOf(new(error)).Elem()
 	case funcT:
 		in := make([]reflect.Type, len(t.arg))
 		out := make([]reflect.Type, len(t.ret))
+		//wrap := false
 		for i, v := range t.arg {
-			in[i] = v.refType(defined)
+			in[i] = v.refType(defined, true)
 		}
 		for i, v := range t.ret {
-			out[i] = v.refType(defined)
+			out[i] = v.refType(defined, true)
 		}
 		t.rtype = reflect.FuncOf(in, out, false)
 	case interfaceT:
 		t.rtype = interf
 	case mapT:
-		t.rtype = reflect.MapOf(t.key.refType(defined), t.val.refType(defined))
+		t.rtype = reflect.MapOf(t.key.refType(defined, wrapRecursive), t.val.refType(defined, wrapRecursive))
 	case ptrT:
-		t.rtype = reflect.PtrTo(t.val.refType(defined))
+		t.rtype = reflect.PtrTo(t.val.refType(defined, wrapRecursive))
 	case structT:
 		if t.name != "" {
-			defined[t.name] = true
+			defined[t.name] = t
 		}
 		var fields []reflect.StructField
 		for _, f := range t.field {
-			field := reflect.StructField{Name: exportName(f.name), Type: f.typ.refType(defined), Tag: reflect.StructTag(f.tag)}
+			field := reflect.StructField{Name: exportName(f.name), Type: f.typ.refType(defined, wrapRecursive), Tag: reflect.StructTag(f.tag)}
 			fields = append(fields, field)
 		}
-		t.rtype = reflect.StructOf(fields)
+		if t.recursive && wrapRecursive {
+			t.rtype = interf
+		} else {
+			t.rtype = reflect.StructOf(fields)
+		}
 	default:
 		if z, _ := t.zero(); z.IsValid() {
 			t.rtype = z.Type()
@@ -967,7 +974,7 @@ func (t *itype) refType(defined map[string]bool) reflect.Type {
 
 // TypeOf returns the reflection type of dynamic interpreter type t.
 func (t *itype) TypeOf() reflect.Type {
-	return t.refType(map[string]bool{})
+	return t.refType(map[string]*itype{}, false)
 }
 
 func (t *itype) frameType() (r reflect.Type) {
