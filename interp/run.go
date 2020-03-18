@@ -2393,14 +2393,16 @@ func recv2(n *node) {
 }
 
 func convertLiteralValue(n *node, t reflect.Type) {
-	// Skip non-constant values, undefined target type or interface target type.
-	if !(n.kind == basicLit || n.rval.IsValid()) || t == nil || t.Kind() == reflect.Interface {
-		return
-	}
-	if n.rval.IsValid() {
+	switch {
+	case n.typ.cat == nilT:
+		// Create a zero value of target type.
+		n.rval = reflect.New(t).Elem()
+	case !(n.kind == basicLit || n.rval.IsValid()) || t == nil || t.Kind() == reflect.Interface:
+		// Skip non-constant values, undefined target type or interface target type.
+	case n.rval.IsValid():
 		// Convert constant value to target type.
 		n.rval = n.rval.Convert(t)
-	} else {
+	default:
 		// Create a zero value of target type.
 		n.rval = reflect.New(t).Elem()
 	}
