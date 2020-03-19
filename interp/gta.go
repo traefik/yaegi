@@ -1,8 +1,6 @@
 package interp
 
-import (
-	"reflect"
-)
+import "reflect"
 
 // gta performs a global types analysis on the AST, registering types,
 // variables and functions symbols at package level, prior to CFG.

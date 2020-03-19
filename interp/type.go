@@ -905,6 +905,9 @@ var interf = reflect.TypeOf(new(interface{})).Elem()
 
 func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.Type {
 	if t.rtype != nil {
+		if wrapRecursive && t.cat == structT && defined[t.name] != nil {
+			return interf
+		}
 		return t.rtype
 	}
 
