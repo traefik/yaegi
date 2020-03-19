@@ -4,7 +4,6 @@ package interp
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 )
 
@@ -583,7 +582,7 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 				if r := v.FieldByIndex(indexes[i]).MethodByName(names[i]); r.IsValid() {
 					w.Field(i).Set(v.FieldByIndex(indexes[i]).MethodByName(names[i]))
 				} else {
-					log.Println(n.cfgErrorf("genInterfaceWrapper error, no method %s", names[i]))
+					panic(n.cfgErrorf("genInterfaceWrapper error, no method %s", names[i]))
 				}
 				continue
 			}
