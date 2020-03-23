@@ -669,6 +669,10 @@ func call(n *node) {
 	if n.anc.kind == deferStmt {
 		// Store function call in frame for deferred execution.
 		value = genFunctionWrapper(n.child[0])
+		if method {
+			// The receiver is already passed in the function wrapper, skip it.
+			values = values[1:]
+		}
 		n.exec = func(f *frame) bltn {
 			val := make([]reflect.Value, len(values)+1)
 			val[0] = value(f)
