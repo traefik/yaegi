@@ -11,4 +11,4 @@ func main() {
 
 // Output:
 // nok 0
-// bye
+// bye 0

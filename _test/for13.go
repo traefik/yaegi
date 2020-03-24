@@ -10,4 +10,4 @@ func main() {
 }
 
 // Output:
-// bye
+// bye 0
