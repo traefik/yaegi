@@ -2,7 +2,7 @@ package main
 
 func main() {
 	a := 0
-	for ; true; a++ {
+	for ; false; a++ {
 		println("nok", a)
 		break
 	}
@@ -10,5 +10,4 @@ func main() {
 }
 
 // Output:
-// nok 0
 // bye
