@@ -863,10 +863,18 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as for condition")
 			}
-			n.start = cond.start
-			cond.tnext = body.start
+			if cond.rval.IsValid() {
+				// Condition is known at compile time, bypass test.
+				if cond.rval.Bool() {
+					n.start = body.start
+					body.tnext = body.start
+				}
+			} else {
+				n.start = cond.start
+				cond.tnext = body.start
+				body.tnext = cond.start
+			}
 			cond.fnext = n
-			body.tnext = cond.start
 			sc = sc.pop()
 
 		case forStmt2: // for init; cond; {}
@@ -875,10 +883,20 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				err = cond.cfgErrorf("non-bool used as for condition")
 			}
 			n.start = init.start
-			init.tnext = cond.start
+			if cond.rval.IsValid() {
+				// Condition is known at compile time, bypass test.
+				if cond.rval.Bool() {
+					init.tnext = body.start
+					body.tnext = body.start
+				} else {
+					init.tnext = n
+				}
+			} else {
+				init.tnext = cond.start
+				body.tnext = cond.start
+			}
 			cond.tnext = body.start
 			cond.fnext = n
-			body.tnext = cond.start
 			sc = sc.pop()
 
 		case forStmt3: // for ; cond; post {}
@@ -886,14 +904,22 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as for condition")
 			}
-			n.start = cond.start
+			if cond.rval.IsValid() {
+				// Condition is known at compile time, bypass test.
+				if cond.rval.Bool() {
+					n.start = body.start
+					post.tnext = body.start
+				}
+			} else {
+				n.start = cond.start
+				post.tnext = cond.start
+			}
 			cond.tnext = body.start
 			cond.fnext = n
 			body.tnext = post.start
-			post.tnext = cond.start
 			sc = sc.pop()
 
-		case forStmt3a: // for int; ; post {}
+		case forStmt3a: // for init; ; post {}
 			init, post, body := n.child[0], n.child[1], n.child[2]
 			n.start = init.start
 			init.tnext = body.start
@@ -907,11 +933,21 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				err = cond.cfgErrorf("non-bool used as for condition")
 			}
 			n.start = init.start
-			init.tnext = cond.start
+			if cond.rval.IsValid() {
+				// Condition is known at compile time, bypass test.
+				if cond.rval.Bool() {
+					init.tnext = body.start
+					post.tnext = body.start
+				} else {
+					init.tnext = n
+				}
+			} else {
+				init.tnext = cond.start
+				post.tnext = cond.start
+			}
 			cond.tnext = body.start
 			cond.fnext = n
 			body.tnext = post.start
-			post.tnext = cond.start
 			sc = sc.pop()
 
 		case forRangeStmt:
@@ -986,8 +1022,15 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as if condition")
 			}
-			n.start = cond.start
-			cond.tnext = tbody.start
+			if cond.rval.IsValid() {
+				// Condition is known at compile time, bypass test.
+				if cond.rval.Bool() {
+					n.start = tbody.start
+				}
+			} else {
+				n.start = cond.start
+				cond.tnext = tbody.start
+			}
 			cond.fnext = n
 			tbody.tnext = n
 			sc = sc.pop()
@@ -997,9 +1040,18 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as if condition")
 			}
-			n.start = cond.start
-			cond.tnext = tbody.start
-			cond.fnext = fbody.start
+			if cond.rval.IsValid() {
+				// Condition is known at compile time, bypass test and the useless branch.
+				if cond.rval.Bool() {
+					n.start = tbody.start
+				} else {
+					n.start = fbody.start
+				}
+			} else {
+				n.start = cond.start
+				cond.tnext = tbody.start
+				cond.fnext = fbody.start
+			}
 			tbody.tnext = n
 			fbody.tnext = n
 			sc = sc.pop()
@@ -1010,9 +1062,18 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				err = cond.cfgErrorf("non-bool used as if condition")
 			}
 			n.start = init.start
+			if cond.rval.IsValid() {
+				// Condition is known at compile time, bypass test.
+				if cond.rval.Bool() {
+					init.tnext = tbody.start
+				} else {
+					init.tnext = n
+				}
+			} else {
+				init.tnext = cond.start
+				cond.tnext = tbody.start
+			}
 			tbody.tnext = n
-			init.tnext = cond.start
-			cond.tnext = tbody.start
 			cond.fnext = n
 			sc = sc.pop()
 
@@ -1022,9 +1083,18 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				err = cond.cfgErrorf("non-bool used as if condition")
 			}
 			n.start = init.start
-			init.tnext = cond.start
-			cond.tnext = tbody.start
-			cond.fnext = fbody.start
+			if cond.rval.IsValid() {
+				// Condition is known at compile time, bypass test.
+				if cond.rval.Bool() {
+					init.tnext = tbody.start
+				} else {
+					init.tnext = fbody.start
+				}
+			} else {
+				init.tnext = cond.start
+				cond.tnext = tbody.start
+				cond.fnext = fbody.start
+			}
 			tbody.tnext = n
 			fbody.tnext = n
 			sc = sc.pop()
