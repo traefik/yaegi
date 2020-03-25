@@ -317,7 +317,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			sc = sc.pushBloc()
 
 		case switchStmt, switchIfStmt, typeSwitch:
-			// Make sure default clause is in last position
+			// Make sure default clause is in last position.
 			c := n.lastChild().child
 			if i, l := getDefault(n), len(c)-1; i >= 0 && i != l {
 				c[i], c[l] = c[l], c[i]
@@ -1378,33 +1378,56 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			fallthrough
 
 		case switchStmt:
+			sc = sc.pop()
 			sbn := n.lastChild() // switch block node
 			clauses := sbn.child
 			l := len(clauses)
-			// Chain case clauses
+			if l == 0 {
+				// Switch is empty
+				break
+			}
+			// Chain case clauses.
 			for i, c := range clauses[:l-1] {
-				c.fnext = clauses[i+1] // chain to next clause
-				body := c.lastChild()
-				c.tnext = body.start
-				if len(body.child) > 0 && body.lastChild().kind == fallthroughtStmt {
-					if n.kind == typeSwitch {
-						err = body.lastChild().cfgErrorf("cannot fallthrough in type switch")
-					}
-					body.tnext = clauses[i+1].lastChild().start
+				c.fnext = clauses[i+1] // Chain to next clause.
+				if len(c.child) == 0 {
+					c.tnext = n // Clause body is empty, exit.
 				} else {
-					body.tnext = n
+					body := c.lastChild()
+					c.tnext = body.start
+					if len(body.child) > 0 && body.lastChild().kind == fallthroughtStmt {
+						if n.kind == typeSwitch {
+							err = body.lastChild().cfgErrorf("cannot fallthrough in type switch")
+						}
+						if len(clauses[i+1].child) == 0 {
+							body.tnext = n // Fallthrough to next with empty body, just exit.
+						} else {
+							body.tnext = clauses[i+1].lastChild().start
+						}
+					} else {
+						body.tnext = n // Exit switch at end of clause body.
+					}
 				}
 			}
-			c := clauses[l-1]
-			c.tnext = c.lastChild().start
+			c := clauses[l-1] // Last clause.
+			if len(c.child) == 0 {
+				c.tnext = n // Clause body is empty, exit.
+			} else {
+				body := c.lastChild()
+				c.tnext = body.start
+				body.tnext = n
+			}
 			n.start = n.child[0].start
 			n.child[0].tnext = sbn.start
-			sc = sc.pop()
 
 		case switchIfStmt: // like an if-else chain
+			sc = sc.pop()
 			sbn := n.lastChild() // switch block node
 			clauses := sbn.child
 			l := len(clauses)
+			if l == 0 {
+				// Switch is empty
+				break
+			}
 			// Wire case clauses in reverse order so the next start node is already resolved when used.
 			for i := l - 1; i >= 0; i-- {
 				c := clauses[i]
@@ -1432,7 +1455,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			sbn.start = clauses[0].start
 			n.start = n.child[0].start
 			n.child[0].tnext = sbn.start
-			sc = sc.pop()
 
 		case typeAssertExpr:
 			if len(n.child) > 1 {
@@ -1646,11 +1668,16 @@ func genRun(nod *node) error {
 	return err
 }
 
-// Find default case clause index of a switch statement, if any
+// GetDefault return the index of default case clause in a switch statement, or -1.
 func getDefault(n *node) int {
 	for i, c := range n.lastChild().child {
-		if len(c.child) == 1 {
+		switch len(c.child) {
+		case 0:
 			return i
+		case 1:
+			if c.child[0].kind == caseBody {
+				return i
+			}
 		}
 	}
 	return -1
