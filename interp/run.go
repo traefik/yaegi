@@ -2594,56 +2594,94 @@ func slice0(n *node) {
 
 func isNil(n *node) {
 	var value func(*frame) reflect.Value
-	if n.child[0].typ.cat == funcT {
-		value = genValueAsFunctionWrapper(n.child[0])
+	c0 := n.child[0]
+	if c0.typ.cat == funcT {
+		value = genValueAsFunctionWrapper(c0)
 	} else {
-		value = genValue(n.child[0])
+		value = genValue(c0)
 	}
 	tnext := getExec(n.tnext)
 	dest := genValue(n)
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
-		n.exec = func(f *frame) bltn {
-			if value(f).IsNil() {
-				dest(f).SetBool(true)
-				return tnext
+		if c0.typ.cat == interfaceT {
+			n.exec = func(f *frame) bltn {
+				if (value(f).Interface().(valueInterface) == valueInterface{}) {
+					dest(f).SetBool(true)
+					return tnext
+				}
+				dest(f).SetBool(false)
+				return fnext
 			}
-			dest(f).SetBool(false)
-			return fnext
+		} else {
+			n.exec = func(f *frame) bltn {
+				if value(f).IsNil() {
+					dest(f).SetBool(true)
+					return tnext
+				}
+				dest(f).SetBool(false)
+				return fnext
+			}
 		}
 	} else {
-		n.exec = func(f *frame) bltn {
-			dest(f).SetBool(value(f).IsNil())
-			return tnext
+		if c0.typ.cat == interfaceT {
+			n.exec = func(f *frame) bltn {
+				dest(f).SetBool(value(f).Interface().(valueInterface) == valueInterface{})
+				return tnext
+			}
+		} else {
+			n.exec = func(f *frame) bltn {
+				dest(f).SetBool(value(f).IsNil())
+				return tnext
+			}
 		}
 	}
 }
 
 func isNotNil(n *node) {
 	var value func(*frame) reflect.Value
-	if n.child[0].typ.cat == funcT {
-		value = genValueAsFunctionWrapper(n.child[0])
+	c0 := n.child[0]
+	if c0.typ.cat == funcT {
+		value = genValueAsFunctionWrapper(c0)
 	} else {
-		value = genValue(n.child[0])
+		value = genValue(c0)
 	}
 	tnext := getExec(n.tnext)
 	dest := genValue(n)
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
-		n.exec = func(f *frame) bltn {
-			if value(f).IsNil() {
-				dest(f).SetBool(false)
-				return fnext
+		if c0.typ.cat == interfaceT {
+			n.exec = func(f *frame) bltn {
+				if (value(f).Interface().(valueInterface) == valueInterface{}) {
+					dest(f).SetBool(false)
+					return fnext
+				}
+				dest(f).SetBool(true)
+				return tnext
 			}
-			dest(f).SetBool(true)
-			return tnext
+		} else {
+			n.exec = func(f *frame) bltn {
+				if value(f).IsNil() {
+					dest(f).SetBool(false)
+					return fnext
+				}
+				dest(f).SetBool(true)
+				return tnext
+			}
 		}
 	} else {
-		n.exec = func(f *frame) bltn {
-			dest(f).SetBool(!value(f).IsNil())
-			return tnext
+		if c0.typ.cat == interfaceT {
+			n.exec = func(f *frame) bltn {
+				dest(f).SetBool(!(value(f).Interface().(valueInterface) == valueInterface{}))
+				return tnext
+			}
+		} else {
+			n.exec = func(f *frame) bltn {
+				dest(f).SetBool(!value(f).IsNil())
+				return tnext
+			}
 		}
 	}
 }
