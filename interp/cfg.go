@@ -1004,10 +1004,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						}
 					}
 					if sym.kind == varSym && sym.typ != nil && sym.typ.TypeOf().Kind() == reflect.Bool {
-						switch n.anc.kind {
-						case ifStmt0, ifStmt1, ifStmt2, ifStmt3, forStmt1, forStmt2, forStmt3, forStmt4:
-							n.gen = branch
-						}
+						fixBranch(n)
 					}
 				}
 				if n.sym != nil {
@@ -1666,6 +1663,17 @@ func genRun(nod *node) error {
 	}, nil)
 
 	return err
+}
+
+// FixBranch sets the branch action to the identExpr node if it is a bool
+// used in a conditional expression.
+func fixBranch(n *node) {
+	switch n.anc.kind {
+	case ifStmt0, ifStmt1, ifStmt2, ifStmt3, forStmt1, forStmt2, forStmt3, forStmt4:
+		n.gen = branch
+	case parenExpr:
+		fixBranch(n.anc)
+	}
 }
 
 // GetDefault return the index of default case clause in a switch statement, or -1.
