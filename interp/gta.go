@@ -63,7 +63,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 					}
 					val = src.rval
 				}
-				if typ.incomplete {
+				if !typ.isComplete() {
 					// Come back when type is known.
 					revisit = append(revisit, n)
 					return false
@@ -94,7 +94,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				if n.typ, err = nodeType(interp, sc, n.child[l]); err != nil {
 					return false
 				}
-				if n.typ.incomplete {
+				if !n.typ.isComplete() {
 					// Come back when type is known.
 					revisit = append(revisit, n)
 					return false
@@ -139,7 +139,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				// Add a function symbol in the package name space
 				sc.sym[n.child[1].ident] = &symbol{kind: funcSym, typ: n.typ, node: n, index: -1}
 			}
-			if n.typ.incomplete {
+			if !n.typ.isComplete() {
 				revisit = append(revisit, n)
 			}
 			return false
@@ -206,7 +206,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				n.typ.method = append(n.typ.method, sc.sym[typeName].typ.method...)
 			}
 			sc.sym[typeName].typ = n.typ
-			if n.typ.incomplete {
+			if !n.typ.isComplete() {
 				revisit = append(revisit, n)
 			}
 			return false
