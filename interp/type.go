@@ -654,6 +654,43 @@ func (t *itype) finalize() (*itype, error) {
 	return t, err
 }
 
+// isComplete returns true if type definition is complete.
+func (t *itype) isComplete() bool { return isComplete(t, map[string]bool{}) }
+
+func isComplete(t *itype, visited map[string]bool) bool {
+	if t.incomplete {
+		return false
+	}
+	if visited[t.name] {
+		return !t.incomplete
+	}
+	if t.name != "" {
+		visited[t.name] = true
+	}
+	switch t.cat {
+	case aliasT, arrayT, chanT, ptrT:
+		return isComplete(t.val, visited)
+	case funcT:
+		complete := true
+		for _, a := range t.arg {
+			complete = complete && isComplete(a, visited)
+		}
+		for _, a := range t.ret {
+			complete = complete && isComplete(a, visited)
+		}
+		return complete
+	case interfaceT, structT:
+		complete := true
+		for _, f := range t.field {
+			complete = complete && isComplete(f.typ, visited)
+		}
+		return complete
+	case nilT:
+		return false
+	}
+	return true
+}
+
 // Equals returns true if the given type is identical to the receiver one.
 func (t *itype) equals(o *itype) bool {
 	switch ti, oi := isInterface(t), isInterface(o); {
