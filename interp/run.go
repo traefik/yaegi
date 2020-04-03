@@ -121,30 +121,33 @@ func runCfg(n *node, f *frame) {
 }
 
 func typeAssertStatus(n *node) {
-	value := genValue(n.child[0])      // input value
+	c0, c1 := n.child[0], n.child[1]
+	value := genValue(c0)              // input value
 	value1 := genValue(n.anc.child[1]) // returned status
+	typ := c1.typ.rtype                // type to assert
 	next := getExec(n.tnext)
 
 	switch {
-	case n.child[0].typ.cat == valueT:
+	case c0.typ.cat == valueT:
 		n.exec = func(f *frame) bltn {
-			if !value(f).IsValid() || value(f).IsNil() {
+			v := value(f)
+			if !v.IsValid() || v.IsNil() {
 				value1(f).SetBool(false)
 			}
-			value1(f).SetBool(true)
+			value1(f).SetBool(v.Type().Implements(typ))
 			return next
 		}
-	case n.child[1].typ.cat == interfaceT:
+	case c1.typ.cat == interfaceT:
 		n.exec = func(f *frame) bltn {
 			_, ok := value(f).Interface().(valueInterface)
-			//value0(f).Set(reflect.ValueOf(valueInterface{v.node, v.value}))
+			// TODO: verify that value(f) implements asserted type.
 			value1(f).SetBool(ok)
 			return next
 		}
 	default:
 		n.exec = func(f *frame) bltn {
 			_, ok := value(f).Interface().(valueInterface)
-			//value0(f).Set(v.value)
+			// TODO: verify that value(f) implements asserted type.
 			value1(f).SetBool(ok)
 			return next
 		}
@@ -152,25 +155,29 @@ func typeAssertStatus(n *node) {
 }
 
 func typeAssert(n *node) {
-	value := genValue(n.child[0]) // input value
-	dest := genValue(n)           // returned result
+	c0, c1 := n.child[0], n.child[1]
+	value := genValue(c0) // input value
+	dest := genValue(n)   // returned result
 	next := getExec(n.tnext)
 
 	switch {
-	case n.child[0].typ.cat == valueT:
+	case c0.typ.cat == valueT:
 		n.exec = func(f *frame) bltn {
-			dest(f).Set(value(f).Elem())
+			v := value(f)
+			dest(f).Set(v.Elem())
 			return next
 		}
-	case n.child[1].typ.cat == interfaceT:
+	case c1.typ.cat == interfaceT:
 		n.exec = func(f *frame) bltn {
 			v := value(f).Interface().(valueInterface)
+			// TODO: verify that value(f) implements asserted type.
 			dest(f).Set(reflect.ValueOf(valueInterface{v.node, v.value}))
 			return next
 		}
 	default:
 		n.exec = func(f *frame) bltn {
 			v := value(f).Interface().(valueInterface)
+			// TODO: verify that value(f) implements asserted type.
 			dest(f).Set(v.value)
 			return next
 		}
@@ -195,6 +202,7 @@ func typeAssert2(n *node) {
 	case n.child[1].typ.cat == interfaceT:
 		n.exec = func(f *frame) bltn {
 			v, ok := value(f).Interface().(valueInterface)
+			// TODO: verify that value(f) implements asserted type.
 			value0(f).Set(reflect.ValueOf(valueInterface{v.node, v.value}))
 			value1(f).SetBool(ok)
 			return next
@@ -202,6 +210,7 @@ func typeAssert2(n *node) {
 	default:
 		n.exec = func(f *frame) bltn {
 			v, ok := value(f).Interface().(valueInterface)
+			// TODO: verify that value(f) implements asserted type.
 			value0(f).Set(v.value)
 			value1(f).SetBool(ok)
 			return next
