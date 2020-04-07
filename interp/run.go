@@ -580,17 +580,22 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 
 	return func(f *frame) reflect.Value {
 		v := value(f)
+		vv := v
 		switch v.Kind() {
 		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
 			if v.IsNil() {
 				return reflect.New(typ).Elem()
 			}
+			if v.Kind() == reflect.Ptr {
+				vv = v.Elem()
+			}
 		}
 		w := reflect.New(wrap).Elem()
 		for i, m := range methods {
 			if m == nil {
-				if r := v.FieldByIndex(indexes[i]).MethodByName(names[i]); r.IsValid() {
-					w.Field(i).Set(v.FieldByIndex(indexes[i]).MethodByName(names[i]))
+				o := vv.FieldByIndex(indexes[i])
+				if r := o.MethodByName(names[i]); r.IsValid() {
+					w.Field(i).Set(o.MethodByName(names[i]))
 				} else {
 					log.Println(n.cfgErrorf("genInterfaceWrapper error, no method %s", names[i]))
 				}
