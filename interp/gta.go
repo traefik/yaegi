@@ -73,7 +73,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 					return false
 				}
 				if typ.isBinMethod {
-					typ = &itype{cat: valueT, rtype: typ.methodCallType(), isBinMethod: true}
+					typ = &itype{cat: valueT, rtype: typ.methodCallType(), isBinMethod: true, scope: sc}
 				}
 				if sc.sym[dest.ident] == nil {
 					sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val}
@@ -163,10 +163,10 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 						if isBinType(v) {
 							typ = typ.Elem()
 						}
-						sc.sym[n] = &symbol{kind: binSym, typ: &itype{cat: valueT, rtype: typ}, rval: v}
+						sc.sym[n] = &symbol{kind: binSym, typ: &itype{cat: valueT, rtype: typ, scope: sc}, rval: v}
 					}
 				default: // import symbols in package namespace
-					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath}}
+					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath, scope: sc}}
 				}
 			} else if err = interp.importSrc(rpath, ipath); err == nil {
 				sc.types = interp.universe.types
@@ -179,7 +179,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 						}
 					}
 				default: // import symbols in package namespace
-					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: ipath}}
+					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: ipath, scope: sc}}
 				}
 			} else {
 				err = n.cfgErrorf("import %q error: %v", ipath, err)
@@ -192,7 +192,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				return false
 			}
 			if n.child[1].kind == identExpr {
-				n.typ = &itype{cat: aliasT, val: typ, name: typeName, path: rpath, field: typ.field, incomplete: typ.incomplete}
+				n.typ = &itype{cat: aliasT, val: typ, name: typeName, path: rpath, field: typ.field, incomplete: typ.incomplete, scope: sc}
 				copy(n.typ.method, typ.method)
 			} else {
 				n.typ = typ
