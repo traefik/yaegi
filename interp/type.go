@@ -278,7 +278,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					case isFloat64(t0) && isFloat64(t1):
 						t = sc.getType("complex128")
 					case nt0.untyped && isNumber(t0) && nt1.untyped && isNumber(t1):
-						t = &itype{cat: valueT, rtype: complexType}
+						t = &itype{cat: valueT, rtype: complexType, scope: sc}
 					case nt0.untyped && isFloat32(t1) || nt1.untyped && isFloat32(t0):
 						t = sc.getType("complex64")
 					case nt0.untyped && isFloat64(t1) || nt1.untyped && isFloat64(t0):
@@ -301,7 +301,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					case k == reflect.Complex128:
 						t = sc.getType("float64")
 					case t.untyped && isNumber(t.TypeOf()):
-						t = &itype{cat: valueT, rtype: floatType, untyped: true}
+						t = &itype{cat: valueT, rtype: floatType, untyped: true, scope: sc}
 					default:
 						err = n.cfgErrorf("invalid complex type %s", k)
 					}
@@ -312,7 +312,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				t, err = nodeType(interp, sc, n.child[1])
 			case "new":
 				t, err = nodeType(interp, sc, n.child[1])
-				t = &itype{cat: ptrT, val: t, incomplete: t.incomplete}
+				t = &itype{cat: ptrT, val: t, incomplete: t.incomplete, scope: sc}
 			case "recover":
 				t = sc.getType("interface{}")
 			}
@@ -326,7 +326,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			switch t.cat {
 			case valueT:
 				if t.rtype.NumOut() == 1 {
-					t = &itype{cat: valueT, rtype: t.rtype.Out(0)}
+					t = &itype{cat: valueT, rtype: t.rtype.Out(0), scope: sc}
 				}
 			default:
 				if len(t.ret) == 1 {
@@ -497,11 +497,11 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			if m, _ := lt.lookupMethod(name); m != nil {
 				t, err = nodeType(interp, sc, m.child[2])
 			} else if bm, _, _, ok := lt.lookupBinMethod(name); ok {
-				t = &itype{cat: valueT, rtype: bm.Type, isBinMethod: true}
+				t = &itype{cat: valueT, rtype: bm.Type, isBinMethod: true, scope: sc}
 			} else if ti := lt.lookupField(name); len(ti) > 0 {
 				t = lt.fieldSeq(ti)
 			} else if bs, _, ok := lt.lookupBinField(name); ok {
-				t = &itype{cat: valueT, rtype: bs.Type}
+				t = &itype{cat: valueT, rtype: bs.Type, scope: sc}
 			} else {
 				err = lt.node.cfgErrorf("undefined selector %s", name)
 			}
@@ -941,24 +941,40 @@ func exportName(s string) string {
 var interf = reflect.TypeOf(new(interface{})).Elem()
 
 func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.Type {
-	if t.rtype != nil {
-		if wrapRecursive && t.cat == structT && defined[t.name] != nil {
-			return interf
-		}
-		return t.rtype
-	}
-
 	if t.incomplete || t.cat == nilT {
 		var err error
 		if t, err = t.finalize(); err != nil {
 			panic(err)
 		}
 	}
-	if t.val != nil && defined[t.val.name] != nil && !t.val.incomplete && t.val.rtype == nil {
+	// Predefined types from universe or runtime may have a nil scope.
+	if t.scope != nil {
+		if st := t.scope.sym[t.name]; st != nil {
+			// Update the type recursive status. Several copies of type
+			// may exist per symbol, as a new type is created at each GTA
+			// pass (several needed due to out of order declarations), and
+			// a node can still point to a previous copy.
+			t.recursive = t.recursive || st.typ.recursive
+			st.typ.recursive = t.recursive
+		}
+	}
+	if wrapRecursive && t.recursive {
+		return interf
+	}
+	if t.rtype != nil {
+		return t.rtype
+	}
+	if defined[t.name] != nil && defined[t.name].rtype != nil {
+		return defined[t.name].rtype
+	}
+	if t.val != nil && defined[t.val.name] != nil && t.val.rtype == nil {
 		// Replace reference to self (direct or indirect) by an interface{} to handle
 		// recursive types with reflect.
 		t.val.rtype = interf
+		t.recursive = true
 		defined[t.val.name].recursive = true
+		// A previous type definition attempt may be still in use.
+		t.scope.sym[t.val.name].typ.recursive = true
 	}
 	switch t.cat {
 	case aliasT:
@@ -974,9 +990,11 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 	case errorT:
 		t.rtype = reflect.TypeOf(new(error)).Elem()
 	case funcT:
+		if t.name != "" {
+			defined[t.name] = t
+		}
 		in := make([]reflect.Type, len(t.arg))
 		out := make([]reflect.Type, len(t.ret))
-		//wrap := false
 		for i, v := range t.arg {
 			in[i] = v.refType(defined, true)
 		}
@@ -992,6 +1010,10 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 		t.rtype = reflect.PtrTo(t.val.refType(defined, wrapRecursive))
 	case structT:
 		if t.name != "" {
+			if defined[t.name] != nil {
+				t.recursive = true
+				t.scope.sym[t.name].typ.recursive = true
+			}
 			defined[t.name] = t
 		}
 		var fields []reflect.StructField
