@@ -947,7 +947,7 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 			panic(err)
 		}
 	}
-	// Predefined types from universe of runtime may have a nil scope.
+	// Predefined types from universe or runtime may have a nil scope.
 	if t.scope != nil {
 		if st := t.scope.sym[t.name]; st != nil {
 			// Update the type recursive status. Several copies of type
