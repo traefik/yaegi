@@ -502,12 +502,13 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 			rcvr = genValueRecv(n)
 		}
 	}
+	funcType := n.typ.TypeOf()
 
 	return func(f *frame) reflect.Value {
 		if n.frame != nil { // Use closure context if defined
 			f = n.frame
 		}
-		return reflect.MakeFunc(n.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
+		return reflect.MakeFunc(funcType, func(in []reflect.Value) []reflect.Value {
 			// Allocate and init local frame. All values to be settable and addressable.
 			fr := newFrame(f, len(def.types), f.runid())
 			d := fr.data
