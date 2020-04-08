@@ -857,7 +857,8 @@ func (t *itype) zero() (v reflect.Value, err error) {
 
 // fieldIndex returns the field index from name in a struct, or -1 if not found
 func (t *itype) fieldIndex(name string) int {
-	if t.cat == ptrT {
+	switch t.cat {
+	case aliasT, ptrT:
 		return t.val.fieldIndex(name)
 	}
 	for i, field := range t.field {
@@ -882,6 +883,10 @@ func (t *itype) fieldSeq(seq []int) *itype {
 
 // lookupField returns a list of indices, i.e. a path to access a field in a struct object
 func (t *itype) lookupField(name string) []int {
+	switch t.cat {
+	case aliasT, ptrT:
+		return t.val.lookupField(name)
+	}
 	if fi := t.fieldIndex(name); fi >= 0 {
 		return []int{fi}
 	}
