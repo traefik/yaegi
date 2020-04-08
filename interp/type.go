@@ -627,7 +627,10 @@ func init() {
 	zeroValues[uintptrT] = reflect.ValueOf(uintptr(0))
 }
 
-// if type is incomplete, re-parse it.
+// Finalize returns a type pointer and error. It reparses a type from the
+// partial AST if necessary (after missing dependecy data is available).
+// If error is nil, the type is guarranteed to be completely defined and
+// usable for CFG.
 func (t *itype) finalize() (*itype, error) {
 	var err error
 	if t.incomplete {
@@ -654,6 +657,59 @@ func (t *itype) finalize() (*itype, error) {
 	return t, err
 }
 
+// ReferTo returns true if the type contains a reference to a
+// full type name. It allows to asses a type recursive status.
+func (t *itype) referTo(name string, seen map[*itype]bool) bool {
+	if t.path+"/"+t.name == name {
+		return true
+	}
+	if seen[t] {
+		return false
+	}
+	seen[t] = true
+	switch t.cat {
+	case aliasT, arrayT, chanT, ptrT:
+		return t.val.referTo(name, seen)
+	case funcT:
+		for _, a := range t.arg {
+			if a.referTo(name, seen) {
+				return true
+			}
+		}
+		for _, a := range t.ret {
+			if a.referTo(name, seen) {
+				return true
+			}
+		}
+	case mapT:
+		return t.key.referTo(name, seen) || t.val.referTo(name, seen)
+	case structT, interfaceT:
+		for _, f := range t.field {
+			if f.typ.referTo(name, seen) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// IsRecursive returns true if type is recursive.
+// Only a named struct or interface can be recursive.
+func (t *itype) isRecursive() bool {
+	if t.name == "" {
+		return false
+	}
+	switch t.cat {
+	case structT, interfaceT:
+		for _, f := range t.field {
+			if f.typ.referTo(t.path+"/"+t.name, map[*itype]bool{}) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // isComplete returns true if type definition is complete.
 func (t *itype) isComplete() bool { return isComplete(t, map[string]bool{}) }
 
@@ -661,11 +717,12 @@ func isComplete(t *itype, visited map[string]bool) bool {
 	if t.incomplete {
 		return false
 	}
-	if visited[t.name] {
+	name := t.path + "/" + t.name
+	if visited[name] {
 		return !t.incomplete
 	}
 	if t.name != "" {
-		visited[t.name] = true
+		visited[name] = true
 	}
 	switch t.cat {
 	case aliasT, arrayT, chanT, ptrT:
@@ -685,6 +742,8 @@ func isComplete(t *itype, visited map[string]bool) bool {
 			complete = complete && isComplete(f.typ, visited)
 		}
 		return complete
+	case mapT:
+		return isComplete(t.key, visited) && isComplete(t.val, visited)
 	case nilT:
 		return false
 	}
@@ -861,7 +920,7 @@ func (t *itype) lookupBinField(name string) (s reflect.StructField, index []int,
 	return s, index, ok
 }
 
-// methodCallType returns a method function type without the receiver defined.
+// MethodCallType returns a method function type without the receiver defined.
 // The input type must be a method function type with the receiver as the first input argument.
 func (t *itype) methodCallType() reflect.Type {
 	it := []reflect.Type{}
@@ -877,7 +936,7 @@ func (t *itype) methodCallType() reflect.Type {
 	return reflect.FuncOf(it, ot, t.rtype.IsVariadic())
 }
 
-// getMethod returns a pointer to the method definition
+// GetMethod returns a pointer to the method definition.
 func (t *itype) getMethod(name string) *node {
 	for _, m := range t.method {
 		if name == m.ident {
@@ -887,8 +946,8 @@ func (t *itype) getMethod(name string) *node {
 	return nil
 }
 
-// lookupMethod returns a pointer to method definition associated to type t
-// and the list of indices to access the right struct field, in case of an embedded method
+// LookupMethod returns a pointer to method definition associated to type t
+// and the list of indices to access the right struct field, in case of an embedded method.
 func (t *itype) lookupMethod(name string) (*node, []int) {
 	if t.cat == ptrT {
 		return t.val.lookupMethod(name)
@@ -908,7 +967,7 @@ func (t *itype) lookupMethod(name string) (*node, []int) {
 	return m, index
 }
 
-// lookupBinMethod returns a method and a path to access a field in a struct object (the receiver)
+// LookupBinMethod returns a method and a path to access a field in a struct object (the receiver).
 func (t *itype) lookupBinMethod(name string) (m reflect.Method, index []int, isPtr bool, ok bool) {
 	if t.cat == ptrT {
 		return t.val.lookupBinMethod(name)
@@ -940,6 +999,12 @@ func exportName(s string) string {
 
 var interf = reflect.TypeOf(new(interface{})).Elem()
 
+// RefType returns a reflect.Type representation from an interpereter type.
+// In simple cases, reflect types are directly mapped from the interpreter
+// counterpart.
+// For recursive named struct or interfaces, as reflect does not permit to
+// create a recursive named struct, an interface{} is returned in place to
+// avoid infinitely nested structs.
 func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.Type {
 	if t.incomplete || t.cat == nilT {
 		var err error
@@ -947,6 +1012,8 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 			panic(err)
 		}
 	}
+	recursive := false
+	name := t.path + "/" + t.name
 	// Predefined types from universe or runtime may have a nil scope.
 	if t.scope != nil {
 		if st := t.scope.sym[t.name]; st != nil {
@@ -954,8 +1021,8 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 			// may exist per symbol, as a new type is created at each GTA
 			// pass (several needed due to out of order declarations), and
 			// a node can still point to a previous copy.
-			t.recursive = t.recursive || st.typ.recursive
-			st.typ.recursive = t.recursive
+			st.typ.recursive = st.typ.recursive || st.typ.isRecursive()
+			recursive = st.typ.isRecursive()
 		}
 	}
 	if wrapRecursive && t.recursive {
@@ -964,17 +1031,14 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 	if t.rtype != nil {
 		return t.rtype
 	}
-	if defined[t.name] != nil && defined[t.name].rtype != nil {
-		return defined[t.name].rtype
+	if defined[name] != nil && defined[name].rtype != nil {
+		return defined[name].rtype
 	}
-	if t.val != nil && defined[t.val.name] != nil && t.val.rtype == nil {
+	if t.val != nil && defined[t.val.path+"/"+t.val.name] != nil && t.val.rtype == nil {
 		// Replace reference to self (direct or indirect) by an interface{} to handle
 		// recursive types with reflect.
 		t.val.rtype = interf
-		t.recursive = true
-		defined[t.val.name].recursive = true
-		// A previous type definition attempt may be still in use.
-		t.scope.sym[t.val.name].typ.recursive = true
+		recursive = true
 	}
 	switch t.cat {
 	case aliasT:
@@ -991,7 +1055,7 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 		t.rtype = reflect.TypeOf(new(error)).Elem()
 	case funcT:
 		if t.name != "" {
-			defined[t.name] = t
+			defined[name] = t
 		}
 		in := make([]reflect.Type, len(t.arg))
 		out := make([]reflect.Type, len(t.ret))
@@ -1010,18 +1074,17 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 		t.rtype = reflect.PtrTo(t.val.refType(defined, wrapRecursive))
 	case structT:
 		if t.name != "" {
-			if defined[t.name] != nil {
-				t.recursive = true
-				t.scope.sym[t.name].typ.recursive = true
+			if defined[name] != nil {
+				recursive = true
 			}
-			defined[t.name] = t
+			defined[name] = t
 		}
 		var fields []reflect.StructField
 		for _, f := range t.field {
 			field := reflect.StructField{Name: exportName(f.name), Type: f.typ.refType(defined, wrapRecursive), Tag: reflect.StructTag(f.tag)}
 			fields = append(fields, field)
 		}
-		if t.recursive && wrapRecursive {
+		if recursive && wrapRecursive {
 			t.rtype = interf
 		} else {
 			t.rtype = reflect.StructOf(fields)
