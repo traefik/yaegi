@@ -206,13 +206,20 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			sc = sc.pushBloc()
 			if n.child[0].action == aAssign {
 				ch := n.child[0].child[1].child[0]
-				if sym, _, ok := sc.lookup(ch.ident); ok {
-					assigned := n.child[0].child[0]
-					index := sc.add(sym.typ.val)
-					sc.sym[assigned.ident] = &symbol{index: index, kind: varSym, typ: sym.typ.val}
-					assigned.findex = index
-					assigned.typ = sym.typ.val
+				var typ *itype
+				if typ, err = nodeType(interp, sc, ch); err != nil {
+					return false
 				}
+				if !isChan(typ) {
+					err = n.cfgErrorf("invalid operation: receive from non-chan type")
+					return false
+				}
+				elem := chanElement(typ)
+				assigned := n.child[0].child[0]
+				index := sc.add(elem)
+				sc.sym[assigned.ident] = &symbol{index: index, kind: varSym, typ: elem}
+				assigned.findex = index
+				assigned.typ = elem
 			}
 
 		case compositeLitExpr:
@@ -831,7 +838,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			} else {
 				n.start = n.child[0].start // default clause
 			}
-			n.lastChild().tnext = n.anc.anc // exit node is SelectStmt
+			n.lastChild().tnext = n.anc.anc // exit node is selectStmt
 			sc = sc.pop()
 
 		case compositeLitExpr:
@@ -1329,9 +1336,32 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case selectStmt:
 			wireChild(n)
-			// Move action to block statement, so select node can be an exit point
+			// Move action to block statement, so select node can be an exit point.
 			n.child[0].gen = _select
-			n.start = n.child[0]
+			// Chain channel init actions in commClauses prior to invoke select.
+			var cur *node
+			for _, c := range n.child[0].child {
+				if c.child[0].action == aAssign {
+					// an is the channel init action node.
+					an := c.child[0].lastChild().child[0]
+					if cur == nil {
+						// First channel init action, the entry point for the select block.
+						n.start = an.start
+					} else {
+						// Chain channel init action to the previous one.
+						cur.tnext = an.start
+					}
+					cur = an
+				}
+			}
+			// Invoke select action
+			if cur == nil {
+				// There is no channel init action, call select directly.
+				n.start = n.child[0]
+			} else {
+				// Select is called after the last channel init action.
+				cur.tnext = n.child[0]
+			}
 
 		case starExpr:
 			switch {
