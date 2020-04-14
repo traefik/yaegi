@@ -1341,9 +1341,17 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			// Chain channel init actions in commClauses prior to invoke select.
 			var cur *node
 			for _, c := range n.child[0].child {
-				if c.child[0].action == aAssign {
-					// an is the channel init action node.
-					an := c.child[0].lastChild().child[0]
+				var an *node // channel init action node
+				c0 := c.child[0]
+				switch {
+				case c0.kind == exprStmt && len(c0.child) == 1 && c0.child[0].action == aRecv:
+					an = c0.child[0].child[0]
+				case c0.action == aAssign:
+					an = c0.lastChild().child[0]
+				case c0.kind == sendStmt:
+					an = c0.child[0]
+				}
+				if an != nil {
 					if cur == nil {
 						// First channel init action, the entry point for the select block.
 						n.start = an.start
@@ -1351,8 +1359,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						// Chain channel init action to the previous one.
 						cur.tnext = an.start
 					}
-					cur = an
 				}
+				cur = an
 			}
 			// Invoke select action
 			if cur == nil {
