@@ -1157,6 +1157,24 @@ func isShiftNode(n *node) bool {
 	return false
 }
 
+// chanElement returns the channel element type.
+func chanElement(t *itype) *itype {
+	switch t.cat {
+	case aliasT:
+		return chanElement(t.val)
+	case chanT:
+		return t.val
+	case valueT:
+		return &itype{cat: valueT, rtype: t.rtype.Elem(), node: t.node, scope: t.scope}
+	}
+	return nil
+}
+
+// isChan returns true if type is of channel kind.
+func isChan(t *itype) bool {
+	return t.TypeOf().Kind() == reflect.Chan
+}
+
 func isInterfaceSrc(t *itype) bool {
 	return t.cat == interfaceT || (t.cat == aliasT && isInterfaceSrc(t.val))
 }
