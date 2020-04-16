@@ -12,4 +12,4 @@ func main() {
 }
 
 // Output:
-// test
+// {test}
