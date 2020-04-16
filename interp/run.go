@@ -1732,6 +1732,7 @@ func doCompositeLit(n *node, hasType bool) {
 		}
 	}
 
+	i := n.findex
 	n.exec = func(f *frame) bltn {
 		a := reflect.New(n.typ.TypeOf()).Elem()
 		for i, v := range values {
@@ -1743,7 +1744,7 @@ func doCompositeLit(n *node, hasType bool) {
 		case destInterface:
 			d.Set(reflect.ValueOf(valueInterface{n, a}))
 		default:
-			d.Set(a)
+			f.data[i] = a
 		}
 		return next
 	}
