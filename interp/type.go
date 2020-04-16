@@ -844,7 +844,7 @@ func (t *itype) zero() (v reflect.Value, err error) {
 		v, err = t.val.zero()
 
 	case arrayT, ptrT, structT:
-		v = reflect.New(t.TypeOf()).Elem()
+		v = reflect.New(t.frameType()).Elem()
 
 	case valueT:
 		v = reflect.New(t.rtype).Elem()
@@ -1002,7 +1002,7 @@ func exportName(s string) string {
 	return "X" + s
 }
 
-var interf = reflect.TypeOf(new(interface{})).Elem()
+var interf = reflect.TypeOf((*interface{})(nil)).Elem()
 
 // RefType returns a reflect.Type representation from an interpereter type.
 // In simple cases, reflect types are directly mapped from the interpreter

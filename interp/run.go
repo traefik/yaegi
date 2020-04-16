@@ -1580,11 +1580,19 @@ func arrayLit(n *node) {
 	for i, c := range child {
 		if c.kind == keyValueExpr {
 			convertLiteralValue(c.child[1], rtype)
-			values[i] = genValue(c.child[1])
+			if n.typ.val.cat == interfaceT {
+				values[i] = genValueInterface(c.child[1])
+			} else {
+				values[i] = genValue(c.child[1])
+			}
 			index[i] = int(vInt(c.child[0].rval))
 		} else {
 			convertLiteralValue(c, rtype)
-			values[i] = genValue(c)
+			if n.typ.val.cat == interfaceT {
+				values[i] = genValueInterface(c)
+			} else {
+				values[i] = genValue(c)
+			}
 			index[i] = prev
 		}
 		prev = index[i] + 1
@@ -1593,14 +1601,14 @@ func arrayLit(n *node) {
 		}
 	}
 
-	var a reflect.Value
-	if n.typ.sizedef {
-		a, _ = n.typ.zero()
-	} else {
-		a = reflect.MakeSlice(n.typ.TypeOf(), max, max)
-	}
-
+	typ := n.typ.frameType()
 	n.exec = func(f *frame) bltn {
+		var a reflect.Value
+		if n.typ.sizedef {
+			a, _ = n.typ.zero()
+		} else {
+			a = reflect.MakeSlice(typ, max, max)
+		}
 		for i, v := range values {
 			a.Index(index[i]).Set(v(f))
 		}
@@ -1622,8 +1630,16 @@ func mapLit(n *node) {
 	for i, c := range child {
 		convertLiteralValue(c.child[0], n.typ.key.TypeOf())
 		convertLiteralValue(c.child[1], n.typ.val.TypeOf())
-		keys[i] = genValue(c.child[0])
-		values[i] = genValue(c.child[1])
+		if n.typ.key.cat == interfaceT {
+			keys[i] = genValueInterface(c.child[0])
+		} else {
+			keys[i] = genValue(c.child[0])
+		}
+		if n.typ.val.cat == interfaceT {
+			values[i] = genValueInterface(c.child[1])
+		} else {
+			values[i] = genValue(c.child[1])
+		}
 	}
 
 	n.exec = func(f *frame) bltn {
