@@ -590,10 +590,15 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				if !(isNumber(t0) && isNumber(t1)) {
 					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
 				}
-			case aRem, aAnd, aOr, aXor, aAndNot:
+			case aAnd, aOr, aXor, aAndNot:
 				if !(isInt(t0) && isInt(t1)) {
 					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
 				}
+			case aRem:
+				if !(c0.isInteger() && c1.isInteger()) {
+					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
+				}
+				n.typ = c0.typ
 			case aShl, aShr:
 				if !(c0.isInteger() && c1.isNatural()) {
 					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
