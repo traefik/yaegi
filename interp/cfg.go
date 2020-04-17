@@ -881,7 +881,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				cond.tnext = body.start
 				body.tnext = cond.start
 			}
-			cond.fnext = n
+			setFNext(cond, n)
 			sc = sc.pop()
 
 		case forStmt2: // for init; cond; {}
@@ -903,7 +903,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				body.tnext = cond.start
 			}
 			cond.tnext = body.start
-			cond.fnext = n
+			setFNext(cond, n)
 			sc = sc.pop()
 
 		case forStmt3: // for ; cond; post {}
@@ -922,7 +922,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				post.tnext = cond.start
 			}
 			cond.tnext = body.start
-			cond.fnext = n
+			setFNext(cond, n)
 			body.tnext = post.start
 			sc = sc.pop()
 
@@ -953,13 +953,13 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				post.tnext = cond.start
 			}
 			cond.tnext = body.start
-			cond.fnext = n
+			setFNext(cond, n)
 			body.tnext = post.start
 			sc = sc.pop()
 
 		case forRangeStmt:
 			n.start = n.child[0].start
-			n.child[0].fnext = n
+			setFNext(n.child[0], n)
 			sc = sc.pop()
 
 		case funcDecl:
@@ -1010,9 +1010,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 							err = n.cfgErrorf("use of builtin %s not in function call", n.ident)
 						}
 					}
-					if sym.kind == varSym && sym.typ != nil && sym.typ.TypeOf().Kind() == reflect.Bool {
-						fixBranch(n)
-					}
 				}
 				if n.sym != nil {
 					n.recv = n.sym.recv
@@ -1035,7 +1032,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				n.start = cond.start
 				cond.tnext = tbody.start
 			}
-			cond.fnext = n
+			setFNext(cond, n)
 			tbody.tnext = n
 			sc = sc.pop()
 
@@ -1054,7 +1051,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			} else {
 				n.start = cond.start
 				cond.tnext = tbody.start
-				cond.fnext = fbody.start
+				setFNext(cond, fbody.start)
 			}
 			tbody.tnext = n
 			fbody.tnext = n
@@ -1078,7 +1075,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				cond.tnext = tbody.start
 			}
 			tbody.tnext = n
-			cond.fnext = n
+			setFNext(cond, n)
 			sc = sc.pop()
 
 		case ifStmt3: // if init; cond {} else {}
@@ -1097,7 +1094,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			} else {
 				init.tnext = cond.start
 				cond.tnext = tbody.start
-				cond.fnext = fbody.start
+				setFNext(cond, fbody.start)
 			}
 			tbody.tnext = n
 			fbody.tnext = n
@@ -1109,7 +1106,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		case landExpr:
 			n.start = n.child[0].start
 			n.child[0].tnext = n.child[1].start
-			n.child[0].fnext = n
+			setFNext(n.child[0], n)
 			n.child[1].tnext = n
 			n.typ = n.child[0].typ
 			n.findex = sc.add(n.typ)
@@ -1120,7 +1117,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		case lorExpr:
 			n.start = n.child[0].start
 			n.child[0].tnext = n
-			n.child[0].fnext = n.child[1].start
+			setFNext(n.child[0], n.child[1].start)
 			n.child[1].tnext = n
 			n.typ = n.child[0].typ
 			n.findex = sc.add(n.typ)
@@ -1423,7 +1420,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			}
 			// Chain case clauses.
 			for i, c := range clauses[:l-1] {
-				c.fnext = clauses[i+1] // Chain to next clause.
+				// Chain to next clause.
+				setFNext(c, clauses[i+1])
 				if len(c.child) == 0 {
 					c.tnext = n // Clause body is empty, exit.
 				} else {
@@ -1472,9 +1470,9 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					cond := c.child[0]
 					cond.tnext = body.start
 					if i == l-1 {
-						cond.fnext = n
+						setFNext(cond, n)
 					} else {
-						cond.fnext = clauses[i+1].start
+						setFNext(cond, clauses[i+1].start)
 					}
 					c.start = cond.start
 				} else {
@@ -1703,15 +1701,19 @@ func genRun(nod *node) error {
 	return err
 }
 
-// FixBranch sets the branch action to the identExpr node if it is a bool
-// used in a conditional expression.
-func fixBranch(n *node) {
-	switch n.anc.kind {
-	case ifStmt0, ifStmt1, ifStmt2, ifStmt3, forStmt1, forStmt2, forStmt3, forStmt4:
-		n.gen = branch
-	case parenExpr:
-		fixBranch(n.anc)
+// setFnext sets the cond fnext field to next, propagates it for parenthesis blocks
+// and sets the action to branch.
+func setFNext(cond, next *node) {
+	if cond.action == aNop {
+		cond.action = aBranch
+		cond.gen = branch
+		cond.fnext = next
 	}
+	if cond.kind == parenExpr {
+		setFNext(cond.lastChild(), next)
+		return
+	}
+	cond.fnext = next
 }
 
 // GetDefault return the index of default case clause in a switch statement, or -1.

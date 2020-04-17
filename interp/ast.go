@@ -196,6 +196,7 @@ const (
 	aAndNot
 	aAndNotAssign
 	aBitNot
+	aBranch
 	aCall
 	aCase
 	aCompositeLit
@@ -253,6 +254,7 @@ var actions = [...]string{
 	aAndNot:       "&^",
 	aAndNotAssign: "&^=",
 	aBitNot:       "^",
+	aBranch:       "branch",
 	aCall:         "call",
 	aCase:         "case",
 	aCompositeLit: "compositeLit",
