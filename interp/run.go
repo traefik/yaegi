@@ -762,39 +762,40 @@ func call(n *node) {
 		}
 
 		// Copy input parameters from caller
-		dest := nf.data[numRet:]
-		for i, v := range values {
-			switch {
-			case method && i == 0:
-				// compute receiver
-				var src reflect.Value
-				if v == nil {
-					src = def.recv.val
-					if len(def.recv.index) > 0 {
-						if src.Kind() == reflect.Ptr {
-							src = src.Elem().FieldByIndex(def.recv.index)
-						} else {
-							src = src.FieldByIndex(def.recv.index)
+		if dest := nf.data[numRet:]; len(dest) > 0 {
+			for i, v := range values {
+				switch {
+				case method && i == 0:
+					// compute receiver
+					var src reflect.Value
+					if v == nil {
+						src = def.recv.val
+						if len(def.recv.index) > 0 {
+							if src.Kind() == reflect.Ptr {
+								src = src.Elem().FieldByIndex(def.recv.index)
+							} else {
+								src = src.FieldByIndex(def.recv.index)
+							}
 						}
-					}
-				} else {
-					src = v(f)
-				}
-				// Accommodate to receiver type
-				d := dest[0]
-				if ks, kd := src.Kind(), d.Kind(); ks != kd {
-					if kd == reflect.Ptr {
-						d.Set(src.Addr())
 					} else {
-						d.Set(src.Elem())
+						src = v(f)
 					}
-				} else {
-					d.Set(src)
+					// Accommodate to receiver type
+					d := dest[0]
+					if ks, kd := src.Kind(), d.Kind(); ks != kd {
+						if kd == reflect.Ptr {
+							d.Set(src.Addr())
+						} else {
+							d.Set(src.Elem())
+						}
+					} else {
+						d.Set(src)
+					}
+				case variadic >= 0 && i >= variadic:
+					vararg.Set(reflect.Append(vararg, v(f)))
+				default:
+					dest[i].Set(v(f))
 				}
-			case variadic >= 0 && i >= variadic:
-				vararg.Set(reflect.Append(vararg, v(f)))
-			default:
-				dest[i].Set(v(f))
 			}
 		}
 
