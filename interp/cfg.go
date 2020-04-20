@@ -1503,7 +1503,12 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					}
 				}
 				if n.anc.action != aAssignX {
-					n.typ = n.child[1].typ
+					if n.child[0].typ.cat == valueT {
+						// Avoid special wrapping of interfaces and func types.
+						n.typ = &itype{cat: valueT, rtype: n.child[1].typ.TypeOf()}
+					} else {
+						n.typ = n.child[1].typ
+					}
 					n.findex = sc.add(n.typ)
 				}
 			} else {
