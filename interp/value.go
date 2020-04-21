@@ -79,7 +79,7 @@ func genValue(n *node) func(*frame) reflect.Value {
 	case basicLit:
 		v := n.rval
 		if !v.IsValid() {
-			v = reflect.New(reflect.TypeOf((*interface{})(nil)).Elem()).Elem()
+			v = reflect.New(interf).Elem()
 		}
 		return func(f *frame) reflect.Value { return v }
 	case funcDecl:
@@ -149,10 +149,9 @@ func genValueRangeArray(n *node) func(*frame) reflect.Value {
 
 func genValueInterfacePtr(n *node) func(*frame) reflect.Value {
 	value := genValue(n)
-	it := reflect.TypeOf((*interface{})(nil)).Elem()
 
 	return func(f *frame) reflect.Value {
-		v := reflect.New(it).Elem()
+		v := reflect.New(interf).Elem()
 		v.Set(value(f))
 		return v.Addr()
 	}
@@ -179,7 +178,7 @@ func genValueInterface(n *node) func(*frame) reflect.Value {
 
 func zeroInterfaceValue() reflect.Value {
 	n := &node{kind: basicLit, typ: &itype{cat: nilT, untyped: true}}
-	v := reflect.New(reflect.TypeOf((*interface{})(nil)).Elem()).Elem()
+	v := reflect.New(interf).Elem()
 	return reflect.ValueOf(valueInterface{n, v})
 }
 
