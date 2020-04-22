@@ -192,7 +192,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				return false
 			}
 			if n.child[1].kind == identExpr {
-				n.typ = &itype{cat: aliasT, val: typ, name: typeName, path: rpath, field: typ.field, incomplete: typ.incomplete, scope: sc}
+				n.typ = &itype{cat: aliasT, val: typ, name: typeName, path: rpath, field: typ.field, incomplete: typ.incomplete, scope: sc, node: n.child[0]}
 				copy(n.typ.method, typ.method)
 			} else {
 				n.typ = typ
