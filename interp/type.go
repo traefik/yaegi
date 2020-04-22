@@ -423,6 +423,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 
 	case interfaceType:
 		t.cat = interfaceT
+		var incomplete bool
 		if sname := typeName(n); sname != "" {
 			if sym, _, found := sc.lookup(sname); found && sym.kind == typeSym {
 				sym.typ = t
@@ -435,16 +436,17 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					return nil, err
 				}
 				t.field = append(t.field, structField{name: fieldName(field.child[0]), embed: true, typ: typ})
-				t.incomplete = t.incomplete || typ.incomplete
+				incomplete = incomplete || typ.incomplete
 			} else {
 				typ, err := nodeType(interp, sc, field.child[1])
 				if err != nil {
 					return nil, err
 				}
 				t.field = append(t.field, structField{name: field.child[0].ident, typ: typ})
-				t.incomplete = t.incomplete || typ.incomplete
+				incomplete = incomplete || typ.incomplete
 			}
 		}
+		t.incomplete = incomplete
 
 	case landExpr, lorExpr:
 		t.cat = boolT
