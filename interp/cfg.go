@@ -659,7 +659,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			wireChild(n)
 			t := n.child[0].typ
 			switch t.cat {
-			case ptrT:
+			case aliasT, ptrT:
 				n.typ = t.val
 				if t.val.cat == valueT {
 					n.typ = &itype{cat: valueT, rtype: t.val.rtype.Elem()}

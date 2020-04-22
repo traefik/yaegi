@@ -1032,6 +1032,9 @@ func getIndexArray(n *node) {
 	}
 }
 
+// valueInterfaceType is the reflection type of valueInterface
+var valueInterfaceType = reflect.TypeOf((*valueInterface)(nil)).Elem()
+
 // getIndexMap retrieves map value from index
 func getIndexMap(n *node) {
 	dest := genValue(n)
@@ -1057,7 +1060,11 @@ func getIndexMap(n *node) {
 			z = reflect.New(n.child[0].typ.val.frameType()).Elem()
 			n.exec = func(f *frame) bltn {
 				if v := value0(f).MapIndex(mi); v.IsValid() {
-					dest(f).Set(v.Elem())
+					if e := v.Elem(); e.Type().AssignableTo(valueInterfaceType) {
+						dest(f).Set(e)
+					} else {
+						dest(f).Set(reflect.ValueOf(valueInterface{n, e}))
+					}
 				} else {
 					dest(f).Set(z)
 				}
@@ -1091,7 +1098,11 @@ func getIndexMap(n *node) {
 			z = reflect.New(n.child[0].typ.val.frameType()).Elem()
 			n.exec = func(f *frame) bltn {
 				if v := value0(f).MapIndex(value1(f)); v.IsValid() {
-					dest(f).Set(v.Elem())
+					if e := v.Elem(); e.Type().AssignableTo(valueInterfaceType) {
+						dest(f).Set(e)
+					} else {
+						dest(f).Set(reflect.ValueOf(valueInterface{n, e}))
+					}
 				} else {
 					dest(f).Set(z)
 				}
@@ -1137,7 +1148,11 @@ func getIndexMap2(n *node) {
 			n.exec = func(f *frame) bltn {
 				v := value0(f).MapIndex(mi)
 				if v.IsValid() {
-					dest(f).Set(v.Elem())
+					if e := v.Elem(); e.Type().AssignableTo(valueInterfaceType) {
+						dest(f).Set(e)
+					} else {
+						dest(f).Set(reflect.ValueOf(valueInterface{n, e}))
+					}
 				}
 				if doStatus {
 					value2(f).SetBool(v.IsValid())
@@ -1169,7 +1184,11 @@ func getIndexMap2(n *node) {
 			n.exec = func(f *frame) bltn {
 				v := value0(f).MapIndex(value1(f))
 				if v.IsValid() {
-					dest(f).Set(v.Elem())
+					if e := v.Elem(); e.Type().AssignableTo(valueInterfaceType) {
+						dest(f).Set(e)
+					} else {
+						dest(f).Set(reflect.ValueOf(valueInterface{n, e}))
+					}
 				}
 				if doStatus {
 					value2(f).SetBool(v.IsValid())
@@ -1900,7 +1919,11 @@ func rangeMap(n *node) {
 					return fnext
 				}
 				f.data[index0].Set(iter.Key())
-				f.data[index1].Set(iter.Value().Elem())
+				if e := iter.Value().Elem(); e.Type().AssignableTo(valueInterfaceType) {
+					f.data[index1].Set(e)
+				} else {
+					f.data[index1].Set(reflect.ValueOf(valueInterface{n, e}))
+				}
 				return tnext
 			}
 		} else {
