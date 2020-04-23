@@ -325,8 +325,8 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			}
 			switch t.cat {
 			case valueT:
-				if t.rtype.NumOut() == 1 {
-					t = &itype{cat: valueT, rtype: t.rtype.Out(0), scope: sc}
+				if rt := t.rtype; rt.Kind() == reflect.Func && rt.NumOut() == 1 {
+					t = &itype{cat: valueT, rtype: rt.Out(0), scope: sc}
 				}
 			default:
 				if len(t.ret) == 1 {
