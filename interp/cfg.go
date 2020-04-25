@@ -204,7 +204,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case commClause:
 			sc = sc.pushBloc()
-			if n.child[0].action == aAssign {
+			if len(n.child) > 0 && n.child[0].action == aAssign {
 				ch := n.child[0].child[1].child[0]
 				var typ *itype
 				if typ, err = nodeType(interp, sc, ch); err != nil {
@@ -827,7 +827,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			case typeSwichAssign(n) && len(n.child) > 1:
 				n.start = n.child[1].start
 			case len(n.child) == 0:
-				// empty case body: jump to switch node (exit node)
+				// Empty case body: jump to switch node (exit node).
 				n.start = n.anc.anc.anc
 			default:
 				n.start = n.child[0].start
@@ -838,10 +838,14 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case commClause:
 			wireChild(n)
-			if len(n.child) > 1 {
-				n.start = n.child[1].start // Skip chan operation, performed by select
-			} else {
+			switch len(n.child) {
+			case 0:
+				sc.pop()
+				return
+			case 1:
 				n.start = n.child[0].start // default clause
+			default:
+				n.start = n.child[1].start // Skip chan operation, performed by select
 			}
 			n.lastChild().tnext = n.anc.anc // exit node is selectStmt
 			sc = sc.pop()
@@ -1344,14 +1348,15 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			var cur *node
 			for _, c := range n.child[0].child {
 				var an *node // channel init action node
-				c0 := c.child[0]
-				switch {
-				case c0.kind == exprStmt && len(c0.child) == 1 && c0.child[0].action == aRecv:
-					an = c0.child[0].child[0]
-				case c0.action == aAssign:
-					an = c0.lastChild().child[0]
-				case c0.kind == sendStmt:
-					an = c0.child[0]
+				if len(c.child) > 0 {
+					switch c0 := c.child[0]; {
+					case c0.kind == exprStmt && len(c0.child) == 1 && c0.child[0].action == aRecv:
+						an = c0.child[0].child[0]
+					case c0.action == aAssign:
+						an = c0.lastChild().child[0]
+					case c0.kind == sendStmt:
+						an = c0.child[0]
+					}
 				}
 				if an != nil {
 					if cur == nil {
