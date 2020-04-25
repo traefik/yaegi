@@ -1204,6 +1204,9 @@ func isStruct(t *itype) bool {
 func isBool(t *itype) bool { return t.TypeOf().Kind() == reflect.Bool }
 
 func isInt(t reflect.Type) bool {
+	if t == nil {
+		return false
+	}
 	switch t.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return true
@@ -1212,6 +1215,9 @@ func isInt(t reflect.Type) bool {
 }
 
 func isUint(t reflect.Type) bool {
+	if t == nil {
+		return false
+	}
 	switch t.Kind() {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return true
@@ -1220,6 +1226,9 @@ func isUint(t reflect.Type) bool {
 }
 
 func isComplex(t reflect.Type) bool {
+	if t == nil {
+		return false
+	}
 	switch t.Kind() {
 	case reflect.Complex64, reflect.Complex128:
 		return true
@@ -1228,6 +1237,9 @@ func isComplex(t reflect.Type) bool {
 }
 
 func isFloat(t reflect.Type) bool {
+	if t == nil {
+		return false
+	}
 	switch t.Kind() {
 	case reflect.Float32, reflect.Float64:
 		return true
@@ -1236,11 +1248,14 @@ func isFloat(t reflect.Type) bool {
 }
 
 func isByteArray(t reflect.Type) bool {
+	if t == nil {
+		return false
+	}
 	k := t.Kind()
 	return (k == reflect.Array || k == reflect.Slice) && t.Elem().Kind() == reflect.Uint8
 }
 
-func isFloat32(t reflect.Type) bool { return t.Kind() == reflect.Float32 }
-func isFloat64(t reflect.Type) bool { return t.Kind() == reflect.Float64 }
+func isFloat32(t reflect.Type) bool { return t != nil && t.Kind() == reflect.Float32 }
+func isFloat64(t reflect.Type) bool { return t != nil && t.Kind() == reflect.Float64 }
 func isNumber(t reflect.Type) bool  { return isInt(t) || isFloat(t) || isComplex(t) }
-func isString(t reflect.Type) bool  { return t.Kind() == reflect.String }
+func isString(t reflect.Type) bool  { return t != nil && t.Kind() == reflect.String }
