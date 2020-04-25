@@ -542,22 +542,22 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		case assignXStmt:
 			wireChild(n)
 			l := len(n.child) - 1
-			switch n.child[l].kind {
+			switch lc := n.child[l]; lc.kind {
 			case callExpr:
 				n.gen = nop
 			case indexExpr:
-				n.child[l].gen = getIndexMap2
+				lc.gen = getIndexMap2
 				n.gen = nop
 			case typeAssertExpr:
 				if n.child[0].ident == "_" {
-					n.child[l].gen = typeAssertStatus
+					lc.gen = typeAssertStatus
 				} else {
-					n.child[l].gen = typeAssert2
+					lc.gen = typeAssert2
 				}
 				n.gen = nop
 			case unaryExpr:
-				if n.child[l].action == aRecv {
-					n.child[l].gen = recv2
+				if lc.action == aRecv {
+					lc.gen = recv2
 					n.gen = nop
 				}
 			}

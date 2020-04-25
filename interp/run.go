@@ -670,7 +670,12 @@ func call(n *node) {
 	case defineXStmt, assignXStmt:
 		for i := range rvalues {
 			c := n.anc.child[i]
-			if c.ident != "_" {
+			switch {
+			case c.ident == "_":
+				// Skip assigning return value to blank var.
+			case c.typ.cat == interfaceT:
+				rvalues[i] = genValueInterfaceValue(c)
+			default:
 				rvalues[i] = genValue(c)
 			}
 		}
