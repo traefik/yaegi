@@ -7,9 +7,9 @@ import "reflect"
 // Arithmetic operators
 
 func add(n *node) {
-	dest := genValue(n)
 	next := getExec(n.tnext)
-	typ := n.typ.TypeOf()
+	typ := n.typ.concrete().TypeOf()
+	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
@@ -167,9 +167,9 @@ func addConst(n *node) {
 }
 
 func and(n *node) {
-	dest := genValue(n)
 	next := getExec(n.tnext)
-	typ := n.typ.TypeOf()
+	typ := n.typ.concrete().TypeOf()
+	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
@@ -245,9 +245,9 @@ func andConst(n *node) {
 }
 
 func andNot(n *node) {
-	dest := genValue(n)
 	next := getExec(n.tnext)
-	typ := n.typ.TypeOf()
+	typ := n.typ.concrete().TypeOf()
+	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
@@ -323,9 +323,9 @@ func andNotConst(n *node) {
 }
 
 func mul(n *node) {
-	dest := genValue(n)
 	next := getExec(n.tnext)
-	typ := n.typ.TypeOf()
+	typ := n.typ.concrete().TypeOf()
+	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
@@ -457,9 +457,9 @@ func mulConst(n *node) {
 }
 
 func or(n *node) {
-	dest := genValue(n)
 	next := getExec(n.tnext)
-	typ := n.typ.TypeOf()
+	typ := n.typ.concrete().TypeOf()
+	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
@@ -535,9 +535,9 @@ func orConst(n *node) {
 }
 
 func quo(n *node) {
-	dest := genValue(n)
 	next := getExec(n.tnext)
-	typ := n.typ.TypeOf()
+	typ := n.typ.concrete().TypeOf()
+	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
@@ -669,9 +669,9 @@ func quoConst(n *node) {
 }
 
 func rem(n *node) {
-	dest := genValue(n)
 	next := getExec(n.tnext)
-	typ := n.typ.TypeOf()
+	typ := n.typ.concrete().TypeOf()
+	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
@@ -747,9 +747,9 @@ func remConst(n *node) {
 }
 
 func shl(n *node) {
-	dest := genValue(n)
 	next := getExec(n.tnext)
-	typ := n.typ.TypeOf()
+	typ := n.typ.concrete().TypeOf()
+	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
@@ -825,9 +825,9 @@ func shlConst(n *node) {
 }
 
 func shr(n *node) {
-	dest := genValue(n)
 	next := getExec(n.tnext)
-	typ := n.typ.TypeOf()
+	typ := n.typ.concrete().TypeOf()
+	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
@@ -903,9 +903,9 @@ func shrConst(n *node) {
 }
 
 func sub(n *node) {
-	dest := genValue(n)
 	next := getExec(n.tnext)
-	typ := n.typ.TypeOf()
+	typ := n.typ.concrete().TypeOf()
+	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
@@ -1037,9 +1037,9 @@ func subConst(n *node) {
 }
 
 func xor(n *node) {
-	dest := genValue(n)
 	next := getExec(n.tnext)
-	typ := n.typ.TypeOf()
+	typ := n.typ.concrete().TypeOf()
+	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
@@ -1917,7 +1917,7 @@ func posConst(n *node) {
 
 func equal(n *node) {
 	tnext := getExec(n.tnext)
-	dest := genValue(n)
+	dest := genValueOutput(n, reflect.TypeOf(true))
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
@@ -2346,7 +2346,7 @@ func equal(n *node) {
 
 func greater(n *node) {
 	tnext := getExec(n.tnext)
-	dest := genValue(n)
+	dest := genValueOutput(n, reflect.TypeOf(true))
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
@@ -2635,7 +2635,7 @@ func greater(n *node) {
 
 func greaterEqual(n *node) {
 	tnext := getExec(n.tnext)
-	dest := genValue(n)
+	dest := genValueOutput(n, reflect.TypeOf(true))
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
@@ -2924,7 +2924,7 @@ func greaterEqual(n *node) {
 
 func lower(n *node) {
 	tnext := getExec(n.tnext)
-	dest := genValue(n)
+	dest := genValueOutput(n, reflect.TypeOf(true))
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
@@ -3213,7 +3213,7 @@ func lower(n *node) {
 
 func lowerEqual(n *node) {
 	tnext := getExec(n.tnext)
-	dest := genValue(n)
+	dest := genValueOutput(n, reflect.TypeOf(true))
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
@@ -3502,7 +3502,7 @@ func lowerEqual(n *node) {
 
 func notEqual(n *node) {
 	tnext := getExec(n.tnext)
-	dest := genValue(n)
+	dest := genValueOutput(n, reflect.TypeOf(true))
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {

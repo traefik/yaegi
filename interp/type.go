@@ -239,26 +239,33 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		t, err = nodeType(interp, sc, n.child[0])
 
 	case binaryExpr:
-		if a := n.anc; a.kind == defineStmt && len(a.child) > a.nleft+a.nright {
-			t, err = nodeType(interp, sc, a.child[a.nleft])
-		} else {
-			if t, err = nodeType(interp, sc, n.child[0]); err != nil {
-				return nil, err
-			}
-			// Shift operator type is inherited from first parameter only
-			// For other operators, infer type in from 2nd parameter in case of untyped first
-			if t.untyped && !isShiftNode(n) {
-				var t1 *itype
-				t1, err = nodeType(interp, sc, n.child[1])
-				if !(t1.untyped && isInt(t1.TypeOf()) && isFloat(t.TypeOf())) {
-					t = t1
-				}
+		// Get type of first operand.
+		if t, err = nodeType(interp, sc, n.child[0]); err != nil {
+			return nil, err
+		}
+		// For operators other than shift, get the type from the 2nd operand if the first is untyped.
+		if t.untyped && !isShiftNode(n) {
+			var t1 *itype
+			t1, err = nodeType(interp, sc, n.child[1])
+			if !(t1.untyped && isInt(t1.TypeOf()) && isFloat(t.TypeOf())) {
+				t = t1
 			}
 		}
+		// If the node is to be assigned or returned, the node type is the destination type.
+		dt := t
+		if a := n.anc; a.kind == defineStmt && len(a.child) > a.nleft+a.nright {
+			if dt, err = nodeType(interp, sc, a.child[a.nleft]); err != nil {
+				return nil, err
+			}
+		}
+		if isInterface(dt) {
+			dt.val = t
+		}
+		t = dt
 
 	case callExpr:
 		if interp.isBuiltinCall(n) {
-			// builtin types are special and may depend from their call arguments
+			// Builtin types are special and may depend from their input arguments.
 			t.cat = builtinT
 			switch n.child[0].ident {
 			case "complex":
@@ -693,6 +700,13 @@ func (t *itype) referTo(name string, seen map[*itype]bool) bool {
 		}
 	}
 	return false
+}
+
+func (t *itype) concrete() *itype {
+	if isInterface(t) && t.val != nil {
+		return t.val.concrete()
+	}
+	return t
 }
 
 // IsRecursive returns true if type is recursive.
