@@ -616,11 +616,11 @@ func call(n *node) {
 	value := genValue(n.child[0])
 	var values []func(*frame) reflect.Value
 	if n.child[0].recv != nil {
-		// Compute method receiver value
+		// Compute method receiver value.
 		values = append(values, genValueRecv(n.child[0]))
 		method = true
 	} else if n.child[0].action == aMethod {
-		// add a place holder for interface method receiver
+		// Add a place holder for interface method receiver.
 		values = append(values, nil)
 		method = true
 	}
@@ -630,18 +630,18 @@ func call(n *node) {
 	tnext := getExec(n.tnext)
 	fnext := getExec(n.fnext)
 
-	// compute input argument value functions
+	// Compute input argument value functions.
 	for i, c := range child {
 		switch {
 		case isBinCall(c):
-			// Handle nested function calls: pass returned values as arguments
+			// Handle nested function calls: pass returned values as arguments.
 			numOut := c.child[0].typ.rtype.NumOut()
 			for j := 0; j < numOut; j++ {
 				ind := c.findex + j
 				values = append(values, func(f *frame) reflect.Value { return f.data[ind] })
 			}
 		case isRegularCall(c):
-			// Arguments are return values of a nested function call
+			// Arguments are return values of a nested function call.
 			for j := range c.child[0].typ.ret {
 				ind := c.findex + j
 				values = append(values, func(f *frame) reflect.Value { return f.data[ind] })
@@ -664,6 +664,7 @@ func call(n *node) {
 		}
 	}
 
+	// Compute output argument value functions.
 	rtypes := n.child[0].typ.ret
 	rvalues := make([]func(*frame) reflect.Value, len(rtypes))
 	switch n.anc.kind {
@@ -679,7 +680,14 @@ func call(n *node) {
 				rvalues[i] = genValue(c)
 			}
 		}
+	case returnStmt:
+		// Function call from a return statement: forward return values (always at frame start).
+		for i := range rtypes {
+			j := i
+			rvalues[i] = func(f *frame) reflect.Value { return f.data[j] }
+		}
 	default:
+		// Multiple return values frame index are indexed from the node frame index.
 		for i := range rtypes {
 			j := n.findex + i
 			rvalues[i] = func(f *frame) reflect.Value { return f.data[j] }
@@ -927,8 +935,8 @@ func callBin(n *node) {
 	default:
 		switch n.anc.action {
 		case aAssign, aAssignX:
-			// The function call is part of an assign expression, we write results direcly
-			// to assigned location, to avoid an additional assign operation.
+			// The function call is part of an assign expression, store results direcly
+			// to assigned location, to avoid an additional frame copy.
 			rvalues := make([]func(*frame) reflect.Value, funcType.NumOut())
 			for i := range rvalues {
 				c := n.anc.child[i]
@@ -946,6 +954,20 @@ func callBin(n *node) {
 					if v != nil {
 						v(f).Set(out[i])
 					}
+				}
+				return tnext
+			}
+		case aReturn:
+			// The function call is part of a return statement, store output results
+			// directly in the frame location of outputs of the current function.
+			n.exec = func(f *frame) bltn {
+				in := make([]reflect.Value, l)
+				for i, v := range values {
+					in[i] = v(f)
+				}
+				out := value(f).Call(in)
+				for i, v := range out {
+					f.data[i].Set(v)
 				}
 				return tnext
 			}
@@ -1533,7 +1555,6 @@ func branch(n *node) {
 
 func _return(n *node) {
 	child := n.child
-	next := getExec(n.tnext)
 	def := n.val.(*node)
 	values := make([]func(*frame) reflect.Value, len(child))
 	for i, c := range child {
@@ -1561,15 +1582,15 @@ func _return(n *node) {
 
 	switch len(child) {
 	case 0:
-		n.exec = func(f *frame) bltn { return next }
+		n.exec = nil
 	case 1:
-		if child[0].kind == binaryExpr {
-			n.exec = func(f *frame) bltn { return next }
+		if child[0].kind == binaryExpr || child[0].action == aCall {
+			n.exec = nil
 		} else {
 			v := values[0]
 			n.exec = func(f *frame) bltn {
 				f.data[0].Set(v(f))
-				return next
+				return nil
 			}
 		}
 	case 2:
@@ -1577,14 +1598,14 @@ func _return(n *node) {
 		n.exec = func(f *frame) bltn {
 			f.data[0].Set(v0(f))
 			f.data[1].Set(v1(f))
-			return next
+			return nil
 		}
 	default:
 		n.exec = func(f *frame) bltn {
 			for i, value := range values {
 				f.data[i].Set(value(f))
 			}
-			return next
+			return nil
 		}
 	}
 }
@@ -2073,7 +2094,7 @@ func _case(n *node) {
 }
 
 func appendSlice(n *node) {
-	dest := genValue(n)
+	dest := genValueOutput(n, n.typ.rtype)
 	next := getExec(n.tnext)
 	value := genValue(n.child[1])
 	value0 := genValue(n.child[2])
@@ -2098,7 +2119,7 @@ func _append(n *node) {
 		appendSlice(n)
 		return
 	}
-	dest := genValue(n)
+	dest := genValueOutput(n, n.typ.rtype)
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
@@ -2148,7 +2169,7 @@ func _append(n *node) {
 }
 
 func _cap(n *node) {
-	dest := genValue(n)
+	dest := genValueOutput(n, reflect.TypeOf(int(0)))
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
@@ -2159,7 +2180,7 @@ func _cap(n *node) {
 }
 
 func _copy(n *node) {
-	dest := genValue(n)
+	dest := genValueOutput(n, reflect.TypeOf(int(0)))
 	value0 := genValueArray(n.child[1])
 	value1 := genValue(n.child[2])
 	next := getExec(n.tnext)
@@ -2181,7 +2202,7 @@ func _close(n *node) {
 }
 
 func _complex(n *node) {
-	dest := genValue(n)
+	dest := genValueOutput(n, reflect.TypeOf(complex(0, 0)))
 	c1, c2 := n.child[1], n.child[2]
 	convertLiteralValue(c1, floatType)
 	convertLiteralValue(c2, floatType)
@@ -2204,7 +2225,7 @@ func _complex(n *node) {
 }
 
 func _imag(n *node) {
-	dest := genValue(n)
+	dest := genValueOutput(n, reflect.TypeOf(float64(0)))
 	convertLiteralValue(n.child[1], complexType)
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
@@ -2216,7 +2237,7 @@ func _imag(n *node) {
 }
 
 func _real(n *node) {
-	dest := genValue(n)
+	dest := genValueOutput(n, reflect.TypeOf(float64(0)))
 	convertLiteralValue(n.child[1], complexType)
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
@@ -2240,7 +2261,7 @@ func _delete(n *node) {
 }
 
 func _len(n *node) {
-	dest := genValue(n)
+	dest := genValueOutput(n, reflect.TypeOf(int(0)))
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
@@ -2251,9 +2272,9 @@ func _len(n *node) {
 }
 
 func _new(n *node) {
-	dest := genValue(n)
 	next := getExec(n.tnext)
 	typ := n.child[1].typ.TypeOf()
+	dest := genValueOutput(n, reflect.PtrTo(typ))
 
 	n.exec = func(f *frame) bltn {
 		dest(f).Set(reflect.New(typ))
@@ -2263,9 +2284,9 @@ func _new(n *node) {
 
 // _make allocates and initializes a slice, a map or a chan.
 func _make(n *node) {
-	dest := genValue(n)
 	next := getExec(n.tnext)
 	typ := n.child[1].typ.frameType()
+	dest := genValueOutput(n, typ)
 
 	switch typ.Kind() {
 	case reflect.Array, reflect.Slice:
