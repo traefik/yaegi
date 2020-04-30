@@ -625,12 +625,12 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			if err != nil {
 				break
 			}
-			if c0.rval.IsValid() && c1.rval.IsValid() && constOp[n.action] != nil {
-				if n.typ == nil {
-					if n.typ, err = nodeType(interp, sc, n); err != nil {
-						return
-					}
+			if n.typ == nil {
+				if n.typ, err = nodeType(interp, sc, n); err != nil {
+					break
 				}
+			}
+			if c0.rval.IsValid() && c1.rval.IsValid() && !isInterface(n.typ) && constOp[n.action] != nil {
 				n.typ.TypeOf()       // Force compute of reflection type.
 				constOp[n.action](n) // Compute a constant result now rather than during exec.
 			}
@@ -654,11 +654,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				n.findex = pos
 			default:
 				// Allocate a new location in frame, and store the result here.
-				if n.typ == nil {
-					if n.typ, err = nodeType(interp, sc, n); err != nil {
-						return
-					}
-				}
 				n.findex = sc.add(n.typ)
 			}
 
@@ -1566,13 +1561,13 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					return
 				}
 			}
-			// TODO: Optimisation: avoid allocation if boolean branch op (i.e. '!' in an 'if' expr)
-			if n.child[0].rval.IsValid() && constOp[n.action] != nil {
-				if n.typ == nil {
-					if n.typ, err = nodeType(interp, sc, n); err != nil {
-						return
-					}
+			if n.typ == nil {
+				if n.typ, err = nodeType(interp, sc, n); err != nil {
+					return
 				}
+			}
+			// TODO: Optimisation: avoid allocation if boolean branch op (i.e. '!' in an 'if' expr)
+			if n.child[0].rval.IsValid() && !isInterface(n.typ) && constOp[n.action] != nil {
 				n.typ.TypeOf() // init reflect type
 				constOp[n.action](n)
 			}
@@ -1589,11 +1584,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				n.typ = sc.def.typ.ret[pos]
 				n.findex = pos
 			default:
-				if n.typ == nil {
-					if n.typ, err = nodeType(interp, sc, n); err != nil {
-						return
-					}
-				}
 				n.findex = sc.add(n.typ)
 			}
 

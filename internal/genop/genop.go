@@ -17,9 +17,9 @@ import "reflect"
 // Arithmetic operators
 {{range $name, $op := .Arithmetic}}
 func {{$name}}(n *node) {
-	dest := genValue(n)
 	next := getExec(n.tnext)
-	typ := n.typ.TypeOf()
+	typ := n.typ.concrete().TypeOf()
+	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
@@ -379,7 +379,7 @@ func {{$name}}Const(n *node) {
 {{range $name, $op := .Comparison}}
 func {{$name}}(n *node) {
 	tnext := getExec(n.tnext)
-	dest := genValue(n)
+	dest := genValueOutput(n, reflect.TypeOf(true))
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
