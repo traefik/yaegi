@@ -199,6 +199,7 @@ const (
 	aCall
 	aCase
 	aCompositeLit
+	aConvert
 	aDec
 	aEqual
 	aGreater
@@ -257,6 +258,7 @@ var actions = [...]string{
 	aCall:         "call",
 	aCase:         "case",
 	aCompositeLit: "compositeLit",
+	aConvert:      "convert",
 	aDec:          "--",
 	aEqual:        "==",
 	aGreater:      ">",

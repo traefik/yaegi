@@ -182,6 +182,21 @@ func zeroInterfaceValue() reflect.Value {
 	return reflect.ValueOf(valueInterface{n, v})
 }
 
+func genValueOutput(n *node, t reflect.Type) func(*frame) reflect.Value {
+	value := genValue(n)
+	if n.anc.kind == returnStmt && n.anc.val.(*node).typ.ret[0].cat == interfaceT {
+		// The result of the builtin has to be returned as an interface type.
+		// Wrap it in a valueInterface and return the dereferenced value.
+		return func(f *frame) reflect.Value {
+			d := value(f)
+			v := reflect.New(t).Elem()
+			d.Set(reflect.ValueOf(valueInterface{n, v}))
+			return v
+		}
+	}
+	return value
+}
+
 func genValueInterfaceValue(n *node) func(*frame) reflect.Value {
 	value := genValue(n)
 

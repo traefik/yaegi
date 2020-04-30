@@ -565,7 +565,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		case defineXStmt:
 			wireChild(n)
 			if sc.def == nil {
-				// in global scope, type definition already handled by GTA
+				// In global scope, type definition already handled by GTA.
 				break
 			}
 			err = compDefineX(sc, n)
@@ -575,8 +575,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			nilSym := interp.universe.sym["nil"]
 			c0, c1 := n.child[0], n.child[1]
 			t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
-			// Shift operator type is inherited from first parameter only
-			// All other binary operators require both parameter types to be the same
+			// Shift operator type is inherited from first parameter only.
+			// All other binary operators require both parameter types to be the same.
 			if !isShiftNode(n) && !c0.typ.untyped && !c1.typ.untyped && !c0.typ.equals(c1.typ) {
 				err = n.cfgErrorf("mismatched types %s and %s", c0.typ.id(), c1.typ.id())
 				break
@@ -631,22 +631,29 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						return
 					}
 				}
-				n.typ.TypeOf() // init reflect type
-				constOp[n.action](n)
+				n.typ.TypeOf()       // Force compute of reflection type.
+				constOp[n.action](n) // Compute a constant result now rather than during exec.
 			}
 			switch {
 			case n.rval.IsValid():
+				// This operation involved constants, and the result is already computed
+				// by constOp and available in n.rval. Nothing else to do at execution.
 				n.gen = nop
 				n.findex = -1
 			case n.anc.kind == assignStmt && n.anc.action == aAssign:
+				// To avoid a copy in frame, if the result is to be assigned, store it directly
+				// at the frame location of destination.
 				dest := n.anc.child[childPos(n)-n.anc.nright]
 				n.typ = dest.typ
 				n.findex = dest.findex
 			case n.anc.kind == returnStmt:
+				// To avoid a copy in frame, if the result is to be returned, store it directly
+				// at the frame location reserved for output arguments.
 				pos := childPos(n)
 				n.typ = sc.def.typ.ret[pos]
 				n.findex = pos
 			default:
+				// Allocate a new location in frame, and store the result here.
 				if n.typ == nil {
 					if n.typ, err = nodeType(interp, sc, n); err != nil {
 						return
@@ -754,14 +761,18 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				if n.typ, err = nodeType(interp, sc, n); err != nil {
 					return
 				}
-				if n.typ.cat == builtinT {
+				switch {
+				case n.typ.cat == builtinT:
 					n.findex = -1
 					n.val = nil
-				} else {
+				case n.anc.kind == returnStmt:
+					// Store result directly to frame output location, to avoid a frame copy.
+					n.findex = 0
+				default:
 					n.findex = sc.add(n.typ)
 				}
 				if op, ok := constBltn[n.child[0].ident]; ok && n.anc.action != aAssign {
-					op(n) // pre-compute non-assigned constant builtin calls
+					op(n) // pre-compute non-assigned constant :
 				}
 
 			case n.child[0].isType(sc):
@@ -769,6 +780,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				if isInt(n.child[0].typ.TypeOf()) && n.child[1].kind == basicLit && isFloat(n.child[1].typ.TypeOf()) {
 					err = n.cfgErrorf("truncated to integer")
 				}
+				n.action = aConvert
 				if isInterface(n.child[0].typ) && !n.child[1].isNil() {
 					// Convert to interface: just check that all required methods are defined by concrete type.
 					c0, c1 := n.child[0], n.child[1]
@@ -807,7 +819,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				}
 			default:
 				if n.child[0].action == aGetFunc {
-					// allocate frame entry for anonymous function
+					// Allocate a frame entry to store the anonymous function definition.
 					sc.add(n.child[0].typ)
 				}
 				if typ := n.child[0].typ; len(typ.ret) > 0 {
