@@ -705,6 +705,13 @@ func (t *itype) referTo(name string, seen map[*itype]bool) bool {
 	return false
 }
 
+func (t *itype) numOut() int {
+	if t.cat == valueT {
+		return t.rtype.NumOut()
+	}
+	return len(t.ret)
+}
+
 func (t *itype) concrete() *itype {
 	if isInterface(t) && t.val != nil {
 		return t.val.concrete()
