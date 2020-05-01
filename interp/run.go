@@ -684,7 +684,19 @@ func call(n *node) {
 		// Function call from a return statement: forward return values (always at frame start).
 		for i := range rtypes {
 			j := i
-			rvalues[i] = func(f *frame) reflect.Value { return f.data[j] }
+			ret := n.child[0].typ.ret[i]
+			callret := n.anc.val.(*node).typ.ret[i]
+			if callret.cat == interfaceT && ret.cat != interfaceT {
+				// Wrap the returned value in a valueInterface in caller frame.
+				rvalues[i] = func(f *frame) reflect.Value {
+					v := reflect.New(ret.rtype).Elem()
+					f.data[j].Set(reflect.ValueOf(valueInterface{n, v}))
+					return v
+				}
+			} else {
+				// Set the return value location in return value of caller frame.
+				rvalues[i] = func(f *frame) reflect.Value { return f.data[j] }
+			}
 		}
 	default:
 		// Multiple return values frame index are indexed from the node frame index.
