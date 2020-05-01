@@ -2059,11 +2059,12 @@ func _case(n *node) {
 				// match against multiple types: assign var to interface value
 				n.exec = func(f *frame) bltn {
 					val := srcValue(f)
-					vid := val.Interface().(valueInterface).node.typ.id()
-					for _, typ := range types {
-						if vid == typ.id() {
-							destValue(f).Set(val)
-							return tnext
+					if v := srcValue(f).Interface().(valueInterface).node; v != nil {
+						for _, typ := range types {
+							if v.typ.id() == typ.id() {
+								destValue(f).Set(val)
+								return tnext
+							}
 						}
 					}
 					return fnext
@@ -2075,10 +2076,11 @@ func _case(n *node) {
 				n.exec = func(f *frame) bltn { return tnext }
 			} else {
 				n.exec = func(f *frame) bltn {
-					vtyp := srcValue(f).Interface().(valueInterface).node.typ
-					for _, typ := range types {
-						if vtyp.id() == typ.id() {
-							return tnext
+					if v := srcValue(f).Interface().(valueInterface).node; v != nil {
+						for _, typ := range types {
+							if v.typ.id() == typ.id() {
+								return tnext
+							}
 						}
 					}
 					return fnext

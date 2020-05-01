@@ -1467,6 +1467,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				}
 			}
 			c := clauses[l-1] // Last clause.
+			c.fnext = n
 			if len(c.child) == 0 {
 				c.tnext = n // Clause body is empty, exit.
 			} else {
