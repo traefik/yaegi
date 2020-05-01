@@ -933,13 +933,16 @@ func callBin(n *node) {
 		}
 	case fnext != nil:
 		// Handle branching according to boolean result.
+		index := n.findex
 		n.exec = func(f *frame) bltn {
 			in := make([]reflect.Value, l)
 			for i, v := range values {
 				in[i] = v(f)
 			}
 			res := value(f).Call(in)
-			if res[0].Bool() {
+			b := res[0].Bool()
+			f.data[index].SetBool(b)
+			if b {
 				return tnext
 			}
 			return fnext
