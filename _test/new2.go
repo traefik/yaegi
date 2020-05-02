@@ -8,3 +8,6 @@ func main() {
 	a := f()
 	println(*(a.(*int)))
 }
+
+// Output:
+// 0

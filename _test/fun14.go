@@ -9,5 +9,5 @@ func main() {
 	println(b, i)
 }
 
-// Output
+// Output:
 // true 2
