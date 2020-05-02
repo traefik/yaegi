@@ -83,6 +83,7 @@ type scope struct {
 	level       int                // Frame level: number of frame indirections to access var during execution
 	sym         map[string]*symbol // Map of symbols defined in this current scope
 	global      bool               // true if scope refers to global space (single frame for universe and package level scopes)
+	iota        int                // iota value in this scope
 }
 
 // push creates a new scope and chain it to the current one

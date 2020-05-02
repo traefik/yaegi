@@ -50,7 +50,6 @@ var identifier = regexp.MustCompile(`([\pL_][\pL_\d]*)$`)
 func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 	sc := interp.initScopePkg(pkgID)
 	var initNodes []*node
-	var iotaValue int
 	var err error
 
 	root.Walk(func(n *node) bool {
@@ -370,6 +369,18 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			}
 			return false
 
+		case constDecl:
+			// Early parse of constDecl subtrees, to compute all constant
+			// values which may be used in further declarations.
+			if !sc.global {
+				for _, c := range n.child {
+					if _, err = interp.cfg(c, pkgID); err != nil {
+						// No error processing here, to allow recovery in subtree nodes.
+						err = nil
+					}
+				}
+			}
+
 		case arrayType, basicLit, chanType, funcType, mapType, structType:
 			n.typ, err = nodeType(interp, sc, n)
 			return false
@@ -525,7 +536,11 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				}
 				if n.anc.kind == constDecl {
 					sc.sym[dest.ident].kind = constSym
-					iotaValue++
+					if childPos(n) == len(n.anc.child)-1 {
+						sc.iota = 0
+					} else {
+						sc.iota++
+					}
 				}
 			}
 
@@ -715,11 +730,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			}
 			sc = sc.pop()
 
-		case constDecl:
-			iotaValue = 0
-			wireChild(n)
-
-		case varDecl:
+		case constDecl, varDecl:
 			wireChild(n)
 
 		case declStmt, exprStmt, sendStmt:
@@ -1020,7 +1031,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						n.rval = sym.rval
 						n.kind = basicLit
 					case n.ident == "iota":
-						n.rval = reflect.ValueOf(iotaValue)
+						n.rval = reflect.ValueOf(sc.iota)
 						n.kind = basicLit
 					case n.ident == "nil":
 						n.kind = basicLit
