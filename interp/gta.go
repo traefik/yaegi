@@ -9,7 +9,6 @@ import "reflect"
 func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error) {
 	sc := interp.initScopePkg(pkgID)
 	var err error
-	var iotaValue int
 	var revisit []*node
 
 	root.Walk(func(n *node) bool {
@@ -18,9 +17,8 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 		}
 		switch n.kind {
 		case constDecl:
-			iotaValue = 0
 			// Early parse of constDecl subtree, to compute all constant
-			// values which may be necessary in further declarations.
+			// values which may be used in further declarations.
 			if _, err = interp.cfg(n, pkgID); err != nil {
 				// No error processing here, to allow recovery in subtree nodes.
 				err = nil
@@ -47,7 +45,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 
 			for i := 0; i < n.nleft; i++ {
 				dest, src := n.child[i], n.child[sbase+i]
-				val := reflect.ValueOf(iotaValue)
+				val := reflect.ValueOf(sc.iota)
 				if n.anc.kind == constDecl {
 					if _, err2 := interp.cfg(n, pkgID); err2 != nil {
 						// Constant value can not be computed yet.
@@ -80,7 +78,11 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				}
 				if n.anc.kind == constDecl {
 					sc.sym[dest.ident].kind = constSym
-					iotaValue++
+					if childPos(n) == len(n.anc.child)-1 {
+						sc.iota = 0
+					} else {
+						sc.iota++
+					}
 				}
 			}
 			return false
