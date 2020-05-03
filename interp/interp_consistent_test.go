@@ -32,6 +32,8 @@ func TestInterpConsistencyBuild(t *testing.T) {
 
 	for _, file := range files {
 		if filepath.Ext(file.Name()) != ".go" ||
+			file.Name() == "assign11.go" || // expect error
+			file.Name() == "assign12.go" || // expect error
 			file.Name() == "bad0.go" || // expect error
 			file.Name() == "const9.go" || // expect error
 			file.Name() == "export1.go" || // non-main package
@@ -134,6 +136,16 @@ func TestInterpErrorConsistency(t *testing.T) {
 		expectedInterp string
 		expectedExec   string
 	}{
+		{
+			fileName:       "assign11.go",
+			expectedInterp: "6:2: assignment mismatch: 3 variables but fmt.Println returns 2 values",
+			expectedExec:   "6:10: assignment mismatch: 3 variables but fmt.Println returns 2 values",
+		},
+		{
+			fileName:       "assign12.go",
+			expectedInterp: "6:2: assignment mismatch: 3 variables but fmt.Println returns 2 values",
+			expectedExec:   "6:10: assignment mismatch: 3 variables but fmt.Println returns 2 values",
+		},
 		{
 			fileName:       "bad0.go",
 			expectedInterp: "1:1: expected 'package', found println",

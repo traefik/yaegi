@@ -544,6 +544,12 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			l := len(n.child) - 1
 			switch lc := n.child[l]; lc.kind {
 			case callExpr:
+				if n.child[l-1].isType(sc) {
+					l--
+				}
+				if r := lc.child[0].typ.numOut(); r != l {
+					err = n.cfgErrorf("assignment mismatch: %d variables but %s returns %d values", l, lc.child[0].name(), r)
+				}
 				n.gen = nop
 			case indexExpr:
 				lc.gen = getIndexMap2
@@ -1267,6 +1273,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						n.typ = &itype{cat: valueT, rtype: s.Type(), untyped: isValueUntyped(s)}
 						n.rval = s
 					}
+					n.action = aGetSym
 					n.gen = nop
 				} else {
 					err = n.cfgErrorf("package %s \"%s\" has no symbol %s", n.child[0].ident, pkg, name)
@@ -1278,6 +1285,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.findex = sym.index
 					n.val = sym.node
 					n.gen = nop
+					n.action = aGetSym
 					n.typ = sym.typ
 					n.sym = sym
 					n.rval = sym.rval
@@ -1634,6 +1642,12 @@ func compDefineX(sc *scope, n *node) error {
 		} else {
 			types = funtype.ret
 		}
+		if n.child[l-1].isType(sc) {
+			l--
+		}
+		if len(types) != l {
+			return n.cfgErrorf("assignment mismatch: %d variables but %s returns %d values", l, src.child[0].name(), len(types))
+		}
 		n.gen = nop
 
 	case indexExpr:
@@ -1816,6 +1830,16 @@ func wireChild(n *node) {
 		}
 		break
 	}
+}
+
+func (n *node) name() (s string) {
+	switch {
+	case n.ident != "":
+		s = n.ident
+	case n.action == aGetSym:
+		s = n.child[0].ident + "." + n.child[1].ident
+	}
+	return s
 }
 
 // isInteger returns true if node type is integer, false otherwise

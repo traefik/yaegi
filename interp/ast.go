@@ -206,6 +206,7 @@ const (
 	aGreaterEqual
 	aGetFunc
 	aGetIndex
+	aGetSym
 	aInc
 	aLand
 	aLor
@@ -264,6 +265,7 @@ var actions = [...]string{
 	aGreater:      ">",
 	aGetFunc:      "getFunc",
 	aGetIndex:     "getIndex",
+	aGetSym:       ".",
 	aInc:          "++",
 	aLand:         "&&",
 	aLor:          "||",
