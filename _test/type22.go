@@ -13,3 +13,6 @@ type T struct {
 func main() {
 	println(foo().Name)
 }
+
+// Output:
+// foo

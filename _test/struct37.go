@@ -15,3 +15,6 @@ func main() {
 	_, err := c.Get("url")
 	println(strings.Contains(err.Error(), "unsupported protocol scheme"))
 }
+
+// Output:
+// true

@@ -14,4 +14,5 @@ func main() {
 	println(t.b)
 }
 
-// Output: true
+// Output:
+// true
