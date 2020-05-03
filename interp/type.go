@@ -253,10 +253,13 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		}
 		// If the node is to be assigned or returned, the node type is the destination type.
 		dt := t
-		if a := n.anc; a.kind == defineStmt && len(a.child) > a.nleft+a.nright {
+		switch a := n.anc; {
+		case a.kind == defineStmt && len(a.child) > a.nleft+a.nright:
 			if dt, err = nodeType(interp, sc, a.child[a.nleft]); err != nil {
 				return nil, err
 			}
+		case a.kind == returnStmt:
+			dt = sc.def.typ.ret[childPos(n)]
 		}
 		if isInterface(dt) {
 			dt.val = t
