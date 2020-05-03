@@ -845,17 +845,43 @@ func (t *itype) methods() methodSet {
 }
 
 // id returns a unique type identificator string
-func (t *itype) id() string {
-	// TODO: if res is nil, build identity from String()
-
-	res := ""
+func (t *itype) id() (res string) {
+	if t.name != "" {
+		return t.path + "." + t.name
+	}
 	switch t.cat {
-	case valueT:
-		res = t.rtype.PkgPath() + "." + t.rtype.Name()
+	case arrayT:
+		res = "[" + strconv.Itoa(t.size) + "]" + t.val.id()
+	case chanT:
+		res = "<-" + t.val.id()
+	case funcT:
+		res = "func("
+		for _, t := range t.arg {
+			res += t.id() + ","
+		}
+		res += ")("
+		for _, t := range t.ret {
+			res += t.id() + ","
+		}
+		res += ")"
+	case interfaceT:
+		res = "interface{"
+		for _, t := range t.field {
+			res += t.name + " " + t.typ.id() + ";"
+		}
+		res += "}"
+	case mapT:
+		res = "map[" + t.key.id() + "]" + t.val.id()
 	case ptrT:
 		res = "*" + t.val.id()
-	default:
-		res = t.path + "." + t.name
+	case structT:
+		res = "struct{"
+		for _, t := range t.field {
+			res += t.name + " " + t.typ.id() + ";"
+		}
+		res += "}"
+	case valueT:
+		res = t.rtype.PkgPath() + "." + t.rtype.Name()
 	}
 	return res
 }
