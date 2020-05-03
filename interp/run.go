@@ -821,7 +821,11 @@ func call(n *node) {
 						d.Set(src)
 					}
 				case variadic >= 0 && i >= variadic:
-					vararg.Set(reflect.Append(vararg, v(f)))
+					if v(f).Type() == vararg.Type() {
+						vararg.Set(v(f))
+					} else {
+						vararg.Set(reflect.Append(vararg, v(f)))
+					}
 				default:
 					dest[i].Set(v(f))
 				}
