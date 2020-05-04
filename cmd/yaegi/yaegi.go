@@ -1,22 +1,67 @@
 /*
 Yaegi interprets Go programs.
 
-Yaegi reads Go language programs from its standard input or from a file
-and evaluates them.
+Yaegi reads Go language programs from standard input, string
+parameters or files and run them.
 
-If invoked with no arguments, it processes the standard input
-in a Read-Eval-Print-Loop. A prompt is displayed if standard input
-is a terminal.
+If invoked with no arguments, it processes the standard input in
+a Read-Eval-Print-Loop. A prompt is displayed if standard input is
+a terminal.
 
-Given a file, it operates on that file. If the first line starts with
-"#!/usr/bin/env yaegi", and the file has exec permission, then the file
-can be invoked directly from the shell.
+File Mode
 
-In file mode, as in standard Go, files are read entirely, then parsed,
-then evaluated. In REPL mode, each line is parsed and evaluated separately,
-at global level in an implicit main package.
+In file mode, as in a standard Go compiler, source files are read entirely
+before being fully parsed, then evaluated. It allows to handle forward
+declarations and to have package code split in multiple source files.
+
+Go specifications fully apply in this mode.
+
+All files are interpreted in file mode except the initial file if it
+starts with "#!" characters (the shebang pattern to allow executable
+scripts), for example "#!/usr/bin/env yaegi". In that case, the initial
+file is interpreted in REPL mode.
+
+REPL mode
+
+In REPL mode, the interpreter parses the code incrementally. As soon
+as a statement is complete, it evaluates it. This makes the interpreter
+suitable for interactive command line and scripts.
+
+Go specifications apply with the following differences:
+
+All local and global declarations (const, var, type, func) are allowed,
+except that forward declarations are forbidden (as declarations inside
+a standard Go function), and import statement can be interleaved with
+other instructions.
+
+The statements are evaluated in the global space, within an implicit
+"main" package.
+
+It is not necessary to have a package statement, or a main function in
+REPL mode.  Import statements for preloaded binary packages can also
+be avoided (i.e. all the standard library except the few packages
+where default names collide, as "math/rand" and "crypto/rand", for which
+explicit import is still necessary).
+
+Note that the source packages are always interpreted in file mode,
+even if imported from REPL.
+
+The following extract is a valid executable script:
+
+	#!/usr/bin/env yaegi
+	helloHandler := func(w http.ResponseWriter, req *http.Request) {
+	   io.WriteString(w, "Hello, world!\n")
+	}
+	http.HandleFunc("/hello", helloHandler)
+	log.Fatal(http.ListenAndServe(":8080", nil))
+
+Example of a one liner:
+
+	$ yaegi -e 'println(reflect.TypeOf(fmt.Print))'
 
 Options:
+	-e string
+	   evaluate the string and return.
     -i
 	   start an interactive REPL after file execution.
 	-tags tag,list
@@ -86,15 +131,18 @@ func main() {
 
 	s := string(b)
 	if s[:2] == "#!" {
-		// Allow executable go scripts, but fix them prior to parse
+		// Allow executable go scripts, Have the same behavior as in interactive mode.
 		s = strings.Replace(s, "#!", "//", 1)
-	}
-
-	i.Name = args[0]
-	if _, err := i.Eval(s); err != nil {
-		fmt.Println(err)
-		if p, ok := err.(interp.Panic); ok {
-			fmt.Println(string(p.Stack))
+		i.REPL(strings.NewReader(s), os.Stdout)
+	} else {
+		// Files not starting with "#!" are supposed to be pure Go, directly Evaled.
+		i.Name = args[0]
+		_, err := i.Eval(s)
+		if err != nil {
+			fmt.Println(err)
+			if p, ok := err.(interp.Panic); ok {
+				fmt.Println(string(p.Stack))
+			}
 		}
 	}
 
