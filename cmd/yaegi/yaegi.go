@@ -11,7 +11,7 @@ a terminal.
 File Mode
 
 In file mode, as in a standard Go compiler, source files are read entirely
-before being fully parsed, then evaluated. It allows to handle forward
+before being parsed, then evaluated. It allows to handle forward
 declarations and to have package code split in multiple source files.
 
 Go specifications fully apply in this mode.
@@ -30,18 +30,17 @@ suitable for interactive command line and scripts.
 Go specifications apply with the following differences:
 
 All local and global declarations (const, var, type, func) are allowed,
-except that forward declarations are forbidden (as declarations inside
-a standard Go function), and import statement can be interleaved with
-other instructions.
+including in short form, except that all identifiers must be defined
+before use (as declarations inside a standard Go function).
 
 The statements are evaluated in the global space, within an implicit
 "main" package.
 
 It is not necessary to have a package statement, or a main function in
-REPL mode.  Import statements for preloaded binary packages can also
+REPL mode. Import statements for preloaded binary packages can also
 be avoided (i.e. all the standard library except the few packages
 where default names collide, as "math/rand" and "crypto/rand", for which
-explicit import is still necessary).
+an explicit import is still necessary).
 
 Note that the source packages are always interpreted in file mode,
 even if imported from REPL.
