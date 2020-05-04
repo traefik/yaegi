@@ -84,7 +84,7 @@ func TestYaegiCmdCancel(t *testing.T) {
 			continue
 		}
 
-		if outBuf.String() != "context canceled\n2\n" {
+		if outBuf.String() != "context canceled\n" {
 			t.Errorf("unexpected output: %q", &outBuf)
 		}
 	}

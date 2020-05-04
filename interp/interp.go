@@ -455,16 +455,34 @@ func (interp *Interpreter) Use(values Exports) {
 // REPL performs a Read-Eval-Print-Loop on input reader.
 // Results are printed on output writer.
 func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
-	s := bufio.NewScanner(in)
+	// Preimport used bin packages, to avoid having to import these packages manually
+	// in REPL mode. These packages are already loaded anyway.
+	sc := interp.universe
+	for k := range interp.binPkg {
+		name := identifier.FindString(k)
+		if name == "" || name == "rand" || name == "scanner" || name == "template" || name == "pprof" {
+			// Skip any package with an ambiguous name (i.e crypto/rand vs math/rand).
+			// Those will have to be imported explicitly.
+			continue
+		}
+		sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: k, scope: sc}}
+	}
+
+	// Set prompt.
+	var v reflect.Value
+	var err error
 	prompt := getPrompt(in, out)
-	prompt()
+	prompt(v)
+
+	// Read, Eval, Print in a Loop.
 	src := ""
+	s := bufio.NewScanner(in)
 	for s.Scan() {
 		src += s.Text() + "\n"
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		handleSignal(ctx, cancel)
-		v, err := interp.EvalWithContext(ctx, src)
+		v, err = interp.EvalWithContext(ctx, src)
 		signal.Reset()
 		if err != nil {
 			switch e := err.(type) {
@@ -479,11 +497,9 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 			default:
 				fmt.Fprintln(out, err)
 			}
-		} else if v.IsValid() {
-			fmt.Fprintln(out, v)
 		}
 		src = ""
-		prompt()
+		prompt(v)
 	}
 }
 
@@ -495,16 +511,21 @@ func (interp *Interpreter) Repl(in, out *os.File) {
 }
 
 // getPrompt returns a function which prints a prompt only if input is a terminal.
-func getPrompt(in io.Reader, out io.Writer) func() {
+func getPrompt(in io.Reader, out io.Writer) func(reflect.Value) {
 	s, ok := in.(interface{ Stat() (os.FileInfo, error) })
 	if !ok {
-		return func() {}
+		return func(reflect.Value) {}
 	}
 	stat, err := s.Stat()
 	if err == nil && stat.Mode()&os.ModeCharDevice != 0 {
-		return func() { fmt.Fprint(out, "> ") }
+		return func(v reflect.Value) {
+			if v.IsValid() {
+				fmt.Fprintln(out, ":", v)
+			}
+			fmt.Fprint(out, "> ")
+		}
 	}
-	return func() {}
+	return func(reflect.Value) {}
 }
 
 // handleSignal wraps signal handling for eval cancellation.
