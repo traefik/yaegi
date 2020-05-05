@@ -687,7 +687,7 @@ func call(n *node) {
 	case returnStmt:
 		// Function call from a return statement: forward return values (always at frame start).
 		for i := range rtypes {
-			j := i
+			j := n.findex + i
 			ret := n.child[0].typ.ret[i]
 			callret := n.anc.val.(*node).typ.ret[i]
 			if callret.cat == interfaceT && ret.cat != interfaceT {
@@ -983,6 +983,7 @@ func callBin(n *node) {
 		case aReturn:
 			// The function call is part of a return statement, store output results
 			// directly in the frame location of outputs of the current function.
+			b := childPos(n)
 			n.exec = func(f *frame) bltn {
 				in := make([]reflect.Value, l)
 				for i, v := range values {
@@ -990,7 +991,7 @@ func callBin(n *node) {
 				}
 				out := value(f).Call(in)
 				for i, v := range out {
-					f.data[i].Set(v)
+					f.data[b+i].Set(v)
 				}
 				return tnext
 			}
