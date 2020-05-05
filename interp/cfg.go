@@ -823,9 +823,13 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						}
 					} else {
 						n.typ = &itype{cat: valueT, rtype: typ.Out(0)}
-						n.findex = sc.add(n.typ)
-						for i := 1; i < typ.NumOut(); i++ {
-							sc.add(&itype{cat: valueT, rtype: typ.Out(i)})
+						if n.anc.kind == returnStmt {
+							n.findex = childPos(n)
+						} else {
+							n.findex = sc.add(n.typ)
+							for i := 1; i < typ.NumOut(); i++ {
+								sc.add(&itype{cat: valueT, rtype: typ.Out(i)})
+							}
 						}
 					}
 				}
@@ -836,9 +840,13 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				}
 				if typ := n.child[0].typ; len(typ.ret) > 0 {
 					n.typ = typ.ret[0]
-					n.findex = sc.add(n.typ)
-					for _, t := range typ.ret[1:] {
-						sc.add(t)
+					if n.anc.kind == returnStmt {
+						n.findex = childPos(n)
+					} else {
+						n.findex = sc.add(n.typ)
+						for _, t := range typ.ret[1:] {
+							sc.add(t)
+						}
 					}
 				} else {
 					n.findex = -1
