@@ -1978,7 +1978,7 @@ func isMethod(n *node) bool {
 }
 
 func isMapEntry(n *node) bool {
-	return n.action == aGetIndex && n.child[0].typ.cat == mapT
+	return n.action == aGetIndex && isMap(n.child[0].typ)
 }
 
 func isBinCall(n *node) bool {
