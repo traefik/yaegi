@@ -678,7 +678,7 @@ func call(n *node) {
 			switch {
 			case c.ident == "_":
 				// Skip assigning return value to blank var.
-			case c.typ.cat == interfaceT:
+			case c.typ.cat == interfaceT && rtypes[i].cat != interfaceT:
 				rvalues[i] = genValueInterfaceValue(c)
 			default:
 				rvalues[i] = genValue(c)
