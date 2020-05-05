@@ -1222,10 +1222,9 @@ func chanElement(t *itype) *itype {
 	return nil
 }
 
-// isChan returns true if type is of channel kind.
-func isChan(t *itype) bool {
-	return t.TypeOf().Kind() == reflect.Chan
-}
+func isBool(t *itype) bool { return t.TypeOf().Kind() == reflect.Bool }
+func isChan(t *itype) bool { return t.TypeOf().Kind() == reflect.Chan }
+func isMap(t *itype) bool  { return t.TypeOf().Kind() == reflect.Map }
 
 func isInterfaceSrc(t *itype) bool {
 	return t.cat == interfaceT || (t.cat == aliasT && isInterfaceSrc(t.val))
@@ -1250,8 +1249,6 @@ func isStruct(t *itype) bool {
 		return false
 	}
 }
-
-func isBool(t *itype) bool { return t.TypeOf().Kind() == reflect.Bool }
 
 func isInt(t reflect.Type) bool {
 	if t == nil {
