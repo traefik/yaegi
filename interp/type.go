@@ -706,10 +706,15 @@ func (t *itype) referTo(name string, seen map[*itype]bool) bool {
 }
 
 func (t *itype) numOut() int {
-	if t.cat == valueT {
-		return t.rtype.NumOut()
+	switch t.cat {
+	case funcT:
+		return len(t.ret)
+	case valueT:
+		if t.rtype.Kind() == reflect.Func {
+			return t.rtype.NumOut()
+		}
 	}
-	return len(t.ret)
+	return 1
 }
 
 func (t *itype) concrete() *itype {

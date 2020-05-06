@@ -39,6 +39,8 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "export1.go" || // non-main package
 			file.Name() == "export0.go" || // non-main package
 			file.Name() == "for7.go" || // expect error
+			file.Name() == "fun21.go" || // expect error
+			file.Name() == "fun22.go" || // expect error
 			file.Name() == "if2.go" || // expect error
 			file.Name() == "import6.go" || // expect error
 			file.Name() == "io0.go" || // use random number
@@ -165,6 +167,16 @@ func TestInterpErrorConsistency(t *testing.T) {
 			fileName:       "for7.go",
 			expectedInterp: "4:14: non-bool used as for condition",
 			expectedExec:   "4:2: non-bool i (type int) used as for condition",
+		},
+		{
+			fileName:       "fun21.go",
+			expectedInterp: "4:2: not enough arguments to return",
+			expectedExec:   "4:2: not enough arguments to return",
+		},
+		{
+			fileName:       "fun22.go",
+			expectedInterp: "6:2: not enough arguments in call to time.Date",
+			expectedExec:   "6:11: not enough arguments in call to time.Date",
 		},
 		{
 			fileName:       "op1.go",
