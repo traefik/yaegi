@@ -76,6 +76,7 @@ Debugging support (may be removed at any time):
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"go/build"
@@ -128,15 +129,14 @@ func main() {
 		log.Fatal("Could not read file: ", args[0])
 	}
 
-	s := string(b)
-	if s[:2] == "#!" {
+	if len(b) > 1 && bytes.Compare(b[:2], []byte("#!")) == 0 {
 		// Allow executable go scripts, Have the same behavior as in interactive mode.
-		s = strings.Replace(s, "#!", "//", 1)
-		i.REPL(strings.NewReader(s), os.Stdout)
+		copy(b, "//")
+		i.REPL(bytes.NewReader(b), os.Stdout)
 	} else {
 		// Files not starting with "#!" are supposed to be pure Go, directly Evaled.
 		i.Name = args[0]
-		_, err := i.Eval(s)
+		_, err := i.Eval(string(b))
 		if err != nil {
 			fmt.Println(err)
 			if p, ok := err.(interp.Panic); ok {
