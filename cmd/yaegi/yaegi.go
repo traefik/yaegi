@@ -129,7 +129,7 @@ func main() {
 		log.Fatal("Could not read file: ", args[0])
 	}
 
-	if len(b) > 1 && bytes.Compare(b[:2], []byte("#!")) == 0 {
+	if len(b) > 1 && bytes.Equal(b[:2], []byte("#!")) {
 		// Allow executable go scripts, Have the same behavior as in interactive mode.
 		copy(b, "//")
 		i.REPL(bytes.NewReader(b), os.Stdout)
