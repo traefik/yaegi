@@ -1867,7 +1867,7 @@ func (n *node) isInteger() bool {
 	if isInt(n.typ.TypeOf()) {
 		return true
 	}
-	if n.typ.untyped && n.rval.IsValid() {
+	if n.rval.IsValid() {
 		t := n.rval.Type()
 		if isInt(t) {
 			return true
@@ -1890,7 +1890,7 @@ func (n *node) isNatural() bool {
 	if isUint(n.typ.TypeOf()) {
 		return true
 	}
-	if n.typ.untyped && n.rval.IsValid() {
+	if n.rval.IsValid() {
 		t := n.rval.Type()
 		if isUint(t) {
 			return true

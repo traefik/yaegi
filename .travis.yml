@@ -39,7 +39,7 @@ install:
   - go mod download
 
 before_script:
-  - rm -f interp/op.go interp/interp_test.go
+  - rm -f interp/op.go
   - make generate
   - git update-index -q --refresh
   - CHANGED=$(git diff-index --name-only HEAD --)
