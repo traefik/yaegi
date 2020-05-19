@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/url"
 )
 
@@ -11,11 +10,12 @@ func main() {
 	value1.Set("first", "v1")
 	value1.Set("second", "v2")
 
+	l := 0
 	for k, v := range value1 {
-		fmt.Println("k:", k, "v:", v)
+		l += len(k) + len(v)
 	}
+	println(l)
 }
 
 // Output:
-// k: first v: [v1]
-// k: second v: [v2]
+// 13
