@@ -8,11 +8,6 @@ import (
 
 func init() { log.SetFlags(log.Lshortfile) }
 
-func genInt() reflect.Type {
-	var x uint = 3
-	return reflect.TypeOf(x)
-}
-
 func TestIsNatural(t *testing.T) {
 	tests := []struct {
 		desc     string
@@ -161,8 +156,8 @@ func TestIsNatural(t *testing.T) {
 				},
 				rval: func() reflect.Value {
 					const (
-							zero = iota
-							a
+						zero = iota
+						a
 					)
 					return reflect.ValueOf(a)
 				}(),
