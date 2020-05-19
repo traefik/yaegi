@@ -507,9 +507,13 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					src.findex = dest.findex // Set recv address to LHS
 					dest.typ = src.typ
 				case n.action == aAssign && src.action == aCompositeLit:
-					n.gen = nop
-					src.findex = dest.findex
-					src.level = level
+					if !(dest.typ.cat == valueT && dest.typ.rtype.Kind() == reflect.Interface) {
+						// Output literal composite to destination (avoiding assign operation)
+						// only if there is no need to wrap to an interface.
+						n.gen = nop
+						src.findex = dest.findex
+						src.level = level
+					}
 				case src.kind == basicLit:
 					// TODO: perform constant folding and propagation here.
 					switch {
@@ -884,9 +888,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case compositeLitExpr:
 			wireChild(n)
-			if n.anc.action != aAssign {
-				n.findex = sc.add(n.typ)
-			}
+			n.findex = sc.add(n.typ)
 			// TODO: Check that composite literal expr matches corresponding type
 			n.gen = compositeGenerator(n, sc)
 
