@@ -148,6 +148,28 @@ func TestIsNatural(t *testing.T) {
 			expected: true,
 		},
 		{
+			desc: "positive untyped const (iota)",
+			n: &node{
+				typ: &itype{
+					rtype: func() reflect.Type {
+						const (
+							zero = iota
+							a
+						)
+						return reflect.TypeOf(a)
+					}(),
+				},
+				rval: func() reflect.Value {
+					const (
+							zero = iota
+							a
+					)
+					return reflect.ValueOf(a)
+				}(),
+			},
+			expected: true,
+		},
+		{
 			desc: "negative const",
 			n: &node{
 				typ: &itype{
