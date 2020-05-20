@@ -1548,24 +1548,29 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			for i := l - 1; i >= 0; i-- {
 				c := clauses[i]
 				c.gen = nop
-				body := c.lastChild()
-				if len(c.child) > 1 {
-					cond := c.child[0]
-					cond.tnext = body.start
-					if i == l-1 {
-						setFNext(cond, n)
+				if len(c.child) == 0 {
+					c.tnext = n
+					c.fnext = n
+				} else {
+					body := c.lastChild()
+					if len(c.child) > 1 {
+						cond := c.child[0]
+						cond.tnext = body.start
+						if i == l-1 {
+							setFNext(cond, n)
+						} else {
+							setFNext(cond, clauses[i+1].start)
+						}
+						c.start = cond.start
 					} else {
-						setFNext(cond, clauses[i+1].start)
+						c.start = body.start
 					}
-					c.start = cond.start
-				} else {
-					c.start = body.start
-				}
-				// If last case body statement is a fallthrough, then jump to next case body
-				if i < l-1 && len(body.child) > 0 && body.lastChild().kind == fallthroughtStmt {
-					body.tnext = clauses[i+1].lastChild().start
-				} else {
-					body.tnext = n
+					// If last case body statement is a fallthrough, then jump to next case body
+					if i < l-1 && len(body.child) > 0 && body.lastChild().kind == fallthroughtStmt {
+						body.tnext = clauses[i+1].lastChild().start
+					} else {
+						body.tnext = n
+					}
 				}
 			}
 			sbn.start = clauses[0].start
