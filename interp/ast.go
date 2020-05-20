@@ -206,6 +206,7 @@ const (
 	aGreaterEqual
 	aGetFunc
 	aGetIndex
+	aGetMethod
 	aGetSym
 	aInc
 	aLand
@@ -265,6 +266,7 @@ var actions = [...]string{
 	aGreater:      ">",
 	aGetFunc:      "getFunc",
 	aGetIndex:     "getIndex",
+	aGetMethod:    "getMethod",
 	aGetSym:       ".",
 	aInc:          "++",
 	aLand:         "&&",

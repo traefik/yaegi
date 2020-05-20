@@ -1595,6 +1595,12 @@ func _return(n *node) {
 			values[i] = genValue(c)
 		case interfaceT:
 			values[i] = genValueInterface(c)
+		case valueT:
+			if t.rtype.Kind() == reflect.Interface {
+				values[i] = genInterfaceWrapper(c, t.rtype)
+				break
+			}
+			fallthrough
 		default:
 			if c.typ.untyped {
 				values[i] = genValueAs(c, def.typ.ret[i].TypeOf())
