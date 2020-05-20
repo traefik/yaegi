@@ -509,6 +509,12 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					src.findex = dest.findex // Set recv address to LHS
 					dest.typ = src.typ
 				case n.action == aAssign && src.action == aCompositeLit:
+					if dest.typ.cat == valueT && dest.typ.rtype.Kind() == reflect.Interface {
+						// No optimisation attempt for assigned binary interface
+						break
+					}
+					// Skip the assign operation entirely, the source frame index is set
+					// to destination index, avoiding extra memory alloc and duplication.
 					n.gen = nop
 					src.findex = dest.findex
 					src.level = level
@@ -902,9 +908,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case compositeLitExpr:
 			wireChild(n)
-			if n.anc.action != aAssign {
-				n.findex = sc.add(n.typ)
-			}
+			n.findex = sc.add(n.typ)
 			// TODO: Check that composite literal expr matches corresponding type
 			n.gen = compositeGenerator(n, sc)
 
