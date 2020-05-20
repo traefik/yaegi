@@ -89,6 +89,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						switch typ.Kind() {
 						case reflect.Map:
 							n.anc.gen = rangeMap
+							ityp := &itype{cat: valueT, rtype: reflect.TypeOf((*reflect.MapIter)(nil))}
+							sc.add(ityp)
 							ktyp = &itype{cat: valueT, rtype: typ.Key()}
 							vtyp = &itype{cat: valueT, rtype: typ.Elem()}
 						case reflect.String:
@@ -818,7 +820,23 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				}
 			case isBinCall(n):
 				n.gen = callBin
-				if typ := n.child[0].typ.rtype; typ.NumOut() > 0 {
+				typ := n.child[0].typ.rtype
+				numIn := len(n.child) - 1
+				tni := typ.NumIn()
+				if numIn == 1 && n.child[1].action == aCall {
+					numIn = n.child[1].typ.numOut()
+				}
+				if n.child[0].action == aGetMethod {
+					tni-- // The first argument is the method receiver.
+				}
+				if typ.IsVariadic() {
+					tni-- // The last argument could be empty.
+				}
+				if numIn < tni {
+					err = n.cfgErrorf("not enough arguments in call to %v", n.child[0].name())
+					break
+				}
+				if typ.NumOut() > 0 {
 					if funcType := n.child[0].typ.val; funcType != nil {
 						// Use the original unwrapped function type, to allow future field and
 						// methods resolutions, otherwise impossible on the opaque bin type.
@@ -1200,6 +1218,16 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			}
 
 		case returnStmt:
+			if mustReturnValue(sc.def.child[2]) {
+				nret := len(n.child)
+				if nret == 1 && n.child[0].action == aCall {
+					nret = n.child[0].child[0].typ.numOut()
+				}
+				if nret < sc.def.typ.numOut() {
+					err = n.cfgErrorf("not enough arguments to return")
+					break
+				}
+			}
 			wireChild(n)
 			n.tnext = nil
 			n.val = sc.def
@@ -1236,6 +1264,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				case ok:
 					n.val = method.Index
 					n.gen = getIndexBinMethod
+					n.action = aGetMethod
 					n.recv = &receiver{node: n.child[0]}
 					n.typ = &itype{cat: valueT, rtype: method.Type, isBinMethod: true}
 				case n.typ.rtype.Kind() == reflect.Ptr:
@@ -1259,6 +1288,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 							n.gen = getIndexBinPtrMethod
 							n.typ = &itype{cat: valueT, rtype: m2.Type}
 							n.recv = &receiver{node: n.child[0]}
+							n.action = aGetMethod
 						} else {
 							err = n.cfgErrorf("undefined field or method: %s", n.child[1].ident)
 						}
@@ -1273,11 +1303,13 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.typ = &itype{cat: valueT, rtype: method.Type}
 					n.recv = &receiver{node: n.child[0]}
 					n.gen = getIndexBinMethod
+					n.action = aGetMethod
 				} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
 					n.val = method.Index
 					n.gen = getIndexBinMethod
 					n.typ = &itype{cat: valueT, rtype: method.Type}
 					n.recv = &receiver{node: n.child[0]}
+					n.action = aGetMethod
 				} else if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
 					n.typ = &itype{cat: valueT, rtype: field.Type}
 					n.val = field.Index
@@ -1316,6 +1348,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					err = n.cfgErrorf("undefined selector: %s.%s", pkg, name)
 				}
 			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
+				n.action = aGetMethod
 				if n.child[0].isType(sc) {
 					// Handle method as a function with receiver in 1st argument
 					n.val = m
@@ -1332,6 +1365,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.recv = &receiver{node: n.child[0], index: lind}
 				}
 			} else if m, lind, isPtr, ok := n.typ.lookupBinMethod(n.child[1].ident); ok {
+				n.action = aGetMethod
 				if isPtr && n.typ.fieldSeq(lind).cat != ptrT {
 					n.gen = getIndexSeqPtrMethod
 				} else {
@@ -1871,7 +1905,7 @@ func (n *node) isInteger() bool {
 	if isInt(n.typ.TypeOf()) {
 		return true
 	}
-	if n.typ.untyped && n.rval.IsValid() {
+	if n.rval.IsValid() {
 		t := n.rval.Type()
 		if isInt(t) {
 			return true
@@ -1894,7 +1928,7 @@ func (n *node) isNatural() bool {
 	if isUint(n.typ.TypeOf()) {
 		return true
 	}
-	if n.typ.untyped && n.rval.IsValid() {
+	if n.rval.IsValid() {
 		t := n.rval.Type()
 		if isUint(t) {
 			return true
@@ -1987,6 +2021,18 @@ func isMapEntry(n *node) bool {
 
 func isBinCall(n *node) bool {
 	return n.kind == callExpr && n.child[0].typ.cat == valueT && n.child[0].typ.rtype.Kind() == reflect.Func
+}
+
+func mustReturnValue(n *node) bool {
+	if len(n.child) < 2 {
+		return false
+	}
+	for _, f := range n.child[1].child {
+		if len(f.child) > 1 {
+			return false
+		}
+	}
+	return true
 }
 
 func isRegularCall(n *node) bool {
