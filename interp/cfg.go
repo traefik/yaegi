@@ -89,6 +89,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						switch typ.Kind() {
 						case reflect.Map:
 							n.anc.gen = rangeMap
+							ityp := &itype{cat: valueT, rtype: reflect.TypeOf((*reflect.MapIter)(nil))}
+							sc.add(ityp)
 							ktyp = &itype{cat: valueT, rtype: typ.Key()}
 							vtyp = &itype{cat: valueT, rtype: typ.Elem()}
 						case reflect.String:
