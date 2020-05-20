@@ -10,12 +10,12 @@ func (f foo) String() string {
 	return "Hello from " + f.bar
 }
 
-func NewFoo(s string) fmt.Stringer {
+func Foo(s string) fmt.Stringer {
 	return foo{s}
 }
 
 func main() {
-	f := NewFoo("bar")
+	f := Foo("bar")
 	fmt.Println(f)
 }
 
