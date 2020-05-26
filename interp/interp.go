@@ -104,8 +104,11 @@ type imports map[string]map[string]*symbol
 
 // opt stores interpreter options
 type opt struct {
-	astDot   bool          // display AST graph (debug)
-	cfgDot   bool          // display CFG graph (debug)
+	astDot bool // display AST graph (debug)
+	cfgDot bool // display CFG graph (debug)
+	// dotCmd is the command to process the dot graph produced when astDot and/or
+	// cfgDot is enabled. It defaults to 'dot -Tdot -o <filename>.dot'.
+	dotCmd   string
 	noRun    bool          // compile, but do not run
 	fastChan bool          // disable cancellable chan operations
 	context  build.Context // build context: GOPATH, build constraints
@@ -224,6 +227,11 @@ func New(options Options) *Interpreter {
 	// cfgDot activates AST graph display for the interpreter
 	i.opt.cfgDot, _ = strconv.ParseBool(os.Getenv("YAEGI_CFG_DOT"))
 
+	// dotCmd defines how to process the dot code generated whenever astDot and/or
+	// cfgDot is enabled. It defaults to 'dot -Tdot -o<filename>.dot' where filename
+	// is context dependent.
+	i.opt.dotCmd = os.Getenv("YAEGI_DOT_CMD")
+
 	// noRun disables the execution (but not the compilation) in the interpreter
 	i.opt.noRun, _ = strconv.ParseBool(os.Getenv("YAEGI_NO_RUN"))
 
@@ -328,7 +336,11 @@ func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
 	}
 
 	if interp.astDot {
-		root.astDot(dotX(), interp.Name)
+		dotCmd := interp.dotCmd
+		if dotCmd == "" {
+			dotCmd = defaultDotCmd(interp.Name, "yaegi-ast-")
+		}
+		root.astDot(dotWriter(dotCmd), interp.Name)
 		if interp.noRun {
 			return res, err
 		}
@@ -363,7 +375,11 @@ func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
 	interp.mutex.Unlock()
 
 	if interp.cfgDot {
-		root.cfgDot(dotX())
+		dotCmd := interp.dotCmd
+		if dotCmd == "" {
+			dotCmd = defaultDotCmd(interp.Name, "yaegi-cfg-")
+		}
+		root.cfgDot(dotWriter(dotCmd))
 	}
 
 	if interp.noRun {
