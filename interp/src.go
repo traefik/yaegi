@@ -67,8 +67,13 @@ func (interp *Interpreter) importSrc(rPath, path string) error {
 		if root == nil {
 			continue
 		}
+
 		if interp.astDot {
-			root.astDot(dotX(), name)
+			dotCmd := interp.dotCmd
+			if dotCmd == "" {
+				dotCmd = defaultDotCmd(name)
+			}
+			root.astDot(dotWriter(dotCmd), name)
 		}
 		if pkgName == "" {
 			pkgName = pname
