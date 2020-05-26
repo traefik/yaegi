@@ -71,7 +71,7 @@ func (interp *Interpreter) importSrc(rPath, path string) error {
 		if interp.astDot {
 			dotCmd := interp.dotCmd
 			if dotCmd == "" {
-				dotCmd = defaultDotCmd(name)
+				dotCmd = defaultDotCmd(name, "yaegi-ast-")
 			}
 			root.astDot(dotWriter(dotCmd), name)
 		}

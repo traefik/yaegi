@@ -83,7 +83,7 @@ func dotWriter(dotCmd string) io.WriteCloser {
 	return dotin
 }
 
-func defaultDotCmd(filePath string) string {
+func defaultDotCmd(filePath, prefix string) string {
 	dir, fileName := filepath.Split(filePath)
 	ext := filepath.Ext(fileName)
 	if ext == "" {
@@ -91,5 +91,5 @@ func defaultDotCmd(filePath string) string {
 	} else {
 		fileName = strings.Replace(fileName, ext, ".dot", 1)
 	}
-	return "dot -Tdot -o" + dir + "yaegi-" + fileName
+	return "dot -Tdot -o" + dir + prefix + fileName
 }
