@@ -149,10 +149,10 @@ func typeAssertStatus(n *node) {
 			return next
 		}
 	default:
-		typId := typ.id()
+		typID := typ.id()
 		n.exec = func(f *frame) bltn {
 			v, ok := value(f).Interface().(valueInterface)
-			value1(f).SetBool(ok && v.node.typ.id() == typId)
+			value1(f).SetBool(ok && v.node.typ.id() == typID)
 			return next
 		}
 	}
@@ -167,15 +167,15 @@ func typeAssert(n *node) {
 	switch {
 	case isInterfaceSrc(c1.typ):
 		typ := n.child[1].typ
-		typId := n.child[1].typ.id()
+		typID := n.child[1].typ.id()
 		n.exec = func(f *frame) bltn {
 			v := value(f)
 			vi, ok := v.Interface().(valueInterface)
 			if !ok {
-				panic(n.cfgErrorf("interface conversion: nil is not %v", typId))
+				panic(n.cfgErrorf("interface conversion: nil is not %v", typID))
 			}
 			if !vi.node.typ.implements(typ) {
-				panic(n.cfgErrorf("interface conversion: %v is not %v", vi.node.typ.id(), typId))
+				panic(n.cfgErrorf("interface conversion: %v is not %v", vi.node.typ.id(), typID))
 			}
 			dest(f).Set(v)
 			return next
@@ -204,14 +204,14 @@ func typeAssert2(n *node) {
 	value0 := genValue(n.anc.child[0]) // returned result
 	value1 := genValue(n.anc.child[1]) // returned status
 	typ := n.child[1].typ              // type to assert or convert to
-	typId := typ.id()
+	typID := typ.id()
 	next := getExec(n.tnext)
 
 	switch {
 	case isInterfaceSrc(typ):
 		n.exec = func(f *frame) bltn {
 			v, ok := value(f).Interface().(valueInterface)
-			if ok && v.node.typ.id() == typId {
+			if ok && v.node.typ.id() == typID {
 				value0(f).Set(value(f))
 			} else {
 				ok = false
@@ -249,7 +249,7 @@ func typeAssert2(n *node) {
 		n.exec = func(f *frame) bltn {
 			v, ok := value(f).Interface().(valueInterface)
 			if ok {
-				if v.node.typ.id() == typId {
+				if v.node.typ.id() == typID {
 					value0(f).Set(v.value)
 				} else {
 					ok = false
