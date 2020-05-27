@@ -841,10 +841,18 @@ func (t *itype) methods() methodSet {
 				res[m.ident] = m.typ.TypeOf().String()
 			}
 		}
-	default:
-		for _, m := range t.method {
-			res[m.ident] = m.typ.TypeOf().String()
+		for k, v := range t.val.methods() {
+			res[k] = v
 		}
+	case structT:
+		for _, f := range t.field {
+			for k, v := range f.typ.methods() {
+				res[k] = v
+			}
+		}
+	}
+	for _, m := range t.method {
+		res[m.ident] = m.typ.TypeOf().String()
 	}
 	return res
 }
@@ -1192,8 +1200,7 @@ func (t *itype) implements(it *itype) bool {
 	if t.cat == valueT {
 		return t.TypeOf().Implements(it.TypeOf())
 	}
-	// TODO: implement method check for interpreted types
-	return true
+	return t.methods().contains(it.methods())
 }
 
 func defRecvType(n *node) *itype {

@@ -137,6 +137,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 					}
 				}
 				rcvrtype.method = append(rcvrtype.method, n)
+				n.child[0].child[0].lastChild().typ = rcvrtype
 			} else {
 				// Add a function symbol in the package name space
 				sc.sym[n.child[1].ident] = &symbol{kind: funcSym, typ: n.typ, node: n, index: -1}
