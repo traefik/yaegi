@@ -1860,9 +1860,12 @@ func doCompositeSparse(n *node, hasType bool) {
 		c1 := c.child[1]
 		field := n.typ.fieldIndex(c.child[0].ident)
 		convertLiteralValue(c1, n.typ.field[field].typ.TypeOf())
-		if c1.typ.cat == funcT {
+		switch {
+		case c1.typ.cat == funcT:
 			values[field] = genFunctionWrapper(c1)
-		} else {
+		case isRecursiveStruct(n.typ.field[field].typ, n.typ.field[field].typ.rtype):
+			values[field] = genValueInterfacePtr(c1)
+		default:
 			values[field] = genValue(c1)
 		}
 	}
