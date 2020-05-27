@@ -153,9 +153,9 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				name = n.child[0].ident
 			} else {
 				ipath = n.child[0].rval.String()
-				name = identifier.FindString(ipath)
 			}
 			// Try to import a binary package first, or a source package
+			var pkgName string
 			if interp.binPkg[ipath] != nil {
 				switch name {
 				case "_": // no import of symbols
@@ -168,9 +168,13 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 						sc.sym[n] = &symbol{kind: binSym, typ: &itype{cat: valueT, rtype: typ, scope: sc}, rval: v}
 					}
 				default: // import symbols in package namespace
+					if name == "" {
+						name = identifier.FindString(ipath)
+					}
+
 					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath, scope: sc}}
 				}
-			} else if err = interp.importSrc(rpath, ipath); err == nil {
+			} else if pkgName, err = interp.importSrc(rpath, ipath); err == nil {
 				sc.types = interp.universe.types
 				switch name {
 				case "_": // no import of symbols
@@ -181,6 +185,10 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 						}
 					}
 				default: // import symbols in package namespace
+					if name == "" {
+						name = pkgName
+					}
+
 					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: ipath, scope: sc}}
 				}
 			} else {
