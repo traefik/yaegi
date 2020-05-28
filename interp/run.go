@@ -459,13 +459,9 @@ func _println(n *node) {
 func _recover(n *node) {
 	tnext := getExec(n.tnext)
 	dest := genValue(n)
-	var err error
-	nilErr := reflect.ValueOf(valueInterface{n, reflect.ValueOf(&err).Elem()})
 
 	n.exec = func(f *frame) bltn {
-		if f.anc.recovered == nil {
-			dest(f).Set(nilErr)
-		} else {
+		if f.anc.recovered != nil {
 			dest(f).Set(reflect.ValueOf(valueInterface{n, reflect.ValueOf(f.anc.recovered)}))
 			f.anc.recovered = nil
 		}
