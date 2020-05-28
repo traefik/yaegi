@@ -17,3 +17,5 @@ func main() {
 	fmt.Println(a.C.E.B)
 }
 
+// Output:
+// b
