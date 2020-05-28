@@ -617,7 +617,11 @@ func call(n *node) {
 	var values []func(*frame) reflect.Value
 	if n.child[0].recv != nil {
 		// Compute method receiver value.
-		values = append(values, genValueRecv(n.child[0]))
+		if isRecursiveStruct(n.child[0].recv.node.typ, n.child[0].recv.node.typ.rtype) {
+			values = append(values, genValueRecvInterfacePtr(n.child[0]))
+		} else {
+			values = append(values, genValueRecv(n.child[0]))
+		}
 		method = true
 	} else if n.child[0].action == aMethod {
 		// Add a place holder for interface method receiver.
