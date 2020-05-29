@@ -195,6 +195,18 @@ func genValueInterface(n *node) func(*frame) reflect.Value {
 	}
 }
 
+func genValueDerefInterfacePtr(n *node) func(*frame) reflect.Value {
+	value := genValue(n)
+
+	return func(f *frame) reflect.Value {
+		v := value(f)
+		if v.IsZero() {
+			return v
+		}
+		return v.Elem().Elem()
+	}
+}
+
 func zeroInterfaceValue() reflect.Value {
 	n := &node{kind: basicLit, typ: &itype{cat: nilT, untyped: true}}
 	v := reflect.New(interf).Elem()

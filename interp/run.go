@@ -662,6 +662,8 @@ func call(n *node) {
 			}
 			if len(n.child[0].typ.arg) > i && n.child[0].typ.arg[i].cat == interfaceT {
 				values = append(values, genValueInterface(c))
+			} else if isRecursiveStruct(c.typ, c.typ.rtype) {
+				values = append(values, genValueDerefInterfacePtr(c))
 			} else {
 				values = append(values, genValue(c))
 			}
@@ -827,7 +829,10 @@ func call(n *node) {
 						vararg.Set(reflect.Append(vararg, v(f)))
 					}
 				default:
-					dest[i].Set(v(f))
+					val := v(f)
+					if !val.IsZero() {
+						dest[i].Set(val)
+					}
 				}
 			}
 		}
