@@ -383,12 +383,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				}
 			}
 
-		case arrayType, basicLit, chanType, funcType, mapType, structType:
-			n.typ, err = nodeType(interp, sc, n)
-			return false
-
-		case interfaceType:
-			//n.typ = sc.getType("interface{}")
+		case arrayType, basicLit, chanType, funcType, interfaceType, mapType, structType:
 			n.typ, err = nodeType(interp, sc, n)
 			return false
 		}
