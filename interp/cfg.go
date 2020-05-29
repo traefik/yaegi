@@ -388,7 +388,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			return false
 
 		case interfaceType:
-			n.typ = sc.getType("interface{}")
+			//n.typ = sc.getType("interface{}")
+			n.typ, err = nodeType(interp, sc, n)
 			return false
 		}
 		return true
