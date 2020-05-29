@@ -1446,7 +1446,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					cur = pn
 				}
 			}
-			// Invoke select action after the last channel init, o
 			if cur == nil {
 				// There is no channel init action, call select directly.
 				n.start = n.child[0]
