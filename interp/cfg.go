@@ -248,6 +248,10 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				case binaryExpr, unaryExpr:
 					// Do not attempt to propagate composite type to operator expressions,
 					// it breaks constant folding.
+				case callExpr:
+					if c.typ, err = nodeType(interp, sc, c); err != nil {
+						return false
+					}
 				default:
 					c.typ = n.typ
 				}
