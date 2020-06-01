@@ -225,6 +225,9 @@ func convert(n *node) {
 	next := getExec(n.tnext)
 
 	if c.isNil() { // convert nil to type
+		if n.child[0].typ.cat == interfaceT {
+			typ = reflect.TypeOf((*valueInterface)(nil)).Elem()
+		}
 		n.exec = func(f *frame) bltn {
 			dest(f).Set(reflect.New(typ).Elem())
 			return next
