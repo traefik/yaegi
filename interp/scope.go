@@ -135,6 +135,9 @@ func (s *scope) rangeChanType(n *node) *itype {
 			return t
 		}
 	}
+	if c := n.child[1]; c.typ != nil && c.typ.cat == chanT {
+		return n.child[1].typ
+	}
 	return nil
 }
 
