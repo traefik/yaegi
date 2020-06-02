@@ -660,11 +660,12 @@ func call(n *node) {
 				}
 				convertLiteralValue(c, argType)
 			}
-			if len(n.child[0].typ.arg) > i && n.child[0].typ.arg[i].cat == interfaceT {
+			switch {
+			case len(n.child[0].typ.arg) > i && n.child[0].typ.arg[i].cat == interfaceT:
 				values = append(values, genValueInterface(c))
-			} else if isRecursiveStruct(c.typ, c.typ.rtype) {
+			case isRecursiveStruct(c.typ, c.typ.rtype):
 				values = append(values, genValueDerefInterfacePtr(c))
-			} else {
+			default:
 				values = append(values, genValue(c))
 			}
 		}

@@ -18,7 +18,7 @@ func pr(l *List) {
 		println("")
 		return
 	}
-	print(l.Num, " ")
+	print(l.Num)
 	pr(l.Next)
 }
 
@@ -33,5 +33,5 @@ func main() {
 
 // Output:
 // 0
-// 0  1
-// 0  1  2
+// 01
+// 012
