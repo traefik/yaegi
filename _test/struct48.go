@@ -24,8 +24,8 @@ func pr(l *List) {
 
 func main() {
 	a := add(nil, 0)
-	pr(a)               // so far so good
-	a = add(a, 1)       // fails here
+	pr(a)
+	a = add(a, 1)
 	pr(a)
 	a = add(a, 2)
 	pr(a)
@@ -33,3 +33,5 @@ func main() {
 
 // Output:
 // 0
+// 0  1
+// 0  1  2
