@@ -617,7 +617,11 @@ func call(n *node) {
 	var values []func(*frame) reflect.Value
 	if n.child[0].recv != nil {
 		// Compute method receiver value.
-		values = append(values, genValueRecv(n.child[0]))
+		if isRecursiveStruct(n.child[0].recv.node.typ, n.child[0].recv.node.typ.rtype) {
+			values = append(values, genValueRecvInterfacePtr(n.child[0]))
+		} else {
+			values = append(values, genValueRecv(n.child[0]))
+		}
 		method = true
 	} else if n.child[0].action == aMethod {
 		// Add a place holder for interface method receiver.
@@ -656,9 +660,12 @@ func call(n *node) {
 				}
 				convertLiteralValue(c, argType)
 			}
-			if len(n.child[0].typ.arg) > i && n.child[0].typ.arg[i].cat == interfaceT {
+			switch {
+			case len(n.child[0].typ.arg) > i && n.child[0].typ.arg[i].cat == interfaceT:
 				values = append(values, genValueInterface(c))
-			} else {
+			case isRecursiveStruct(c.typ, c.typ.rtype):
+				values = append(values, genValueDerefInterfacePtr(c))
+			default:
 				values = append(values, genValue(c))
 			}
 		}
@@ -823,7 +830,10 @@ func call(n *node) {
 						vararg.Set(reflect.Append(vararg, v(f)))
 					}
 				default:
-					dest[i].Set(v(f))
+					val := v(f)
+					if !val.IsZero() {
+						dest[i].Set(val)
+					}
 				}
 			}
 		}

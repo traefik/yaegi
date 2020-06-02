@@ -495,7 +495,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				// Propagate type
 				// TODO: Check that existing destination type matches source type
 				switch {
-				case n.action == aAssign && src.action == aCall && dest.typ.cat != interfaceT:
+				case n.action == aAssign && src.action == aCall && dest.typ.cat != interfaceT && !isRecursiveField(dest):
 					// Call action may perform the assignment directly.
 					n.gen = nop
 					src.level = level
@@ -1994,6 +1994,10 @@ func isKey(n *node) bool {
 
 func isField(n *node) bool {
 	return n.kind == selectorExpr && len(n.child) > 0 && n.child[0].typ != nil && isStruct(n.child[0].typ)
+}
+
+func isRecursiveField(n *node) bool {
+	return isField(n) && (n.typ.recursive || n.typ.cat == ptrT && n.typ.val.recursive)
 }
 
 // isNewDefine returns true if node refers to a new definition
