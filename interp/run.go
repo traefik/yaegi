@@ -26,6 +26,7 @@ var builtin = [...]bltnGenerator{
 	aAndNotAssign: andNotAssign,
 	aBitNot:       bitNot,
 	aCall:         call,
+	aCallSlice:    call,
 	aCase:         _case,
 	aCompositeLit: arrayLit,
 	aDec:          dec,
@@ -1019,7 +1020,7 @@ func callBin(n *node) {
 }
 
 func getIndexBinMethod(n *node) {
-	//dest := genValue(n)
+	// dest := genValue(n)
 	i := n.findex
 	m := n.val.(int)
 	value := genValue(n.child[0])
@@ -1027,7 +1028,7 @@ func getIndexBinMethod(n *node) {
 
 	n.exec = func(f *frame) bltn {
 		// Can not use .Set() because dest type contains the receiver and source not
-		//dest(f).Set(value(f).Method(m))
+		// dest(f).Set(value(f).Method(m))
 		f.data[i] = value(f).Method(m)
 		return next
 	}
@@ -1623,7 +1624,7 @@ func _return(n *node) {
 	case 0:
 		n.exec = nil
 	case 1:
-		if child[0].kind == binaryExpr || child[0].action == aCall {
+		if child[0].kind == binaryExpr || isCall(child[0]) {
 			n.exec = nil
 		} else {
 			v := values[0]
