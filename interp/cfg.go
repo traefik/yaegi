@@ -368,7 +368,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				// TODO(mpl): find the exact location of the previous declaration
 				err = n.cfgErrorf("%s redeclared in this block", typeName)
 				return false
-
 			}
 
 			if n.child[1].kind == identExpr {
