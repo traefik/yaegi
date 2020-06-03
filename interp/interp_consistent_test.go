@@ -58,6 +58,12 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "type5.go" || // used to illustrate a limitation with no workaround, related to the fact that the reflect package does not allow the creation of named types
 			file.Name() == "type6.go" || // used to illustrate a limitation with no workaround, related to the fact that the reflect package does not allow the creation of named types
 
+			file.Name() == "redeclaration0.go" || // expect error
+			file.Name() == "redeclaration1.go" || // expect error
+			file.Name() == "redeclaration2.go" || // expect error
+			file.Name() == "redeclaration3.go" || // expect error
+			file.Name() == "redeclaration4.go" || // expect error
+			file.Name() == "redeclaration5.go" || // expect error
 			file.Name() == "server6.go" || // syntax parsing
 			file.Name() == "server5.go" || // syntax parsing
 			file.Name() == "server4.go" || // syntax parsing

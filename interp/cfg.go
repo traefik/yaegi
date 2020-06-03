@@ -355,24 +355,32 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case typeSpec:
 			// processing already done in GTA pass for global types, only parses inlined types
-			if sc.def != nil {
-				typeName := n.child[0].ident
-				var typ *itype
-				if typ, err = nodeType(interp, sc, n.child[1]); err != nil {
-					return false
-				}
-				if typ.incomplete {
-					err = n.cfgErrorf("invalid type declaration")
-					return false
-				}
-				if n.child[1].kind == identExpr {
-					n.typ = &itype{cat: aliasT, val: typ, name: typeName}
-				} else {
-					n.typ = typ
-					n.typ.name = typeName
-				}
-				sc.sym[typeName] = &symbol{kind: typeSym, typ: n.typ}
+			if sc.def == nil {
+				return false
 			}
+			typeName := n.child[0].ident
+			var typ *itype
+			if typ, err = nodeType(interp, sc, n.child[1]); err != nil {
+				return false
+			}
+			if typ.incomplete {
+				err = n.cfgErrorf("invalid type declaration")
+				return false
+			}
+
+			if _, exists := sc.sym[typeName]; exists {
+				// TODO(mpl): find the exact location of the previous declaration
+				err = n.cfgErrorf("%s redeclared in this block", typeName)
+				return false
+			}
+
+			if n.child[1].kind == identExpr {
+				n.typ = &itype{cat: aliasT, val: typ, name: typeName}
+			} else {
+				n.typ = typ
+				n.typ.name = typeName
+			}
+			sc.sym[typeName] = &symbol{kind: typeSym, typ: n.typ}
 			return false
 
 		case constDecl:
@@ -1676,6 +1684,19 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					// Global object allocation is already performed in GTA.
 					index = sc.sym[c.ident].index
 				} else {
+					if sym, exists := sc.sym[c.ident]; exists {
+						if sym.typ.node != nil &&
+							sym.typ.node.anc != nil {
+							// for non-predeclared identifiers (struct, map, etc)
+							prevDecl := n.interp.fset.Position(sym.typ.node.anc.pos)
+							err = n.cfgErrorf("%s redeclared in this block\n\tprevious declaration at %v", c.ident, prevDecl)
+							return
+						}
+						// for predeclared identifiers (int, string, etc)
+						// TODO(mpl): find the exact location of the previous declaration in all cases.
+						err = n.cfgErrorf("%s redeclared in this block", c.ident)
+						return
+					}
 					index = sc.add(n.typ)
 					sc.sym[c.ident] = &symbol{index: index, kind: varSym, typ: n.typ}
 				}
