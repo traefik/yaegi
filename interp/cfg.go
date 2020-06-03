@@ -721,7 +721,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				n.typ = t.val
 			}
 			n.findex = sc.add(n.typ)
-			n.recv = &receiver{node: n}
 			typ := t.TypeOf()
 			switch k := typ.Kind(); k {
 			case reflect.Map:
