@@ -885,6 +885,12 @@ func callBin(n *node) {
 		}
 	}
 
+	// Determine if we should use `Call` or `CallSlice` on the function Value.
+	callFn := func(v reflect.Value, in []reflect.Value) []reflect.Value { return v.Call(in) }
+	if n.action == aCallSlice {
+		callFn = func(v reflect.Value, in []reflect.Value) []reflect.Value { return v.CallSlice(in) }
+	}
+
 	for i, c := range child {
 		defType := funcType.In(pindex(i, variadic))
 		switch {
@@ -920,6 +926,13 @@ func callBin(n *node) {
 				values = append(values, genFunctionWrapper(c))
 			case interfaceT:
 				values = append(values, genValueInterfaceValue(c))
+			case arrayT:
+				switch c.typ.val.cat {
+				case interfaceT:
+					values = append(values, genValueInterfaceArray(c))
+				default:
+					values = append(values, genInterfaceWrapper(c, defType))
+				}
 			default:
 				values = append(values, genInterfaceWrapper(c, defType))
 			}
@@ -946,7 +959,7 @@ func callBin(n *node) {
 			for i, v := range values {
 				in[i] = v(f)
 			}
-			go value(f).Call(in)
+			go callFn(value(f), in)
 			return tnext
 		}
 	case fnext != nil:
@@ -957,7 +970,7 @@ func callBin(n *node) {
 			for i, v := range values {
 				in[i] = v(f)
 			}
-			res := value(f).Call(in)
+			res := callFn(value(f), in)
 			b := res[0].Bool()
 			f.data[index].SetBool(b)
 			if b {
@@ -982,7 +995,7 @@ func callBin(n *node) {
 				for i, v := range values {
 					in[i] = v(f)
 				}
-				out := value(f).Call(in)
+				out := callFn(value(f), in)
 				for i, v := range rvalues {
 					if v != nil {
 						v(f).Set(out[i])
@@ -999,7 +1012,7 @@ func callBin(n *node) {
 				for i, v := range values {
 					in[i] = v(f)
 				}
-				out := value(f).Call(in)
+				out := callFn(value(f), in)
 				for i, v := range out {
 					f.data[b+i].Set(v)
 				}
@@ -1011,7 +1024,7 @@ func callBin(n *node) {
 				for i, v := range values {
 					in[i] = v(f)
 				}
-				out := value(f).Call(in)
+				out := callFn(value(f), in)
 				copy(f.data[n.findex:], out)
 				return tnext
 			}
