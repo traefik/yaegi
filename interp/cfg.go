@@ -248,6 +248,10 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				case binaryExpr, unaryExpr:
 					// Do not attempt to propagate composite type to operator expressions,
 					// it breaks constant folding.
+				case callExpr:
+					if c.typ, err = nodeType(interp, sc, c); err != nil {
+						return false
+					}
 				default:
 					c.typ = n.typ
 				}
@@ -391,7 +395,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				}
 			}
 
-		case arrayType, basicLit, chanType, funcType, mapType, structType:
+		case arrayType, basicLit, chanType, funcType, interfaceType, mapType, structType:
 			n.typ, err = nodeType(interp, sc, n)
 			return false
 		}
@@ -503,7 +507,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				// Propagate type
 				// TODO: Check that existing destination type matches source type
 				switch {
-				case n.action == aAssign && src.action == aCall && dest.typ.cat != interfaceT:
+				case n.action == aAssign && src.action == aCall && dest.typ.cat != interfaceT && !isRecursiveField(dest):
 					// Call action may perform the assignment directly.
 					n.gen = nop
 					src.level = level
@@ -2015,6 +2019,10 @@ func isKey(n *node) bool {
 
 func isField(n *node) bool {
 	return n.kind == selectorExpr && len(n.child) > 0 && n.child[0].typ != nil && isStruct(n.child[0].typ)
+}
+
+func isRecursiveField(n *node) bool {
+	return isField(n) && (n.typ.recursive || n.typ.cat == ptrT && n.typ.val.recursive)
 }
 
 // isNewDefine returns true if node refers to a new definition
