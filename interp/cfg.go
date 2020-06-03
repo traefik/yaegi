@@ -507,7 +507,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				// Propagate type
 				// TODO: Check that existing destination type matches source type
 				switch {
-				case n.action == aAssign && src.action == aCall && dest.typ.cat != interfaceT && !isRecursiveField(dest):
+				case n.action == aAssign && isCall(src) && dest.typ.cat != interfaceT && !isRecursiveField(dest):
 					// Call action may perform the assignment directly.
 					n.gen = nop
 					src.level = level
@@ -835,7 +835,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				typ := n.child[0].typ.rtype
 				numIn := len(n.child) - 1
 				tni := typ.NumIn()
-				if numIn == 1 && n.child[1].action == aCall {
+				if numIn == 1 && isCall(n.child[1]) {
 					numIn = n.child[1].typ.numOut()
 				}
 				if n.child[0].action == aGetMethod {
@@ -1232,7 +1232,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		case returnStmt:
 			if mustReturnValue(sc.def.child[2]) {
 				nret := len(n.child)
-				if nret == 1 && n.child[0].action == aCall {
+				if nret == 1 && isCall(n.child[0]) {
 					nret = n.child[0].child[0].typ.numOut()
 				}
 				if nret < sc.def.typ.numOut() {
@@ -2051,6 +2051,10 @@ func isMethod(n *node) bool {
 
 func isMapEntry(n *node) bool {
 	return n.action == aGetIndex && isMap(n.child[0].typ)
+}
+
+func isCall(n *node) bool {
+	return n.action == aCall || n.action == aCallSlice
 }
 
 func isBinCall(n *node) bool {
