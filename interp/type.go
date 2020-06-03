@@ -835,12 +835,6 @@ func (t *itype) methods() methodSet {
 			res[m.Name] = m.Type.String()
 		}
 	case ptrT:
-		// Consider only methods where receiver is a pointer to type t
-		for _, m := range t.val.method {
-			if m.child[0].child[0].lastChild().typ.cat == ptrT {
-				res[m.ident] = m.typ.TypeOf().String()
-			}
-		}
 		for k, v := range t.val.methods() {
 			res[k] = v
 		}
