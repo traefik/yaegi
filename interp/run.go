@@ -465,7 +465,9 @@ func _recover(n *node) {
 	dest := genValue(n)
 
 	n.exec = func(f *frame) bltn {
-		if f.anc.recovered != nil {
+		if f.anc.recovered == nil {
+			dest(f).Set(reflect.ValueOf(valueInterface{}))
+		} else {
 			dest(f).Set(reflect.ValueOf(valueInterface{n, reflect.ValueOf(f.anc.recovered)}))
 			f.anc.recovered = nil
 		}
@@ -2766,7 +2768,9 @@ func isNil(n *node) {
 		fnext := getExec(n.fnext)
 		if c0.typ.cat == interfaceT {
 			n.exec = func(f *frame) bltn {
-				if (value(f).Interface().(valueInterface) == valueInterface{}) {
+				vi := value(f).Interface().(valueInterface)
+				if (vi == valueInterface{} ||
+					vi.node.kind == basicLit && vi.node.typ.cat == nilT) {
 					dest(f).SetBool(true)
 					return tnext
 				}
@@ -2813,7 +2817,9 @@ func isNotNil(n *node) {
 		fnext := getExec(n.fnext)
 		if c0.typ.cat == interfaceT {
 			n.exec = func(f *frame) bltn {
-				if (value(f).Interface().(valueInterface) == valueInterface{}) {
+				vi := value(f).Interface().(valueInterface)
+				if (vi == valueInterface{} ||
+					vi.node.kind == basicLit && vi.node.typ.cat == nilT) {
 					dest(f).SetBool(false)
 					return fnext
 				}
