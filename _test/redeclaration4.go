@@ -11,4 +11,4 @@ func main() {
 }
 
 // Error:
-// ../_test/redecleration4.go:8:7: foo redeclared in this block
+// ../_test/redeclaration4.go:8:7: foo redeclared in this block
