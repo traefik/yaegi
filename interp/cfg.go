@@ -520,7 +520,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.gen = nop
 					src.findex = dest.findex // Set recv address to LHS
 					dest.typ = src.typ
-				case n.action == aAssign && src.action == aCompositeLit:
+				case n.action == aAssign && src.action == aCompositeLit && !isMapEntry(dest):
 					if dest.typ.cat == valueT && dest.typ.rtype.Kind() == reflect.Interface {
 						// No optimisation attempt for assigned binary interface
 						break
