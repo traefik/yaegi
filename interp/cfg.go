@@ -1433,14 +1433,15 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						pn = c0.child[1]
 					}
 				}
-				if an != nil {
-					if cur == nil {
-						// First channel init action, the entry point for the select block.
-						n.start = an.start
-					} else {
-						// Chain channel init action to the previous one.
-						cur.tnext = an.start
-					}
+				if an == nil {
+					continue
+				}
+				if cur == nil {
+					// First channel init action, the entry point for the select block.
+					n.start = an.start
+				} else {
+					// Chain channel init action to the previous one.
+					cur.tnext = an.start
 				}
 				if pn != nil {
 					cur = pn
