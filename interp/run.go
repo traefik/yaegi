@@ -26,6 +26,7 @@ var builtin = [...]bltnGenerator{
 	aAndNotAssign: andNotAssign,
 	aBitNot:       bitNot,
 	aCall:         call,
+	aCallSlice:    call,
 	aCase:         _case,
 	aCompositeLit: arrayLit,
 	aDec:          dec,
@@ -121,34 +122,38 @@ func runCfg(n *node, f *frame) {
 }
 
 func typeAssertStatus(n *node) {
-	c0, c1 := n.child[0], n.child[1]
+	c0, c1 := n.child[0], n.child[1]   // cO contains the input value, c1 the type to assert
 	value := genValue(c0)              // input value
 	value1 := genValue(n.anc.child[1]) // returned status
-	typ := c1.typ.rtype                // type to assert
 	next := getExec(n.tnext)
 
 	switch {
-	case c0.typ.cat == valueT:
+	case isInterfaceSrc(c1.typ):
+		typ := c1.typ
 		n.exec = func(f *frame) bltn {
-			v := value(f)
-			if !v.IsValid() || v.IsNil() {
-				value1(f).SetBool(false)
-			}
-			value1(f).SetBool(v.Type().Implements(typ))
+			v, ok := value(f).Interface().(valueInterface)
+			value1(f).SetBool(ok && v.node.typ.implements(typ))
 			return next
 		}
-	case c1.typ.cat == interfaceT:
+	case isInterface(c1.typ):
+		rtype := c1.typ.rtype
 		n.exec = func(f *frame) bltn {
-			_, ok := value(f).Interface().(valueInterface)
-			// TODO: verify that value(f) implements asserted type.
-			value1(f).SetBool(ok)
+			v := value(f)
+			value1(f).SetBool(v.IsValid() && v.Type().Implements(rtype))
+			return next
+		}
+	case c0.typ.cat == valueT:
+		rtype := c1.typ.rtype
+		n.exec = func(f *frame) bltn {
+			v := value(f)
+			value1(f).SetBool(v.IsValid() && v.Type() == rtype)
 			return next
 		}
 	default:
+		typID := c1.typ.id()
 		n.exec = func(f *frame) bltn {
-			_, ok := value(f).Interface().(valueInterface)
-			// TODO: verify that value(f) implements asserted type.
-			value1(f).SetBool(ok)
+			v, ok := value(f).Interface().(valueInterface)
+			value1(f).SetBool(ok && v.node.typ.id() == typID)
 			return next
 		}
 	}
@@ -161,24 +166,35 @@ func typeAssert(n *node) {
 	next := getExec(n.tnext)
 
 	switch {
-	case c0.typ.cat == valueT:
+	case isInterfaceSrc(c1.typ):
+		typ := n.child[1].typ
+		typID := n.child[1].typ.id()
 		n.exec = func(f *frame) bltn {
 			v := value(f)
-			dest(f).Set(v.Elem())
+			vi, ok := v.Interface().(valueInterface)
+			if !ok {
+				panic(n.cfgErrorf("interface conversion: nil is not %v", typID))
+			}
+			if !vi.node.typ.implements(typ) {
+				panic(n.cfgErrorf("interface conversion: %v is not %v", vi.node.typ.id(), typID))
+			}
+			dest(f).Set(v)
 			return next
 		}
-	case c1.typ.cat == interfaceT:
+	case isInterface(c1.typ):
+		rtype := n.child[1].typ.rtype
 		n.exec = func(f *frame) bltn {
-			v := value(f).Interface().(valueInterface)
-			// TODO: verify that value(f) implements asserted type.
-			dest(f).Set(reflect.ValueOf(valueInterface{v.node, v.value}))
+			dest(f).Set(value(f).Convert(rtype))
+			return next
+		}
+	case c0.typ.cat == valueT:
+		n.exec = func(f *frame) bltn {
+			dest(f).Set(value(f).Elem())
 			return next
 		}
 	default:
 		n.exec = func(f *frame) bltn {
-			v := value(f).Interface().(valueInterface)
-			// TODO: verify that value(f) implements asserted type.
-			dest(f).Set(v.value)
+			dest(f).Set(value(f).Interface().(valueInterface).value)
 			return next
 		}
 	}
@@ -188,30 +204,58 @@ func typeAssert2(n *node) {
 	value := genValue(n.child[0])      // input value
 	value0 := genValue(n.anc.child[0]) // returned result
 	value1 := genValue(n.anc.child[1]) // returned status
+	typ := n.child[1].typ              // type to assert or convert to
+	typID := typ.id()
 	next := getExec(n.tnext)
 
 	switch {
-	case n.child[0].typ.cat == valueT:
-		n.exec = func(f *frame) bltn {
-			if value(f).IsValid() && !value(f).IsNil() {
-				value0(f).Set(value(f).Elem())
-			}
-			value1(f).SetBool(true)
-			return next
-		}
-	case n.child[1].typ.cat == interfaceT:
+	case isInterfaceSrc(typ):
 		n.exec = func(f *frame) bltn {
 			v, ok := value(f).Interface().(valueInterface)
-			// TODO: verify that value(f) implements asserted type.
-			value0(f).Set(reflect.ValueOf(valueInterface{v.node, v.value}))
+			if ok && v.node.typ.id() == typID {
+				value0(f).Set(value(f))
+			} else {
+				ok = false
+			}
+			value1(f).SetBool(ok)
+			return next
+		}
+	case isInterface(typ):
+		rtype := typ.rtype
+		n.exec = func(f *frame) bltn {
+			v := value(f)
+			ok := v.IsValid() && v.Type().Implements(rtype)
+			if ok {
+				value0(f).Set(v.Convert(rtype))
+			}
+			value1(f).SetBool(ok)
+			return next
+		}
+	case n.child[0].typ.cat == valueT:
+		rtype := n.child[1].typ.rtype
+		n.exec = func(f *frame) bltn {
+			v := value(f)
+			ok := v.IsValid() && !value(f).IsNil()
+			if ok {
+				if e := v.Elem(); e.Type() == rtype {
+					value0(f).Set(e)
+				} else {
+					ok = false
+				}
+			}
 			value1(f).SetBool(ok)
 			return next
 		}
 	default:
 		n.exec = func(f *frame) bltn {
 			v, ok := value(f).Interface().(valueInterface)
-			// TODO: verify that value(f) implements asserted type.
-			value0(f).Set(v.value)
+			if ok {
+				if v.node.typ.id() == typID {
+					value0(f).Set(v.value)
+				} else {
+					ok = false
+				}
+			}
 			value1(f).SetBool(ok)
 			return next
 		}
@@ -225,6 +269,9 @@ func convert(n *node) {
 	next := getExec(n.tnext)
 
 	if c.isNil() { // convert nil to type
+		if n.child[0].typ.cat == interfaceT {
+			typ = reflect.TypeOf((*valueInterface)(nil)).Elem()
+		}
 		n.exec = func(f *frame) bltn {
 			dest(f).Set(reflect.New(typ).Elem())
 			return next
@@ -459,12 +506,10 @@ func _println(n *node) {
 func _recover(n *node) {
 	tnext := getExec(n.tnext)
 	dest := genValue(n)
-	var err error
-	nilErr := reflect.ValueOf(valueInterface{n, reflect.ValueOf(&err).Elem()})
 
 	n.exec = func(f *frame) bltn {
 		if f.anc.recovered == nil {
-			dest(f).Set(nilErr)
+			dest(f).Set(reflect.ValueOf(valueInterface{}))
 		} else {
 			dest(f).Set(reflect.ValueOf(valueInterface{n, reflect.ValueOf(f.anc.recovered)}))
 			f.anc.recovered = nil
@@ -621,7 +666,11 @@ func call(n *node) {
 	var values []func(*frame) reflect.Value
 	if n.child[0].recv != nil {
 		// Compute method receiver value.
-		values = append(values, genValueRecv(n.child[0]))
+		if isRecursiveStruct(n.child[0].recv.node.typ, n.child[0].recv.node.typ.rtype) {
+			values = append(values, genValueRecvInterfacePtr(n.child[0]))
+		} else {
+			values = append(values, genValueRecv(n.child[0]))
+		}
 		method = true
 	} else if n.child[0].action == aMethod {
 		// Add a place holder for interface method receiver.
@@ -660,9 +709,12 @@ func call(n *node) {
 				}
 				convertLiteralValue(c, argType)
 			}
-			if len(n.child[0].typ.arg) > i && n.child[0].typ.arg[i].cat == interfaceT {
+			switch {
+			case len(n.child[0].typ.arg) > i && n.child[0].typ.arg[i].cat == interfaceT:
 				values = append(values, genValueInterface(c))
-			} else {
+			case isRecursiveStruct(c.typ, c.typ.rtype):
+				values = append(values, genValueDerefInterfacePtr(c))
+			default:
 				values = append(values, genValue(c))
 			}
 		}
@@ -827,7 +879,10 @@ func call(n *node) {
 						vararg.Set(reflect.Append(vararg, v(f)))
 					}
 				default:
-					dest[i].Set(v(f))
+					val := v(f)
+					if !val.IsZero() {
+						dest[i].Set(val)
+					}
 				}
 			}
 		}
@@ -875,6 +930,12 @@ func callBin(n *node) {
 		}
 	}
 
+	// Determine if we should use `Call` or `CallSlice` on the function Value.
+	callFn := func(v reflect.Value, in []reflect.Value) []reflect.Value { return v.Call(in) }
+	if n.action == aCallSlice {
+		callFn = func(v reflect.Value, in []reflect.Value) []reflect.Value { return v.CallSlice(in) }
+	}
+
 	for i, c := range child {
 		defType := funcType.In(pindex(i, variadic))
 		switch {
@@ -910,6 +971,13 @@ func callBin(n *node) {
 				values = append(values, genFunctionWrapper(c))
 			case interfaceT:
 				values = append(values, genValueInterfaceValue(c))
+			case arrayT:
+				switch c.typ.val.cat {
+				case interfaceT:
+					values = append(values, genValueInterfaceArray(c))
+				default:
+					values = append(values, genInterfaceWrapper(c, defType))
+				}
 			default:
 				values = append(values, genInterfaceWrapper(c, defType))
 			}
@@ -936,7 +1004,7 @@ func callBin(n *node) {
 			for i, v := range values {
 				in[i] = v(f)
 			}
-			go value(f).Call(in)
+			go callFn(value(f), in)
 			return tnext
 		}
 	case fnext != nil:
@@ -947,7 +1015,7 @@ func callBin(n *node) {
 			for i, v := range values {
 				in[i] = v(f)
 			}
-			res := value(f).Call(in)
+			res := callFn(value(f), in)
 			b := res[0].Bool()
 			f.data[index].SetBool(b)
 			if b {
@@ -972,7 +1040,7 @@ func callBin(n *node) {
 				for i, v := range values {
 					in[i] = v(f)
 				}
-				out := value(f).Call(in)
+				out := callFn(value(f), in)
 				for i, v := range rvalues {
 					if v != nil {
 						v(f).Set(out[i])
@@ -989,7 +1057,7 @@ func callBin(n *node) {
 				for i, v := range values {
 					in[i] = v(f)
 				}
-				out := value(f).Call(in)
+				out := callFn(value(f), in)
 				for i, v := range out {
 					f.data[b+i].Set(v)
 				}
@@ -1001,7 +1069,7 @@ func callBin(n *node) {
 				for i, v := range values {
 					in[i] = v(f)
 				}
-				out := value(f).Call(in)
+				out := callFn(value(f), in)
 				copy(f.data[n.findex:], out)
 				return tnext
 			}
@@ -1010,7 +1078,7 @@ func callBin(n *node) {
 }
 
 func getIndexBinMethod(n *node) {
-	//dest := genValue(n)
+	// dest := genValue(n)
 	i := n.findex
 	m := n.val.(int)
 	value := genValue(n.child[0])
@@ -1018,7 +1086,7 @@ func getIndexBinMethod(n *node) {
 
 	n.exec = func(f *frame) bltn {
 		// Can not use .Set() because dest type contains the receiver and source not
-		//dest(f).Set(value(f).Method(m))
+		// dest(f).Set(value(f).Method(m))
 		f.data[i] = value(f).Method(m)
 		return next
 	}
@@ -1614,7 +1682,7 @@ func _return(n *node) {
 	case 0:
 		n.exec = nil
 	case 1:
-		if child[0].kind == binaryExpr || child[0].action == aCall {
+		if child[0].kind == binaryExpr || isCall(child[0]) {
 			n.exec = nil
 		} else {
 			v := values[0]
@@ -2743,7 +2811,9 @@ func isNil(n *node) {
 		fnext := getExec(n.fnext)
 		if c0.typ.cat == interfaceT {
 			n.exec = func(f *frame) bltn {
-				if (value(f).Interface().(valueInterface) == valueInterface{}) {
+				vi := value(f).Interface().(valueInterface)
+				if (vi == valueInterface{} ||
+					vi.node.kind == basicLit && vi.node.typ.cat == nilT) {
 					dest(f).SetBool(true)
 					return tnext
 				}
@@ -2790,7 +2860,9 @@ func isNotNil(n *node) {
 		fnext := getExec(n.fnext)
 		if c0.typ.cat == interfaceT {
 			n.exec = func(f *frame) bltn {
-				if (value(f).Interface().(valueInterface) == valueInterface{}) {
+				vi := value(f).Interface().(valueInterface)
+				if (vi == valueInterface{} ||
+					vi.node.kind == basicLit && vi.node.typ.cat == nilT) {
 					dest(f).SetBool(false)
 					return fnext
 				}

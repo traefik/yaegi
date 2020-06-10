@@ -818,7 +818,7 @@ func (t *itype) methods() methodSet {
 	res := make(methodSet)
 	switch t.cat {
 	case interfaceT:
-		// Get methods from recursive analysis of interface fields
+		// Get methods from recursive analysis of interface fields.
 		for _, f := range t.field {
 			if f.typ.cat == funcT {
 				res[f.name] = f.typ.TypeOf().String()
@@ -829,22 +829,25 @@ func (t *itype) methods() methodSet {
 			}
 		}
 	case valueT, errorT:
-		// Get method from corresponding reflect.Type
+		// Get method from corresponding reflect.Type.
 		for i := t.rtype.NumMethod() - 1; i >= 0; i-- {
 			m := t.rtype.Method(i)
 			res[m.Name] = m.Type.String()
 		}
 	case ptrT:
-		// Consider only methods where receiver is a pointer to type t
-		for _, m := range t.val.method {
-			if m.child[0].child[0].lastChild().typ.cat == ptrT {
-				res[m.ident] = m.typ.TypeOf().String()
+		for k, v := range t.val.methods() {
+			res[k] = v
+		}
+	case structT:
+		for _, f := range t.field {
+			for k, v := range f.typ.methods() {
+				res[k] = v
 			}
 		}
-	default:
-		for _, m := range t.method {
-			res[m.ident] = m.typ.TypeOf().String()
-		}
+	}
+	// Get all methods defined on this type.
+	for _, m := range t.method {
+		res[m.ident] = m.typ.TypeOf().String()
 	}
 	return res
 }
@@ -1192,8 +1195,7 @@ func (t *itype) implements(it *itype) bool {
 	if t.cat == valueT {
 		return t.TypeOf().Implements(it.TypeOf())
 	}
-	// TODO: implement method check for interpreted types
-	return true
+	return t.methods().contains(it.methods())
 }
 
 func defRecvType(n *node) *itype {

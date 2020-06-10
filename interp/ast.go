@@ -197,6 +197,7 @@ const (
 	aBitNot
 	aBranch
 	aCall
+	aCallSlice
 	aCase
 	aCompositeLit
 	aConvert
@@ -258,6 +259,7 @@ var actions = [...]string{
 	aBitNot:       "^",
 	aBranch:       "branch",
 	aCall:         "call",
+	aCallSlice:    "callSlice",
 	aCase:         "case",
 	aCompositeLit: "compositeLit",
 	aConvert:      "convert",
@@ -549,7 +551,12 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 			st.push(addChild(&root, anc, pos, kind, aNop), nod)
 
 		case *ast.CallExpr:
-			st.push(addChild(&root, anc, pos, callExpr, aCall), nod)
+			action := aCall
+			if a.Ellipsis != token.NoPos {
+				action = aCallSlice
+			}
+
+			st.push(addChild(&root, anc, pos, callExpr, action), nod)
 
 		case *ast.CaseClause:
 			st.push(addChild(&root, anc, pos, caseClause, aCase), nod)

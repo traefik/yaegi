@@ -6,9 +6,33 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 )
+
+const (
+	// CITimeoutMultiplier is the multiplier for all timeouts in the CI
+	CITimeoutMultiplier = 3
+)
+
+// Sleep pauses the current goroutine for at least the duration d.
+func Sleep(d time.Duration) {
+	d = applyCIMultiplier(d)
+	time.Sleep(d)
+}
+
+func applyCIMultiplier(timeout time.Duration) time.Duration {
+	ci := os.Getenv("CI")
+	if ci == "" {
+		return timeout
+	}
+	b, err := strconv.ParseBool(ci)
+	if err != nil || !b {
+		return timeout
+	}
+	return time.Duration(float64(timeout) * CITimeoutMultiplier)
+}
 
 func TestYaegiCmdCancel(t *testing.T) {
 	tmp, err := ioutil.TempDir("", "yaegi-")
@@ -56,7 +80,7 @@ func TestYaegiCmdCancel(t *testing.T) {
 		if err != nil {
 			t.Errorf("failed pipe test source to yaegi command: %v", err)
 		}
-		time.Sleep(100 * time.Millisecond)
+		Sleep(200 * time.Millisecond)
 		err = cmd.Process.Signal(os.Interrupt)
 		if err != nil {
 			t.Errorf("failed to send os.Interrupt to yaegi command: %v", err)
