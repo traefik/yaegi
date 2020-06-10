@@ -818,7 +818,7 @@ func (t *itype) methods() methodSet {
 	res := make(methodSet)
 	switch t.cat {
 	case interfaceT:
-		// Get methods from recursive analysis of interface fields
+		// Get methods from recursive analysis of interface fields.
 		for _, f := range t.field {
 			if f.typ.cat == funcT {
 				res[f.name] = f.typ.TypeOf().String()
@@ -829,7 +829,7 @@ func (t *itype) methods() methodSet {
 			}
 		}
 	case valueT, errorT:
-		// Get method from corresponding reflect.Type
+		// Get method from corresponding reflect.Type.
 		for i := t.rtype.NumMethod() - 1; i >= 0; i-- {
 			m := t.rtype.Method(i)
 			res[m.Name] = m.Type.String()
@@ -845,6 +845,7 @@ func (t *itype) methods() methodSet {
 			}
 		}
 	}
+	// Get all methods defined on this type.
 	for _, m := range t.method {
 		res[m.ident] = m.typ.TypeOf().String()
 	}

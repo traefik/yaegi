@@ -121,35 +121,35 @@ func runCfg(n *node, f *frame) {
 }
 
 func typeAssertStatus(n *node) {
-	c0, c1 := n.child[0], n.child[1]
+	c0, c1 := n.child[0], n.child[1]   // cO contains the input value, c1 the type to assert
 	value := genValue(c0)              // input value
 	value1 := genValue(n.anc.child[1]) // returned status
-	typ := c1.typ                      // type to assert
 	next := getExec(n.tnext)
 
 	switch {
 	case isInterfaceSrc(c1.typ):
+		typ := c1.typ
 		n.exec = func(f *frame) bltn {
 			v, ok := value(f).Interface().(valueInterface)
 			value1(f).SetBool(ok && v.node.typ.implements(typ))
 			return next
 		}
 	case isInterface(c1.typ):
-		rtype := typ.rtype
+		rtype := c1.typ.rtype
 		n.exec = func(f *frame) bltn {
 			v := value(f)
 			value1(f).SetBool(v.IsValid() && v.Type().Implements(rtype))
 			return next
 		}
 	case c0.typ.cat == valueT:
-		rtype := typ.rtype
+		rtype := c1.typ.rtype
 		n.exec = func(f *frame) bltn {
 			v := value(f)
 			value1(f).SetBool(v.IsValid() && v.Type() == rtype)
 			return next
 		}
 	default:
-		typID := typ.id()
+		typID := c1.typ.id()
 		n.exec = func(f *frame) bltn {
 			v, ok := value(f).Interface().(valueInterface)
 			value1(f).SetBool(ok && v.node.typ.id() == typID)
