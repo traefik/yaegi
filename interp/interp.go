@@ -136,6 +136,7 @@ type Interpreter struct {
 	universe *scope            // interpreter global level scope
 	scopes   map[string]*scope // package level scopes, indexed by package name
 	srcPkg   imports           // source packages used in interpreter, indexed by path
+	pkgNames map[string]string // package names, indexed by path
 	done     chan struct{}     // for cancellation of channel operations
 }
 
@@ -213,6 +214,7 @@ func New(options Options) *Interpreter {
 		scopes:   map[string]*scope{},
 		binPkg:   Exports{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
 		srcPkg:   imports{},
+		pkgNames: map[string]string{},
 		rdir:     map[string]bool{},
 	}
 
