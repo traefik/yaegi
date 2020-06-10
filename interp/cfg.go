@@ -89,6 +89,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						switch typ.Kind() {
 						case reflect.Map:
 							n.anc.gen = rangeMap
+							ityp := &itype{cat: valueT, rtype: reflect.TypeOf((*reflect.MapIter)(nil))}
+							sc.add(ityp)
 							ktyp = &itype{cat: valueT, rtype: typ.Key()}
 							vtyp = &itype{cat: valueT, rtype: typ.Elem()}
 						case reflect.String:
@@ -246,6 +248,10 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				case binaryExpr, unaryExpr:
 					// Do not attempt to propagate composite type to operator expressions,
 					// it breaks constant folding.
+				case callExpr:
+					if c.typ, err = nodeType(interp, sc, c); err != nil {
+						return false
+					}
 				default:
 					c.typ = n.typ
 				}
@@ -349,24 +355,32 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case typeSpec:
 			// processing already done in GTA pass for global types, only parses inlined types
-			if sc.def != nil {
-				typeName := n.child[0].ident
-				var typ *itype
-				if typ, err = nodeType(interp, sc, n.child[1]); err != nil {
-					return false
-				}
-				if typ.incomplete {
-					err = n.cfgErrorf("invalid type declaration")
-					return false
-				}
-				if n.child[1].kind == identExpr {
-					n.typ = &itype{cat: aliasT, val: typ, name: typeName}
-				} else {
-					n.typ = typ
-					n.typ.name = typeName
-				}
-				sc.sym[typeName] = &symbol{kind: typeSym, typ: n.typ}
+			if sc.def == nil {
+				return false
 			}
+			typeName := n.child[0].ident
+			var typ *itype
+			if typ, err = nodeType(interp, sc, n.child[1]); err != nil {
+				return false
+			}
+			if typ.incomplete {
+				err = n.cfgErrorf("invalid type declaration")
+				return false
+			}
+
+			if _, exists := sc.sym[typeName]; exists {
+				// TODO(mpl): find the exact location of the previous declaration
+				err = n.cfgErrorf("%s redeclared in this block", typeName)
+				return false
+			}
+
+			if n.child[1].kind == identExpr {
+				n.typ = &itype{cat: aliasT, val: typ, name: typeName}
+			} else {
+				n.typ = typ
+				n.typ.name = typeName
+			}
+			sc.sym[typeName] = &symbol{kind: typeSym, typ: n.typ}
 			return false
 
 		case constDecl:
@@ -381,7 +395,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				}
 			}
 
-		case arrayType, basicLit, chanType, funcType, mapType, structType:
+		case arrayType, basicLit, chanType, funcType, interfaceType, mapType, structType:
 			n.typ, err = nodeType(interp, sc, n)
 			return false
 		}
@@ -493,7 +507,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				// Propagate type
 				// TODO: Check that existing destination type matches source type
 				switch {
-				case n.action == aAssign && src.action == aCall && dest.typ.cat != interfaceT:
+				case n.action == aAssign && isCall(src) && dest.typ.cat != interfaceT && !isRecursiveField(dest):
 					// Call action may perform the assignment directly.
 					n.gen = nop
 					src.level = level
@@ -507,6 +521,12 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					src.findex = dest.findex // Set recv address to LHS
 					dest.typ = src.typ
 				case n.action == aAssign && src.action == aCompositeLit:
+					if dest.typ.cat == valueT && dest.typ.rtype.Kind() == reflect.Interface {
+						// No optimisation attempt for assigned binary interface
+						break
+					}
+					// Skip the assign operation entirely, the source frame index is set
+					// to destination index, avoiding extra memory alloc and duplication.
 					n.gen = nop
 					src.findex = dest.findex
 					src.level = level
@@ -701,7 +721,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				n.typ = t.val
 			}
 			n.findex = sc.add(n.typ)
-			n.recv = &receiver{node: n}
 			typ := t.TypeOf()
 			switch k := typ.Kind(); k {
 			case reflect.Map:
@@ -815,7 +834,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				typ := n.child[0].typ.rtype
 				numIn := len(n.child) - 1
 				tni := typ.NumIn()
-				if numIn == 1 && n.child[1].action == aCall {
+				if numIn == 1 && isCall(n.child[1]) {
 					numIn = n.child[1].typ.numOut()
 				}
 				if n.child[0].action == aGetMethod {
@@ -900,9 +919,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case compositeLitExpr:
 			wireChild(n)
-			if n.anc.action != aAssign {
-				n.findex = sc.add(n.typ)
-			}
+			n.findex = sc.add(n.typ)
 			// TODO: Check that composite literal expr matches corresponding type
 			n.gen = compositeGenerator(n, sc)
 
@@ -1214,7 +1231,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		case returnStmt:
 			if mustReturnValue(sc.def.child[2]) {
 				nret := len(n.child)
-				if nret == 1 && n.child[0].action == aCall {
+				if nret == 1 && isCall(n.child[0]) {
 					nret = n.child[0].child[0].typ.numOut()
 				}
 				if nret < sc.def.typ.numOut() {
@@ -1542,24 +1559,29 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			for i := l - 1; i >= 0; i-- {
 				c := clauses[i]
 				c.gen = nop
-				body := c.lastChild()
-				if len(c.child) > 1 {
-					cond := c.child[0]
-					cond.tnext = body.start
-					if i == l-1 {
-						setFNext(cond, n)
+				if len(c.child) == 0 {
+					c.tnext = n
+					c.fnext = n
+				} else {
+					body := c.lastChild()
+					if len(c.child) > 1 {
+						cond := c.child[0]
+						cond.tnext = body.start
+						if i == l-1 {
+							setFNext(cond, n)
+						} else {
+							setFNext(cond, clauses[i+1].start)
+						}
+						c.start = cond.start
 					} else {
-						setFNext(cond, clauses[i+1].start)
+						c.start = body.start
 					}
-					c.start = cond.start
-				} else {
-					c.start = body.start
-				}
-				// If last case body statement is a fallthrough, then jump to next case body
-				if i < l-1 && len(body.child) > 0 && body.lastChild().kind == fallthroughtStmt {
-					body.tnext = clauses[i+1].lastChild().start
-				} else {
-					body.tnext = n
+					// If last case body statement is a fallthrough, then jump to next case body
+					if i < l-1 && len(body.child) > 0 && body.lastChild().kind == fallthroughtStmt {
+						body.tnext = clauses[i+1].lastChild().start
+					} else {
+						body.tnext = n
+					}
 				}
 			}
 			sbn.start = clauses[0].start
@@ -1661,6 +1683,19 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					// Global object allocation is already performed in GTA.
 					index = sc.sym[c.ident].index
 				} else {
+					if sym, exists := sc.sym[c.ident]; exists {
+						if sym.typ.node != nil &&
+							sym.typ.node.anc != nil {
+							// for non-predeclared identifiers (struct, map, etc)
+							prevDecl := n.interp.fset.Position(sym.typ.node.anc.pos)
+							err = n.cfgErrorf("%s redeclared in this block\n\tprevious declaration at %v", c.ident, prevDecl)
+							return
+						}
+						// for predeclared identifiers (int, string, etc)
+						// TODO(mpl): find the exact location of the previous declaration in all cases.
+						err = n.cfgErrorf("%s redeclared in this block", c.ident)
+						return
+					}
 					index = sc.add(n.typ)
 					sc.sym[c.ident] = &symbol{index: index, kind: varSym, typ: n.typ}
 				}
@@ -1985,6 +2020,10 @@ func isField(n *node) bool {
 	return n.kind == selectorExpr && len(n.child) > 0 && n.child[0].typ != nil && isStruct(n.child[0].typ)
 }
 
+func isRecursiveField(n *node) bool {
+	return isField(n) && (n.typ.recursive || n.typ.cat == ptrT && n.typ.val.recursive)
+}
+
 // isNewDefine returns true if node refers to a new definition
 func isNewDefine(n *node, sc *scope) bool {
 	if n.ident == "_" {
@@ -2011,6 +2050,10 @@ func isMethod(n *node) bool {
 
 func isMapEntry(n *node) bool {
 	return n.action == aGetIndex && isMap(n.child[0].typ)
+}
+
+func isCall(n *node) bool {
+	return n.action == aCall || n.action == aCallSlice
 }
 
 func isBinCall(n *node) bool {

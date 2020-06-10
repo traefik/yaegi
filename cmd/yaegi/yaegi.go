@@ -72,6 +72,11 @@ Debugging support (may be removed at any time):
     Generate and display graphviz dot of AST with dotty(1)
   YAEGI_CFG_DOT=1
     Generate and display graphviz dot of CFG with dotty(1)
+  YAEGI_DOT_CMD='dot -Tsvg -ofoo.svg'
+    Defines how to process the dot code generated whenever YAEGI_AST_DOT and/or
+    YAEGI_CFG_DOT is enabled. If any of YAEGI_AST_DOT or YAEGI_CFG_DOT is set,
+    but YAEGI_DOT_CMD is not defined, the default is to write to a .dot file
+    next to the Go source file.
 */
 package main
 

@@ -8,12 +8,12 @@ import (
 	"strings"
 )
 
-func (interp *Interpreter) importSrc(rPath, path string) error {
+func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 	var dir string
 	var err error
 
 	if interp.srcPkg[path] != nil {
-		return nil
+		return "", nil
 	}
 
 	// For relative import paths in the form "./xxx" or "../xxx", the initial
@@ -27,17 +27,17 @@ func (interp *Interpreter) importSrc(rPath, path string) error {
 		}
 		dir = filepath.Join(filepath.Dir(interp.Name), rPath, path)
 	} else if dir, rPath, err = pkgDir(interp.context.GOPATH, rPath, path); err != nil {
-		return err
+		return "", err
 	}
 
 	if interp.rdir[path] {
-		return fmt.Errorf("import cycle not allowed\n\timports %s", path)
+		return "", fmt.Errorf("import cycle not allowed\n\timports %s", path)
 	}
 	interp.rdir[path] = true
 
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	var initNodes []*node
@@ -57,23 +57,28 @@ func (interp *Interpreter) importSrc(rPath, path string) error {
 		name = filepath.Join(dir, name)
 		var buf []byte
 		if buf, err = ioutil.ReadFile(name); err != nil {
-			return err
+			return "", err
 		}
 
 		var pname string
 		if pname, root, err = interp.ast(string(buf), name); err != nil {
-			return err
+			return "", err
 		}
 		if root == nil {
 			continue
 		}
+
 		if interp.astDot {
-			root.astDot(dotX(), name)
+			dotCmd := interp.dotCmd
+			if dotCmd == "" {
+				dotCmd = defaultDotCmd(name, "yaegi-ast-")
+			}
+			root.astDot(dotWriter(dotCmd), name)
 		}
 		if pkgName == "" {
 			pkgName = pname
 		} else if pkgName != pname {
-			return fmt.Errorf("found packages %s and %s in %s", pkgName, pname, dir)
+			return "", fmt.Errorf("found packages %s and %s in %s", pkgName, pname, dir)
 		}
 		rootNodes = append(rootNodes, root)
 
@@ -81,7 +86,7 @@ func (interp *Interpreter) importSrc(rPath, path string) error {
 		var list []*node
 		list, err = interp.gta(root, subRPath, path)
 		if err != nil {
-			return err
+			return "", err
 		}
 		revisit[subRPath] = append(revisit[subRPath], list...)
 	}
@@ -89,7 +94,7 @@ func (interp *Interpreter) importSrc(rPath, path string) error {
 	// Revisit incomplete nodes where GTA could not complete.
 	for pkg, nodes := range revisit {
 		if err = interp.gtaRetry(nodes, pkg, path); err != nil {
-			return err
+			return "", err
 		}
 	}
 
@@ -97,7 +102,7 @@ func (interp *Interpreter) importSrc(rPath, path string) error {
 	for _, root := range rootNodes {
 		var nodes []*node
 		if nodes, err = interp.cfg(root, path); err != nil {
-			return err
+			return "", err
 		}
 		initNodes = append(initNodes, nodes...)
 	}
@@ -115,7 +120,7 @@ func (interp *Interpreter) importSrc(rPath, path string) error {
 	// Once all package sources have been parsed, execute entry points then init functions
 	for _, n := range rootNodes {
 		if err = genRun(n); err != nil {
-			return err
+			return "", err
 		}
 		interp.run(n, nil)
 	}
@@ -129,7 +134,7 @@ func (interp *Interpreter) importSrc(rPath, path string) error {
 		interp.run(n, interp.frame)
 	}
 
-	return nil
+	return pkgName, nil
 }
 
 // pkgDir returns the absolute path in filesystem for a package given its name and

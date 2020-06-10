@@ -54,6 +54,25 @@ func genValueRecv(n *node) func(*frame) reflect.Value {
 	}
 }
 
+func genValueRecvInterfacePtr(n *node) func(*frame) reflect.Value {
+	v := genValue(n.recv.node)
+	fi := n.recv.index
+
+	return func(f *frame) reflect.Value {
+		r := v(f)
+		r = r.Elem().Elem()
+
+		if len(fi) == 0 {
+			return r
+		}
+
+		if r.Kind() == reflect.Ptr {
+			r = r.Elem()
+		}
+		return r.FieldByIndex(fi)
+	}
+}
+
 func genValueAsFunctionWrapper(n *node) func(*frame) reflect.Value {
 	value := genValue(n)
 	typ := n.typ.TypeOf()
@@ -147,6 +166,19 @@ func genValueRangeArray(n *node) func(*frame) reflect.Value {
 	}
 }
 
+func genValueInterfaceArray(n *node) func(*frame) reflect.Value {
+	value := genValue(n)
+	return func(f *frame) reflect.Value {
+		vi := value(f).Interface().([]valueInterface)
+		v := reflect.MakeSlice(reflect.TypeOf([]interface{}{}), len(vi), len(vi))
+		for i, vv := range vi {
+			v.Index(i).Set(vv.value)
+		}
+
+		return v
+	}
+}
+
 func genValueInterfacePtr(n *node) func(*frame) reflect.Value {
 	value := genValue(n)
 
@@ -173,6 +205,18 @@ func genValueInterface(n *node) func(*frame) reflect.Value {
 			nod = vi.node
 		}
 		return reflect.ValueOf(valueInterface{nod, v})
+	}
+}
+
+func genValueDerefInterfacePtr(n *node) func(*frame) reflect.Value {
+	value := genValue(n)
+
+	return func(f *frame) reflect.Value {
+		v := value(f)
+		if v.IsZero() {
+			return v
+		}
+		return v.Elem().Elem()
 	}
 }
 
