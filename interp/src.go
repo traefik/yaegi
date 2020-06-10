@@ -13,7 +13,7 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 	var err error
 
 	if interp.srcPkg[path] != nil {
-		return "", nil
+		return interp.pkgNames[path], nil
 	}
 
 	// For relative import paths in the form "./xxx" or "../xxx", the initial
@@ -111,6 +111,7 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 	// the global symbols in the package scope.
 	interp.mutex.Lock()
 	interp.srcPkg[path] = interp.scopes[path].sym
+	interp.pkgNames[path] = pkgName
 
 	interp.frame.mutex.Lock()
 	interp.resizeFrame()
