@@ -1444,6 +1444,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					cur.tnext = an.start
 				}
 				if pn != nil {
+					an.tnext = pn
 					cur = pn
 				}
 			}
