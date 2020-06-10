@@ -1444,6 +1444,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					cur.tnext = an.start
 				}
 				if pn != nil {
+					// Chain channect init action to send data init action.
+					// (already done by wireChild, but let's be explicit).
 					an.tnext = pn
 					cur = pn
 				}
