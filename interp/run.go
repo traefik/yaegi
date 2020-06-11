@@ -1257,7 +1257,7 @@ func getIndexMap2(n *node) {
 		return
 	}
 	if n.child[1].rval.IsValid() { // constant map index
-		convertConstantValue( n.child[1])
+		convertConstantValue(n.child[1])
 		mi := n.child[1].rval
 		switch {
 		case !doValue:
@@ -2625,11 +2625,11 @@ func convertConstantValue(n *node) {
 		switch t.cat {
 		case intT:
 			if l > 64 {
-				panic(fmt.Sprintf("constant %s overflows int64", c.ExactString()))
+				panic(fmt.Sprintf("constant %s overflows int", c.ExactString()))
 			}
 			v = reflect.ValueOf(int(i))
 		case int8T:
-			if l > 64 {
+			if l > 8 {
 				panic(fmt.Sprintf("constant %s overflows int8", c.ExactString()))
 			}
 			v = reflect.ValueOf(int8(i))
@@ -2655,27 +2655,32 @@ func convertConstantValue(n *node) {
 		switch t.cat {
 		case uintT:
 			if l > 64 {
-				panic(fmt.Sprintf("constant %s overflows int64", c.ExactString()))
+				panic(fmt.Sprintf("constant %s overflows uint", c.ExactString()))
 			}
 			v = reflect.ValueOf(uint(i))
 		case uint8T:
-			if l > 64 {
-				panic(fmt.Sprintf("constant %s overflows int8", c.ExactString()))
+			if l > 8 {
+				panic(fmt.Sprintf("constant %s overflows uint8", c.ExactString()))
 			}
 			v = reflect.ValueOf(uint8(i))
 		case uint16T:
 			if l > 16 {
-				panic(fmt.Sprintf("constant %s overflows int16", c.ExactString()))
+				panic(fmt.Sprintf("constant %s overflows uint16", c.ExactString()))
 			}
 			v = reflect.ValueOf(uint16(i))
 		case uint32T:
 			if l > 32 {
-				panic(fmt.Sprintf("constant %s overflows int32", c.ExactString()))
+				panic(fmt.Sprintf("constant %s overflows uint32", c.ExactString()))
 			}
 			v = reflect.ValueOf(uint32(i))
 		case uint64T:
 			if l > 64 {
-				panic(fmt.Sprintf("constant %s overflows int64", c.ExactString()))
+				panic(fmt.Sprintf("constant %s overflows uint64", c.ExactString()))
+			}
+			v = reflect.ValueOf(i)
+		case uintptrT:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows uintptr", c.ExactString()))
 			}
 			v = reflect.ValueOf(i)
 		}
