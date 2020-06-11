@@ -1347,6 +1347,8 @@ func isByteArray(t reflect.Type) bool {
 
 func isFloat32(t reflect.Type) bool { return t != nil && t.Kind() == reflect.Float32 }
 func isFloat64(t reflect.Type) bool { return t != nil && t.Kind() == reflect.Float64 }
-func isNumber(t reflect.Type) bool  { return isInt(t) || isFloat(t) || isComplex(t) || isConstantValue(t) }
-func isString(t reflect.Type) bool  { return t != nil && t.Kind() == reflect.String }
+func isNumber(t reflect.Type) bool {
+	return isInt(t) || isFloat(t) || isComplex(t) || isConstantValue(t)
+}
+func isString(t reflect.Type) bool        { return t != nil && t.Kind() == reflect.String }
 func isConstantValue(t reflect.Type) bool { return t != nil && t.Implements(constVal) }
