@@ -4,6 +4,7 @@ package interp
 
 import (
 	"fmt"
+	"go/constant"
 	"log"
 	"reflect"
 )
@@ -1162,6 +1163,7 @@ func getIndexMap(n *node) {
 	z := reflect.New(n.child[0].typ.frameType().Elem()).Elem()
 
 	if n.child[1].rval.IsValid() { // constant map index
+		convertConstantValue(n.child[1])
 		mi := n.child[1].rval
 
 		switch {
@@ -1255,6 +1257,7 @@ func getIndexMap2(n *node) {
 		return
 	}
 	if n.child[1].rval.IsValid() { // constant map index
+		convertConstantValue( n.child[1])
 		mi := n.child[1].rval
 		switch {
 		case !doValue:
@@ -2590,6 +2593,9 @@ func convertLiteralValue(n *node, t reflect.Type) {
 		// Skip non-constant values, undefined target type or interface target type.
 	case n.rval.IsValid():
 		// Convert constant value to target type.
+		if n.typ != nil {
+			convertConstantValue(n)
+		}
 		n.rval = n.rval.Convert(t)
 	default:
 		// Create a zero value of target type.
