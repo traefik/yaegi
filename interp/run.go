@@ -250,7 +250,7 @@ func typeAssert2(n *node) {
 		}
 	case isInterface(typ):
 		n.exec = func(f *frame) bltn {
-			v := value(f)
+			v := value(f).Elem()
 			ok := v.IsValid() && canAssertTypes(v.Type(), rtype)
 			if ok {
 				value0(f).Set(v)
