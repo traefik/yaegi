@@ -191,7 +191,8 @@ func effectivePkg(root, path string) string {
 	for i := 0; i < len(splitPath); i++ {
 		part := splitPath[len(splitPath)-1-i]
 
-		if part == splitRoot[len(splitRoot)-1-rootIndex] && i != 0 {
+		index := len(splitRoot) - 1 - rootIndex
+		if index > 0 && part == splitRoot[index] && i != 0 {
 			prevRootIndex = rootIndex
 			rootIndex++
 		} else if prevRootIndex == rootIndex {
