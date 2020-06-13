@@ -91,6 +91,7 @@ import (
 
 	"github.com/containous/yaegi/interp"
 	"github.com/containous/yaegi/stdlib"
+	"github.com/containous/yaegi/stdlib/unsafe"
 )
 
 func main() {
@@ -112,6 +113,7 @@ func main() {
 	i := interp.New(interp.Options{GoPath: build.Default.GOPATH, BuildTags: strings.Split(tags, ",")})
 	i.Use(stdlib.Symbols)
 	i.Use(interp.Symbols)
+	i.Use(unsafe.Symbols)
 
 	if cmd != `` {
 		i.REPL(strings.NewReader(cmd), os.Stderr)

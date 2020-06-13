@@ -7,6 +7,7 @@ import (
 	"go/constant"
 	"log"
 	"reflect"
+	"unsafe"
 )
 
 // bltn type defines functions which run at CFG execution
@@ -329,9 +330,35 @@ func convert(n *node) {
 		value = genValue(c)
 	}
 
-	n.exec = func(f *frame) bltn {
-		dest(f).Set(value(f).Convert(typ))
-		return next
+	switch {
+	case typ.Kind() == reflect.UnsafePointer && c.typ.cat == uintptrT:
+		n.exec = func(f *frame) bltn {
+			dest(f).SetPointer(unsafe.Pointer(value(f).Interface().(uintptr)))
+			return next
+		}
+	case typ.Kind() == reflect.UnsafePointer:
+		n.exec = func(f *frame) bltn {
+			dest(f).SetPointer(unsafe.Pointer(value(f).Pointer()))
+			return next
+		}
+	case typ.Kind() == reflect.Uintptr && c.typ.cat == valueT && c.typ.rtype.Kind() == reflect.UnsafePointer:
+		n.exec = func(f *frame) bltn {
+			ptr := value(f).Interface().(unsafe.Pointer)
+			dest(f).Set(reflect.ValueOf(uintptr(ptr)))
+			return next
+		}
+	case c.typ.cat == valueT && c.typ.rtype.Kind() == reflect.UnsafePointer:
+		n.exec = func(f *frame) bltn {
+			ptr := value(f).Interface().(unsafe.Pointer)
+			v := reflect.NewAt(dest(f).Type().Elem(), ptr)
+			dest(f).Set(v)
+			return next
+		}
+	default:
+		n.exec = func(f *frame) bltn {
+			dest(f).Set(value(f).Convert(typ))
+			return next
+		}
 	}
 }
 

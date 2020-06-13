@@ -12,6 +12,7 @@ import (
 
 	"github.com/containous/yaegi/interp"
 	"github.com/containous/yaegi/stdlib"
+	"github.com/containous/yaegi/stdlib/unsafe"
 )
 
 func TestFile(t *testing.T) {
@@ -56,6 +57,7 @@ func runCheck(t *testing.T, p string) {
 	i.Name = p
 	i.Use(interp.Symbols)
 	i.Use(stdlib.Symbols)
+	i.Use(unsafe.Symbols)
 
 	_, err = i.Eval(string(src))
 	if errWanted {
