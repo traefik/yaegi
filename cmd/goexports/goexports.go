@@ -30,6 +30,7 @@ import (
 	"go/types"
 	"io/ioutil"
 	"log"
+	"math/big"
 	"os"
 	"path"
 	"runtime"
@@ -150,7 +151,7 @@ func genContent(dest, pkgName, license string) ([]byte, error) {
 		case *types.Const:
 			if b, ok := o.Type().(*types.Basic); ok && (b.Info()&types.IsUntyped) != 0 {
 				// convert untyped constant to right type to avoid overflow
-				val[name] = Val{fixConst(pname, o.Val()), false}
+				val[name] = Val{fixConst(pname, o.Val(), imports), false}
 			} else {
 				val[name] = Val{pname, false}
 			}
@@ -253,35 +254,35 @@ func genContent(dest, pkgName, license string) ([]byte, error) {
 }
 
 // fixConst checks untyped constant value, converting it if necessary to avoid overflow
-func fixConst(name string, val constant.Value) string {
+func fixConst(name string, val constant.Value, imports map[string]bool) string {
+	var (
+		tok string
+		str   string
+	)
 	switch val.Kind() {
-	case constant.Float:
-		str := val.ExactString()
-		if _, err := strconv.ParseFloat(str, 32); err == nil {
-			return "float32(" + name + ")"
-		}
-		return name
 	case constant.Int:
-		str := val.ExactString()
-		i, err := strconv.ParseInt(str, 0, 64)
-		if err == nil {
-			switch {
-			case i == int64(int32(i)):
-				return name
-			case i == int64(uint32(i)):
-				return "uint32(" + name + ")"
-			default:
-				return "int64(" + name + ")"
-			}
+		tok = "INT"
+		str = val.ExactString()
+	case constant.Float:
+		v := constant.Val(val) // v is *big.Rat or *big.Float
+		f, ok := v.(*big.Float)
+		if !ok {
+			f = new(big.Float).SetRat(v.(*big.Rat))
 		}
-		_, err = strconv.ParseUint(str, 0, 64)
-		if err == nil {
-			return "uint64(" + name + ")"
-		}
-		return name
+
+		tok = "FLOAT"
+		str = f.Text('g', int(f.Prec()))
+	case constant.Complex:
+		// TODO: not sure how to parse this case
+		fallthrough
 	default:
 		return name
 	}
+
+	imports["go/constant"] = true
+	imports["go/token"] = true
+
+	return fmt.Sprintf("constant.MakeFromLiteral(\"%s\", token.%s, 0)", str, tok)
 }
 
 // genLicense generates the correct LICENSE header text from the provided
