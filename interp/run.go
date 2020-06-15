@@ -2443,14 +2443,14 @@ func _make(n *node) {
 		switch len(n.child) {
 		case 3:
 			n.exec = func(f *frame) bltn {
-				len := int(value(f).Int())
+				len := int(vInt(value(f)))
 				dest(f).Set(reflect.MakeSlice(typ, len, len))
 				return next
 			}
 		case 4:
 			value1 := genValue(n.child[3])
 			n.exec = func(f *frame) bltn {
-				dest(f).Set(reflect.MakeSlice(typ, int(value(f).Int()), int(value1(f).Int())))
+				dest(f).Set(reflect.MakeSlice(typ, int(vInt(value(f))), int(vInt(value1(f)))))
 				return next
 			}
 		}
@@ -2465,7 +2465,7 @@ func _make(n *node) {
 		case 3:
 			value := genValue(n.child[2])
 			n.exec = func(f *frame) bltn {
-				dest(f).Set(reflect.MakeChan(typ, int(value(f).Int())))
+				dest(f).Set(reflect.MakeChan(typ, int(vInt(value(f)))))
 				return next
 			}
 		}
@@ -2480,7 +2480,7 @@ func _make(n *node) {
 		case 3:
 			value := genValue(n.child[2])
 			n.exec = func(f *frame) bltn {
-				dest(f).Set(reflect.MakeMapWithSize(typ, int(value(f).Int())))
+				dest(f).Set(reflect.MakeMapWithSize(typ, int(vInt(value(f)))))
 				return next
 			}
 		}
