@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"hash/adler32"
 	"reflect"
 )
@@ -14,6 +16,6 @@ func init() {
 		// function, constant and variable definitions
 		"Checksum": reflect.ValueOf(adler32.Checksum),
 		"New":      reflect.ValueOf(adler32.New),
-		"Size":     reflect.ValueOf(adler32.Size),
+		"Size":     reflect.ValueOf(constant.MakeFromLiteral("4", token.INT, 0)),
 	}
 }

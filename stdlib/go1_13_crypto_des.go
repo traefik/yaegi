@@ -6,13 +6,15 @@ package stdlib
 
 import (
 	"crypto/des"
+	"go/constant"
+	"go/token"
 	"reflect"
 )
 
 func init() {
 	Symbols["crypto/des"] = map[string]reflect.Value{
 		// function, constant and variable definitions
-		"BlockSize":          reflect.ValueOf(des.BlockSize),
+		"BlockSize":          reflect.ValueOf(constant.MakeFromLiteral("8", token.INT, 0)),
 		"NewCipher":          reflect.ValueOf(des.NewCipher),
 		"NewTripleDESCipher": reflect.ValueOf(des.NewTripleDESCipher),
 

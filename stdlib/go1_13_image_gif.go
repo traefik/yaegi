@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"image/gif"
 	"reflect"
 )
@@ -15,9 +17,9 @@ func init() {
 		"Decode":             reflect.ValueOf(gif.Decode),
 		"DecodeAll":          reflect.ValueOf(gif.DecodeAll),
 		"DecodeConfig":       reflect.ValueOf(gif.DecodeConfig),
-		"DisposalBackground": reflect.ValueOf(gif.DisposalBackground),
-		"DisposalNone":       reflect.ValueOf(gif.DisposalNone),
-		"DisposalPrevious":   reflect.ValueOf(gif.DisposalPrevious),
+		"DisposalBackground": reflect.ValueOf(constant.MakeFromLiteral("2", token.INT, 0)),
+		"DisposalNone":       reflect.ValueOf(constant.MakeFromLiteral("1", token.INT, 0)),
+		"DisposalPrevious":   reflect.ValueOf(constant.MakeFromLiteral("3", token.INT, 0)),
 		"Encode":             reflect.ValueOf(gif.Encode),
 		"EncodeAll":          reflect.ValueOf(gif.EncodeAll),
 

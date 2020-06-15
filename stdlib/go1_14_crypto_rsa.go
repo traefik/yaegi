@@ -6,6 +6,8 @@ package stdlib
 
 import (
 	"crypto/rsa"
+	"go/constant"
+	"go/token"
 	"reflect"
 )
 
@@ -22,8 +24,8 @@ func init() {
 		"ErrVerification":           reflect.ValueOf(&rsa.ErrVerification).Elem(),
 		"GenerateKey":               reflect.ValueOf(rsa.GenerateKey),
 		"GenerateMultiPrimeKey":     reflect.ValueOf(rsa.GenerateMultiPrimeKey),
-		"PSSSaltLengthAuto":         reflect.ValueOf(rsa.PSSSaltLengthAuto),
-		"PSSSaltLengthEqualsHash":   reflect.ValueOf(rsa.PSSSaltLengthEqualsHash),
+		"PSSSaltLengthAuto":         reflect.ValueOf(constant.MakeFromLiteral("0", token.INT, 0)),
+		"PSSSaltLengthEqualsHash":   reflect.ValueOf(constant.MakeFromLiteral("-1", token.INT, 0)),
 		"SignPKCS1v15":              reflect.ValueOf(rsa.SignPKCS1v15),
 		"SignPSS":                   reflect.ValueOf(rsa.SignPSS),
 		"VerifyPKCS1v15":            reflect.ValueOf(rsa.VerifyPKCS1v15),

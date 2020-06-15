@@ -6,6 +6,8 @@ package stdlib
 
 import (
 	"bufio"
+	"go/constant"
+	"go/token"
 	"reflect"
 )
 
@@ -20,7 +22,7 @@ func init() {
 		"ErrNegativeAdvance":   reflect.ValueOf(&bufio.ErrNegativeAdvance).Elem(),
 		"ErrNegativeCount":     reflect.ValueOf(&bufio.ErrNegativeCount).Elem(),
 		"ErrTooLong":           reflect.ValueOf(&bufio.ErrTooLong).Elem(),
-		"MaxScanTokenSize":     reflect.ValueOf(bufio.MaxScanTokenSize),
+		"MaxScanTokenSize":     reflect.ValueOf(constant.MakeFromLiteral("65536", token.INT, 0)),
 		"NewReadWriter":        reflect.ValueOf(bufio.NewReadWriter),
 		"NewReader":            reflect.ValueOf(bufio.NewReader),
 		"NewReaderSize":        reflect.ValueOf(bufio.NewReaderSize),
