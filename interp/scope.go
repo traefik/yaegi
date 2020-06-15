@@ -136,21 +136,13 @@ func (s *scope) rangeChanType(n *node) *itype {
 		}
 	}
 
-	c := n.child[1]
-	if c.typ != nil && c.typ.cat == chanT {
-		return c.typ
-	}
-	if isBinCall(c) &&
-		c.child[0].typ.rtype.NumOut() > 0 &&
-		c.child[0].typ.rtype.Out(0).Kind() == reflect.Chan {
-		o := c.child[0].typ.rtype.Out(0)
-		return &itype{
-			cat:   chanT,
-			rtype: o,
-			val: &itype{
-				cat:   valueT,
-				rtype: o.Elem(),
-			},
+	if c := n.child[1]; c.typ != nil {
+		if c.typ.cat == chanT {
+			return c.typ
+		}
+
+		if c.typ.cat == valueT && c.typ.rtype.Kind() == reflect.Chan {
+			return &itype{cat: chanT, val: &itype{cat: valueT, rtype: c.typ.rtype.Elem()}}
 		}
 	}
 
