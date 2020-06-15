@@ -143,7 +143,7 @@ func (s *scope) rangeChanType(n *node) *itype {
 	switch {
 	case c.typ.cat == chanT:
 		return c.typ
-	case c.typ.rtype.Kind() == reflect.Chan:
+	case c.typ.cat == valueT && c.typ.rtype.Kind() == reflect.Chan:
 		return &itype{cat: chanT, val: &itype{cat: valueT, rtype: c.typ.rtype.Elem()}}
 	}
 
