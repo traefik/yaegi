@@ -333,7 +333,7 @@ func convert(n *node) {
 	switch {
 	case typ.Kind() == reflect.UnsafePointer && c.typ.cat == uintptrT:
 		n.exec = func(f *frame) bltn {
-			dest(f).SetPointer(unsafe.Pointer(value(f).Interface().(uintptr)))
+			dest(f).SetPointer(unsafe.Pointer(value(f).Interface().(uintptr))) //nolint:govet
 			return next
 		}
 	case typ.Kind() == reflect.UnsafePointer:
