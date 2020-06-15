@@ -18,6 +18,7 @@ generate: gen_all_syscall
 
 tests:
 	GO111MODULE=off go test -v ./...
-	GO111MODULE=off go test -race ./interp
+	# support for unsafe means we cannot do unsafe pointer arithmetic checks
+	GO111MODULE=off go test -race -gcflags=all=-d=checkptr=0 ./interp
 
 .PHONY: check gen_all_syscall gen_tests
