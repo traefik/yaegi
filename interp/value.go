@@ -182,6 +182,45 @@ func genValueInterfaceArray(n *node) func(*frame) reflect.Value {
 	}
 }
 
+var sliceInter = reflect.TypeOf((*[]*interface{})(nil)).Elem()
+
+func genValueArrayInterface(n *node) func(*frame) reflect.Value {
+	value := genValue(n)
+	return func(f *frame) reflect.Value {
+		vi := value(f)
+		if vi.Type() == sliceInter {
+			return vi
+		}
+		l := vi.Len()
+		v := reflect.MakeSlice(reflect.TypeOf([]interface{}{}), l, l)
+		for i := 0; i < l; i++ {
+			v.Index(i).Set(vi.Index(i))
+		}
+
+		return v
+	}
+}
+
+var slicePtrInter = reflect.TypeOf((*[]*interface{})(nil)).Elem()
+
+func genValueArrayInterfacePtr(n *node) func(*frame) reflect.Value {
+	value := genValue(n)
+	return func(f *frame) reflect.Value {
+		vi := value(f)
+		if vi.Type() == slicePtrInter {
+			return vi
+		}
+		l := vi.Len()
+		v := reflect.MakeSlice(reflect.TypeOf([]*interface{}{}), l, l)
+		for i := 0; i < l; i++ {
+			val := vi.Index(i).Interface()
+			v.Index(i).Set(reflect.ValueOf(&val))
+		}
+
+		return v
+	}
+}
+
 func genValueInterfacePtr(n *node) func(*frame) reflect.Value {
 	value := genValue(n)
 

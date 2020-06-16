@@ -7,6 +7,7 @@ import (
 	"go/constant"
 	"log"
 	"reflect"
+	"unsafe"
 )
 
 // bltn type defines functions which run at CFG execution.
@@ -361,6 +362,16 @@ func isRecursiveStruct(t *itype, rtype reflect.Type) bool {
 	return false
 }
 
+func isRecursiveArrayStruct(t *itype, rtype reflect.Type) bool {
+	if t.cat == structT && rtype.Kind() == reflect.Interface {
+		return true
+	}
+	if (t.cat == ptrT || t.cat == arrayT) && t.rtype != nil {
+		return isRecursiveStruct(t.val, t.rtype.Elem())
+	}
+	return false
+}
+
 func assign(n *node) {
 	next := getExec(n.tnext)
 	dvalue := make([]func(*frame) reflect.Value, n.nleft)
@@ -389,6 +400,10 @@ func assign(n *node) {
 			svalue[i] = func(*frame) reflect.Value { return reflect.New(t).Elem() }
 		case isRecursiveStruct(dest.typ, dest.typ.rtype):
 			svalue[i] = genValueInterfacePtr(src)
+		case isRecursiveArrayStruct(dest.typ, dest.typ.rtype) && dest.typ.val.cat == ptrT:
+			svalue[i] = genValueArrayInterfacePtr(src)
+		case isRecursiveArrayStruct(dest.typ, dest.typ.rtype):
+			svalue[i] = genValueArrayInterface(src)
 		case src.typ.untyped && isComplex(dest.typ.TypeOf()):
 			svalue[i] = genValueComplex(src)
 		case src.typ.untyped && !dest.typ.untyped:
@@ -1457,7 +1472,13 @@ func getIndexSeq(n *node) {
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
-			f.data[i] = value(f).FieldByIndex(index)
+			v := value(f)
+			if v.Type().Kind() == reflect.Interface && n.child[0].typ.recursive {
+				// Here we have an interface to a struct. Any attempt to dereference it will
+				// make a copy of the struct. We need to get a Value to the actual struct.
+				v = reflect.NewAt(v.Elem().Type(), unsafe.Pointer(v.InterfaceData()[1])).Elem() //nolint:govet
+			}
+			f.data[i] = v.FieldByIndex(index)
 			if f.data[i].Bool() {
 				return tnext
 			}
@@ -1465,7 +1486,13 @@ func getIndexSeq(n *node) {
 		}
 	} else {
 		n.exec = func(f *frame) bltn {
-			f.data[i] = value(f).FieldByIndex(index)
+			v := value(f)
+			if v.Type().Kind() == reflect.Interface && n.child[0].typ.recursive {
+				// Here we have an interface to a struct. Any attempt to dereference it will
+				// make a copy of the struct. We need to get a Value to the actual struct.
+				v = reflect.NewAt(v.Elem().Type(), unsafe.Pointer(v.InterfaceData()[1])).Elem() //nolint:govet
+			}
+			f.data[i] = v.FieldByIndex(index)
 			return tnext
 		}
 	}
@@ -1476,8 +1503,7 @@ func getPtrIndexSeq(n *node) {
 	tnext := getExec(n.tnext)
 	var value func(*frame) reflect.Value
 	if isRecursiveStruct(n.child[0].typ, n.child[0].typ.rtype) {
-		v := genValue(n.child[0])
-		value = func(f *frame) reflect.Value { return v(f).Elem().Elem() }
+		value = genValueDerefInterfacePtr(n.child[0])
 	} else {
 		value = genValue(n.child[0])
 	}

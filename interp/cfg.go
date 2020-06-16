@@ -2090,7 +2090,17 @@ func isField(n *node) bool {
 }
 
 func isRecursiveField(n *node) bool {
-	return isField(n) && (n.typ.recursive || n.typ.cat == ptrT && n.typ.val.recursive)
+	if !isField(n) {
+		return false
+	}
+	t := n.typ
+	for t != nil {
+		if t.recursive {
+			return true
+		}
+		t = t.val
+	}
+	return false
 }
 
 // isNewDefine returns true if node refers to a new definition.
