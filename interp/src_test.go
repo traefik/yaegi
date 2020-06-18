@@ -26,6 +26,12 @@ func Test_effectivePkg(t *testing.T) {
 			path:     "vendor/guthib.com/containous/vin",
 			expected: "github.com/foo/plugin/vendor/guthib.com/containous/fromage/vendor/guthib.com/containous/vin",
 		},
+		{
+			desc:     "path is non-existent",
+			root:     "foo",
+			path:     "githib.com/foo/app",
+			expected: "foo/githib.com/foo/app",
+		},
 	}
 
 	for _, test := range testCases {
