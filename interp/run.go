@@ -2635,8 +2635,10 @@ func convertLiteralValue(n *node, t reflect.Type) {
 		// Skip non-constant values, undefined target type or interface target type.
 	case n.rval.IsValid():
 		// Convert constant value to target type.
-		if n.typ != nil {
+		if n.typ != nil && n.typ.cat != valueT {
 			convertConstantValue(n)
+		} else {
+			convertConstantValueTo(n, t)
 		}
 		n.rval = n.rval.Convert(t)
 	default:
@@ -2740,12 +2742,100 @@ func convertConstantValue(n *node) {
 		r, _ := constant.Float64Val(constant.Real(c))
 		i, _ := constant.Float64Val(constant.Imag(c))
 		v = reflect.ValueOf(complex(r, i))
-	case boolT:
-		b := constant.BoolVal(c)
-		v = reflect.ValueOf(b)
-	case stringT:
-		s := constant.StringVal(c)
-		v = reflect.ValueOf(s)
+	}
+	n.rval = v
+}
+
+func convertConstantValueTo(n *node, typ reflect.Type) {
+	if !n.rval.IsValid() {
+		return
+	}
+	c, ok := n.rval.Interface().(constant.Value)
+	if !ok {
+		return
+	}
+
+	v := n.rval
+	switch typ.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		i, _ := constant.Int64Val(c)
+		l := constant.BitLen(c)
+		switch typ.Kind() {
+		case reflect.Int:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows int", c.ExactString()))
+			}
+			v = reflect.ValueOf(int(i))
+		case reflect.Int8:
+			if l > 8 {
+				panic(fmt.Sprintf("constant %s overflows int8", c.ExactString()))
+			}
+			v = reflect.ValueOf(int8(i))
+		case reflect.Int16:
+			if l > 16 {
+				panic(fmt.Sprintf("constant %s overflows int16", c.ExactString()))
+			}
+			v = reflect.ValueOf(int16(i))
+		case reflect.Int32:
+			if l > 32 {
+				panic(fmt.Sprintf("constant %s overflows int32", c.ExactString()))
+			}
+			v = reflect.ValueOf(int32(i))
+		case reflect.Int64:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows int64", c.ExactString()))
+			}
+			v = reflect.ValueOf(i)
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		i, _ := constant.Uint64Val(c)
+		l := constant.BitLen(c)
+		switch typ.Kind() {
+		case reflect.Uint:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows uint", c.ExactString()))
+			}
+			v = reflect.ValueOf(uint(i))
+		case reflect.Uint8:
+			if l > 8 {
+				panic(fmt.Sprintf("constant %s overflows uint8", c.ExactString()))
+			}
+			v = reflect.ValueOf(uint8(i))
+		case reflect.Uint16:
+			if l > 16 {
+				panic(fmt.Sprintf("constant %s overflows uint16", c.ExactString()))
+			}
+			v = reflect.ValueOf(uint16(i))
+		case reflect.Uint32:
+			if l > 32 {
+				panic(fmt.Sprintf("constant %s overflows uint32", c.ExactString()))
+			}
+			v = reflect.ValueOf(uint32(i))
+		case reflect.Uint64:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows uint64", c.ExactString()))
+			}
+			v = reflect.ValueOf(i)
+		case reflect.Uintptr:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows uintptr", c.ExactString()))
+			}
+			v = reflect.ValueOf(i)
+		}
+	case reflect.Float32:
+		f, _ := constant.Float32Val(c)
+		v = reflect.ValueOf(f)
+	case reflect.Float64:
+		f, _ := constant.Float64Val(c)
+		v = reflect.ValueOf(f)
+	case reflect.Complex64:
+		r, _ := constant.Float32Val(constant.Real(c))
+		i, _ := constant.Float32Val(constant.Imag(c))
+		v = reflect.ValueOf(complex(r, i))
+	case reflect.Complex128:
+		r, _ := constant.Float64Val(constant.Real(c))
+		i, _ := constant.Float64Val(constant.Imag(c))
+		v = reflect.ValueOf(complex(r, i))
 	}
 	n.rval = v
 }
