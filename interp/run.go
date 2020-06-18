@@ -329,6 +329,22 @@ func convert(n *node) {
 		value = genValue(c)
 	}
 
+	for _, con := range n.interp.convert {
+		if c.typ.rtype == nil {
+			continue
+		}
+
+		fn := con(c.typ.rtype, typ)
+		if fn == nil {
+			continue
+		}
+		n.exec = func(f *frame) bltn {
+			fn(value(f), dest(f))
+			return next
+		}
+		return
+	}
+
 	n.exec = func(f *frame) bltn {
 		dest(f).Set(value(f).Convert(typ))
 		return next

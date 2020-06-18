@@ -11,6 +11,7 @@ import (
 
 	"github.com/containous/yaegi/interp"
 	"github.com/containous/yaegi/stdlib"
+	"github.com/containous/yaegi/stdlib/unsafe"
 )
 
 func TestInterpConsistencyBuild(t *testing.T) {
@@ -104,6 +105,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			i.Name = filePath
 			i.Use(stdlib.Symbols)
 			i.Use(interp.Symbols)
+			i.Use(unsafe.Symbols)
 
 			_, err = i.Eval(string(src))
 			if err != nil {

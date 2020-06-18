@@ -96,6 +96,9 @@ func (f *frame) clone() *frame {
 	}
 }
 
+// convertFn is the signature of a symbol converter
+type convertFn func(from, to reflect.Type) func(src, dest reflect.Value)
+
 // Exports stores the map of binary packages per package path
 type Exports map[string]map[string]reflect.Value
 
@@ -138,6 +141,8 @@ type Interpreter struct {
 	srcPkg   imports           // source packages used in interpreter, indexed by path
 	pkgNames map[string]string // package names, indexed by path
 	done     chan struct{}     // for cancellation of channel operations
+
+	convert []convertFn // converters from symbols
 }
 
 const (
@@ -466,8 +471,26 @@ func (interp *Interpreter) getWrapper(t reflect.Type) reflect.Type {
 // they can be used in interpreted code
 func (interp *Interpreter) Use(values Exports) {
 	for k, v := range values {
-		interp.binPkg[k] = v
+		if k != "github.com/containous/yaegi" {
+			interp.binPkg[k] = v
+			continue
+		}
+
+		if con, ok := extractConverter(v["convert"]); ok {
+			interp.convert = append(interp.convert, con)
+		}
 	}
+}
+
+func extractConverter(v reflect.Value) (convertFn, bool) {
+	if !v.IsValid() {
+		return nil, false
+	}
+	fn, ok := v.Interface().(func(from, to reflect.Type) func(src, dest reflect.Value))
+	if !ok {
+		return nil, false
+	}
+	return fn, true
 }
 
 // REPL performs a Read-Eval-Print-Loop on input reader.
