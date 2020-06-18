@@ -3,6 +3,7 @@ package interp
 import (
 	"fmt"
 	"go/ast"
+	"go/constant"
 	"go/parser"
 	"go/scanner"
 	"go/token"
@@ -474,14 +475,14 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 				v, _, _, _ := strconv.UnquoteChar(a.Value[1:len(a.Value)-1], '\'')
 				n.rval = reflect.ValueOf(v)
 			case token.FLOAT:
-				v, _ := strconv.ParseFloat(a.Value, 64)
+				v := constant.MakeFromLiteral(a.Value, a.Kind, 0)
 				n.rval = reflect.ValueOf(v)
 			case token.IMAG:
-				v, _ := strconv.ParseFloat(a.Value[:len(a.Value)-1], 64)
-				n.rval = reflect.ValueOf(complex(0, v))
+				v := constant.MakeFromLiteral(a.Value, a.Kind, 0)
+				n.rval = reflect.ValueOf(v)
 			case token.INT:
-				v, _ := strconv.ParseInt(a.Value, 0, 0)
-				n.rval = reflect.ValueOf(int(v))
+				v := constant.MakeFromLiteral(a.Value, a.Kind, 0)
+				n.rval = reflect.ValueOf(v)
 			case token.STRING:
 				v, _ := strconv.Unquote(a.Value)
 				n.rval = reflect.ValueOf(v)
