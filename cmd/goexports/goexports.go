@@ -257,7 +257,7 @@ func genContent(dest, pkgName, license string) ([]byte, error) {
 func fixConst(name string, val constant.Value, imports map[string]bool) string {
 	var (
 		tok string
-		str   string
+		str string
 	)
 	switch val.Kind() {
 	case constant.Int:
