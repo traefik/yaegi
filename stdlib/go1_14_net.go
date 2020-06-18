@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"net"
 	"reflect"
 	"time"
@@ -35,10 +37,10 @@ func init() {
 		"IPv4allrouter":              reflect.ValueOf(&net.IPv4allrouter).Elem(),
 		"IPv4allsys":                 reflect.ValueOf(&net.IPv4allsys).Elem(),
 		"IPv4bcast":                  reflect.ValueOf(&net.IPv4bcast).Elem(),
-		"IPv4len":                    reflect.ValueOf(net.IPv4len),
+		"IPv4len":                    reflect.ValueOf(constant.MakeFromLiteral("4", token.INT, 0)),
 		"IPv4zero":                   reflect.ValueOf(&net.IPv4zero).Elem(),
 		"IPv6interfacelocalallnodes": reflect.ValueOf(&net.IPv6interfacelocalallnodes).Elem(),
-		"IPv6len":                    reflect.ValueOf(net.IPv6len),
+		"IPv6len":                    reflect.ValueOf(constant.MakeFromLiteral("16", token.INT, 0)),
 		"IPv6linklocalallnodes":      reflect.ValueOf(&net.IPv6linklocalallnodes).Elem(),
 		"IPv6linklocalallrouters":    reflect.ValueOf(&net.IPv6linklocalallrouters).Elem(),
 		"IPv6loopback":               reflect.ValueOf(&net.IPv6loopback).Elem(),

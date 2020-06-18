@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"io"
 	"reflect"
 )
@@ -28,9 +30,9 @@ func init() {
 		"Pipe":             reflect.ValueOf(io.Pipe),
 		"ReadAtLeast":      reflect.ValueOf(io.ReadAtLeast),
 		"ReadFull":         reflect.ValueOf(io.ReadFull),
-		"SeekCurrent":      reflect.ValueOf(io.SeekCurrent),
-		"SeekEnd":          reflect.ValueOf(io.SeekEnd),
-		"SeekStart":        reflect.ValueOf(io.SeekStart),
+		"SeekCurrent":      reflect.ValueOf(constant.MakeFromLiteral("1", token.INT, 0)),
+		"SeekEnd":          reflect.ValueOf(constant.MakeFromLiteral("2", token.INT, 0)),
+		"SeekStart":        reflect.ValueOf(constant.MakeFromLiteral("0", token.INT, 0)),
 		"TeeReader":        reflect.ValueOf(io.TeeReader),
 		"WriteString":      reflect.ValueOf(io.WriteString),
 

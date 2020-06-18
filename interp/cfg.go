@@ -2282,5 +2282,8 @@ func isValueUntyped(v reflect.Value) bool {
 		return false
 	}
 	t := v.Type()
+	if t.Implements(constVal) {
+		return true
+	}
 	return t.String() == t.Kind().String()
 }

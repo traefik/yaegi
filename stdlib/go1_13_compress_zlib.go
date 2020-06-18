@@ -6,6 +6,8 @@ package stdlib
 
 import (
 	"compress/zlib"
+	"go/constant"
+	"go/token"
 	"io"
 	"reflect"
 )
@@ -13,19 +15,19 @@ import (
 func init() {
 	Symbols["compress/zlib"] = map[string]reflect.Value{
 		// function, constant and variable definitions
-		"BestCompression":    reflect.ValueOf(zlib.BestCompression),
-		"BestSpeed":          reflect.ValueOf(zlib.BestSpeed),
-		"DefaultCompression": reflect.ValueOf(zlib.DefaultCompression),
+		"BestCompression":    reflect.ValueOf(constant.MakeFromLiteral("9", token.INT, 0)),
+		"BestSpeed":          reflect.ValueOf(constant.MakeFromLiteral("1", token.INT, 0)),
+		"DefaultCompression": reflect.ValueOf(constant.MakeFromLiteral("-1", token.INT, 0)),
 		"ErrChecksum":        reflect.ValueOf(&zlib.ErrChecksum).Elem(),
 		"ErrDictionary":      reflect.ValueOf(&zlib.ErrDictionary).Elem(),
 		"ErrHeader":          reflect.ValueOf(&zlib.ErrHeader).Elem(),
-		"HuffmanOnly":        reflect.ValueOf(zlib.HuffmanOnly),
+		"HuffmanOnly":        reflect.ValueOf(constant.MakeFromLiteral("-2", token.INT, 0)),
 		"NewReader":          reflect.ValueOf(zlib.NewReader),
 		"NewReaderDict":      reflect.ValueOf(zlib.NewReaderDict),
 		"NewWriter":          reflect.ValueOf(zlib.NewWriter),
 		"NewWriterLevel":     reflect.ValueOf(zlib.NewWriterLevel),
 		"NewWriterLevelDict": reflect.ValueOf(zlib.NewWriterLevelDict),
-		"NoCompression":      reflect.ValueOf(zlib.NoCompression),
+		"NoCompression":      reflect.ValueOf(constant.MakeFromLiteral("0", token.INT, 0)),
 
 		// type definitions
 		"Resetter": reflect.ValueOf((*zlib.Resetter)(nil)),

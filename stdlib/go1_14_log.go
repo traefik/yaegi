@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"log"
 	"reflect"
 )
@@ -16,14 +18,14 @@ func init() {
 		"Fatalf":        reflect.ValueOf(log.Fatalf),
 		"Fatalln":       reflect.ValueOf(log.Fatalln),
 		"Flags":         reflect.ValueOf(log.Flags),
-		"LUTC":          reflect.ValueOf(log.LUTC),
-		"Ldate":         reflect.ValueOf(log.Ldate),
-		"Llongfile":     reflect.ValueOf(log.Llongfile),
-		"Lmicroseconds": reflect.ValueOf(log.Lmicroseconds),
-		"Lmsgprefix":    reflect.ValueOf(log.Lmsgprefix),
-		"Lshortfile":    reflect.ValueOf(log.Lshortfile),
-		"LstdFlags":     reflect.ValueOf(log.LstdFlags),
-		"Ltime":         reflect.ValueOf(log.Ltime),
+		"LUTC":          reflect.ValueOf(constant.MakeFromLiteral("32", token.INT, 0)),
+		"Ldate":         reflect.ValueOf(constant.MakeFromLiteral("1", token.INT, 0)),
+		"Llongfile":     reflect.ValueOf(constant.MakeFromLiteral("8", token.INT, 0)),
+		"Lmicroseconds": reflect.ValueOf(constant.MakeFromLiteral("4", token.INT, 0)),
+		"Lmsgprefix":    reflect.ValueOf(constant.MakeFromLiteral("64", token.INT, 0)),
+		"Lshortfile":    reflect.ValueOf(constant.MakeFromLiteral("16", token.INT, 0)),
+		"LstdFlags":     reflect.ValueOf(constant.MakeFromLiteral("3", token.INT, 0)),
+		"Ltime":         reflect.ValueOf(constant.MakeFromLiteral("2", token.INT, 0)),
 		"New":           reflect.ValueOf(log.New),
 		"Output":        reflect.ValueOf(log.Output),
 		"Panic":         reflect.ValueOf(log.Panic),

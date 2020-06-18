@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"reflect"
 	"strconv"
 )
@@ -30,7 +32,7 @@ func init() {
 		"FormatFloat":              reflect.ValueOf(strconv.FormatFloat),
 		"FormatInt":                reflect.ValueOf(strconv.FormatInt),
 		"FormatUint":               reflect.ValueOf(strconv.FormatUint),
-		"IntSize":                  reflect.ValueOf(strconv.IntSize),
+		"IntSize":                  reflect.ValueOf(constant.MakeFromLiteral("64", token.INT, 0)),
 		"IsGraphic":                reflect.ValueOf(strconv.IsGraphic),
 		"IsPrint":                  reflect.ValueOf(strconv.IsPrint),
 		"Itoa":                     reflect.ValueOf(strconv.Itoa),

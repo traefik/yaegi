@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"math/big"
 	"reflect"
 )
@@ -17,10 +19,10 @@ func init() {
 		"Below":         reflect.ValueOf(big.Below),
 		"Exact":         reflect.ValueOf(big.Exact),
 		"Jacobi":        reflect.ValueOf(big.Jacobi),
-		"MaxBase":       reflect.ValueOf(big.MaxBase),
-		"MaxExp":        reflect.ValueOf(big.MaxExp),
-		"MaxPrec":       reflect.ValueOf(uint32(big.MaxPrec)),
-		"MinExp":        reflect.ValueOf(big.MinExp),
+		"MaxBase":       reflect.ValueOf(constant.MakeFromLiteral("62", token.INT, 0)),
+		"MaxExp":        reflect.ValueOf(constant.MakeFromLiteral("2147483647", token.INT, 0)),
+		"MaxPrec":       reflect.ValueOf(constant.MakeFromLiteral("4294967295", token.INT, 0)),
+		"MinExp":        reflect.ValueOf(constant.MakeFromLiteral("-2147483648", token.INT, 0)),
 		"NewFloat":      reflect.ValueOf(big.NewFloat),
 		"NewInt":        reflect.ValueOf(big.NewInt),
 		"NewRat":        reflect.ValueOf(big.NewRat),

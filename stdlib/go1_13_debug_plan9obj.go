@@ -6,16 +6,18 @@ package stdlib
 
 import (
 	"debug/plan9obj"
+	"go/constant"
+	"go/token"
 	"reflect"
 )
 
 func init() {
 	Symbols["debug/plan9obj"] = map[string]reflect.Value{
 		// function, constant and variable definitions
-		"Magic386":   reflect.ValueOf(plan9obj.Magic386),
-		"Magic64":    reflect.ValueOf(plan9obj.Magic64),
-		"MagicAMD64": reflect.ValueOf(plan9obj.MagicAMD64),
-		"MagicARM":   reflect.ValueOf(plan9obj.MagicARM),
+		"Magic386":   reflect.ValueOf(constant.MakeFromLiteral("491", token.INT, 0)),
+		"Magic64":    reflect.ValueOf(constant.MakeFromLiteral("32768", token.INT, 0)),
+		"MagicAMD64": reflect.ValueOf(constant.MakeFromLiteral("35479", token.INT, 0)),
+		"MagicARM":   reflect.ValueOf(constant.MakeFromLiteral("1607", token.INT, 0)),
 		"NewFile":    reflect.ValueOf(plan9obj.NewFile),
 		"Open":       reflect.ValueOf(plan9obj.Open),
 

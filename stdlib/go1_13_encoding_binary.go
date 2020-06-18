@@ -6,6 +6,8 @@ package stdlib
 
 import (
 	"encoding/binary"
+	"go/constant"
+	"go/token"
 	"reflect"
 )
 
@@ -14,9 +16,9 @@ func init() {
 		// function, constant and variable definitions
 		"BigEndian":      reflect.ValueOf(&binary.BigEndian).Elem(),
 		"LittleEndian":   reflect.ValueOf(&binary.LittleEndian).Elem(),
-		"MaxVarintLen16": reflect.ValueOf(binary.MaxVarintLen16),
-		"MaxVarintLen32": reflect.ValueOf(binary.MaxVarintLen32),
-		"MaxVarintLen64": reflect.ValueOf(binary.MaxVarintLen64),
+		"MaxVarintLen16": reflect.ValueOf(constant.MakeFromLiteral("3", token.INT, 0)),
+		"MaxVarintLen32": reflect.ValueOf(constant.MakeFromLiteral("5", token.INT, 0)),
+		"MaxVarintLen64": reflect.ValueOf(constant.MakeFromLiteral("10", token.INT, 0)),
 		"PutUvarint":     reflect.ValueOf(binary.PutUvarint),
 		"PutVarint":      reflect.ValueOf(binary.PutVarint),
 		"Read":           reflect.ValueOf(binary.Read),

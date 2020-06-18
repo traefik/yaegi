@@ -6,6 +6,8 @@ package stdlib
 
 import (
 	"crypto/tls"
+	"go/constant"
+	"go/token"
 	"reflect"
 )
 
@@ -74,11 +76,11 @@ func init() {
 		"TLS_RSA_WITH_AES_256_GCM_SHA384":               reflect.ValueOf(tls.TLS_RSA_WITH_AES_256_GCM_SHA384),
 		"TLS_RSA_WITH_RC4_128_SHA":                      reflect.ValueOf(tls.TLS_RSA_WITH_RC4_128_SHA),
 		"VerifyClientCertIfGiven":                       reflect.ValueOf(tls.VerifyClientCertIfGiven),
-		"VersionSSL30":                                  reflect.ValueOf(tls.VersionSSL30),
-		"VersionTLS10":                                  reflect.ValueOf(tls.VersionTLS10),
-		"VersionTLS11":                                  reflect.ValueOf(tls.VersionTLS11),
-		"VersionTLS12":                                  reflect.ValueOf(tls.VersionTLS12),
-		"VersionTLS13":                                  reflect.ValueOf(tls.VersionTLS13),
+		"VersionSSL30":                                  reflect.ValueOf(constant.MakeFromLiteral("768", token.INT, 0)),
+		"VersionTLS10":                                  reflect.ValueOf(constant.MakeFromLiteral("769", token.INT, 0)),
+		"VersionTLS11":                                  reflect.ValueOf(constant.MakeFromLiteral("770", token.INT, 0)),
+		"VersionTLS12":                                  reflect.ValueOf(constant.MakeFromLiteral("771", token.INT, 0)),
+		"VersionTLS13":                                  reflect.ValueOf(constant.MakeFromLiteral("772", token.INT, 0)),
 		"X25519":                                        reflect.ValueOf(tls.X25519),
 		"X509KeyPair":                                   reflect.ValueOf(tls.X509KeyPair),
 
