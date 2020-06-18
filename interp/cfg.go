@@ -2,6 +2,7 @@ package interp
 
 import (
 	"fmt"
+	"go/constant"
 	"log"
 	"math"
 	"reflect"
@@ -543,8 +544,11 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					case !src.rval.IsValid():
 						// Assign to nil.
 						src.rval = reflect.New(dest.typ.TypeOf()).Elem()
+					case n.anc.kind == constDecl:
+						// Possible conversion from const to actual type will be handled later
 					default:
 						// Convert literal value to destination type.
+						convertConstantValue(src)
 						src.rval = src.rval.Convert(dest.typ.TypeOf())
 						src.typ = dest.typ
 					}
@@ -559,6 +563,12 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					dest.gen = nop // skip getIndexMap
 				}
 				if n.anc.kind == constDecl {
+					if !dest.typ.untyped {
+						// If the dest is untyped, any constant rval needs to be converted
+						convertConstantValue(src)
+					}
+					n.gen = nop
+					n.findex = -1
 					sc.sym[dest.ident].kind = constSym
 					if childPos(n) == len(n.anc.child)-1 {
 						sc.iota = 0
@@ -1082,7 +1092,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						n.rval = sym.rval
 						n.kind = basicLit
 					case n.ident == "iota":
-						n.rval = reflect.ValueOf(sc.iota)
+						n.rval = reflect.ValueOf(constant.Make(int64(sc.iota)))
 						n.kind = basicLit
 					case n.ident == "nil":
 						n.kind = basicLit
@@ -1791,13 +1801,13 @@ func compDefineX(sc *scope, n *node) error {
 }
 
 // TODO used for allocation optimization, temporarily disabled
-//func isAncBranch(n *node) bool {
+// func isAncBranch(n *node) bool {
 //	switch n.anc.kind {
 //	case If0, If1, If2, If3:
 //		return true
 //	}
 //	return false
-//}
+// }
 
 func childPos(n *node) int {
 	for i, c := range n.anc.child {
@@ -1966,6 +1976,20 @@ func (n *node) isInteger() bool {
 				return true
 			}
 		}
+		if isConstantValue(t) {
+			c := n.rval.Interface().(constant.Value)
+			switch c.Kind() {
+			case constant.Int:
+				return true
+			case constant.Float:
+				f, _ := constant.Float64Val(c)
+				if f == math.Trunc(f) {
+					n.rval = reflect.ValueOf(constant.ToInt(c))
+					n.typ.rtype = n.rval.Type()
+					return true
+				}
+			}
+		}
 	}
 	return false
 }
@@ -1991,6 +2015,23 @@ func (n *node) isNatural() bool {
 				n.rval = reflect.ValueOf(uint(f))
 				n.typ.rtype = n.rval.Type()
 				return true
+			}
+		}
+		if isConstantValue(t) {
+			c := n.rval.Interface().(constant.Value)
+			switch c.Kind() {
+			case constant.Int:
+				i, _ := constant.Int64Val(c)
+				if i >= 0 {
+					return true
+				}
+			case constant.Float:
+				f, _ := constant.Float64Val(c)
+				if f == math.Trunc(f) {
+					n.rval = reflect.ValueOf(constant.ToInt(c))
+					n.typ.rtype = n.rval.Type()
+					return true
+				}
 			}
 		}
 	}
@@ -2241,5 +2282,8 @@ func isValueUntyped(v reflect.Value) bool {
 		return false
 	}
 	t := v.Type()
+	if t.Implements(constVal) {
+		return true
+	}
 	return t.String() == t.Kind().String()
 }

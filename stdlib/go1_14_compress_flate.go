@@ -6,6 +6,8 @@ package stdlib
 
 import (
 	"compress/flate"
+	"go/constant"
+	"go/token"
 	"io"
 	"reflect"
 )
@@ -13,15 +15,15 @@ import (
 func init() {
 	Symbols["compress/flate"] = map[string]reflect.Value{
 		// function, constant and variable definitions
-		"BestCompression":    reflect.ValueOf(flate.BestCompression),
-		"BestSpeed":          reflect.ValueOf(flate.BestSpeed),
-		"DefaultCompression": reflect.ValueOf(flate.DefaultCompression),
-		"HuffmanOnly":        reflect.ValueOf(flate.HuffmanOnly),
+		"BestCompression":    reflect.ValueOf(constant.MakeFromLiteral("9", token.INT, 0)),
+		"BestSpeed":          reflect.ValueOf(constant.MakeFromLiteral("1", token.INT, 0)),
+		"DefaultCompression": reflect.ValueOf(constant.MakeFromLiteral("-1", token.INT, 0)),
+		"HuffmanOnly":        reflect.ValueOf(constant.MakeFromLiteral("-2", token.INT, 0)),
 		"NewReader":          reflect.ValueOf(flate.NewReader),
 		"NewReaderDict":      reflect.ValueOf(flate.NewReaderDict),
 		"NewWriter":          reflect.ValueOf(flate.NewWriter),
 		"NewWriterDict":      reflect.ValueOf(flate.NewWriterDict),
-		"NoCompression":      reflect.ValueOf(flate.NoCompression),
+		"NoCompression":      reflect.ValueOf(constant.MakeFromLiteral("0", token.INT, 0)),
 
 		// type definitions
 		"CorruptInputError": reflect.ValueOf((*flate.CorruptInputError)(nil)),

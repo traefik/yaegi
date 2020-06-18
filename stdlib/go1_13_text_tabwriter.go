@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"reflect"
 	"text/tabwriter"
 )
@@ -15,7 +17,7 @@ func init() {
 		"AlignRight":          reflect.ValueOf(tabwriter.AlignRight),
 		"Debug":               reflect.ValueOf(tabwriter.Debug),
 		"DiscardEmptyColumns": reflect.ValueOf(tabwriter.DiscardEmptyColumns),
-		"Escape":              reflect.ValueOf(tabwriter.Escape),
+		"Escape":              reflect.ValueOf(constant.MakeFromLiteral("255", token.INT, 0)),
 		"FilterHTML":          reflect.ValueOf(tabwriter.FilterHTML),
 		"NewWriter":           reflect.ValueOf(tabwriter.NewWriter),
 		"StripEscape":         reflect.ValueOf(tabwriter.StripEscape),

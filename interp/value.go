@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"go/constant"
 	"reflect"
 )
 
@@ -96,6 +97,7 @@ func genValueAs(n *node, t reflect.Type) func(*frame) reflect.Value {
 func genValue(n *node) func(*frame) reflect.Value {
 	switch n.kind {
 	case basicLit:
+		convertConstantValue(n)
 		v := n.rval
 		if !v.IsValid() {
 			v = reflect.New(interf).Elem()
@@ -111,6 +113,7 @@ func genValue(n *node) func(*frame) reflect.Value {
 		return func(f *frame) reflect.Value { return v }
 	default:
 		if n.rval.IsValid() {
+			convertConstantValue(n)
 			v := n.rval
 			return func(f *frame) reflect.Value { return v }
 		}
@@ -277,6 +280,10 @@ func vInt(v reflect.Value) (i int64) {
 	case reflect.Complex64, reflect.Complex128:
 		i = int64(real(v.Complex()))
 	}
+	if v.Type().Implements(constVal) {
+		c := v.Interface().(constant.Value)
+		i, _ = constant.Int64Val(constant.ToInt(c))
+	}
 	return
 }
 
@@ -290,6 +297,11 @@ func vUint(v reflect.Value) (i uint64) {
 		i = uint64(v.Float())
 	case reflect.Complex64, reflect.Complex128:
 		i = uint64(real(v.Complex()))
+	}
+	if v.Type().Implements(constVal) {
+		c := v.Interface().(constant.Value)
+		iv, _ := constant.Int64Val(constant.ToInt(c))
+		i = uint64(iv)
 	}
 	return
 }
@@ -305,6 +317,13 @@ func vComplex(v reflect.Value) (c complex128) {
 	case reflect.Complex64, reflect.Complex128:
 		c = v.Complex()
 	}
+	if v.Type().Implements(constVal) {
+		con := v.Interface().(constant.Value)
+		con = constant.ToComplex(con)
+		rel, _ := constant.Float64Val(constant.Real(con))
+		img, _ := constant.Float64Val(constant.Imag(con))
+		c = complex(rel, img)
+	}
 	return
 }
 
@@ -318,6 +337,17 @@ func vFloat(v reflect.Value) (i float64) {
 		i = v.Float()
 	case reflect.Complex64, reflect.Complex128:
 		i = real(v.Complex())
+	}
+	if v.Type().Implements(constVal) {
+		c := v.Interface().(constant.Value)
+		i, _ = constant.Float64Val(constant.ToFloat(c))
+	}
+	return
+}
+
+func vConstantValue(v reflect.Value) (c constant.Value) {
+	if v.Type().Implements(constVal) {
+		c = v.Interface().(constant.Value)
 	}
 	return
 }

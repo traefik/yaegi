@@ -6,13 +6,15 @@ package stdlib
 
 import (
 	"debug/elf"
+	"go/constant"
+	"go/token"
 	"reflect"
 )
 
 func init() {
 	Symbols["debug/elf"] = map[string]reflect.Value{
 		// function, constant and variable definitions
-		"ARM_MAGIC_TRAMP_NUMBER":             reflect.ValueOf(elf.ARM_MAGIC_TRAMP_NUMBER),
+		"ARM_MAGIC_TRAMP_NUMBER":             reflect.ValueOf(constant.MakeFromLiteral("1543503875", token.INT, 0)),
 		"COMPRESS_HIOS":                      reflect.ValueOf(elf.COMPRESS_HIOS),
 		"COMPRESS_HIPROC":                    reflect.ValueOf(elf.COMPRESS_HIPROC),
 		"COMPRESS_LOOS":                      reflect.ValueOf(elf.COMPRESS_LOOS),
@@ -64,13 +66,13 @@ func init() {
 		"DT_VERNEED":                         reflect.ValueOf(elf.DT_VERNEED),
 		"DT_VERNEEDNUM":                      reflect.ValueOf(elf.DT_VERNEEDNUM),
 		"DT_VERSYM":                          reflect.ValueOf(elf.DT_VERSYM),
-		"EI_ABIVERSION":                      reflect.ValueOf(elf.EI_ABIVERSION),
-		"EI_CLASS":                           reflect.ValueOf(elf.EI_CLASS),
-		"EI_DATA":                            reflect.ValueOf(elf.EI_DATA),
-		"EI_NIDENT":                          reflect.ValueOf(elf.EI_NIDENT),
-		"EI_OSABI":                           reflect.ValueOf(elf.EI_OSABI),
-		"EI_PAD":                             reflect.ValueOf(elf.EI_PAD),
-		"EI_VERSION":                         reflect.ValueOf(elf.EI_VERSION),
+		"EI_ABIVERSION":                      reflect.ValueOf(constant.MakeFromLiteral("8", token.INT, 0)),
+		"EI_CLASS":                           reflect.ValueOf(constant.MakeFromLiteral("4", token.INT, 0)),
+		"EI_DATA":                            reflect.ValueOf(constant.MakeFromLiteral("5", token.INT, 0)),
+		"EI_NIDENT":                          reflect.ValueOf(constant.MakeFromLiteral("16", token.INT, 0)),
+		"EI_OSABI":                           reflect.ValueOf(constant.MakeFromLiteral("7", token.INT, 0)),
+		"EI_PAD":                             reflect.ValueOf(constant.MakeFromLiteral("9", token.INT, 0)),
+		"EI_VERSION":                         reflect.ValueOf(constant.MakeFromLiteral("6", token.INT, 0)),
 		"ELFCLASS32":                         reflect.ValueOf(elf.ELFCLASS32),
 		"ELFCLASS64":                         reflect.ValueOf(elf.ELFCLASS64),
 		"ELFCLASSNONE":                       reflect.ValueOf(elf.ELFCLASSNONE),
@@ -1190,8 +1192,8 @@ func init() {
 		"ST_INFO":                                   reflect.ValueOf(elf.ST_INFO),
 		"ST_TYPE":                                   reflect.ValueOf(elf.ST_TYPE),
 		"ST_VISIBILITY":                             reflect.ValueOf(elf.ST_VISIBILITY),
-		"Sym32Size":                                 reflect.ValueOf(elf.Sym32Size),
-		"Sym64Size":                                 reflect.ValueOf(elf.Sym64Size),
+		"Sym32Size":                                 reflect.ValueOf(constant.MakeFromLiteral("16", token.INT, 0)),
+		"Sym64Size":                                 reflect.ValueOf(constant.MakeFromLiteral("24", token.INT, 0)),
 
 		// type definitions
 		"Chdr32":          reflect.ValueOf((*elf.Chdr32)(nil)),

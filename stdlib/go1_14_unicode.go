@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"reflect"
 	"unicode"
 )
@@ -130,7 +132,7 @@ func init() {
 		"Lo":                                 reflect.ValueOf(&unicode.Lo).Elem(),
 		"Logical_Order_Exception":            reflect.ValueOf(&unicode.Logical_Order_Exception).Elem(),
 		"Lower":                              reflect.ValueOf(&unicode.Lower).Elem(),
-		"LowerCase":                          reflect.ValueOf(unicode.LowerCase),
+		"LowerCase":                          reflect.ValueOf(constant.MakeFromLiteral("1", token.INT, 0)),
 		"Lt":                                 reflect.ValueOf(&unicode.Lt).Elem(),
 		"Lu":                                 reflect.ValueOf(&unicode.Lu).Elem(),
 		"Lycian":                             reflect.ValueOf(&unicode.Lycian).Elem(),
@@ -144,10 +146,10 @@ func init() {
 		"Marchen":                            reflect.ValueOf(&unicode.Marchen).Elem(),
 		"Mark":                               reflect.ValueOf(&unicode.Mark).Elem(),
 		"Masaram_Gondi":                      reflect.ValueOf(&unicode.Masaram_Gondi).Elem(),
-		"MaxASCII":                           reflect.ValueOf(unicode.MaxASCII),
-		"MaxCase":                            reflect.ValueOf(unicode.MaxCase),
-		"MaxLatin1":                          reflect.ValueOf(unicode.MaxLatin1),
-		"MaxRune":                            reflect.ValueOf(unicode.MaxRune),
+		"MaxASCII":                           reflect.ValueOf(constant.MakeFromLiteral("127", token.INT, 0)),
+		"MaxCase":                            reflect.ValueOf(constant.MakeFromLiteral("3", token.INT, 0)),
+		"MaxLatin1":                          reflect.ValueOf(constant.MakeFromLiteral("255", token.INT, 0)),
+		"MaxRune":                            reflect.ValueOf(constant.MakeFromLiteral("1114111", token.INT, 0)),
 		"Mc":                                 reflect.ValueOf(&unicode.Mc).Elem(),
 		"Me":                                 reflect.ValueOf(&unicode.Me).Elem(),
 		"Medefaidrin":                        reflect.ValueOf(&unicode.Medefaidrin).Elem(),
@@ -221,7 +223,7 @@ func init() {
 		"Radical":                            reflect.ValueOf(&unicode.Radical).Elem(),
 		"Regional_Indicator":                 reflect.ValueOf(&unicode.Regional_Indicator).Elem(),
 		"Rejang":                             reflect.ValueOf(&unicode.Rejang).Elem(),
-		"ReplacementChar":                    reflect.ValueOf(unicode.ReplacementChar),
+		"ReplacementChar":                    reflect.ValueOf(constant.MakeFromLiteral("65533", token.INT, 0)),
 		"Runic":                              reflect.ValueOf(&unicode.Runic).Elem(),
 		"S":                                  reflect.ValueOf(&unicode.S).Elem(),
 		"STerm":                              reflect.ValueOf(&unicode.STerm).Elem(),
@@ -264,7 +266,7 @@ func init() {
 		"Tifinagh":                           reflect.ValueOf(&unicode.Tifinagh).Elem(),
 		"Tirhuta":                            reflect.ValueOf(&unicode.Tirhuta).Elem(),
 		"Title":                              reflect.ValueOf(&unicode.Title).Elem(),
-		"TitleCase":                          reflect.ValueOf(unicode.TitleCase),
+		"TitleCase":                          reflect.ValueOf(constant.MakeFromLiteral("2", token.INT, 0)),
 		"To":                                 reflect.ValueOf(unicode.To),
 		"ToLower":                            reflect.ValueOf(unicode.ToLower),
 		"ToTitle":                            reflect.ValueOf(unicode.ToTitle),
@@ -273,8 +275,8 @@ func init() {
 		"Ugaritic":                           reflect.ValueOf(&unicode.Ugaritic).Elem(),
 		"Unified_Ideograph":                  reflect.ValueOf(&unicode.Unified_Ideograph).Elem(),
 		"Upper":                              reflect.ValueOf(&unicode.Upper).Elem(),
-		"UpperCase":                          reflect.ValueOf(unicode.UpperCase),
-		"UpperLower":                         reflect.ValueOf(unicode.UpperLower),
+		"UpperCase":                          reflect.ValueOf(constant.MakeFromLiteral("0", token.INT, 0)),
+		"UpperLower":                         reflect.ValueOf(constant.MakeFromLiteral("1114112", token.INT, 0)),
 		"Vai":                                reflect.ValueOf(&unicode.Vai).Elem(),
 		"Variation_Selector":                 reflect.ValueOf(&unicode.Variation_Selector).Elem(),
 		"Version":                            reflect.ValueOf(unicode.Version),

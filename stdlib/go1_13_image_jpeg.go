@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"image/jpeg"
 	"reflect"
 )
@@ -14,7 +16,7 @@ func init() {
 		// function, constant and variable definitions
 		"Decode":         reflect.ValueOf(jpeg.Decode),
 		"DecodeConfig":   reflect.ValueOf(jpeg.DecodeConfig),
-		"DefaultQuality": reflect.ValueOf(jpeg.DefaultQuality),
+		"DefaultQuality": reflect.ValueOf(constant.MakeFromLiteral("75", token.INT, 0)),
 		"Encode":         reflect.ValueOf(jpeg.Encode),
 
 		// type definitions
