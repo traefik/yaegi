@@ -96,9 +96,11 @@ import (
 
 func main() {
 	var interactive bool
+	var useUnsafe bool
 	var tags string
 	var cmd string
 	flag.BoolVar(&interactive, "i", false, "start an interactive REPL")
+	flag.BoolVar(&useUnsafe, "unsafe", false, "include usafe symbols")
 	flag.StringVar(&tags, "tags", "", "set a list of build tags")
 	flag.StringVar(&cmd, "e", "", "set the command to be executed (instead of script or/and shell)")
 	flag.Usage = func() {
@@ -113,7 +115,9 @@ func main() {
 	i := interp.New(interp.Options{GoPath: build.Default.GOPATH, BuildTags: strings.Split(tags, ",")})
 	i.Use(stdlib.Symbols)
 	i.Use(interp.Symbols)
-	i.Use(unsafe.Symbols)
+	if useUnsafe {
+		i.Use(unsafe.Symbols)
+	}
 
 	if cmd != `` {
 		i.REPL(strings.NewReader(cmd), os.Stderr)
