@@ -5,6 +5,7 @@ import (
 	"go/constant"
 	"log"
 	"math"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"unicode"
@@ -52,6 +53,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 	sc := interp.initScopePkg(pkgID)
 	var initNodes []*node
 	var err error
+
+	baseName := filepath.Base(interp.fset.Position(root.pos).Filename)
 
 	root.Walk(func(n *node) bool {
 		// Pre-order processing
@@ -1080,36 +1083,43 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			if isKey(n) || isNewDefine(n, sc) {
 				break
 			}
-			if sym, level, ok := sc.lookup(n.ident); ok {
-				// Found symbol, populate node info
-				n.typ, n.findex, n.level = sym.typ, sym.index, level
-				if n.findex < 0 {
-					n.val = sym.node
-				} else {
-					n.sym = sym
-					switch {
-					case sym.kind == constSym && sym.rval.IsValid():
-						n.rval = sym.rval
-						n.kind = basicLit
-					case n.ident == "iota":
-						n.rval = reflect.ValueOf(constant.Make(int64(sc.iota)))
-						n.kind = basicLit
-					case n.ident == "nil":
-						n.kind = basicLit
-					case sym.kind == binSym:
-						n.typ = sym.typ
-						n.rval = sym.rval
-					case sym.kind == bltnSym:
-						if n.anc.kind != callExpr {
-							err = n.cfgErrorf("use of builtin %s not in function call", n.ident)
-						}
+
+			sym, level, found := sc.lookup(n.ident)
+			if !found {
+				// retry with the filename, in case ident is a package name.
+				// TODO(mpl): maybe we improve lookup itself so it can deal with that.
+				sym, level, found = sc.lookup(filepath.Join(n.ident, baseName))
+				if !found {
+					err = n.cfgErrorf("undefined: %s", n.ident)
+					break
+				}
+			}
+			// Found symbol, populate node info
+			n.typ, n.findex, n.level = sym.typ, sym.index, level
+			if n.findex < 0 {
+				n.val = sym.node
+			} else {
+				n.sym = sym
+				switch {
+				case sym.kind == constSym && sym.rval.IsValid():
+					n.rval = sym.rval
+					n.kind = basicLit
+				case n.ident == "iota":
+					n.rval = reflect.ValueOf(sc.iota)
+					n.kind = basicLit
+				case n.ident == "nil":
+					n.kind = basicLit
+				case sym.kind == binSym:
+					n.typ = sym.typ
+					n.rval = sym.rval
+				case sym.kind == bltnSym:
+					if n.anc.kind != callExpr {
+						err = n.cfgErrorf("use of builtin %s not in function call", n.ident)
 					}
 				}
-				if n.sym != nil {
-					n.recv = n.sym.recv
-				}
-			} else {
-				err = n.cfgErrorf("undefined: %s", n.ident)
+			}
+			if n.sym != nil {
+				n.recv = n.sym.recv
 			}
 
 		case ifStmt0: // if cond {}

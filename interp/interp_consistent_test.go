@@ -64,6 +64,13 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "redeclaration3.go" || // expect error
 			file.Name() == "redeclaration4.go" || // expect error
 			file.Name() == "redeclaration5.go" || // expect error
+			file.Name() == "redeclaration-global0.go" || // expect error
+			file.Name() == "redeclaration-global1.go" || // expect error
+			file.Name() == "redeclaration-global2.go" || // expect error
+			file.Name() == "redeclaration-global3.go" || // expect error
+			file.Name() == "redeclaration-global4.go" || // expect error
+			file.Name() == "redeclaration-global5.go" || // expect error
+			file.Name() == "redeclaration-global6.go" || // expect error
 			file.Name() == "server6.go" || // syntax parsing
 			file.Name() == "server5.go" || // syntax parsing
 			file.Name() == "server4.go" || // syntax parsing

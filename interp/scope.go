@@ -120,9 +120,12 @@ func (s *scope) pop() *scope {
 // and status (false if no result)
 func (s *scope) lookup(ident string) (*symbol, int, bool) {
 	level := s.level
-	for s != nil {
+	for {
 		if sym, ok := s.sym[ident]; ok {
 			return sym, level - s.level, true
+		}
+		if s.anc == nil {
+			break
 		}
 		s = s.anc
 	}

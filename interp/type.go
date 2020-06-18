@@ -3,6 +3,7 @@ package interp
 import (
 	"fmt"
 	"go/constant"
+	"path/filepath"
 	"reflect"
 	"strconv"
 )
@@ -426,22 +427,30 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		}
 
 	case identExpr:
-		if sym, _, found := sc.lookup(n.ident); found {
-			t = sym.typ
-			if t.incomplete && t.node != n {
-				m := t.method
-				if t, err = nodeType(interp, sc, t.node); err != nil {
-					return nil, err
-				}
-				t.method = m
-				sym.typ = t
+		sym, _, found := sc.lookup(n.ident)
+		if !found {
+			// retry with the filename, in case ident is a package name.
+			// TODO(mpl): try to move that into lookup instead?
+			baseName := filepath.Base(interp.fset.Position(n.pos).Filename)
+			ident := filepath.Join(n.ident, baseName)
+			sym, _, found = sc.lookup(ident)
+			if !found {
+				t.incomplete = true
+				sc.sym[n.ident] = &symbol{kind: typeSym, typ: t}
+				break
 			}
-			if t.node == nil {
-				t.node = n
+		}
+		t = sym.typ
+		if t.incomplete && t.node != n {
+			m := t.method
+			if t, err = nodeType(interp, sc, t.node); err != nil {
+				return nil, err
 			}
-		} else {
-			t.incomplete = true
-			sc.sym[n.ident] = &symbol{kind: typeSym, typ: t}
+			t.method = m
+			sym.typ = t
+		}
+		if t.node == nil {
+			t.node = n
 		}
 
 	case indexExpr:

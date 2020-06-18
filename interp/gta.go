@@ -1,6 +1,9 @@
 package interp
 
-import "reflect"
+import (
+	"path/filepath"
+	"reflect"
+)
 
 // gta performs a global types analysis on the AST, registering types,
 // variables and functions symbols at package level, prior to CFG.
@@ -10,6 +13,8 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 	sc := interp.initScopePkg(pkgID)
 	var err error
 	var revisit []*node
+
+	baseName := filepath.Base(interp.fset.Position(root.pos).Filename)
 
 	root.Walk(func(n *node) bool {
 		if err != nil {
@@ -103,7 +108,30 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				}
 			}
 			for _, c := range n.child[:l] {
-				sc.sym[c.ident] = &symbol{index: sc.add(n.typ), kind: varSym, global: true, typ: n.typ}
+				asImportName := filepath.Join(c.ident, baseName)
+				sym1, exists1 := sc.sym[asImportName]
+				sym2, exists2 := sc.sym[c.ident]
+				if !exists1 && !exists2 {
+					sc.sym[c.ident] = &symbol{index: sc.add(n.typ), kind: varSym, global: true, typ: n.typ}
+					continue
+				}
+
+				var sym *symbol
+				if exists1 {
+					// prev declaration is an import statement
+					sym = sym1
+				} else {
+					// prev declaration is whatever else (var, type, etc)
+					sym = sym2
+				}
+				// redeclaration error
+				if sym.typ.node != nil && sym.typ.node.anc != nil {
+					prevDecl := n.interp.fset.Position(sym.typ.node.anc.pos)
+					err = n.cfgErrorf("%s redeclared in this block\n\tprevious declaration at %v", c.ident, prevDecl)
+					return false
+				}
+				err = n.cfgErrorf("%s redeclared in this block", c.ident)
+				return false
 			}
 
 		case funcDecl:
@@ -111,6 +139,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				return false
 			}
 			if isMethod(n) {
+				// TODO(mpl): redeclaration detection
 				// Add a method symbol in the receiver type name space
 				var rcvrtype *itype
 				n.ident = n.child[1].ident
@@ -139,6 +168,31 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				rcvrtype.method = append(rcvrtype.method, n)
 				n.child[0].child[0].lastChild().typ = rcvrtype
 			} else {
+				ident := n.child[1].ident
+				// TODO(mpl): use constant instead of hardcoded string?
+				if ident != "init" {
+					asImportName := filepath.Join(ident, baseName)
+					if _, exists := sc.sym[asImportName]; exists {
+						// redeclaration error
+						// TODO(mpl): improve error with position of previous declaration.
+						err = n.cfgErrorf("%s redeclared in this block", ident)
+						return false
+					}
+					sym, exists := sc.sym[ident]
+					if exists {
+						// Make sure the symbol we found seems to be about another node, before calling
+						// it a redeclaration.
+						if sym.typ.isComplete() {
+							// TODO(mpl): this check might be too permissive?
+							if sym.kind != funcSym || sym.typ.cat != n.typ.cat || sym.node != n || sym.index != -1 {
+								// redeclaration error
+								// TODO(mpl): improve error with position of previous declaration.
+								err = n.cfgErrorf("%s redeclared in this block", ident)
+								return false
+							}
+						}
+					}
+				}
 				// Add a function symbol in the package name space
 				sc.sym[n.child[1].ident] = &symbol{kind: funcSym, typ: n.typ, node: n, index: -1}
 			}
@@ -172,8 +226,20 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 					if name == "" {
 						name = identifier.FindString(ipath)
 					}
+					// imports of a same package are all mapped in the same scope, so we cannot just
+					// map them by their names, otherwise we could have collisions from same-name
+					// imports in different source files of the same package. Therefore, we suffix
+					// the key with the basename of the source file.
+					name = filepath.Join(name, baseName)
+					if _, exists := sc.sym[name]; !exists {
+						sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath, scope: sc}}
+						break
+					}
 
-					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath, scope: sc}}
+					// redeclaration error
+					// TODO(mpl): find position information about previous declaration
+					err = n.cfgErrorf("%s redeclared in this block", name)
+					return false
 				}
 			} else if pkgName, err = interp.importSrc(rpath, ipath); err == nil {
 				sc.types = interp.universe.types
@@ -191,6 +257,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 					}
 
 					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: ipath, scope: sc}}
+					// TODO(mpl): redecleration detection
 				}
 			} else {
 				err = n.cfgErrorf("import %q error: %v", ipath, err)
@@ -202,6 +269,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 			if typ, err = nodeType(interp, sc, n.child[1]); err != nil {
 				return false
 			}
+
 			if n.child[1].kind == identExpr {
 				n.typ = &itype{cat: aliasT, val: typ, name: typeName, path: rpath, field: typ.field, incomplete: typ.incomplete, scope: sc, node: n.child[0]}
 				copy(n.typ.method, typ.method)
@@ -210,11 +278,26 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				n.typ.name = typeName
 				n.typ.path = rpath
 			}
-			// Type may be already declared for a receiver in a method function
-			if sc.sym[typeName] == nil {
+
+			asImportName := filepath.Join(typeName, baseName)
+			if _, exists := sc.sym[asImportName]; exists {
+				// redeclaration error
+				// TODO(mpl): improve error with position of previous declaration.
+				err = n.cfgErrorf("%s redeclared in this block", typeName)
+				return false
+			}
+			sym, exists := sc.sym[typeName]
+			if !exists {
 				sc.sym[typeName] = &symbol{kind: typeSym}
 			} else {
-				n.typ.method = append(n.typ.method, sc.sym[typeName].typ.method...)
+				if sym.typ != nil && (len(sym.typ.method) > 0) {
+					// Type has already been seen as a receiver in a method function
+					n.typ.method = append(n.typ.method, sym.typ.method...)
+				} else {
+					// TODO(mpl): figure out how to detect redeclarations without breaking type aliases.
+					// Allow redeclarations for now.
+					sc.sym[typeName] = &symbol{kind: typeSym}
+				}
 			}
 			sc.sym[typeName].typ = n.typ
 			if !n.typ.isComplete() {
