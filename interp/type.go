@@ -1,6 +1,8 @@
 package interp
 
 import (
+	"fmt"
+	"go/constant"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -153,10 +155,16 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	case arrayType:
 		t.cat = arrayT
 		if len(n.child) > 1 {
+			v := n.child[0].rval
 			switch {
-			case n.child[0].rval.IsValid():
+			case v.IsValid():
 				// constant size
-				t.size = int(n.child[0].rval.Int())
+				if isConstantValue(v.Type()) {
+					c := v.Interface().(constant.Value)
+					t.size = constToInt(c)
+				} else {
+					t.size = int(v.Int())
+				}
 			case n.child[0].kind == ellipsisExpr:
 				// [...]T expression
 				t.size = arrayTypeLen(n.anc)
@@ -166,6 +174,8 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					if sym.typ != nil && sym.typ.cat == intT {
 						if v, ok := sym.rval.Interface().(int); ok {
 							t.size = v
+						} else if c, ok := sym.rval.Interface().(constant.Value); ok {
+							t.size = constToInt(c)
 						} else {
 							t.incomplete = true
 						}
@@ -232,6 +242,23 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			t.cat = stringT
 			t.name = "string"
 			t.untyped = true
+		case constant.Value:
+			switch v.Kind() {
+			case constant.Int:
+				t.cat = intT
+				t.name = "int"
+				t.untyped = true
+			case constant.Float:
+				t.cat = float64T
+				t.name = "float64"
+				t.untyped = true
+			case constant.Complex:
+				t.cat = complex128T
+				t.name = "complex128"
+				t.untyped = true
+			default:
+				err = n.cfgErrorf("missing support for type %v", n.rval)
+			}
 		default:
 			err = n.cfgErrorf("missing support for type %T: %v", v, n.rval)
 		}
@@ -827,7 +854,7 @@ func (t *itype) methods() methodSet {
 	res := make(methodSet)
 	switch t.cat {
 	case interfaceT:
-		// Get methods from recursive analysis of interface fields
+		// Get methods from recursive analysis of interface fields.
 		for _, f := range t.field {
 			if f.typ.cat == funcT {
 				res[f.name] = f.typ.TypeOf().String()
@@ -838,22 +865,25 @@ func (t *itype) methods() methodSet {
 			}
 		}
 	case valueT, errorT:
-		// Get method from corresponding reflect.Type
+		// Get method from corresponding reflect.Type.
 		for i := t.rtype.NumMethod() - 1; i >= 0; i-- {
 			m := t.rtype.Method(i)
 			res[m.Name] = m.Type.String()
 		}
 	case ptrT:
-		// Consider only methods where receiver is a pointer to type t
-		for _, m := range t.val.method {
-			if m.child[0].child[0].lastChild().typ.cat == ptrT {
-				res[m.ident] = m.typ.TypeOf().String()
+		for k, v := range t.val.methods() {
+			res[k] = v
+		}
+	case structT:
+		for _, f := range t.field {
+			for k, v := range f.typ.methods() {
+				res[k] = v
 			}
 		}
-	default:
-		for _, m := range t.method {
-			res[m.ident] = m.typ.TypeOf().String()
-		}
+	}
+	// Get all methods defined on this type.
+	for _, m := range t.method {
+		res[m.ident] = m.typ.TypeOf().String()
 	}
 	return res
 }
@@ -1069,6 +1099,7 @@ func exportName(s string) string {
 }
 
 var interf = reflect.TypeOf((*interface{})(nil)).Elem()
+var constVal = reflect.TypeOf((*constant.Value)(nil)).Elem()
 
 // RefType returns a reflect.Type representation from an interpereter type.
 // In simple cases, reflect types are directly mapped from the interpreter
@@ -1201,8 +1232,15 @@ func (t *itype) implements(it *itype) bool {
 	if t.cat == valueT {
 		return t.TypeOf().Implements(it.TypeOf())
 	}
-	// TODO: implement method check for interpreted types
-	return true
+	return t.methods().contains(it.methods())
+}
+
+func constToInt(c constant.Value) int {
+	if constant.BitLen(c) > 64 {
+		panic(fmt.Sprintf("constant %s overflows int64", c.ExactString()))
+	}
+	i, _ := constant.Int64Val(c)
+	return int(i)
 }
 
 func defRecvType(n *node) *itype {
@@ -1318,5 +1356,8 @@ func isByteArray(t reflect.Type) bool {
 
 func isFloat32(t reflect.Type) bool { return t != nil && t.Kind() == reflect.Float32 }
 func isFloat64(t reflect.Type) bool { return t != nil && t.Kind() == reflect.Float64 }
-func isNumber(t reflect.Type) bool  { return isInt(t) || isFloat(t) || isComplex(t) }
-func isString(t reflect.Type) bool  { return t != nil && t.Kind() == reflect.String }
+func isNumber(t reflect.Type) bool {
+	return isInt(t) || isFloat(t) || isComplex(t) || isConstantValue(t)
+}
+func isString(t reflect.Type) bool        { return t != nil && t.Kind() == reflect.String }
+func isConstantValue(t reflect.Type) bool { return t != nil && t.Implements(constVal) }

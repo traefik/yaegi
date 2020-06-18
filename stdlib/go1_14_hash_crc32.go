@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"hash/crc32"
 	"reflect"
 )
@@ -12,16 +14,16 @@ import (
 func init() {
 	Symbols["hash/crc32"] = map[string]reflect.Value{
 		// function, constant and variable definitions
-		"Castagnoli":   reflect.ValueOf(uint32(crc32.Castagnoli)),
+		"Castagnoli":   reflect.ValueOf(constant.MakeFromLiteral("2197175160", token.INT, 0)),
 		"Checksum":     reflect.ValueOf(crc32.Checksum),
 		"ChecksumIEEE": reflect.ValueOf(crc32.ChecksumIEEE),
-		"IEEE":         reflect.ValueOf(uint32(crc32.IEEE)),
+		"IEEE":         reflect.ValueOf(constant.MakeFromLiteral("3988292384", token.INT, 0)),
 		"IEEETable":    reflect.ValueOf(&crc32.IEEETable).Elem(),
-		"Koopman":      reflect.ValueOf(uint32(crc32.Koopman)),
+		"Koopman":      reflect.ValueOf(constant.MakeFromLiteral("3945912366", token.INT, 0)),
 		"MakeTable":    reflect.ValueOf(crc32.MakeTable),
 		"New":          reflect.ValueOf(crc32.New),
 		"NewIEEE":      reflect.ValueOf(crc32.NewIEEE),
-		"Size":         reflect.ValueOf(crc32.Size),
+		"Size":         reflect.ValueOf(constant.MakeFromLiteral("4", token.INT, 0)),
 		"Update":       reflect.ValueOf(crc32.Update),
 
 		// type definitions

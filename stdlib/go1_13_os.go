@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"os"
 	"reflect"
 	"time"
@@ -84,8 +86,8 @@ func init() {
 		"O_WRONLY":          reflect.ValueOf(os.O_WRONLY),
 		"Open":              reflect.ValueOf(os.Open),
 		"OpenFile":          reflect.ValueOf(os.OpenFile),
-		"PathListSeparator": reflect.ValueOf(os.PathListSeparator),
-		"PathSeparator":     reflect.ValueOf(os.PathSeparator),
+		"PathListSeparator": reflect.ValueOf(constant.MakeFromLiteral("58", token.INT, 0)),
+		"PathSeparator":     reflect.ValueOf(constant.MakeFromLiteral("47", token.INT, 0)),
 		"Pipe":              reflect.ValueOf(os.Pipe),
 		"Readlink":          reflect.ValueOf(os.Readlink),
 		"Remove":            reflect.ValueOf(os.Remove),

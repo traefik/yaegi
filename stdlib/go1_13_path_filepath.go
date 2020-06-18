@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"path/filepath"
 	"reflect"
 )
@@ -24,10 +26,10 @@ func init() {
 		"HasPrefix":     reflect.ValueOf(filepath.HasPrefix),
 		"IsAbs":         reflect.ValueOf(filepath.IsAbs),
 		"Join":          reflect.ValueOf(filepath.Join),
-		"ListSeparator": reflect.ValueOf(filepath.ListSeparator),
+		"ListSeparator": reflect.ValueOf(constant.MakeFromLiteral("58", token.INT, 0)),
 		"Match":         reflect.ValueOf(filepath.Match),
 		"Rel":           reflect.ValueOf(filepath.Rel),
-		"Separator":     reflect.ValueOf(filepath.Separator),
+		"Separator":     reflect.ValueOf(constant.MakeFromLiteral("47", token.INT, 0)),
 		"SkipDir":       reflect.ValueOf(&filepath.SkipDir).Elem(),
 		"Split":         reflect.ValueOf(filepath.Split),
 		"SplitList":     reflect.ValueOf(filepath.SplitList),

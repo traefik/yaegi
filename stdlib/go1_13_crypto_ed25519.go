@@ -6,6 +6,8 @@ package stdlib
 
 import (
 	"crypto/ed25519"
+	"go/constant"
+	"go/token"
 	"reflect"
 )
 
@@ -14,11 +16,11 @@ func init() {
 		// function, constant and variable definitions
 		"GenerateKey":    reflect.ValueOf(ed25519.GenerateKey),
 		"NewKeyFromSeed": reflect.ValueOf(ed25519.NewKeyFromSeed),
-		"PrivateKeySize": reflect.ValueOf(ed25519.PrivateKeySize),
-		"PublicKeySize":  reflect.ValueOf(ed25519.PublicKeySize),
-		"SeedSize":       reflect.ValueOf(ed25519.SeedSize),
+		"PrivateKeySize": reflect.ValueOf(constant.MakeFromLiteral("64", token.INT, 0)),
+		"PublicKeySize":  reflect.ValueOf(constant.MakeFromLiteral("32", token.INT, 0)),
+		"SeedSize":       reflect.ValueOf(constant.MakeFromLiteral("32", token.INT, 0)),
 		"Sign":           reflect.ValueOf(ed25519.Sign),
-		"SignatureSize":  reflect.ValueOf(ed25519.SignatureSize),
+		"SignatureSize":  reflect.ValueOf(constant.MakeFromLiteral("64", token.INT, 0)),
 		"Verify":         reflect.ValueOf(ed25519.Verify),
 
 		// type definitions

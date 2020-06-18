@@ -2,6 +2,7 @@ package interp
 
 import (
 	"fmt"
+	"go/constant"
 	"log"
 	"math"
 	"path/filepath"
@@ -205,6 +206,9 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				nod.findex = index
 				nod.typ = typ
 			}
+
+		case commClauseDefault:
+			sc = sc.pushBloc()
 
 		case commClause:
 			sc = sc.pushBloc()
@@ -523,9 +527,10 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.gen = nop
 					src.findex = dest.findex // Set recv address to LHS
 					dest.typ = src.typ
-				case n.action == aAssign && src.action == aCompositeLit:
+				case n.action == aAssign && src.action == aCompositeLit && !isMapEntry(dest):
 					if dest.typ.cat == valueT && dest.typ.rtype.Kind() == reflect.Interface {
-						// No optimisation attempt for assigned binary interface
+						// Skip optimisation for assigned binary interface or map entry
+						// which require and additional operation to set the value
 						break
 					}
 					// Skip the assign operation entirely, the source frame index is set
@@ -542,8 +547,11 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					case !src.rval.IsValid():
 						// Assign to nil.
 						src.rval = reflect.New(dest.typ.TypeOf()).Elem()
+					case n.anc.kind == constDecl:
+						// Possible conversion from const to actual type will be handled later
 					default:
 						// Convert literal value to destination type.
+						convertConstantValue(src)
 						src.rval = src.rval.Convert(dest.typ.TypeOf())
 						src.typ = dest.typ
 					}
@@ -558,6 +566,12 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					dest.gen = nop // skip getIndexMap
 				}
 				if n.anc.kind == constDecl {
+					if !dest.typ.untyped {
+						// If the dest is untyped, any constant rval needs to be converted
+						convertConstantValue(src)
+					}
+					n.gen = nop
+					n.findex = -1
 					sc.sym[dest.ident].kind = constSym
 					if childPos(n) == len(n.anc.child)-1 {
 						sc.iota = 0
@@ -906,19 +920,25 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		case caseClause:
 			sc = sc.pop()
 
+		case commClauseDefault:
+			wireChild(n)
+			sc = sc.pop()
+			if len(n.child) == 0 {
+				return
+			}
+			n.start = n.child[0].start
+			n.lastChild().tnext = n.anc.anc // exit node is selectStmt
+
 		case commClause:
 			wireChild(n)
-			switch len(n.child) {
-			case 0:
-				sc.pop()
+			sc = sc.pop()
+			if len(n.child) == 0 {
 				return
-			case 1:
-				n.start = n.child[0].start // default clause
-			default:
+			}
+			if len(n.child) > 1 {
 				n.start = n.child[1].start // Skip chan operation, performed by select
 			}
 			n.lastChild().tnext = n.anc.anc // exit node is selectStmt
-			sc = sc.pop()
 
 		case compositeLitExpr:
 			wireChild(n)
@@ -1063,6 +1083,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			if isKey(n) || isNewDefine(n, sc) {
 				break
 			}
+
 			sym, level, found := sc.lookup(n.ident)
 			if !found {
 				// retry with the filename, in case ident is a package name.
@@ -1439,29 +1460,37 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			// Chain channel init actions in commClauses prior to invoke select.
 			var cur *node
 			for _, c := range n.child[0].child {
-				var an *node // channel init action node
+				var an, pn *node // channel init action nodes
 				if len(c.child) > 0 {
 					switch c0 := c.child[0]; {
 					case c0.kind == exprStmt && len(c0.child) == 1 && c0.child[0].action == aRecv:
 						an = c0.child[0].child[0]
+						pn = an
 					case c0.action == aAssign:
 						an = c0.lastChild().child[0]
+						pn = an
 					case c0.kind == sendStmt:
 						an = c0.child[0]
+						pn = c0.child[1]
 					}
 				}
-				if an != nil {
-					if cur == nil {
-						// First channel init action, the entry point for the select block.
-						n.start = an.start
-					} else {
-						// Chain channel init action to the previous one.
-						cur.tnext = an.start
-					}
+				if an == nil {
+					continue
 				}
-				cur = an
+				if cur == nil {
+					// First channel init action, the entry point for the select block.
+					n.start = an.start
+				} else {
+					// Chain channel init action to the previous one.
+					cur.tnext = an.start
+				}
+				if pn != nil {
+					// Chain channect init action to send data init action.
+					// (already done by wireChild, but let's be explicit).
+					an.tnext = pn
+					cur = pn
+				}
 			}
-			// Invoke select action
 			if cur == nil {
 				// There is no channel init action, call select directly.
 				n.start = n.child[0]
@@ -1782,13 +1811,13 @@ func compDefineX(sc *scope, n *node) error {
 }
 
 // TODO used for allocation optimization, temporarily disabled
-//func isAncBranch(n *node) bool {
+// func isAncBranch(n *node) bool {
 //	switch n.anc.kind {
 //	case If0, If1, If2, If3:
 //		return true
 //	}
 //	return false
-//}
+// }
 
 func childPos(n *node) int {
 	for i, c := range n.anc.child {
@@ -1957,6 +1986,20 @@ func (n *node) isInteger() bool {
 				return true
 			}
 		}
+		if isConstantValue(t) {
+			c := n.rval.Interface().(constant.Value)
+			switch c.Kind() {
+			case constant.Int:
+				return true
+			case constant.Float:
+				f, _ := constant.Float64Val(c)
+				if f == math.Trunc(f) {
+					n.rval = reflect.ValueOf(constant.ToInt(c))
+					n.typ.rtype = n.rval.Type()
+					return true
+				}
+			}
+		}
 	}
 	return false
 }
@@ -1982,6 +2025,23 @@ func (n *node) isNatural() bool {
 				n.rval = reflect.ValueOf(uint(f))
 				n.typ.rtype = n.rval.Type()
 				return true
+			}
+		}
+		if isConstantValue(t) {
+			c := n.rval.Interface().(constant.Value)
+			switch c.Kind() {
+			case constant.Int:
+				i, _ := constant.Int64Val(c)
+				if i >= 0 {
+					return true
+				}
+			case constant.Float:
+				f, _ := constant.Float64Val(c)
+				if f == math.Trunc(f) {
+					n.rval = reflect.ValueOf(constant.ToInt(c))
+					n.typ.rtype = n.rval.Type()
+					return true
+				}
 			}
 		}
 	}
@@ -2232,5 +2292,8 @@ func isValueUntyped(v reflect.Value) bool {
 		return false
 	}
 	t := v.Type()
+	if t.Implements(constVal) {
+		return true
+	}
 	return t.String() == t.Kind().String()
 }

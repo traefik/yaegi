@@ -5,6 +5,7 @@
 package stdlib
 
 import (
+	"go/constant"
 	"go/token"
 	"reflect"
 )
@@ -45,7 +46,7 @@ func init() {
 		"GO":             reflect.ValueOf(token.GO),
 		"GOTO":           reflect.ValueOf(token.GOTO),
 		"GTR":            reflect.ValueOf(token.GTR),
-		"HighestPrec":    reflect.ValueOf(token.HighestPrec),
+		"HighestPrec":    reflect.ValueOf(constant.MakeFromLiteral("7", token.INT, 0)),
 		"IDENT":          reflect.ValueOf(token.IDENT),
 		"IF":             reflect.ValueOf(token.IF),
 		"ILLEGAL":        reflect.ValueOf(token.ILLEGAL),
@@ -65,7 +66,7 @@ func init() {
 		"LPAREN":         reflect.ValueOf(token.LPAREN),
 		"LSS":            reflect.ValueOf(token.LSS),
 		"Lookup":         reflect.ValueOf(token.Lookup),
-		"LowestPrec":     reflect.ValueOf(token.LowestPrec),
+		"LowestPrec":     reflect.ValueOf(constant.MakeFromLiteral("0", token.INT, 0)),
 		"MAP":            reflect.ValueOf(token.MAP),
 		"MUL":            reflect.ValueOf(token.MUL),
 		"MUL_ASSIGN":     reflect.ValueOf(token.MUL_ASSIGN),
@@ -98,7 +99,7 @@ func init() {
 		"SUB_ASSIGN":     reflect.ValueOf(token.SUB_ASSIGN),
 		"SWITCH":         reflect.ValueOf(token.SWITCH),
 		"TYPE":           reflect.ValueOf(token.TYPE),
-		"UnaryPrec":      reflect.ValueOf(token.UnaryPrec),
+		"UnaryPrec":      reflect.ValueOf(constant.MakeFromLiteral("6", token.INT, 0)),
 		"VAR":            reflect.ValueOf(token.VAR),
 		"XOR":            reflect.ValueOf(token.XOR),
 		"XOR_ASSIGN":     reflect.ValueOf(token.XOR_ASSIGN),

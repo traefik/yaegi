@@ -166,6 +166,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 					}
 				}
 				rcvrtype.method = append(rcvrtype.method, n)
+				n.child[0].child[0].lastChild().typ = rcvrtype
 			} else {
 				ident := n.child[1].ident
 				// TODO(mpl): use constant instead of hardcoded string?

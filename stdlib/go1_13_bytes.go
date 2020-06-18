@@ -6,6 +6,8 @@ package stdlib
 
 import (
 	"bytes"
+	"go/constant"
+	"go/token"
 	"reflect"
 )
 
@@ -35,7 +37,7 @@ func init() {
 		"LastIndexByte":   reflect.ValueOf(bytes.LastIndexByte),
 		"LastIndexFunc":   reflect.ValueOf(bytes.LastIndexFunc),
 		"Map":             reflect.ValueOf(bytes.Map),
-		"MinRead":         reflect.ValueOf(bytes.MinRead),
+		"MinRead":         reflect.ValueOf(constant.MakeFromLiteral("512", token.INT, 0)),
 		"NewBuffer":       reflect.ValueOf(bytes.NewBuffer),
 		"NewBufferString": reflect.ValueOf(bytes.NewBufferString),
 		"NewReader":       reflect.ValueOf(bytes.NewReader),

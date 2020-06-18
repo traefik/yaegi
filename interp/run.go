@@ -4,6 +4,7 @@ package interp
 
 import (
 	"fmt"
+	"go/constant"
 	"log"
 	"reflect"
 )
@@ -122,33 +123,38 @@ func runCfg(n *node, f *frame) {
 }
 
 func typeAssertStatus(n *node) {
-	c0, c1 := n.child[0], n.child[1]
+	c0, c1 := n.child[0], n.child[1]   // cO contains the input value, c1 the type to assert
 	value := genValue(c0)              // input value
 	value1 := genValue(n.anc.child[1]) // returned status
-	typ := c1.typ.rtype                // type to assert
+	rtype := c1.typ.rtype              // type to assert
 	next := getExec(n.tnext)
 
 	switch {
+	case isInterfaceSrc(c1.typ):
+		typ := c1.typ
+		n.exec = func(f *frame) bltn {
+			v, ok := value(f).Interface().(valueInterface)
+			value1(f).SetBool(ok && v.node.typ.implements(typ))
+			return next
+		}
+	case isInterface(c1.typ):
+		n.exec = func(f *frame) bltn {
+			v := value(f)
+			ok := v.IsValid() && canAssertTypes(v.Elem().Type(), rtype)
+			value1(f).SetBool(ok)
+			return next
+		}
 	case c0.typ.cat == valueT:
 		n.exec = func(f *frame) bltn {
 			v := value(f)
-			if !v.IsValid() || v.IsNil() {
-				value1(f).SetBool(false)
-			}
-			value1(f).SetBool(v.Type().Implements(typ))
-			return next
-		}
-	case c1.typ.cat == interfaceT:
-		n.exec = func(f *frame) bltn {
-			_, ok := value(f).Interface().(valueInterface)
-			// TODO: verify that value(f) implements asserted type.
+			ok := v.IsValid() && canAssertTypes(v.Elem().Type(), rtype)
 			value1(f).SetBool(ok)
 			return next
 		}
 	default:
 		n.exec = func(f *frame) bltn {
-			_, ok := value(f).Interface().(valueInterface)
-			// TODO: verify that value(f) implements asserted type.
+			v, ok := value(f).Interface().(valueInterface)
+			ok = ok && v.value.IsValid() && canAssertTypes(v.value.Type(), rtype)
 			value1(f).SetBool(ok)
 			return next
 		}
@@ -158,65 +164,145 @@ func typeAssertStatus(n *node) {
 func typeAssert(n *node) {
 	c0, c1 := n.child[0], n.child[1]
 	value := genValue(c0) // input value
-	dest := genValue(n)   // returned result
+	value0 := genValue(n) // returned result
 	next := getExec(n.tnext)
 
 	switch {
-	case c0.typ.cat == valueT:
+	case isInterfaceSrc(c1.typ):
+		typ := n.child[1].typ
+		typID := n.child[1].typ.id()
 		n.exec = func(f *frame) bltn {
 			v := value(f)
-			dest(f).Set(v.Elem())
+			vi, ok := v.Interface().(valueInterface)
+			if !ok {
+				panic(n.cfgErrorf("interface conversion: nil is not %v", typID))
+			}
+			if !vi.node.typ.implements(typ) {
+				panic(n.cfgErrorf("interface conversion: %v is not %v", vi.node.typ.id(), typID))
+			}
+			value0(f).Set(v)
 			return next
 		}
-	case c1.typ.cat == interfaceT:
+	case isInterface(c1.typ):
 		n.exec = func(f *frame) bltn {
-			v := value(f).Interface().(valueInterface)
-			// TODO: verify that value(f) implements asserted type.
-			dest(f).Set(reflect.ValueOf(valueInterface{v.node, v.value}))
+			v := value(f).Elem()
+			typ := value0(f).Type()
+			if !v.IsValid() {
+				panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", typ.String()))
+			}
+			if !canAssertTypes(v.Type(), typ) {
+				method := firstMissingMethod(v.Type(), typ)
+				panic(fmt.Sprintf("interface conversion: %s is not %s: missing method %s", v.Type().String(), typ.String(), method))
+			}
+			value0(f).Set(v)
+			return next
+		}
+	case c0.typ.cat == valueT:
+		n.exec = func(f *frame) bltn {
+			v := value(f).Elem()
+			typ := value0(f).Type()
+			if !v.IsValid() {
+				panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", typ.String()))
+			}
+			if !canAssertTypes(v.Type(), typ) {
+				method := firstMissingMethod(v.Type(), typ)
+				panic(fmt.Sprintf("interface conversion: %s is not %s: missing method %s", v.Type().String(), typ.String(), method))
+			}
+			value0(f).Set(v)
 			return next
 		}
 	default:
 		n.exec = func(f *frame) bltn {
 			v := value(f).Interface().(valueInterface)
-			// TODO: verify that value(f) implements asserted type.
-			dest(f).Set(v.value)
+			typ := value0(f).Type()
+			if !v.value.IsValid() {
+				panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", typ.String()))
+			}
+			if !canAssertTypes(v.value.Type(), typ) {
+				panic(fmt.Sprintf("interface conversion: interface {} is %s, not %s", v.value.Type().String(), typ.String()))
+			}
+			value0(f).Set(v.value)
 			return next
 		}
 	}
 }
 
 func typeAssert2(n *node) {
-	value := genValue(n.child[0])      // input value
+	c0, c1 := n.child[0], n.child[1]
+	value := genValue(c0)              // input value
 	value0 := genValue(n.anc.child[0]) // returned result
 	value1 := genValue(n.anc.child[1]) // returned status
+	typ := c1.typ                      // type to assert or convert to
+	typID := typ.id()
+	rtype := typ.rtype // type to assert
 	next := getExec(n.tnext)
 
 	switch {
-	case n.child[0].typ.cat == valueT:
-		n.exec = func(f *frame) bltn {
-			if value(f).IsValid() && !value(f).IsNil() {
-				value0(f).Set(value(f).Elem())
-			}
-			value1(f).SetBool(true)
-			return next
-		}
-	case n.child[1].typ.cat == interfaceT:
+	case isInterfaceSrc(typ):
 		n.exec = func(f *frame) bltn {
 			v, ok := value(f).Interface().(valueInterface)
-			// TODO: verify that value(f) implements asserted type.
-			value0(f).Set(reflect.ValueOf(valueInterface{v.node, v.value}))
+			if ok && v.node.typ.id() == typID {
+				value0(f).Set(value(f))
+			} else {
+				ok = false
+			}
+			value1(f).SetBool(ok)
+			return next
+		}
+	case isInterface(typ):
+		n.exec = func(f *frame) bltn {
+			v := value(f).Elem()
+			ok := v.IsValid() && canAssertTypes(v.Type(), rtype)
+			if ok {
+				value0(f).Set(v)
+			}
+			value1(f).SetBool(ok)
+			return next
+		}
+	case n.child[0].typ.cat == valueT:
+		n.exec = func(f *frame) bltn {
+			v := value(f).Elem()
+			ok := v.IsValid() && canAssertTypes(v.Type(), rtype)
+			if ok {
+				value0(f).Set(v)
+			}
 			value1(f).SetBool(ok)
 			return next
 		}
 	default:
 		n.exec = func(f *frame) bltn {
 			v, ok := value(f).Interface().(valueInterface)
-			// TODO: verify that value(f) implements asserted type.
-			value0(f).Set(v.value)
+			ok = ok && v.value.IsValid() && canAssertTypes(v.value.Type(), rtype)
+			if ok {
+				value0(f).Set(v.value)
+			}
 			value1(f).SetBool(ok)
 			return next
 		}
 	}
+}
+
+func canAssertTypes(src, dest reflect.Type) bool {
+	if src == dest {
+		return true
+	}
+	if dest.Kind() == reflect.Interface && src.Implements(dest) {
+		return true
+	}
+	if src.AssignableTo(dest) {
+		return true
+	}
+	return false
+}
+
+func firstMissingMethod(src, dest reflect.Type) string {
+	for i := 0; i < dest.NumMethod(); i++ {
+		m := dest.Method(i).Name
+		if _, ok := src.MethodByName(m); !ok {
+			return m
+		}
+	}
+	return ""
 }
 
 func convert(n *node) {
@@ -1119,6 +1205,7 @@ func getIndexMap(n *node) {
 	z := reflect.New(n.child[0].typ.frameType().Elem()).Elem()
 
 	if n.child[1].rval.IsValid() { // constant map index
+		convertConstantValue(n.child[1])
 		mi := n.child[1].rval
 
 		switch {
@@ -1212,6 +1299,7 @@ func getIndexMap2(n *node) {
 		return
 	}
 	if n.child[1].rval.IsValid() { // constant map index
+		convertConstantValue(n.child[1])
 		mi := n.child[1].rval
 		switch {
 		case !doValue:
@@ -2547,11 +2635,209 @@ func convertLiteralValue(n *node, t reflect.Type) {
 		// Skip non-constant values, undefined target type or interface target type.
 	case n.rval.IsValid():
 		// Convert constant value to target type.
+		if n.typ != nil && n.typ.cat != valueT {
+			convertConstantValue(n)
+		} else {
+			convertConstantValueTo(n, t)
+		}
 		n.rval = n.rval.Convert(t)
 	default:
 		// Create a zero value of target type.
 		n.rval = reflect.New(t).Elem()
 	}
+}
+
+func convertConstantValue(n *node) {
+	if !n.rval.IsValid() {
+		return
+	}
+	c, ok := n.rval.Interface().(constant.Value)
+	if !ok {
+		return
+	}
+	t := n.typ
+	for t != nil && t.cat == aliasT {
+		// If it is an alias, get the actual type
+		t = t.val
+	}
+
+	v := n.rval
+	switch t.cat {
+	case intT, int8T, int16T, int32T, int64T:
+		i, _ := constant.Int64Val(c)
+		l := constant.BitLen(c)
+		switch t.cat {
+		case intT:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows int", c.ExactString()))
+			}
+			v = reflect.ValueOf(int(i))
+		case int8T:
+			if l > 8 {
+				panic(fmt.Sprintf("constant %s overflows int8", c.ExactString()))
+			}
+			v = reflect.ValueOf(int8(i))
+		case int16T:
+			if l > 16 {
+				panic(fmt.Sprintf("constant %s overflows int16", c.ExactString()))
+			}
+			v = reflect.ValueOf(int16(i))
+		case int32T:
+			if l > 32 {
+				panic(fmt.Sprintf("constant %s overflows int32", c.ExactString()))
+			}
+			v = reflect.ValueOf(int32(i))
+		case int64T:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows int64", c.ExactString()))
+			}
+			v = reflect.ValueOf(i)
+		}
+	case uintT, uint8T, uint16T, uint32T, uint64T:
+		i, _ := constant.Uint64Val(c)
+		l := constant.BitLen(c)
+		switch t.cat {
+		case uintT:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows uint", c.ExactString()))
+			}
+			v = reflect.ValueOf(uint(i))
+		case uint8T:
+			if l > 8 {
+				panic(fmt.Sprintf("constant %s overflows uint8", c.ExactString()))
+			}
+			v = reflect.ValueOf(uint8(i))
+		case uint16T:
+			if l > 16 {
+				panic(fmt.Sprintf("constant %s overflows uint16", c.ExactString()))
+			}
+			v = reflect.ValueOf(uint16(i))
+		case uint32T:
+			if l > 32 {
+				panic(fmt.Sprintf("constant %s overflows uint32", c.ExactString()))
+			}
+			v = reflect.ValueOf(uint32(i))
+		case uint64T:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows uint64", c.ExactString()))
+			}
+			v = reflect.ValueOf(i)
+		case uintptrT:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows uintptr", c.ExactString()))
+			}
+			v = reflect.ValueOf(i)
+		}
+	case float32T:
+		f, _ := constant.Float32Val(c)
+		v = reflect.ValueOf(f)
+	case float64T:
+		f, _ := constant.Float64Val(c)
+		v = reflect.ValueOf(f)
+	case complex64T:
+		r, _ := constant.Float32Val(constant.Real(c))
+		i, _ := constant.Float32Val(constant.Imag(c))
+		v = reflect.ValueOf(complex(r, i))
+	case complex128T:
+		r, _ := constant.Float64Val(constant.Real(c))
+		i, _ := constant.Float64Val(constant.Imag(c))
+		v = reflect.ValueOf(complex(r, i))
+	}
+	n.rval = v
+}
+
+func convertConstantValueTo(n *node, typ reflect.Type) {
+	if !n.rval.IsValid() {
+		return
+	}
+	c, ok := n.rval.Interface().(constant.Value)
+	if !ok {
+		return
+	}
+
+	v := n.rval
+	switch typ.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		i, _ := constant.Int64Val(c)
+		l := constant.BitLen(c)
+		switch typ.Kind() {
+		case reflect.Int:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows int", c.ExactString()))
+			}
+			v = reflect.ValueOf(int(i))
+		case reflect.Int8:
+			if l > 8 {
+				panic(fmt.Sprintf("constant %s overflows int8", c.ExactString()))
+			}
+			v = reflect.ValueOf(int8(i))
+		case reflect.Int16:
+			if l > 16 {
+				panic(fmt.Sprintf("constant %s overflows int16", c.ExactString()))
+			}
+			v = reflect.ValueOf(int16(i))
+		case reflect.Int32:
+			if l > 32 {
+				panic(fmt.Sprintf("constant %s overflows int32", c.ExactString()))
+			}
+			v = reflect.ValueOf(int32(i))
+		case reflect.Int64:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows int64", c.ExactString()))
+			}
+			v = reflect.ValueOf(i)
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		i, _ := constant.Uint64Val(c)
+		l := constant.BitLen(c)
+		switch typ.Kind() {
+		case reflect.Uint:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows uint", c.ExactString()))
+			}
+			v = reflect.ValueOf(uint(i))
+		case reflect.Uint8:
+			if l > 8 {
+				panic(fmt.Sprintf("constant %s overflows uint8", c.ExactString()))
+			}
+			v = reflect.ValueOf(uint8(i))
+		case reflect.Uint16:
+			if l > 16 {
+				panic(fmt.Sprintf("constant %s overflows uint16", c.ExactString()))
+			}
+			v = reflect.ValueOf(uint16(i))
+		case reflect.Uint32:
+			if l > 32 {
+				panic(fmt.Sprintf("constant %s overflows uint32", c.ExactString()))
+			}
+			v = reflect.ValueOf(uint32(i))
+		case reflect.Uint64:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows uint64", c.ExactString()))
+			}
+			v = reflect.ValueOf(i)
+		case reflect.Uintptr:
+			if l > 64 {
+				panic(fmt.Sprintf("constant %s overflows uintptr", c.ExactString()))
+			}
+			v = reflect.ValueOf(i)
+		}
+	case reflect.Float32:
+		f, _ := constant.Float32Val(c)
+		v = reflect.ValueOf(f)
+	case reflect.Float64:
+		f, _ := constant.Float64Val(c)
+		v = reflect.ValueOf(f)
+	case reflect.Complex64:
+		r, _ := constant.Float32Val(constant.Real(c))
+		i, _ := constant.Float32Val(constant.Imag(c))
+		v = reflect.ValueOf(complex(r, i))
+	case reflect.Complex128:
+		r, _ := constant.Float64Val(constant.Real(c))
+		i, _ := constant.Float64Val(constant.Imag(c))
+		v = reflect.ValueOf(complex(r, i))
+	}
+	n.rval = v
 }
 
 // Write to a channel

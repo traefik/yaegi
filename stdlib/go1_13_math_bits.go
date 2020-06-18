@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"math/bits"
 	"reflect"
 )
@@ -58,6 +60,6 @@ func init() {
 		"TrailingZeros32": reflect.ValueOf(bits.TrailingZeros32),
 		"TrailingZeros64": reflect.ValueOf(bits.TrailingZeros64),
 		"TrailingZeros8":  reflect.ValueOf(bits.TrailingZeros8),
-		"UintSize":        reflect.ValueOf(bits.UintSize),
+		"UintSize":        reflect.ValueOf(constant.MakeFromLiteral("64", token.INT, 0)),
 	}
 }
