@@ -31,6 +31,8 @@ const (
 	caseBody
 	caseClause
 	chanType
+	chanTypeSend
+	chanTypeRecv
 	commClause
 	commClauseDefault
 	compositeLitExpr
@@ -109,6 +111,8 @@ var kinds = [...]string{
 	caseBody:          "caseBody",
 	caseClause:        "caseClause",
 	chanType:          "chanType",
+	chanTypeSend:      "chanTypeSend",
+	chanTypeRecv:      "chanTypeRecv",
 	commClause:        "commClause",
 	commClauseDefault: "commClauseDefault",
 	compositeLitExpr:  "compositeLitExpr",
@@ -565,7 +569,14 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 			st.push(addChild(&root, anc, pos, caseClause, aCase), nod)
 
 		case *ast.ChanType:
-			st.push(addChild(&root, anc, pos, chanType, aNop), nod)
+			switch a.Dir {
+			case ast.SEND | ast.RECV:
+				st.push(addChild(&root, anc, pos, chanType, aNop), nod)
+			case ast.SEND:
+				st.push(addChild(&root, anc, pos, chanTypeSend, aNop), nod)
+			case ast.RECV:
+				st.push(addChild(&root, anc, pos, chanTypeRecv, aNop), nod)
+			}
 
 		case *ast.CommClause:
 			kind := commClause

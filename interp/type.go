@@ -376,7 +376,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	case compositeLitExpr:
 		t, err = nodeType(interp, sc, n.child[0])
 
-	case chanType:
+	case chanType, chanTypeRecv, chanTypeSend:
 		t.cat = chanT
 		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
 			return nil, err
