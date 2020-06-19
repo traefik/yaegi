@@ -134,7 +134,7 @@ func (s *scope) lookup(ident string) (*symbol, int, bool) {
 
 func (s *scope) rangeChanType(n *node) *itype {
 	if sym, _, found := s.lookup(n.child[1].ident); found {
-		if t := sym.typ; len(n.child) == 3 && t != nil && t.cat == chanT {
+		if t := sym.typ; len(n.child) == 3 && t != nil && (t.cat == chanT || t.cat == chanRecvT) {
 			return t
 		}
 	}
@@ -144,7 +144,7 @@ func (s *scope) rangeChanType(n *node) *itype {
 		return nil
 	}
 	switch {
-	case c.typ.cat == chanT:
+	case c.typ.cat == chanT, c.typ.cat == chanRecvT:
 		return c.typ
 	case c.typ.cat == valueT && c.typ.rtype.Kind() == reflect.Chan:
 		return &itype{cat: chanT, val: &itype{cat: valueT, rtype: c.typ.rtype.Elem()}}
