@@ -18,6 +18,10 @@ func init() {
 	Symbols["github.com/containous/yaegi"] = map[string]reflect.Value{
 		"convert": reflect.ValueOf(convert),
 	}
+
+	// Add builtin functions to unsafe.
+	Symbols["unsafe"]["Sizeof"] = reflect.ValueOf(sizeof)
+	Symbols["unsafe"]["Alignof"] = reflect.ValueOf(alignof)
 }
 
 func convert(from, to reflect.Type) func(src, dest reflect.Value) {
@@ -44,6 +48,14 @@ func convert(from, to reflect.Type) func(src, dest reflect.Value) {
 	default:
 		return nil
 	}
+}
+
+func sizeof(i interface{}) uintptr {
+	return reflect.ValueOf(i).Type().Size()
+}
+
+func alignof(i interface{}) uintptr {
+	return uintptr(reflect.ValueOf(i).Type().Align())
 }
 
 //go:generate ../../cmd/goexports/goexports unsafe
