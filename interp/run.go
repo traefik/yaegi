@@ -329,7 +329,7 @@ func convert(n *node) {
 		value = genValue(c)
 	}
 
-	for _, con := range n.interp.convert {
+	for _, con := range n.interp.hooks.convert {
 		if c.typ.rtype == nil {
 			continue
 		}
