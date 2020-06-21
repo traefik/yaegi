@@ -98,18 +98,18 @@ func init() {
 {{end}}
 `
 
-// Val store the value name and addressable status of symbols
+// Val store the value name and addressable status of symbols.
 type Val struct {
 	Name string // "package.name"
 	Addr bool   // true if symbol is a Var
 }
 
-// Method store information for generating interface wrapper method
+// Method store information for generating interface wrapper method.
 type Method struct {
 	Name, Param, Result, Arg, Ret string
 }
 
-// Wrap store information for generating interface wrapper
+// Wrap store information for generating interface wrapper.
 type Wrap struct {
 	Name   string
 	Method []Method
@@ -253,7 +253,7 @@ func genContent(dest, pkgName, license string) ([]byte, error) {
 	return source, nil
 }
 
-// fixConst checks untyped constant value, converting it if necessary to avoid overflow
+// fixConst checks untyped constant value, converting it if necessary to avoid overflow.
 func fixConst(name string, val constant.Value, imports map[string]bool) string {
 	var (
 		tok string

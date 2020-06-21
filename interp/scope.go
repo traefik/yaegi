@@ -6,10 +6,10 @@ import (
 	"strconv"
 )
 
-// A sKind represents the kind of symbol
+// A sKind represents the kind of symbol.
 type sKind uint
 
-// Symbol kinds for the Go interpreter
+// Symbol kinds for the Go interpreter.
 const (
 	undefSym sKind = iota
 	binSym         // Binary from runtime
@@ -86,7 +86,7 @@ type scope struct {
 	iota        int                // iota value in this scope
 }
 
-// push creates a new scope and chain it to the current one
+// push creates a new scope and chain it to the current one.
 func (s *scope) push(indirect bool) *scope {
 	sc := scope{anc: s, level: s.level, sym: map[string]*symbol{}}
 	if indirect {
@@ -117,7 +117,7 @@ func (s *scope) pop() *scope {
 
 // lookup searches for a symbol in the current scope, and upper ones if not found
 // it returns the symbol, the number of indirections level from the current scope
-// and status (false if no result)
+// and status (false if no result).
 func (s *scope) lookup(ident string) (*symbol, int, bool) {
 	level := s.level
 	for {
@@ -163,7 +163,7 @@ func (s *scope) getType(ident string) *itype {
 	return t
 }
 
-// add adds a type to the scope types array, and returns its index
+// add adds a type to the scope types array, and returns its index.
 func (s *scope) add(typ *itype) (index int) {
 	if typ == nil {
 		log.Panic("nil type")

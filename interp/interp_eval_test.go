@@ -483,7 +483,7 @@ func TestEvalWithContext(t *testing.T) {
 				// Successful cancellation.
 
 				// Check we can still execute an expression.
-				v, err := i.EvalWithContext(context.Background(), "1+1\n") //nolint:govet
+				v, err := i.EvalWithContext(context.Background(), "1+1\n")
 				if err != nil {
 					t.Errorf("failed to evaluate expression after cancellation: %v", err)
 				}

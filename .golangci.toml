@@ -38,6 +38,9 @@
     "gocognit",
     "stylecheck",
     "gomnd",
+    "testpackage",
+    "goerr113",
+    "nestif",
   ]
 
 [issues]

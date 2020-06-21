@@ -31,7 +31,7 @@ func (interp *Interpreter) buildOk(ctx *build.Context, name, src string) (bool, 
 }
 
 // buildLineOk returns true if line is not a build constraint or
-// if build constraint is satisfied
+// if build constraint is satisfied.
 func buildLineOk(ctx *build.Context, line string) (ok bool) {
 	if len(line) < 7 || line[:7] != "+build " {
 		return true
@@ -46,7 +46,7 @@ func buildLineOk(ctx *build.Context, line string) (ok bool) {
 	return ok
 }
 
-// buildOptionOk return true if all comma separated tags match, false otherwise
+// buildOptionOk return true if all comma separated tags match, false otherwise.
 func buildOptionOk(ctx *build.Context, tag string) bool {
 	// in option, evaluate the AND of individual tags
 	for _, t := range strings.Split(tag, ",") {
@@ -58,7 +58,7 @@ func buildOptionOk(ctx *build.Context, tag string) bool {
 }
 
 // buildTagOk returns true if a build tag matches, false otherwise
-// if first character is !, result is negated
+// if first character is !, result is negated.
 func buildTagOk(ctx *build.Context, s string) (r bool) {
 	not := s[0] == '!'
 	if not {
@@ -112,7 +112,7 @@ func contains(tags []string, tag string) bool {
 	return false
 }
 
-// goMinorVersion returns the go minor version number
+// goMinorVersion returns the go minor version number.
 func goMinorVersion(ctx *build.Context) int {
 	current := ctx.ReleaseTags[len(ctx.ReleaseTags)-1]
 
@@ -128,7 +128,7 @@ func goMinorVersion(ctx *build.Context) int {
 	return m
 }
 
-// skipFile returns true if file should be skipped
+// skipFile returns true if file should be skipped.
 func skipFile(ctx *build.Context, p string) bool {
 	if !strings.HasSuffix(p, ".go") {
 		return true

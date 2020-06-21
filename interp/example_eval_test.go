@@ -7,7 +7,7 @@ import (
 	"github.com/containous/yaegi/interp"
 )
 
-// Generic example
+// Generic example.
 func Example_eval() {
 	// Create a new interpreter context
 	i := interp.New(interp.Options{})

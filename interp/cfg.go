@@ -11,7 +11,7 @@ import (
 	"unicode"
 )
 
-// A cfgError represents an error during CFG build stage
+// A cfgError represents an error during CFG build stage.
 type cfgError struct {
 	*node
 	error
@@ -48,7 +48,7 @@ var identifier = regexp.MustCompile(`([\pL_][\pL_\d]*)$`)
 // cfg generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
-// Following this pass, the CFG is ready to run
+// Following this pass, the CFG is ready to run.
 func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 	sc := interp.initScopePkg(pkgID)
 	var initNodes []*node
@@ -1889,7 +1889,7 @@ func getDefault(n *node) int {
 
 func isBinType(v reflect.Value) bool { return v.IsValid() && v.Kind() == reflect.Ptr && v.IsNil() }
 
-// isType returns true if node refers to a type definition, false otherwise
+// isType returns true if node refers to a type definition, false otherwise.
 func (n *node) isType(sc *scope) bool {
 	switch n.kind {
 	case arrayType, chanType, funcType, interfaceType, mapType, structType:
@@ -1915,7 +1915,7 @@ func (n *node) isType(sc *scope) bool {
 	return false
 }
 
-// wireChild wires AST nodes for CFG in subtree
+// wireChild wires AST nodes for CFG in subtree.
 func wireChild(n *node) {
 	// Set start node, in subtree (propagated to ancestors by post-order processing)
 	for _, child := range n.child {
@@ -1967,7 +1967,7 @@ func (n *node) name() (s string) {
 	return s
 }
 
-// isInteger returns true if node type is integer, false otherwise
+// isInteger returns true if node type is integer, false otherwise.
 func (n *node) isInteger() bool {
 	if isInt(n.typ.TypeOf()) {
 		return true
@@ -2004,7 +2004,7 @@ func (n *node) isInteger() bool {
 	return false
 }
 
-// isNatural returns true if node type is natural, false otherwise
+// isNatural returns true if node type is natural, false otherwise.
 func (n *node) isNatural() bool {
 	if isUint(n.typ.TypeOf()) {
 		return true
@@ -2048,10 +2048,10 @@ func (n *node) isNatural() bool {
 	return false
 }
 
-// isNil returns true if node is a literal nil value, false otherwise
+// isNil returns true if node is a literal nil value, false otherwise.
 func (n *node) isNil() bool { return n.kind == basicLit && !n.rval.IsValid() }
 
-// fieldType returns the nth parameter field node (type) of a fieldList node
+// fieldType returns the nth parameter field node (type) of a fieldList node.
 func (n *node) fieldType(m int) *node {
 	k := 0
 	l := len(n.child)
@@ -2074,7 +2074,7 @@ func (n *node) fieldType(m int) *node {
 	return nil
 }
 
-// lastChild returns the last child of a node
+// lastChild returns the last child of a node.
 func (n *node) lastChild() *node { return n.child[len(n.child)-1] }
 
 func isKey(n *node) bool {
@@ -2093,7 +2093,7 @@ func isRecursiveField(n *node) bool {
 	return isField(n) && (n.typ.recursive || n.typ.cat == ptrT && n.typ.val.recursive)
 }
 
-// isNewDefine returns true if node refers to a new definition
+// isNewDefine returns true if node refers to a new definition.
 func isNewDefine(n *node, sc *scope) bool {
 	if n.ident == "_" {
 		return true
@@ -2285,7 +2285,7 @@ func arrayTypeLen(n *node) int {
 	return max + 1
 }
 
-// isValueUntyped returns true if value is untyped
+// isValueUntyped returns true if value is untyped.
 func isValueUntyped(v reflect.Value) bool {
 	// Consider only constant values.
 	if v.CanSet() {

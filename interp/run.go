@@ -9,10 +9,10 @@ import (
 	"reflect"
 )
 
-// bltn type defines functions which run at CFG execution
+// bltn type defines functions which run at CFG execution.
 type bltn func(f *frame) bltn
 
-// bltnGenerator type defines a builtin generator function
+// bltnGenerator type defines a builtin generator function.
 type bltnGenerator func(n *node)
 
 var builtin = [...]bltnGenerator{
@@ -99,9 +99,9 @@ func (interp *Interpreter) run(n *node, cf *frame) {
 	runCfg(n.start, f)
 }
 
-// Functions set to run during execution of CFG
+// Functions set to run during execution of CFG.
 
-// runCfg executes a node AST by walking its CFG and running node builtin at each step
+// runCfg executes a node AST by walking its CFG and running node builtin at each step.
 func runCfg(n *node, f *frame) {
 	defer func() {
 		f.mutex.Lock()
@@ -961,7 +961,7 @@ func call(n *node) {
 	}
 }
 
-// pindex returns definition parameter index for function call
+// pindex returns definition parameter index for function call.
 func pindex(i, variadic int) int {
 	if variadic < 0 || i <= variadic {
 		return i
@@ -1164,7 +1164,7 @@ func getIndexBinPtrMethod(n *node) {
 	}
 }
 
-// getIndexArray returns array value from index
+// getIndexArray returns array value from index.
 func getIndexArray(n *node) {
 	tnext := getExec(n.tnext)
 	value0 := genValueArray(n.child[0]) // array
@@ -1210,10 +1210,10 @@ func getIndexArray(n *node) {
 	}
 }
 
-// valueInterfaceType is the reflection type of valueInterface
+// valueInterfaceType is the reflection type of valueInterface.
 var valueInterfaceType = reflect.TypeOf((*valueInterface)(nil)).Elem()
 
-// getIndexMap retrieves map value from index
+// getIndexMap retrieves map value from index.
 func getIndexMap(n *node) {
 	dest := genValue(n)
 	value0 := genValue(n.child[0]) // map
@@ -1300,7 +1300,7 @@ func getIndexMap(n *node) {
 	}
 }
 
-// getIndexMap2 retrieves map value from index and set status
+// getIndexMap2 retrieves map value from index and set status.
 func getIndexMap2(n *node) {
 	dest := genValue(n.anc.child[0])   // result
 	value0 := genValue(n.child[0])     // map
@@ -1884,7 +1884,7 @@ func compositeBinMap(n *node) {
 	}
 }
 
-// compositeBinStruct creates and populates a struct object from a binary type
+// compositeBinStruct creates and populates a struct object from a binary type.
 func compositeBinStruct(n *node) {
 	next := getExec(n.tnext)
 	value := valueGenerator(n, n.findex)
@@ -1933,7 +1933,7 @@ func destType(n *node) *itype {
 	}
 }
 
-// doCompositeLit creates and populates a struct object
+// doCompositeLit creates and populates a struct object.
 func doCompositeLit(n *node, hasType bool) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
@@ -1974,7 +1974,7 @@ func doCompositeLit(n *node, hasType bool) {
 func compositeLit(n *node)       { doCompositeLit(n, true) }
 func compositeLitNotype(n *node) { doCompositeLit(n, false) }
 
-// doCompositeSparse creates a struct Object, filling fields from sparse key-values
+// doCompositeSparse creates a struct Object, filling fields from sparse key-values.
 func doCompositeSparse(n *node, hasType bool) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
@@ -2539,7 +2539,7 @@ func reset(n *node) {
 	}
 }
 
-// recv reads from a channel
+// recv reads from a channel.
 func recv(n *node) {
 	value := genValue(n.child[0])
 	tnext := getExec(n.tnext)
@@ -2856,7 +2856,7 @@ func convertConstantValueTo(n *node, typ reflect.Type) {
 	n.rval = v
 }
 
-// Write to a channel
+// Write to a channel.
 func send(n *node) {
 	next := getExec(n.tnext)
 	value0 := genValue(n.child[0]) // channel
@@ -2990,7 +2990,7 @@ func _select(n *node) {
 	}
 }
 
-// slice expression: array[low:high:max]
+// slice expression: array[low:high:max].
 func slice(n *node) {
 	i := n.findex
 	next := getExec(n.tnext)
@@ -3024,7 +3024,7 @@ func slice(n *node) {
 	}
 }
 
-// slice expression, no low value: array[:high:max]
+// slice expression, no low value: array[:high:max].
 func slice0(n *node) {
 	i := n.findex
 	next := getExec(n.tnext)
