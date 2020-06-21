@@ -26,7 +26,6 @@ matrix:
 env:
   global:
     - GO111MODULE=on
-    - CI=1
 
 go_import_path: github.com/containous/yaegi
 
