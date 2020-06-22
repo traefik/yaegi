@@ -8,10 +8,10 @@ import (
 	"strconv"
 )
 
-// tcat defines interpreter type categories
+// tcat defines interpreter type categories.
 type tcat uint
 
-// Types for go language
+// Types for go language.
 const (
 	nilT tcat = iota
 	aliasT
@@ -92,7 +92,7 @@ func (c tcat) String() string {
 	return "Cat(" + strconv.Itoa(int(c)) + ")"
 }
 
-// structField type defines a field in a struct
+// structField type defines a field in a struct.
 type structField struct {
 	name  string
 	tag   string
@@ -100,7 +100,7 @@ type structField struct {
 	typ   *itype
 }
 
-// itype defines the internal representation of types in the interpreter
+// itype defines the internal representation of types in the interpreter.
 type itype struct {
 	cat         tcat          // Type category
 	field       []structField // Array of struct fields if structT or interfaceT
@@ -122,7 +122,7 @@ type itype struct {
 	scope       *scope        // type declaration scope (in case of re-parse incomplete type)
 }
 
-// nodeType returns a type definition for the corresponding AST subtree
+// nodeType returns a type definition for the corresponding AST subtree.
 func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	if n.typ != nil && !n.typ.incomplete {
 		if n.kind == sliceExpr {
@@ -652,7 +652,7 @@ func (interp *Interpreter) isBuiltinCall(n *node) bool {
 	return s != nil && s.kind == bltnSym
 }
 
-// struct name returns the name of a struct type
+// struct name returns the name of a struct type.
 func typeName(n *node) string {
 	if n.anc.kind == typeSpec {
 		return n.anc.child[0].ident
@@ -660,7 +660,7 @@ func typeName(n *node) string {
 	return ""
 }
 
-// fieldName returns an implicit struct field name according to node kind
+// fieldName returns an implicit struct field name according to node kind.
 func fieldName(n *node) string {
 	switch n.kind {
 	case selectorExpr:
@@ -910,7 +910,7 @@ func (t *itype) methods() methodSet {
 	return res
 }
 
-// id returns a unique type identificator string
+// id returns a unique type identificator string.
 func (t *itype) id() (res string) {
 	if t.name != "" {
 		return t.path + "." + t.name
@@ -952,7 +952,7 @@ func (t *itype) id() (res string) {
 	return res
 }
 
-// zero instantiates and return a zero value object for the given type during execution
+// zero instantiates and return a zero value object for the given type during execution.
 func (t *itype) zero() (v reflect.Value, err error) {
 	if t, err = t.finalize(); err != nil {
 		return v, err
@@ -973,7 +973,7 @@ func (t *itype) zero() (v reflect.Value, err error) {
 	return v, err
 }
 
-// fieldIndex returns the field index from name in a struct, or -1 if not found
+// fieldIndex returns the field index from name in a struct, or -1 if not found.
 func (t *itype) fieldIndex(name string) int {
 	switch t.cat {
 	case aliasT, ptrT:
@@ -987,7 +987,7 @@ func (t *itype) fieldIndex(name string) int {
 	return -1
 }
 
-// fieldSeq returns the field type from the list of field indexes
+// fieldSeq returns the field type from the list of field indexes.
 func (t *itype) fieldSeq(seq []int) *itype {
 	ft := t
 	for _, i := range seq {
@@ -999,7 +999,7 @@ func (t *itype) fieldSeq(seq []int) *itype {
 	return ft
 }
 
-// lookupField returns a list of indices, i.e. a path to access a field in a struct object
+// lookupField returns a list of indices, i.e. a path to access a field in a struct object.
 func (t *itype) lookupField(name string) []int {
 	switch t.cat {
 	case aliasT, ptrT:
@@ -1021,7 +1021,7 @@ func (t *itype) lookupField(name string) []int {
 	return nil
 }
 
-// lookupBinField returns a structfield and a path to access an embedded binary field in a struct object
+// lookupBinField returns a structfield and a path to access an embedded binary field in a struct object.
 func (t *itype) lookupBinField(name string) (s reflect.StructField, index []int, ok bool) {
 	if t.cat == ptrT {
 		return t.val.lookupBinField(name)
@@ -1123,7 +1123,7 @@ func exportName(s string) string {
 var interf = reflect.TypeOf((*interface{})(nil)).Elem()
 var constVal = reflect.TypeOf((*constant.Value)(nil)).Elem()
 
-// RefType returns a reflect.Type representation from an interpereter type.
+// RefType returns a reflect.Type representation from an interpreter type.
 // In simple cases, reflect types are directly mapped from the interpreter
 // counterpart.
 // For recursive named struct or interfaces, as reflect does not permit to

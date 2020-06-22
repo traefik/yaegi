@@ -840,7 +840,7 @@ func {{$name}}(n *node) {
 {{end}}
 `
 
-// Op define operator name and properties
+// Op define operator name and properties.
 type Op struct {
 	Name    string // +, -, ...
 	Str     bool   // true if operator applies to string

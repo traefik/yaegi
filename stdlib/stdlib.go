@@ -5,7 +5,7 @@ package stdlib
 
 import "reflect"
 
-// Symbols variable stores the map of stdlib symbols per package
+// Symbols variable stores the map of stdlib symbols per package.
 var Symbols = map[string]map[string]reflect.Value{}
 
 func init() {
