@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"go/build"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -178,7 +179,9 @@ func Test_pkgDir(t *testing.T) {
 				}
 			}
 
-			dir, rPath, err := pkgDir(goPath, test.root, test.path)
+			bctx := build.Default
+			bctx.GOPATH = goPath
+			dir, rPath, err := pkgDir(&bctx, test.root, test.path)
 			if err != nil {
 				t.Fatal(err)
 			}

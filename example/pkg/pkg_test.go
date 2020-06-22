@@ -159,6 +159,65 @@ func TestPackages(t *testing.T) {
 	}
 }
 
+func TestModules(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		cwd      string
+		options  interp.Options
+		expected string
+	}{
+		{
+			desc:     "gomods",
+			cwd:      "./_pkg12/",
+			expected: "gomod!",
+		},
+	}
+
+	// nothing to test if its turned off
+	if os.Getenv("GO111MODULE") == "off" {
+		return
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			if test.cwd != "" {
+				prev, err := os.Getwd()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Chdir(test.cwd); err != nil {
+					t.Fatal(err)
+				}
+				// rollback.
+				defer func() { _ = os.Chdir(prev) }()
+			}
+
+			// Init go interpreter
+			i := interp.New(test.options)
+			i.Use(stdlib.Symbols) // Use binary standard library
+
+			// Load pkg from sources
+			if _, err := i.Eval(`import "github.com/foo/pkg"`); err != nil {
+				t.Fatal(err)
+			}
+
+			value, err := i.Eval(`pkg.NewSample()`)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			fn := value.Interface().(func() string)
+
+			msg := fn()
+
+			if msg != test.expected {
+				t.Errorf("Got %q, want %q", msg, test.expected)
+			}
+		})
+	}
+}
+
 func TestPackagesError(t *testing.T) {
 	testCases := []struct {
 		desc     string

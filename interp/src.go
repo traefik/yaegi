@@ -2,6 +2,7 @@ package interp
 
 import (
 	"fmt"
+	"go/build"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -31,12 +32,15 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if dir, rPath, err = pkgDir(interp.context.GOPATH, root, path); err != nil {
+		if dir, rPath, err = pkgDir(&interp.context, root, path); err != nil {
 			return "", err
 		}
 	}
 
 	if interp.rdir[path] {
+		// BUG: importing source can trigger panics, which leaves
+		// interp.rdir in a dirty state causing this error to be incorrect
+		// if the package failed to be imported.
 		return "", fmt.Errorf("import cycle not allowed\n\timports %s", path)
 	}
 	interp.rdir[path] = true
@@ -163,25 +167,30 @@ func (interp *Interpreter) rootFromSourceLocation(rPath string) (string, error) 
 
 // pkgDir returns the absolute path in filesystem for a package given its name and
 // the root of the subtree dependencies.
-func pkgDir(goPath string, root, path string) (string, string, error) {
+func pkgDir(ctx *build.Context, root, path string) (pdir string, proot string, err error) {
 	rPath := filepath.Join(root, "vendor")
-	dir := filepath.Join(goPath, "src", rPath, path)
-
+	dir := filepath.Join(ctx.GOPATH, "src", rPath, path)
 	if _, err := os.Stat(dir); err == nil {
 		return dir, rPath, nil // found!
 	}
 
-	dir = filepath.Join(goPath, "src", effectivePkg(root, path))
-
+	dir = filepath.Join(ctx.GOPATH, "src", effectivePkg(root, path))
 	if _, err := os.Stat(dir); err == nil {
 		return dir, root, nil // found!
 	}
 
 	if len(root) == 0 {
+		// for backwards compatibility behavior only use the 'normal' go
+		// package location when current implementation fails to discover
+		// the source.
+		if pkg, err := ctx.Import(path, ".", build.FindOnly); err == nil {
+			return pkg.Dir, pkg.Root, nil
+		}
+
 		return "", "", fmt.Errorf("unable to find source related to: %q", path)
 	}
 
-	return pkgDir(goPath, previousRoot(root), path)
+	return pkgDir(ctx, previousRoot(root), path)
 }
 
 // Find the previous source root (vendor > vendor > ... > GOPATH).
