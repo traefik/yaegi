@@ -531,6 +531,32 @@ func _print(n *node) {
 		values[i] = genValue(c)
 	}
 
+	if n.anc.kind == deferStmt {
+		args := make([]reflect.Type, len(child))
+		for i := 0; i < len(child); i++{
+			args[i] = interf
+		}
+		funcType := reflect.FuncOf(args, nil, false)
+		n.exec = func(f *frame) bltn {
+			val := make([]reflect.Value, len(values)+1)
+			val[0] = reflect.MakeFunc(funcType, func(args []reflect.Value) []reflect.Value {
+				for i, value := range args {
+					if i > 0 {
+						fmt.Printf(" ")
+					}
+					fmt.Printf("%v", value)
+				}
+				return nil
+			})
+			for i, v := range values {
+				val[i+1] = v(f)
+			}
+			f.deferred = append([][]reflect.Value{val}, f.deferred...)
+			return next
+		}
+		return
+	}
+
 	n.exec = func(f *frame) bltn {
 		for i, value := range values {
 			if i > 0 {
@@ -548,6 +574,33 @@ func _println(n *node) {
 	values := make([]func(*frame) reflect.Value, len(child))
 	for i, c := range child {
 		values[i] = genValue(c)
+	}
+
+	if n.anc.kind == deferStmt {
+		args := make([]reflect.Type, len(child))
+		for i := 0; i < len(child); i++{
+			args[i] = interf
+		}
+		funcType := reflect.FuncOf(args, nil, false)
+		n.exec = func(f *frame) bltn {
+			val := make([]reflect.Value, len(values)+1)
+			val[0] = reflect.MakeFunc(funcType, func(args []reflect.Value) []reflect.Value {
+				for i, value := range args {
+					if i > 0 {
+						fmt.Printf(" ")
+					}
+					fmt.Printf("%v", value)
+				}
+				fmt.Println("")
+				return nil
+			})
+			for i, v := range values {
+				val[i+1] = v(f)
+			}
+			f.deferred = append([][]reflect.Value{val}, f.deferred...)
+			return next
+		}
+		return
 	}
 
 	n.exec = func(f *frame) bltn {
