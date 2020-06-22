@@ -12,10 +12,10 @@ import (
 	"sync/atomic"
 )
 
-// nkind defines the kind of AST, i.e. the grammar category
+// nkind defines the kind of AST, i.e. the grammar category.
 type nkind uint
 
-// Node kinds for the go language
+// Node kinds for the go language.
 const (
 	undefNode nkind = iota
 	addressExpr
@@ -179,13 +179,13 @@ func (k nkind) String() string {
 	return "nKind(" + strconv.Itoa(int(k)) + ")"
 }
 
-// astError represents an error during AST build stage
+// astError represents an error during AST build stage.
 type astError error
 
-// action defines the node action to perform at execution
+// action defines the node action to perform at execution.
 type action uint
 
-// Node actions for the go language
+// Node actions for the go language.
 const (
 	aNop action = iota
 	aAddr
@@ -870,7 +870,7 @@ func (s *nodestack) top() astNode {
 	return astNode{}
 }
 
-// dup returns a duplicated node subtree
+// dup returns a duplicated node subtree.
 func (interp *Interpreter) dup(nod, anc *node) *node {
 	nindex := atomic.AddInt64(&interp.nindex, 1)
 	n := *nod

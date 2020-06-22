@@ -161,7 +161,7 @@ func pkgDir(goPath string, root, path string) (string, string, error) {
 	return pkgDir(goPath, previousRoot(root), path)
 }
 
-// Find the previous source root. (vendor > vendor > ... > GOPATH)
+// Find the previous source root (vendor > vendor > ... > GOPATH).
 func previousRoot(root string) string {
 	splitRoot := strings.Split(root, string(filepath.Separator))
 
@@ -208,7 +208,7 @@ func effectivePkg(root, path string) string {
 	return filepath.Join(root, frag)
 }
 
-// isPathRelative returns true if path starts with "./" or "../"
+// isPathRelative returns true if path starts with "./" or "../".
 func isPathRelative(s string) bool {
 	p := "." + string(filepath.Separator)
 	return strings.HasPrefix(s, p) || strings.HasPrefix(s, "."+p)

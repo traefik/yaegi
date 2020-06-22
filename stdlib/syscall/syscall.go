@@ -5,7 +5,7 @@ package syscall
 
 import "reflect"
 
-// Symbols stores the map of syscall package symbols
+// Symbols stores the map of syscall package symbols.
 var Symbols = map[string]map[string]reflect.Value{}
 
 func init() {

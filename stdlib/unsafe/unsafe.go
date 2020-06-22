@@ -8,7 +8,7 @@ import (
 	"unsafe"
 )
 
-// Symbols stores the map of unsafe package symbols
+// Symbols stores the map of unsafe package symbols.
 var Symbols = map[string]map[string]reflect.Value{}
 
 func init() {

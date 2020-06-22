@@ -18,7 +18,7 @@ import (
 	"sync/atomic"
 )
 
-// Interpreter node structure for AST and CFG
+// Interpreter node structure for AST and CFG.
 type node struct {
 	child  []*node        // child subtrees (AST)
 	anc    *node          // ancestor (AST)
@@ -46,14 +46,14 @@ type node struct {
 	ident  string         // set if node is a var or func
 }
 
-// receiver stores method receiver object access path
+// receiver stores method receiver object access path.
 type receiver struct {
 	node  *node         // receiver value for alias and struct types
 	val   reflect.Value // receiver value for interface type and value type
 	index []int         // path in receiver value for interface or value type
 }
 
-// frame contains values for the current execution level (a function context)
+// frame contains values for the current execution level (a function context).
 type frame struct {
 	// id is an atomic counter used for cancellation, only access
 	// via newFrame/runid/setrunid/clone.
@@ -96,16 +96,16 @@ func (f *frame) clone() *frame {
 	}
 }
 
-// convertFn is the signature of a symbol converter
+// convertFn is the signature of a symbol converter.
 type convertFn func(from, to reflect.Type) func(src, dest reflect.Value)
 
-// Exports stores the map of binary packages per package path
+// Exports stores the map of binary packages per package path.
 type Exports map[string]map[string]reflect.Value
 
-// imports stores the map of source packages per package path
+// imports stores the map of source packages per package path.
 type imports map[string]map[string]*symbol
 
-// opt stores interpreter options
+// opt stores interpreter options.
 type opt struct {
 	astDot bool // display AST graph (debug)
 	cfgDot bool // display CFG graph (debug)
@@ -117,7 +117,7 @@ type opt struct {
 	context  build.Context // build context: GOPATH, build constraints
 }
 
-// Interpreter contains global resources and state
+// Interpreter contains global resources and state.
 type Interpreter struct {
 	// id is an atomic counter counter used for run cancellation,
 	// only accessed via runid/stop
@@ -150,7 +150,7 @@ const (
 	selfPath = "github.com/containous/yaegi/interp"
 )
 
-// Symbols exposes interpreter values
+// Symbols exposes interpreter values.
 var Symbols = Exports{
 	selfPath: map[string]reflect.Value{
 		"New": reflect.ValueOf(New),
@@ -162,7 +162,7 @@ var Symbols = Exports{
 
 func init() { Symbols[selfPath]["Symbols"] = reflect.ValueOf(Symbols) }
 
-// _error is a wrapper of error interface type
+// _error is a wrapper of error interface type.
 type _error struct {
 	WError func() string
 }
@@ -209,7 +209,7 @@ type Options struct {
 	BuildTags []string
 }
 
-// New returns a new interpreter
+// New returns a new interpreter.
 func New(options Options) *Interpreter {
 	i := Interpreter{
 		opt:      opt{context: build.Default},
@@ -300,7 +300,7 @@ func initUniverse() *scope {
 	return sc
 }
 
-// resizeFrame resizes the global frame of interpreter
+// resizeFrame resizes the global frame of interpreter.
 func (interp *Interpreter) resizeFrame() {
 	l := len(interp.universe.types)
 	b := len(interp.frame.data)
@@ -325,7 +325,7 @@ func (interp *Interpreter) main() *node {
 }
 
 // Eval evaluates Go code represented as a string. It returns a map on
-// current interpreted package exported symbols
+// current interpreted package exported symbols.
 func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
 	defer func() {
 		r := recover()
@@ -459,7 +459,7 @@ func (interp *Interpreter) stop() {
 
 func (interp *Interpreter) runid() uint64 { return atomic.LoadUint64(&interp.id) }
 
-// getWrapper returns the wrapper type of the corresponding interface, or nil if not found
+// getWrapper returns the wrapper type of the corresponding interface, or nil if not found.
 func (interp *Interpreter) getWrapper(t reflect.Type) reflect.Type {
 	if p, ok := interp.binPkg[t.PkgPath()]; ok {
 		return p["_"+t.Name()].Type().Elem()
@@ -468,7 +468,7 @@ func (interp *Interpreter) getWrapper(t reflect.Type) reflect.Type {
 }
 
 // Use loads binary runtime symbols in the interpreter context so
-// they can be used in interpreted code
+// they can be used in interpreted code.
 func (interp *Interpreter) Use(values Exports) {
 	for k, v := range values {
 		if k != "github.com/containous/yaegi" {
@@ -546,7 +546,7 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 
 // Repl performs a Read-Eval-Print-Loop on input file descriptor.
 // Results are printed on output.
-// Deprecated: use REPL instead
+// Deprecated: use REPL instead.
 func (interp *Interpreter) Repl(in, out *os.File) {
 	interp.REPL(in, out)
 }
