@@ -69,12 +69,13 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				// type of array like value is not yet known. This could be fixed in ast structure
 				// by setting array/map node as 1st child of ForRangeStmt instead of 3rd child of
 				// RangeStmt. The following workaround is less elegant but ok.
-				var t *itype
-				t, err = sc.rangeChanType(n.anc)
-				if err != nil {
+				c := n.anc.child[1]
+				if c != nil && c.typ != nil && isSendChan(c.typ) {
+					err = c.cfgErrorf("invalid operation: range %s receive from send-only channel", c.ident)
 					return false
 				}
-				if t != nil {
+
+				if t := sc.rangeChanType(n.anc); t != nil {
 					// range over channel
 					e := n.anc.child[0]
 					index := sc.add(t.val)
@@ -1242,9 +1243,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			n.rval = c.rval
 
 		case rangeStmt:
-			var t *itype
-			t, _ = sc.rangeChanType(n)
-			if t != nil {
+			if sc.rangeChanType(n) != nil {
 				n.start = n.child[1]       // Get chan
 				n.child[1].tnext = n       // then go to range function
 				n.tnext = n.child[2].start // then go to range body
@@ -2112,8 +2111,7 @@ func isNewDefine(n *node, sc *scope) bool {
 		if n.anc.child[0] == n {
 			return true // array or map key, or chan element
 		}
-
-		if t, _ := sc.rangeChanType(n.anc); t == nil && n.anc.child[1] == n && len(n.anc.child) == 4 {
+		if sc.rangeChanType(n.anc) == nil && n.anc.child[1] == n && len(n.anc.child) == 4 {
 			return true // array or map value
 		}
 		return false // array, map or channel are always pre-defined in range expression

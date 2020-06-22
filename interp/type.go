@@ -1320,7 +1320,21 @@ func chanElement(t *itype) *itype {
 
 func isBool(t *itype) bool { return t.TypeOf().Kind() == reflect.Bool }
 func isChan(t *itype) bool { return t.TypeOf().Kind() == reflect.Chan }
-func isMap(t *itype) bool  { return t.TypeOf().Kind() == reflect.Map }
+
+func isSendChan(t *itype) bool {
+	switch {
+	case t.cat == chanSendT:
+		return true
+	case t.cat == valueT && t.TypeOf().Kind() == reflect.Chan && t.TypeOf().ChanDir() == reflect.SendDir:
+		return true
+	case t.cat == aliasT:
+		return isSendChan(t.val)
+	default:
+		return false
+	}
+}
+
+func isMap(t *itype) bool { return t.TypeOf().Kind() == reflect.Map }
 
 func isInterfaceSrc(t *itype) bool {
 	return t.cat == interfaceT || (t.cat == aliasT && isInterfaceSrc(t.val))
