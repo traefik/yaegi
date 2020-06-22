@@ -132,25 +132,28 @@ func (s *scope) lookup(ident string) (*symbol, int, bool) {
 	return nil, 0, false
 }
 
-func (s *scope) rangeChanType(n *node) *itype {
+func (s *scope) rangeChanType(n *node) (*itype, error) {
 	if sym, _, found := s.lookup(n.child[1].ident); found {
 		if t := sym.typ; len(n.child) == 3 && t != nil && (t.cat == chanT || t.cat == chanRecvT) {
-			return t
+			return t, nil
 		}
 	}
 
 	c := n.child[1]
 	if c.typ == nil {
-		return nil
+		return nil, nil
 	}
 	switch {
+	case c.typ.cat == chanSendT:
+		// return an error saying that ranging over send is not a good idea.
+		return nil, n.cfgErrorf("invalid operation: range %s receive from send-only channel", c.ident)
 	case c.typ.cat == chanT, c.typ.cat == chanRecvT:
-		return c.typ
+		return c.typ, nil
 	case c.typ.cat == valueT && c.typ.rtype.Kind() == reflect.Chan:
-		return &itype{cat: chanT, val: &itype{cat: valueT, rtype: c.typ.rtype.Elem()}}
+		return &itype{cat: chanT, val: &itype{cat: valueT, rtype: c.typ.rtype.Elem()}}, nil
 	}
 
-	return nil
+	return nil, nil
 }
 
 func (s *scope) getType(ident string) *itype {

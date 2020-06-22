@@ -69,7 +69,12 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				// type of array like value is not yet known. This could be fixed in ast structure
 				// by setting array/map node as 1st child of ForRangeStmt instead of 3rd child of
 				// RangeStmt. The following workaround is less elegant but ok.
-				if t := sc.rangeChanType(n.anc); t != nil {
+				var t *itype
+				t, err = sc.rangeChanType(n.anc)
+				if err != nil {
+					return false
+				}
+				if t != nil {
 					// range over channel
 					e := n.anc.child[0]
 					index := sc.add(t.val)
@@ -1237,7 +1242,9 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			n.rval = c.rval
 
 		case rangeStmt:
-			if sc.rangeChanType(n) != nil {
+			var t *itype
+			t, _ = sc.rangeChanType(n)
+			if t != nil {
 				n.start = n.child[1]       // Get chan
 				n.child[1].tnext = n       // then go to range function
 				n.tnext = n.child[2].start // then go to range body
@@ -2105,7 +2112,8 @@ func isNewDefine(n *node, sc *scope) bool {
 		if n.anc.child[0] == n {
 			return true // array or map key, or chan element
 		}
-		if sc.rangeChanType(n.anc) == nil && n.anc.child[1] == n && len(n.anc.child) == 4 {
+
+		if t, _ := sc.rangeChanType(n.anc); t == nil && n.anc.child[1] == n && len(n.anc.child) == 4 {
 			return true // array or map value
 		}
 		return false // array, map or channel are always pre-defined in range expression
