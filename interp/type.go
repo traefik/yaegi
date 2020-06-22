@@ -1181,15 +1181,17 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 		if t.name != "" {
 			defined[name] = t
 		}
+		variadic := false
 		in := make([]reflect.Type, len(t.arg))
 		out := make([]reflect.Type, len(t.ret))
 		for i, v := range t.arg {
 			in[i] = v.refType(defined, true)
+			variadic = v.cat == variadicT
 		}
 		for i, v := range t.ret {
 			out[i] = v.refType(defined, true)
 		}
-		t.rtype = reflect.FuncOf(in, out, false)
+		t.rtype = reflect.FuncOf(in, out, variadic)
 	case interfaceT:
 		t.rtype = interf
 	case mapT:
