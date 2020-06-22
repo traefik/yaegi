@@ -2020,6 +2020,10 @@ func doCompositeSparse(n *node, hasType bool) {
 			values[field] = genFunctionWrapper(c1)
 		case isRecursiveStruct(n.typ.field[field].typ, n.typ.field[field].typ.rtype):
 			values[field] = genValueInterfacePtr(c1)
+		case isRecursiveArrayStruct(n.typ.field[field].typ, n.typ.field[field].typ.rtype) && n.typ.field[field].typ.val.cat == ptrT:
+			values[field] = genValueArrayInterfacePtr(c1)
+		case isRecursiveArrayStruct(n.typ.field[field].typ, n.typ.field[field].typ.rtype):
+			values[field] = genValueArrayInterface(c1)
 		default:
 			values[field] = genValue(c1)
 		}
