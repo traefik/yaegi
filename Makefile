@@ -1,11 +1,3 @@
-GO_VERSION=$(shell go version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f1,2)
-
-RACE_TEST_GCFLAGS=
-ifneq ($(GO_VERSION), 1.13)
-# support for unsafe means we cannot do unsafe pointer arithmetic checks
-RACE_TEST_GCFLAGS=-gcflags=all=-d=checkptr=0
-endif
-
 # Static linting of source files. See .golangci.toml for options
 check:
 	golangci-lint run
@@ -26,6 +18,6 @@ generate: gen_all_syscall
 
 tests:
 	GO111MODULE=off go test -v ./...
-	GO111MODULE=off go test -race $(RACE_TEST_GCFLAGS) -short ./interp
+	GO111MODULE=off go test -race ./interp
 
 .PHONY: check gen_all_syscall gen_tests
