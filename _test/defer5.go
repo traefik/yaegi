@@ -22,7 +22,7 @@ func main() {
 	f1()
 }
 
-// Outputs:
+// Output:
 // hello
 // f3-end
 // f3-begin

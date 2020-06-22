@@ -23,5 +23,5 @@ func main() {
 	println()
 }
 
-// Outputs:
+// Output:
 // hello f3-end f3-begin f2-end f2-begin f1-end f1-begin

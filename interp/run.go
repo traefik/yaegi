@@ -525,94 +525,39 @@ func deref(n *node) {
 
 func _print(n *node) {
 	child := n.child[1:]
-	next := getExec(n.tnext)
 	values := make([]func(*frame) reflect.Value, len(child))
 	for i, c := range child {
 		values[i] = genValue(c)
 	}
 
-	if n.anc.kind == deferStmt {
-		args := make([]reflect.Type, len(child))
-		for i := 0; i < len(child); i++{
-			args[i] = interf
-		}
-		funcType := reflect.FuncOf(args, nil, false)
-		n.exec = func(f *frame) bltn {
-			val := make([]reflect.Value, len(values)+1)
-			val[0] = reflect.MakeFunc(funcType, func(args []reflect.Value) []reflect.Value {
-				for i, value := range args {
-					if i > 0 {
-						fmt.Printf(" ")
-					}
-					fmt.Printf("%v", value)
-				}
-				return nil
-			})
-			for i, v := range values {
-				val[i+1] = v(f)
-			}
-			f.deferred = append([][]reflect.Value{val}, f.deferred...)
-			return next
-		}
-		return
-	}
-
-	n.exec = func(f *frame) bltn {
-		for i, value := range values {
+	genBuiltinDeferWrapper(n, values, nil, func(args []reflect.Value) []reflect.Value {
+		for i, value := range args {
 			if i > 0 {
 				fmt.Printf(" ")
 			}
-			fmt.Printf("%v", value(f))
+			fmt.Printf("%v", value)
 		}
-		return next
-	}
+		return nil
+	})
 }
 
 func _println(n *node) {
 	child := n.child[1:]
-	next := getExec(n.tnext)
 	values := make([]func(*frame) reflect.Value, len(child))
 	for i, c := range child {
 		values[i] = genValue(c)
 	}
 
-	if n.anc.kind == deferStmt {
-		args := make([]reflect.Type, len(child))
-		for i := 0; i < len(child); i++{
-			args[i] = interf
-		}
-		funcType := reflect.FuncOf(args, nil, false)
-		n.exec = func(f *frame) bltn {
-			val := make([]reflect.Value, len(values)+1)
-			val[0] = reflect.MakeFunc(funcType, func(args []reflect.Value) []reflect.Value {
-				for i, value := range args {
-					if i > 0 {
-						fmt.Printf(" ")
-					}
-					fmt.Printf("%v", value)
-				}
-				fmt.Println("")
-				return nil
-			})
-			for i, v := range values {
-				val[i+1] = v(f)
-			}
-			f.deferred = append([][]reflect.Value{val}, f.deferred...)
-			return next
-		}
-		return
-	}
-
-	n.exec = func(f *frame) bltn {
-		for i, value := range values {
+	genBuiltinDeferWrapper(n, values, nil, func(args []reflect.Value) []reflect.Value {
+		for i, value := range args {
 			if i > 0 {
 				fmt.Printf(" ")
 			}
-			fmt.Printf("%v", value(f))
+			fmt.Printf("%v", value)
 		}
 		fmt.Println("")
-		return next
-	}
+		return nil
+	})
 }
 
 func _recover(n *node) {
@@ -635,6 +580,45 @@ func _panic(n *node) {
 
 	n.exec = func(f *frame) bltn {
 		panic(value(f))
+	}
+}
+
+func genBuiltinDeferWrapper(n *node, in, out []func(*frame) reflect.Value, fn func([]reflect.Value) []reflect.Value) {
+	next := getExec(n.tnext)
+
+	if n.anc.kind == deferStmt {
+		n.exec = func(f *frame) bltn {
+			val := make([]reflect.Value, len(in)+1)
+			inTypes := make([]reflect.Type, len(in))
+			for i, v := range in {
+				val[i+1] = v(f)
+				inTypes[i] = val[i+1].Type()
+			}
+			outTypes := make([]reflect.Type, len(out))
+			for i, v := range out {
+				outTypes[i] = v(f).Type()
+			}
+
+			funcType := reflect.FuncOf(inTypes, outTypes, false)
+			val[0] = reflect.MakeFunc(funcType, fn)
+			f.deferred = append([][]reflect.Value{val}, f.deferred...)
+			return next
+		}
+		return
+	}
+
+	n.exec = func(f *frame) bltn {
+		val := make([]reflect.Value, len(in))
+		for i, v := range in {
+			val[i] = v(f)
+		}
+
+		dests := fn(val)
+
+		for i, dest := range dests {
+			out[i](f).Set(dest)
+		}
+		return next
 	}
 }
 
@@ -2397,25 +2381,22 @@ func _cap(n *node) {
 }
 
 func _copy(n *node) {
-	dest := genValueOutput(n, reflect.TypeOf(int(0)))
-	value0 := genValueArray(n.child[1])
-	value1 := genValue(n.child[2])
-	next := getExec(n.tnext)
+	in := []func(*frame) reflect.Value{genValueArray(n.child[1]), genValue(n.child[2])}
+	out := []func(*frame) reflect.Value{genValueOutput(n, reflect.TypeOf(0))}
 
-	n.exec = func(f *frame) bltn {
-		dest(f).SetInt(int64(reflect.Copy(value0(f), value1(f))))
-		return next
-	}
+	genBuiltinDeferWrapper(n, in, out, func(args []reflect.Value) []reflect.Value {
+		cnt := reflect.Copy(args[0], args[1])
+		return []reflect.Value{reflect.ValueOf(cnt)}
+	})
 }
 
 func _close(n *node) {
-	value := genValue(n.child[1])
-	next := getExec(n.tnext)
+	in := []func(*frame) reflect.Value{genValue(n.child[1])}
 
-	n.exec = func(f *frame) bltn {
-		value(f).Close()
-		return next
-	}
+	genBuiltinDeferWrapper(n, in, nil, func(args []reflect.Value) []reflect.Value {
+		args[0].Close()
+		return nil
+	})
 }
 
 func _complex(n *node) {
@@ -2468,13 +2449,13 @@ func _real(n *node) {
 func _delete(n *node) {
 	value0 := genValue(n.child[1]) // map
 	value1 := genValue(n.child[2]) // key
-	next := getExec(n.tnext)
+	in := []func(*frame) reflect.Value{value0, value1}
 	var z reflect.Value
 
-	n.exec = func(f *frame) bltn {
-		value0(f).SetMapIndex(value1(f), z)
-		return next
-	}
+	genBuiltinDeferWrapper(n, in, nil, func(args []reflect.Value) []reflect.Value {
+		args[0].SetMapIndex(args[1], z)
+		return nil
+	})
 }
 
 func _len(n *node) {
