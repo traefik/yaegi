@@ -855,6 +855,40 @@ func isComplete(t *itype, visited map[string]bool) bool {
 	return true
 }
 
+// comparableTo returns true of the given type is comparable to the receiver type.
+func (t *itype) comparableTo(o *itype) bool {
+	if t.equals(o) {
+		return true
+	}
+	if t.cat == aliasT || o.cat == aliasT {
+		return t.id() == o.id()
+	}
+
+	tt, ot := t.TypeOf(), o.TypeOf()
+	if !tt.Comparable() || !ot.Comparable() {
+		return false
+	}
+	return tt.AssignableTo(ot) || ot.AssignableTo(tt)
+}
+
+func (t *itype) orderableWith(o *itype) bool {
+	if t.cat == aliasT || o.cat == aliasT {
+		return false
+	}
+	tt, ot := t.TypeOf(), o.TypeOf()
+	switch {
+	case isConstantValue(tt):
+		return isInt(ot) || isFloat(ot) || isConstantValue(ot)
+	case isFloat(tt):
+		return isFloat(ot) || isConstantValue(ot) || (isInt(ot) && o.untyped)
+	case isInt(tt):
+		return isInt(ot) || isConstantValue(ot) || (isFloat(ot) && o.untyped)
+	case isString(tt):
+		return isString(ot)
+	}
+	return false
+}
+
 // Equals returns true if the given type is identical to the receiver one.
 func (t *itype) equals(o *itype) bool {
 	switch ti, oi := isInterface(t), isInterface(o); {
@@ -1300,6 +1334,14 @@ func defRecvType(n *node) *itype {
 func isShiftNode(n *node) bool {
 	switch n.action {
 	case aShl, aShr, aShlAssign, aShrAssign:
+		return true
+	}
+	return false
+}
+
+func isEqualityNode(n *node) bool {
+	switch n.action {
+	case aEqual, aNotEqual:
 		return true
 	}
 	return false

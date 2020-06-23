@@ -641,10 +641,11 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 			// Shift operator type is inherited from first parameter only.
 			// All other binary operators require both parameter types to be the same.
-			if !isShiftNode(n) && !c0.typ.untyped && !c1.typ.untyped && !c0.typ.equals(c1.typ) {
+			if !isShiftNode(n) && !c0.typ.untyped && !c1.typ.untyped && (isEqualityNode(n) && !c0.typ.comparableTo(c1.typ) || !isEqualityNode(n) && !c0.typ.equals(c1.typ)) {
 				err = n.cfgErrorf("mismatched types %s and %s", c0.typ.id(), c1.typ.id())
 				break
 			}
+
 			switch n.action {
 			case aAdd:
 				if !(isNumber(t0) && isNumber(t1) || isString(t0) && isString(t1)) {
@@ -681,7 +682,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					}
 				}
 			case aGreater, aGreaterEqual, aLower, aLowerEqual:
-				if isNumber(t0) && !isNumber(t1) || isString(t0) && !isString(t1) {
+				if !c0.typ.orderableWith(c1.typ) {
 					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
 				}
 				n.typ = sc.getType("bool")
