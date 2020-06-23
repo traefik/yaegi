@@ -69,6 +69,12 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				// type of array like value is not yet known. This could be fixed in ast structure
 				// by setting array/map node as 1st child of ForRangeStmt instead of 3rd child of
 				// RangeStmt. The following workaround is less elegant but ok.
+				c := n.anc.child[1]
+				if c != nil && c.typ != nil && isSendChan(c.typ) {
+					err = c.cfgErrorf("invalid operation: range %s receive from send-only channel", c.ident)
+					return false
+				}
+
 				if t := sc.rangeChanType(n.anc); t != nil {
 					// range over channel
 					e := n.anc.child[0]
@@ -402,7 +408,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				}
 			}
 
-		case arrayType, basicLit, chanType, funcType, interfaceType, mapType, structType:
+		case arrayType, basicLit, chanType, chanTypeRecv, chanTypeSend, funcType, interfaceType, mapType, structType:
 			n.typ, err = nodeType(interp, sc, n)
 			return false
 		}
@@ -1892,7 +1898,7 @@ func isBinType(v reflect.Value) bool { return v.IsValid() && v.Kind() == reflect
 // isType returns true if node refers to a type definition, false otherwise.
 func (n *node) isType(sc *scope) bool {
 	switch n.kind {
-	case arrayType, chanType, funcType, interfaceType, mapType, structType:
+	case arrayType, chanType, chanTypeRecv, chanTypeSend, funcType, interfaceType, mapType, structType:
 		return true
 	case parenExpr, starExpr:
 		if len(n.child) == 1 {
@@ -1920,7 +1926,7 @@ func wireChild(n *node) {
 	// Set start node, in subtree (propagated to ancestors by post-order processing)
 	for _, child := range n.child {
 		switch child.kind {
-		case arrayType, chanType, funcDecl, importDecl, mapType, basicLit, identExpr, typeDecl:
+		case arrayType, chanType, chanTypeRecv, chanTypeSend, funcDecl, importDecl, mapType, basicLit, identExpr, typeDecl:
 			continue
 		default:
 			n.start = child.start
@@ -1946,7 +1952,7 @@ func wireChild(n *node) {
 	// Chain subtree next to self
 	for i := len(n.child) - 1; i >= 0; i-- {
 		switch n.child[i].kind {
-		case arrayType, chanType, importDecl, mapType, funcDecl, basicLit, identExpr, typeDecl:
+		case arrayType, chanType, chanTypeRecv, chanTypeSend, importDecl, mapType, funcDecl, basicLit, identExpr, typeDecl:
 			continue
 		case breakStmt, continueStmt, gotoStmt, returnStmt:
 			// tnext is already computed, no change

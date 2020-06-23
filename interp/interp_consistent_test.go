@@ -80,7 +80,8 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "server1a.go" || // syntax parsing
 			file.Name() == "server1.go" || // syntax parsing
 			file.Name() == "server0.go" || // syntax parsing
-			file.Name() == "server.go" { // syntax parsing
+			file.Name() == "server.go" || // syntax parsing
+			file.Name() == "range9.go" { // expect error
 			continue
 		}
 

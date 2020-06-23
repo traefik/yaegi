@@ -21,6 +21,8 @@ const (
 	boolT
 	builtinT
 	chanT
+	chanSendT
+	chanRecvT
 	complex64T
 	complex128T
 	errorT
@@ -105,7 +107,7 @@ type itype struct {
 	cat         tcat          // Type category
 	field       []structField // Array of struct fields if structT or interfaceT
 	key         *itype        // Type of key element if MapT or nil
-	val         *itype        // Type of value element if chanT, mapT, ptrT, aliasT, arrayT or variadicT
+	val         *itype        // Type of value element if chanT,chanSendT, chanRecvT, mapT, ptrT, aliasT, arrayT or variadicT
 	arg         []*itype      // Argument types if funcT or nil
 	ret         []*itype      // Return types if funcT or nil
 	method      []*node       // Associated methods or nil
@@ -378,6 +380,20 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 
 	case chanType:
 		t.cat = chanT
+		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
+			return nil, err
+		}
+		t.incomplete = t.val.incomplete
+
+	case chanTypeRecv:
+		t.cat = chanRecvT
+		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
+			return nil, err
+		}
+		t.incomplete = t.val.incomplete
+
+	case chanTypeSend:
+		t.cat = chanSendT
 		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
 			return nil, err
 		}
@@ -738,7 +754,7 @@ func (t *itype) referTo(name string, seen map[*itype]bool) bool {
 	}
 	seen[t] = true
 	switch t.cat {
-	case aliasT, arrayT, chanT, ptrT:
+	case aliasT, arrayT, chanT, chanRecvT, chanSendT, ptrT:
 		return t.val.referTo(name, seen)
 	case funcT:
 		for _, a := range t.arg {
@@ -814,7 +830,7 @@ func isComplete(t *itype, visited map[string]bool) bool {
 		visited[name] = true
 	}
 	switch t.cat {
-	case aliasT, arrayT, chanT, ptrT:
+	case aliasT, arrayT, chanT, chanRecvT, chanSendT, ptrT:
 		return isComplete(t.val, visited)
 	case funcT:
 		complete := true
@@ -1175,6 +1191,10 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 		}
 	case chanT:
 		t.rtype = reflect.ChanOf(reflect.BothDir, t.val.refType(defined, wrapRecursive))
+	case chanRecvT:
+		t.rtype = reflect.ChanOf(reflect.RecvDir, t.val.refType(defined, wrapRecursive))
+	case chanSendT:
+		t.rtype = reflect.ChanOf(reflect.SendDir, t.val.refType(defined, wrapRecursive))
 	case errorT:
 		t.rtype = reflect.TypeOf(new(error)).Elem()
 	case funcT:
@@ -1290,7 +1310,7 @@ func chanElement(t *itype) *itype {
 	switch t.cat {
 	case aliasT:
 		return chanElement(t.val)
-	case chanT:
+	case chanT, chanSendT, chanRecvT:
 		return t.val
 	case valueT:
 		return &itype{cat: valueT, rtype: t.rtype.Elem(), node: t.node, scope: t.scope}
@@ -1300,7 +1320,11 @@ func chanElement(t *itype) *itype {
 
 func isBool(t *itype) bool { return t.TypeOf().Kind() == reflect.Bool }
 func isChan(t *itype) bool { return t.TypeOf().Kind() == reflect.Chan }
-func isMap(t *itype) bool  { return t.TypeOf().Kind() == reflect.Map }
+func isSendChan(t *itype) bool {
+	rt := t.TypeOf()
+	return rt.Kind() == reflect.Chan && rt.ChanDir() == reflect.SendDir
+}
+func isMap(t *itype) bool { return t.TypeOf().Kind() == reflect.Map }
 
 func isInterfaceSrc(t *itype) bool {
 	return t.cat == interfaceT || (t.cat == aliasT && isInterfaceSrc(t.val))
