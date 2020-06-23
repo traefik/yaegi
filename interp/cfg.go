@@ -669,7 +669,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				}
 				n.typ = c0.typ
 			case aEqual, aNotEqual:
-				if isNumber(t0) && !isNumber(t1) || isString(t0) && !isString(t1) {
+				if (isNumber(t0) || isNumber(t1)) && (!isNumber(t0) || !isNumber(t1)) || (isString(t0) || isString(t1)) && (!isString(t0) || !isString(t1)) {
 					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
 				}
 				n.typ = sc.getType("bool")
@@ -681,7 +681,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					}
 				}
 			case aGreater, aGreaterEqual, aLower, aLowerEqual:
-				if isNumber(t0) && !isNumber(t1) || isString(t0) && !isString(t1) {
+				if (isNumber(t0) || isNumber(t1)) && (!isNumber(t0) || !isNumber(t1)) || (isString(t0) || isString(t1)) && (!isString(t0) || !isString(t1)) {
 					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
 				}
 				n.typ = sc.getType("bool")
