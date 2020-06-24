@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
+func (interp *Interpreter) importSrc(rPath, path, pkgID string) (string, error) {
 	var dir string
 	var err error
 
@@ -26,8 +26,14 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 			rPath = "."
 		}
 		dir = filepath.Join(filepath.Dir(interp.Name), rPath, path)
-	} else if dir, rPath, err = pkgDir(interp.context.GOPATH, rPath, path); err != nil {
-		return "", err
+	} else {
+		root, err := interp.rootFromSourceLocation(rPath, pkgID)
+		if err != nil {
+			return "", err
+		}
+		if dir, rPath, err = pkgDir(interp.context.GOPATH, root, path); err != nil {
+			return "", err
+		}
 	}
 
 	if interp.rdir[path] {
@@ -136,6 +142,22 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 	}
 
 	return pkgName, nil
+}
+
+func (interp *Interpreter) rootFromSourceLocation(rPath, pkgID string) (string, error) {
+	if rPath != "main" || !strings.HasSuffix(pkgID, ".go") {
+		return rPath, nil
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	pkgDir := filepath.Join(wd, filepath.Dir(pkgID))
+	root := strings.TrimPrefix(pkgDir, filepath.Join(interp.context.GOPATH, "src")+"/")
+	if root == wd {
+		return "", fmt.Errorf("package location %s not in GOPATH", pkgDir)
+	}
+	return root, nil
 }
 
 // pkgDir returns the absolute path in filesystem for a package given its name and
