@@ -692,6 +692,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				cat = catOfConst(c.rval)
 			case c.typ.cat == valueT:
 				cat = catOf(c.typ.rtype)
+			case c.typ.cat == aliasT:
+				cat = c.typ.val.cat
 			}
 			if !isShiftNode(n) && !okFor[n.action][cat] {
 				err = n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, strings.TrimLeft(c0.typ.id(), "."))

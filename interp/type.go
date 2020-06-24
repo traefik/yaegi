@@ -745,8 +745,6 @@ func init() {
 
 	okForAdd[stringT] = true
 
-	okForAnd[aliasT] = true
-
 	okForBool[boolT] = true
 
 	okForEq[nilT] = true
