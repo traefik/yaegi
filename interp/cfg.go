@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"strings"
 	"unicode"
 )
 
@@ -639,40 +640,75 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			nilSym := interp.universe.sym["nil"]
 			c0, c1 := n.child[0], n.child[1]
 			t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
-			// Shift operator type is inherited from first parameter only.
-			// All other binary operators require both parameter types to be the same.
-			if !isShiftNode(n) && !c0.typ.untyped && !c1.typ.untyped && (isEqualityNode(n) && !c0.typ.comparableTo(c1.typ) || !isEqualityNode(n) && !c0.typ.equals(c1.typ)) {
-				err = n.cfgErrorf("mismatched types %s and %s", c0.typ.id(), c1.typ.id())
+
+			isConstVal := func(n *node) bool {
+				return n.rval.IsValid() && isConstantValue(n.rval.Type())
+			}
+
+			// Type check the binary expression. Mimics Gos logic as closely and possible.
+			c := c0
+			if isConstVal(c) {
+				c = c1
+			}
+
+			if isShiftNode(n) {
+				if !c1.isNatural() {
+					err = n.cfgErrorf("invalid operation: shift count type %v, must be integer", strings.TrimLeft(c1.typ.id(), "."))
+					break
+				}
+
+				if !c0.isInteger() {
+					err = n.cfgErrorf("invalid operation: shift of type %v", strings.TrimLeft(c0.typ.id(), "."))
+					break
+				}
+			}
+			if !isShiftNode(n) && isComparisonNode(n) && !isConstVal(c) && !c0.typ.equals(c1.typ) {
+				if isInterface(c1.typ) && !isInterface(c0.typ) && !c0.typ.comparable() {
+					err = n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, strings.TrimLeft(c0.typ.id(), "."))
+					break
+				}
+
+				if isInterface(c0.typ) && !isInterface(c1.typ) && !c1.typ.comparable() {
+					err = n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, strings.TrimLeft(c1.typ.id(), "."))
+					break
+				}
+			}
+			if !isShiftNode(n) && !isConstVal(c) && !c0.typ.equals(c1.typ) && t0 != nil && t1 != nil {
+				switch {
+				case isConstVal(c0) && isNumber(t1) || isConstVal(c1) && isNumber(t0): // const <-> numberic case
+				case t0.Kind() == reflect.Uint8 && t1.Kind() == reflect.Int32 || t1.Kind() == reflect.Uint8 && t0.Kind() == reflect.Int32: // byte <-> rune case
+				case isInterface(c0.typ) && isInterface(c1.typ): // interface <-> interface case
+				default:
+					err = n.cfgErrorf("invalid operation: mismatched types %s and %s", strings.TrimLeft(c0.typ.id(), "."), strings.TrimLeft(c1.typ.id(), "."))
+				}
+				if err != nil {
+					break
+				}
+			}
+
+			cat := c.typ.cat
+			switch {
+			case isConstVal(c):
+				cat = catOfConst(c.rval)
+			case c.typ.cat == valueT:
+				cat = catOf(c.typ.rtype)
+			}
+			if !isShiftNode(n) && !okFor[n.action][cat] {
+				err = n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, strings.TrimLeft(c0.typ.id(), "."))
 				break
+			}
+			if !isShiftNode(n) && isConstVal(c0) && isConstVal(c1) {
+				// If both are constants, check the left type as well.
+				if !okFor[n.action][catOfConst(c0.rval)] {
+					err = n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, strings.TrimLeft(c0.typ.id(), "."))
+					break
+				}
 			}
 
 			switch n.action {
-			case aAdd:
-				if !(isNumber(t0) && isNumber(t1) || isString(t0) && isString(t1)) {
-					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
-				}
-			case aSub, aMul, aQuo:
-				if !(isNumber(t0) && isNumber(t1)) {
-					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
-				}
-			case aAnd, aOr, aXor, aAndNot:
-				if !(isInt(t0) && isInt(t1)) {
-					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
-				}
-			case aRem:
-				if !(c0.isInteger() && c1.isInteger()) {
-					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
-				}
-				n.typ = c0.typ
-			case aShl, aShr:
-				if !(c0.isInteger() && c1.isNatural()) {
-					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
-				}
+			case aRem, aShl, aShr:
 				n.typ = c0.typ
 			case aEqual, aNotEqual:
-				if isNumber(t0) && !isNumber(t1) || isString(t0) && !isString(t1) {
-					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
-				}
 				n.typ = sc.getType("bool")
 				if n.child[0].sym == nilSym || n.child[1].sym == nilSym {
 					if n.action == aEqual {
@@ -682,9 +718,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					}
 				}
 			case aGreater, aGreaterEqual, aLower, aLowerEqual:
-				if !c0.typ.orderableWith(c1.typ) {
-					err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
-				}
 				n.typ = sc.getType("bool")
 			}
 			if err != nil {

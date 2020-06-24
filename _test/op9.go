@@ -8,4 +8,4 @@ func main() {
 }
 
 // Error:
-// _test/op9.go:7:8: illegal operand types for '>' operator
+// _test/op9.go:7:8: invalid operation: operator > not defined on complex128

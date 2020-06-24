@@ -14,4 +14,4 @@ func main() {
 }
 
 // Error:
-// _test/op7.go:11:5: illegal operand types for '>' operator
+// _test/op7.go:11:5: invalid operation: operator > not defined on error
