@@ -119,17 +119,20 @@ func TestPackages(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				outC := make(chan string)
+				var buf bytes.Buffer
+				errC := make(chan error)
 				go func() {
-					var buf bytes.Buffer
-					if _, err := io.Copy(&buf, pr); err != nil {
-						t.Fatal(err)
-					}
-					outC <- buf.String()
+					_, err := io.Copy(&buf, pr)
+					errC <- err
 				}()
 
-				pw.Close()
-				msg = <-outC
+				if err := pw.Close(); err != nil {
+					t.Fatal(err)
+				}
+				if err := <-errC; err != nil {
+					t.Fatal(err)
+				}
+				msg = buf.String()
 			} else {
 				// Load pkg from sources
 				topImport := "github.com/foo/pkg"
