@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func (interp *Interpreter) importSrc(rPath, path, pkgID string) (string, error) {
+func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 	var dir string
 	var err error
 
@@ -27,7 +27,7 @@ func (interp *Interpreter) importSrc(rPath, path, pkgID string) (string, error) 
 		}
 		dir = filepath.Join(filepath.Dir(interp.Name), rPath, path)
 	} else {
-		root, err := interp.rootFromSourceLocation(rPath, pkgID)
+		root, err := interp.rootFromSourceLocation(rPath)
 		if err != nil {
 			return "", err
 		}
@@ -144,15 +144,16 @@ func (interp *Interpreter) importSrc(rPath, path, pkgID string) (string, error) 
 	return pkgName, nil
 }
 
-func (interp *Interpreter) rootFromSourceLocation(rPath, pkgID string) (string, error) {
-	if rPath != "main" || !strings.HasSuffix(pkgID, ".go") {
+func (interp *Interpreter) rootFromSourceLocation(rPath string) (string, error) {
+	sourceFile := interp.Name
+	if rPath != "main" || !strings.HasSuffix(sourceFile, ".go") {
 		return rPath, nil
 	}
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
-	pkgDir := filepath.Join(wd, filepath.Dir(pkgID))
+	pkgDir := filepath.Join(wd, filepath.Dir(sourceFile))
 	root := strings.TrimPrefix(pkgDir, filepath.Join(interp.context.GOPATH, "src")+"/")
 	if root == wd {
 		return "", fmt.Errorf("package location %s not in GOPATH", pkgDir)
