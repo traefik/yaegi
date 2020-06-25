@@ -521,7 +521,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				// Propagate type
 				// TODO: Check that existing destination type matches source type
 				switch {
-				case n.action == aAssign && isCall(src) && dest.typ.cat != interfaceT && !isRecursiveField(dest):
+				case n.action == aAssign && isCall(src) && dest.typ.cat != interfaceT && !isMapEntry(dest) && !isRecursiveField(dest):
 					// Call action may perform the assignment directly.
 					n.gen = nop
 					src.level = level

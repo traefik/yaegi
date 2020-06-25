@@ -1121,9 +1121,11 @@ func callBin(n *node) {
 		}
 	default:
 		switch n.anc.action {
-		case aAssign, aAssignX:
+		case aAssignX:
 			// The function call is part of an assign expression, store results direcly
 			// to assigned location, to avoid an additional frame copy.
+			// The optimization of aAssign is handled in assign(), and should not
+			// be handled here.
 			rvalues := make([]func(*frame) reflect.Value, funcType.NumOut())
 			for i := range rvalues {
 				c := n.anc.child[i]
@@ -1166,7 +1168,9 @@ func callBin(n *node) {
 					in[i] = v(f)
 				}
 				out := callFn(value(f), in)
-				copy(f.data[n.findex:], out)
+				for i := 0; i < len(out); i++ {
+					f.data[n.findex+i].Set(out[i])
+				}
 				return tnext
 			}
 		}
