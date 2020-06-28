@@ -882,6 +882,22 @@ func (m methodSet) contains(n methodSet) bool {
 	return true
 }
 
+// containsR returns true if all methods of t are defined in m method set.
+func (m methodSet) containsR(t reflect.Type) bool {
+	nm := t.NumMethod()
+	for i := 0; i < nm; i++ {
+		method := t.Method(i)
+		if method.Name == "String" || method.Name == "Error" { // always provided by wrapper
+			continue
+		}
+		// TODO: should also verify method signature
+		if m[method.Name] == "" {
+			return false
+		}
+	}
+	return true
+}
+
 // Equal returns true if the method set m is equal to the method set n.
 func (m methodSet) equals(n methodSet) bool {
 	return m.contains(n) && n.contains(m)
@@ -889,7 +905,17 @@ func (m methodSet) equals(n methodSet) bool {
 
 // Methods returns a map of method type strings, indexed by method names.
 func (t *itype) methods() methodSet {
+	return getMethods(t, map[string]bool{})
+}
+
+func getMethods(t *itype, visited map[string]bool) methodSet {
 	res := make(methodSet)
+	name := t.path + "/" + t.name
+	if visited[name] {
+		return res
+	}
+	visited[name] = true
+
 	switch t.cat {
 	case interfaceT:
 		// Get methods from recursive analysis of interface fields.
@@ -897,7 +923,7 @@ func (t *itype) methods() methodSet {
 			if f.typ.cat == funcT {
 				res[f.name] = f.typ.TypeOf().String()
 			} else {
-				for k, v := range f.typ.methods() {
+				for k, v := range getMethods(f.typ, visited) {
 					res[k] = v
 				}
 			}
@@ -909,12 +935,12 @@ func (t *itype) methods() methodSet {
 			res[m.Name] = m.Type.String()
 		}
 	case ptrT:
-		for k, v := range t.val.methods() {
+		for k, v := range getMethods(t.val, visited) {
 			res[k] = v
 		}
 	case structT:
 		for _, f := range t.field {
-			for k, v := range f.typ.methods() {
+			for k, v := range getMethods(f.typ, visited) {
 				res[k] = v
 			}
 		}
