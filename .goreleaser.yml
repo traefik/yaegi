@@ -11,7 +11,7 @@ builds:
 #      - windows
       - freebsd
       - openbsd
-      - solaris
+#      - solaris
     goarch:
       - amd64
       - 386
@@ -36,7 +36,7 @@ builds:
 #      - windows
       - freebsd
       - openbsd
-      - solaris
+#      - solaris
     goarch:
       - amd64
       - 386
