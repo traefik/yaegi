@@ -63,9 +63,13 @@ Options:
 	   evaluate the string and return.
     -i
 	   start an interactive REPL after file execution.
+	-syscall
+	   include syscall symbols.
 	-tags tag,list
 	   a comma-separated list of build tags to consider satisfied during
 	   the interpretation.
+	-unsafe
+	  include unsafe symbols.
 
 Debugging support (may be removed at any time):
   YAEGI_AST_DOT=1
@@ -91,17 +95,20 @@ import (
 
 	"github.com/containous/yaegi/interp"
 	"github.com/containous/yaegi/stdlib"
+	"github.com/containous/yaegi/stdlib/syscall"
 	"github.com/containous/yaegi/stdlib/unsafe"
 )
 
 func main() {
 	var interactive bool
 	var useUnsafe bool
+	var useSyscall bool
 	var tags string
 	var cmd string
 	flag.BoolVar(&interactive, "i", false, "start an interactive REPL")
-	flag.BoolVar(&useUnsafe, "unsafe", false, "include usafe symbols")
+	flag.BoolVar(&useSyscall, "syscall", false, "include syscall symbols")
 	flag.StringVar(&tags, "tags", "", "set a list of build tags")
+	flag.BoolVar(&useUnsafe, "unsafe", false, "include usafe symbols")
 	flag.StringVar(&cmd, "e", "", "set the command to be executed (instead of script or/and shell)")
 	flag.Usage = func() {
 		fmt.Println("Usage:", os.Args[0], "[options] [script] [args]")
@@ -115,6 +122,9 @@ func main() {
 	i := interp.New(interp.Options{GoPath: build.Default.GOPATH, BuildTags: strings.Split(tags, ",")})
 	i.Use(stdlib.Symbols)
 	i.Use(interp.Symbols)
+	if useSyscall {
+		i.Use(syscall.Symbols)
+	}
 	if useUnsafe {
 		i.Use(unsafe.Symbols)
 	}
