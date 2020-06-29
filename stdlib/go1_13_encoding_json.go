@@ -6,6 +6,7 @@ package stdlib
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -49,18 +50,27 @@ func init() {
 
 // _encoding_json_Marshaler is an interface wrapper for Marshaler type
 type _encoding_json_Marshaler struct {
+	Val          interface{}
 	WMarshalJSON func() ([]byte, error)
 }
+
+func (W _encoding_json_Marshaler) String() string { return fmt.Sprint(W.Val) }
 
 func (W _encoding_json_Marshaler) MarshalJSON() ([]byte, error) { return W.WMarshalJSON() }
 
 // _encoding_json_Token is an interface wrapper for Token type
 type _encoding_json_Token struct {
+	Val interface{}
 }
+
+func (W _encoding_json_Token) String() string { return fmt.Sprint(W.Val) }
 
 // _encoding_json_Unmarshaler is an interface wrapper for Unmarshaler type
 type _encoding_json_Unmarshaler struct {
+	Val            interface{}
 	WUnmarshalJSON func(a0 []byte) error
 }
+
+func (W _encoding_json_Unmarshaler) String() string { return fmt.Sprint(W.Val) }
 
 func (W _encoding_json_Unmarshaler) UnmarshalJSON(a0 []byte) error { return W.WUnmarshalJSON(a0) }

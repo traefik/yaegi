@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -102,6 +103,9 @@ type Exports map[string]map[string]reflect.Value
 // imports stores the map of source packages per package path.
 type imports map[string]map[string]*symbol
 
+// binWrap stores the map of binary interface wrappers indexed per method signature.
+type binWrap map[string][]reflect.Type
+
 // opt stores interpreter options.
 type opt struct {
 	astDot bool // display AST graph (debug)
@@ -131,13 +135,15 @@ type Interpreter struct {
 	binPkg     Exports         // binary packages used in interpreter, indexed by path
 	rdir       map[string]bool // for src import cycle detection
 
-	mutex    sync.RWMutex
+	mutex sync.RWMutex
+	done  chan struct{} // for cancellation of channel operations
+
 	frame    *frame            // program data storage during execution
 	universe *scope            // interpreter global level scope
 	scopes   map[string]*scope // package level scopes, indexed by package name
 	srcPkg   imports           // source packages used in interpreter, indexed by path
 	pkgNames map[string]string // package names, indexed by path
-	done     chan struct{}     // for cancellation of channel operations
+	binWrap  binWrap           // binary wrappers indexed by method signature
 
 	hooks *hooks // symbol hooks
 }
@@ -161,10 +167,16 @@ func init() { Symbols[selfPath]["Symbols"] = reflect.ValueOf(Symbols) }
 
 // _error is a wrapper of error interface type.
 type _error struct {
+	Val    interface{}
 	WError func() string
 }
 
-func (w _error) Error() string { return w.WError() }
+func (w _error) Error() string {
+	if w.WError != nil {
+		return w.WError()
+	}
+	return fmt.Sprint(w.Val)
+}
 
 // Panic is an error recovered from a panic call in interpreted code.
 type Panic struct {
@@ -218,6 +230,7 @@ func New(options Options) *Interpreter {
 		srcPkg:   imports{},
 		pkgNames: map[string]string{},
 		rdir:     map[string]bool{},
+		binWrap:  binWrap{},
 		hooks:    &hooks{},
 	}
 
@@ -457,6 +470,23 @@ func (interp *Interpreter) stop() {
 
 func (interp *Interpreter) runid() uint64 { return atomic.LoadUint64(&interp.id) }
 
+// getWrapperType returns the wrapper type which implements the highest number of methods of t.
+func (interp *Interpreter) getWrapperType(t *itype) reflect.Type {
+	methods := t.methods()
+	var nmw int
+	var wt reflect.Type
+	// build a list of wrapper type candidates
+	for k, v := range methods {
+		for _, it := range interp.binWrap[k+v] {
+			if methods.containsR(it) && it.NumMethod() > nmw {
+				nmw = it.NumMethod()
+				wt = it
+			}
+		}
+	}
+	return wt
+}
+
 // getWrapper returns the wrapper type of the corresponding interface, or nil if not found.
 func (interp *Interpreter) getWrapper(t reflect.Type) reflect.Type {
 	if p, ok := interp.binPkg[t.PkgPath()]; ok {
@@ -475,6 +505,21 @@ func (interp *Interpreter) Use(values Exports) {
 		}
 
 		interp.binPkg[k] = v
+
+		// Register binary interface wrappers.
+		for id, val := range v {
+			if !strings.HasPrefix(id, "_") {
+				continue
+			}
+			t := val.Type().Elem()
+			it := v[strings.TrimPrefix(id, "_")].Type().Elem()
+			nm := it.NumMethod()
+			for i := 0; i < nm; i++ {
+				m := it.Method(i)
+				name := m.Name + m.Type.String()
+				interp.binWrap[name] = append(interp.binWrap[name], t)
+			}
+		}
 	}
 }
 

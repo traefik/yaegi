@@ -5,6 +5,7 @@
 package stdlib
 
 import (
+	"fmt"
 	"net/http/httputil"
 	"reflect"
 )
@@ -39,9 +40,12 @@ func init() {
 
 // _net_http_httputil_BufferPool is an interface wrapper for BufferPool type
 type _net_http_httputil_BufferPool struct {
+	Val  interface{}
 	WGet func() []byte
 	WPut func(a0 []byte)
 }
+
+func (W _net_http_httputil_BufferPool) String() string { return fmt.Sprint(W.Val) }
 
 func (W _net_http_httputil_BufferPool) Get() []byte   { return W.WGet() }
 func (W _net_http_httputil_BufferPool) Put(a0 []byte) { W.WPut(a0) }

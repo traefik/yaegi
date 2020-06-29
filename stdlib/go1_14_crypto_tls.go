@@ -6,6 +6,7 @@ package stdlib
 
 import (
 	"crypto/tls"
+	"fmt"
 	"go/constant"
 	"go/token"
 	"reflect"
@@ -107,9 +108,12 @@ func init() {
 
 // _crypto_tls_ClientSessionCache is an interface wrapper for ClientSessionCache type
 type _crypto_tls_ClientSessionCache struct {
+	Val  interface{}
 	WGet func(sessionKey string) (session *tls.ClientSessionState, ok bool)
 	WPut func(sessionKey string, cs *tls.ClientSessionState)
 }
+
+func (W _crypto_tls_ClientSessionCache) String() string { return fmt.Sprint(W.Val) }
 
 func (W _crypto_tls_ClientSessionCache) Get(sessionKey string) (session *tls.ClientSessionState, ok bool) {
 	return W.WGet(sessionKey)

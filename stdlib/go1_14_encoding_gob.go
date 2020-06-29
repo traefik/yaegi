@@ -6,6 +6,7 @@ package stdlib
 
 import (
 	"encoding/gob"
+	"fmt"
 	"reflect"
 )
 
@@ -32,14 +33,20 @@ func init() {
 
 // _encoding_gob_GobDecoder is an interface wrapper for GobDecoder type
 type _encoding_gob_GobDecoder struct {
+	Val        interface{}
 	WGobDecode func(a0 []byte) error
 }
+
+func (W _encoding_gob_GobDecoder) String() string { return fmt.Sprint(W.Val) }
 
 func (W _encoding_gob_GobDecoder) GobDecode(a0 []byte) error { return W.WGobDecode(a0) }
 
 // _encoding_gob_GobEncoder is an interface wrapper for GobEncoder type
 type _encoding_gob_GobEncoder struct {
+	Val        interface{}
 	WGobEncode func() ([]byte, error)
 }
+
+func (W _encoding_gob_GobEncoder) String() string { return fmt.Sprint(W.Val) }
 
 func (W _encoding_gob_GobEncoder) GobEncode() ([]byte, error) { return W.WGobEncode() }

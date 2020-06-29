@@ -252,10 +252,10 @@ func genValueInterfaceValue(n *node) func(*frame) reflect.Value {
 
 	return func(f *frame) reflect.Value {
 		v := value(f)
-		if v.Interface().(valueInterface).node == nil {
-			// Uninitialized interface value, set it to a correct zero value.
+		if nod := v.Interface().(valueInterface).node; nod == nil {
 			v.Set(zeroInterfaceValue())
-			v = value(f)
+		} else if w, ok := genInterfaceWrapper(nod, nil); ok {
+			return w(f)
 		}
 		return v.Interface().(valueInterface).value
 	}

@@ -5,6 +5,7 @@
 package stdlib
 
 import (
+	"fmt"
 	"image/png"
 	"reflect"
 )
@@ -35,9 +36,12 @@ func init() {
 
 // _image_png_EncoderBufferPool is an interface wrapper for EncoderBufferPool type
 type _image_png_EncoderBufferPool struct {
+	Val  interface{}
 	WGet func() *png.EncoderBuffer
 	WPut func(a0 *png.EncoderBuffer)
 }
+
+func (W _image_png_EncoderBufferPool) String() string { return fmt.Sprint(W.Val) }
 
 func (W _image_png_EncoderBufferPool) Get() *png.EncoderBuffer   { return W.WGet() }
 func (W _image_png_EncoderBufferPool) Put(a0 *png.EncoderBuffer) { W.WPut(a0) }
