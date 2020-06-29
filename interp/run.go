@@ -377,7 +377,7 @@ func assign(n *node) {
 		case dest.typ.cat == interfaceT:
 			svalue[i] = genValueInterface(src)
 		case (dest.typ.cat == valueT || dest.typ.cat == errorT) && dest.typ.rtype.Kind() == reflect.Interface:
-			svalue[i] = genInterfaceWrapper(src, dest.typ.rtype)
+			svalue[i], _ = genInterfaceWrapper(src, nil)
 		case src.typ.cat == funcT && dest.typ.cat == valueT:
 			svalue[i] = genFunctionWrapper(src)
 		case src.typ.cat == funcT && isField(dest):
@@ -661,7 +661,11 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 			if rcvr != nil {
 				src, dest := rcvr(f), d[numRet]
 				if src.Type().Kind() != dest.Type().Kind() {
-					dest.Set(src.Addr())
+					if vi, ok := src.Interface().(valueInterface); ok {
+						dest.Set(vi.value)
+					} else {
+						dest.Set(src.Addr())
+					}
 				} else {
 					dest.Set(src)
 				}
@@ -698,13 +702,24 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 	}
 }
 
-func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
+func genInterfaceWrapper(n *node, t reflect.Type) (func(*frame) reflect.Value, bool) {
 	value := genValue(n)
-	if typ == nil || typ.Kind() != reflect.Interface || typ.NumMethod() == 0 || n.typ.cat == valueT {
-		return value
+	var typ reflect.Type
+	switch n.typ.cat {
+	case valueT:
+		return value, false
+	default:
+		if t != nil {
+			if nt := n.typ.TypeOf(); nt != nil && nt.Kind() == reflect.Interface {
+				return value, false
+			}
+			typ = n.interp.getWrapper(t)
+		} else {
+			typ = n.interp.getWrapperType(n.typ)
+		}
 	}
-	if nt := n.typ.TypeOf(); nt != nil && nt.Kind() == reflect.Interface {
-		return value
+	if typ == nil {
+		return value, false
 	}
 	mn := typ.NumMethod()
 	names := make([]string, mn)
@@ -718,7 +733,6 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 			_, indexes[i], _, _ = n.typ.lookupBinMethod(names[i])
 		}
 	}
-	wrap := n.interp.getWrapper(typ)
 
 	return func(f *frame) reflect.Value {
 		v := value(f)
@@ -726,22 +740,29 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 		switch v.Kind() {
 		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
 			if v.IsNil() {
-				return reflect.New(typ).Elem()
-			}
-			if v.Kind() == reflect.Ptr {
-				vv = v.Elem()
+				return reflect.New(v.Type()).Elem()
 			}
 		}
-		w := reflect.New(wrap).Elem()
+		if v.Kind() == reflect.Ptr {
+			vv = v.Elem()
+		}
+		if vi, ok := v.Interface().(valueInterface); ok {
+			v = vi.value
+		}
+		w := reflect.New(typ).Elem()
+		w.Field(0).Set(v)
 		for i, m := range methods {
 			if m == nil {
+				if names[i] == "String" {
+					continue
+				}
 				if r := v.MethodByName(names[i]); r.IsValid() {
-					w.Field(i).Set(r)
+					w.FieldByName("W" + names[i]).Set(r)
 					continue
 				}
 				o := vv.FieldByIndex(indexes[i])
 				if r := o.MethodByName(names[i]); r.IsValid() {
-					w.Field(i).Set(r)
+					w.FieldByName("W" + names[i]).Set(r)
 				} else {
 					log.Println(n.cfgErrorf("genInterfaceWrapper error, no method %s", names[i]))
 				}
@@ -749,10 +770,10 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 			}
 			nod := *m
 			nod.recv = &receiver{n, v, indexes[i]}
-			w.Field(i).Set(genFunctionWrapper(&nod)(f))
+			w.FieldByName("W" + names[i]).Set(genFunctionWrapper(&nod)(f))
 		}
 		return w
-	}
+	}, true
 }
 
 func call(n *node) {
@@ -998,14 +1019,6 @@ func call(n *node) {
 	}
 }
 
-// pindex returns definition parameter index for function call.
-func pindex(i, variadic int) int {
-	if variadic < 0 || i <= variadic {
-		return i
-	}
-	return variadic
-}
-
 // Callbin calls a function from a bin import, accessible through reflect.
 func callBin(n *node) {
 	tnext := getExec(n.tnext)
@@ -1033,7 +1046,6 @@ func callBin(n *node) {
 	}
 
 	for i, c := range child {
-		defType := funcType.In(pindex(i, variadic))
 		switch {
 		case isBinCall(c):
 			// Handle nested function calls: pass returned values as arguments
@@ -1072,10 +1084,12 @@ func callBin(n *node) {
 				case interfaceT:
 					values = append(values, genValueInterfaceArray(c))
 				default:
-					values = append(values, genInterfaceWrapper(c, defType))
+					v, _ := genInterfaceWrapper(c, nil)
+					values = append(values, v)
 				}
 			default:
-				values = append(values, genInterfaceWrapper(c, defType))
+				v, _ := genInterfaceWrapper(c, nil)
+				values = append(values, v)
 			}
 		}
 	}
@@ -1121,9 +1135,11 @@ func callBin(n *node) {
 		}
 	default:
 		switch n.anc.action {
-		case aAssign, aAssignX:
+		case aAssignX:
 			// The function call is part of an assign expression, store results direcly
 			// to assigned location, to avoid an additional frame copy.
+			// The optimization of aAssign is handled in assign(), and should not
+			// be handled here.
 			rvalues := make([]func(*frame) reflect.Value, funcType.NumOut())
 			for i := range rvalues {
 				c := n.anc.child[i]
@@ -1166,7 +1182,9 @@ func callBin(n *node) {
 					in[i] = v(f)
 				}
 				out := callFn(value(f), in)
-				copy(f.data[n.findex:], out)
+				for i := 0; i < len(out); i++ {
+					f.data[n.findex+i].Set(out[i])
+				}
 				return tnext
 			}
 		}
@@ -1750,7 +1768,7 @@ func _return(n *node) {
 	for i, c := range child {
 		switch t := def.typ.ret[i]; t.cat {
 		case errorT:
-			values[i] = genInterfaceWrapper(c, t.TypeOf())
+			values[i], _ = genInterfaceWrapper(c, t.TypeOf())
 		case aliasT:
 			if isInterfaceSrc(t) {
 				values[i] = genValueInterface(c)
@@ -1763,7 +1781,7 @@ func _return(n *node) {
 			values[i] = genValueInterface(c)
 		case valueT:
 			if t.rtype.Kind() == reflect.Interface {
-				values[i] = genInterfaceWrapper(c, t.rtype)
+				values[i], _ = genInterfaceWrapper(c, nil)
 				break
 			}
 			fallthrough

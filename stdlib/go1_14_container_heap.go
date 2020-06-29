@@ -6,6 +6,7 @@ package stdlib
 
 import (
 	"container/heap"
+	"fmt"
 	"reflect"
 )
 
@@ -28,12 +29,15 @@ func init() {
 
 // _container_heap_Interface is an interface wrapper for Interface type
 type _container_heap_Interface struct {
+	Val   interface{}
 	WLen  func() int
 	WLess func(i int, j int) bool
 	WPop  func() interface{}
 	WPush func(x interface{})
 	WSwap func(i int, j int)
 }
+
+func (W _container_heap_Interface) String() string { return fmt.Sprint(W.Val) }
 
 func (W _container_heap_Interface) Len() int               { return W.WLen() }
 func (W _container_heap_Interface) Less(i int, j int) bool { return W.WLess(i, j) }

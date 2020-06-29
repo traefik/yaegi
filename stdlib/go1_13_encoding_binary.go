@@ -39,6 +39,7 @@ func init() {
 
 // _encoding_binary_ByteOrder is an interface wrapper for ByteOrder type
 type _encoding_binary_ByteOrder struct {
+	Val        interface{}
 	WPutUint16 func(a0 []byte, a1 uint16)
 	WPutUint32 func(a0 []byte, a1 uint32)
 	WPutUint64 func(a0 []byte, a1 uint64)

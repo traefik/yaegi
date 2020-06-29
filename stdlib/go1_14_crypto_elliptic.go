@@ -6,6 +6,7 @@ package stdlib
 
 import (
 	"crypto/elliptic"
+	"fmt"
 	"math/big"
 	"reflect"
 )
@@ -32,6 +33,7 @@ func init() {
 
 // _crypto_elliptic_Curve is an interface wrapper for Curve type
 type _crypto_elliptic_Curve struct {
+	Val             interface{}
 	WAdd            func(x1 *big.Int, y1 *big.Int, x2 *big.Int, y2 *big.Int) (x *big.Int, y *big.Int)
 	WDouble         func(x1 *big.Int, y1 *big.Int) (x *big.Int, y *big.Int)
 	WIsOnCurve      func(x *big.Int, y *big.Int) bool
@@ -39,6 +41,8 @@ type _crypto_elliptic_Curve struct {
 	WScalarBaseMult func(k []byte) (x *big.Int, y *big.Int)
 	WScalarMult     func(x1 *big.Int, y1 *big.Int, k []byte) (x *big.Int, y *big.Int)
 }
+
+func (W _crypto_elliptic_Curve) String() string { return fmt.Sprint(W.Val) }
 
 func (W _crypto_elliptic_Curve) Add(x1 *big.Int, y1 *big.Int, x2 *big.Int, y2 *big.Int) (x *big.Int, y *big.Int) {
 	return W.WAdd(x1, y1, x2, y2)

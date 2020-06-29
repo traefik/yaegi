@@ -5,6 +5,7 @@
 package stdlib
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"reflect"
@@ -128,52 +129,70 @@ func init() {
 
 // _go_ast_Decl is an interface wrapper for Decl type
 type _go_ast_Decl struct {
+	Val  interface{}
 	WEnd func() token.Pos
 	WPos func() token.Pos
 }
+
+func (W _go_ast_Decl) String() string { return fmt.Sprint(W.Val) }
 
 func (W _go_ast_Decl) End() token.Pos { return W.WEnd() }
 func (W _go_ast_Decl) Pos() token.Pos { return W.WPos() }
 
 // _go_ast_Expr is an interface wrapper for Expr type
 type _go_ast_Expr struct {
+	Val  interface{}
 	WEnd func() token.Pos
 	WPos func() token.Pos
 }
+
+func (W _go_ast_Expr) String() string { return fmt.Sprint(W.Val) }
 
 func (W _go_ast_Expr) End() token.Pos { return W.WEnd() }
 func (W _go_ast_Expr) Pos() token.Pos { return W.WPos() }
 
 // _go_ast_Node is an interface wrapper for Node type
 type _go_ast_Node struct {
+	Val  interface{}
 	WEnd func() token.Pos
 	WPos func() token.Pos
 }
+
+func (W _go_ast_Node) String() string { return fmt.Sprint(W.Val) }
 
 func (W _go_ast_Node) End() token.Pos { return W.WEnd() }
 func (W _go_ast_Node) Pos() token.Pos { return W.WPos() }
 
 // _go_ast_Spec is an interface wrapper for Spec type
 type _go_ast_Spec struct {
+	Val  interface{}
 	WEnd func() token.Pos
 	WPos func() token.Pos
 }
+
+func (W _go_ast_Spec) String() string { return fmt.Sprint(W.Val) }
 
 func (W _go_ast_Spec) End() token.Pos { return W.WEnd() }
 func (W _go_ast_Spec) Pos() token.Pos { return W.WPos() }
 
 // _go_ast_Stmt is an interface wrapper for Stmt type
 type _go_ast_Stmt struct {
+	Val  interface{}
 	WEnd func() token.Pos
 	WPos func() token.Pos
 }
+
+func (W _go_ast_Stmt) String() string { return fmt.Sprint(W.Val) }
 
 func (W _go_ast_Stmt) End() token.Pos { return W.WEnd() }
 func (W _go_ast_Stmt) Pos() token.Pos { return W.WPos() }
 
 // _go_ast_Visitor is an interface wrapper for Visitor type
 type _go_ast_Visitor struct {
+	Val    interface{}
 	WVisit func(node ast.Node) (w ast.Visitor)
 }
+
+func (W _go_ast_Visitor) String() string { return fmt.Sprint(W.Val) }
 
 func (W _go_ast_Visitor) Visit(node ast.Node) (w ast.Visitor) { return W.WVisit(node) }

@@ -5,6 +5,7 @@
 package stdlib
 
 import (
+	"fmt"
 	"go/token"
 	"go/types"
 	"reflect"
@@ -162,16 +163,22 @@ func init() {
 
 // _go_types_Importer is an interface wrapper for Importer type
 type _go_types_Importer struct {
+	Val     interface{}
 	WImport func(path string) (*types.Package, error)
 }
+
+func (W _go_types_Importer) String() string { return fmt.Sprint(W.Val) }
 
 func (W _go_types_Importer) Import(path string) (*types.Package, error) { return W.WImport(path) }
 
 // _go_types_ImporterFrom is an interface wrapper for ImporterFrom type
 type _go_types_ImporterFrom struct {
+	Val         interface{}
 	WImport     func(path string) (*types.Package, error)
 	WImportFrom func(path string, dir string, mode types.ImportMode) (*types.Package, error)
 }
+
+func (W _go_types_ImporterFrom) String() string { return fmt.Sprint(W.Val) }
 
 func (W _go_types_ImporterFrom) Import(path string) (*types.Package, error) { return W.WImport(path) }
 func (W _go_types_ImporterFrom) ImportFrom(path string, dir string, mode types.ImportMode) (*types.Package, error) {
@@ -180,6 +187,7 @@ func (W _go_types_ImporterFrom) ImportFrom(path string, dir string, mode types.I
 
 // _go_types_Object is an interface wrapper for Object type
 type _go_types_Object struct {
+	Val       interface{}
 	WExported func() bool
 	WId       func() string
 	WName     func() string
@@ -201,10 +209,13 @@ func (W _go_types_Object) Type() types.Type     { return W.WType() }
 
 // _go_types_Sizes is an interface wrapper for Sizes type
 type _go_types_Sizes struct {
+	Val        interface{}
 	WAlignof   func(T types.Type) int64
 	WOffsetsof func(fields []*types.Var) []int64
 	WSizeof    func(T types.Type) int64
 }
+
+func (W _go_types_Sizes) String() string { return fmt.Sprint(W.Val) }
 
 func (W _go_types_Sizes) Alignof(T types.Type) int64            { return W.WAlignof(T) }
 func (W _go_types_Sizes) Offsetsof(fields []*types.Var) []int64 { return W.WOffsetsof(fields) }
@@ -212,6 +223,7 @@ func (W _go_types_Sizes) Sizeof(T types.Type) int64             { return W.WSize
 
 // _go_types_Type is an interface wrapper for Type type
 type _go_types_Type struct {
+	Val         interface{}
 	WString     func() string
 	WUnderlying func() types.Type
 }
