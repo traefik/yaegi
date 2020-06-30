@@ -120,7 +120,7 @@ type Wrap struct {
 	Method     []Method
 }
 
-func genContent(dest, pkgName, license string) ([]byte, error) {
+func genContent(dest, pkgName, license string, skip map[string]bool) ([]byte, error) {
 	p, err := importer.ForCompiler(token.NewFileSet(), "source", nil).Import(pkgName)
 	if err != nil {
 		return nil, err
@@ -152,6 +152,10 @@ func genContent(dest, pkgName, license string) ([]byte, error) {
 		}
 
 		pname := path.Base(pkgName) + "." + name
+		if skip[pname] {
+			continue
+		}
+
 		switch o := o.(type) {
 		case *types.Const:
 			if b, ok := o.Type().(*types.Basic); ok && (b.Info()&types.IsUntyped) != 0 {
@@ -347,18 +351,23 @@ func main() {
 	dest := path.Base(dir)
 
 	for _, pkg := range flag.Args() {
-		content, err := genContent(dest, pkg, license)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-
 		var oFile string
+		skip := map[string]bool{}
 		if pkg == "syscall" {
 			goos, arch := os.Getenv("GOOS"), os.Getenv("GOARCH")
 			oFile = strings.Replace(pkg, "/", "_", -1) + "_" + goos + "_" + arch + ".go"
+			if goos == "solaris" {
+				skip["syscall.RawSyscall6"] = true
+				skip["syscall.Syscall6"] = true
+			}
 		} else {
 			oFile = strings.Replace(pkg, "/", "_", -1) + ".go"
+		}
+
+		content, err := genContent(dest, pkg, license, skip)
+		if err != nil {
+			log.Println(err)
+			continue
 		}
 
 		prefix := runtime.Version()
