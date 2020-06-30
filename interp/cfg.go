@@ -470,7 +470,10 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						if src.typ.isBinMethod {
 							dest.typ = &itype{cat: valueT, rtype: src.typ.methodCallType()}
 						} else {
-							dest.typ = src.typ
+							// In a new definition, propagate the source type to the destination
+							// type. If the source is an untyped constant, make sure that the
+							// type matches a default type.
+							dest.typ = sc.fixType(src.typ)
 						}
 					}
 					if dest.typ.sizedef {

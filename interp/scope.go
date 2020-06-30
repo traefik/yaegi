@@ -153,6 +153,24 @@ func (s *scope) rangeChanType(n *node) *itype {
 	return nil
 }
 
+// fixType returns the input type, or a valid default type for untyped constant.
+func (s *scope) fixType(t *itype) *itype {
+	if !t.untyped || t.cat != valueT {
+		return t
+	}
+	switch typ := t.TypeOf(); typ.Kind() {
+	case reflect.Int64:
+		return s.getType("int")
+	case reflect.Uint64:
+		return s.getType("uint")
+	case reflect.Float64:
+		return s.getType("float64")
+	case reflect.Complex128:
+		return s.getType("complex128")
+	}
+	return t
+}
+
 func (s *scope) getType(ident string) *itype {
 	var t *itype
 	if sym, _, found := s.lookup(ident); found {
