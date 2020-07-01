@@ -1,6 +1,11 @@
 package pkg
 
 import (
+	"bytes"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -10,9 +15,11 @@ import (
 
 func TestPackages(t *testing.T) {
 	testCases := []struct {
-		desc     string
-		goPath   string
-		expected string
+		desc      string
+		goPath    string
+		expected  string
+		topImport string
+		evalFile  string
 	}{
 		{
 			desc:     "vendor",
@@ -64,6 +71,18 @@ func TestPackages(t *testing.T) {
 			goPath:   "./_pkg8/",
 			expected: "root Fromage!",
 		},
+		{
+			desc:      "at the project root",
+			goPath:    "./_pkg10/",
+			expected:  "root Fromage",
+			topImport: "github.com/foo",
+		},
+		{
+			desc:     "eval main that has vendored dep",
+			goPath:   "./_pkg11/",
+			expected: "Fromage",
+			evalFile: "./_pkg11/src/foo/foo.go",
+		},
 	}
 
 	for _, test := range testCases {
@@ -78,19 +97,60 @@ func TestPackages(t *testing.T) {
 			i := interp.New(interp.Options{GoPath: goPath})
 			i.Use(stdlib.Symbols) // Use binary standard library
 
-			// Load pkg from sources
-			if _, err = i.Eval(`import "github.com/foo/pkg"`); err != nil {
-				t.Fatal(err)
+			var msg string
+			if test.evalFile != "" {
+				// setting i.Name as this is how it's actually done in cmd/yaegi
+				i.Name = test.evalFile
+				data, err := ioutil.ReadFile(test.evalFile)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// TODO(mpl): this is brittle if we do concurrent tests and stuff, do better later.
+				stdout := os.Stdout
+				defer func() { os.Stdout = stdout }()
+				pr, pw, err := os.Pipe()
+				if err != nil {
+					t.Fatal(err)
+				}
+				os.Stdout = pw
+
+				if _, err := i.Eval(string(data)); err != nil {
+					t.Fatal(err)
+				}
+
+				var buf bytes.Buffer
+				errC := make(chan error)
+				go func() {
+					_, err := io.Copy(&buf, pr)
+					errC <- err
+				}()
+
+				if err := pw.Close(); err != nil {
+					t.Fatal(err)
+				}
+				if err := <-errC; err != nil {
+					t.Fatal(err)
+				}
+				msg = buf.String()
+			} else {
+				// Load pkg from sources
+				topImport := "github.com/foo/pkg"
+				if test.topImport != "" {
+					topImport = test.topImport
+				}
+				if _, err = i.Eval(fmt.Sprintf(`import "%s"`, topImport)); err != nil {
+					t.Fatal(err)
+				}
+				value, err := i.Eval(`pkg.NewSample()`)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				fn := value.Interface().(func() string)
+
+				msg = fn()
 			}
-
-			value, err := i.Eval(`pkg.NewSample()`)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			fn := value.Interface().(func() string)
-
-			msg := fn()
 
 			if msg != test.expected {
 				t.Errorf("Got %q, want %q", msg, test.expected)
