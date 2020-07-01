@@ -5,6 +5,7 @@
 package stdlib
 
 import (
+	"fmt"
 	"go/constant"
 	"go/token"
 	"os"
@@ -131,6 +132,7 @@ func init() {
 
 // _os_FileInfo is an interface wrapper for FileInfo type
 type _os_FileInfo struct {
+	Val      interface{}
 	WIsDir   func() bool
 	WModTime func() time.Time
 	WMode    func() os.FileMode
@@ -138,6 +140,8 @@ type _os_FileInfo struct {
 	WSize    func() int64
 	WSys     func() interface{}
 }
+
+func (W _os_FileInfo) String() string { return fmt.Sprint(W.Val) }
 
 func (W _os_FileInfo) IsDir() bool        { return W.WIsDir() }
 func (W _os_FileInfo) ModTime() time.Time { return W.WModTime() }
@@ -148,6 +152,7 @@ func (W _os_FileInfo) Sys() interface{}   { return W.WSys() }
 
 // _os_Signal is an interface wrapper for Signal type
 type _os_Signal struct {
+	Val     interface{}
 	WSignal func()
 	WString func() string
 }

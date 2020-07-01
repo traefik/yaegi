@@ -7,6 +7,7 @@ package stdlib
 import (
 	"context"
 	"database/sql/driver"
+	"fmt"
 	"reflect"
 )
 
@@ -96,8 +97,11 @@ func init() {
 
 // _database_sql_driver_ColumnConverter is an interface wrapper for ColumnConverter type
 type _database_sql_driver_ColumnConverter struct {
+	Val              interface{}
 	WColumnConverter func(idx int) driver.ValueConverter
 }
+
+func (W _database_sql_driver_ColumnConverter) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_ColumnConverter) ColumnConverter(idx int) driver.ValueConverter {
 	return W.WColumnConverter(idx)
@@ -105,10 +109,13 @@ func (W _database_sql_driver_ColumnConverter) ColumnConverter(idx int) driver.Va
 
 // _database_sql_driver_Conn is an interface wrapper for Conn type
 type _database_sql_driver_Conn struct {
+	Val      interface{}
 	WBegin   func() (driver.Tx, error)
 	WClose   func() error
 	WPrepare func(query string) (driver.Stmt, error)
 }
+
+func (W _database_sql_driver_Conn) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_Conn) Begin() (driver.Tx, error) { return W.WBegin() }
 func (W _database_sql_driver_Conn) Close() error              { return W.WClose() }
@@ -118,8 +125,11 @@ func (W _database_sql_driver_Conn) Prepare(query string) (driver.Stmt, error) {
 
 // _database_sql_driver_ConnBeginTx is an interface wrapper for ConnBeginTx type
 type _database_sql_driver_ConnBeginTx struct {
+	Val      interface{}
 	WBeginTx func(ctx context.Context, opts driver.TxOptions) (driver.Tx, error)
 }
+
+func (W _database_sql_driver_ConnBeginTx) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_ConnBeginTx) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
 	return W.WBeginTx(ctx, opts)
@@ -127,8 +137,11 @@ func (W _database_sql_driver_ConnBeginTx) BeginTx(ctx context.Context, opts driv
 
 // _database_sql_driver_ConnPrepareContext is an interface wrapper for ConnPrepareContext type
 type _database_sql_driver_ConnPrepareContext struct {
+	Val             interface{}
 	WPrepareContext func(ctx context.Context, query string) (driver.Stmt, error)
 }
+
+func (W _database_sql_driver_ConnPrepareContext) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_ConnPrepareContext) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
 	return W.WPrepareContext(ctx, query)
@@ -136,9 +149,12 @@ func (W _database_sql_driver_ConnPrepareContext) PrepareContext(ctx context.Cont
 
 // _database_sql_driver_Connector is an interface wrapper for Connector type
 type _database_sql_driver_Connector struct {
+	Val      interface{}
 	WConnect func(a0 context.Context) (driver.Conn, error)
 	WDriver  func() driver.Driver
 }
+
+func (W _database_sql_driver_Connector) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_Connector) Connect(a0 context.Context) (driver.Conn, error) {
 	return W.WConnect(a0)
@@ -147,15 +163,21 @@ func (W _database_sql_driver_Connector) Driver() driver.Driver { return W.WDrive
 
 // _database_sql_driver_Driver is an interface wrapper for Driver type
 type _database_sql_driver_Driver struct {
+	Val   interface{}
 	WOpen func(name string) (driver.Conn, error)
 }
+
+func (W _database_sql_driver_Driver) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_Driver) Open(name string) (driver.Conn, error) { return W.WOpen(name) }
 
 // _database_sql_driver_DriverContext is an interface wrapper for DriverContext type
 type _database_sql_driver_DriverContext struct {
+	Val            interface{}
 	WOpenConnector func(name string) (driver.Connector, error)
 }
+
+func (W _database_sql_driver_DriverContext) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_DriverContext) OpenConnector(name string) (driver.Connector, error) {
 	return W.WOpenConnector(name)
@@ -163,8 +185,11 @@ func (W _database_sql_driver_DriverContext) OpenConnector(name string) (driver.C
 
 // _database_sql_driver_Execer is an interface wrapper for Execer type
 type _database_sql_driver_Execer struct {
+	Val   interface{}
 	WExec func(query string, args []driver.Value) (driver.Result, error)
 }
+
+func (W _database_sql_driver_Execer) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_Execer) Exec(query string, args []driver.Value) (driver.Result, error) {
 	return W.WExec(query, args)
@@ -172,8 +197,11 @@ func (W _database_sql_driver_Execer) Exec(query string, args []driver.Value) (dr
 
 // _database_sql_driver_ExecerContext is an interface wrapper for ExecerContext type
 type _database_sql_driver_ExecerContext struct {
+	Val          interface{}
 	WExecContext func(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error)
 }
+
+func (W _database_sql_driver_ExecerContext) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_ExecerContext) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
 	return W.WExecContext(ctx, query, args)
@@ -181,8 +209,11 @@ func (W _database_sql_driver_ExecerContext) ExecContext(ctx context.Context, que
 
 // _database_sql_driver_NamedValueChecker is an interface wrapper for NamedValueChecker type
 type _database_sql_driver_NamedValueChecker struct {
+	Val              interface{}
 	WCheckNamedValue func(a0 *driver.NamedValue) error
 }
+
+func (W _database_sql_driver_NamedValueChecker) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_NamedValueChecker) CheckNamedValue(a0 *driver.NamedValue) error {
 	return W.WCheckNamedValue(a0)
@@ -190,15 +221,21 @@ func (W _database_sql_driver_NamedValueChecker) CheckNamedValue(a0 *driver.Named
 
 // _database_sql_driver_Pinger is an interface wrapper for Pinger type
 type _database_sql_driver_Pinger struct {
+	Val   interface{}
 	WPing func(ctx context.Context) error
 }
+
+func (W _database_sql_driver_Pinger) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_Pinger) Ping(ctx context.Context) error { return W.WPing(ctx) }
 
 // _database_sql_driver_Queryer is an interface wrapper for Queryer type
 type _database_sql_driver_Queryer struct {
+	Val    interface{}
 	WQuery func(query string, args []driver.Value) (driver.Rows, error)
 }
+
+func (W _database_sql_driver_Queryer) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_Queryer) Query(query string, args []driver.Value) (driver.Rows, error) {
 	return W.WQuery(query, args)
@@ -206,8 +243,11 @@ func (W _database_sql_driver_Queryer) Query(query string, args []driver.Value) (
 
 // _database_sql_driver_QueryerContext is an interface wrapper for QueryerContext type
 type _database_sql_driver_QueryerContext struct {
+	Val           interface{}
 	WQueryContext func(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error)
 }
+
+func (W _database_sql_driver_QueryerContext) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_QueryerContext) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
 	return W.WQueryContext(ctx, query, args)
@@ -215,19 +255,25 @@ func (W _database_sql_driver_QueryerContext) QueryContext(ctx context.Context, q
 
 // _database_sql_driver_Result is an interface wrapper for Result type
 type _database_sql_driver_Result struct {
+	Val           interface{}
 	WLastInsertId func() (int64, error)
 	WRowsAffected func() (int64, error)
 }
+
+func (W _database_sql_driver_Result) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_Result) LastInsertId() (int64, error) { return W.WLastInsertId() }
 func (W _database_sql_driver_Result) RowsAffected() (int64, error) { return W.WRowsAffected() }
 
 // _database_sql_driver_Rows is an interface wrapper for Rows type
 type _database_sql_driver_Rows struct {
+	Val      interface{}
 	WClose   func() error
 	WColumns func() []string
 	WNext    func(dest []driver.Value) error
 }
+
+func (W _database_sql_driver_Rows) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_Rows) Close() error                   { return W.WClose() }
 func (W _database_sql_driver_Rows) Columns() []string              { return W.WColumns() }
@@ -235,10 +281,15 @@ func (W _database_sql_driver_Rows) Next(dest []driver.Value) error { return W.WN
 
 // _database_sql_driver_RowsColumnTypeDatabaseTypeName is an interface wrapper for RowsColumnTypeDatabaseTypeName type
 type _database_sql_driver_RowsColumnTypeDatabaseTypeName struct {
+	Val                         interface{}
 	WClose                      func() error
 	WColumnTypeDatabaseTypeName func(index int) string
 	WColumns                    func() []string
 	WNext                       func(dest []driver.Value) error
+}
+
+func (W _database_sql_driver_RowsColumnTypeDatabaseTypeName) String() string {
+	return fmt.Sprint(W.Val)
 }
 
 func (W _database_sql_driver_RowsColumnTypeDatabaseTypeName) Close() error { return W.WClose() }
@@ -252,11 +303,14 @@ func (W _database_sql_driver_RowsColumnTypeDatabaseTypeName) Next(dest []driver.
 
 // _database_sql_driver_RowsColumnTypeLength is an interface wrapper for RowsColumnTypeLength type
 type _database_sql_driver_RowsColumnTypeLength struct {
+	Val               interface{}
 	WClose            func() error
 	WColumnTypeLength func(index int) (length int64, ok bool)
 	WColumns          func() []string
 	WNext             func(dest []driver.Value) error
 }
+
+func (W _database_sql_driver_RowsColumnTypeLength) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_RowsColumnTypeLength) Close() error { return W.WClose() }
 func (W _database_sql_driver_RowsColumnTypeLength) ColumnTypeLength(index int) (length int64, ok bool) {
@@ -269,11 +323,14 @@ func (W _database_sql_driver_RowsColumnTypeLength) Next(dest []driver.Value) err
 
 // _database_sql_driver_RowsColumnTypeNullable is an interface wrapper for RowsColumnTypeNullable type
 type _database_sql_driver_RowsColumnTypeNullable struct {
+	Val                 interface{}
 	WClose              func() error
 	WColumnTypeNullable func(index int) (nullable bool, ok bool)
 	WColumns            func() []string
 	WNext               func(dest []driver.Value) error
 }
+
+func (W _database_sql_driver_RowsColumnTypeNullable) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_RowsColumnTypeNullable) Close() error { return W.WClose() }
 func (W _database_sql_driver_RowsColumnTypeNullable) ColumnTypeNullable(index int) (nullable bool, ok bool) {
@@ -286,11 +343,14 @@ func (W _database_sql_driver_RowsColumnTypeNullable) Next(dest []driver.Value) e
 
 // _database_sql_driver_RowsColumnTypePrecisionScale is an interface wrapper for RowsColumnTypePrecisionScale type
 type _database_sql_driver_RowsColumnTypePrecisionScale struct {
+	Val                       interface{}
 	WClose                    func() error
 	WColumnTypePrecisionScale func(index int) (precision int64, scale int64, ok bool)
 	WColumns                  func() []string
 	WNext                     func(dest []driver.Value) error
 }
+
+func (W _database_sql_driver_RowsColumnTypePrecisionScale) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_RowsColumnTypePrecisionScale) Close() error { return W.WClose() }
 func (W _database_sql_driver_RowsColumnTypePrecisionScale) ColumnTypePrecisionScale(index int) (precision int64, scale int64, ok bool) {
@@ -303,11 +363,14 @@ func (W _database_sql_driver_RowsColumnTypePrecisionScale) Next(dest []driver.Va
 
 // _database_sql_driver_RowsColumnTypeScanType is an interface wrapper for RowsColumnTypeScanType type
 type _database_sql_driver_RowsColumnTypeScanType struct {
+	Val                 interface{}
 	WClose              func() error
 	WColumnTypeScanType func(index int) reflect.Type
 	WColumns            func() []string
 	WNext               func(dest []driver.Value) error
 }
+
+func (W _database_sql_driver_RowsColumnTypeScanType) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_RowsColumnTypeScanType) Close() error { return W.WClose() }
 func (W _database_sql_driver_RowsColumnTypeScanType) ColumnTypeScanType(index int) reflect.Type {
@@ -320,12 +383,15 @@ func (W _database_sql_driver_RowsColumnTypeScanType) Next(dest []driver.Value) e
 
 // _database_sql_driver_RowsNextResultSet is an interface wrapper for RowsNextResultSet type
 type _database_sql_driver_RowsNextResultSet struct {
+	Val               interface{}
 	WClose            func() error
 	WColumns          func() []string
 	WHasNextResultSet func() bool
 	WNext             func(dest []driver.Value) error
 	WNextResultSet    func() error
 }
+
+func (W _database_sql_driver_RowsNextResultSet) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_RowsNextResultSet) Close() error                   { return W.WClose() }
 func (W _database_sql_driver_RowsNextResultSet) Columns() []string              { return W.WColumns() }
@@ -335,8 +401,11 @@ func (W _database_sql_driver_RowsNextResultSet) NextResultSet() error           
 
 // _database_sql_driver_SessionResetter is an interface wrapper for SessionResetter type
 type _database_sql_driver_SessionResetter struct {
+	Val           interface{}
 	WResetSession func(ctx context.Context) error
 }
+
+func (W _database_sql_driver_SessionResetter) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_SessionResetter) ResetSession(ctx context.Context) error {
 	return W.WResetSession(ctx)
@@ -344,11 +413,14 @@ func (W _database_sql_driver_SessionResetter) ResetSession(ctx context.Context) 
 
 // _database_sql_driver_Stmt is an interface wrapper for Stmt type
 type _database_sql_driver_Stmt struct {
+	Val       interface{}
 	WClose    func() error
 	WExec     func(args []driver.Value) (driver.Result, error)
 	WNumInput func() int
 	WQuery    func(args []driver.Value) (driver.Rows, error)
 }
+
+func (W _database_sql_driver_Stmt) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_Stmt) Close() error { return W.WClose() }
 func (W _database_sql_driver_Stmt) Exec(args []driver.Value) (driver.Result, error) {
@@ -361,8 +433,11 @@ func (W _database_sql_driver_Stmt) Query(args []driver.Value) (driver.Rows, erro
 
 // _database_sql_driver_StmtExecContext is an interface wrapper for StmtExecContext type
 type _database_sql_driver_StmtExecContext struct {
+	Val          interface{}
 	WExecContext func(ctx context.Context, args []driver.NamedValue) (driver.Result, error)
 }
+
+func (W _database_sql_driver_StmtExecContext) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_StmtExecContext) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
 	return W.WExecContext(ctx, args)
@@ -370,8 +445,11 @@ func (W _database_sql_driver_StmtExecContext) ExecContext(ctx context.Context, a
 
 // _database_sql_driver_StmtQueryContext is an interface wrapper for StmtQueryContext type
 type _database_sql_driver_StmtQueryContext struct {
+	Val           interface{}
 	WQueryContext func(ctx context.Context, args []driver.NamedValue) (driver.Rows, error)
 }
+
+func (W _database_sql_driver_StmtQueryContext) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_StmtQueryContext) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
 	return W.WQueryContext(ctx, args)
@@ -379,21 +457,30 @@ func (W _database_sql_driver_StmtQueryContext) QueryContext(ctx context.Context,
 
 // _database_sql_driver_Tx is an interface wrapper for Tx type
 type _database_sql_driver_Tx struct {
+	Val       interface{}
 	WCommit   func() error
 	WRollback func() error
 }
+
+func (W _database_sql_driver_Tx) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_Tx) Commit() error   { return W.WCommit() }
 func (W _database_sql_driver_Tx) Rollback() error { return W.WRollback() }
 
 // _database_sql_driver_Value is an interface wrapper for Value type
 type _database_sql_driver_Value struct {
+	Val interface{}
 }
+
+func (W _database_sql_driver_Value) String() string { return fmt.Sprint(W.Val) }
 
 // _database_sql_driver_ValueConverter is an interface wrapper for ValueConverter type
 type _database_sql_driver_ValueConverter struct {
+	Val           interface{}
 	WConvertValue func(v interface{}) (driver.Value, error)
 }
+
+func (W _database_sql_driver_ValueConverter) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_ValueConverter) ConvertValue(v interface{}) (driver.Value, error) {
 	return W.WConvertValue(v)
@@ -401,7 +488,10 @@ func (W _database_sql_driver_ValueConverter) ConvertValue(v interface{}) (driver
 
 // _database_sql_driver_Valuer is an interface wrapper for Valuer type
 type _database_sql_driver_Valuer struct {
+	Val    interface{}
 	WValue func() (driver.Value, error)
 }
+
+func (W _database_sql_driver_Valuer) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_driver_Valuer) Value() (driver.Value, error) { return W.WValue() }

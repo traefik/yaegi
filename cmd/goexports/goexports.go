@@ -88,10 +88,14 @@ func init() {
 {{range $key, $value := .Wrap -}}
 	// {{$value.Name}} is an interface wrapper for {{$key}} type
 	type {{$value.Name}} struct {
+		Val interface{}
 		{{range $m := $value.Method -}}
 		W{{$m.Name}} func{{$m.Param}} {{$m.Result}}
 		{{end}}
 	}
+	{{- if $value.NeedString}}
+	func (W {{$value.Name}}) String() string { return fmt.Sprint(W.Val) }
+	{{end}}
 	{{range $m := $value.Method -}}
 		func (W {{$value.Name}}) {{$m.Name}}{{$m.Param}} {{$m.Result}} { {{$m.Ret}} W.W{{$m.Name}}{{$m.Arg}} }
 	{{end}}
@@ -111,11 +115,12 @@ type Method struct {
 
 // Wrap store information for generating interface wrapper.
 type Wrap struct {
-	Name   string
-	Method []Method
+	Name       string
+	NeedString bool
+	Method     []Method
 }
 
-func genContent(dest, pkgName, license string) ([]byte, error) {
+func genContent(dest, pkgName, license string, skip map[string]bool) ([]byte, error) {
 	p, err := importer.ForCompiler(token.NewFileSet(), "source", nil).Import(pkgName)
 	if err != nil {
 		return nil, err
@@ -147,6 +152,10 @@ func genContent(dest, pkgName, license string) ([]byte, error) {
 		}
 
 		pname := path.Base(pkgName) + "." + name
+		if skip[pname] {
+			continue
+		}
+
 		switch o := o.(type) {
 		case *types.Const:
 			if b, ok := o.Type().(*types.Basic); ok && (b.Info()&types.IsUntyped) != 0 {
@@ -163,6 +172,7 @@ func genContent(dest, pkgName, license string) ([]byte, error) {
 			typ[name] = pname
 			if t, ok := o.Type().Underlying().(*types.Interface); ok {
 				var methods []Method
+				needString := true
 				for i := 0; i < t.NumMethods(); i++ {
 					f := t.Method(i)
 					if !f.Exported() {
@@ -193,10 +203,15 @@ func genContent(dest, pkgName, license string) ([]byte, error) {
 					if sign.Results().Len() > 0 {
 						ret = "return"
 					}
-
+					if f.Name() == "String" {
+						needString = false
+					}
 					methods = append(methods, Method{f.Name(), param, result, arg, ret})
 				}
-				wrap[name] = Wrap{prefix + name, methods}
+				if needString {
+					imports["fmt"] = true
+				}
+				wrap[name] = Wrap{prefix + name, needString, methods}
 			}
 		}
 	}
@@ -336,18 +351,23 @@ func main() {
 	dest := path.Base(dir)
 
 	for _, pkg := range flag.Args() {
-		content, err := genContent(dest, pkg, license)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-
 		var oFile string
+		skip := map[string]bool{}
 		if pkg == "syscall" {
 			goos, arch := os.Getenv("GOOS"), os.Getenv("GOARCH")
 			oFile = strings.Replace(pkg, "/", "_", -1) + "_" + goos + "_" + arch + ".go"
+			if goos == "solaris" {
+				skip["syscall.RawSyscall6"] = true
+				skip["syscall.Syscall6"] = true
+			}
 		} else {
 			oFile = strings.Replace(pkg, "/", "_", -1) + ".go"
+		}
+
+		content, err := genContent(dest, pkg, license, skip)
+		if err != nil {
+			log.Println(err)
+			continue
 		}
 
 		prefix := runtime.Version()

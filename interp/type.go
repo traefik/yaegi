@@ -691,6 +691,7 @@ func fieldName(n *node) string {
 }
 
 var zeroValues [maxT]reflect.Value
+var okFor [aMax][maxT]bool
 
 func init() {
 	zeroValues[boolT] = reflect.ValueOf(false)
@@ -711,6 +712,77 @@ func init() {
 	zeroValues[uint32T] = reflect.ValueOf(uint32(0))
 	zeroValues[uint64T] = reflect.ValueOf(uint64(0))
 	zeroValues[uintptrT] = reflect.ValueOf(uintptr(0))
+
+	// Calculate the action -> type allowances
+	var (
+		okForEq    [maxT]bool
+		okForCmp   [maxT]bool
+		okForAdd   [maxT]bool
+		okForAnd   [maxT]bool
+		okForBool  [maxT]bool
+		okForArith [maxT]bool
+	)
+	for cat := tcat(0); cat < maxT; cat++ {
+		if (cat >= intT && cat <= int64T) || (cat >= uintT && cat <= uintptrT) {
+			okForEq[cat] = true
+			okForCmp[cat] = true
+			okForAdd[cat] = true
+			okForAnd[cat] = true
+			okForArith[cat] = true
+		}
+		if cat == float32T || cat == float64T {
+			okForEq[cat] = true
+			okForCmp[cat] = true
+			okForAdd[cat] = true
+			okForArith[cat] = true
+		}
+		if cat == complex64T || cat == complex128T {
+			okForEq[cat] = true
+			okForAdd[cat] = true
+			okForArith[cat] = true
+		}
+	}
+
+	okForAdd[stringT] = true
+
+	okForBool[boolT] = true
+
+	okForEq[nilT] = true
+	okForEq[ptrT] = true
+	okForEq[interfaceT] = true
+	okForEq[errorT] = true
+	okForEq[chanT] = true
+	okForEq[stringT] = true
+	okForEq[boolT] = true
+	okForEq[mapT] = true    // nil only
+	okForEq[funcT] = true   // nil only
+	okForEq[arrayT] = true  // array: only if element type is comparable slice: nil only
+	okForEq[structT] = true // only if all struct fields are comparable
+
+	okForCmp[stringT] = true
+
+	okFor[aAdd] = okForAdd
+	okFor[aAnd] = okForAnd
+	okFor[aLand] = okForBool
+	okFor[aAndNot] = okForAnd
+	okFor[aQuo] = okForArith
+	okFor[aEqual] = okForEq
+	okFor[aGreaterEqual] = okForCmp
+	okFor[aGreater] = okForCmp
+	okFor[aLowerEqual] = okForCmp
+	okFor[aLower] = okForCmp
+	okFor[aRem] = okForAnd
+	okFor[aMul] = okForArith
+	okFor[aNotEqual] = okForEq
+	okFor[aOr] = okForAnd
+	okFor[aLor] = okForBool
+	okFor[aSub] = okForArith
+	okFor[aXor] = okForAnd
+	okFor[aShl] = okForAnd
+	okFor[aShr] = okForAnd
+	okFor[aNeg] = okForArith
+	okFor[aNot] = okForBool
+	okFor[aPos] = okForArith
 }
 
 // Finalize returns a type pointer and error. It reparses a type from the
@@ -855,6 +927,12 @@ func isComplete(t *itype, visited map[string]bool) bool {
 	return true
 }
 
+// comparable returns true if the type is comparable.
+func (t *itype) comparable() bool {
+	typ := t.TypeOf()
+	return t.cat == nilT || typ != nil && typ.Comparable()
+}
+
 // Equals returns true if the given type is identical to the receiver one.
 func (t *itype) equals(o *itype) bool {
 	switch ti, oi := isInterface(t), isInterface(o); {
@@ -882,6 +960,22 @@ func (m methodSet) contains(n methodSet) bool {
 	return true
 }
 
+// containsR returns true if all methods of t are defined in m method set.
+func (m methodSet) containsR(t reflect.Type) bool {
+	nm := t.NumMethod()
+	for i := 0; i < nm; i++ {
+		method := t.Method(i)
+		if method.Name == "String" || method.Name == "Error" { // always provided by wrapper
+			continue
+		}
+		// TODO: should also verify method signature
+		if m[method.Name] == "" {
+			return false
+		}
+	}
+	return true
+}
+
 // Equal returns true if the method set m is equal to the method set n.
 func (m methodSet) equals(n methodSet) bool {
 	return m.contains(n) && n.contains(m)
@@ -889,7 +983,17 @@ func (m methodSet) equals(n methodSet) bool {
 
 // Methods returns a map of method type strings, indexed by method names.
 func (t *itype) methods() methodSet {
+	return getMethods(t, map[string]bool{})
+}
+
+func getMethods(t *itype, visited map[string]bool) methodSet {
 	res := make(methodSet)
+	name := t.path + "/" + t.name
+	if visited[name] {
+		return res
+	}
+	visited[name] = true
+
 	switch t.cat {
 	case interfaceT:
 		// Get methods from recursive analysis of interface fields.
@@ -897,7 +1001,7 @@ func (t *itype) methods() methodSet {
 			if f.typ.cat == funcT {
 				res[f.name] = f.typ.TypeOf().String()
 			} else {
-				for k, v := range f.typ.methods() {
+				for k, v := range getMethods(f.typ, visited) {
 					res[k] = v
 				}
 			}
@@ -909,12 +1013,12 @@ func (t *itype) methods() methodSet {
 			res[m.Name] = m.Type.String()
 		}
 	case ptrT:
-		for k, v := range t.val.methods() {
+		for k, v := range getMethods(t.val, visited) {
 			res[k] = v
 		}
 	case structT:
 		for _, f := range t.field {
-			for k, v := range f.typ.methods() {
+			for k, v := range getMethods(f.typ, visited) {
 				res[k] = v
 			}
 		}
@@ -1279,6 +1383,88 @@ func (t *itype) implements(it *itype) bool {
 	return t.methods().contains(it.methods())
 }
 
+var errType = reflect.TypeOf((*error)(nil)).Elem()
+
+func catOf(t reflect.Type) tcat {
+	if t == nil {
+		return nilT
+	}
+	if t == errType {
+		return errorT
+	}
+	switch t.Kind() {
+	case reflect.Bool:
+		return boolT
+	case reflect.Int:
+		return intT
+	case reflect.Int8:
+		return int8T
+	case reflect.Int16:
+		return int16T
+	case reflect.Int32:
+		return int32T
+	case reflect.Int64:
+		return int64T
+	case reflect.Uint:
+		return uintT
+	case reflect.Uint8:
+		return uint8T
+	case reflect.Uint16:
+		return uint16T
+	case reflect.Uint32:
+		return uint32T
+	case reflect.Uint64:
+		return uint64T
+	case reflect.Uintptr:
+		return uintptrT
+	case reflect.Float32:
+		return float32T
+	case reflect.Float64:
+		return float64T
+	case reflect.Complex64:
+		return complex64T
+	case reflect.Complex128:
+		return complex128T
+	case reflect.Array, reflect.Slice:
+		return arrayT
+	case reflect.Chan:
+		return chanT
+	case reflect.Func:
+		return funcT
+	case reflect.Interface:
+		return interfaceT
+	case reflect.Map:
+		return mapT
+	case reflect.Ptr:
+		return ptrT
+	case reflect.String:
+		return stringT
+	case reflect.Struct:
+		return structT
+	case reflect.UnsafePointer:
+		return uintptrT
+	}
+	return nilT
+}
+
+func catOfConst(v reflect.Value) tcat {
+	c, ok := v.Interface().(constant.Value)
+	if !ok {
+		return nilT
+	}
+
+	switch c.Kind() {
+	case constant.Int:
+		return intT
+	case constant.Float:
+		return float64T
+	case constant.Complex:
+		return complex128T
+	default:
+		return nilT
+	}
+}
+
 func constToInt(c constant.Value) int {
 	if constant.BitLen(c) > 64 {
 		panic(fmt.Sprintf("constant %s overflows int64", c.ExactString()))
@@ -1300,6 +1486,14 @@ func defRecvType(n *node) *itype {
 func isShiftNode(n *node) bool {
 	switch n.action {
 	case aShl, aShr, aShlAssign, aShrAssign:
+		return true
+	}
+	return false
+}
+
+func isComparisonNode(n *node) bool {
+	switch n.action {
+	case aEqual, aNotEqual, aGreater, aGreaterEqual, aLower, aLowerEqual:
 		return true
 	}
 	return false
@@ -1331,7 +1525,7 @@ func isInterfaceSrc(t *itype) bool {
 }
 
 func isInterface(t *itype) bool {
-	return isInterfaceSrc(t) || t.TypeOf().Kind() == reflect.Interface
+	return isInterfaceSrc(t) || t.TypeOf() != nil && t.TypeOf().Kind() == reflect.Interface
 }
 
 func isStruct(t *itype) bool {

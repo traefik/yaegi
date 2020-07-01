@@ -5,6 +5,7 @@
 package stdlib
 
 import (
+	"fmt"
 	"image/color"
 	"reflect"
 )
@@ -57,14 +58,20 @@ func init() {
 
 // _image_color_Color is an interface wrapper for Color type
 type _image_color_Color struct {
+	Val   interface{}
 	WRGBA func() (r uint32, g uint32, b uint32, a uint32)
 }
+
+func (W _image_color_Color) String() string { return fmt.Sprint(W.Val) }
 
 func (W _image_color_Color) RGBA() (r uint32, g uint32, b uint32, a uint32) { return W.WRGBA() }
 
 // _image_color_Model is an interface wrapper for Model type
 type _image_color_Model struct {
+	Val      interface{}
 	WConvert func(c color.Color) color.Color
 }
+
+func (W _image_color_Model) String() string { return fmt.Sprint(W.Val) }
 
 func (W _image_color_Model) Convert(c color.Color) color.Color { return W.WConvert(c) }

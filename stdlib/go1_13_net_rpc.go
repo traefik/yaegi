@@ -5,6 +5,7 @@
 package stdlib
 
 import (
+	"fmt"
 	"net/rpc"
 	"reflect"
 )
@@ -48,11 +49,14 @@ func init() {
 
 // _net_rpc_ClientCodec is an interface wrapper for ClientCodec type
 type _net_rpc_ClientCodec struct {
+	Val                 interface{}
 	WClose              func() error
 	WReadResponseBody   func(a0 interface{}) error
 	WReadResponseHeader func(a0 *rpc.Response) error
 	WWriteRequest       func(a0 *rpc.Request, a1 interface{}) error
 }
+
+func (W _net_rpc_ClientCodec) String() string { return fmt.Sprint(W.Val) }
 
 func (W _net_rpc_ClientCodec) Close() error                          { return W.WClose() }
 func (W _net_rpc_ClientCodec) ReadResponseBody(a0 interface{}) error { return W.WReadResponseBody(a0) }
@@ -65,11 +69,14 @@ func (W _net_rpc_ClientCodec) WriteRequest(a0 *rpc.Request, a1 interface{}) erro
 
 // _net_rpc_ServerCodec is an interface wrapper for ServerCodec type
 type _net_rpc_ServerCodec struct {
+	Val                interface{}
 	WClose             func() error
 	WReadRequestBody   func(a0 interface{}) error
 	WReadRequestHeader func(a0 *rpc.Request) error
 	WWriteResponse     func(a0 *rpc.Response, a1 interface{}) error
 }
+
+func (W _net_rpc_ServerCodec) String() string { return fmt.Sprint(W.Val) }
 
 func (W _net_rpc_ServerCodec) Close() error                         { return W.WClose() }
 func (W _net_rpc_ServerCodec) ReadRequestBody(a0 interface{}) error { return W.WReadRequestBody(a0) }

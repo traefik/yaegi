@@ -250,6 +250,7 @@ const (
 	aTypeAssert
 	aXor
 	aXorAssign
+	aMax
 )
 
 var actions = [...]string{
