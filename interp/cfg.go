@@ -520,6 +520,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					}
 				}
 				n.findex = dest.findex
+				n.level = dest.level
 
 				// Propagate type
 				// TODO: Check that existing destination type matches source type
@@ -749,6 +750,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				dest := n.anc.child[childPos(n)-n.anc.nright]
 				n.typ = dest.typ
 				n.findex = dest.findex
+				n.level = dest.level
 			case n.anc.kind == returnStmt:
 				// To avoid a copy in frame, if the result is to be returned, store it directly
 				// at the frame location reserved for output arguments.
@@ -804,6 +806,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			if len(n.child) > 0 {
 				l := n.lastChild()
 				n.findex = l.findex
+				n.level = l.level
 				n.val = l.val
 				n.sym = l.sym
 				n.typ = l.typ
@@ -818,6 +821,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			wireChild(n)
 			l := n.lastChild()
 			n.findex = l.findex
+			n.level = l.level
 			n.val = l.val
 			n.sym = l.sym
 			n.typ = l.typ
@@ -884,6 +888,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.gen = nop
 					n.typ = n.child[1].typ
 					n.findex = n.child[1].findex
+					n.level = n.child[1].level
 					n.val = n.child[1].val
 					n.rval = n.child[1].rval
 				} else {
@@ -1278,6 +1283,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			wireChild(n)
 			c := n.lastChild()
 			n.findex = c.findex
+			n.level = c.level
 			n.typ = c.typ
 			n.rval = c.rval
 
@@ -1744,6 +1750,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				dest := n.anc.child[childPos(n)-n.anc.nright]
 				n.typ = dest.typ
 				n.findex = dest.findex
+				n.level = dest.level
 			case n.anc.kind == returnStmt:
 				pos := childPos(n)
 				n.typ = sc.def.typ.ret[pos]
