@@ -5,7 +5,6 @@
 package stdlib
 
 import (
-	"fmt"
 	"go/constant"
 	"go/token"
 	"image/jpeg"
@@ -33,12 +32,9 @@ func init() {
 
 // _image_jpeg_Reader is an interface wrapper for Reader type
 type _image_jpeg_Reader struct {
-	Val       interface{}
 	WRead     func(p []byte) (n int, err error)
 	WReadByte func() (byte, error)
 }
-
-func (W _image_jpeg_Reader) String() string { return fmt.Sprint(W.Val) }
 
 func (W _image_jpeg_Reader) Read(p []byte) (n int, err error) { return W.WRead(p) }
 func (W _image_jpeg_Reader) ReadByte() (byte, error)          { return W.WReadByte() }

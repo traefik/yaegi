@@ -5,7 +5,6 @@
 package stdlib
 
 import (
-	"fmt"
 	"go/constant"
 	"go/token"
 	"net"
@@ -127,7 +126,6 @@ func init() {
 
 // _net_Addr is an interface wrapper for Addr type
 type _net_Addr struct {
-	Val      interface{}
 	WNetwork func() string
 	WString  func() string
 }
@@ -137,7 +135,6 @@ func (W _net_Addr) String() string  { return W.WString() }
 
 // _net_Conn is an interface wrapper for Conn type
 type _net_Conn struct {
-	Val               interface{}
 	WClose            func() error
 	WLocalAddr        func() net.Addr
 	WRead             func(b []byte) (n int, err error)
@@ -147,8 +144,6 @@ type _net_Conn struct {
 	WSetWriteDeadline func(t time.Time) error
 	WWrite            func(b []byte) (n int, err error)
 }
-
-func (W _net_Conn) String() string { return fmt.Sprint(W.Val) }
 
 func (W _net_Conn) Close() error                       { return W.WClose() }
 func (W _net_Conn) LocalAddr() net.Addr                { return W.WLocalAddr() }
@@ -161,13 +156,10 @@ func (W _net_Conn) Write(b []byte) (n int, err error)  { return W.WWrite(b) }
 
 // _net_Error is an interface wrapper for Error type
 type _net_Error struct {
-	Val        interface{}
 	WError     func() string
 	WTemporary func() bool
 	WTimeout   func() bool
 }
-
-func (W _net_Error) String() string { return fmt.Sprint(W.Val) }
 
 func (W _net_Error) Error() string   { return W.WError() }
 func (W _net_Error) Temporary() bool { return W.WTemporary() }
@@ -175,13 +167,10 @@ func (W _net_Error) Timeout() bool   { return W.WTimeout() }
 
 // _net_Listener is an interface wrapper for Listener type
 type _net_Listener struct {
-	Val     interface{}
 	WAccept func() (net.Conn, error)
 	WAddr   func() net.Addr
 	WClose  func() error
 }
-
-func (W _net_Listener) String() string { return fmt.Sprint(W.Val) }
 
 func (W _net_Listener) Accept() (net.Conn, error) { return W.WAccept() }
 func (W _net_Listener) Addr() net.Addr            { return W.WAddr() }
@@ -189,7 +178,6 @@ func (W _net_Listener) Close() error              { return W.WClose() }
 
 // _net_PacketConn is an interface wrapper for PacketConn type
 type _net_PacketConn struct {
-	Val               interface{}
 	WClose            func() error
 	WLocalAddr        func() net.Addr
 	WReadFrom         func(p []byte) (n int, addr net.Addr, err error)
@@ -198,8 +186,6 @@ type _net_PacketConn struct {
 	WSetWriteDeadline func(t time.Time) error
 	WWriteTo          func(p []byte, addr net.Addr) (n int, err error)
 }
-
-func (W _net_PacketConn) String() string { return fmt.Sprint(W.Val) }
 
 func (W _net_PacketConn) Close() error                                        { return W.WClose() }
 func (W _net_PacketConn) LocalAddr() net.Addr                                 { return W.WLocalAddr() }

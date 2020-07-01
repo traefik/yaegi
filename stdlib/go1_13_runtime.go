@@ -5,7 +5,6 @@
 package stdlib
 
 import (
-	"fmt"
 	"reflect"
 	"runtime"
 )
@@ -69,12 +68,9 @@ func init() {
 
 // _runtime_Error is an interface wrapper for Error type
 type _runtime_Error struct {
-	Val           interface{}
 	WError        func() string
 	WRuntimeError func()
 }
-
-func (W _runtime_Error) String() string { return fmt.Sprint(W.Val) }
 
 func (W _runtime_Error) Error() string { return W.WError() }
 func (W _runtime_Error) RuntimeError() { W.WRuntimeError() }

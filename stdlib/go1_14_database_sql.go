@@ -6,7 +6,6 @@ package stdlib
 
 import (
 	"database/sql"
-	"fmt"
 	"reflect"
 )
 
@@ -61,22 +60,16 @@ func init() {
 
 // _database_sql_Result is an interface wrapper for Result type
 type _database_sql_Result struct {
-	Val           interface{}
 	WLastInsertId func() (int64, error)
 	WRowsAffected func() (int64, error)
 }
-
-func (W _database_sql_Result) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_Result) LastInsertId() (int64, error) { return W.WLastInsertId() }
 func (W _database_sql_Result) RowsAffected() (int64, error) { return W.WRowsAffected() }
 
 // _database_sql_Scanner is an interface wrapper for Scanner type
 type _database_sql_Scanner struct {
-	Val   interface{}
 	WScan func(src interface{}) error
 }
-
-func (W _database_sql_Scanner) String() string { return fmt.Sprint(W.Val) }
 
 func (W _database_sql_Scanner) Scan(src interface{}) error { return W.WScan(src) }
