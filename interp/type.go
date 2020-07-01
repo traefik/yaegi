@@ -1255,6 +1255,8 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 	if t.val != nil && defined[t.val.path+"/"+t.val.name] != nil && t.val.rtype == nil {
 		// Replace reference to self (direct or indirect) by an interface{} to handle
 		// recursive types with reflect.
+		typ := *t.val
+		t.val = &typ
 		t.val.rtype = interf
 		recursive = true
 	}
