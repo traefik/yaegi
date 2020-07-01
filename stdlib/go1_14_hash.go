@@ -5,7 +5,6 @@
 package stdlib
 
 import (
-	"fmt"
 	"hash"
 	"reflect"
 )
@@ -26,15 +25,12 @@ func init() {
 
 // _hash_Hash is an interface wrapper for Hash type
 type _hash_Hash struct {
-	Val        interface{}
 	WBlockSize func() int
 	WReset     func()
 	WSize      func() int
 	WSum       func(b []byte) []byte
 	WWrite     func(p []byte) (n int, err error)
 }
-
-func (W _hash_Hash) String() string { return fmt.Sprint(W.Val) }
 
 func (W _hash_Hash) BlockSize() int                    { return W.WBlockSize() }
 func (W _hash_Hash) Reset()                            { W.WReset() }
@@ -44,7 +40,6 @@ func (W _hash_Hash) Write(p []byte) (n int, err error) { return W.WWrite(p) }
 
 // _hash_Hash32 is an interface wrapper for Hash32 type
 type _hash_Hash32 struct {
-	Val        interface{}
 	WBlockSize func() int
 	WReset     func()
 	WSize      func() int
@@ -52,8 +47,6 @@ type _hash_Hash32 struct {
 	WSum32     func() uint32
 	WWrite     func(p []byte) (n int, err error)
 }
-
-func (W _hash_Hash32) String() string { return fmt.Sprint(W.Val) }
 
 func (W _hash_Hash32) BlockSize() int                    { return W.WBlockSize() }
 func (W _hash_Hash32) Reset()                            { W.WReset() }
@@ -64,7 +57,6 @@ func (W _hash_Hash32) Write(p []byte) (n int, err error) { return W.WWrite(p) }
 
 // _hash_Hash64 is an interface wrapper for Hash64 type
 type _hash_Hash64 struct {
-	Val        interface{}
 	WBlockSize func() int
 	WReset     func()
 	WSize      func() int
@@ -72,8 +64,6 @@ type _hash_Hash64 struct {
 	WSum64     func() uint64
 	WWrite     func(p []byte) (n int, err error)
 }
-
-func (W _hash_Hash64) String() string { return fmt.Sprint(W.Val) }
 
 func (W _hash_Hash64) BlockSize() int                    { return W.WBlockSize() }
 func (W _hash_Hash64) Reset()                            { W.WReset() }

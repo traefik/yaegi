@@ -5,7 +5,6 @@
 package stdlib
 
 import (
-	"fmt"
 	"net/smtp"
 	"reflect"
 )
@@ -31,12 +30,9 @@ func init() {
 
 // _net_smtp_Auth is an interface wrapper for Auth type
 type _net_smtp_Auth struct {
-	Val    interface{}
 	WNext  func(fromServer []byte, more bool) (toServer []byte, err error)
 	WStart func(server *smtp.ServerInfo) (proto string, toServer []byte, err error)
 }
-
-func (W _net_smtp_Auth) String() string { return fmt.Sprint(W.Val) }
 
 func (W _net_smtp_Auth) Next(fromServer []byte, more bool) (toServer []byte, err error) {
 	return W.WNext(fromServer, more)

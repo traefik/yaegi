@@ -88,14 +88,10 @@ func init() {
 {{range $key, $value := .Wrap -}}
 	// {{$value.Name}} is an interface wrapper for {{$key}} type
 	type {{$value.Name}} struct {
-		Val interface{}
 		{{range $m := $value.Method -}}
 		W{{$m.Name}} func{{$m.Param}} {{$m.Result}}
 		{{end}}
 	}
-	{{- if $value.NeedString}}
-	func (W {{$value.Name}}) String() string { return fmt.Sprint(W.Val) }
-	{{end}}
 	{{range $m := $value.Method -}}
 		func (W {{$value.Name}}) {{$m.Name}}{{$m.Param}} {{$m.Result}} { {{$m.Ret}} W.W{{$m.Name}}{{$m.Arg}} }
 	{{end}}
@@ -115,9 +111,8 @@ type Method struct {
 
 // Wrap store information for generating interface wrapper.
 type Wrap struct {
-	Name       string
-	NeedString bool
-	Method     []Method
+	Name   string
+	Method []Method
 }
 
 func genContent(dest, pkgName, license string, skip map[string]bool) ([]byte, error) {
@@ -172,7 +167,6 @@ func genContent(dest, pkgName, license string, skip map[string]bool) ([]byte, er
 			typ[name] = pname
 			if t, ok := o.Type().Underlying().(*types.Interface); ok {
 				var methods []Method
-				needString := true
 				for i := 0; i < t.NumMethods(); i++ {
 					f := t.Method(i)
 					if !f.Exported() {
@@ -203,15 +197,10 @@ func genContent(dest, pkgName, license string, skip map[string]bool) ([]byte, er
 					if sign.Results().Len() > 0 {
 						ret = "return"
 					}
-					if f.Name() == "String" {
-						needString = false
-					}
+
 					methods = append(methods, Method{f.Name(), param, result, arg, ret})
 				}
-				if needString {
-					imports["fmt"] = true
-				}
-				wrap[name] = Wrap{prefix + name, needString, methods}
+				wrap[name] = Wrap{prefix + name, methods}
 			}
 		}
 	}

@@ -6,7 +6,6 @@ package stdlib
 
 import (
 	"crypto/cipher"
-	"fmt"
 	"reflect"
 )
 
@@ -41,14 +40,11 @@ func init() {
 
 // _crypto_cipher_AEAD is an interface wrapper for AEAD type
 type _crypto_cipher_AEAD struct {
-	Val        interface{}
 	WNonceSize func() int
 	WOpen      func(dst []byte, nonce []byte, ciphertext []byte, additionalData []byte) ([]byte, error)
 	WOverhead  func() int
 	WSeal      func(dst []byte, nonce []byte, plaintext []byte, additionalData []byte) []byte
 }
-
-func (W _crypto_cipher_AEAD) String() string { return fmt.Sprint(W.Val) }
 
 func (W _crypto_cipher_AEAD) NonceSize() int { return W.WNonceSize() }
 func (W _crypto_cipher_AEAD) Open(dst []byte, nonce []byte, ciphertext []byte, additionalData []byte) ([]byte, error) {
@@ -61,13 +57,10 @@ func (W _crypto_cipher_AEAD) Seal(dst []byte, nonce []byte, plaintext []byte, ad
 
 // _crypto_cipher_Block is an interface wrapper for Block type
 type _crypto_cipher_Block struct {
-	Val        interface{}
 	WBlockSize func() int
 	WDecrypt   func(dst []byte, src []byte)
 	WEncrypt   func(dst []byte, src []byte)
 }
-
-func (W _crypto_cipher_Block) String() string { return fmt.Sprint(W.Val) }
 
 func (W _crypto_cipher_Block) BlockSize() int                 { return W.WBlockSize() }
 func (W _crypto_cipher_Block) Decrypt(dst []byte, src []byte) { W.WDecrypt(dst, src) }
@@ -75,22 +68,16 @@ func (W _crypto_cipher_Block) Encrypt(dst []byte, src []byte) { W.WEncrypt(dst, 
 
 // _crypto_cipher_BlockMode is an interface wrapper for BlockMode type
 type _crypto_cipher_BlockMode struct {
-	Val          interface{}
 	WBlockSize   func() int
 	WCryptBlocks func(dst []byte, src []byte)
 }
-
-func (W _crypto_cipher_BlockMode) String() string { return fmt.Sprint(W.Val) }
 
 func (W _crypto_cipher_BlockMode) BlockSize() int                     { return W.WBlockSize() }
 func (W _crypto_cipher_BlockMode) CryptBlocks(dst []byte, src []byte) { W.WCryptBlocks(dst, src) }
 
 // _crypto_cipher_Stream is an interface wrapper for Stream type
 type _crypto_cipher_Stream struct {
-	Val           interface{}
 	WXORKeyStream func(dst []byte, src []byte)
 }
-
-func (W _crypto_cipher_Stream) String() string { return fmt.Sprint(W.Val) }
 
 func (W _crypto_cipher_Stream) XORKeyStream(dst []byte, src []byte) { W.WXORKeyStream(dst, src) }

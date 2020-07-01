@@ -5,7 +5,6 @@
 package stdlib
 
 import (
-	"fmt"
 	"reflect"
 	"sort"
 )
@@ -44,13 +43,10 @@ func init() {
 
 // _sort_Interface is an interface wrapper for Interface type
 type _sort_Interface struct {
-	Val   interface{}
 	WLen  func() int
 	WLess func(i int, j int) bool
 	WSwap func(i int, j int)
 }
-
-func (W _sort_Interface) String() string { return fmt.Sprint(W.Val) }
 
 func (W _sort_Interface) Len() int               { return W.WLen() }
 func (W _sort_Interface) Less(i int, j int) bool { return W.WLess(i, j) }

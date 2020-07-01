@@ -6,7 +6,6 @@ package stdlib
 
 import (
 	"compress/zlib"
-	"fmt"
 	"go/constant"
 	"go/token"
 	"io"
@@ -41,10 +40,7 @@ func init() {
 
 // _compress_zlib_Resetter is an interface wrapper for Resetter type
 type _compress_zlib_Resetter struct {
-	Val    interface{}
 	WReset func(r io.Reader, dict []byte) error
 }
-
-func (W _compress_zlib_Resetter) String() string { return fmt.Sprint(W.Val) }
 
 func (W _compress_zlib_Resetter) Reset(r io.Reader, dict []byte) error { return W.WReset(r, dict) }

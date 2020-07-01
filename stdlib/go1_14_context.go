@@ -6,7 +6,6 @@ package stdlib
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"time"
 )
@@ -34,14 +33,11 @@ func init() {
 
 // _context_Context is an interface wrapper for Context type
 type _context_Context struct {
-	Val       interface{}
 	WDeadline func() (deadline time.Time, ok bool)
 	WDone     func() <-chan struct{}
 	WErr      func() error
 	WValue    func(key interface{}) interface{}
 }
-
-func (W _context_Context) String() string { return fmt.Sprint(W.Val) }
 
 func (W _context_Context) Deadline() (deadline time.Time, ok bool) { return W.WDeadline() }
 func (W _context_Context) Done() <-chan struct{}                   { return W.WDone() }

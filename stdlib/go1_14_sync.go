@@ -5,7 +5,6 @@
 package stdlib
 
 import (
-	"fmt"
 	"reflect"
 	"sync"
 )
@@ -32,12 +31,9 @@ func init() {
 
 // _sync_Locker is an interface wrapper for Locker type
 type _sync_Locker struct {
-	Val     interface{}
 	WLock   func()
 	WUnlock func()
 }
-
-func (W _sync_Locker) String() string { return fmt.Sprint(W.Val) }
 
 func (W _sync_Locker) Lock()   { W.WLock() }
 func (W _sync_Locker) Unlock() { W.WUnlock() }

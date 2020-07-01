@@ -91,7 +91,6 @@ func init() {
 
 // _reflect_Type is an interface wrapper for Type type
 type _reflect_Type struct {
-	Val              interface{}
 	WAlign           func() int
 	WAssignableTo    func(u reflect.Type) bool
 	WBits            func() int

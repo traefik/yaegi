@@ -271,7 +271,6 @@ func init() {
 
 // _debug_dwarf_Type is an interface wrapper for Type type
 type _debug_dwarf_Type struct {
-	Val     interface{}
 	WCommon func() *dwarf.CommonType
 	WSize   func() int64
 	WString func() string
