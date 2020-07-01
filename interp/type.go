@@ -1241,6 +1241,10 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 			// a node can still point to a previous copy.
 			st.typ.recursive = st.typ.recursive || st.typ.isRecursive()
 			recursive = st.typ.isRecursive()
+			// It is possible that t.recursive is not inline with st.typ.recursive
+			// which will break recursion detection. Set it here to make sure it
+			// is correct.
+			t.recursive = recursive
 		}
 	}
 	if wrapRecursive && t.recursive {
@@ -1252,7 +1256,7 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 	if defined[name] != nil && defined[name].rtype != nil {
 		return defined[name].rtype
 	}
-	if t.val != nil && defined[t.val.path+"/"+t.val.name] != nil && t.val.rtype == nil {
+	if t.val != nil && t.val.cat == structT && t.val.rtype == nil && hasRecursiveStruct(t.val, defined) {
 		// Replace reference to self (direct or indirect) by an interface{} to handle
 		// recursive types with reflect.
 		typ := *t.val
@@ -1357,6 +1361,34 @@ func (t *itype) implements(it *itype) bool {
 		return t.TypeOf().Implements(it.TypeOf())
 	}
 	return t.methods().contains(it.methods())
+}
+
+// hasRecursiveStruct determines if a struct is a recursion or a recursion
+// intermediate. A recursion intermediate is a struct that contains a recursive
+// struct.
+func hasRecursiveStruct(t *itype, defined map[string]*itype) bool {
+	if len(defined) == 0 {
+		return false
+	}
+
+	typ := t
+	for typ != nil {
+		if typ.cat != structT {
+			typ = typ.val
+			continue
+		}
+
+		if defined[typ.path+"/"+typ.name] != nil {
+			return true
+		}
+		for _, f := range typ.field {
+			if hasRecursiveStruct(f.typ, defined) {
+				return true
+			}
+		}
+		return false
+	}
+	return false
 }
 
 var errType = reflect.TypeOf((*error)(nil)).Elem()
