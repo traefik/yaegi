@@ -1,15 +1,23 @@
 package main
 
+import (
+	"encoding/json"
+	"os"
+)
+
 type S struct {
-	Child []*S
 	Name  string
+	Child []*S
 }
 
 func main() {
-	s := &S{Name: "root"}
-	s.Child = append(s.Child, &S{Name: "child"})
-	println(s.Child[0].Name)
+	a := S{Name: "hello"}
+	a.Child = append(a.Child, &S{Name: "world"})
+	json.NewEncoder(os.Stdout).Encode(a)
+	a.Child[0].Child = append([]*S{}, &S{Name: "sunshine"})
+	json.NewEncoder(os.Stdout).Encode(a)
 }
 
 // Output:
-// child
+// {"Name":"hello","Child":[{"Name":"world","Child":null}]}
+// {"Name":"hello","Child":[{"Name":"world","Child":[{"Name":"sunshine","Child":null}]}]}
