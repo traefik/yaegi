@@ -7,6 +7,7 @@ import (
 	"go/constant"
 	"log"
 	"reflect"
+	"unsafe"
 )
 
 // bltn type defines functions which run at CFG execution.
@@ -351,14 +352,16 @@ func convert(n *node) {
 	}
 }
 
-func isRecursiveStruct(t *itype, rtype reflect.Type) bool {
+func isRecursiveType(t *itype, rtype reflect.Type) bool {
 	if t.cat == structT && rtype.Kind() == reflect.Interface {
 		return true
 	}
-	if t.cat == ptrT && t.rtype != nil {
-		return isRecursiveStruct(t.val, t.rtype.Elem())
+	switch t.cat {
+	case ptrT, arrayT, mapT:
+		return isRecursiveType(t.val, t.val.rtype)
+	default:
+		return false
 	}
-	return false
 }
 
 func assign(n *node) {
@@ -387,8 +390,10 @@ func assign(n *node) {
 		case src.kind == basicLit && src.val == nil:
 			t := dest.typ.TypeOf()
 			svalue[i] = func(*frame) reflect.Value { return reflect.New(t).Elem() }
-		case isRecursiveStruct(dest.typ, dest.typ.rtype):
-			svalue[i] = genValueInterfacePtr(src)
+		case isRecursiveType(dest.typ, dest.typ.rtype):
+			svalue[i] = genValueRecursiveInterface(src, dest.typ.rtype)
+		case isRecursiveType(src.typ, src.typ.rtype):
+			svalue[i] = genValueRecursiveInterfacePtrValue(src)
 		case src.typ.untyped && isComplex(dest.typ.TypeOf()):
 			svalue[i] = genValueComplex(src)
 		case src.typ.untyped && !dest.typ.untyped:
@@ -764,7 +769,7 @@ func call(n *node) {
 	var values []func(*frame) reflect.Value
 	if n.child[0].recv != nil {
 		// Compute method receiver value.
-		if isRecursiveStruct(n.child[0].recv.node.typ, n.child[0].recv.node.typ.rtype) {
+		if isRecursiveType(n.child[0].recv.node.typ, n.child[0].recv.node.typ.rtype) {
 			values = append(values, genValueRecvInterfacePtr(n.child[0]))
 		} else {
 			values = append(values, genValueRecv(n.child[0]))
@@ -810,8 +815,8 @@ func call(n *node) {
 			switch {
 			case len(n.child[0].typ.arg) > i && n.child[0].typ.arg[i].cat == interfaceT:
 				values = append(values, genValueInterface(c))
-			case isRecursiveStruct(c.typ, c.typ.rtype):
-				values = append(values, genValueDerefInterfacePtr(c))
+			case isRecursiveType(c.typ, c.typ.rtype):
+				values = append(values, genValueRecursiveInterfacePtrValue(c))
 			default:
 				values = append(values, genValue(c))
 			}
@@ -1525,7 +1530,11 @@ func getIndexSeq(n *node) {
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
-			r := value(f).FieldByIndex(index)
+			v := value(f)
+			if v.Type().Kind() == reflect.Interface && n.child[0].typ.recursive {
+				v = writableDeref(v)
+			}
+			r := v.FieldByIndex(index)
 			getFrame(f, l).data[i] = r
 			if r.Bool() {
 				return tnext
@@ -1534,17 +1543,29 @@ func getIndexSeq(n *node) {
 		}
 	} else {
 		n.exec = func(f *frame) bltn {
-			getFrame(f, l).data[i] = value(f).FieldByIndex(index)
+			v := value(f)
+			if v.Type().Kind() == reflect.Interface && n.child[0].typ.recursive {
+				v = writableDeref(v)
+			}
+			getFrame(f, l).data[i] = v.FieldByIndex(index)
 			return tnext
 		}
 	}
+}
+
+//go:nocheckptr
+func writableDeref(v reflect.Value) reflect.Value {
+	// Here we have an interface to a struct. Any attempt to dereference it will
+	// make a copy of the struct. We need to get a Value to the actual struct.
+	// TODO: using unsafe is a temporary measure. Rethink this.
+	return reflect.NewAt(v.Elem().Type(), unsafe.Pointer(v.InterfaceData()[1])).Elem() //nolint:govet
 }
 
 func getPtrIndexSeq(n *node) {
 	index := n.val.([]int)
 	tnext := getExec(n.tnext)
 	var value func(*frame) reflect.Value
-	if isRecursiveStruct(n.child[0].typ, n.child[0].typ.rtype) {
+	if isRecursiveType(n.child[0].typ, n.child[0].typ.rtype) {
 		v := genValue(n.child[0])
 		value = func(f *frame) reflect.Value { return v(f).Elem().Elem() }
 	} else {
@@ -2069,8 +2090,8 @@ func doCompositeSparse(n *node, hasType bool) {
 		switch {
 		case c1.typ.cat == funcT:
 			values[field] = genFunctionWrapper(c1)
-		case isRecursiveStruct(n.typ.field[field].typ, n.typ.field[field].typ.rtype):
-			values[field] = genValueInterfacePtr(c1)
+		case isRecursiveType(n.typ.field[field].typ, n.typ.field[field].typ.rtype):
+			values[field] = genValueRecursiveInterface(c1, n.typ.field[field].typ.rtype)
 		default:
 			values[field] = genValue(c1)
 		}
@@ -2372,8 +2393,8 @@ func _append(n *node) {
 			switch {
 			case n.typ.val.cat == interfaceT:
 				values[i] = genValueInterface(arg)
-			case isRecursiveStruct(n.typ.val, n.typ.val.rtype):
-				values[i] = genValueInterfacePtr(arg)
+			case isRecursiveType(n.typ.val, n.typ.val.rtype):
+				values[i] = genValueRecursiveInterface(arg, n.typ.val.rtype)
 			case arg.typ.untyped:
 				values[i] = genValueAs(arg, n.child[1].typ.TypeOf().Elem())
 			default:
@@ -2394,8 +2415,8 @@ func _append(n *node) {
 		switch {
 		case n.typ.val.cat == interfaceT:
 			value0 = genValueInterface(n.child[2])
-		case isRecursiveStruct(n.typ.val, n.typ.val.rtype):
-			value0 = genValueInterfacePtr(n.child[2])
+		case isRecursiveType(n.typ.val, n.typ.val.rtype):
+			value0 = genValueRecursiveInterface(n.child[2], n.typ.val.rtype)
 		case n.child[2].typ.untyped:
 			value0 = genValueAs(n.child[2], n.child[1].typ.TypeOf().Elem())
 		default:
