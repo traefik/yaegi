@@ -1,20 +1,23 @@
 package main
 
-import "fmt"
+import (
+	"encoding/json"
+	"os"
+)
 
 type Node struct {
 	Name  string
-	Child [2]Node
+	Child [2]*Node
 }
 
 func main() {
 	a := Node{Name: "hello"}
-	a.Child[0] = Node{Name: "world"}
-	fmt.Println(a)
-	a.Child[0].Child[0] = Node{Name: "sunshine"}
-	fmt.Println(a)
+	a.Child[0] = &Node{Name: "world"}
+	json.NewEncoder(os.Stdout).Encode(a)
+	a.Child[0].Child[0] = &Node{Name: "sunshine"}
+	json.NewEncoder(os.Stdout).Encode(a)
 }
 
 // Output:
-// {hello [{world [<nil> <nil>]} <nil>]}
-// {hello [{world [{sunshine [<nil> <nil>]} <nil>]} <nil>]}
+// {"Name":"hello","Child":[{"Name":"world","Child":[null,null]},null]}
+// {"Name":"hello","Child":[{"Name":"world","Child":[{"Name":"sunshine","Child":[null,null]},null]},null]}
