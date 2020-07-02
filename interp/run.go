@@ -1482,7 +1482,6 @@ func getMethodByName(n *node) {
 	}
 }
 
-//go:nocheckptr
 func getIndexSeq(n *node) {
 	value := genValue(n.child[0])
 	index := n.val.([]int)
@@ -1504,10 +1503,7 @@ func getIndexSeq(n *node) {
 		n.exec = func(f *frame) bltn {
 			v := value(f)
 			if v.Type().Kind() == reflect.Interface && n.child[0].typ.recursive {
-				// Here we have an interface to a struct. Any attempt to dereference it will
-				// make a copy of the struct. We need to get a Value to the actual struct.
-				// TODO: using unsafe is a temporary measure. Rethink this.
-				v = reflect.NewAt(v.Elem().Type(), unsafe.Pointer(v.InterfaceData()[1])).Elem() //nolint:govet
+				v = writableDeref(v)
 			}
 			f.data[i] = v.FieldByIndex(index)
 			if f.data[i].Bool() {
@@ -1519,15 +1515,20 @@ func getIndexSeq(n *node) {
 		n.exec = func(f *frame) bltn {
 			v := value(f)
 			if v.Type().Kind() == reflect.Interface && n.child[0].typ.recursive {
-				// Here we have an interface to a struct. Any attempt to dereference it will
-				// make a copy of the struct. We need to get a Value to the actual struct.
-				// TODO: using unsafe is a temporary measure. Rethink this.
-				v = reflect.NewAt(v.Elem().Type(), unsafe.Pointer(v.InterfaceData()[1])).Elem() //nolint:govet
+				v = writableDeref(v)
 			}
 			f.data[i] = v.FieldByIndex(index)
 			return tnext
 		}
 	}
+}
+
+//go:nocheckptr
+func writableDeref(v reflect.Value) reflect.Value {
+	// Here we have an interface to a struct. Any attempt to dereference it will
+	// make a copy of the struct. We need to get a Value to the actual struct.
+	// TODO: using unsafe is a temporary measure. Rethink this.
+	return reflect.NewAt(v.Elem().Type(), unsafe.Pointer(v.InterfaceData()[1])).Elem() //nolint:govet
 }
 
 func getPtrIndexSeq(n *node) {
