@@ -4,17 +4,19 @@ type S struct {
 	ts map[string][]*T
 }
 
-func (c *S) getT(addr string) *T {
-	cns, ok := c.ts[addr]
-	if !ok || len(cns) == 0 {
-		return nil
-	}
-
-	return cns[0]
-}
-
 type T struct {
 	s *S
+}
+
+func (c *S) getT(addr string) (t *T, ok bool) {
+	cns, ok := c.ts[addr]
+	if !ok || len(cns) == 0 {
+		return nil, false
+	}
+
+	t = cns[len(cns)-1]
+	c.ts[addr] = cns[:len(cns)-1]
+	return t, true
 }
 
 func main() {
@@ -23,9 +25,9 @@ func main() {
 	}
 	s.ts["test"] = append(s.ts["test"], &T{s: s})
 
-	t := s.getT("test")
-	println(t != nil)
+	t , ok:= s.getT("test")
+	println(t != nil, ok)
 }
 
 // Output:
-// true
+// true true

@@ -392,6 +392,8 @@ func assign(n *node) {
 			svalue[i] = func(*frame) reflect.Value { return reflect.New(t).Elem() }
 		case isRecursiveType(dest.typ, dest.typ.rtype):
 			svalue[i] = genValueRecursiveInterface(src, dest.typ.rtype)
+		case isRecursiveType(src.typ, src.typ.rtype):
+			svalue[i] = genValueRecursiveInterfacePtrValue(src)
 		case src.typ.untyped && isComplex(dest.typ.TypeOf()):
 			svalue[i] = genValueComplex(src)
 		case src.typ.untyped && !dest.typ.untyped:
