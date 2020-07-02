@@ -182,16 +182,6 @@ func genValueInterfaceArray(n *node) func(*frame) reflect.Value {
 	}
 }
 
-func genValueInterfacePtr(n *node) func(*frame) reflect.Value {
-	value := genValue(n)
-
-	return func(f *frame) reflect.Value {
-		v := reflect.New(interf).Elem()
-		v.Set(value(f))
-		return v.Addr()
-	}
-}
-
 func genValueInterface(n *node) func(*frame) reflect.Value {
 	value := genValue(n)
 
@@ -266,6 +256,51 @@ func genValueNode(n *node) func(*frame) reflect.Value {
 
 	return func(f *frame) reflect.Value {
 		return reflect.ValueOf(&node{rval: value(f)})
+	}
+}
+
+func genValueRecursiveInterface(n *node, t reflect.Type) func(*frame) reflect.Value {
+	value := genValue(n)
+
+	return func(f *frame) reflect.Value {
+		vv := value(f)
+		v := reflect.New(t).Elem()
+		toRecursive(v, vv)
+		return v
+	}
+}
+
+func toRecursive(dest, src reflect.Value) {
+	if !src.IsValid() {
+		return
+	}
+
+	switch dest.Kind() {
+	case reflect.Map:
+		v := reflect.MakeMapWithSize(dest.Type(), src.Len())
+		for _, kv := range src.MapKeys() {
+			vv := reflect.New(dest.Type().Elem()).Elem()
+			toRecursive(vv, src.MapIndex(kv))
+			vv.SetMapIndex(kv, vv)
+		}
+		dest.Set(v)
+	case reflect.Slice:
+		l := src.Len()
+		v := reflect.MakeSlice(dest.Type(), l, l)
+		for i := 0; i < l; i++ {
+			toRecursive(v.Index(i), src.Index(i))
+		}
+		dest.Set(v)
+	case reflect.Ptr:
+		v := reflect.New(dest.Type().Elem()).Elem()
+		s := src
+		if s.Elem().Kind() != reflect.Struct { // In the case of *interface{}, we want *struct{}
+			s = s.Elem()
+		}
+		toRecursive(v, s)
+		dest.Set(v.Addr())
+	default:
+		dest.Set(src)
 	}
 }
 
