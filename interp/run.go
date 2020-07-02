@@ -1482,6 +1482,7 @@ func getMethodByName(n *node) {
 	}
 }
 
+//go:nocheckptr
 func getIndexSeq(n *node) {
 	value := genValue(n.child[0])
 	index := n.val.([]int)
