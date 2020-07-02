@@ -35,6 +35,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 		if filepath.Ext(file.Name()) != ".go" ||
 			file.Name() == "assign11.go" || // expect error
 			file.Name() == "assign12.go" || // expect error
+			file.Name() == "assign15.go" || // expect error
 			file.Name() == "bad0.go" || // expect error
 			file.Name() == "const9.go" || // expect error
 			file.Name() == "export1.go" || // non-main package

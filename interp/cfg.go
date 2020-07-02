@@ -518,6 +518,22 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 						err = src.cfgErrorf("invalid float truncate")
 						return
 					}
+
+					// TODO: Rudimentary type check at this point,
+					// improvements need to be made to make it better.
+					switch {
+					case dest.typ.untyped || src.typ.untyped:
+						// Both side of the assignment must be typed.
+					case isRecursiveField(dest):
+						// Recursive fields cannot be type checked.
+					case t0.Kind() == reflect.Interface || t0.Kind() == reflect.Func:
+						// We have no way of checking interfaces and functions.
+					case t1.AssignableTo(t0):
+						// All is well when they are assignable.
+					default:
+						err = src.cfgErrorf("cannot use type %s as type %s in assignment", src.typ.id(), dest.typ.id())
+						return
+					}
 				}
 				n.findex = dest.findex
 				n.level = dest.level
@@ -1157,6 +1173,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				case n.ident == "iota":
 					n.rval = reflect.ValueOf(sc.iota)
 					n.kind = basicLit
+					n.typ.untyped = true
 				case n.ident == "nil":
 					n.kind = basicLit
 				case sym.kind == binSym:
