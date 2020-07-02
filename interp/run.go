@@ -2309,8 +2309,13 @@ func _case(n *node) {
 			values[i] = genValue(n.child[i])
 		}
 		n.exec = func(f *frame) bltn {
+			v0 := value(f)
 			for _, v := range values {
-				if value(f).Interface() == v(f).Interface() {
+				v1 := v(f)
+				if !v0.Type().AssignableTo(v1.Type()) {
+					v0 = v0.Convert(v1.Type())
+				}
+				if v0.Interface() == v1.Interface() {
 					return tnext
 				}
 			}
