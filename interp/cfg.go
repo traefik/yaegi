@@ -524,8 +524,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					switch {
 					case dest.typ.untyped || src.typ.untyped:
 						// Both side of the assignment must be typed.
-					case isRecursiveField(dest):
-						// Recursive fields cannot be type checked.
+					case isRecursiveType(dest.typ, dest.typ.rtype) || isRecursiveType(src.typ, src.typ.rtype):
+						// Recursive types cannot be type checked.
 					case t0.Kind() == reflect.Interface || t0.Kind() == reflect.Func:
 						// We have no way of checking interfaces and functions.
 					case t1.AssignableTo(t0):
