@@ -1013,7 +1013,11 @@ func (t *itype) id() (res string) {
 	case arrayT:
 		res = "[" + strconv.Itoa(t.size) + "]" + t.val.id()
 	case chanT:
-		res = "<-" + t.val.id()
+		res = "chan " + t.val.id()
+	case chanSendT:
+		res = "chan<- " + t.val.id()
+	case chanRecvT:
+		res = "<-chan " + t.val.id()
 	case funcT:
 		res = "func("
 		for _, t := range t.arg {
