@@ -392,7 +392,7 @@ func TestEvalFunctionCallWithFunctionParam(t *testing.T) {
 	`)
 
 	v := eval(t, i, "Bar")
-	bar := v.Interface().(func(string, func(string)string) string)
+	bar := v.Interface().(func(string, func(string) string) string)
 
 	got := bar("hello ", func(s string) string {
 		return s + "world!"
