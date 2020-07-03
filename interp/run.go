@@ -510,19 +510,21 @@ func deref(n *node) {
 	value := genValue(n.child[0])
 	tnext := getExec(n.tnext)
 	i := n.findex
+	l := n.level
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
-			f.data[i] = value(f).Elem()
-			if f.data[i].Bool() {
+			r := value(f).Elem()
+			if r.Bool() {
+				getFrame(f, l).data[i] = r
 				return tnext
 			}
 			return fnext
 		}
 	} else {
 		n.exec = func(f *frame) bltn {
-			f.data[i] = value(f).Elem()
+			getFrame(f, l).data[i] = value(f).Elem()
 			return tnext
 		}
 	}
@@ -858,9 +860,10 @@ func call(n *node) {
 		}
 	default:
 		// Multiple return values frame index are indexed from the node frame index.
+		l := n.level
 		for i := range rtypes {
 			j := n.findex + i
-			rvalues[i] = func(f *frame) reflect.Value { return f.data[j] }
+			rvalues[i] = func(f *frame) reflect.Value { return getFrame(f, l).data[j] }
 		}
 	}
 
@@ -1012,6 +1015,21 @@ func pindex(i, variadic int) int {
 	return variadic
 }
 
+func getFrame(f *frame, l int) *frame {
+	switch l {
+	case 0:
+		return f
+	case 1:
+		return f.anc
+	case 2:
+		return f.anc.anc
+	}
+	for ; l > 0; l-- {
+		f = f.anc
+	}
+	return f
+}
+
 // Callbin calls a function from a bin import, accessible through reflect.
 func callBin(n *node) {
 	tnext := getExec(n.tnext)
@@ -1112,6 +1130,7 @@ func callBin(n *node) {
 	case fnext != nil:
 		// Handle branching according to boolean result.
 		index := n.findex
+		level := n.level
 		n.exec = func(f *frame) bltn {
 			in := make([]reflect.Value, l)
 			for i, v := range values {
@@ -1119,7 +1138,7 @@ func callBin(n *node) {
 			}
 			res := callFn(value(f), in)
 			b := res[0].Bool()
-			f.data[index].SetBool(b)
+			getFrame(f, level).data[index].SetBool(b)
 			if b {
 				return tnext
 			}
@@ -1175,7 +1194,7 @@ func callBin(n *node) {
 				}
 				out := callFn(value(f), in)
 				for i := 0; i < len(out); i++ {
-					f.data[n.findex+i].Set(out[i])
+					getFrame(f, n.level).data[n.findex+i].Set(out[i])
 				}
 				return tnext
 			}
@@ -1186,6 +1205,7 @@ func callBin(n *node) {
 func getIndexBinMethod(n *node) {
 	// dest := genValue(n)
 	i := n.findex
+	l := n.level
 	m := n.val.(int)
 	value := genValue(n.child[0])
 	next := getExec(n.tnext)
@@ -1193,20 +1213,21 @@ func getIndexBinMethod(n *node) {
 	n.exec = func(f *frame) bltn {
 		// Can not use .Set() because dest type contains the receiver and source not
 		// dest(f).Set(value(f).Method(m))
-		f.data[i] = value(f).Method(m)
+		getFrame(f, l).data[i] = value(f).Method(m)
 		return next
 	}
 }
 
 func getIndexBinPtrMethod(n *node) {
 	i := n.findex
+	l := n.level
 	m := n.val.(int)
 	value := genValue(n.child[0])
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
 		// Can not use .Set() because dest type contains the receiver and source not
-		f.data[i] = value(f).Addr().Method(m)
+		getFrame(f, l).data[i] = value(f).Addr().Method(m)
 		return next
 	}
 }
@@ -1216,21 +1237,23 @@ func getIndexArray(n *node) {
 	tnext := getExec(n.tnext)
 	value0 := genValueArray(n.child[0]) // array
 	i := n.findex
+	l := n.level
 
 	if n.child[1].rval.IsValid() { // constant array index
 		ai := int(vInt(n.child[1].rval))
 		if n.fnext != nil {
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
-				f.data[i] = value0(f).Index(ai)
-				if f.data[i].Bool() {
+				r := value0(f).Index(ai)
+				getFrame(f, l).data[i] = r
+				if r.Bool() {
 					return tnext
 				}
 				return fnext
 			}
 		} else {
 			n.exec = func(f *frame) bltn {
-				f.data[i] = value0(f).Index(ai)
+				getFrame(f, l).data[i] = value0(f).Index(ai)
 				return tnext
 			}
 		}
@@ -1241,8 +1264,9 @@ func getIndexArray(n *node) {
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
 				_, vi := value1(f)
-				f.data[i] = value0(f).Index(int(vi))
-				if f.data[i].Bool() {
+				r := value0(f).Index(int(vi))
+				getFrame(f, l).data[i] = r
+				if r.Bool() {
 					return tnext
 				}
 				return fnext
@@ -1250,7 +1274,7 @@ func getIndexArray(n *node) {
 		} else {
 			n.exec = func(f *frame) bltn {
 				_, vi := value1(f)
-				f.data[i] = value0(f).Index(int(vi))
+				getFrame(f, l).data[i] = value0(f).Index(int(vi))
 				return tnext
 			}
 		}
@@ -1453,6 +1477,7 @@ func getFunc(n *node) {
 
 func getMethod(n *node) {
 	i := n.findex
+	l := n.level
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
@@ -1461,7 +1486,7 @@ func getMethod(n *node) {
 		nod.val = &nod
 		nod.recv = n.recv
 		nod.frame = fr
-		f.data[i] = reflect.ValueOf(&nod)
+		getFrame(f, l).data[i] = reflect.ValueOf(&nod)
 		return next
 	}
 }
@@ -1471,6 +1496,7 @@ func getMethodByName(n *node) {
 	value0 := genValue(n.child[0])
 	name := n.child[1].ident
 	i := n.findex
+	l := n.level
 
 	n.exec = func(f *frame) bltn {
 		val := value0(f).Interface().(valueInterface)
@@ -1480,7 +1506,7 @@ func getMethodByName(n *node) {
 		nod.val = &nod
 		nod.recv = &receiver{nil, val.value, li}
 		nod.frame = fr
-		f.data[i] = reflect.ValueOf(&nod)
+		getFrame(f, l).data[i] = reflect.ValueOf(&nod)
 		return next
 	}
 }
@@ -1490,6 +1516,7 @@ func getIndexSeq(n *node) {
 	index := n.val.([]int)
 	tnext := getExec(n.tnext)
 	i := n.findex
+	l := n.level
 
 	// Note:
 	// Here we have to store the result using
@@ -1508,8 +1535,9 @@ func getIndexSeq(n *node) {
 			if v.Type().Kind() == reflect.Interface && n.child[0].typ.recursive {
 				v = writableDeref(v)
 			}
-			f.data[i] = v.FieldByIndex(index)
-			if f.data[i].Bool() {
+			r := v.FieldByIndex(index)
+			getFrame(f, l).data[i] = r
+			if r.Bool() {
 				return tnext
 			}
 			return fnext
@@ -1520,7 +1548,7 @@ func getIndexSeq(n *node) {
 			if v.Type().Kind() == reflect.Interface && n.child[0].typ.recursive {
 				v = writableDeref(v)
 			}
-			f.data[i] = v.FieldByIndex(index)
+			getFrame(f, l).data[i] = v.FieldByIndex(index)
 			return tnext
 		}
 	}
@@ -1545,19 +1573,21 @@ func getPtrIndexSeq(n *node) {
 		value = genValue(n.child[0])
 	}
 	i := n.findex
+	l := n.level
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
-			f.data[i] = value(f).Elem().FieldByIndex(index)
-			if f.data[i].Bool() {
+			r := value(f).Elem().FieldByIndex(index)
+			getFrame(f, l).data[i] = r
+			if r.Bool() {
 				return tnext
 			}
 			return fnext
 		}
 	} else {
 		n.exec = func(f *frame) bltn {
-			f.data[i] = value(f).Elem().FieldByIndex(index)
+			getFrame(f, l).data[i] = value(f).Elem().FieldByIndex(index)
 			return tnext
 		}
 	}
@@ -1567,22 +1597,25 @@ func getIndexSeqField(n *node) {
 	value := genValue(n.child[0])
 	index := n.val.([]int)
 	i := n.findex
+	l := n.level
 	tnext := getExec(n.tnext)
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
 			n.exec = func(f *frame) bltn {
-				f.data[i] = value(f).Elem().FieldByIndex(index)
-				if f.data[i].Bool() {
+				r := value(f).Elem().FieldByIndex(index)
+				getFrame(f, l).data[i] = r
+				if r.Bool() {
 					return tnext
 				}
 				return fnext
 			}
 		} else {
 			n.exec = func(f *frame) bltn {
-				f.data[i] = value(f).FieldByIndex(index)
-				if f.data[i].Bool() {
+				r := value(f).FieldByIndex(index)
+				getFrame(f, l).data[i] = r
+				if r.Bool() {
 					return tnext
 				}
 				return fnext
@@ -1591,12 +1624,12 @@ func getIndexSeqField(n *node) {
 	} else {
 		if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
 			n.exec = func(f *frame) bltn {
-				f.data[i] = value(f).Elem().FieldByIndex(index)
+				getFrame(f, l).data[i] = value(f).Elem().FieldByIndex(index)
 				return tnext
 			}
 		} else {
 			n.exec = func(f *frame) bltn {
-				f.data[i] = value(f).FieldByIndex(index)
+				getFrame(f, l).data[i] = value(f).FieldByIndex(index)
 				return tnext
 			}
 		}
@@ -1609,16 +1642,17 @@ func getIndexSeqPtrMethod(n *node) {
 	fi := index[1:]
 	mi := index[0]
 	i := n.findex
+	l := n.level
 	next := getExec(n.tnext)
 
 	if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
 		n.exec = func(f *frame) bltn {
-			f.data[i] = value(f).Elem().FieldByIndex(fi).Addr().Method(mi)
+			getFrame(f, l).data[i] = value(f).Elem().FieldByIndex(fi).Addr().Method(mi)
 			return next
 		}
 	} else {
 		n.exec = func(f *frame) bltn {
-			f.data[i] = value(f).FieldByIndex(fi).Addr().Method(mi)
+			getFrame(f, l).data[i] = value(f).FieldByIndex(fi).Addr().Method(mi)
 			return next
 		}
 	}
@@ -1630,16 +1664,17 @@ func getIndexSeqMethod(n *node) {
 	fi := index[1:]
 	mi := index[0]
 	i := n.findex
+	l := n.level
 	next := getExec(n.tnext)
 
 	if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
 		n.exec = func(f *frame) bltn {
-			f.data[i] = value(f).Elem().FieldByIndex(fi).Method(mi)
+			getFrame(f, l).data[i] = value(f).Elem().FieldByIndex(fi).Method(mi)
 			return next
 		}
 	} else {
 		n.exec = func(f *frame) bltn {
-			f.data[i] = value(f).FieldByIndex(fi).Method(mi)
+			getFrame(f, l).data[i] = value(f).FieldByIndex(fi).Method(mi)
 			return next
 		}
 	}
@@ -2017,6 +2052,7 @@ func doCompositeLit(n *node, hasType bool) {
 	}
 
 	i := n.findex
+	l := n.level
 	n.exec = func(f *frame) bltn {
 		a := reflect.New(n.typ.TypeOf()).Elem()
 		for i, v := range values {
@@ -2028,7 +2064,7 @@ func doCompositeLit(n *node, hasType bool) {
 		case destInterface:
 			d.Set(reflect.ValueOf(valueInterface{n, a}))
 		default:
-			f.data[i] = a
+			getFrame(f, l).data[i] = a
 		}
 		return next
 	}
@@ -2609,6 +2645,7 @@ func recv(n *node) {
 	value := genValue(n.child[0])
 	tnext := getExec(n.tnext)
 	i := n.findex
+	l := n.level
 
 	if n.interp.cancelChan {
 		// Cancellable channel read
@@ -2616,10 +2653,10 @@ func recv(n *node) {
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
 				// Fast: channel read doesn't block
-				var ok bool
 				ch := value(f)
-				if f.data[i], ok = ch.TryRecv(); ok {
-					if f.data[i].Bool() {
+				if r, ok := ch.TryRecv(); ok {
+					getFrame(f, l).data[i] = r
+					if r.Bool() {
 						return tnext
 					}
 					return fnext
@@ -2637,14 +2674,14 @@ func recv(n *node) {
 		} else {
 			n.exec = func(f *frame) bltn {
 				// Fast: channel read doesn't block
-				var ok bool
 				ch := value(f)
-				if f.data[i], ok = ch.TryRecv(); ok {
+				if r, ok := ch.TryRecv(); ok {
+					getFrame(f, l).data[i] = r
 					return tnext
 				}
 				// Slow: channel is blocked, allow cancel
 				var chosen int
-				chosen, f.data[i], _ = reflect.Select([]reflect.SelectCase{f.done, {Dir: reflect.SelectRecv, Chan: ch}})
+				chosen, getFrame(f, l).data[i], _ = reflect.Select([]reflect.SelectCase{f.done, {Dir: reflect.SelectRecv, Chan: ch}})
 				if chosen == 0 {
 					return nil
 				}
@@ -2656,7 +2693,8 @@ func recv(n *node) {
 		if n.fnext != nil {
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
-				if f.data[i], _ = value(f).Recv(); f.data[i].Bool() {
+				if r, _ := value(f).Recv(); r.Bool() {
+					getFrame(f, l).data[i] = r
 					return tnext
 				}
 				return fnext
@@ -2664,7 +2702,7 @@ func recv(n *node) {
 		} else {
 			i := n.findex
 			n.exec = func(f *frame) bltn {
-				f.data[i], _ = value(f).Recv()
+				getFrame(f, l).data[i], _ = value(f).Recv()
 				return tnext
 			}
 		}
@@ -2945,6 +2983,7 @@ func _select(n *node) {
 // slice expression: array[low:high:max].
 func slice(n *node) {
 	i := n.findex
+	l := n.level
 	next := getExec(n.tnext)
 	value0 := genValueArray(n.child[0]) // array
 	value1 := genValue(n.child[1])      // low (if 2 or 3 args) or high (if 1 arg)
@@ -2953,7 +2992,7 @@ func slice(n *node) {
 	case 2:
 		n.exec = func(f *frame) bltn {
 			a := value0(f)
-			f.data[i] = a.Slice(int(value1(f).Int()), a.Len())
+			getFrame(f, l).data[i] = a.Slice(int(value1(f).Int()), a.Len())
 			return next
 		}
 	case 3:
@@ -2961,7 +3000,7 @@ func slice(n *node) {
 
 		n.exec = func(f *frame) bltn {
 			a := value0(f)
-			f.data[i] = a.Slice(int(value1(f).Int()), int(value2(f).Int()))
+			getFrame(f, l).data[i] = a.Slice(int(value1(f).Int()), int(value2(f).Int()))
 			return next
 		}
 	case 4:
@@ -2970,7 +3009,7 @@ func slice(n *node) {
 
 		n.exec = func(f *frame) bltn {
 			a := value0(f)
-			f.data[i] = a.Slice3(int(value1(f).Int()), int(value2(f).Int()), int(value3(f).Int()))
+			getFrame(f, l).data[i] = a.Slice3(int(value1(f).Int()), int(value2(f).Int()), int(value3(f).Int()))
 			return next
 		}
 	}
@@ -2979,6 +3018,7 @@ func slice(n *node) {
 // slice expression, no low value: array[:high:max].
 func slice0(n *node) {
 	i := n.findex
+	l := n.level
 	next := getExec(n.tnext)
 	value0 := genValueArray(n.child[0])
 
@@ -2986,14 +3026,14 @@ func slice0(n *node) {
 	case 1:
 		n.exec = func(f *frame) bltn {
 			a := value0(f)
-			f.data[i] = a.Slice(0, a.Len())
+			getFrame(f, l).data[i] = a.Slice(0, a.Len())
 			return next
 		}
 	case 2:
 		value1 := genValue(n.child[1])
 		n.exec = func(f *frame) bltn {
 			a := value0(f)
-			f.data[i] = a.Slice(0, int(value1(f).Int()))
+			getFrame(f, l).data[i] = a.Slice(0, int(value1(f).Int()))
 			return next
 		}
 	case 3:
@@ -3001,7 +3041,7 @@ func slice0(n *node) {
 		value2 := genValue(n.child[2])
 		n.exec = func(f *frame) bltn {
 			a := value0(f)
-			f.data[i] = a.Slice3(0, int(value1(f).Int()), int(value2(f).Int()))
+			getFrame(f, l).data[i] = a.Slice3(0, int(value1(f).Int()), int(value2(f).Int()))
 			return next
 		}
 	}
