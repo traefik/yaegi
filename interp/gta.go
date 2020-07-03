@@ -3,6 +3,7 @@ package interp
 import (
 	"path/filepath"
 	"reflect"
+	"strings"
 )
 
 // gta performs a global types analysis on the AST, registering types,
@@ -27,6 +28,16 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 			if _, err = interp.cfg(n, pkgID); err != nil {
 				// No error processing here, to allow recovery in subtree nodes.
 				err = nil
+			}
+
+		case varDecl:
+			// Dependency analysis on vars to order them correctly
+			if len(n.child) <= 1 {
+				break
+			}
+			if e := sortVarDependencies(n); e != nil {
+				err = e
+				break
 			}
 
 		case blockStmt:
@@ -312,6 +323,88 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 		sc.pop()
 	}
 	return revisit, err
+}
+
+// sortVarDependencies specifically sorts var dependencies.
+func sortVarDependencies(n *node) error {
+	names := map[string]*node{}
+	deps := map[string][]string{}
+	for _, c := range n.child {
+		name := c.child[0].ident
+		names[name] = c
+		deps[name] = findIdentities(c.child[1])
+	}
+	// Trim deps to just vars.
+	for k, d := range deps {
+		var nd []string
+		for _, name := range d {
+			if p := strings.Split(name, "."); len(p) == 2 {
+				name = p[0]
+			}
+			if _, ok := names[name]; ok {
+				nd = append(nd, name)
+			}
+		}
+		deps[k] = nd
+	}
+
+	res := make([]*node, 0, len(n.child))
+	for len(deps) != 0 {
+		var ready []string
+		for name, d := range deps {
+			if len(d) == 0 {
+				ready = append(ready, name)
+			}
+		}
+		if len(ready) == 0 {
+			return n.cfgErrorf("variable definition loop")
+		}
+		for _, name := range ready {
+			delete(deps, name)
+			res = append(res, names[name])
+		}
+		for k, d := range deps {
+			deps[k] = diffStrings(d, ready)
+		}
+	}
+
+	n.child = res
+	return nil
+}
+
+func findIdentities(n *node) (deps []string) {
+	if n == nil {
+		return nil
+	}
+	switch n.kind {
+	case selectorExpr:
+		return []string{n.child[0].ident + "." + n.child[1].ident}
+	case identExpr:
+		return []string{n.ident}
+	}
+	for _, c := range n.child {
+		if d := findIdentities(c); len(d) > 0 {
+			deps = append(deps, d...)
+		}
+	}
+	return deps
+}
+
+func diffStrings(s, d []string) []string {
+	if len(d) == 0 {
+		return s
+	}
+	for i := 0; i < len(s); i++ {
+		for _, v := range d {
+			if s[i] != v {
+				continue
+			}
+			s = append(s[:i], s[i+1:]...)
+			i--
+			break
+		}
+	}
+	return s
 }
 
 // gtaRetry (re)applies gta until all global constants and types are defined.

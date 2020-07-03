@@ -666,6 +666,15 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 			case token.VAR:
 				kind = varDecl
 			}
+
+			if kind == varDecl {
+				// In order to group all vars and consts under a single declaration
+				// find the correct anc.
+				if n := findNodeKind(anc.node.child, kind); n != nil {
+					st.push(n, nod)
+					break
+				}
+			}
 			st.push(addChild(&root, anc, pos, kind, aNop), nod)
 
 		case *ast.GoStmt:
@@ -853,7 +862,17 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 		root = root.child[1].child[3]
 		root.anc = nil
 	}
+
 	return pkgName, root, err
+}
+
+func findNodeKind(ns []*node, k nkind) *node {
+	for _, c := range ns {
+		if c.kind == k {
+			return c
+		}
+	}
+	return nil
 }
 
 type astNode struct {
