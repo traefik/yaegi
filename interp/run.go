@@ -803,17 +803,18 @@ func call(n *node) {
 				values = append(values, func(f *frame) reflect.Value { return f.data[ind] })
 			}
 		default:
+			var arg *itype
+			if variadic >= 0 && i >= variadic {
+				arg = n.child[0].typ.arg[variadic].val
+			} else {
+				arg = n.child[0].typ.arg[i]
+			}
 			if c.kind == basicLit || c.rval.IsValid() {
-				var argType reflect.Type
-				if variadic >= 0 && i >= variadic {
-					argType = n.child[0].typ.arg[variadic].val.TypeOf()
-				} else {
-					argType = n.child[0].typ.arg[i].TypeOf()
-				}
+				argType := arg.TypeOf()
 				convertLiteralValue(c, argType)
 			}
 			switch {
-			case len(n.child[0].typ.arg) > i && n.child[0].typ.arg[i].cat == interfaceT:
+			case arg.cat == interfaceT:
 				values = append(values, genValueInterface(c))
 			case isRecursiveType(c.typ, c.typ.rtype):
 				values = append(values, genValueRecursiveInterfacePtrValue(c))
@@ -1090,7 +1091,7 @@ func callBin(n *node) {
 				values = append(values, genFunctionWrapper(c))
 			case interfaceT:
 				values = append(values, genValueInterfaceValue(c))
-			case arrayT:
+			case arrayT, variadicT:
 				switch c.typ.val.cat {
 				case interfaceT:
 					values = append(values, genValueInterfaceArray(c))
@@ -2345,8 +2346,13 @@ func _case(n *node) {
 			values[i] = genValue(n.child[i])
 		}
 		n.exec = func(f *frame) bltn {
+			v0 := value(f)
 			for _, v := range values {
-				if value(f).Interface() == v(f).Interface() {
+				v1 := v(f)
+				if !v0.Type().AssignableTo(v1.Type()) {
+					v0 = v0.Convert(v1.Type())
+				}
+				if v0.Interface() == v1.Interface() {
 					return tnext
 				}
 			}
