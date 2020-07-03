@@ -385,6 +385,25 @@ func TestEvalChan(t *testing.T) {
 	})
 }
 
+func TestEvalFunctionCallWithFunctionParam(t *testing.T) {
+	i := interp.New(interp.Options{})
+	eval(t, i, `
+		func Bar(s string, fn func(string)string) string { return fn(s) }
+	`)
+
+	v := eval(t, i, "Bar")
+	bar := v.Interface().(func(string, func(string)string) string)
+
+	got := bar("hello ", func(s string) string {
+		return s + "world!"
+	})
+
+	want := "hello world!"
+	if got != want {
+		t.Errorf("unexpected result of function eval: got %q, want %q", got, want)
+	}
+}
+
 func TestEvalMissingSymbol(t *testing.T) {
 	defer func() {
 		r := recover()

@@ -679,9 +679,13 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 
 			// Copy function input arguments in local frame
 			for i, arg := range in {
-				if def.typ.arg[i].cat == interfaceT {
+				typ := def.typ.arg[i]
+				switch {
+				case typ.cat == interfaceT:
 					d[i].Set(reflect.ValueOf(valueInterface{value: arg.Elem()}))
-				} else {
+				case typ.cat == funcT && arg.Kind() == reflect.Func:
+					d[i].Set(reflect.ValueOf(genFunctionNode(arg)))
+				default:
 					d[i].Set(arg)
 				}
 			}
@@ -703,6 +707,10 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 			return result
 		})
 	}
+}
+
+func genFunctionNode(v reflect.Value) *node {
+	return &node{kind: funcType, action: aNop, rval: v, typ: &itype{cat: valueT, rtype: v.Type()}}
 }
 
 func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
