@@ -732,6 +732,18 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				n.typ = c0.typ
 			case aEqual, aNotEqual:
 				n.typ = sc.getType("bool")
+				if isConstVal(c0) && !isConstVal(c1) || !isConstVal(c0) && isConstVal(c1) {
+					// if either node is a constant value, but the other is not, the constant
+					// must be converted into the non-constants type.
+					switch {
+					case isConstVal(c0):
+						convertConstantValue(c0)
+						c0.rval = c0.rval.Convert(c1.typ.TypeOf())
+					default:
+						convertConstantValue(c1)
+						c1.rval = c1.rval.Convert(c0.typ.TypeOf())
+					}
+				}
 				if n.child[0].sym == nilSym || n.child[1].sym == nilSym {
 					if n.action == aEqual {
 						n.gen = isNil
