@@ -1715,7 +1715,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					}
 				}
 				if n.anc.action != aAssignX {
-					if n.child[0].typ.cat == valueT && n.child[1].typ.cat != structT {
+					if n.child[0].typ.cat == valueT && !isStruct(n.child[1].typ) {
 						// Avoid special wrapping of interfaces and func types.
 						n.typ = &itype{cat: valueT, rtype: n.child[1].typ.TypeOf()}
 					} else {
