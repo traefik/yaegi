@@ -2089,6 +2089,7 @@ func doCompositeSparse(n *node, hasType bool) {
 	if hasType {
 		child = n.child[1:]
 	}
+	destInterface := destType(n).cat == interfaceT
 
 	values := make(map[int]func(*frame) reflect.Value)
 	a, _ := n.typ.zero()
@@ -2110,9 +2111,13 @@ func doCompositeSparse(n *node, hasType bool) {
 		for i, v := range values {
 			a.Field(i).Set(v(f))
 		}
-		if d := value(f); d.Type().Kind() == reflect.Ptr {
+		d := value(f)
+		switch {
+		case d.Type().Kind() == reflect.Ptr:
 			d.Set(a.Addr())
-		} else {
+		case destInterface:
+			d.Set(reflect.ValueOf(valueInterface{n, a}))
+		default:
 			d.Set(a)
 		}
 		return next
