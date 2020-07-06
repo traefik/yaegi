@@ -2053,7 +2053,7 @@ func equal(n *node) {
 				dest := genValue(n)
 				n.exec = func(f *frame) bltn {
 					i1 := v1(f).Interface()
-					dest(f).SetBool(i0 != i1)
+					dest(f).SetBool(i0 == i1)
 					return tnext
 				}
 			}
@@ -2075,7 +2075,7 @@ func equal(n *node) {
 				dest := genValue(n)
 				n.exec = func(f *frame) bltn {
 					i0 := v0(f).Interface()
-					dest(f).SetBool(i0 != i1)
+					dest(f).SetBool(i0 == i1)
 					return tnext
 				}
 			}
@@ -2099,7 +2099,7 @@ func equal(n *node) {
 				n.exec = func(f *frame) bltn {
 					i0 := v0(f).Interface()
 					i1 := v1(f).Interface()
-					dest(f).SetBool(i0 != i1)
+					dest(f).SetBool(i0 == i1)
 					return tnext
 				}
 			}
@@ -2536,80 +2536,6 @@ func greater(n *node) {
 	dest := genValueOutput(n, reflect.TypeOf(true))
 	c0, c1 := n.child[0], n.child[1]
 
-	if c0.typ.cat == aliasT || c1.typ.cat == aliasT {
-		switch {
-		case c0.rval.IsValid():
-			i0 := c0.rval.Interface()
-			v1 := genValue(c1)
-			if n.fnext != nil {
-				fnext := getExec(n.fnext)
-				n.exec = func(f *frame) bltn {
-					i1 := v1(f).Interface()
-					if i0 != i1 {
-						dest(f).SetBool(true)
-						return tnext
-					}
-					dest(f).SetBool(false)
-					return fnext
-				}
-			} else {
-				dest := genValue(n)
-				n.exec = func(f *frame) bltn {
-					i1 := v1(f).Interface()
-					dest(f).SetBool(i0 != i1)
-					return tnext
-				}
-			}
-		case c1.rval.IsValid():
-			i1 := c1.rval.Interface()
-			v0 := genValue(c0)
-			if n.fnext != nil {
-				fnext := getExec(n.fnext)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					if i0 != i1 {
-						dest(f).SetBool(true)
-						return tnext
-					}
-					dest(f).SetBool(false)
-					return fnext
-				}
-			} else {
-				dest := genValue(n)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					dest(f).SetBool(i0 != i1)
-					return tnext
-				}
-			}
-		default:
-			v0 := genValue(c0)
-			v1 := genValue(c1)
-			if n.fnext != nil {
-				fnext := getExec(n.fnext)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					i1 := v1(f).Interface()
-					if i0 != i1 {
-						dest(f).SetBool(true)
-						return tnext
-					}
-					dest(f).SetBool(false)
-					return fnext
-				}
-			} else {
-				dest := genValue(n)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					i1 := v1(f).Interface()
-					dest(f).SetBool(i0 != i1)
-					return tnext
-				}
-			}
-		}
-		return
-	}
-
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
@@ -2898,80 +2824,6 @@ func greaterEqual(n *node) {
 	tnext := getExec(n.tnext)
 	dest := genValueOutput(n, reflect.TypeOf(true))
 	c0, c1 := n.child[0], n.child[1]
-
-	if c0.typ.cat == aliasT || c1.typ.cat == aliasT {
-		switch {
-		case c0.rval.IsValid():
-			i0 := c0.rval.Interface()
-			v1 := genValue(c1)
-			if n.fnext != nil {
-				fnext := getExec(n.fnext)
-				n.exec = func(f *frame) bltn {
-					i1 := v1(f).Interface()
-					if i0 != i1 {
-						dest(f).SetBool(true)
-						return tnext
-					}
-					dest(f).SetBool(false)
-					return fnext
-				}
-			} else {
-				dest := genValue(n)
-				n.exec = func(f *frame) bltn {
-					i1 := v1(f).Interface()
-					dest(f).SetBool(i0 != i1)
-					return tnext
-				}
-			}
-		case c1.rval.IsValid():
-			i1 := c1.rval.Interface()
-			v0 := genValue(c0)
-			if n.fnext != nil {
-				fnext := getExec(n.fnext)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					if i0 != i1 {
-						dest(f).SetBool(true)
-						return tnext
-					}
-					dest(f).SetBool(false)
-					return fnext
-				}
-			} else {
-				dest := genValue(n)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					dest(f).SetBool(i0 != i1)
-					return tnext
-				}
-			}
-		default:
-			v0 := genValue(c0)
-			v1 := genValue(c1)
-			if n.fnext != nil {
-				fnext := getExec(n.fnext)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					i1 := v1(f).Interface()
-					if i0 != i1 {
-						dest(f).SetBool(true)
-						return tnext
-					}
-					dest(f).SetBool(false)
-					return fnext
-				}
-			} else {
-				dest := genValue(n)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					i1 := v1(f).Interface()
-					dest(f).SetBool(i0 != i1)
-					return tnext
-				}
-			}
-		}
-		return
-	}
 
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
@@ -3262,80 +3114,6 @@ func lower(n *node) {
 	dest := genValueOutput(n, reflect.TypeOf(true))
 	c0, c1 := n.child[0], n.child[1]
 
-	if c0.typ.cat == aliasT || c1.typ.cat == aliasT {
-		switch {
-		case c0.rval.IsValid():
-			i0 := c0.rval.Interface()
-			v1 := genValue(c1)
-			if n.fnext != nil {
-				fnext := getExec(n.fnext)
-				n.exec = func(f *frame) bltn {
-					i1 := v1(f).Interface()
-					if i0 != i1 {
-						dest(f).SetBool(true)
-						return tnext
-					}
-					dest(f).SetBool(false)
-					return fnext
-				}
-			} else {
-				dest := genValue(n)
-				n.exec = func(f *frame) bltn {
-					i1 := v1(f).Interface()
-					dest(f).SetBool(i0 != i1)
-					return tnext
-				}
-			}
-		case c1.rval.IsValid():
-			i1 := c1.rval.Interface()
-			v0 := genValue(c0)
-			if n.fnext != nil {
-				fnext := getExec(n.fnext)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					if i0 != i1 {
-						dest(f).SetBool(true)
-						return tnext
-					}
-					dest(f).SetBool(false)
-					return fnext
-				}
-			} else {
-				dest := genValue(n)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					dest(f).SetBool(i0 != i1)
-					return tnext
-				}
-			}
-		default:
-			v0 := genValue(c0)
-			v1 := genValue(c1)
-			if n.fnext != nil {
-				fnext := getExec(n.fnext)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					i1 := v1(f).Interface()
-					if i0 != i1 {
-						dest(f).SetBool(true)
-						return tnext
-					}
-					dest(f).SetBool(false)
-					return fnext
-				}
-			} else {
-				dest := genValue(n)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					i1 := v1(f).Interface()
-					dest(f).SetBool(i0 != i1)
-					return tnext
-				}
-			}
-		}
-		return
-	}
-
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
@@ -3624,80 +3402,6 @@ func lowerEqual(n *node) {
 	tnext := getExec(n.tnext)
 	dest := genValueOutput(n, reflect.TypeOf(true))
 	c0, c1 := n.child[0], n.child[1]
-
-	if c0.typ.cat == aliasT || c1.typ.cat == aliasT {
-		switch {
-		case c0.rval.IsValid():
-			i0 := c0.rval.Interface()
-			v1 := genValue(c1)
-			if n.fnext != nil {
-				fnext := getExec(n.fnext)
-				n.exec = func(f *frame) bltn {
-					i1 := v1(f).Interface()
-					if i0 != i1 {
-						dest(f).SetBool(true)
-						return tnext
-					}
-					dest(f).SetBool(false)
-					return fnext
-				}
-			} else {
-				dest := genValue(n)
-				n.exec = func(f *frame) bltn {
-					i1 := v1(f).Interface()
-					dest(f).SetBool(i0 != i1)
-					return tnext
-				}
-			}
-		case c1.rval.IsValid():
-			i1 := c1.rval.Interface()
-			v0 := genValue(c0)
-			if n.fnext != nil {
-				fnext := getExec(n.fnext)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					if i0 != i1 {
-						dest(f).SetBool(true)
-						return tnext
-					}
-					dest(f).SetBool(false)
-					return fnext
-				}
-			} else {
-				dest := genValue(n)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					dest(f).SetBool(i0 != i1)
-					return tnext
-				}
-			}
-		default:
-			v0 := genValue(c0)
-			v1 := genValue(c1)
-			if n.fnext != nil {
-				fnext := getExec(n.fnext)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					i1 := v1(f).Interface()
-					if i0 != i1 {
-						dest(f).SetBool(true)
-						return tnext
-					}
-					dest(f).SetBool(false)
-					return fnext
-				}
-			} else {
-				dest := genValue(n)
-				n.exec = func(f *frame) bltn {
-					i0 := v0(f).Interface()
-					i1 := v1(f).Interface()
-					dest(f).SetBool(i0 != i1)
-					return tnext
-				}
-			}
-		}
-		return
-	}
 
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):

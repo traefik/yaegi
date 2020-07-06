@@ -412,6 +412,8 @@ func {{$name}}(n *node) {
 	dest := genValueOutput(n, reflect.TypeOf(true))
 	c0, c1 := n.child[0], n.child[1]
 
+	{{- if or (eq $op.Name "==") (eq $op.Name "!=") }}
+
 	if c0.typ.cat == aliasT || c1.typ.cat == aliasT {
 		switch {
 		case c0.rval.IsValid():
@@ -432,7 +434,7 @@ func {{$name}}(n *node) {
 				dest := genValue(n)
 				n.exec = func(f *frame) bltn {
 					i1 := v1(f).Interface()
-					dest(f).SetBool(i0 != i1)
+					dest(f).SetBool(i0 {{$op.Name}} i1)
 					return tnext
 				}
 			}
@@ -454,7 +456,7 @@ func {{$name}}(n *node) {
 				dest := genValue(n)
 				n.exec = func(f *frame) bltn {
 					i0 := v0(f).Interface()
-					dest(f).SetBool(i0 != i1)
+					dest(f).SetBool(i0 {{$op.Name}} i1)
 					return tnext
 				}
 			}
@@ -478,13 +480,14 @@ func {{$name}}(n *node) {
 				n.exec = func(f *frame) bltn {
 					i0 := v0(f).Interface()
 					i1 := v1(f).Interface()
-					dest(f).SetBool(i0 != i1)
+					dest(f).SetBool(i0 {{$op.Name}} i1)
 					return tnext
 				}
 			}
 		}
 		return
 	}
+	{{- end}}
 
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
