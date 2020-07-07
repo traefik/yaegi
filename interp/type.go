@@ -1260,7 +1260,7 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 	if defined[name] != nil && defined[name].rtype != nil {
 		return defined[name].rtype
 	}
-	if t.val != nil && t.val.cat == structT && t.val.rtype == nil && hasRecursiveStruct(t.val, defined) {
+	if t.val != nil && t.val.cat == structT && t.val.rtype == nil && hasRecursiveStruct(t.val, copyDefined(defined)) {
 		// Replace reference to self (direct or indirect) by an interface{} to handle
 		// recursive types with reflect.
 		typ := *t.val
@@ -1365,6 +1365,14 @@ func (t *itype) implements(it *itype) bool {
 		return t.TypeOf().Implements(it.TypeOf())
 	}
 	return t.methods().contains(it.methods())
+}
+
+func copyDefined(m map[string]*itype) map[string]*itype {
+	n := make(map[string]*itype, len(m))
+	for k, v := range m {
+		n[k] = v
+	}
+	return n
 }
 
 // hasRecursiveStruct determines if a struct is a recursion or a recursion
