@@ -1,7 +1,7 @@
 package main
 
 import (
-	"foo/baz"
+	"guthib.com/baz"
 )
 
 func main() {

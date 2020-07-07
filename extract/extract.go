@@ -9,6 +9,8 @@ import (
 	"go/build"
 	"go/constant"
 	"go/format"
+	"go/importer"
+	"go/token"
 	"go/types"
 	"io"
 	"math/big"
@@ -100,19 +102,22 @@ type Wrap struct {
 	Method []Method
 }
 
-// restricted map defines symbols for which a special implementation is provided.
-var restricted = map[string]bool{
-	"osExit":        true,
-	"osFindProcess": true,
-	"logFatal":      true,
-	"logFatalf":     true,
-	"logFatalln":    true,
-	"logLogger":     true,
-	"logNew":        true,
-}
-
-func genContent(dest, pkgName, license string, skip map[string]bool) ([]byte, error) {
-	cfg := &packages.Config{Mode: packages.NeedTypes}
+func loadPkg(pkgName string) (*types.Package, error) {
+	parts := strings.Split(pkgName, "/")
+	var err error
+	if !strings.Contains(parts[0], ".") {
+		// first part does not have a domain, assume (wrongly imho) that it is an stdlib
+		// pkg. In which case, we keep on using go/importer, because x/packages produces
+		// funky results for math package.
+		return importer.ForCompiler(token.NewFileSet(), "source", nil).Import(pkgName)
+	}
+	// TODO(mpl): technically, we don't need the imports, but if we don't ask for them
+	//  we hit the check at
+	// https://github.com/golang/tools/blob/2ee2e4c56a28ab4461523bb5ecc1785c3845e938/go/packages/packages.go#L1182
+	// because we haven't prepopulated the imports. I think they should be smarter
+	// and only do that check if the initial pkg.Imports was not empty.
+	cfg := &packages.Config{Mode: packages.NeedTypes |
+		packages.NeedImports}
 	pkgs, err := packages.Load(cfg, pkgName)
 	if err != nil {
 		return nil, err
@@ -120,7 +125,14 @@ func genContent(dest, pkgName, license string, skip map[string]bool) ([]byte, er
 	if packages.PrintErrors(pkgs) > 0 {
 		return nil, fmt.Errorf("error(s) loading package %s", pkgName)
 	}
-	p := pkgs[0].Types
+	return pkgs[0].Types, nil
+}
+
+func genContent(dest, pkgName, license string, skip map[string]bool) ([]byte, error) {
+	p, err := loadPkg(pkgName)
+	if err != nil {
+		return nil, err
+	}
 
 	prefix := "_" + pkgName + "_"
 	prefix = strings.NewReplacer("/", "_", "-", "_", ".", "_").Replace(prefix)
