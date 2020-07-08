@@ -2011,10 +2011,11 @@ func compositeBinStruct(n *node) {
 			}
 		} else {
 			fieldIndex[i] = []int{i}
-			convertLiteralValue(c.child[1], typ.Field(i).Type)
 			if c.typ.cat == funcT {
+				convertLiteralValue(c.child[1], typ.Field(i).Type)
 				values[i] = genFunctionWrapper(c.child[1])
 			} else {
+				convertLiteralValue(c, typ.Field(i).Type)
 				values[i] = genValue(c)
 			}
 		}
