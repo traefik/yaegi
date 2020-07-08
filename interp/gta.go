@@ -78,7 +78,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				if typ.isBinMethod {
 					typ = &itype{cat: valueT, rtype: typ.methodCallType(), isBinMethod: true, scope: sc}
 				}
-				if sc.sym[dest.ident] == nil {
+				if sc.sym[dest.ident] == nil || sc.sym[dest.ident].typ.incomplete {
 					sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val}
 				}
 				if n.anc.kind == constDecl {
