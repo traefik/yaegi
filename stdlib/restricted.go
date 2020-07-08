@@ -8,7 +8,7 @@ import (
 	"strconv"
 )
 
-var restricted = errors.New("restricted")
+var errRestricted = errors.New("restricted")
 
 // osExit invokes panic instead of exit.
 func osExit(code int) { panic("os.Exit(" + strconv.Itoa(code) + ")") }
@@ -16,7 +16,7 @@ func osExit(code int) { panic("os.Exit(" + strconv.Itoa(code) + ")") }
 // osFindProcess returns os.FindProcess, except for self process.
 func osFindProcess(pid int) (*os.Process, error) {
 	if pid == os.Getpid() {
-		return nil, restricted
+		return nil, errRestricted
 	}
 	return os.FindProcess(pid)
 }
@@ -30,7 +30,7 @@ type logLogger struct {
 	l *log.Logger
 }
 
-// logNew Returns a wrapped logger
+// logNew Returns a wrapped logger.
 func logNew(out io.Writer, prefix string, flag int) *logLogger {
 	return &logLogger{log.New(out, prefix, flag)}
 }
