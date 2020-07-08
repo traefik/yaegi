@@ -43,7 +43,7 @@ func init() {
 //go:generate ../cmd/goexports/goexports net net/http net/http/cgi net/http/cookiejar net/http/fcgi
 //go:generate ../cmd/goexports/goexports net/http/httptest net/http/httptrace net/http/httputil net/http/pprof
 //go:generate ../cmd/goexports/goexports net/mail net/rpc net/rpc/jsonrpc net/smtp net/textproto net/url
-//go:generate ../cmd/goexports/goexports os os/exec os/signal os/user
+//go:generate ../cmd/goexports/goexports os os/signal os/user
 //go:generate ../cmd/goexports/goexports path path/filepath reflect regexp regexp/syntax
 //go:generate ../cmd/goexports/goexports runtime runtime/debug runtime/pprof runtime/trace
 //go:generate ../cmd/goexports/goexports sort strconv strings sync sync/atomic

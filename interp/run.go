@@ -2763,7 +2763,7 @@ func convertLiteralValue(n *node, t reflect.Type) {
 	case n.typ.cat == nilT:
 		// Create a zero value of target type.
 		n.rval = reflect.New(t).Elem()
-	case !(n.kind == basicLit || n.rval.IsValid()) || t == nil || t.Kind() == reflect.Interface:
+	case !(n.kind == basicLit || n.rval.IsValid()) || t == nil || t.Kind() == reflect.Interface || t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Interface:
 		// Skip non-constant values, undefined target type or interface target type.
 	case n.rval.IsValid():
 		// Convert constant value to target type.
