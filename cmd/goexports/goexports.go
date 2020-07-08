@@ -123,7 +123,7 @@ func main() {
 		}
 
 		if _, err := io.Copy(f, &buf); err != nil {
-			f.Close()
+			_ = f.Close()
 			log.Fatal(err)
 		}
 

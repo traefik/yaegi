@@ -1,5 +1,5 @@
 /*
-Extract generates wrappers of package exported symbols.
+Package extract generates wrappers of package exported symbols.
 */
 package extract
 
@@ -358,7 +358,7 @@ type Extractor struct {
 // the latter case, Extract returns the actual import path of the package found at
 // pkgIdent, otherwise it just returns pkgIdent.
 // If pkgIdent is an import path, it is looked up in GOPATH. Vendoring is not
-// supported yet, and the behaviour is only defined for GO111MODULE=off.
+// supported yet, and the behavior is only defined for GO111MODULE=off.
 func (e Extractor) Extract(pkgIdent string, rw io.Writer) (string, error) {
 	wd, err := filepath.Abs(e.WorkingDir)
 	if err != nil {
@@ -384,6 +384,7 @@ func (e Extractor) Extract(pkgIdent string, rw io.Writer) (string, error) {
 	return ipp, nil
 }
 
+// GetMinor returns the minor part of the version number.
 func GetMinor(part string) string {
 	minor := part
 	index := strings.Index(minor, "beta")
