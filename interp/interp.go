@@ -474,7 +474,14 @@ func (interp *Interpreter) Use(values Exports) {
 			continue
 		}
 
-		interp.binPkg[k] = v
+		if interp.binPkg[k] == nil {
+			interp.binPkg[k] = v
+			continue
+		}
+
+		for s, sym := range v {
+			interp.binPkg[k][s] = sym
+		}
 	}
 }
 

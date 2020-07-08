@@ -115,6 +115,17 @@ type Wrap struct {
 	Method []Method
 }
 
+// restricted map defines symbols for which a special implementation is provided.
+var restricted = map[string]bool{
+	"osExit":        true,
+	"osFindProcess": true,
+	"logFatal":      true,
+	"logFatalf":     true,
+	"logFatalln":    true,
+	"logLogger":     true,
+	"logNew":        true,
+}
+
 func genContent(dest, pkgName, license string, skip map[string]bool) ([]byte, error) {
 	p, err := importer.ForCompiler(token.NewFileSet(), "source", nil).Import(pkgName)
 	if err != nil {
@@ -149,6 +160,10 @@ func genContent(dest, pkgName, license string, skip map[string]bool) ([]byte, er
 		pname := path.Base(pkgName) + "." + name
 		if skip[pname] {
 			continue
+		}
+		if rname := path.Base(pkgName) + name; restricted[rname] {
+			// Restricted symbol, locally provided by stdlib wrapper.
+			pname = rname
 		}
 
 		switch o := o.(type) {

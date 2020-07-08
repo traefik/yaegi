@@ -96,17 +96,20 @@ import (
 	"github.com/containous/yaegi/interp"
 	"github.com/containous/yaegi/stdlib"
 	"github.com/containous/yaegi/stdlib/syscall"
+	"github.com/containous/yaegi/stdlib/unrestricted"
 	"github.com/containous/yaegi/stdlib/unsafe"
 )
 
 func main() {
 	var interactive bool
-	var useUnsafe bool
 	var useSyscall bool
+	var useUnrestricted bool
+	var useUnsafe bool
 	var tags string
 	var cmd string
 	flag.BoolVar(&interactive, "i", false, "start an interactive REPL")
 	flag.BoolVar(&useSyscall, "syscall", false, "include syscall symbols")
+	flag.BoolVar(&useUnrestricted, "unrestricted", false, "include unrestricted symbols")
 	flag.StringVar(&tags, "tags", "", "set a list of build tags")
 	flag.BoolVar(&useUnsafe, "unsafe", false, "include usafe symbols")
 	flag.StringVar(&cmd, "e", "", "set the command to be executed (instead of script or/and shell)")
@@ -127,6 +130,10 @@ func main() {
 	}
 	if useUnsafe {
 		i.Use(unsafe.Symbols)
+	}
+	if useUnrestricted {
+		// Use of unrestricted symbols should always follow use of stdlib symbols, to update them.
+		i.Use(unrestricted.Symbols)
 	}
 
 	if cmd != `` {

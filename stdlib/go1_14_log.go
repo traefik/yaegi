@@ -14,9 +14,9 @@ import (
 func init() {
 	Symbols["log"] = map[string]reflect.Value{
 		// function, constant and variable definitions
-		"Fatal":         reflect.ValueOf(log.Fatal),
-		"Fatalf":        reflect.ValueOf(log.Fatalf),
-		"Fatalln":       reflect.ValueOf(log.Fatalln),
+		"Fatal":         reflect.ValueOf(logFatal),
+		"Fatalf":        reflect.ValueOf(logFatalf),
+		"Fatalln":       reflect.ValueOf(logFatalln),
 		"Flags":         reflect.ValueOf(log.Flags),
 		"LUTC":          reflect.ValueOf(constant.MakeFromLiteral("32", token.INT, 0)),
 		"Ldate":         reflect.ValueOf(constant.MakeFromLiteral("1", token.INT, 0)),
@@ -26,7 +26,7 @@ func init() {
 		"Lshortfile":    reflect.ValueOf(constant.MakeFromLiteral("16", token.INT, 0)),
 		"LstdFlags":     reflect.ValueOf(constant.MakeFromLiteral("3", token.INT, 0)),
 		"Ltime":         reflect.ValueOf(constant.MakeFromLiteral("2", token.INT, 0)),
-		"New":           reflect.ValueOf(log.New),
+		"New":           reflect.ValueOf(logNew),
 		"Output":        reflect.ValueOf(log.Output),
 		"Panic":         reflect.ValueOf(log.Panic),
 		"Panicf":        reflect.ValueOf(log.Panicf),
@@ -41,6 +41,6 @@ func init() {
 		"Writer":        reflect.ValueOf(log.Writer),
 
 		// type definitions
-		"Logger": reflect.ValueOf((*log.Logger)(nil)),
+		"Logger": reflect.ValueOf((*logLogger)(nil)),
 	}
 }
