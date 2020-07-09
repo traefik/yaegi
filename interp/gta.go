@@ -138,11 +138,13 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 			if n.typ, err = nodeType(interp, sc, n.child[2]); err != nil {
 				return false
 			}
-			if isMethod(n) {
+			ident := n.child[1].ident
+			switch {
+			case isMethod(n):
 				// TODO(mpl): redeclaration detection
 				// Add a method symbol in the receiver type name space
 				var rcvrtype *itype
-				n.ident = n.child[1].ident
+				n.ident = ident
 				rcvr := n.child[0].child[0]
 				rtn := rcvr.lastChild()
 				typeName := rtn.ident
@@ -167,33 +169,32 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				}
 				rcvrtype.method = append(rcvrtype.method, n)
 				n.child[0].child[0].lastChild().typ = rcvrtype
-			} else {
-				ident := n.child[1].ident
+			case ident == "init":
 				// TODO(mpl): use constant instead of hardcoded string?
-				if ident != "init" {
-					asImportName := filepath.Join(ident, baseName)
-					if _, exists := sc.sym[asImportName]; exists {
-						// redeclaration error
-						// TODO(mpl): improve error with position of previous declaration.
-						err = n.cfgErrorf("%s redeclared in this block", ident)
-						return false
-					}
-					sym, exists := sc.sym[ident]
-					if exists {
-						// Make sure the symbol we found seems to be about another node, before calling
-						// it a redeclaration.
-						if sym.typ.isComplete() {
-							// TODO(mpl): this check might be too permissive?
-							if sym.kind != funcSym || sym.typ.cat != n.typ.cat || sym.node != n || sym.index != -1 {
-								// redeclaration error
-								// TODO(mpl): improve error with position of previous declaration.
-								err = n.cfgErrorf("%s redeclared in this block", ident)
-								return false
-							}
+				// init functions do not get declared as per the Go spec.
+			default:
+				asImportName := filepath.Join(ident, baseName)
+				if _, exists := sc.sym[asImportName]; exists {
+					// redeclaration error
+					// TODO(mpl): improve error with position of previous declaration.
+					err = n.cfgErrorf("%s redeclared in this block", ident)
+					return false
+				}
+				sym, exists := sc.sym[ident]
+				if exists {
+					// Make sure the symbol we found seems to be about another node, before calling
+					// it a redeclaration.
+					if sym.typ.isComplete() {
+						// TODO(mpl): this check might be too permissive?
+						if sym.kind != funcSym || sym.typ.cat != n.typ.cat || sym.node != n || sym.index != -1 {
+							// redeclaration error
+							// TODO(mpl): improve error with position of previous declaration.
+							err = n.cfgErrorf("%s redeclared in this block", ident)
+							return false
 						}
 					}
 				}
-				// Add a function symbol in the package name space
+				// Add a function symbol in the package name space except for init
 				sc.sym[n.child[1].ident] = &symbol{kind: funcSym, typ: n.typ, node: n, index: -1}
 			}
 			if !n.typ.isComplete() {
