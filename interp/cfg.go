@@ -1153,11 +1153,11 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			n.types = sc.types
 			sc = sc.pop()
 			funcName := n.child[1].ident
-			if !isMethod(n) {
-				interp.scopes[pkgID].sym[funcName].index = -1 // to force value to n.val
-				interp.scopes[pkgID].sym[funcName].typ = n.typ
-				interp.scopes[pkgID].sym[funcName].kind = funcSym
-				interp.scopes[pkgID].sym[funcName].node = n
+			if sym := sc.sym[funcName]; !isMethod(n) && sym != nil {
+				sym.index = -1 // to force value to n.val
+				sym.typ = n.typ
+				sym.kind = funcSym
+				sym.node = n
 			}
 
 		case funcLit:
@@ -1170,6 +1170,10 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case identExpr:
 			if isKey(n) || isNewDefine(n, sc) {
+				break
+			}
+			if n.anc.kind == funcDecl && n.anc.child[1] == n {
+				// Dont process a function name identExpr.
 				break
 			}
 
