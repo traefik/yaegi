@@ -476,6 +476,9 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 							dest.typ = sc.fixType(src.typ)
 						}
 					}
+					if dest.typ.incomplete {
+						return
+					}
 					if dest.typ.sizedef {
 						dest.typ.size = arrayTypeLen(src)
 						dest.typ.rtype = nil
