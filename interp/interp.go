@@ -405,6 +405,17 @@ func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
 	// Execute node closures
 	interp.run(root, nil)
 
+	// Wire and execute global vars
+	vars := getVars(root)
+	if len(vars) > 0 {
+		varNode, err := genGlobalVarDecl(vars, interp.scopes[interp.Name])
+		if err != nil {
+			return res, err
+		}
+		setExec(varNode.start)
+		interp.run(varNode, nil)
+	}
+
 	for _, n := range initNodes {
 		interp.run(n, interp.frame)
 	}

@@ -1949,6 +1949,73 @@ func genRun(nod *node) error {
 	return err
 }
 
+func getVars(n *node) (vars []*node) {
+	for _, child := range n.child {
+		if child.kind == varDecl {
+			vars = append(vars, child.child...)
+		}
+	}
+	return vars
+}
+
+func genGlobalVarDecl(nodes []*node, sc *scope) (*node, error) {
+	varNode := &node{kind: varDecl, action: aNop, gen: nop}
+
+	deps := map[*node][]*node{}
+	for _, n := range nodes {
+		deps[n] = getVarDependencies(n, sc)
+	}
+
+	inited := map[*node]bool{}
+	revisit := []*node{}
+	for {
+		for _, n := range nodes {
+			canInit := true
+			for _, d := range deps[n] {
+				if !inited[d] {
+					canInit = false
+				}
+			}
+			if !canInit {
+				revisit = append(revisit, n)
+				continue
+			}
+
+			varNode.child = append(varNode.child, n)
+			inited[n] = true
+		}
+
+		if len(revisit) == 0 || equalNodes(nodes, revisit) {
+			break
+		}
+
+		nodes = revisit
+		revisit = []*node{}
+	}
+
+	if len(revisit) > 0 {
+		return nil, revisit[0].cfgErrorf("variable definition loop")
+	}
+	wireChild(varNode)
+	return varNode, nil
+}
+
+func getVarDependencies(nod *node, sc *scope) (deps []*node) {
+	nod.Walk(func(n *node) bool {
+		switch n.kind {
+		case identExpr:
+			if sym, _, ok := sc.lookup(n.ident); ok {
+				if sym.kind != varSym || !sym.global || sym.node == nod {
+					break
+				}
+				deps = append(deps, sym.node)
+			}
+		}
+		return true
+	}, nil)
+	return deps
+}
+
 // setFnext sets the cond fnext field to next, propagates it for parenthesis blocks
 // and sets the action to branch.
 func setFNext(cond, next *node) {

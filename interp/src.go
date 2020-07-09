@@ -132,6 +132,20 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 		interp.run(n, nil)
 	}
 
+	// Wire and execute global vars
+	var vars []*node
+	for _, n := range rootNodes {
+		vars = append(vars, getVars(n)...)
+	}
+	if len(vars) > 0 {
+		varNode, err := genGlobalVarDecl(vars, interp.scopes[path])
+		if err != nil {
+			return "", err
+		}
+		setExec(varNode.start)
+		interp.run(varNode, nil)
+	}
+
 	// Add main to list of functions to run, after all inits
 	if m := interp.main(); m != nil {
 		initNodes = append(initNodes, m)
