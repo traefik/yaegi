@@ -230,10 +230,11 @@ func typeAssert(n *node) {
 
 func typeAssert2(n *node) {
 	c0, c1 := n.child[0], n.child[1]
-	value := genValue(c0)              // input value
-	value0 := genValue(n.anc.child[0]) // returned result
-	value1 := genValue(n.anc.child[1]) // returned status
-	typ := c1.typ                      // type to assert or convert to
+	value := genValue(c0)                    // input value
+	value0 := genValue(n.anc.child[0])       // returned result
+	value1 := genValue(n.anc.child[1])       // returned status
+	setStatus := n.anc.child[1].ident != "_" // do not assign status to "_"
+	typ := c1.typ                            // type to assert or convert to
 	typID := typ.id()
 	rtype := typ.rtype // type to assert
 	next := getExec(n.tnext)
@@ -247,7 +248,9 @@ func typeAssert2(n *node) {
 			} else {
 				ok = false
 			}
-			value1(f).SetBool(ok)
+			if setStatus {
+				value1(f).SetBool(ok)
+			}
 			return next
 		}
 	case isInterface(typ):
@@ -257,7 +260,9 @@ func typeAssert2(n *node) {
 			if ok {
 				value0(f).Set(v)
 			}
-			value1(f).SetBool(ok)
+			if setStatus {
+				value1(f).SetBool(ok)
+			}
 			return next
 		}
 	case n.child[0].typ.cat == valueT:
@@ -267,7 +272,9 @@ func typeAssert2(n *node) {
 			if ok {
 				value0(f).Set(v)
 			}
-			value1(f).SetBool(ok)
+			if setStatus {
+				value1(f).SetBool(ok)
+			}
 			return next
 		}
 	default:
@@ -277,13 +284,18 @@ func typeAssert2(n *node) {
 			if ok {
 				value0(f).Set(v.value)
 			}
-			value1(f).SetBool(ok)
+			if setStatus {
+				value1(f).SetBool(ok)
+			}
 			return next
 		}
 	}
 }
 
 func canAssertTypes(src, dest reflect.Type) bool {
+	if dest == nil {
+		return false
+	}
 	if src == dest {
 		return true
 	}
