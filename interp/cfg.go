@@ -1949,6 +1949,24 @@ func genRun(nod *node) error {
 	return err
 }
 
+func genGlobalVars(roots []*node, sc *scope) (*node, error) {
+	var vars []*node
+	for _, n := range roots {
+		vars = append(vars, getVars(n)...)
+	}
+
+	if len(vars) == 0 {
+		return nil, nil
+	}
+
+	varNode, err := genGlobalVarDecl(vars, sc)
+	if err != nil {
+		return nil, err
+	}
+	setExec(varNode.start)
+	return varNode, nil
+}
+
 func getVars(n *node) (vars []*node) {
 	for _, child := range n.child {
 		if child.kind == varDecl {
@@ -2002,11 +2020,10 @@ func genGlobalVarDecl(nodes []*node, sc *scope) (*node, error) {
 
 func getVarDependencies(nod *node, sc *scope) (deps []*node) {
 	nod.Walk(func(n *node) bool {
-		switch n.kind {
-		case identExpr:
+		if n.kind == identExpr {
 			if sym, _, ok := sc.lookup(n.ident); ok {
 				if sym.kind != varSym || !sym.global || sym.node == nod {
-					break
+					return false
 				}
 				deps = append(deps, sym.node)
 			}
