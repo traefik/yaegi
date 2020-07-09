@@ -132,6 +132,13 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 		interp.run(n, nil)
 	}
 
+	// Wire and execute global vars
+	n, err := genGlobalVars(rootNodes, interp.scopes[path])
+	if err != nil {
+		return "", err
+	}
+	interp.run(n, nil)
+
 	// Add main to list of functions to run, after all inits
 	if m := interp.main(); m != nil {
 		initNodes = append(initNodes, m)

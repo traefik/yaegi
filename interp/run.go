@@ -84,6 +84,9 @@ func init() {
 }
 
 func (interp *Interpreter) run(n *node, cf *frame) {
+	if n == nil {
+		return
+	}
 	var f *frame
 	if cf == nil {
 		f = interp.frame

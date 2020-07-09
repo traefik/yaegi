@@ -78,8 +78,8 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				if typ.isBinMethod {
 					typ = &itype{cat: valueT, rtype: typ.methodCallType(), isBinMethod: true, scope: sc}
 				}
-				if sc.sym[dest.ident] == nil {
-					sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val}
+				if sc.sym[dest.ident] == nil || sc.sym[dest.ident].typ.incomplete {
+					sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val, node: n}
 				}
 				if n.anc.kind == constDecl {
 					sc.sym[dest.ident].kind = constSym
@@ -112,7 +112,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				sym1, exists1 := sc.sym[asImportName]
 				sym2, exists2 := sc.sym[c.ident]
 				if !exists1 && !exists2 {
-					sc.sym[c.ident] = &symbol{index: sc.add(n.typ), kind: varSym, global: true, typ: n.typ}
+					sc.sym[c.ident] = &symbol{index: sc.add(n.typ), kind: varSym, global: true, typ: n.typ, node: n}
 					continue
 				}
 

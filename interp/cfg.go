@@ -845,7 +845,15 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			}
 			sc = sc.pop()
 
-		case constDecl, varDecl:
+		case constDecl:
+			wireChild(n)
+
+		case varDecl:
+			// Global varDecl do not need to be wired as this
+			// will be handled after cfg.
+			if n.anc.kind == fileStmt {
+				break
+			}
 			wireChild(n)
 
 		case declStmt, exprStmt, sendStmt:
@@ -1033,7 +1041,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			}
 
 		case fileStmt:
-			wireChild(n)
+			wireChild(n, varDecl)
 			sc = sc.pop()
 			n.findex = -1
 
@@ -1941,6 +1949,90 @@ func genRun(nod *node) error {
 	return err
 }
 
+func genGlobalVars(roots []*node, sc *scope) (*node, error) {
+	var vars []*node
+	for _, n := range roots {
+		vars = append(vars, getVars(n)...)
+	}
+
+	if len(vars) == 0 {
+		return nil, nil
+	}
+
+	varNode, err := genGlobalVarDecl(vars, sc)
+	if err != nil {
+		return nil, err
+	}
+	setExec(varNode.start)
+	return varNode, nil
+}
+
+func getVars(n *node) (vars []*node) {
+	for _, child := range n.child {
+		if child.kind == varDecl {
+			vars = append(vars, child.child...)
+		}
+	}
+	return vars
+}
+
+func genGlobalVarDecl(nodes []*node, sc *scope) (*node, error) {
+	varNode := &node{kind: varDecl, action: aNop, gen: nop}
+
+	deps := map[*node][]*node{}
+	for _, n := range nodes {
+		deps[n] = getVarDependencies(n, sc)
+	}
+
+	inited := map[*node]bool{}
+	revisit := []*node{}
+	for {
+		for _, n := range nodes {
+			canInit := true
+			for _, d := range deps[n] {
+				if !inited[d] {
+					canInit = false
+				}
+			}
+			if !canInit {
+				revisit = append(revisit, n)
+				continue
+			}
+
+			varNode.child = append(varNode.child, n)
+			inited[n] = true
+		}
+
+		if len(revisit) == 0 || equalNodes(nodes, revisit) {
+			break
+		}
+
+		nodes = revisit
+		revisit = []*node{}
+	}
+
+	if len(revisit) > 0 {
+		return nil, revisit[0].cfgErrorf("variable definition loop")
+	}
+	wireChild(varNode)
+	return varNode, nil
+}
+
+func getVarDependencies(nod *node, sc *scope) (deps []*node) {
+	nod.Walk(func(n *node) bool {
+		if n.kind == identExpr {
+			if sym, _, ok := sc.lookup(n.ident); ok {
+				if sym.kind != varSym || !sym.global || sym.node == nod {
+					return false
+				}
+				deps = append(deps, sym.node)
+			}
+		}
+		return true
+	}, nil)
+	return deps
+}
+
 // setFnext sets the cond fnext field to next, propagates it for parenthesis blocks
 // and sets the action to branch.
 func setFNext(cond, next *node) {
@@ -2000,45 +2092,66 @@ func (n *node) isType(sc *scope) bool {
 }
 
 // wireChild wires AST nodes for CFG in subtree.
-func wireChild(n *node) {
+func wireChild(n *node, exclude ...nkind) {
+	child := excludeNodeKind(n.child, exclude)
+
 	// Set start node, in subtree (propagated to ancestors by post-order processing)
-	for _, child := range n.child {
-		switch child.kind {
+	for _, c := range child {
+		switch c.kind {
 		case arrayType, chanType, chanTypeRecv, chanTypeSend, funcDecl, importDecl, mapType, basicLit, identExpr, typeDecl:
 			continue
 		default:
-			n.start = child.start
+			n.start = c.start
 		}
 		break
 	}
 
 	// Chain sequential operations inside a block (next is right sibling)
-	for i := 1; i < len(n.child); i++ {
-		switch n.child[i].kind {
+	for i := 1; i < len(child); i++ {
+		switch child[i].kind {
 		case funcDecl:
-			n.child[i-1].tnext = n.child[i]
+			child[i-1].tnext = child[i]
 		default:
-			switch n.child[i-1].kind {
+			switch child[i-1].kind {
 			case breakStmt, continueStmt, gotoStmt, returnStmt:
 				// tnext is already computed, no change
 			default:
-				n.child[i-1].tnext = n.child[i].start
+				child[i-1].tnext = child[i].start
 			}
 		}
 	}
 
 	// Chain subtree next to self
-	for i := len(n.child) - 1; i >= 0; i-- {
-		switch n.child[i].kind {
+	for i := len(child) - 1; i >= 0; i-- {
+		switch child[i].kind {
 		case arrayType, chanType, chanTypeRecv, chanTypeSend, importDecl, mapType, funcDecl, basicLit, identExpr, typeDecl:
 			continue
 		case breakStmt, continueStmt, gotoStmt, returnStmt:
 			// tnext is already computed, no change
 		default:
-			n.child[i].tnext = n
+			child[i].tnext = n
 		}
 		break
 	}
+}
+
+func excludeNodeKind(child []*node, kinds []nkind) []*node {
+	if len(kinds) == 0 {
+		return child
+	}
+	var res []*node
+	for _, c := range child {
+		exclude := false
+		for _, k := range kinds {
+			if c.kind == k {
+				exclude = true
+			}
+		}
+		if !exclude {
+			res = append(res, c)
+		}
+	}
+	return res
 }
 
 func (n *node) name() (s string) {
