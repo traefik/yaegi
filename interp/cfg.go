@@ -845,7 +845,15 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			}
 			sc = sc.pop()
 
-		case constDecl, varDecl:
+		case constDecl:
+			wireChild(n)
+
+		case varDecl:
+			// Global varDecl do not need to be wired as this
+			// will be handled after cfg.
+			if n.anc.kind == fileStmt {
+				break
+			}
 			wireChild(n)
 
 		case declStmt, exprStmt, sendStmt:
@@ -1033,7 +1041,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			}
 
 		case fileStmt:
-			wireChild(n)
+			wireChild(n, varDecl)
 			sc = sc.pop()
 			n.findex = -1
 
@@ -2000,45 +2008,66 @@ func (n *node) isType(sc *scope) bool {
 }
 
 // wireChild wires AST nodes for CFG in subtree.
-func wireChild(n *node) {
+func wireChild(n *node, exclude ...nkind) {
+	child := excludeNodeKind(n.child, exclude)
+
 	// Set start node, in subtree (propagated to ancestors by post-order processing)
-	for _, child := range n.child {
-		switch child.kind {
+	for _, c := range child {
+		switch c.kind {
 		case arrayType, chanType, chanTypeRecv, chanTypeSend, funcDecl, importDecl, mapType, basicLit, identExpr, typeDecl:
 			continue
 		default:
-			n.start = child.start
+			n.start = c.start
 		}
 		break
 	}
 
 	// Chain sequential operations inside a block (next is right sibling)
-	for i := 1; i < len(n.child); i++ {
-		switch n.child[i].kind {
+	for i := 1; i < len(child); i++ {
+		switch child[i].kind {
 		case funcDecl:
-			n.child[i-1].tnext = n.child[i]
+			child[i-1].tnext = child[i]
 		default:
-			switch n.child[i-1].kind {
+			switch child[i-1].kind {
 			case breakStmt, continueStmt, gotoStmt, returnStmt:
 				// tnext is already computed, no change
 			default:
-				n.child[i-1].tnext = n.child[i].start
+				child[i-1].tnext = child[i].start
 			}
 		}
 	}
 
 	// Chain subtree next to self
-	for i := len(n.child) - 1; i >= 0; i-- {
-		switch n.child[i].kind {
+	for i := len(child) - 1; i >= 0; i-- {
+		switch child[i].kind {
 		case arrayType, chanType, chanTypeRecv, chanTypeSend, importDecl, mapType, funcDecl, basicLit, identExpr, typeDecl:
 			continue
 		case breakStmt, continueStmt, gotoStmt, returnStmt:
 			// tnext is already computed, no change
 		default:
-			n.child[i].tnext = n
+			child[i].tnext = n
 		}
 		break
 	}
+}
+
+func excludeNodeKind(child []*node, kinds []nkind) []*node {
+	if len(kinds) == 0 {
+		return child
+	}
+	var res []*node
+	for _, c := range child {
+		exclude := false
+		for _, k := range kinds {
+			if c.kind == k {
+				exclude = true
+			}
+		}
+		if !exclude {
+			res = append(res, c)
+		}
+	}
+	return res
 }
 
 func (n *node) name() (s string) {
