@@ -4,9 +4,10 @@ Package extract generates wrappers of package exported symbols.
 package extract
 
 import (
+	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
-	"go/build"
 	"go/constant"
 	"go/format"
 	"go/importer"
@@ -103,6 +104,8 @@ type Wrap struct {
 }
 
 func loadPkg(pkgName string) (*types.Package, error) {
+	//	return importer.ForCompiler(token.NewFileSet(), "source", nil).Import(pkgName)
+	return importer.ForCompiler(token.NewFileSet(), "source", nil).Import(".")
 	parts := strings.Split(pkgName, "/")
 	var err error
 	if !strings.Contains(parts[0], ".") {
@@ -128,13 +131,8 @@ func loadPkg(pkgName string) (*types.Package, error) {
 	return pkgs[0].Types, nil
 }
 
-func genContent(dest, pkgName, license string, skip map[string]bool) ([]byte, error) {
-	p, err := loadPkg(pkgName)
-	if err != nil {
-		return nil, err
-	}
-
-	prefix := "_" + pkgName + "_"
+func genContent(dest, importPath, license string, p *types.Package, skip map[string]bool) ([]byte, error) {
+	prefix := "_" + importPath + "_"
 	prefix = strings.NewReplacer("/", "_", "-", "_", ".", "_").Replace(prefix)
 
 	typ := map[string]string{}
@@ -147,7 +145,7 @@ func genContent(dest, pkgName, license string, skip map[string]bool) ([]byte, er
 		imports[pkg.Path()] = false
 	}
 	qualify := func(pkg *types.Package) string {
-		if pkg.Path() != pkgName {
+		if pkg.Path() != importPath {
 			imports[pkg.Path()] = true
 		}
 		return pkg.Name()
@@ -159,7 +157,7 @@ func genContent(dest, pkgName, license string, skip map[string]bool) ([]byte, er
 			continue
 		}
 
-		pname := path.Base(pkgName) + "." + name
+		pname := path.Base(importPath) + "." + name
 		if skip[pname] {
 			continue
 		}
@@ -247,7 +245,7 @@ func genContent(dest, pkgName, license string, skip map[string]bool) ([]byte, er
 		return nil, fmt.Errorf("template parsing error: %v", err)
 	}
 
-	if pkgName == "log/syslog" {
+	if importPath == "log/syslog" {
 		buildTags += ",!windows,!nacl,!plan9"
 	}
 
@@ -255,7 +253,7 @@ func genContent(dest, pkgName, license string, skip map[string]bool) ([]byte, er
 	data := map[string]interface{}{
 		"Dest":      dest,
 		"Imports":   imports,
-		"PkgName":   pkgName,
+		"PkgName":   importPath,
 		"Val":       val,
 		"Typ":       typ,
 		"Wrap":      wrap,
@@ -307,50 +305,75 @@ func fixConst(name string, val constant.Value, imports map[string]bool) string {
 	return fmt.Sprintf("constant.MakeFromLiteral(\"%s\", token.%s, 0)", str, tok)
 }
 
-// TODO(mpl): make it work for vendor
-// TODO(mpl): make it all work with GO111MODULE=on
 // importPath checks whether pkgIdent is an existing directory relative to
 // e.WorkingDir. If yes, it returns the actual import path of the Go package
 // located in the directory. If it is definitely a relative path, but it does not
 // exist, an error is returned. Otherwise, it is assumed to be an import path, and
 // pkgIdent is returned.
-func (e Extractor) importPath(pkgIdent string) (string, error) {
-	ctx := build.Default
-	goPath := os.Getenv("GOPATH")
-	if goPath != "" {
-		ctx.GOPATH = goPath
+func (e Extractor) resolvePaths(pkgIdent, importPath string) (string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
 	}
-	var pkg *build.Package
 
-	dirPath := filepath.Join(e.WorkingDir, pkgIdent)
-	_, err := os.Stat(dirPath)
+	dirPath := filepath.Join(wd, pkgIdent)
+	_, err = os.Stat(dirPath)
 	if err != nil && !os.IsNotExist(err) {
 		return "", err
 	}
-	if err == nil {
-		// local import
-		pkg, err = ctx.ImportDir(dirPath, build.FindOnly)
-		if err != nil {
+	if err != nil {
+		if len(pkgIdent) > 0 && pkgIdent[0] == '.' {
+			// pkgIdent is definitely a relative path, not a package name, and it does not exist
 			return "", err
 		}
-		return pkg.ImportPath, nil
+		// pkgIdent might be a valid stdlib package name. So we leave that responsibility to the caller now.
+		return pkgIdent, nil
 	}
 
-	if len(pkgIdent) > 0 && pkgIdent[0] == '.' {
-		// pkgIdent is definitely a relative path, not a package name, and it does not exist
+	// local import
+	if importPath != "" {
+		return importPath, nil
+	}
+
+	modPath := filepath.Join(dirPath, "go.mod")
+	_, err = os.Stat(modPath)
+	if os.IsNotExist(err) {
+		return "", errors.New("no go.mod found, and no import path specified")
+	}
+	if err != nil {
 		return "", err
 	}
+	f, err := os.Open(modPath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	sc := bufio.NewScanner(f)
+	var l string
+	for sc.Scan() {
+		l = sc.Text()
+		break
+	}
+	if sc.Err() != nil {
+		return "", err
+	}
+	parts := strings.Fields(l)
+	if len(parts) < 2 {
+		return "", errors.New(`invalid first line syntax in go.mod`)
+	}
+	if parts[0] != "module" {
+		return "", errors.New(`invalid first line in go.mod, no "module" found`)
+	}
 
-	// pkgIdent might be a package import path, so we let the caller deal with that.
-	return pkgIdent, nil
+	return parts[1], nil
+
 }
 
 // Extractor creates a package with all the symbols from a dependency package.
 type Extractor struct {
-	WorkingDir string // the working directory, for relative path arguments.
-	Dest       string // the name of the created package.
-	License    string // license text to be included in the created package, optional.
-	Skip       map[string]bool
+	Dest    string // the name of the created package.
+	License string // license text to be included in the created package, optional.
+	Skip    map[string]bool
 }
 
 // Extract writes to rw a Go package with all the symbols found at pkgIdent.
@@ -359,20 +382,18 @@ type Extractor struct {
 // pkgIdent, otherwise it just returns pkgIdent.
 // If pkgIdent is an import path, it is looked up in GOPATH. Vendoring is not
 // supported yet, and the behavior is only defined for GO111MODULE=off.
-func (e Extractor) Extract(pkgIdent string, rw io.Writer) (string, error) {
-	wd, err := filepath.Abs(e.WorkingDir)
-	if err != nil {
-		return "", err
-	}
-	e.WorkingDir = wd
-
-	ipp, err := e.importPath(pkgIdent)
+func (e Extractor) Extract(pkgIdent, importPath string, rw io.Writer) (string, error) {
+	ipp, err := e.resolvePaths(pkgIdent, importPath)
 	if err != nil {
 		return "", err
 	}
 
-	// TODO(mpl): make genContent directly write to rw.
-	content, err := genContent(e.Dest, ipp, e.License, e.Skip)
+	pkg, err := importer.ForCompiler(token.NewFileSet(), "source", nil).Import(pkgIdent)
+	if err != nil {
+		return "", err
+	}
+
+	content, err := genContent(e.Dest, ipp, e.License, pkg, e.Skip)
 	if err != nil {
 		return "", err
 	}

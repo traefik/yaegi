@@ -62,9 +62,13 @@ func genLicense(fname string) (string, error) {
 	return license.String(), nil
 }
 
-func main() {
-	licenseFlag := flag.String("license", "", "path to a LICENSE file")
+var (
+	licenseFlag = flag.String("license", "", "path to a LICENSE file")
+	// TODO: deal with a module that has several packages (so there's only one go.mod file at the root of the project).
+	importPathFlag = flag.String("import_path", "", "the namespace for the symbols extracted from the argument. Not needed if the argument is from the stdlib, or if the name can be found in a go.mod")
+)
 
+func main() {
 	flag.Parse()
 
 	if flag.NArg() == 0 {
@@ -83,9 +87,8 @@ func main() {
 	}
 
 	ext := extract.Extractor{
-		WorkingDir: wd,
-		Dest:       path.Base(wd),
-		License:    license,
+		Dest:    path.Base(wd),
+		License: license,
 	}
 	goos, goarch := os.Getenv("GOOS"), os.Getenv("GOARCH")
 	skip := map[string]bool{}
@@ -97,7 +100,7 @@ func main() {
 
 	for _, pkgIdent := range flag.Args() {
 		var buf bytes.Buffer
-		importPath, err := ext.Extract(pkgIdent, &buf)
+		importPath, err := ext.Extract(pkgIdent, *importPathFlag, &buf)
 		if err != nil {
 			log.Println(err)
 			continue
