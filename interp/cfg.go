@@ -699,6 +699,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			if !isShiftNode(n) && !isConstVal(c) && !c0.typ.equals(c1.typ) && t0 != nil && t1 != nil {
 				switch {
 				case isConstVal(c0) && isNumber(t1) || isConstVal(c1) && isNumber(t0): // const <-> numberic case
+				case isNumber(t0) && isNumber(t1) && (c0.typ.untyped || c1.typ.untyped):
 				case t0.Kind() == reflect.Uint8 && t1.Kind() == reflect.Int32 || t1.Kind() == reflect.Uint8 && t0.Kind() == reflect.Int32: // byte <-> rune case
 				case isInterface(c0.typ) && isInterface(c1.typ): // interface <-> interface case
 				default:
