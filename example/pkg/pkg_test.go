@@ -128,7 +128,7 @@ func TestPackages(t *testing.T) {
 				os.Stdout = pw
 
 				if _, err := i.Eval(string(data)); err != nil {
-					fatalStderr(t, "%v", err)
+					fatalStderrf(t, "%v", err)
 				}
 
 				var buf bytes.Buffer
@@ -139,10 +139,10 @@ func TestPackages(t *testing.T) {
 				}()
 
 				if err := pw.Close(); err != nil {
-					fatalStderr(t, "%v", err)
+					fatalStderrf(t, "%v", err)
 				}
 				if err := <-errC; err != nil {
-					fatalStderr(t, "%v", err)
+					fatalStderrf(t, "%v", err)
 				}
 				msg = buf.String()
 			} else {
@@ -165,13 +165,13 @@ func TestPackages(t *testing.T) {
 			}
 
 			if msg != test.expected {
-				fatalStderr(t, "Got %q, want %q", msg, test.expected)
+				fatalStderrf(t, "Got %q, want %q", msg, test.expected)
 			}
 		})
 	}
 }
 
-func fatalStderr(t *testing.T, format string, args ...interface{}) {
+func fatalStderrf(t *testing.T, format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format+"\n", args...)
 	t.FailNow()
 }

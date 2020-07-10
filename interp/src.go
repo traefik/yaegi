@@ -24,7 +24,7 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 	// In all other cases, absolute import paths are resolved from the GOPATH
 	// and the nested "vendor" directories.
 	if isPathRelative(path) {
-		if rPath == "main" {
+		if rPath == mainID {
 			rPath = "."
 		}
 		dir = filepath.Join(filepath.Dir(interp.Name), rPath, path)
@@ -155,7 +155,7 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 
 func (interp *Interpreter) rootFromSourceLocation(rPath string) (string, error) {
 	sourceFile := interp.Name
-	if rPath != "main" || !strings.HasSuffix(sourceFile, ".go") {
+	if rPath != mainID || !strings.HasSuffix(sourceFile, ".go") {
 		return rPath, nil
 	}
 	wd, err := os.Getwd()
@@ -205,9 +205,11 @@ func previousRoot(rootPath, root string) (string, error) {
 	maxDepth := 100
 	depthCounter := 0
 
+	const vendor = "vendor"
+
 	// TODO(mpl): maybe it works for the special case main, but can't be bothered for now.
 	parent, final := filepath.Split(rootPath)
-	if root != "main" && final != "vendor" {
+	if root != mainID && final != vendor {
 		// look for the closest vendor in one of our direct ancestors, as it takes priority.
 		prefix := path.Clean(strings.TrimSuffix(rootPath, root))
 		var vendored string
@@ -218,17 +220,19 @@ func previousRoot(rootPath, root string) (string, error) {
 				if err != nil {
 					return err
 				}
-				defer rootDir.Close()
+				defer func() {
+					_ = rootDir.Close()
+				}()
 
 				names, err := rootDir.Readdirnames(-1)
 				if err != nil {
 					return err
 				}
 				for _, v := range names {
-					if v == "vendor" {
+					if v == vendor {
 						// TODO(mpl): done on purpose in two steps, just in case I'm not always right
 						// about the "/", and I never want the first Trim to fail. Think harder later.
-						vendored = strings.TrimPrefix(strings.TrimPrefix(filepath.Join(parent, "vendor"), prefix), "/")
+						vendored = strings.TrimPrefix(strings.TrimPrefix(filepath.Join(parent, vendor), prefix), "/")
 						return nil
 					}
 				}
@@ -261,7 +265,6 @@ func previousRoot(rootPath, root string) (string, error) {
 			if depthCounter > maxDepth {
 				return "", errors.New("infinite recursion while looking for vendor in ancestors")
 			}
-
 		}
 	}
 
