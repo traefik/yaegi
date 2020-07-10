@@ -1080,7 +1080,7 @@ func callBin(n *node) {
 	}
 
 	for i, c := range child {
-		defType := funcType.In(pindex(i, variadic))
+		defType := funcType.In(rcvrOffset + pindex(i, variadic))
 		switch {
 		case isBinCall(c):
 			// Handle nested function calls: pass returned values as arguments
