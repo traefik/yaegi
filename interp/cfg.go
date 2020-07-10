@@ -1724,17 +1724,18 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		case typeAssertExpr:
 			if len(n.child) > 1 {
 				wireChild(n)
-				if n.child[1].typ == nil {
-					if n.child[1].typ, err = nodeType(interp, sc, n.child[1]); err != nil {
+				c1 := n.child[1]
+				if c1.typ == nil {
+					if n.child[1].typ, err = nodeType(interp, sc, c1); err != nil {
 						return
 					}
 				}
 				if n.anc.action != aAssignX {
-					if n.child[0].typ.cat == valueT && !isStruct(n.child[1].typ) {
+					if n.child[0].typ.cat == valueT && isFunc(c1.typ) {
 						// Avoid special wrapping of interfaces and func types.
-						n.typ = &itype{cat: valueT, rtype: n.child[1].typ.TypeOf()}
+						n.typ = &itype{cat: valueT, rtype: c1.typ.TypeOf()}
 					} else {
-						n.typ = n.child[1].typ
+						n.typ = c1.typ
 					}
 					n.findex = sc.add(n.typ)
 				}
