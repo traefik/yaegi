@@ -1,9 +1,11 @@
 package interp
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -188,13 +190,84 @@ func pkgDir(goPath string, root, path string) (string, string, error) {
 		return "", "", fmt.Errorf("unable to find source related to: %q", path)
 	}
 
-	return pkgDir(goPath, previousRoot(root), path)
+	rootPath := filepath.Join(goPath, "src", root)
+	prevRoot, err := previousRoot(rootPath, root)
+	if err != nil {
+		return "", "", err
+	}
+
+	return pkgDir(goPath, prevRoot, path)
 }
 
 // Find the previous source root (vendor > vendor > ... > GOPATH).
-func previousRoot(root string) string {
-	splitRoot := strings.Split(root, string(filepath.Separator))
+func previousRoot(rootPath, root string) (string, error) {
+	// Arbitrary limit to prevent unforeseen infinite recursion.
+	maxDepth := 100
+	depthCounter := 0
 
+	// TODO(mpl): maybe it works for the special case main, but can't be bothered for now.
+	parent, final := filepath.Split(rootPath)
+	if root != "main" && final != "vendor" {
+		// look for the closest vendor in one of our direct ancestors, as it takes priority.
+		prefix := path.Clean(strings.TrimSuffix(rootPath, root))
+		var vendored string
+		for {
+			// closure to avoid accumulation of deferred closes
+			err := func() error {
+				rootDir, err := os.Open(parent)
+				if err != nil {
+					return err
+				}
+				defer rootDir.Close()
+
+				names, err := rootDir.Readdirnames(-1)
+				if err != nil {
+					return err
+				}
+				for _, v := range names {
+					if v == "vendor" {
+						// TODO(mpl): done on purpose in two steps, just in case I'm not always right
+						// about the "/", and I never want the first Trim to fail. Think harder later.
+						vendored = strings.TrimPrefix(strings.TrimPrefix(filepath.Join(parent, "vendor"), prefix), "/")
+						return nil
+					}
+				}
+
+				// stop when we reach GOPATH/src/blah
+				parent = filepath.Dir(parent)
+				if parent == prefix || len(parent) == 1 && parent[0] == filepath.Separator {
+					return os.ErrNotExist
+				}
+
+				// just an additional failsafe, stop if we reach "/".
+				// TODO(mpl): It should probably be a critical error actually,
+				// as we shouldn't have gone that high up in the tree.
+				if len(parent) == 1 && parent[0] == filepath.Separator {
+					return os.ErrNotExist
+				}
+				return nil
+			}()
+			if err == os.ErrNotExist {
+				break
+			}
+			if err != nil {
+				return "", err
+			}
+			if vendored != "" {
+				return vendored, nil
+			}
+
+			depthCounter++
+			if depthCounter > maxDepth {
+				return "", errors.New("infinite recursion while looking for vendor in ancestors")
+			}
+
+		}
+	}
+
+	// TODO(mpl): the algorithm below might be redundant with the one above,
+	// but keeping it for now. Investigate/simplify/remove later.
+	splitRoot := strings.Split(root, string(filepath.Separator))
 	var index int
 	for i := len(splitRoot) - 1; i >= 0; i-- {
 		if splitRoot[i] == "vendor" {
@@ -204,10 +277,10 @@ func previousRoot(root string) string {
 	}
 
 	if index == 0 {
-		return ""
+		return "", nil
 	}
 
-	return filepath.Join(splitRoot[:index]...)
+	return filepath.Join(splitRoot[:index]...), nil
 }
 
 func effectivePkg(root, path string) string {

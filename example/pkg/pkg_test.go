@@ -83,6 +83,18 @@ func TestPackages(t *testing.T) {
 			expected: "Fromage",
 			evalFile: "./_pkg11/src/foo/foo.go",
 		},
+		{
+			desc:      "vendor dir is a sibling or an uncle",
+			goPath:    "./_pkg12/",
+			expected:  "Yo hello",
+			topImport: "guthib.com/foo/pkg",
+		},
+		{
+			desc:     "eval main with vendor as a sibling",
+			goPath:   "./_pkg12/",
+			expected: "Yo hello",
+			evalFile: "./_pkg12/src/guthib.com/foo/main.go",
+		},
 	}
 
 	for _, test := range testCases {
@@ -116,7 +128,7 @@ func TestPackages(t *testing.T) {
 				os.Stdout = pw
 
 				if _, err := i.Eval(string(data)); err != nil {
-					t.Fatal(err)
+					fatalStderr(t, "%v", err)
 				}
 
 				var buf bytes.Buffer
@@ -127,10 +139,10 @@ func TestPackages(t *testing.T) {
 				}()
 
 				if err := pw.Close(); err != nil {
-					t.Fatal(err)
+					fatalStderr(t, "%v", err)
 				}
 				if err := <-errC; err != nil {
-					t.Fatal(err)
+					fatalStderr(t, "%v", err)
 				}
 				msg = buf.String()
 			} else {
@@ -153,10 +165,15 @@ func TestPackages(t *testing.T) {
 			}
 
 			if msg != test.expected {
-				t.Errorf("Got %q, want %q", msg, test.expected)
+				fatalStderr(t, "Got %q, want %q", msg, test.expected)
 			}
 		})
 	}
+}
+
+func fatalStderr(t *testing.T, format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, format+"\n", args...)
+	t.FailNow()
 }
 
 func TestPackagesError(t *testing.T) {
