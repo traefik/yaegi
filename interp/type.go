@@ -1541,6 +1541,10 @@ func isSendChan(t *itype) bool {
 	return rt.Kind() == reflect.Chan && rt.ChanDir() == reflect.SendDir
 }
 func isMap(t *itype) bool { return t.TypeOf().Kind() == reflect.Map }
+func isArray(t *itype) bool {
+	k := t.TypeOf().Kind()
+	return k == reflect.Array || k == reflect.Slice
+}
 
 func isInterfaceSrc(t *itype) bool {
 	return t.cat == interfaceT || (t.cat == aliasT && isInterfaceSrc(t.val))
