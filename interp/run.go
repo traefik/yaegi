@@ -2116,6 +2116,10 @@ func doCompositeSparse(n *node, hasType bool) {
 		switch {
 		case c1.typ.cat == funcT:
 			values[field] = genFunctionWrapper(c1)
+		case c1.typ.cat == interfaceT:
+			values[field] = genValueInterfaceValue(c1)
+		case isArray(c1.typ) && c1.typ.val != nil && c1.typ.val.cat == interfaceT:
+			values[field] = genValueInterfaceArray(c1)
 		case isRecursiveType(n.typ.field[field].typ, n.typ.field[field].typ.rtype):
 			values[field] = genValueRecursiveInterface(c1, n.typ.field[field].typ.rtype)
 		default:
