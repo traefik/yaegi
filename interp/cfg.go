@@ -1334,7 +1334,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case rangeStmt:
 			if sc.rangeChanType(n) != nil {
-				n.start = n.child[1]       // Get chan
+				n.start = n.child[1].start // Get chan
 				n.child[1].tnext = n       // then go to range function
 				n.tnext = n.child[2].start // then go to range body
 				n.child[2].tnext = n       // then body go to range function (loop)
@@ -1346,7 +1346,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				} else {
 					k, o, body = n.child[0], n.child[1], n.child[2]
 				}
-				n.start = o          // Get array or map object
+				n.start = o.start    // Get array or map object
 				o.tnext = k.start    // then go to iterator init
 				k.tnext = n          // then go to range function
 				n.tnext = body.start // then go to range body
