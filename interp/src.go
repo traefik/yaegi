@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 )
@@ -202,18 +201,21 @@ const vendor = "vendor"
 
 // Find the previous source root (vendor > vendor > ... > GOPATH).
 func previousRoot(rootPath, root string) (string, error) {
-	// TODO(mpl): maybe it works for the special case main, but can't be bothered for now.
+	rootPath = filepath.Clean(rootPath)
 	parent, final := filepath.Split(rootPath)
+	parent = filepath.Clean(parent)
+
+	// TODO(mpl): maybe it works for the special case main, but can't be bothered for now.
 	if root != mainID && final != vendor {
+		root = strings.TrimSuffix(root, string(filepath.Separator))
+		prefix := strings.TrimSuffix(rootPath, root)
+
 		// look for the closest vendor in one of our direct ancestors, as it takes priority.
-		prefix := path.Clean(strings.TrimSuffix(rootPath, root))
 		var vendored string
 		for {
 			fi, err := os.Lstat(filepath.Join(parent, vendor))
 			if err == nil && fi.IsDir() {
-				// TODO(mpl): done on purpose in two steps, just in case I'm not always right
-				// about the "/", and I never want the first Trim to fail. Think harder later.
-				vendored = strings.TrimPrefix(strings.TrimPrefix(filepath.Join(parent, vendor), prefix), "/")
+				vendored = strings.TrimPrefix(strings.TrimPrefix(parent, prefix), string(filepath.Separator))
 				break
 			}
 			if !os.IsNotExist(err) {
@@ -226,7 +228,7 @@ func previousRoot(rootPath, root string) (string, error) {
 				break
 			}
 
-			// just an additional failsafe, stop if we reach "/".
+			// just an additional failsafe, stop if we reach the filesystem root.
 			// TODO(mpl): It should probably be a critical error actually,
 			// as we shouldn't have gone that high up in the tree.
 			if parent == string(filepath.Separator) {
