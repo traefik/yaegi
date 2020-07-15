@@ -196,9 +196,10 @@ func Test_pkgDir(t *testing.T) {
 
 func Test_previousRoot(t *testing.T) {
 	testCases := []struct {
-		desc     string
-		root     string
-		expected string
+		desc           string
+		root           string
+		rootPathSuffix string
+		expected       string
 	}{
 		{
 			desc:     "GOPATH",
@@ -215,6 +216,18 @@ func Test_previousRoot(t *testing.T) {
 			root:     "github.com/foo/pkg/vendor/guthib.com/containous/fromage/vendor/guthib.com/containous/fuu",
 			expected: "github.com/foo/pkg/vendor/guthib.com/containous/fromage",
 		},
+		{
+			desc:           "vendor is sibling",
+			root:           "github.com/foo/bar",
+			rootPathSuffix: "testdata/src/github.com/foo/bar",
+			expected:       "github.com/foo",
+		},
+		{
+			desc:           "vendor is uncle",
+			root:           "github.com/foo/bar/baz",
+			rootPathSuffix: "testdata/src/github.com/foo/bar/baz",
+			expected:       "github.com/foo",
+		},
 	}
 
 	for _, test := range testCases {
@@ -222,7 +235,20 @@ func Test_previousRoot(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			p := previousRoot(test.root)
+			var rootPath string
+			if test.rootPathSuffix != "" {
+				wd, err := os.Getwd()
+				if err != nil {
+					t.Fatal(err)
+				}
+				rootPath = filepath.Join(wd, test.rootPathSuffix)
+			} else {
+				rootPath = vendor
+			}
+			p, err := previousRoot(rootPath, test.root)
+			if err != nil {
+				t.Error(err)
+			}
 
 			if p != test.expected {
 				t.Errorf("got: %s, want: %s", p, test.expected)
