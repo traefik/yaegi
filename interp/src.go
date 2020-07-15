@@ -1,7 +1,6 @@
 package interp
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -199,14 +198,10 @@ func pkgDir(goPath string, root, path string) (string, string, error) {
 	return pkgDir(goPath, prevRoot, path)
 }
 
+const vendor = "vendor"
+
 // Find the previous source root (vendor > vendor > ... > GOPATH).
 func previousRoot(rootPath, root string) (string, error) {
-	// Arbitrary limit to prevent unforeseen infinite recursion.
-	maxDepth := 100
-	depthCounter := 0
-
-	const vendor = "vendor"
-
 	// TODO(mpl): maybe it works for the special case main, but can't be bothered for now.
 	parent, final := filepath.Split(rootPath)
 	if root != mainID && final != vendor {
@@ -214,57 +209,33 @@ func previousRoot(rootPath, root string) (string, error) {
 		prefix := path.Clean(strings.TrimSuffix(rootPath, root))
 		var vendored string
 		for {
-			// closure to avoid accumulation of deferred closes
-			err := func() error {
-				rootDir, err := os.Open(parent)
-				if err != nil {
-					return err
-				}
-				defer func() {
-					_ = rootDir.Close()
-				}()
-
-				names, err := rootDir.Readdirnames(-1)
-				if err != nil {
-					return err
-				}
-				for _, v := range names {
-					if v == vendor {
-						// TODO(mpl): done on purpose in two steps, just in case I'm not always right
-						// about the "/", and I never want the first Trim to fail. Think harder later.
-						vendored = strings.TrimPrefix(strings.TrimPrefix(filepath.Join(parent, vendor), prefix), "/")
-						return nil
-					}
-				}
-
-				// stop when we reach GOPATH/src/blah
-				parent = filepath.Dir(parent)
-				if parent == prefix || len(parent) == 1 && parent[0] == filepath.Separator {
-					return os.ErrNotExist
-				}
-
-				// just an additional failsafe, stop if we reach "/".
-				// TODO(mpl): It should probably be a critical error actually,
-				// as we shouldn't have gone that high up in the tree.
-				if len(parent) == 1 && parent[0] == filepath.Separator {
-					return os.ErrNotExist
-				}
-				return nil
-			}()
-			if err == os.ErrNotExist {
+			fi, err := os.Lstat(filepath.Join(parent, vendor))
+			if err == nil && fi.IsDir() {
+				// TODO(mpl): done on purpose in two steps, just in case I'm not always right
+				// about the "/", and I never want the first Trim to fail. Think harder later.
+				vendored = strings.TrimPrefix(strings.TrimPrefix(filepath.Join(parent, vendor), prefix), "/")
 				break
 			}
-			if err != nil {
+			if !os.IsNotExist(err) {
 				return "", err
 			}
-			if vendored != "" {
-				return vendored, nil
+
+			// stop when we reach GOPATH/src/blah
+			parent = filepath.Dir(parent)
+			if parent == prefix {
+				break
 			}
 
-			depthCounter++
-			if depthCounter > maxDepth {
-				return "", errors.New("infinite recursion while looking for vendor in ancestors")
+			// just an additional failsafe, stop if we reach "/".
+			// TODO(mpl): It should probably be a critical error actually,
+			// as we shouldn't have gone that high up in the tree.
+			if parent == string(filepath.Separator) {
+				break
 			}
+		}
+
+		if vendored != "" {
+			return vendored, nil
 		}
 	}
 

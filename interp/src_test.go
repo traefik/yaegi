@@ -224,7 +224,7 @@ func Test_previousRoot(t *testing.T) {
 
 			// TODO(mpl): add tests for new algo.
 			// it's not too bad to not have them for now, since the tests in example run this code path too.
-			p, _ := previousRoot("vendor", test.root)
+			p, _ := previousRoot(vendor, test.root)
 
 			if p != test.expected {
 				t.Errorf("got: %s, want: %s", p, test.expected)
