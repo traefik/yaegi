@@ -122,7 +122,8 @@ type Interpreter struct {
 	// architectures.
 	id uint64
 
-	Name string // program name
+	name   string // name of the input source file (or main)
+	inREPL bool
 
 	opt                        // user settable options
 	cancelChan bool            // enables cancellable chan operations
@@ -145,6 +146,10 @@ type Interpreter struct {
 const (
 	mainID   = "main"
 	selfPath = "github.com/containous/yaegi/interp"
+	// DefaultSourceName is the name used by default when the name of the input
+	// source file has not been specified for an Eval.
+	// TODO(mpl): something even more special as a name?
+	DefaultSourceName = "_.go"
 )
 
 // Symbols exposes interpreter values.
@@ -219,6 +224,7 @@ func New(options Options) *Interpreter {
 		pkgNames: map[string]string{},
 		rdir:     map[string]bool{},
 		hooks:    &hooks{},
+		inREPL:   true,
 	}
 
 	i.opt.context.GOPATH = options.GoPath
@@ -229,7 +235,7 @@ func New(options Options) *Interpreter {
 	// astDot activates AST graph display for the interpreter
 	i.opt.astDot, _ = strconv.ParseBool(os.Getenv("YAEGI_AST_DOT"))
 
-	// cfgDot activates AST graph display for the interpreter
+	// cfgDot activates CFG graph display for the interpreter
 	i.opt.cfgDot, _ = strconv.ParseBool(os.Getenv("YAEGI_CFG_DOT"))
 
 	// dotCmd defines how to process the dot code generated whenever astDot and/or
@@ -316,15 +322,32 @@ func (interp *Interpreter) resizeFrame() {
 func (interp *Interpreter) main() *node {
 	interp.mutex.RLock()
 	defer interp.mutex.RUnlock()
-	if m, ok := interp.scopes[interp.Name]; ok && m.sym[mainID] != nil {
+	if m, ok := interp.scopes[mainID]; ok && m.sym[mainID] != nil {
 		return m.sym[mainID].node
 	}
 	return nil
 }
 
+// EvalInc is Eval in incremental mode, with the default input name.
+func (interp *Interpreter) EvalInc(src string) (res reflect.Value, err error) {
+	return interp.Eval(src, "", true)
+}
+
 // Eval evaluates Go code represented as a string. It returns a map on
 // current interpreted package exported symbols.
-func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
+// Name is the file path to the Go source file containing src. It defaults to the
+// special value "_.go".
+// Incremental is whether the given source should be considered an integral
+// valid Go source file, or only a fragment.
+func (interp *Interpreter) Eval(src, name string, incremental bool) (res reflect.Value, err error) {
+	if name != "" {
+		interp.name = name
+	} else if interp.name == "" {
+		interp.name = DefaultSourceName
+	}
+
+	interp.inREPL = incremental
+
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -335,7 +358,7 @@ func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
 	}()
 
 	// Parse source to AST.
-	pkgName, root, err := interp.ast(src, interp.Name)
+	pkgName, root, err := interp.ast(src, interp.name)
 	if err != nil || root == nil {
 		return res, err
 	}
@@ -343,22 +366,29 @@ func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
 	if interp.astDot {
 		dotCmd := interp.dotCmd
 		if dotCmd == "" {
-			dotCmd = defaultDotCmd(interp.Name, "yaegi-ast-")
+			dotCmd = defaultDotCmd(interp.name, "yaegi-ast-")
 		}
-		root.astDot(dotWriter(dotCmd), interp.Name)
+		root.astDot(dotWriter(dotCmd), interp.name)
 		if interp.noRun {
 			return res, err
 		}
 	}
 
 	// Perform global types analysis.
-	if err = interp.gtaRetry([]*node{root}, pkgName, interp.Name); err != nil {
+	if err = interp.gtaRetry([]*node{root}, pkgName); err != nil {
 		return res, err
 	}
 
 	// Annotate AST with CFG infos
-	initNodes, err := interp.cfg(root, interp.Name)
+	initNodes, err := interp.cfg(root, pkgName)
 	if err != nil {
+		if interp.cfgDot {
+			dotCmd := interp.dotCmd
+			if dotCmd == "" {
+				dotCmd = defaultDotCmd(interp.name, "yaegi-cfg-")
+			}
+			root.cfgDot(dotWriter(dotCmd))
+		}
 		return res, err
 	}
 
@@ -374,15 +404,17 @@ func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
 	interp.mutex.Lock()
 	if interp.universe.sym[pkgName] == nil {
 		// Make the package visible under a path identical to its name
-		interp.srcPkg[pkgName] = interp.scopes[interp.Name].sym
+		// TODO(mpl): srcPkg is supposed to be keyed by importPath. Verify it is necessary, and implement.
+		interp.srcPkg[pkgName] = interp.scopes[pkgName].sym
 		interp.universe.sym[pkgName] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: pkgName}}
+		interp.pkgNames[pkgName] = pkgName
 	}
 	interp.mutex.Unlock()
 
 	if interp.cfgDot {
 		dotCmd := interp.dotCmd
 		if dotCmd == "" {
-			dotCmd = defaultDotCmd(interp.Name, "yaegi-cfg-")
+			dotCmd = defaultDotCmd(interp.name, "yaegi-cfg-")
 		}
 		root.cfgDot(dotWriter(dotCmd))
 	}
@@ -406,7 +438,7 @@ func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
 	interp.run(root, nil)
 
 	// Wire and execute global vars
-	n, err := genGlobalVars([]*node{root}, interp.scopes[interp.Name])
+	n, err := genGlobalVars([]*node{root}, interp.scopes[pkgName])
 	if err != nil {
 		return res, err
 	}
@@ -430,7 +462,7 @@ func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
 
 // EvalWithContext evaluates Go code represented as a string. It returns
 // a map on current interpreted package exported symbols.
-func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (reflect.Value, error) {
+func (interp *Interpreter) EvalWithContext(ctx context.Context, src, name string, incremental bool) (reflect.Value, error) {
 	var v reflect.Value
 	var err error
 
@@ -442,7 +474,7 @@ func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (ref
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		v, err = interp.Eval(src)
+		v, err = interp.Eval(src, name, incremental)
 	}()
 
 	select {
@@ -522,7 +554,7 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		handleSignal(ctx, cancel)
-		v, err = interp.EvalWithContext(ctx, src)
+		v, err = interp.EvalWithContext(ctx, src, "", true)
 		signal.Reset()
 		if err != nil {
 			switch e := err.(type) {

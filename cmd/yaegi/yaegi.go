@@ -162,8 +162,7 @@ func main() {
 		i.REPL(strings.NewReader(s), os.Stdout)
 	} else {
 		// Files not starting with "#!" are supposed to be pure Go, directly Evaled.
-		i.Name = args[0]
-		_, err := i.Eval(s)
+		_, err := i.Eval(s, args[0], false)
 		if err != nil {
 			fmt.Println(err)
 			if p, ok := err.(interp.Panic); ok {

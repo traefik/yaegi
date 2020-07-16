@@ -11,12 +11,12 @@ func TestFunctionCall(t *testing.T) {
 	i := interp.New(interp.Options{GoPath: "./_pkg"})
 	i.Use(stdlib.Symbols)
 
-	_, err := i.Eval(`import "foo/bar"`)
+	_, err := i.EvalInc(`import "foo/bar"`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	fnv, err := i.Eval(`bar.NewSample()`)
+	fnv, err := i.EvalInc(`bar.NewSample()`)
 	if err != nil {
 		t.Fatal(err)
 	}

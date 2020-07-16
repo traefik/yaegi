@@ -2,9 +2,13 @@ package interp_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -420,11 +424,11 @@ func TestEvalMissingSymbol(t *testing.T) {
 	i.Use(interp.Exports{"p": map[string]reflect.Value{
 		"S1": reflect.Zero(reflect.TypeOf(&S1{})),
 	}})
-	_, err := i.Eval(`import "p"`)
+	_, err := i.EvalInc(`import "p"`)
 	if err != nil {
 		t.Fatalf("failed to import package: %v", err)
 	}
-	_, err = i.Eval(`p.S1{F: p.S2{}}`)
+	_, err = i.EvalInc(`p.S1{F: p.S2{}}`)
 	if err == nil {
 		t.Error("unexpected nil error for expression with undefined type")
 	}
@@ -489,20 +493,20 @@ func TestEvalWithContext(t *testing.T) {
 			defer close(done)
 			i := interp.New(interp.Options{})
 			i.Use(stdlib.Symbols)
-			_, err := i.Eval(`import "sync"`)
+			_, err := i.EvalInc(`import "sync"`)
 			if err != nil {
 				t.Errorf(`failed to import "sync": %v`, err)
 				return
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 			defer cancel()
-			_, err = i.EvalWithContext(ctx, src)
+			_, err = i.EvalWithContext(ctx, src, "", true)
 			switch err {
 			case context.DeadlineExceeded:
 				// Successful cancellation.
 
 				// Check we can still execute an expression.
-				v, err := i.EvalWithContext(context.Background(), "1+1\n")
+				v, err := i.EvalWithContext(context.Background(), "1+1\n", "", true)
 				if err != nil {
 					t.Errorf("failed to evaluate expression after cancellation: %v", err)
 				}
@@ -542,7 +546,7 @@ func runTests(t *testing.T, i *interp.Interpreter, tests []testCase) {
 
 func eval(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
 	t.Helper()
-	res, err := i.Eval(src)
+	res, err := i.EvalInc(src)
 	if err != nil {
 		t.Logf("Error: %v", err)
 		if e, ok := err.(interp.Panic); ok {
@@ -554,7 +558,7 @@ func eval(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
 }
 
 func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expectedRes string) {
-	res, err := i.Eval(src)
+	res, err := i.EvalInc(src)
 
 	if expectedError != "" {
 		if err == nil || !strings.Contains(err.Error(), expectedError) {
@@ -573,5 +577,87 @@ func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expecte
 
 	if fmt.Sprintf("%v", res) != expectedRes {
 		t.Fatalf("got %v, want %s", res, expectedRes)
+	}
+}
+
+func TestMultiEval(t *testing.T) {
+	// catch stdout
+	backupStdout := os.Stdout
+	defer func() {
+		os.Stdout = backupStdout
+	}()
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	i := interp.New(interp.Options{})
+	i.Use(stdlib.Symbols)
+	var err error
+
+	f, err := os.Open(filepath.Join("testdata", "multi", "731"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	names, err := f.Readdirnames(-1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range names {
+		data, err := ioutil.ReadFile(filepath.Join(f.Name(), v))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := i.Eval(string(data), v, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// read stdout
+	if err = w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	outInterp, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// restore Stdout
+	os.Stdout = backupStdout
+
+	want := "A\nB\n"
+	got := string(outInterp)
+	if got != want {
+		t.Fatalf("unexpected output: got %v, wanted %v", got, want)
+	}
+}
+
+func TestMultiEvalNoName(t *testing.T) {
+	i := interp.New(interp.Options{})
+	i.Use(stdlib.Symbols)
+	var err error
+
+	f, err := os.Open(filepath.Join("testdata", "multi", "731"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	names, err := f.Readdirnames(-1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for k, v := range names {
+		data, err := ioutil.ReadFile(filepath.Join(f.Name(), v))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = i.Eval(string(data), "", false)
+		if k == 1 {
+			expectedErr := errors.New(interp.DefaultSourceName + ":3:8: fmt/" + interp.DefaultSourceName + " redeclared in this block")
+			if err.Error() != expectedErr.Error() {
+				t.Fatalf("unexpected result; wanted error %v, got %v", expectedErr, err)
+			}
+			return
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 }

@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/constant"
@@ -334,15 +335,16 @@ func (interp *Interpreter) firstToken(src string) token.Token {
 
 // ast parses src string containing Go code and generates the corresponding AST.
 // The package name and the AST root node are returned.
+// The given name is used to set the filename of the relevant source file in the
+// interpreter's FileSet.
 func (interp *Interpreter) ast(src, name string) (string, *node, error) {
-	inRepl := name == ""
 	var inFunc bool
 	var mode parser.Mode
 
 	// Allow incremental parsing of declarations or statements, by inserting
 	// them in a pseudo file package or function. Those statements or
 	// declarations will be always evaluated in the global scope
-	if inRepl {
+	if interp.inREPL {
 		switch interp.firstToken(src) {
 		case token.PACKAGE:
 			// nothing to do
@@ -852,6 +854,9 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 		// Set root to function body so its statements are evaluated in global scope
 		root = root.child[1].child[3]
 		root.anc = nil
+	}
+	if pkgName == "" {
+		return "", root, errors.New("no package name found")
 	}
 	return pkgName, root, err
 }

@@ -360,10 +360,11 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				ipath = n.child[0].rval.String()
 				name = identifier.FindString(ipath)
 			}
+			uniqName := filepath.Join(name, baseName)
 			if interp.binPkg[ipath] != nil && name != "." {
-				sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath}}
+				sc.sym[uniqName] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath}}
 			} else {
-				sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: ipath}}
+				sc.sym[uniqName] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: ipath}}
 			}
 			return false
 
@@ -1184,7 +1185,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				// TODO(mpl): maybe we improve lookup itself so it can deal with that.
 				sym, level, found = sc.lookup(filepath.Join(n.ident, baseName))
 				if !found {
-					err = n.cfgErrorf("undefined: %s", n.ident)
+					err = n.cfgErrorf("undefined: %s(/%s)", n.ident, baseName)
 					break
 				}
 			}
@@ -2081,14 +2082,21 @@ func (n *node) isType(sc *scope) bool {
 		}
 	case selectorExpr:
 		pkg, name := n.child[0].ident, n.child[1].ident
-		if sym, _, ok := sc.lookup(pkg); ok && sym.kind == pkgSym {
-			path := sym.typ.path
-			if p, ok := n.interp.binPkg[path]; ok && isBinType(p[name]) {
-				return true // Imported binary type
-			}
-			if p, ok := n.interp.srcPkg[path]; ok && p[name] != nil && p[name].kind == typeSym {
-				return true // Imported source type
-			}
+		baseName := filepath.Base(n.interp.fset.Position(n.pos).Filename)
+		suffixedPkg := filepath.Join(pkg, baseName)
+		sym, _, ok := sc.lookup(suffixedPkg)
+		if !ok {
+			return false
+		}
+		if sym.kind != pkgSym {
+			return false
+		}
+		path := sym.typ.path
+		if p, ok := n.interp.binPkg[path]; ok && isBinType(p[name]) {
+			return true // Imported binary type
+		}
+		if p, ok := n.interp.srcPkg[path]; ok && p[name] != nil && p[name].kind == typeSym {
+			return true // Imported source type
 		}
 	case identExpr:
 		return sc.getType(n.ident) != nil

@@ -54,12 +54,11 @@ func runCheck(t *testing.T, p string) {
 	os.Stdout = w
 
 	i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
-	i.Name = p
 	i.Use(interp.Symbols)
 	i.Use(stdlib.Symbols)
 	i.Use(unsafe.Symbols)
 
-	_, err = i.Eval(string(src))
+	_, err = i.Eval(string(src), p, false)
 	if errWanted {
 		if err == nil {
 			t.Fatalf("got nil error, want: %q", wanted)

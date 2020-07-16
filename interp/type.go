@@ -446,7 +446,6 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		sym, _, found := sc.lookup(n.ident)
 		if !found {
 			// retry with the filename, in case ident is a package name.
-			// TODO(mpl): try to move that into lookup instead?
 			baseName := filepath.Base(interp.fset.Position(n.pos).Filename)
 			ident := filepath.Join(n.ident, baseName)
 			sym, _, found = sc.lookup(ident)

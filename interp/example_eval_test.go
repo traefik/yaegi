@@ -13,13 +13,13 @@ func Example_eval() {
 	i := interp.New(interp.Options{})
 
 	// Run some code: define a new function
-	_, err := i.Eval("func f(i int) int { return 2 * i }")
+	_, err := i.EvalInc("func f(i int) int { return 2 * i }")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Access the interpreted f function with Eval
-	v, err := i.Eval("f")
+	v, err := i.EvalInc("f")
 	if err != nil {
 		log.Fatal(err)
 	}
