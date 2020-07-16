@@ -9,6 +9,8 @@ import (
 // variables and functions symbols at package level, prior to CFG.
 // All function bodies are skipped. GTA is necessary to handle out of
 // order declarations and multiple source files packages.
+// rpath is the relative path to the directory containing the source for pkgID.
+// TODO(mpl): clarify pkgID: package name VS package import path.
 func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error) {
 	sc := interp.initScopePkg(pkgID)
 	var err error
@@ -170,7 +172,6 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				rcvrtype.method = append(rcvrtype.method, n)
 				n.child[0].child[0].lastChild().typ = rcvrtype
 			case ident == "init":
-				// TODO(mpl): use constant instead of hardcoded string?
 				// init functions do not get declared as per the Go spec.
 			default:
 				asImportName := filepath.Join(ident, baseName)
@@ -316,11 +317,11 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 }
 
 // gtaRetry (re)applies gta until all global constants and types are defined.
-func (interp *Interpreter) gtaRetry(nodes []*node, rpath, pkgID string) error {
+func (interp *Interpreter) gtaRetry(nodes []*node, importPath string) error {
 	revisit := []*node{}
 	for {
 		for _, n := range nodes {
-			list, err := interp.gta(n, rpath, pkgID)
+			list, err := interp.gta(n, importPath, importPath)
 			if err != nil {
 				return err
 			}

@@ -111,8 +111,6 @@ func TestPackages(t *testing.T) {
 
 			var msg string
 			if test.evalFile != "" {
-				// setting i.Name as this is how it's actually done in cmd/yaegi
-				i.Name = test.evalFile
 				data, err := ioutil.ReadFile(test.evalFile)
 				if err != nil {
 					t.Fatal(err)
@@ -127,7 +125,7 @@ func TestPackages(t *testing.T) {
 				}
 				os.Stdout = pw
 
-				if _, err := i.Eval(string(data)); err != nil {
+				if _, err := i.Eval(string(data), test.evalFile, false); err != nil {
 					fatalStderrf(t, "%v", err)
 				}
 
@@ -151,10 +149,10 @@ func TestPackages(t *testing.T) {
 				if test.topImport != "" {
 					topImport = test.topImport
 				}
-				if _, err = i.Eval(fmt.Sprintf(`import "%s"`, topImport)); err != nil {
+				if _, err = i.EvalInc(fmt.Sprintf(`import "%s"`, topImport)); err != nil {
 					t.Fatal(err)
 				}
-				value, err := i.Eval(`pkg.NewSample()`)
+				value, err := i.EvalInc(`pkg.NewSample()`)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -185,7 +183,7 @@ func TestPackagesError(t *testing.T) {
 		{
 			desc:     "different packages in the same directory",
 			goPath:   "./_pkg9/",
-			expected: "1:21: import \"github.com/foo/pkg\" error: found packages pkg and pkgfalse in _pkg9/src/github.com/foo/pkg",
+			expected: interp.DefaultSourceName + ":1:21: import \"github.com/foo/pkg\" error: found packages pkg and pkgfalse in _pkg9/src/github.com/foo/pkg",
 		},
 	}
 
@@ -197,7 +195,7 @@ func TestPackagesError(t *testing.T) {
 			i.Use(stdlib.Symbols) // Use binary standard library
 
 			// Load pkg from sources
-			_, err := i.Eval(`import "github.com/foo/pkg"`)
+			_, err := i.EvalInc(`import "github.com/foo/pkg"`)
 			if err == nil {
 				t.Fatalf("got no error, want %q", test.expected)
 			}

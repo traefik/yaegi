@@ -6,7 +6,7 @@ import (
 
 func main() {
 	i := interp.New(interp.Opt{})
-	i.Eval(`println("Hello")`)
+	i.EvalInc(`println("Hello")`)
 }
 
 // Output:
