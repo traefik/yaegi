@@ -37,8 +37,6 @@ before_install:
 install:
   - echo "TRAVIS_GO_VERSION=$TRAVIS_GO_VERSION"
   - go mod download
-  - # if $TRAVIS_GO_VERSION =~ ^1\.13; rm stdlib/go1_14_hash_maphash.go
-  - go mod vendor
 
 before_script:
   - rm -f interp/op.go
