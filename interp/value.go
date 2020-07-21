@@ -155,12 +155,30 @@ func genValueArray(n *node) func(*frame) reflect.Value {
 
 func genValueRangeArray(n *node) func(*frame) reflect.Value {
 	value := genValue(n)
+
 	// dereference array pointer, to support array operations on array pointer
 	if n.typ.TypeOf().Kind() == reflect.Ptr {
 		return func(f *frame) reflect.Value {
 			return value(f).Elem()
 		}
 	}
+	if n.typ.val.cat == interfaceT {
+		return func(f *frame) reflect.Value {
+			val := value(f)
+			v := []valueInterface{}
+			for i := 0; i < val.Len(); i++ {
+				if av, ok := val.Index(i).Interface().([]valueInterface); ok {
+					v = append(v, av...)
+				} else if av, ok := val.Index(i).Interface().(valueInterface); ok {
+					v = append(v, av)
+				} else {
+					panic(n.cfgErrorf("invalid type %v", val.Index(i).Type()))
+				}
+			}
+			return reflect.ValueOf(v)
+		}
+	}
+
 	return func(f *frame) reflect.Value {
 		// This is necessary to prevent changes in the returned
 		// reflect.Value being reflected back to the value used
