@@ -45,3 +45,24 @@ archives:
         format: zip
     files:
       - LICENSE
+
+brews:
+  - name: yaegi
+    caveats:
+    commit_author:
+      name:  <TODO>
+      email: <TODO>
+    description: |
+      Yaegi is Another Elegant Go Interpreter.
+      It powers executable Go scripts and plugins, in embedded interpreters
+      or interactive shells, on top of the Go runtime.
+    folder: Formula
+    homepage: https://github.com/containous/yaegi
+    github:
+      owner: <TODO>
+      name:  <TODO>
+    install: |
+      bin.install "yaegi"
+      prefix.install_metafiles
+    test: |
+      system "#{bin}/yaegi -e 'println(true)'"
