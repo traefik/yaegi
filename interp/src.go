@@ -22,7 +22,7 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 	// In all other cases, absolute import paths are resolved from the GOPATH
 	// and the nested "vendor" directories.
 	if isPathRelative(path) {
-		if rPath == "main" {
+		if rPath == mainID {
 			rPath = "."
 		}
 		dir = filepath.Join(filepath.Dir(interp.Name), rPath, path)
@@ -153,7 +153,7 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 
 func (interp *Interpreter) rootFromSourceLocation(rPath string) (string, error) {
 	sourceFile := interp.Name
-	if rPath != "main" || !strings.HasSuffix(sourceFile, ".go") {
+	if rPath != mainID || !strings.HasSuffix(sourceFile, ".go") {
 		return rPath, nil
 	}
 	wd, err := os.Getwd()
@@ -188,13 +188,62 @@ func pkgDir(goPath string, root, path string) (string, string, error) {
 		return "", "", fmt.Errorf("unable to find source related to: %q", path)
 	}
 
-	return pkgDir(goPath, previousRoot(root), path)
+	rootPath := filepath.Join(goPath, "src", root)
+	prevRoot, err := previousRoot(rootPath, root)
+	if err != nil {
+		return "", "", err
+	}
+
+	return pkgDir(goPath, prevRoot, path)
 }
 
-// Find the previous source root (vendor > vendor > ... > GOPATH).
-func previousRoot(root string) string {
-	splitRoot := strings.Split(root, string(filepath.Separator))
+const vendor = "vendor"
 
+// Find the previous source root (vendor > vendor > ... > GOPATH).
+func previousRoot(rootPath, root string) (string, error) {
+	rootPath = filepath.Clean(rootPath)
+	parent, final := filepath.Split(rootPath)
+	parent = filepath.Clean(parent)
+
+	// TODO(mpl): maybe it works for the special case main, but can't be bothered for now.
+	if root != mainID && final != vendor {
+		root = strings.TrimSuffix(root, string(filepath.Separator))
+		prefix := strings.TrimSuffix(rootPath, root)
+
+		// look for the closest vendor in one of our direct ancestors, as it takes priority.
+		var vendored string
+		for {
+			fi, err := os.Lstat(filepath.Join(parent, vendor))
+			if err == nil && fi.IsDir() {
+				vendored = strings.TrimPrefix(strings.TrimPrefix(parent, prefix), string(filepath.Separator))
+				break
+			}
+			if !os.IsNotExist(err) {
+				return "", err
+			}
+
+			// stop when we reach GOPATH/src/blah
+			parent = filepath.Dir(parent)
+			if parent == prefix {
+				break
+			}
+
+			// just an additional failsafe, stop if we reach the filesystem root.
+			// TODO(mpl): It should probably be a critical error actually,
+			// as we shouldn't have gone that high up in the tree.
+			if parent == string(filepath.Separator) {
+				break
+			}
+		}
+
+		if vendored != "" {
+			return vendored, nil
+		}
+	}
+
+	// TODO(mpl): the algorithm below might be redundant with the one above,
+	// but keeping it for now. Investigate/simplify/remove later.
+	splitRoot := strings.Split(root, string(filepath.Separator))
 	var index int
 	for i := len(splitRoot) - 1; i >= 0; i-- {
 		if splitRoot[i] == "vendor" {
@@ -204,10 +253,10 @@ func previousRoot(root string) string {
 	}
 
 	if index == 0 {
-		return ""
+		return "", nil
 	}
 
-	return filepath.Join(splitRoot[:index]...)
+	return filepath.Join(splitRoot[:index]...), nil
 }
 
 func effectivePkg(root, path string) string {
