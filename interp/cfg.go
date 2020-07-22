@@ -1726,7 +1726,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				wireChild(n)
 				c1 := n.child[1]
 				if c1.typ == nil {
-					if n.child[1].typ, err = nodeType(interp, sc, c1); err != nil {
+					if c1.typ, err = nodeType(interp, sc, c1); err != nil {
 						return
 					}
 				}
