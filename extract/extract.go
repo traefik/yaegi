@@ -202,22 +202,9 @@ func genContent(dest, importPath, license string, p *types.Package, skip map[str
 		}
 	}
 
-	var buildTags string
-	if runtime.Version() != "devel" {
-		parts := strings.Split(runtime.Version(), ".")
-
-		minorRaw := GetMinor(parts[1])
-
-		currentGoVersion := parts[0] + "." + minorRaw
-
-		minor, errParse := strconv.Atoi(minorRaw)
-		if errParse != nil {
-			return nil, fmt.Errorf("failed to parse version: %v", errParse)
-		}
-
-		nextGoVersion := parts[0] + "." + strconv.Itoa(minor+1)
-
-		buildTags = currentGoVersion + ",!" + nextGoVersion
+	buildTags, err := buildTags()
+	if err != nil {
+		return nil, err
 	}
 
 	base := template.New("goexports")
@@ -399,4 +386,26 @@ func GetMinor(part string) string {
 	}
 
 	return minor
+}
+
+func buildTags() (string, error) {
+	version := runtime.Version()
+	if version == "devel" {
+		// TODO(mpl): maybe we want to return an error in that case?
+		return "", nil
+	}
+	parts := strings.Split(version, ".")
+
+	minorRaw := GetMinor(parts[1])
+
+	currentGoVersion := parts[0] + "." + minorRaw
+
+	minor, err := strconv.Atoi(minorRaw)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse version: %v", err)
+	}
+
+	nextGoVersion := parts[0] + "." + strconv.Itoa(minor+1)
+
+	return currentGoVersion + ",!" + nextGoVersion, nil
 }
