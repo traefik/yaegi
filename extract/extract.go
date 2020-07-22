@@ -22,8 +22,6 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
-
-	"golang.org/x/tools/go/packages"
 )
 
 // TODO(mpl): do we want to change that warning (s/goexports/something else/) ?
@@ -103,32 +101,15 @@ type Wrap struct {
 	Method []Method
 }
 
-func loadPkg(pkgName string) (*types.Package, error) {
-	//	return importer.ForCompiler(token.NewFileSet(), "source", nil).Import(pkgName)
-	return importer.ForCompiler(token.NewFileSet(), "source", nil).Import(".")
-	parts := strings.Split(pkgName, "/")
-	var err error
-	if !strings.Contains(parts[0], ".") {
-		// first part does not have a domain, assume (wrongly imho) that it is an stdlib
-		// pkg. In which case, we keep on using go/importer, because x/packages produces
-		// funky results for math package.
-		return importer.ForCompiler(token.NewFileSet(), "source", nil).Import(pkgName)
-	}
-	// TODO(mpl): technically, we don't need the imports, but if we don't ask for them
-	//  we hit the check at
-	// https://github.com/golang/tools/blob/2ee2e4c56a28ab4461523bb5ecc1785c3845e938/go/packages/packages.go#L1182
-	// because we haven't prepopulated the imports. I think they should be smarter
-	// and only do that check if the initial pkg.Imports was not empty.
-	cfg := &packages.Config{Mode: packages.NeedTypes |
-		packages.NeedImports}
-	pkgs, err := packages.Load(cfg, pkgName)
-	if err != nil {
-		return nil, err
-	}
-	if packages.PrintErrors(pkgs) > 0 {
-		return nil, fmt.Errorf("error(s) loading package %s", pkgName)
-	}
-	return pkgs[0].Types, nil
+// restricted map defines symbols for which a special implementation is provided.
+var restricted = map[string]bool{
+	"osExit":        true,
+	"osFindProcess": true,
+	"logFatal":      true,
+	"logFatalf":     true,
+	"logFatalln":    true,
+	"logLogger":     true,
+	"logNew":        true,
 }
 
 func genContent(dest, importPath, license string, p *types.Package, skip map[string]bool) ([]byte, error) {
@@ -162,7 +143,7 @@ func genContent(dest, importPath, license string, p *types.Package, skip map[str
 			continue
 		}
 
-		if rname := path.Base(pkgName) + name; restricted[rname] {
+		if rname := path.Base(importPath) + name; restricted[rname] {
 			// Restricted symbol, locally provided by stdlib wrapper.
 			pname = rname
 		}
@@ -310,7 +291,7 @@ func fixConst(name string, val constant.Value, imports map[string]bool) string {
 // located in the directory. If it is definitely a relative path, but it does not
 // exist, an error is returned. Otherwise, it is assumed to be an import path, and
 // pkgIdent is returned.
-func (e Extractor) resolvePaths(pkgIdent, importPath string) (string, error) {
+func (e Extractor) importPath(pkgIdent, importPath string) (string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", err
@@ -347,7 +328,9 @@ func (e Extractor) resolvePaths(pkgIdent, importPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	sc := bufio.NewScanner(f)
 	var l string
 	for sc.Scan() {
@@ -366,7 +349,6 @@ func (e Extractor) resolvePaths(pkgIdent, importPath string) (string, error) {
 	}
 
 	return parts[1], nil
-
 }
 
 // Extractor creates a package with all the symbols from a dependency package.
@@ -383,7 +365,7 @@ type Extractor struct {
 // If pkgIdent is an import path, it is looked up in GOPATH. Vendoring is not
 // supported yet, and the behavior is only defined for GO111MODULE=off.
 func (e Extractor) Extract(pkgIdent, importPath string, rw io.Writer) (string, error) {
-	ipp, err := e.resolvePaths(pkgIdent, importPath)
+	ipp, err := e.importPath(pkgIdent, importPath)
 	if err != nil {
 		return "", err
 	}
