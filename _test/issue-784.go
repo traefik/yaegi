@@ -28,12 +28,6 @@ func (g *GIFT) Bounds(srcBounds string) (dstBounds string) {
 	return dstBounds
 }
 
-type resizeFilter struct{}
-
-func (p *resizeFilter) Bounds(srcBounds string) (dstBounds string) {
-	return srcBounds
-}
-
 func main() {
 	var filters []Filter
 	bounds := "foo"
