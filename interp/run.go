@@ -3025,7 +3025,7 @@ func slice(n *node) {
 	case 2:
 		n.exec = func(f *frame) bltn {
 			a := value0(f)
-			getFrame(f, l).data[i] = a.Slice(int(value1(f).Int()), a.Len())
+			getFrame(f, l).data[i] = a.Slice(int(vInt(value1(f))), a.Len())
 			return next
 		}
 	case 3:
@@ -3033,7 +3033,7 @@ func slice(n *node) {
 
 		n.exec = func(f *frame) bltn {
 			a := value0(f)
-			getFrame(f, l).data[i] = a.Slice(int(value1(f).Int()), int(value2(f).Int()))
+			getFrame(f, l).data[i] = a.Slice(int(vInt(value1(f))), int(vInt(value2(f))))
 			return next
 		}
 	case 4:
@@ -3042,7 +3042,7 @@ func slice(n *node) {
 
 		n.exec = func(f *frame) bltn {
 			a := value0(f)
-			getFrame(f, l).data[i] = a.Slice3(int(value1(f).Int()), int(value2(f).Int()), int(value3(f).Int()))
+			getFrame(f, l).data[i] = a.Slice3(int(vInt(value1(f))), int(vInt(value2(f))), int(vInt(value3(f))))
 			return next
 		}
 	}
@@ -3066,7 +3066,7 @@ func slice0(n *node) {
 		value1 := genValue(n.child[1])
 		n.exec = func(f *frame) bltn {
 			a := value0(f)
-			getFrame(f, l).data[i] = a.Slice(0, int(value1(f).Int()))
+			getFrame(f, l).data[i] = a.Slice(0, int(vInt(value1(f))))
 			return next
 		}
 	case 3:
@@ -3074,7 +3074,7 @@ func slice0(n *node) {
 		value2 := genValue(n.child[2])
 		n.exec = func(f *frame) bltn {
 			a := value0(f)
-			getFrame(f, l).data[i] = a.Slice3(0, int(value1(f).Int()), int(value2(f).Int()))
+			getFrame(f, l).data[i] = a.Slice3(0, int(vInt(value1(f))), int(vInt(value2(f))))
 			return next
 		}
 	}
