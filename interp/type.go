@@ -1536,11 +1536,13 @@ func chanElement(t *itype) *itype {
 
 func isBool(t *itype) bool { return t.TypeOf().Kind() == reflect.Bool }
 func isChan(t *itype) bool { return t.TypeOf().Kind() == reflect.Chan }
+func isFunc(t *itype) bool { return t.TypeOf().Kind() == reflect.Func }
+func isMap(t *itype) bool  { return t.TypeOf().Kind() == reflect.Map }
 func isSendChan(t *itype) bool {
 	rt := t.TypeOf()
 	return rt.Kind() == reflect.Chan && rt.ChanDir() == reflect.SendDir
 }
-func isMap(t *itype) bool { return t.TypeOf().Kind() == reflect.Map }
+
 func isArray(t *itype) bool {
 	k := t.TypeOf().Kind()
 	return k == reflect.Array || k == reflect.Slice
