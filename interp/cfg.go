@@ -580,7 +580,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					case n.anc.kind == constDecl:
 						// Possible conversion from const to actual type will be handled later
 					default:
-						// Convert literal value to destination type.
+						// Convert literal value to destination type, ensuring dest is not untyped.
+						dest.typ = dest.typ.defaultType()
 						convertConstantValue(src)
 						src.rval = src.rval.Convert(dest.typ.TypeOf())
 						src.typ = dest.typ
@@ -843,9 +844,11 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				// Type conversion expression
 				if isInt(n.child[0].typ.TypeOf()) && n.child[1].kind == basicLit && isFloat(n.child[1].typ.TypeOf()) {
 					err = n.cfgErrorf("truncated to integer")
+					break
 				}
 				n.action = aConvert
-				if isInterface(n.child[0].typ) && !n.child[1].isNil() {
+				switch {
+				case isInterface(n.child[0].typ) && !n.child[1].isNil():
 					// Convert to interface: just check that all required methods are defined by concrete type.
 					c0, c1 := n.child[0], n.child[1]
 					if !c1.typ.implements(c0.typ) {
@@ -858,7 +861,13 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.level = n.child[1].level
 					n.val = n.child[1].val
 					n.rval = n.child[1].rval
-				} else {
+				case n.child[1].rval.IsValid() && isConstType(n.child[0].typ):
+					n.gen = nop
+					n.findex = -1
+					n.typ = n.child[0].typ
+					n.rval = n.child[1].rval
+					convertConstantValue(n)
+				default:
 					n.gen = convert
 					n.typ = n.child[0].typ
 					n.findex = sc.add(n.typ)
