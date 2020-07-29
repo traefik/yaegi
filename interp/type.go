@@ -961,6 +961,8 @@ func (t *itype) id() (res string) {
 		return t.name
 	}
 	switch t.cat {
+	case nilT:
+		res = "nil"
 	case arrayT:
 		res = "[" + strconv.Itoa(t.size) + "]" + t.val.id()
 	case chanT:
@@ -996,7 +998,11 @@ func (t *itype) id() (res string) {
 		}
 		res += "}"
 	case valueT:
-		res = t.rtype.PkgPath() + "." + t.rtype.Name()
+		res = ""
+		if t.rtype.PkgPath() != "" {
+			res += t.rtype.PkgPath() + "."
+		}
+		res += t.rtype.Name()
 	}
 	return res
 }
@@ -1401,14 +1407,6 @@ func defRecvType(n *node) *itype {
 func isShiftNode(n *node) bool {
 	switch n.action {
 	case aShl, aShr, aShlAssign, aShrAssign:
-		return true
-	}
-	return false
-}
-
-func isComparisonNode(n *node) bool {
-	switch n.action {
-	case aEqual, aNotEqual, aGreater, aGreaterEqual, aLower, aLowerEqual:
 		return true
 	}
 	return false

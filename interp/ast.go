@@ -190,6 +190,8 @@ type astError error
 type action uint
 
 // Node actions for the go language.
+// It is important for type checking that *Assign directly
+// follows it non-assign counterpart.
 const (
 	aNop action = iota
 	aAddr
@@ -317,6 +319,15 @@ func (a action) String() string {
 		return actions[a]
 	}
 	return "Action(" + strconv.Itoa(int(a)) + ")"
+}
+
+func isAssignAction(a action) bool {
+	switch a {
+	case aAddAssign, aAndAssign, aAndNotAssign, aMulAssign, aOrAssign,
+		aQuoAssign, aRemAssign, aShlAssign, aShrAssign, aSubAssign, aXorAssign:
+		return true
+	}
+	return false
 }
 
 func (interp *Interpreter) firstToken(src string) token.Token {

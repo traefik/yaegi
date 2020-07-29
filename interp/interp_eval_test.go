@@ -67,9 +67,9 @@ func TestEvalAssign(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{src: `a := "Hello"; a += " world"`, res: "Hello world"},
-		{src: `b := "Hello"; b += 1`, err: "1:42: illegal operand types for '+=' operator"},
-		{src: `c := "Hello"; c -= " world"`, err: "1:42: illegal operand types for '-=' operator"},
-		{src: "e := 64.4; e %= 64", err: "1:39: illegal operand types for '%=' operator"},
+		{src: `b := "Hello"; b += 1`, err: "1:42: invalid operation: mismatched types string and int"},
+		{src: `c := "Hello"; c -= " world"`, err: "1:42: invalid operation: operator -= not defined on string"},
+		{src: "e := 64.4; e %= 64", err: "1:39: invalid operation: operator %= not defined on float64"},
 		{src: "f := int64(3.2)", err: "1:33: truncated to integer"},
 		{src: "g := 1; g <<= 8", res: "256"},
 		{src: "h := 1; h >>= 8", res: "0"},

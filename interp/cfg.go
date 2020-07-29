@@ -504,46 +504,12 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				} else {
 					sym, level, _ = sc.lookup(dest.ident)
 				}
-				switch t0, t1 := dest.typ.TypeOf(), src.typ.TypeOf(); n.action {
-				case aAddAssign:
-					if !(isNumber(t0) && isNumber(t1) || isString(t0) && isString(t1)) || isInt(t0) && isFloat(t1) {
-						err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
-					}
-				case aSubAssign, aMulAssign, aQuoAssign:
-					if !(isNumber(t0) && isNumber(t1)) || isInt(t0) && isFloat(t1) {
-						err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
-					}
-				case aRemAssign, aAndAssign, aOrAssign, aXorAssign, aAndNotAssign:
-					if !(isInt(t0) && isInt(t1)) {
-						err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
-					}
-				case aShlAssign, aShrAssign:
-					if !(dest.isInteger() && src.isNatural()) {
-						err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
-					}
-				default:
-					// Detect invalid float truncate.
-					if isInt(t0) && isFloat(t1) {
-						err = src.cfgErrorf("invalid float truncate")
-						return
-					}
 
-					// TODO: Rudimentary type check at this point,
-					// improvements need to be made to make it better.
-					switch {
-					case dest.typ.untyped || src.typ.untyped:
-						// Both side of the assignment must be typed.
-					case isRecursiveType(dest.typ, dest.typ.rtype) || isRecursiveType(src.typ, src.typ.rtype):
-						// Recursive types cannot be type checked.
-					case t0.Kind() == reflect.Interface || t0.Kind() == reflect.Func:
-						// We have no way of checking interfaces and functions.
-					case t1.AssignableTo(t0):
-						// All is well when they are assignable.
-					default:
-						err = src.cfgErrorf("cannot use type %s as type %s in assignment", src.typ.id(), dest.typ.id())
-						return
-					}
+				err = check.assignExpr(n, dest, src)
+				if err != nil {
+					break
 				}
+
 				n.findex = dest.findex
 				n.level = dest.level
 
@@ -574,24 +540,9 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.gen = nop
 					src.findex = dest.findex
 					src.level = level
-				case src.kind == basicLit:
-					// TODO: perform constant folding and propagation here.
-					switch {
-					case dest.typ.cat == interfaceT:
-					case isComplex(dest.typ.TypeOf()):
-						// Value set in genValue.
-					case !src.rval.IsValid():
-						// Assign to nil.
-						src.rval = reflect.New(dest.typ.TypeOf()).Elem()
-					case n.anc.kind == constDecl:
-						// Possible conversion from const to actual type will be handled later
-					default:
-						// Convert literal value to destination type, ensuring dest is not untyped.
-						dest.typ = dest.typ.defaultType()
-						convertConstantValue(src)
-						src.rval = src.rval.Convert(dest.typ.TypeOf())
-						src.typ = dest.typ
-					}
+				case src.kind == basicLit && !src.rval.IsValid():
+					// Assign to nil.
+					src.rval = reflect.New(dest.typ.TypeOf()).Elem()
 				}
 				n.typ = dest.typ
 				if sym != nil {
@@ -603,10 +554,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					dest.gen = nop // skip getIndexMap
 				}
 				if n.anc.kind == constDecl {
-					if !dest.typ.untyped {
-						// If the dest is untyped, any constant rval needs to be converted
-						convertConstantValue(src)
-					}
 					n.gen = nop
 					n.findex = -1
 					if sym, _, ok := sc.lookup(dest.ident); ok {
@@ -976,7 +923,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			wireChild(n)
 			n.findex = sc.add(n.typ)
 			// TODO: Check that composite literal expr matches corresponding type
-			n.gen = compositeGenerator(n, sc)
+			n.gen = compositeGenerator(n)
 
 		case fallthroughtStmt:
 			if n.anc.kind != caseBody {
@@ -2103,42 +2050,8 @@ func (n *node) name() (s string) {
 }
 
 // isInteger returns true if node type is integer, false otherwise.
-func (n *node) isInteger() bool {
-	if isInt(n.typ.TypeOf()) {
-		return true
-	}
-	if n.rval.IsValid() {
 		t := n.rval.Type()
 		if isInt(t) {
-			return true
-		}
-		if isFloat(t) {
-			// untyped float constant with null decimal part is ok
-			f := n.rval.Float()
-			if f == math.Trunc(f) {
-				n.rval = reflect.ValueOf(int(f))
-				n.typ.rtype = n.rval.Type()
-				return true
-			}
-		}
-		if isConstantValue(t) {
-			c := n.rval.Interface().(constant.Value)
-			switch c.Kind() {
-			case constant.Int:
-				return true
-			case constant.Float:
-				f, _ := constant.Float64Val(c)
-				if f == math.Trunc(f) {
-					n.rval = reflect.ValueOf(constant.ToInt(c))
-					n.typ.rtype = n.rval.Type()
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
 // isNatural returns true if node type is natural, false otherwise.
 func (n *node) isNatural() bool {
 	if isUint(n.typ.TypeOf()) {
@@ -2368,12 +2281,11 @@ func gotoLabel(s *symbol) {
 	}
 }
 
-func compositeGenerator(n *node, sc *scope) (gen bltnGenerator) {
+func compositeGenerator(n *node) (gen bltnGenerator) {
 	switch n.typ.cat {
 	case aliasT, ptrT:
-		n.typ.val.untyped = n.typ.untyped
 		n.typ = n.typ.val
-		gen = compositeGenerator(n, sc)
+		gen = compositeGenerator(n)
 	case arrayT:
 		gen = arrayLit
 	case mapT:
@@ -2383,13 +2295,13 @@ func compositeGenerator(n *node, sc *scope) (gen bltnGenerator) {
 		case len(n.child) == 0:
 			gen = compositeLitNotype
 		case n.lastChild().kind == keyValueExpr:
-			if n.child[0].isType(sc) {
+			if n.nleft == 1 {
 				gen = compositeSparse
 			} else {
 				gen = compositeSparseNotype
 			}
 		default:
-			if n.child[0].isType(sc) {
+			if n.nleft == 1 {
 				gen = compositeLit
 			} else {
 				gen = compositeLitNotype

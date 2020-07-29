@@ -2,8 +2,8 @@ package interp
 
 import (
 	"errors"
-	"fmt"
 	"go/constant"
+	"math"
 	"reflect"
 )
 
@@ -17,8 +17,8 @@ type opPredicates map[action]func(reflect.Type) bool
 type typecheck struct{}
 
 // op type checks an expression against a set of expression predicates.
-func (check typecheck) op(p opPredicates, n, c *node, t reflect.Type) error {
-	if pred := p[n.action]; pred != nil {
+func (check typecheck) op(p opPredicates, a action, n, c *node, t reflect.Type) error {
+	if pred := p[a]; pred != nil {
 		if !pred(t) {
 			return n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, c.typ.id())
 		}
@@ -26,6 +26,41 @@ func (check typecheck) op(p opPredicates, n, c *node, t reflect.Type) error {
 		return n.cfgErrorf("invalid operation: unknown operator %v", n.action)
 	}
 	return nil
+}
+
+// addressExpr type checks an assign expression.
+//
+// This is done per pair of assignments.
+func (check typecheck) assignExpr(n, dest, src *node) error {
+	if n.action == aAssign {
+		isConst := n.anc.kind == constDecl
+		if !isConst {
+			// var operations must be typed
+			dest.typ = dest.typ.defaultType()
+		}
+
+		if src.typ.untyped {
+			typ := dest.typ
+			if typ.isNil() || isInterface(typ) {
+				typ = src.typ.defaultType()
+			}
+			if err := check.convertUntyped(src, typ); err != nil {
+				return err
+			}
+		}
+
+		if !src.typ.assignableTo(dest.typ) {
+			return src.cfgErrorf("cannot use type %s as type %s in assignment", src.typ.id(), dest.typ.id())
+		}
+		return nil
+	}
+
+	// assignment operations.
+	if n.nleft > 1 || n.nright > 1 {
+		return n.cfgErrorf("assignment operation %s requires single-valued expressions", n.action)
+	}
+
+	return check.binaryExpr(n)
 }
 
 // addressExpr type checks a unary address expression.
@@ -74,7 +109,7 @@ func (check typecheck) unaryExpr(n *node) error {
 		return nil
 	}
 
-	if err := check.op(unaryOpPredicates, n, c0, t0); err != nil {
+	if err := check.op(unaryOpPredicates, n.action, n, c0, t0); err != nil {
 		return err
 	}
 	return nil
@@ -152,14 +187,19 @@ var binaryOpPredicates = opPredicates{
 // binaryExpr type checks a binary expression.
 func (check typecheck) binaryExpr(n *node) error {
 	c0, c1 := n.child[0], n.child[1]
-	if isShiftNode(n) {
+	a := n.action
+	if isAssignAction(a) {
+		a--
+	}
+
+	if isShiftAction(a) {
 		return check.shift(n)
 	}
 
 	_ = check.convertUntyped(c0, c1.typ)
 	_ = check.convertUntyped(c1, c0.typ)
 
-	if isComparisonNode(n) {
+	if isComparisonAction(a) {
 		return check.comparison(n)
 	}
 
@@ -168,7 +208,7 @@ func (check typecheck) binaryExpr(n *node) error {
 	}
 
 	t0 := c0.typ.TypeOf()
-	if err := check.op(binaryOpPredicates, n, c0, t0); err != nil {
+	if err := check.op(binaryOpPredicates, a, n, c0, t0); err != nil {
 		return err
 	}
 
@@ -188,7 +228,7 @@ func (check typecheck) convertUntyped(n *node, typ *itype) error {
 		return nil
 	}
 
-	convErr := n.cfgErrorf("invalid operation: cannot convert %s to %s", n.typ.id(), typ.id())
+	convErr := n.cfgErrorf("cannot convert %s to %s", n.typ.id(), typ.id())
 
 	ntyp, ttyp := n.typ.TypeOf(), typ.TypeOf()
 	if typ.untyped {
@@ -210,6 +250,9 @@ func (check typecheck) convertUntyped(n *node, typ *itype) error {
 		err  error
 	)
 	switch {
+	case typ.isNil() && n.typ.isNil():
+		n.typ = typ
+		return nil
 	case isNumber(ttyp) || isString(ttyp) || isBoolean(ttyp):
 		ityp = typ
 		rtyp = ttyp
@@ -226,7 +269,7 @@ func (check typecheck) convertUntyped(n *node, typ *itype) error {
 	case isArray(typ) || isMap(typ) || isChan(typ) || isFunc(typ) || isPtr(typ):
 		// TODO(nick): above we are acting on itype, but really it is an rtype check. This is not clear which type
 		// 		 	   plain we are in. Fix this later.
-		if !typ.isNil() {
+		if !n.typ.isNil() {
 			return convErr
 		}
 		return nil
@@ -234,14 +277,48 @@ func (check typecheck) convertUntyped(n *node, typ *itype) error {
 		return convErr
 	}
 
+	if err := check.representable(n, rtyp); err != nil {
+		return err
+	}
 	n.rval, err = check.convertConst(n.rval, rtyp)
 	if err != nil {
 		if errors.Is(err, errCantConvert) {
-			return n.cfgErrorf("invalid operation: cannot convert %s to %s", n.typ.id(), typ.id())
+			return convErr
 		}
 		return n.cfgErrorf(err.Error())
 	}
 	n.typ = ityp
+	return nil
+}
+
+func (check typecheck) representable(n *node, t reflect.Type) error {
+	if !n.rval.IsValid() {
+		// TODO(nick): This should be an error as the const is in the frame which is undesirable.
+		return nil
+	}
+	c, ok := n.rval.Interface().(constant.Value)
+	if !ok {
+		// TODO(nick): This should be an error as untyped strings and bools should be constant.Values.
+		return nil
+	}
+
+	if !representableConst(c, t) {
+		typ := n.typ.TypeOf()
+		if isNumber(typ) && isNumber(t) {
+			// numeric conversion : error msg
+			//
+			// integer -> integer : overflows
+			// integer -> float   : overflows (actually not possible)
+			// float   -> integer : truncated
+			// float   -> float   : overflows
+			//
+			if !isInt(typ) && isInt(t) {
+				return n.cfgErrorf("%s truncated to %s", c.ExactString(), t.Kind().String())
+			}
+			return n.cfgErrorf("%s overflows %s", c.ExactString(), t.Kind().String())
+		}
+		return n.cfgErrorf("cannot convert %s to %s", c.ExactString(), t.Kind().String())
+	}
 	return nil
 }
 
@@ -263,69 +340,118 @@ func (check typecheck) convertConst(v reflect.Value, t reflect.Type) (reflect.Va
 	case reflect.String:
 		v = reflect.ValueOf(constant.StringVal(c))
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		k := c.Kind()
-		c = constant.ToInt(c)
-		i, ok := constant.Int64Val(c)
-		if !ok {
-			if k == constant.Float || k == constant.Complex {
-				return v, fmt.Errorf("%s truncated to %s", c.ExactString(), t.Kind().String())
-			}
-			return v, errCantConvert
-		}
-		l := constant.BitLen(c)
-		if l > bitlen[kind] {
-			return v, fmt.Errorf("constant %s overflows %s", c.ExactString(), t.Kind().String())
-		}
+		i, _ := constant.Int64Val(constant.ToInt(c))
 		v = reflect.ValueOf(i).Convert(t)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		k := c.Kind()
-		c = constant.ToInt(c)
-		i, ok := constant.Uint64Val(c)
-		if !ok {
-			if k == constant.Float || k == constant.Complex {
-				return v, fmt.Errorf("%s truncated to %s", c.ExactString(), t.Kind().String())
-			}
-			return v, errCantConvert
-		}
-		l := constant.BitLen(c)
-		if l > bitlen[kind] {
-			return v, fmt.Errorf("constant %s overflows %s", c.ExactString(), t.Kind().String())
-		}
+		i, _ := constant.Uint64Val(constant.ToInt(c))
 		v = reflect.ValueOf(i).Convert(t)
 	case reflect.Float32:
-		f, ok := constant.Float32Val(constant.ToFloat(c))
-		if !ok {
-			return v, errCantConvert
-		}
+		f, _ := constant.Float32Val(constant.ToFloat(c))
 		v = reflect.ValueOf(f)
 	case reflect.Float64:
-		f, ok := constant.Float64Val(constant.ToFloat(c))
-		if !ok {
-			return v, errCantConvert
-		}
+		f, _ := constant.Float64Val(constant.ToFloat(c))
 		v = reflect.ValueOf(f)
 	case reflect.Complex64:
-		r, ok := constant.Float32Val(constant.Real(c))
-		if !ok {
-			return v, errCantConvert
-		}
-		i, ok := constant.Float32Val(constant.Imag(c))
-		if !ok {
-			return v, errCantConvert
-		}
+		r, _ := constant.Float32Val(constant.Real(c))
+		i, _ := constant.Float32Val(constant.Imag(c))
 		v = reflect.ValueOf(complex(r, i)).Convert(t)
 	case reflect.Complex128:
-		r, ok := constant.Float64Val(constant.Real(c))
-		if !ok {
-			return v, errCantConvert
-		}
-		i, ok := constant.Float64Val(constant.Imag(c))
-		if !ok {
-			return v, errCantConvert
-		}
+		r, _ := constant.Float64Val(constant.Real(c))
+		i, _ := constant.Float64Val(constant.Imag(c))
 		v = reflect.ValueOf(complex(r, i)).Convert(t)
 	default:
 		return v, errCantConvert
 	}
 	return v, nil
+}
+
+var bitlen = [...]int{
+	reflect.Int:     64,
+	reflect.Int8:    8,
+	reflect.Int16:   16,
+	reflect.Int32:   32,
+	reflect.Int64:   64,
+	reflect.Uint:    64,
+	reflect.Uint8:   8,
+	reflect.Uint16:  16,
+	reflect.Uint32:  32,
+	reflect.Uint64:  64,
+	reflect.Uintptr: 64,
+}
+
+func representableConst(c constant.Value, t reflect.Type) bool {
+	switch {
+	case isInt(t):
+		x := constant.ToInt(c)
+		if x.Kind() != constant.Int {
+			return false
+		}
+		switch t.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			if _, ok := constant.Int64Val(x); !ok {
+				return false
+			}
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+			if _, ok := constant.Uint64Val(x); !ok {
+				return false
+			}
+		default:
+			return false
+		}
+		return constant.BitLen(x) <= bitlen[t.Kind()]
+	case isFloat(t):
+		x := constant.ToFloat(c)
+		if x.Kind() != constant.Float {
+			return false
+		}
+		switch t.Kind() {
+		case reflect.Float32:
+			f, _ := constant.Float32Val(x)
+			return !math.IsInf(float64(f), 0)
+		case reflect.Float64:
+			f, _ := constant.Float64Val(x)
+			return !math.IsInf(f, 0)
+		default:
+			return false
+		}
+	case isComplex(t):
+		x := constant.ToComplex(c)
+		if x.Kind() != constant.Complex {
+			return false
+		}
+		switch t.Kind() {
+		case reflect.Complex64:
+			r, _ := constant.Float32Val(constant.Real(x))
+			i, _ := constant.Float32Val(constant.Imag(x))
+			return !math.IsInf(float64(r), 0) && !math.IsInf(float64(i), 0)
+		case reflect.Complex128:
+			r, _ := constant.Float64Val(constant.Real(x))
+			i, _ := constant.Float64Val(constant.Imag(x))
+			return !math.IsInf(r, 0) && !math.IsInf(i, 0)
+		default:
+			return false
+		}
+	case isString(t):
+		return c.Kind() == constant.String
+	case isBoolean(t):
+		return c.Kind() == constant.Bool
+	default:
+		return false
+	}
+}
+
+func isShiftAction(a action) bool {
+	switch a {
+	case aShl, aShr, aShlAssign, aShrAssign:
+		return true
+	}
+	return false
+}
+
+func isComparisonAction(a action) bool {
+	switch a {
+	case aEqual, aNotEqual, aGreater, aGreaterEqual, aLower, aLowerEqual:
+		return true
+	}
+	return false
 }

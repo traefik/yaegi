@@ -2795,20 +2795,6 @@ func convertLiteralValue(n *node, t reflect.Type) {
 	}
 }
 
-var bitlen = [...]int{
-	reflect.Int:     64,
-	reflect.Int8:    8,
-	reflect.Int16:   16,
-	reflect.Int32:   32,
-	reflect.Int64:   64,
-	reflect.Uint:    64,
-	reflect.Uint8:   8,
-	reflect.Uint16:  16,
-	reflect.Uint32:  32,
-	reflect.Uint64:  64,
-	reflect.Uintptr: 64,
-}
-
 func convertConstantValue(n *node) {
 	if !n.rval.IsValid() {
 		return
