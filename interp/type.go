@@ -124,6 +124,15 @@ type itype struct {
 	scope       *scope        // type declaration scope (in case of re-parse incomplete type)
 }
 
+var (
+	untypedBool    = &itype{cat: boolT, name: "bool", untyped: true}
+	untypedString  = &itype{cat: stringT, name: "string", untyped: true}
+	untypedRune    = &itype{cat: int32T, name: "int32", untyped: true}
+	untypedInt     = &itype{cat: intT, name: "int", untyped: true}
+	untypedFloat   = &itype{cat: float64T, name: "float64", untyped: true}
+	untypedComplex = &itype{cat: complex128T, name: "complex128", untyped: true}
+)
+
 // nodeType returns a type definition for the corresponding AST subtree.
 func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	if n.typ != nil && !n.typ.incomplete {
@@ -207,8 +216,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	case basicLit:
 		switch v := n.rval.Interface().(type) {
 		case bool:
-			t.cat = boolT
-			t.name = "bool"
+			t = untypedBool
 		case byte:
 			t.cat = uint8T
 			t.name = "uint8"
@@ -229,35 +237,27 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			t.name = "float64"
 			t.untyped = true
 		case int:
-			t.cat = intT
-			t.name = "int"
-			t.untyped = true
+			t = untypedInt
 		case uint:
 			t.cat = uintT
 			t.name = "uint"
 			t.untyped = true
 		case rune:
-			t.cat = int32T
-			t.name = "int32"
-			t.untyped = true
+			t = untypedRune
 		case string:
-			t.cat = stringT
-			t.name = "string"
-			t.untyped = true
+			t = untypedString
 		case constant.Value:
 			switch v.Kind() {
+			case constant.Bool:
+				t = untypedBool
+			case constant.String:
+				t = untypedString
 			case constant.Int:
-				t.cat = intT
-				t.name = "int"
-				t.untyped = true
+				t = untypedInt
 			case constant.Float:
-				t.cat = float64T
-				t.name = "float64"
-				t.untyped = true
+				t = untypedFloat
 			case constant.Complex:
-				t.cat = complex128T
-				t.name = "complex128"
-				t.untyped = true
+				t = untypedComplex
 			default:
 				err = n.cfgErrorf("missing support for type %v", n.rval)
 			}

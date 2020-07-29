@@ -271,9 +271,9 @@ func initUniverse() *scope {
 		"uintptr":     {kind: typeSym, typ: &itype{cat: uintptrT, name: "uintptr"}},
 
 		// predefined Go constants
-		"false": {kind: constSym, typ: &itype{cat: boolT, name: "bool"}, rval: reflect.ValueOf(false)},
-		"true":  {kind: constSym, typ: &itype{cat: boolT, name: "bool"}, rval: reflect.ValueOf(true)},
-		"iota":  {kind: constSym, typ: &itype{cat: intT, name: "int", untyped: true}},
+		"false": {kind: constSym, typ: untypedBool, rval: reflect.ValueOf(false)},
+		"true":  {kind: constSym, typ: untypedBool, rval: reflect.ValueOf(true)},
+		"iota":  {kind: constSym, typ: untypedInt},
 
 		// predefined Go zero value
 		"nil": {typ: &itype{cat: nilT, untyped: true}},
