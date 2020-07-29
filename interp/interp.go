@@ -30,7 +30,7 @@ type node struct {
 	index  int64          // node index (dot display)
 	findex int            // index of value in frame or frame size (func def, type def)
 	level  int            // number of frame indirections to access value
-	nleft  int            // number of children in left part (assign)
+	nleft  int            // number of children in left part (assign) or indicates preceding type (compositeLit)
 	nright int            // number of children in right part (assign)
 	kind   nkind          // kind of node
 	pos    token.Pos      // position in source code, relative to fset

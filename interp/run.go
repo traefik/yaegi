@@ -1894,7 +1894,7 @@ func arrayLit(n *node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child
-	if !n.typ.untyped {
+	if n.nleft == 1 {
 		child = n.child[1:]
 	}
 
@@ -1947,7 +1947,7 @@ func mapLit(n *node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child
-	if !n.typ.untyped {
+	if n.nleft == 1 {
 		child = n.child[1:]
 	}
 	typ := n.typ.TypeOf()
@@ -1982,7 +1982,7 @@ func compositeBinMap(n *node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child
-	if !n.typ.untyped {
+	if n.nleft == 1 {
 		child = n.child[1:]
 	}
 	typ := n.typ.TypeOf()

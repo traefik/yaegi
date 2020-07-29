@@ -243,6 +243,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				if n.typ, err = nodeType(interp, sc, n.child[0]); err != nil {
 					return false
 				}
+				n.nleft = 1
 			} else {
 				// Get type from ancestor (implicit type)
 				if n.anc.kind == keyValueExpr && n == n.anc.child[0] {
@@ -254,7 +255,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					err = n.cfgErrorf("undefined type")
 					return false
 				}
-				n.typ.untyped = true
 			}
 			// Propagate type to children, to handle implicit types
 			for _, c := range n.child {
@@ -2049,9 +2049,6 @@ func (n *node) name() (s string) {
 	return s
 }
 
-// isInteger returns true if node type is integer, false otherwise.
-		t := n.rval.Type()
-		if isInt(t) {
 // isNatural returns true if node type is natural, false otherwise.
 func (n *node) isNatural() bool {
 	if isUint(n.typ.TypeOf()) {
