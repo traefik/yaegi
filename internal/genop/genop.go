@@ -181,7 +181,11 @@ func {{$name}}(n *node) {
 
 func {{$name}}Const(n *node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
+	{{- if $op.Shift}}
+	isConst := (v0.IsValid() && isConstantValue(v0.Type()))
+	{{- else}}
 	isConst := (v0.IsValid() && isConstantValue(v0.Type())) && (v1.IsValid() && isConstantValue(v1.Type()))
+	{{- end}}
 	t := n.typ.rtype
 	if isConst {
 		t = constVal
@@ -190,8 +194,7 @@ func {{$name}}Const(n *node) {
 	switch {
 	case isConst:
 		{{- if $op.Shift}}
-		s, _ := constant.Uint64Val(vConstantValue(v1))
-		v := constant.Shift(vConstantValue(v0), token.{{tokenFromName $name}}, uint(s))
+		v := constant.Shift(vConstantValue(v0), token.{{tokenFromName $name}}, uint(vUint(v1)))
 		n.rval.Set(reflect.ValueOf(v))
 		{{- else}}
 		v := constant.BinaryOp(vConstantValue(v0), token.{{tokenFromName $name}}, vConstantValue(v1))

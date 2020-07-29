@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"strings"
 	"unicode"
 )
 
@@ -52,6 +51,7 @@ var identifier = regexp.MustCompile(`([\pL_][\pL_\d]*)$`)
 // Following this pass, the CFG is ready to run.
 func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 	sc := interp.initScopePkg(pkgID)
+	check := typecheck{}
 	var initNodes []*node
 	var err error
 
@@ -664,73 +664,10 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			wireChild(n)
 			nilSym := interp.universe.sym["nil"]
 			c0, c1 := n.child[0], n.child[1]
-			t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 
-			isConstVal := func(n *node) bool {
-				return n.rval.IsValid() && isConstantValue(n.rval.Type())
-			}
-
-			// Type check the binary expression. Mimics Gos logic as closely and possible.
-			c := c0
-			if isConstVal(c) {
-				c = c1
-			}
-
-			if isShiftNode(n) {
-				if !c1.isNatural() {
-					err = n.cfgErrorf("invalid operation: shift count type %v, must be integer", strings.TrimLeft(c1.typ.id(), "."))
-					break
-				}
-
-				if !c0.isInteger() {
-					err = n.cfgErrorf("invalid operation: shift of type %v", strings.TrimLeft(c0.typ.id(), "."))
-					break
-				}
-			}
-			if !isShiftNode(n) && isComparisonNode(n) && !isConstVal(c) && !c0.typ.equals(c1.typ) {
-				if isInterface(c1.typ) && !isInterface(c0.typ) && !c0.typ.comparable() {
-					err = n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, strings.TrimLeft(c0.typ.id(), "."))
-					break
-				}
-
-				if isInterface(c0.typ) && !isInterface(c1.typ) && !c1.typ.comparable() {
-					err = n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, strings.TrimLeft(c1.typ.id(), "."))
-					break
-				}
-			}
-			if !isShiftNode(n) && !isConstVal(c) && !c0.typ.equals(c1.typ) && t0 != nil && t1 != nil {
-				switch {
-				case isConstVal(c0) && isNumber(t1) || isConstVal(c1) && isNumber(t0): // const <-> numberic case
-				case isNumber(t0) && isNumber(t1) && (c0.typ.untyped || c1.typ.untyped):
-				case t0.Kind() == reflect.Uint8 && t1.Kind() == reflect.Int32 || t1.Kind() == reflect.Uint8 && t0.Kind() == reflect.Int32: // byte <-> rune case
-				case isInterface(c0.typ) && isInterface(c1.typ): // interface <-> interface case
-				default:
-					err = n.cfgErrorf("invalid operation: mismatched types %s and %s", strings.TrimLeft(c0.typ.id(), "."), strings.TrimLeft(c1.typ.id(), "."))
-				}
-				if err != nil {
-					break
-				}
-			}
-
-			cat := c.typ.cat
-			switch {
-			case isConstVal(c):
-				cat = catOfConst(c.rval)
-			case c.typ.cat == valueT:
-				cat = catOf(c.typ.rtype)
-			case c.typ.cat == aliasT:
-				cat = c.typ.val.cat
-			}
-			if !isShiftNode(n) && !okFor[n.action][cat] {
-				err = n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, strings.TrimLeft(c0.typ.id(), "."))
+			err = check.binaryExpr(n)
+			if err != nil {
 				break
-			}
-			if !isShiftNode(n) && isConstVal(c0) && isConstVal(c1) {
-				// If both are constants, check the left type as well.
-				if !okFor[n.action][catOfConst(c0.rval)] {
-					err = n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, strings.TrimLeft(c0.typ.id(), "."))
-					break
-				}
 			}
 
 			switch n.action {
@@ -738,19 +675,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				n.typ = c0.typ
 			case aEqual, aNotEqual:
 				n.typ = sc.getType("bool")
-				if isConstVal(c0) && !isConstVal(c1) || !isConstVal(c0) && isConstVal(c1) {
-					// if either node is a constant value, but the other is not, the constant
-					// must be converted into the non-constants type.
-					switch {
-					case isConstVal(c0):
-						convertConstantValue(c0)
-						c0.rval = c0.rval.Convert(c1.typ.TypeOf())
-					default:
-						convertConstantValue(c1)
-						c1.rval = c1.rval.Convert(c0.typ.TypeOf())
-					}
-				}
-				if n.child[0].sym == nilSym || n.child[1].sym == nilSym {
+				if c0.sym == nilSym || c1.sym == nilSym {
 					if n.action == aEqual {
 						n.gen = isNil
 					} else {
@@ -1201,9 +1126,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.rval = sym.rval
 					n.kind = basicLit
 				case n.ident == "iota":
-					n.rval = reflect.ValueOf(sc.iota)
+					n.rval = reflect.ValueOf(constant.MakeInt64(int64(sc.iota)))
 					n.kind = basicLit
-					n.typ.untyped = true
 				case n.ident == "nil":
 					n.kind = basicLit
 				case sym.kind == binSym:
