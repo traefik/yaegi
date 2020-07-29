@@ -28,6 +28,58 @@ func (check typecheck) op(p opPredicates, n, c *node, t reflect.Type) error {
 	return nil
 }
 
+// addressExpr type checks a unary address expression.
+func (check typecheck) addressExpr(n *node) error {
+	c0 := n.child[0]
+	found := false
+	for !found {
+		switch c0.kind {
+		case parenExpr:
+			c0 = c0.child[0]
+			continue
+		case indexExpr:
+			c := c0.child[0]
+			if isArray(c.typ) || isMap(c.typ) {
+				c0 = c
+				continue
+			}
+		case compositeLitExpr, identExpr:
+			found = true
+			continue
+		}
+		return n.cfgErrorf("invalid operation: cannot take address of %s", c0.typ.id())
+	}
+	return nil
+}
+
+var unaryOpPredicates = opPredicates{
+	aPos:    isNumber,
+	aNeg:    isNumber,
+	aBitNot: isInt,
+	aNot:    isBoolean,
+}
+
+// unaryExpr type checks a unary expression.
+func (check typecheck) unaryExpr(n *node) error {
+	c0 := n.child[0]
+	t0 := c0.typ.TypeOf()
+
+	if n.action == aRecv {
+		if !isChan(c0.typ) {
+			return n.cfgErrorf("invalid operation: cannot receive from non-channel %s", c0.typ.id())
+		}
+		if isSendChan(c0.typ) {
+			return n.cfgErrorf("invalid operation: cannot receive from send-only channel %s", c0.typ.id())
+		}
+		return nil
+	}
+
+	if err := check.op(unaryOpPredicates, n, c0, t0); err != nil {
+		return err
+	}
+	return nil
+}
+
 // shift type checks a shift binary expression.
 func (check typecheck) shift(n *node) error {
 	c0, c1 := n.child[0], n.child[1]

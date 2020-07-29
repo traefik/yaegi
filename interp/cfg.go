@@ -430,6 +430,12 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		switch n.kind {
 		case addressExpr:
 			wireChild(n)
+
+			err = check.addressExpr(n)
+			if err != nil {
+				break
+			}
+
 			n.typ = &itype{cat: ptrT, val: n.child[0].typ}
 			n.findex = sc.add(n.typ)
 
@@ -1688,29 +1694,19 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case unaryExpr:
 			wireChild(n)
+
+			err = check.unaryExpr(n)
+			if err != nil {
+				break
+			}
+
 			n.typ = n.child[0].typ
-			switch n.action {
-			case aRecv:
+			if n.action == aRecv {
 				// Channel receive operation: set type to the channel data type
 				if n.typ.cat == valueT {
 					n.typ = &itype{cat: valueT, rtype: n.typ.rtype.Elem()}
 				} else {
 					n.typ = n.typ.val
-				}
-			case aBitNot:
-				if !isInt(n.typ.TypeOf()) {
-					err = n.cfgErrorf("illegal operand type for '^' operator")
-					return
-				}
-			case aNot:
-				if !isBool(n.typ) {
-					err = n.cfgErrorf("illegal operand type for '!' operator")
-					return
-				}
-			case aNeg, aPos:
-				if !isNumber(n.typ.TypeOf()) {
-					err = n.cfgErrorf("illegal operand type for '%v' operator", n.action)
-					return
 				}
 			}
 			if n.typ == nil {
@@ -1718,6 +1714,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					return
 				}
 			}
+
 			// TODO: Optimisation: avoid allocation if boolean branch op (i.e. '!' in an 'if' expr)
 			if n.child[0].rval.IsValid() && !isInterface(n.typ) && constOp[n.action] != nil {
 				n.typ.TypeOf() // init reflect type

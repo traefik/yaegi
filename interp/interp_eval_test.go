@@ -57,9 +57,9 @@ func TestEvalArithmetic(t *testing.T) {
 		{desc: "neg_I", src: "-2", res: "-2"},
 		{desc: "pos_I", src: "+2", res: "2"},
 		{desc: "bitnot_I", src: "^2", res: "-3"},
-		{desc: "bitnot_F", src: "^0.2", err: "1:28: illegal operand type for '^' operator"},
+		{desc: "bitnot_F", src: "^0.2", err: "1:28: invalid operation: operator ^ not defined on float64"},
 		{desc: "not_B", src: "!false", res: "true"},
-		{desc: "not_I", src: "!0", err: "1:28: illegal operand type for '!' operator"},
+		{desc: "not_I", src: "!0", err: "1:28: invalid operation: operator ! not defined on int"},
 	})
 }
 
