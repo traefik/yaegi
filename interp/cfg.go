@@ -45,6 +45,8 @@ var constBltn = map[string]func(*node){
 
 var identifier = regexp.MustCompile(`([\pL_][\pL_\d]*)$`)
 
+const nilIdent = "nil"
+
 // cfg generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
@@ -193,7 +195,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				if len(n.child) == 2 {
 					// 1 type in clause: define the var with this type in the case clause scope
 					switch {
-					case n.child[0].ident == "nil":
+					case n.child[0].ident == nilIdent:
 						typ = sc.getType("interface{}")
 					case !n.child[0].isType(sc):
 						err = n.cfgErrorf("%s is not a type", n.child[0].ident)
@@ -616,7 +618,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case binaryExpr:
 			wireChild(n)
-			nilSym := interp.universe.sym["nil"]
+			nilSym := interp.universe.sym[nilIdent]
 			c0, c1 := n.child[0], n.child[1]
 
 			err = check.binaryExpr(n)
@@ -1090,7 +1092,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				case n.ident == "iota":
 					n.rval = reflect.ValueOf(constant.MakeInt64(int64(sc.iota)))
 					n.kind = basicLit
-				case n.ident == "nil":
+				case n.ident == nilIdent:
 					n.kind = basicLit
 				case sym.kind == binSym:
 					n.typ = sym.typ
