@@ -1,6 +1,9 @@
 package main
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+)
 
 type extendedRequest struct {
 	http.Request
@@ -12,8 +15,11 @@ func main() {
 	r := extendedRequest{}
 	req := &r.Request
 
-	println(r)
+
+	fmt.Println(r)
+	fmt.Println(req)
 }
 
 // Output:
 // {{ <nil>  0 0 map[] <nil> <nil> 0 [] false  map[] map[] <nil> map[]   <nil> <nil> <nil> <nil>} }
+// &{ <nil>  0 0 map[] <nil> <nil> 0 [] false  map[] map[] <nil> map[]   <nil> <nil> <nil> <nil>}
