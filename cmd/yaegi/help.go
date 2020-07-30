@@ -28,14 +28,14 @@ func help(arg []string) error {
 	}
 
 	switch cmd {
-	case "extract":
+	case Extract:
 		return extractCmd([]string{"-h"})
-	case "", "help", "-h", "--help":
+	case Help, "", "-h", "--help":
 		fmt.Print(usage)
 		return nil
-	case "run":
+	case Run:
 		return run([]string{"-h"})
-	case "test":
+	case Test:
 		return fmt.Errorf("help: test not implemented")
 	default:
 		return fmt.Errorf("help: invalid yaegi command: %v", cmd)

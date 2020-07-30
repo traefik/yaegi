@@ -92,6 +92,13 @@ import (
 	"os"
 )
 
+const (
+	Extract = "extract"
+	Help    = "help"
+	Run     = "run"
+	Test    = "test"
+)
+
 func main() {
 	var cmd string
 	var err error
@@ -104,20 +111,20 @@ func main() {
 	}
 
 	switch cmd {
-	case "extract":
+	case Extract:
 		err = extractCmd(os.Args[2:])
-	case "help", "-h", "--help":
+	case Help, "-h", "--help":
 		err = help(os.Args[2:])
-	case "run":
+	case Run:
 		err = run(os.Args[2:])
-	case "test":
+	case Test:
 		err = fmt.Errorf("test not implemented")
 	default:
 		// If no command is given, fallback to default "run" command.
 		// This allows scripts starting with "#!/usr/bin/env yaegi",
 		// as passing more than 1 argument to #! executable may be not supported
 		// on all platforms.
-		cmd = "run"
+		cmd = Run
 		err = run(os.Args[1:])
 	}
 
