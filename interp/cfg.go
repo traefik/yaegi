@@ -602,7 +602,9 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					}
 					n.gen = nop
 					n.findex = -1
-					sc.sym[dest.ident].kind = constSym
+					if sym, _, ok := sc.lookup(dest.ident); ok {
+						sym.kind = constSym
+					}
 					if childPos(n) == len(n.anc.child)-1 {
 						sc.iota = 0
 					} else {

@@ -162,7 +162,7 @@ func genValueRangeArray(n *node) func(*frame) reflect.Value {
 		return func(f *frame) reflect.Value {
 			return value(f).Elem()
 		}
-	case n.typ.val.cat == interfaceT:
+	case n.typ.val != nil && n.typ.val.cat == interfaceT:
 		return func(f *frame) reflect.Value {
 			val := value(f)
 			v := []valueInterface{}
