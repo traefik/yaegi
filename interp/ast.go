@@ -795,7 +795,7 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 			}
 
 		case *ast.UnaryExpr:
-			var kind = unaryExpr
+			kind := unaryExpr
 			var act action
 			switch a.Op {
 			case token.ADD:
