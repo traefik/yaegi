@@ -35,12 +35,12 @@ func TestIsNatural(t *testing.T) {
 			n: &node{
 				typ: &itype{
 					rtype: func() reflect.Type {
-						var x = 3
+						x := 3
 						return reflect.TypeOf(x)
 					}(),
 				},
 				rval: func() reflect.Value {
-					var x = 3
+					x := 3
 					return reflect.ValueOf(x)
 				}(),
 			},
