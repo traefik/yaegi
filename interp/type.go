@@ -133,7 +133,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		return n.typ, nil
 	}
 
-	var t = &itype{node: n, scope: sc}
+	t := &itype{node: n, scope: sc}
 
 	if n.anc.kind == typeSpec {
 		name := n.anc.child[0].ident
@@ -690,8 +690,10 @@ func fieldName(n *node) string {
 	}
 }
 
-var zeroValues [maxT]reflect.Value
-var okFor [aMax][maxT]bool
+var (
+	zeroValues [maxT]reflect.Value
+	okFor      [aMax][maxT]bool
+)
 
 func init() {
 	zeroValues[boolT] = reflect.ValueOf(false)
@@ -1218,8 +1220,10 @@ func exportName(s string) string {
 	return "X" + s
 }
 
-var interf = reflect.TypeOf((*interface{})(nil)).Elem()
-var constVal = reflect.TypeOf((*constant.Value)(nil)).Elem()
+var (
+	interf   = reflect.TypeOf((*interface{})(nil)).Elem()
+	constVal = reflect.TypeOf((*constant.Value)(nil)).Elem()
+)
 
 // RefType returns a reflect.Type representation from an interpreter type.
 // In simple cases, reflect types are directly mapped from the interpreter
