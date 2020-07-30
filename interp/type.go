@@ -216,33 +216,12 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	case basicLit:
 		switch v := n.rval.Interface().(type) {
 		case bool:
+			n.rval = reflect.ValueOf(constant.MakeBool(v))
 			t = untypedBool
-		case byte:
-			t.cat = uint8T
-			t.name = "uint8"
-			t.untyped = true
-		case complex64:
-			t.cat = complex64T
-			t.name = "complex64"
-		case complex128:
-			t.cat = complex128T
-			t.name = "complex128"
-			t.untyped = true
-		case float32:
-			t.cat = float32T
-			t.name = "float32"
-			t.untyped = true
-		case float64:
-			t.cat = float64T
-			t.name = "float64"
-			t.untyped = true
-		case int:
-			t = untypedInt
-		case uint:
-			t.cat = uintT
-			t.name = "uint"
-			t.untyped = true
 		case rune:
+			// It is impossible to work out rune const literals in AST
+			// with the correct type so we must make the const type here.
+			n.rval = reflect.ValueOf(constant.MakeInt64(int64(v)))
 			t = untypedRune
 		case string:
 			t = untypedString
