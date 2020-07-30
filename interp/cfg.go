@@ -245,6 +245,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				if n.typ, err = nodeType(interp, sc, n.child[0]); err != nil {
 					return false
 				}
+				// Indicate that the first child is the type
 				n.nleft = 1
 			} else {
 				// Get type from ancestor (implicit type)
@@ -258,18 +259,28 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					return false
 				}
 			}
+
+			child := n.child
+			if n.nleft > 0 {
+				n.child[0].typ = n.typ
+				child = n.child[1:]
+			}
 			// Propagate type to children, to handle implicit types
-			for _, c := range n.child {
+			for _, c := range child {
 				switch c.kind {
-				case binaryExpr, unaryExpr:
+				case binaryExpr, unaryExpr, compositeLitExpr:
 					// Do not attempt to propagate composite type to operator expressions,
 					// it breaks constant folding.
-				case callExpr:
+				case keyValueExpr, typeAssertExpr:
+					c.typ = n.typ
+				default:
+					if c.ident == nilIdent {
+						c.typ = sc.getType(nilIdent)
+						continue
+					}
 					if c.typ, err = nodeType(interp, sc, c); err != nil {
 						return false
 					}
-				default:
-					c.typ = n.typ
 				}
 			}
 
@@ -934,6 +945,38 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case compositeLitExpr:
 			wireChild(n)
+
+			switch n.typ.cat {
+			case aliasT, ptrT:
+			case arrayT:
+				child := n.child
+				if n.nleft > 0 {
+					child = child[1:]
+				}
+				typ := n.typ.val
+				if typ.cat == ptrT || typ.cat == aliasT { // match compositeGenerator
+					typ = typ.val
+				}
+				err = check.arrayLitExpr(child, typ, n.typ.size)
+			case mapT:
+			case structT:
+				switch {
+				case len(n.child) == 0:
+				case n.lastChild().kind == keyValueExpr:
+
+				default:
+
+				}
+			case valueT:
+				switch k := n.typ.rtype.Kind(); k {
+				case reflect.Struct:
+				case reflect.Map:
+				}
+			}
+			if err != nil {
+				break
+			}
+
 			n.findex = sc.add(n.typ)
 			// TODO: Check that composite literal expr matches corresponding type
 			n.gen = compositeGenerator(n)

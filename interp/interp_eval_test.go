@@ -311,6 +311,11 @@ func TestEvalCompositeArray(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{src: "a := []int{1, 2, 7: 20, 30}", res: "[1 2 0 0 0 0 0 20 30]"},
+		{src: `a := []int{1, 1.2}`, err: "1:42: 6/5 truncated to int"},
+		{src: `a := []int{0:1, 0:1}`, err: "1:46: duplicate index 0 in array or slice literal"},
+		{src: `a := []int{1.1:1, 1.2:"test"}`, err: "1:39: index float64 must be integer constant"},
+		{src: `a := [2]int{1, 1.2}`, err: "1:43: 6/5 truncated to int"},
+		{src: `a := [1]int{1, 2}`, err: "1:43: index 1 is out of bounds (>= 1)"},
 	})
 }
 

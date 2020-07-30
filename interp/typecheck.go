@@ -257,6 +257,36 @@ func (check typecheck) index(n *node, max int) error {
 	return nil
 }
 
+// arrayLitExpr type checks an array composite literal expression.
+func (check typecheck) arrayLitExpr(child []*node, typ *itype, length int) error {
+	visited := make(map[int]bool, len(child))
+	index := 0
+	for _, c := range child {
+		n := c
+		switch  {
+		case c.kind == keyValueExpr:
+			if err := check.index(c.child[0], length); err != nil {
+				return c.cfgErrorf("index %s must be integer constant", c.child[0].typ.id())
+			}
+			n = c.child[1]
+			index = int(vInt(c.child[0].rval))
+		case length > 0 && index >= length:
+			return c.cfgErrorf("index %d is out of bounds (>= %d)", index, length)
+		}
+
+		if visited[index] {
+			return n.cfgErrorf("duplicate index %d in array or slice literal", index)
+		}
+		visited[index] = true
+		index++
+
+		if err := check.assignment(n, typ, "array or slice literal"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 var errCantConvert = errors.New("cannot convert")
 
 func (check typecheck) convertUntyped(n *node, typ *itype) error {
