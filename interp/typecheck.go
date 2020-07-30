@@ -28,7 +28,33 @@ func (check typecheck) op(p opPredicates, a action, n, c *node, t reflect.Type) 
 	return nil
 }
 
-// addressExpr type checks an assign expression.
+// assignment checks if n can be assigned to typ.
+//
+// Use typ == nil to indicate assignment to an untyped blank identifier.
+func (check typecheck) assignment(n *node, typ *itype, context string) error {
+	if n.typ.untyped {
+		if typ == nil || isInterface(typ) {
+			if typ == nil && n.typ.cat == nilT {
+				return n.cfgErrorf("use of untyped nil in %s", context)
+			}
+			typ = n.typ.defaultType()
+		}
+		if err := check.convertUntyped(n, typ); err != nil {
+			return err
+		}
+	}
+
+	if typ == nil {
+		return nil
+	}
+
+	if !n.typ.assignableTo(typ) {
+		return n.cfgErrorf("cannot use type %s as type %s in %s", n.typ.id(), typ.id(), context)
+	}
+	return nil
+}
+
+// assignExpr type checks an assign expression.
 //
 // This is done per pair of assignments.
 func (check typecheck) assignExpr(n, dest, src *node) error {
@@ -39,20 +65,7 @@ func (check typecheck) assignExpr(n, dest, src *node) error {
 			dest.typ = dest.typ.defaultType()
 		}
 
-		if src.typ.untyped {
-			typ := dest.typ
-			if typ.isNil() || isInterface(typ) {
-				typ = src.typ.defaultType()
-			}
-			if err := check.convertUntyped(src, typ); err != nil {
-				return err
-			}
-		}
-
-		if !src.typ.assignableTo(dest.typ) {
-			return src.cfgErrorf("cannot use type %s as type %s in assignment", src.typ.id(), dest.typ.id())
-		}
-		return nil
+		return check.assignment(src, dest.typ, "assignment")
 	}
 
 	// assignment operations.
@@ -221,6 +234,26 @@ func (check typecheck) binaryExpr(n *node) error {
 			return n.cfgErrorf("invalid operation: division by zero")
 		}
 	}
+	return nil
+}
+
+func (check typecheck) index(n *node, max int) error {
+	if err :=check.convertUntyped(n,  &itype{cat: intT, name: "int"}); err != nil {
+		return err
+	}
+
+	if !isInt(n.typ.TypeOf()) {
+		return n.cfgErrorf("index %s must be integer", n.typ.id())
+	}
+
+	if !n.rval.IsValid() || max < 1 {
+		return nil
+	}
+
+	if int(vInt(n.rval)) >= max {
+		return n.cfgErrorf("index %s is out of bounds", n.typ.id())
+	}
+
 	return nil
 }
 

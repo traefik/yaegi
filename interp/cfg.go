@@ -701,13 +701,22 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			}
 			n.findex = sc.add(n.typ)
 			typ := t.TypeOf()
-			switch k := typ.Kind(); k {
-			case reflect.Map:
+			if typ.Kind() == reflect.Map {
+				err = check.assignment(n.child[1], t.key, "map index")
 				n.gen = getIndexMap
-			case reflect.Array, reflect.Slice, reflect.String:
+				break
+			}
+
+			l := -1
+			switch k := typ.Kind(); k {
+			case reflect.Array:
+				l = typ.Len()
+				fallthrough
+			case reflect.Slice, reflect.String:
 				n.gen = getIndexArray
 			case reflect.Ptr:
 				if typ2 := typ.Elem(); typ2.Kind() == reflect.Array {
+					l = typ2.Len()
 					n.gen = getIndexArray
 				} else {
 					err = n.cfgErrorf("type %v does not support indexing", typ)
@@ -715,6 +724,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			default:
 				err = n.cfgErrorf("type is not an array, slice, string or map: %v", t.id())
 			}
+
+			err = check.index(n.child[1], l)
 
 		case blockStmt:
 			wireChild(n)
