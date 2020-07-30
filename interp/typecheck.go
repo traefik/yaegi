@@ -72,6 +72,9 @@ func (check typecheck) addressExpr(n *node) error {
 		case parenExpr:
 			c0 = c0.child[0]
 			continue
+		case selectorExpr:
+			c0 = c0.child[1]
+			continue
 		case indexExpr:
 			c := c0.child[0]
 			if isArray(c.typ) || isMap(c.typ) {
