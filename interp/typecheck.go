@@ -287,6 +287,34 @@ func (check typecheck) arrayLitExpr(child []*node, typ *itype, length int) error
 	return nil
 }
 
+// mapLitExpr type checks an map composite literal expression.
+func (check typecheck) mapLitExpr(child []*node, ktyp, vtyp *itype) error {
+	visited := make(map[interface{}]bool, len(child))
+	for _, c := range child {
+		if c.kind != keyValueExpr {
+			return c.cfgErrorf("missing key in map literal")
+		}
+
+		key, val := c.child[0], c.child[1]
+		if err := check.assignment(key, ktyp, "map literal"); err != nil {
+			return err
+		}
+
+		if key.rval.IsValid() {
+			kval := key.rval.Interface()
+			if visited[kval] {
+					return c.cfgErrorf("duplicate key %s in map literal", kval)
+			}
+			visited[kval] = true
+		}
+
+		if err := check.assignment(val, vtyp, "map literal"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 var errCantConvert = errors.New("cannot convert")
 
 func (check typecheck) convertUntyped(n *node, typ *itype) error {

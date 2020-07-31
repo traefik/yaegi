@@ -946,19 +946,25 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		case compositeLitExpr:
 			wireChild(n)
 
+			child := n.child
+			if n.nleft > 0 {
+				child = child[1:]
+			}
+
 			switch n.typ.cat {
 			case aliasT, ptrT:
 			case arrayT:
-				child := n.child
-				if n.nleft > 0 {
-					child = child[1:]
-				}
 				typ := n.typ.val
 				if typ.cat == ptrT || typ.cat == aliasT { // match compositeGenerator
 					typ = typ.val
 				}
 				err = check.arrayLitExpr(child, typ, n.typ.size)
 			case mapT:
+				typ := n.typ.val
+				if typ.cat == ptrT || typ.cat == aliasT { // match compositeGenerator
+					typ = typ.val
+				}
+				err = check.mapLitExpr(child, n.typ.key, typ)
 			case structT:
 				switch {
 				case len(n.child) == 0:

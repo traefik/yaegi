@@ -319,6 +319,17 @@ func TestEvalCompositeArray(t *testing.T) {
 	})
 }
 
+func TestEvalCompositeMap(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `a := map[string]int{"one":1, "two":2}`, res: "map[one:1 two:2]"},
+		{src: `a := map[string]int{1:1, 2:2}`, err: "1:48: cannot convert 1 to string"},
+		{src: `a := map[string]int{"one":1, "two":2.2}`, err: "1:63: 11/5 truncated to int"},
+		{src: `a := map[string]int{1, "two":2}`, err: "1:48: missing key in map literal"},
+		{src: `a := map[string]int{"one":1, "one":2}`, err: "1:57: duplicate key one in map literal"},
+	})
+}
+
 func TestEvalUnary(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
