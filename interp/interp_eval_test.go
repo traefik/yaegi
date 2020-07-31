@@ -42,7 +42,9 @@ func TestEvalArithmetic(t *testing.T) {
 		{desc: "mul_II", src: "2 * 3", res: "6"},
 		{desc: "mul_FI", src: "2.2 * 3", res: "6.6"},
 		{desc: "mul_IF", src: "3 * 2.2", res: "6.6"},
+		{desc: "quo_Z", src: "3 / 0", err: "1:28: invalid operation: division by zero"},
 		{desc: "rem_FI", src: "8.2 % 4", err: "1:28: invalid operation: operator % not defined on float64"},
+		{desc: "rem_Z", src: "8 % 0", err: "1:28: invalid operation: division by zero"},
 		{desc: "shl_II", src: "1 << 8", res: "256"},
 		{desc: "shl_IN", src: "1 << -1", err: "1:28: invalid operation: shift count type int, must be integer"},
 		{desc: "shl_IF", src: "1 << 1.0", res: "2"},
@@ -55,9 +57,9 @@ func TestEvalArithmetic(t *testing.T) {
 		{desc: "neg_I", src: "-2", res: "-2"},
 		{desc: "pos_I", src: "+2", res: "2"},
 		{desc: "bitnot_I", src: "^2", res: "-3"},
-		{desc: "bitnot_F", src: "^0.2", err: "1:28: illegal operand type for '^' operator"},
+		{desc: "bitnot_F", src: "^0.2", err: "1:28: invalid operation: operator ^ not defined on float64"},
 		{desc: "not_B", src: "!false", res: "true"},
-		{desc: "not_I", src: "!0", err: "1:28: illegal operand type for '!' operator"},
+		{desc: "not_I", src: "!0", err: "1:28: invalid operation: operator ! not defined on int"},
 	})
 }
 
@@ -65,9 +67,9 @@ func TestEvalAssign(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{src: `a := "Hello"; a += " world"`, res: "Hello world"},
-		{src: `b := "Hello"; b += 1`, err: "1:42: illegal operand types for '+=' operator"},
-		{src: `c := "Hello"; c -= " world"`, err: "1:42: illegal operand types for '-=' operator"},
-		{src: "e := 64.4; e %= 64", err: "1:39: illegal operand types for '%=' operator"},
+		{src: `b := "Hello"; b += 1`, err: "1:42: invalid operation: mismatched types string and int"},
+		{src: `c := "Hello"; c -= " world"`, err: "1:42: invalid operation: operator -= not defined on string"},
+		{src: "e := 64.4; e %= 64", err: "1:39: invalid operation: operator %= not defined on float64"},
 		{src: "f := int64(3.2)", err: "1:33: truncated to integer"},
 		{src: "g := 1; g <<= 8", res: "256"},
 		{src: "h := 1; h >>= 8", res: "0"},

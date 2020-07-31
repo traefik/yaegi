@@ -204,7 +204,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 		},
 		{
 			fileName:       "op1.go",
-			expectedInterp: "5:2: illegal operand types for '+=' operator",
+			expectedInterp: "5:2: invalid operation: mismatched types int and float64",
 			expectedExec:   "5:4: constant 1.3 truncated to integer",
 		},
 		{
