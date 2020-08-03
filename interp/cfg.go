@@ -946,33 +946,30 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		case compositeLitExpr:
 			wireChild(n)
 
+			underlying := func (t *itype) *itype {
+				for {
+					switch t.cat {
+					case ptrT, aliasT:
+						t = t.val
+						continue
+					default:
+						return t
+					}
+				}
+			}
+
 			child := n.child
 			if n.nleft > 0 {
 				child = child[1:]
 			}
 
 			switch n.typ.cat {
-			case aliasT, ptrT:
 			case arrayT:
-				typ := n.typ.val
-				if typ.cat == ptrT || typ.cat == aliasT { // match compositeGenerator
-					typ = typ.val
-				}
-				err = check.arrayLitExpr(child, typ, n.typ.size)
+				err = check.arrayLitExpr(child, underlying(n.typ.val), n.typ.size)
 			case mapT:
-				typ := n.typ.val
-				if typ.cat == ptrT || typ.cat == aliasT { // match compositeGenerator
-					typ = typ.val
-				}
-				err = check.mapLitExpr(child, n.typ.key, typ)
+				err = check.mapLitExpr(child, n.typ.key, underlying(n.typ.val))
 			case structT:
-				switch {
-				case len(n.child) == 0:
-				case n.lastChild().kind == keyValueExpr:
-
-				default:
-
-				}
+				err = check.structLitExpr(child, n.typ)
 			case valueT:
 				switch k := n.typ.rtype.Kind(); k {
 				case reflect.Struct:

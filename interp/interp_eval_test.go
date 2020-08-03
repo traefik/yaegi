@@ -330,6 +330,24 @@ func TestEvalCompositeMap(t *testing.T) {
 	})
 }
 
+func TestEvalCompositeStruct(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `a := struct{A,B,C int}{}`, res: "{0 0 0}"},
+		{src: `a := struct{A,B,C int}{1,2,3}`, res: "{1 2 3}"},
+		{src: `a := struct{A,B,C int}{1,2.2,3}`, err: "1:53: 11/5 truncated to int"},
+		{src: `a := struct{A,B,C int}{1,2}`, err: "1:53: too few values in struct literal"},
+		{src: `a := struct{A,B,C int}{1,2,3,4}`, err: "1:57: too many values in struct literal"},
+		{src: `a := struct{A,B,C int}{1,B:2,3}`, err: "1:53: mixture of field:value and value elements in struct literal"},
+		{src: `a := struct{A,B,C int}{A:1,B:2,C:3}`, res: "{1 2 3}"},
+		{src: `a := struct{A,B,C int}{B:2}`, res: "{0 2 0}"},
+		{src: `a := struct{A,B,C int}{A:1,D:2,C:3}`, err: "1:55: unknown field D in struct literal"},
+		{src: `a := struct{A,B,C int}{A:1,A:2,C:3}`, err: "1:55: duplicate field name A in struct literal"},
+		{src: `a := struct{A,B,C int}{A:1,B:2.2,C:3}`, err: "1:57: 11/5 truncated to int"},
+		{src: `a := struct{A,B,C int}{A:1,2,C:3}`, err: "1:55: mixture of field:value and value elements in struct literal"},
+	})
+}
+
 func TestEvalUnary(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{

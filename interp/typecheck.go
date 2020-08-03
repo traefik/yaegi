@@ -315,6 +315,65 @@ func (check typecheck) mapLitExpr(child []*node, ktyp, vtyp *itype) error {
 	return nil
 }
 
+// structLitExpr type checks an struct composite literal expression.
+func (check typecheck) structLitExpr(child []*node, typ *itype) error {
+	if len(child) == 0 {
+		return nil
+	}
+
+	if child[0].kind == keyValueExpr {
+		// All children must be keyValueExpr
+		visited := make([]bool, len(typ.field))
+		for _, c := range child {
+			if c.kind != keyValueExpr {
+				return c.cfgErrorf("mixture of field:value and value elements in struct literal")
+			}
+
+			key, val := c.child[0], c.child[1]
+			name := key.ident
+			if name == "" {
+				return c.cfgErrorf("invalid field name %s in struct literal", key.typ.id())
+			}
+			i := typ.fieldIndex(name)
+			if i < 0 {
+				return c.cfgErrorf("unknown field %s in struct literal", name)
+			}
+			field := typ.field[i]
+
+			if err := check.assignment(val, field.typ, "struct literal"); err != nil {
+				return err
+			}
+
+			if visited[i] {
+				return c.cfgErrorf("duplicate field name %s in struct literal", name)
+			}
+			visited[i] = true
+		}
+		return nil
+	}
+
+	// No children can be keyValueExpr
+	for i, c := range child {
+		if c.kind == keyValueExpr {
+			return c.cfgErrorf("mixture of field:value and value elements in struct literal")
+		}
+
+		if i >= len(typ.field) {
+			return c.cfgErrorf("too many values in struct literal")
+		}
+		field := typ.field[i]
+		// TODO(nick): check if this field is not exported and in a different package.
+
+		if err := check.assignment(c, field.typ, "struct literal"); err != nil {
+			return err
+		}
+	}
+	if len(child) <  len(typ.field) {
+		return child[len(child)-1].cfgErrorf("too few values in struct literal")
+	}
+	return nil
+}
+
 var errCantConvert = errors.New("cannot convert")
 
 func (check typecheck) convertUntyped(n *node, typ *itype) error {
