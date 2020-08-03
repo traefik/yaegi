@@ -257,9 +257,15 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 					if name == "" {
 						name = pkgName
 					}
+					name = filepath.Join(name, baseName)
+					if _, exists := sc.sym[name]; !exists {
+						sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: ipath, scope: sc}}
+						break
+					}
 
-					sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: ipath, scope: sc}}
-					// TODO(mpl): redecleration detection
+					// redeclaration error
+					err = n.cfgErrorf("%s redeclared as imported package name", name)
+					return false
 				}
 			} else {
 				err = n.cfgErrorf("import %q error: %v", ipath, err)

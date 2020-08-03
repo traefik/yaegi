@@ -36,7 +36,7 @@ func TestFile(t *testing.T) {
 }
 
 func runCheck(t *testing.T, p string) {
-	wanted, errWanted := wantedFromComment(p)
+	wanted, goPath, errWanted := wantedFromComment(p)
 	if wanted == "" {
 		t.Skip(p, "has no comment 'Output:' or 'Error:'")
 	}
@@ -53,7 +53,10 @@ func runCheck(t *testing.T, p string) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
+	if goPath == "" {
+		goPath = build.Default.GOPATH
+	}
+	i := interp.New(interp.Options{GoPath: goPath})
 	i.Use(interp.Symbols)
 	i.Use(stdlib.Symbols)
 	i.Use(unsafe.Symbols)
@@ -86,18 +89,27 @@ func runCheck(t *testing.T, p string) {
 	}
 }
 
-func wantedFromComment(p string) (res string, err bool) {
+func wantedFromComment(p string) (res string, goPath string, err bool) {
 	fset := token.NewFileSet()
 	f, _ := parser.ParseFile(fset, p, nil, parser.ParseComments)
 	if len(f.Comments) == 0 {
 		return
 	}
 	text := f.Comments[len(f.Comments)-1].Text()
+	if strings.HasPrefix(text, "GOPATH:") {
+		parts := strings.SplitN(text, "\n", 2)
+		text = parts[1]
+		wd, err := os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+		goPath = filepath.Join(wd, "../_test", strings.TrimPrefix(parts[0], "GOPATH:"))
+	}
 	if strings.HasPrefix(text, "Output:\n") {
-		return strings.TrimPrefix(text, "Output:\n"), false
+		return strings.TrimPrefix(text, "Output:\n"), goPath, false
 	}
 	if strings.HasPrefix(text, "Error:\n") {
-		return strings.TrimPrefix(text, "Error:\n"), true
+		return strings.TrimPrefix(text, "Error:\n"), goPath, true
 	}
 	return
 }

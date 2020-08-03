@@ -184,24 +184,24 @@ func (interp *Interpreter) rootFromSourceLocation() (string, error) {
 	return root, nil
 }
 
-// pkgDir returns the absolute path in filesystem for a package given its name and
-// the root of the subtree dependencies.
-func pkgDir(goPath string, root, path string) (string, string, error) {
+// pkgDir returns the absolute path in filesystem for a package given its import path
+// and the root of the subtree dependencies.
+func pkgDir(goPath string, root, importPath string) (string, string, error) {
 	rPath := filepath.Join(root, "vendor")
-	dir := filepath.Join(goPath, "src", rPath, path)
+	dir := filepath.Join(goPath, "src", rPath, importPath)
 
 	if _, err := os.Stat(dir); err == nil {
 		return dir, rPath, nil // found!
 	}
 
-	dir = filepath.Join(goPath, "src", effectivePkg(root, path))
+	dir = filepath.Join(goPath, "src", effectivePkg(root, importPath))
 
 	if _, err := os.Stat(dir); err == nil {
 		return dir, root, nil // found!
 	}
 
 	if len(root) == 0 {
-		return "", "", fmt.Errorf("unable to find source related to: %q", path)
+		return "", "", fmt.Errorf("unable to find source related to: %q", importPath)
 	}
 
 	rootPath := filepath.Join(goPath, "src", root)
@@ -210,7 +210,7 @@ func pkgDir(goPath string, root, path string) (string, string, error) {
 		return "", "", err
 	}
 
-	return pkgDir(goPath, prevRoot, path)
+	return pkgDir(goPath, prevRoot, importPath)
 }
 
 const vendor = "vendor"

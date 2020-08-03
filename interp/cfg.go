@@ -352,20 +352,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			sc.loop = n
 
 		case importSpec:
-			var name, ipath string
-			if len(n.child) == 2 {
-				ipath = n.child[1].rval.String()
-				name = n.child[0].ident
-			} else {
-				ipath = n.child[0].rval.String()
-				name = identifier.FindString(ipath)
-			}
-			uniqName := filepath.Join(name, baseName)
-			if interp.binPkg[ipath] != nil && name != "." {
-				sc.sym[uniqName] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath}}
-			} else {
-				sc.sym[uniqName] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: ipath}}
-			}
+			// already all done in gta
 			return false
 
 		case typeSpec:
