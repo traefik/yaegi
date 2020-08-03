@@ -946,7 +946,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		case compositeLitExpr:
 			wireChild(n)
 
-			underlying := func (t *itype) *itype {
+			underlying := func(t *itype) *itype {
 				for {
 					switch t.cat {
 					case ptrT, aliasT:
@@ -971,9 +971,14 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			case structT:
 				err = check.structLitExpr(child, n.typ)
 			case valueT:
-				switch k := n.typ.rtype.Kind(); k {
+				rtype := n.typ.rtype
+				switch rtype.Kind() {
 				case reflect.Struct:
+					err = check.structBinLitExpr(child, rtype)
 				case reflect.Map:
+					ktyp := &itype{cat: valueT, rtype: rtype.Key()}
+					vtyp := &itype{cat: valueT, rtype: rtype.Elem()}
+					err = check.mapLitExpr(child, ktyp, vtyp)
 				}
 			}
 			if err != nil {

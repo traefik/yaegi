@@ -238,7 +238,7 @@ func (check typecheck) binaryExpr(n *node) error {
 }
 
 func (check typecheck) index(n *node, max int) error {
-	if err :=check.convertUntyped(n,  &itype{cat: intT, name: "int"}); err != nil {
+	if err := check.convertUntyped(n, &itype{cat: intT, name: "int"}); err != nil {
 		return err
 	}
 
@@ -263,7 +263,7 @@ func (check typecheck) arrayLitExpr(child []*node, typ *itype, length int) error
 	index := 0
 	for _, c := range child {
 		n := c
-		switch  {
+		switch {
 		case c.kind == keyValueExpr:
 			if err := check.index(c.child[0], length); err != nil {
 				return c.cfgErrorf("index %s must be integer constant", c.child[0].typ.id())
@@ -303,7 +303,7 @@ func (check typecheck) mapLitExpr(child []*node, ktyp, vtyp *itype) error {
 		if key.rval.IsValid() {
 			kval := key.rval.Interface()
 			if visited[kval] {
-					return c.cfgErrorf("duplicate key %s in map literal", kval)
+				return c.cfgErrorf("duplicate key %s in map literal", kval)
 			}
 			visited[kval] = true
 		}
@@ -368,7 +368,67 @@ func (check typecheck) structLitExpr(child []*node, typ *itype) error {
 			return err
 		}
 	}
-	if len(child) <  len(typ.field) {
+	if len(child) < len(typ.field) {
+		return child[len(child)-1].cfgErrorf("too few values in struct literal")
+	}
+	return nil
+}
+
+// structBinLitExpr type checks an struct composite literal expression on a binary type.
+func (check typecheck) structBinLitExpr(child []*node, typ reflect.Type) error {
+	if len(child) == 0 {
+		return nil
+	}
+
+	if child[0].kind == keyValueExpr {
+		// All children must be keyValueExpr
+		visited := make(map[string]bool, typ.NumField())
+		for _, c := range child {
+			if c.kind != keyValueExpr {
+				return c.cfgErrorf("mixture of field:value and value elements in struct literal")
+			}
+
+			key, val := c.child[0], c.child[1]
+			name := key.ident
+			if name == "" {
+				return c.cfgErrorf("invalid field name %s in struct literal", key.typ.id())
+			}
+			field, ok := typ.FieldByName(name)
+			if !ok {
+				return c.cfgErrorf("unknown field %s in struct literal", name)
+			}
+
+			if err := check.assignment(val, &itype{cat: valueT, rtype: field.Type}, "struct literal"); err != nil {
+				return err
+			}
+
+			if visited[field.Name] {
+				return c.cfgErrorf("duplicate field name %s in struct literal", name)
+			}
+			visited[field.Name] = true
+		}
+		return nil
+	}
+
+	// No children can be keyValueExpr
+	for i, c := range child {
+		if c.kind == keyValueExpr {
+			return c.cfgErrorf("mixture of field:value and value elements in struct literal")
+		}
+
+		if i >= typ.NumField() {
+			return c.cfgErrorf("too many values in struct literal")
+		}
+		field := typ.Field(i)
+		if !canExport(field.Name) {
+			return c.cfgErrorf("implicit assignment to unexported field %s in %s literal", field.Name, typ)
+		}
+
+		if err := check.assignment(c, &itype{cat: valueT, rtype: field.Type}, "struct literal"); err != nil {
+			return err
+		}
+	}
+	if len(child) < typ.NumField() {
 		return child[len(child)-1].cfgErrorf("too few values in struct literal")
 	}
 	return nil
