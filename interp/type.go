@@ -852,6 +852,24 @@ func (t *itype) assignableTo(o *itype) bool {
 	return t.TypeOf().AssignableTo(o.TypeOf())
 }
 
+// convertibleTo returns true if t is convertible to o.
+func (t *itype) convertibleTo(o *itype) bool {
+	if t.assignableTo(o) {
+		return true
+	}
+
+	// unsafe checkes
+	tt, ot := t.TypeOf(), o.TypeOf()
+	if (tt.Kind() == reflect.Ptr || tt.Kind() == reflect.Uintptr) && ot.Kind() == reflect.UnsafePointer {
+		return true
+	}
+	if tt.Kind() == reflect.UnsafePointer && (ot.Kind() == reflect.Ptr || ot.Kind() == reflect.Uintptr) {
+		return true
+	}
+
+	return t.TypeOf().ConvertibleTo(o.TypeOf())
+}
+
 // ordered returns true if the type is ordered.
 func (t *itype) ordered() bool {
 	typ := t.TypeOf()

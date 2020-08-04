@@ -75,7 +75,7 @@ func TestEvalAssign(t *testing.T) {
 		{src: `b := "Hello"; b += 1`, err: "1:42: invalid operation: mismatched types string and int"},
 		{src: `c := "Hello"; c -= " world"`, err: "1:42: invalid operation: operator -= not defined on string"},
 		{src: "e := 64.4; e %= 64", err: "1:39: invalid operation: operator %= not defined on float64"},
-		{src: "f := int64(3.2)", err: "1:33: truncated to integer"},
+		{src: "f := int64(3.2)", err: "1:39: cannot convert expression of type float64 to type int64"},
 		{src: "g := 1; g <<= 8", res: "256"},
 		{src: "h := 1; h >>= 8", res: "0"},
 	})
@@ -352,6 +352,16 @@ func TestEvalCompositeStruct(t *testing.T) {
 		{src: `a := struct{A,B,C int}{A:1,A:2,C:3}`, err: "1:55: duplicate field name A in struct literal"},
 		{src: `a := struct{A,B,C int}{A:1,B:2.2,C:3}`, err: "1:57: 11/5 truncated to int"},
 		{src: `a := struct{A,B,C int}{A:1,2,C:3}`, err: "1:55: mixture of field:value and value elements in struct literal"},
+	})
+}
+
+func TestEvalConversion(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `a := uint64(1)`, res: "1"},
+		{src: `i := 1.1; a := uint64(i)`, res: "1"},
+		{src: `b := string(49)`, res: "1"},
+		{src: `c := uint64(1.1)`, err: "1:40: cannot convert expression of type float64 to type uint64"},
 	})
 }
 

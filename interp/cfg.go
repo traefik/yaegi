@@ -821,37 +821,43 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				if op, ok := constBltn[n.child[0].ident]; ok && n.anc.action != aAssign {
 					op(n) // pre-compute non-assigned constant :
 				}
-
 			case n.child[0].isType(sc):
 				// Type conversion expression
-				if isInt(n.child[0].typ.TypeOf()) && n.child[1].kind == basicLit && isFloat(n.child[1].typ.TypeOf()) {
-					err = n.cfgErrorf("truncated to integer")
+				c0, c1 := n.child[0], n.child[1]
+				switch len(n.child) {
+				case 1:
+					err = n.cfgErrorf("missing argument in conversion to %s", c0.typ.id())
+				case 2:
+					err = check.conversion(c1, c0.typ)
+				default:
+					err = n.cfgErrorf("too many arguments in conversion to %s", c0.typ.id())
+				}
+				if err != nil {
 					break
 				}
+
 				n.action = aConvert
 				switch {
-				case isInterface(n.child[0].typ) && !n.child[1].isNil():
+				case isInterface(c0.typ) && !c1.isNil():
 					// Convert to interface: just check that all required methods are defined by concrete type.
-					c0, c1 := n.child[0], n.child[1]
 					if !c1.typ.implements(c0.typ) {
 						err = n.cfgErrorf("type %v does not implement interface %v", c1.typ.id(), c0.typ.id())
 					}
 					// Pass value as is
 					n.gen = nop
-					n.typ = n.child[1].typ
-					n.findex = n.child[1].findex
-					n.level = n.child[1].level
-					n.val = n.child[1].val
-					n.rval = n.child[1].rval
-				case n.child[1].rval.IsValid() && isConstType(n.child[0].typ):
+					n.typ = c1.typ
+					n.findex = c1.findex
+					n.level = c1.level
+					n.val = c1.val
+					n.rval = c1.rval
+				case c1.rval.IsValid() && isConstType(c0.typ):
 					n.gen = nop
 					n.findex = -1
-					n.typ = n.child[0].typ
-					n.rval = n.child[1].rval
-					convertConstantValue(n)
+					n.typ = c0.typ
+					n.rval = c1.rval
 				default:
 					n.gen = convert
-					n.typ = n.child[0].typ
+					n.typ = c0.typ
 					n.findex = sc.add(n.typ)
 				}
 			case isBinCall(n):

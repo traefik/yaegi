@@ -434,6 +434,49 @@ func (check typecheck) structBinLitExpr(child []*node, typ reflect.Type) error {
 	return nil
 }
 
+// conversion type checks the conversion of n to typ.
+func (check typecheck) conversion(n *node, typ *itype) error {
+	var c constant.Value
+	if n.rval.IsValid() {
+		if con, ok := n.rval.Interface().(constant.Value); ok {
+			c = con
+		}
+	}
+
+	var ok bool
+	switch {
+	case c != nil && isConstType(typ):
+		switch t := typ.TypeOf(); {
+		case representableConst(c, t):
+			ok = true
+		case isInt(n.typ.TypeOf()) && isString(t):
+			codepoint := int64(-1)
+			if i, ok := constant.Int64Val(c); ok {
+				codepoint = i
+			}
+			n.rval = reflect.ValueOf(constant.MakeString(string(codepoint)))
+			ok = true
+		}
+
+	case n.typ.convertibleTo(typ):
+		ok = true
+	}
+	if !ok {
+		return n.cfgErrorf("cannot convert expression of type %s to type %s", n.typ.id(), typ.id())
+	}
+
+	if n.typ.untyped {
+		switch {
+		case isInterface(typ) || c != nil && !isConstType(typ):
+			typ = n.typ.defaultType()
+		}
+		if err := check.convertUntyped(n, typ); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 var errCantConvert = errors.New("cannot convert")
 
 func (check typecheck) convertUntyped(n *node, typ *itype) error {
