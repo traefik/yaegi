@@ -324,6 +324,10 @@ func genValueRecursiveInterfacePtrValue(n *node) func(*frame) reflect.Value {
 }
 
 func vInt(v reflect.Value) (i int64) {
+	if c := vConstantValue(v); c != nil {
+		i, _ = constant.Int64Val(constant.ToInt(c))
+		return i
+	}
 	switch v.Type().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		i = v.Int()
@@ -352,6 +356,12 @@ func vUint(v reflect.Value) (i uint64) {
 }
 
 func vComplex(v reflect.Value) (c complex128) {
+	if c := vConstantValue(v); c != nil {
+		c = constant.ToComplex(c)
+		rel, _ := constant.Float64Val(constant.Real(c))
+		img, _ := constant.Float64Val(constant.Imag(c))
+		return complex(rel, img)
+	}
 	switch v.Type().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		c = complex(float64(v.Int()), 0)
@@ -366,6 +376,10 @@ func vComplex(v reflect.Value) (c complex128) {
 }
 
 func vFloat(v reflect.Value) (i float64) {
+	if c := vConstantValue(v); c != nil {
+		i, _ = constant.Float64Val(constant.ToFloat(c))
+		return i
+	}
 	switch v.Type().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		i = float64(v.Int())
@@ -377,6 +391,14 @@ func vFloat(v reflect.Value) (i float64) {
 		i = real(v.Complex())
 	}
 	return
+}
+
+func vString(v reflect.Value) (s string) {
+	if c := vConstantValue(v); c != nil {
+		s = constant.StringVal(c)
+		return s
+	}
+	return v.String()
 }
 
 func vConstantValue(v reflect.Value) (c constant.Value) {

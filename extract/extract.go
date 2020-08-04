@@ -247,6 +247,9 @@ func fixConst(name string, val constant.Value, imports map[string]bool) string {
 		str string
 	)
 	switch val.Kind() {
+	case constant.String:
+		tok = "STRING"
+		str = val.ExactString()
 	case constant.Int:
 		tok = "INT"
 		str = val.ExactString()
@@ -269,7 +272,7 @@ func fixConst(name string, val constant.Value, imports map[string]bool) string {
 	imports["go/constant"] = true
 	imports["go/token"] = true
 
-	return fmt.Sprintf("constant.MakeFromLiteral(\"%s\", token.%s, 0)", str, tok)
+	return fmt.Sprintf("constant.MakeFromLiteral(%q, token.%s, 0)", str, tok)
 }
 
 // importPath checks whether pkgIdent is an existing directory relative to

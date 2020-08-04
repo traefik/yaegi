@@ -367,10 +367,10 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		case importSpec:
 			var name, ipath string
 			if len(n.child) == 2 {
-				ipath = n.child[1].rval.String()
+				ipath = constToString(n.child[1].rval)
 				name = n.child[0].ident
 			} else {
-				ipath = n.child[0].rval.String()
+				ipath = constToString(n.child[0].rval)
 				name = identifier.FindString(ipath)
 			}
 			if interp.binPkg[ipath] != nil && name != "." {
@@ -477,6 +477,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			wireChild(n)
 			for i := 0; i < n.nleft; i++ {
 				dest, src := n.child[i], n.child[sbase+i]
+				updateSym := false
 				var sym *symbol
 				var level int
 				if n.kind == defineStmt || (n.kind == assignStmt && dest.ident == "_") {
@@ -513,7 +514,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					dest.val = src.val
 					dest.recv = src.recv
 					dest.findex = sym.index
-					sym.rval = src.rval
+					updateSym = true
 				} else {
 					sym, level, _ = sc.lookup(dest.ident)
 				}
@@ -523,6 +524,10 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					break
 				}
 
+				if updateSym {
+					sym.typ = dest.typ
+					sym.rval = src.rval
+				}
 				n.findex = dest.findex
 				n.level = dest.level
 

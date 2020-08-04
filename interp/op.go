@@ -20,7 +20,7 @@ func add(n *node) {
 	case reflect.String:
 		switch {
 		case c0.rval.IsValid():
-			s0 := c0.rval.String()
+			s0 := vString(c0.rval)
 			v1 := genValue(c1)
 			n.exec = func(f *frame) bltn {
 				dest(f).SetString(s0 + v1(f).String())
@@ -28,7 +28,7 @@ func add(n *node) {
 			}
 		case c1.rval.IsValid():
 			v0 := genValue(c0)
-			s1 := c1.rval.String()
+			s1 := vString(c1.rval)
 			n.exec = func(f *frame) bltn {
 				dest(f).SetString(v0(f).String() + s1)
 				return next
@@ -165,7 +165,7 @@ func addConst(n *node) {
 		v := constant.BinaryOp(vConstantValue(v0), token.ADD, vConstantValue(v1))
 		n.rval.Set(reflect.ValueOf(v))
 	case isString(t):
-		n.rval.SetString(v0.String() + v1.String())
+		n.rval.SetString(vString(v0) + vString(v1))
 	case isComplex(t):
 		n.rval.SetComplex(vComplex(v0) + vComplex(v1))
 	case isFloat(t):
@@ -1206,7 +1206,7 @@ func addAssign(n *node) {
 		switch typ.Kind() {
 		case reflect.String:
 			v0 := genValueString(c0)
-			v1 := c1.rval.String()
+			v1 := vString(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, s := v0(f)
 				v.SetString(s + v1)
@@ -2109,7 +2109,7 @@ func equal(n *node) {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
-			s0 := c0.rval.String()
+			s0 := vString(c0.rval)
 			v1 := genValueString(n.child[1])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
@@ -2130,7 +2130,7 @@ func equal(n *node) {
 				}
 			}
 		case c1.rval.IsValid():
-			s1 := c1.rval.String()
+			s1 := vString(c1.rval)
 			v0 := genValueString(n.child[0])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
@@ -2538,7 +2538,7 @@ func greater(n *node) {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
-			s0 := c0.rval.String()
+			s0 := vString(c0.rval)
 			v1 := genValueString(n.child[1])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
@@ -2559,7 +2559,7 @@ func greater(n *node) {
 				}
 			}
 		case c1.rval.IsValid():
-			s1 := c1.rval.String()
+			s1 := vString(c1.rval)
 			v0 := genValueString(n.child[0])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
@@ -2827,7 +2827,7 @@ func greaterEqual(n *node) {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
-			s0 := c0.rval.String()
+			s0 := vString(c0.rval)
 			v1 := genValueString(n.child[1])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
@@ -2848,7 +2848,7 @@ func greaterEqual(n *node) {
 				}
 			}
 		case c1.rval.IsValid():
-			s1 := c1.rval.String()
+			s1 := vString(c1.rval)
 			v0 := genValueString(n.child[0])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
@@ -3116,7 +3116,7 @@ func lower(n *node) {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
-			s0 := c0.rval.String()
+			s0 := vString(c0.rval)
 			v1 := genValueString(n.child[1])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
@@ -3137,7 +3137,7 @@ func lower(n *node) {
 				}
 			}
 		case c1.rval.IsValid():
-			s1 := c1.rval.String()
+			s1 := vString(c1.rval)
 			v0 := genValueString(n.child[0])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
@@ -3405,7 +3405,7 @@ func lowerEqual(n *node) {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
-			s0 := c0.rval.String()
+			s0 := vString(c0.rval)
 			v1 := genValueString(n.child[1])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
@@ -3426,7 +3426,7 @@ func lowerEqual(n *node) {
 				}
 			}
 		case c1.rval.IsValid():
-			s1 := c1.rval.String()
+			s1 := vString(c1.rval)
 			v0 := genValueString(n.child[0])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
@@ -3768,7 +3768,7 @@ func notEqual(n *node) {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
-			s0 := c0.rval.String()
+			s0 := vString(c0.rval)
 			v1 := genValueString(n.child[1])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
@@ -3789,7 +3789,7 @@ func notEqual(n *node) {
 				}
 			}
 		case c1.rval.IsValid():
-			s1 := c1.rval.String()
+			s1 := vString(c1.rval)
 			v0 := genValueString(n.child[0])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)

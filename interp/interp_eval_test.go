@@ -296,6 +296,8 @@ func Foo() {
 func TestEvalComparison(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
+		{src: `2 > 1`, res: "true"},
+		{src: `1.2 > 1.1`, res: "true"},
 		{src: `"hhh" > "ggg"`, res: "true"},
 		{
 			desc: "mismatched types",

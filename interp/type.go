@@ -223,8 +223,6 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			// with the correct type so we must make the const type here.
 			n.rval = reflect.ValueOf(constant.MakeInt64(int64(v)))
 			t = untypedRune
-		case string:
-			t = untypedString
 		case constant.Value:
 			switch v.Kind() {
 			case constant.Bool:
@@ -1371,6 +1369,11 @@ func constToInt(c constant.Value) int {
 	}
 	i, _ := constant.Int64Val(c)
 	return int(i)
+}
+
+func constToString(v reflect.Value) string {
+	c := v.Interface().(constant.Value)
+	return constant.StringVal(c)
 }
 
 func defRecvType(n *node) *itype {
