@@ -900,6 +900,11 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					}
 				}
 			default:
+				err = check.arguments(n.child[1:], n.child[0], n.action == aCallSlice)
+				if err != nil {
+					break
+				}
+
 				if n.child[0].action == aGetFunc {
 					// Allocate a frame entry to store the anonymous function definition.
 					sc.add(n.child[0].typ)

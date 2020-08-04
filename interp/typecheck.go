@@ -49,6 +49,9 @@ func (check typecheck) assignment(n *node, typ *itype, context string) error {
 	}
 
 	if !n.typ.assignableTo(typ) {
+		if context == "" {
+			return n.cfgErrorf("cannot use type %s as type %s", n.typ.id(), typ.id())
+		}
 		return n.cfgErrorf("cannot use type %s as type %s in %s", n.typ.id(), typ.id(), context)
 	}
 	return nil
@@ -475,6 +478,121 @@ func (check typecheck) conversion(n *node, typ *itype) error {
 		}
 	}
 	return nil
+}
+
+func unpackArgs(child []*node, params []*node) []*node {
+	var args []*node
+
+	for _, c := range child {
+		switch {
+		case isBinCall(c):
+
+		case isRegularCall(c):
+
+		default:
+			// a callExpr has the type of the first return so it can be used directly in
+			// the case that
+			args = append(args, c)
+		}
+	}
+	return args
+}
+
+// arguments type checks the call expression arguments.
+func (check typecheck) arguments(child []*node, fun *node, ellipsis bool) error {
+	l := len(child)
+	if ellipsis {
+		if !fun.typ.isVariadic() {
+			return child[l-1].cfgErrorf("invalid use of ..., corresponding parameter is non-variadic")
+		}
+		if len(child) == 1 && isCall(child[0]) && child[0].child[0].typ.numOut() > 1 {
+			return child[0].cfgErrorf("cannot use ... with %d-valued %s", child[0].child[0].typ.numOut(), child[0].child[0].typ.id())
+		}
+	}
+
+	if len(child) == 1 && isCall(child[0]) && child[0].child[0].typ.numOut() > 1 {
+		// Handle the case of unpacking a n-valued function into the params.
+		c := child[0].child[0]
+		l := c.typ.numOut()
+		switch {
+		case l < len(fun.typ.arg):
+			return child[0].cfgErrorf("too few arguments in call to %q", fun.name())
+		case l > len(fun.typ.arg):
+			return child[0].cfgErrorf("too many arguments")
+		}
+		for i := 0; i < l; i++ {
+			if !c.typ.out(i).assignableTo(getArg(fun.typ, i)) {
+				return child[0].cfgErrorf("cannot use %s as type %s", c.typ.id(), getArgsId(fun.typ))
+			}
+		}
+		return nil
+	}
+
+	var n int
+	for i, arg := range child {
+		ellip := i == l-1 && ellipsis
+		if err := check.argument(arg, fun.typ, n, ellip); err != nil {
+			return err
+		}
+		n++
+	}
+
+	if fun.typ.isVariadic() {
+		n++
+	}
+	if n < len(fun.typ.arg) {
+		return child[l-1].cfgErrorf("too few arguments in call to %q", fun.name())
+	}
+	return nil
+}
+
+func (check typecheck) argument(n *node, ftyp *itype, i int, ellipsis bool) error {
+	typ := getArg(ftyp, i)
+	if typ == nil {
+		return n.cfgErrorf("too many arguments")
+	}
+
+	if isCall(n) && n.child[0].typ.numOut() != 1 {
+		return n.cfgErrorf("cannot use %s as type %s", n.child[0].typ.id(), typ.id())
+	}
+
+	if ellipsis {
+		if i != len(ftyp.arg)-1 {
+			return n.cfgErrorf("can only use ... with matching parameter")
+		}
+		t := n.typ.TypeOf()
+		if t.Kind() != reflect.Slice || !(&itype{cat: valueT, rtype: t.Elem()}).assignableTo(typ) {
+			return n.cfgErrorf("cannot use %s as type %s", n.typ.id(), (&itype{cat: arrayT, val: typ}).id())
+		}
+		return nil
+	}
+
+	err := check.assignment(n, typ, "")
+	return err
+}
+
+func getArg(ftyp *itype, i int) *itype {
+	l := len(ftyp.arg)
+	switch {
+	case ftyp.isVariadic() && i >= l-1:
+		return ftyp.arg[l-1].val
+	case i < l:
+		return ftyp.arg[i]
+	default:
+		return nil
+	}
+}
+
+func getArgsId(ftyp *itype) string {
+	res := "("
+	for i, arg := range ftyp.arg {
+		if i > 0 {
+			res += ","
+		}
+		res += arg.id()
+	}
+	res += ")"
+	return res
 }
 
 var errCantConvert = errors.New("cannot convert")

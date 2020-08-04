@@ -457,6 +457,48 @@ func TestEvalFunctionCallWithFunctionParam(t *testing.T) {
 	}
 }
 
+func TestEvalCall(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: ` test := func(a int, b float64) int { return a }
+				a := test(1, 2.3)`, res: "1"},
+		{src: ` test := func(a int, b float64) int { return a }
+				a := test(1)`, err: "2:15: too few arguments in call to \"test\""},
+		{src: ` test := func(a int, b float64) int { return a }
+				s := "test"
+				a := test(1, s)`, err: "3:18: cannot use type string as type float64"},
+		{src: ` test := func(a ...int) int { return 1 }
+				a := test([]int{1}...)`, res: "1"},
+		{src: ` test := func(a ...int) int { return 1 }
+				a := test()`, res: "1"},
+		{src: ` test := func(a ...int) int { return 1 }
+				blah := func() []int { return []int{1,1} }
+				a := test(blah()...)`, res: "1"},
+		{src: ` test := func(a ...int) int { return 1 }
+				a := test([]string{"1"}...)`, err: "2:15: cannot use []string as type []int"},
+		{src: ` test := func(a ...int) int { return 1 }
+				i := 1
+				a := test(i...)`, err: "3:15: cannot use int as type []int"},
+		{src: ` test := func(a int) int { return a }
+				a := test([]int{1}...)`, err: "2:15: invalid use of ..., corresponding parameter is non-variadic"},
+		{src: ` test := func(a ...int) int { return 1 }
+				blah := func() (int, int) { return 1, 1 }
+				a := test(blah()...)`, err: "3:15: cannot use ... with 2-valued func()(int,int)"},
+		{src: ` test := func(a, b int) int { return a }
+				blah := func() (int, int) { return 1, 1 }
+				a := test(blah())`, res: "1"},
+		{src: ` test := func(a, b int) int { return a }
+				blah := func() int { return 1 }
+				a := test(blah(), blah())`, res: "1"},
+		{src: ` test := func(a, b, c, d int) int { return a }
+				blah := func() (int, int) { return 1, 1 }
+				a := test(blah(), blah())`, err: "3:15: cannot use func()(int,int) as type int"},
+		{src: ` test := func(a, b int) int { return a }
+				blah := func() (int, float64) { return 1, 1.1 }
+				a := test(blah())`, err: "3:15: cannot use func()(int,float64) as type (int,int)"},
+	})
+}
+
 func TestEvalMissingSymbol(t *testing.T) {
 	defer func() {
 		r := recover()

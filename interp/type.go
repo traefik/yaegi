@@ -768,6 +768,18 @@ func (t *itype) numOut() int {
 	return 1
 }
 
+func (t *itype) out(i int) *itype {
+	switch t.cat {
+	case funcT:
+		return t.ret[i]
+	case valueT:
+		if t.rtype.Kind() == reflect.Func {
+			return &itype{cat: valueT, rtype: t.rtype.Out(i)}
+		}
+	}
+	return nil
+}
+
 func (t *itype) concrete() *itype {
 	if isInterface(t) && t.val != nil {
 		return t.val.concrete()
@@ -790,6 +802,16 @@ func (t *itype) isRecursive() bool {
 		}
 	}
 	return false
+}
+
+// isVariadic returns true if the function type is variadic.
+// If the type is not a function or is not variadic, it will
+// return false.
+func (t *itype) isVariadic() bool {
+	if t.cat != funcT || len(t.arg) == 0 {
+		return false
+	}
+	return t.arg[len(t.arg)-1].cat == variadicT
 }
 
 // isComplete returns true if type definition is complete.
@@ -959,7 +981,11 @@ func (t *itype) id() (res string) {
 	case nilT:
 		res = "nil"
 	case arrayT:
-		res = "[" + strconv.Itoa(t.size) + "]" + t.val.id()
+		if t.size == 0 {
+			res = "[]" + t.val.id()
+		} else {
+			res = "[" + strconv.Itoa(t.size) + "]" + t.val.id()
+		}
 	case chanT:
 		res = "chan " + t.val.id()
 	case chanSendT:
@@ -968,12 +994,18 @@ func (t *itype) id() (res string) {
 		res = "<-chan " + t.val.id()
 	case funcT:
 		res = "func("
-		for _, t := range t.arg {
-			res += t.id() + ","
+		for i, t := range t.arg {
+			if i > 0 {
+				res += ","
+			}
+			res += t.id()
 		}
 		res += ")("
-		for _, t := range t.ret {
-			res += t.id() + ","
+		for i, t := range t.ret {
+			if i > 0 {
+				res += ","
+			}
+			res += t.id()
 		}
 		res += ")"
 	case interfaceT:
