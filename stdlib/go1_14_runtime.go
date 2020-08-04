@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"reflect"
 	"runtime"
 )
@@ -18,7 +20,7 @@ func init() {
 		"Caller":                  reflect.ValueOf(runtime.Caller),
 		"Callers":                 reflect.ValueOf(runtime.Callers),
 		"CallersFrames":           reflect.ValueOf(runtime.CallersFrames),
-		"Compiler":                reflect.ValueOf(runtime.Compiler),
+		"Compiler":                reflect.ValueOf(constant.MakeFromLiteral("\"gc\"", token.STRING, 0)),
 		"FuncForPC":               reflect.ValueOf(runtime.FuncForPC),
 		"GC":                      reflect.ValueOf(runtime.GC),
 		"GOARCH":                  reflect.ValueOf(runtime.GOARCH),
