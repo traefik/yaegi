@@ -135,9 +135,9 @@ type Interpreter struct {
 	mutex    sync.RWMutex
 	frame    *frame            // program data storage during execution
 	universe *scope            // interpreter global level scope
-	scopes   map[string]*scope // package level scopes, indexed by package name
+	scopes   map[string]*scope // package level scopes, indexed by import path
 	srcPkg   imports           // source packages used in interpreter, indexed by path
-	pkgNames map[string]string // package names, indexed by path
+	pkgNames map[string]string // package names, indexed by import path
 	done     chan struct{}     // for cancellation of channel operations
 
 	hooks *hooks // symbol hooks

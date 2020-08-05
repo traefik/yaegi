@@ -50,8 +50,8 @@ var identifier = regexp.MustCompile(`([\pL_][\pL_\d]*)$`)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
 // Following this pass, the CFG is ready to run.
-func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
-	sc := interp.initScopePkg(pkgID)
+func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
+	sc := interp.initScopePkg(importPath)
 	var initNodes []*node
 	var err error
 
@@ -390,7 +390,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			// values which may be used in further declarations.
 			if !sc.global {
 				for _, c := range n.child {
-					if _, err = interp.cfg(c, pkgID); err != nil {
+					if _, err = interp.cfg(c, importPath); err != nil {
 						// No error processing here, to allow recovery in subtree nodes.
 						err = nil
 					}
@@ -1815,7 +1815,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 							return
 						}
 						// for predeclared identifiers (int, string, etc)
-						// TODO(mpl): find the exact location of the previous declaration in all cases.
 						err = n.cfgErrorf("%s redeclared in this block", c.ident)
 						return
 					}

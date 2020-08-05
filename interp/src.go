@@ -224,7 +224,7 @@ func previousRoot(rootPath, root string) (string, error) {
 	// TODO(mpl): maybe it works for the special case main, but can't be bothered for now.
 	if root != mainID && final != vendor {
 		root = strings.TrimSuffix(root, string(filepath.Separator))
-		prefix := strings.TrimSuffix(rootPath, root)
+		prefix := strings.TrimSuffix(strings.TrimSuffix(rootPath, root), string(filepath.Separator))
 
 		// look for the closest vendor in one of our direct ancestors, as it takes priority.
 		var vendored string
@@ -244,10 +244,11 @@ func previousRoot(rootPath, root string) (string, error) {
 				break
 			}
 
-			// just an additional failsafe, stop if we reach the filesystem root.
+			// just an additional failsafe, stop if we reach the filesystem root, or dot (if
+			// we are dealing with relative paths).
 			// TODO(mpl): It should probably be a critical error actually,
 			// as we shouldn't have gone that high up in the tree.
-			if parent == string(filepath.Separator) {
+			if parent == string(filepath.Separator) || parent == "." {
 				break
 			}
 		}

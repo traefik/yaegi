@@ -9,10 +9,9 @@ import (
 // variables and functions symbols at package level, prior to CFG.
 // All function bodies are skipped. GTA is necessary to handle out of
 // order declarations and multiple source files packages.
-// rpath is the relative path to the directory containing the source for pkgID.
-// TODO(mpl): clarify pkgID: package name VS package import path.
-func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error) {
-	sc := interp.initScopePkg(pkgID)
+// rpath is the relative path to the directory containing the source for the package.
+func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, error) {
+	sc := interp.initScopePkg(importPath)
 	var err error
 	var revisit []*node
 
@@ -26,7 +25,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 		case constDecl:
 			// Early parse of constDecl subtree, to compute all constant
 			// values which may be used in further declarations.
-			if _, err = interp.cfg(n, pkgID); err != nil {
+			if _, err = interp.cfg(n, importPath); err != nil {
 				// No error processing here, to allow recovery in subtree nodes.
 				err = nil
 			}
@@ -54,7 +53,7 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				dest, src := n.child[i], n.child[sbase+i]
 				val := reflect.ValueOf(sc.iota)
 				if n.anc.kind == constDecl {
-					if _, err2 := interp.cfg(n, pkgID); err2 != nil {
+					if _, err2 := interp.cfg(n, importPath); err2 != nil {
 						// Constant value can not be computed yet.
 						// Come back when child dependencies are known.
 						revisit = append(revisit, n)
@@ -177,7 +176,6 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 				asImportName := filepath.Join(ident, baseName)
 				if _, exists := sc.sym[asImportName]; exists {
 					// redeclaration error
-					// TODO(mpl): improve error with position of previous declaration.
 					err = n.cfgErrorf("%s redeclared in this block", ident)
 					return false
 				}
@@ -189,7 +187,6 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 						// TODO(mpl): this check might be too permissive?
 						if sym.kind != funcSym || sym.typ.cat != n.typ.cat || sym.node != n || sym.index != -1 {
 							// redeclaration error
-							// TODO(mpl): improve error with position of previous declaration.
 							err = n.cfgErrorf("%s redeclared in this block", ident)
 							return false
 						}
@@ -239,7 +236,6 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 					}
 
 					// redeclaration error
-					// TODO(mpl): find position information about previous declaration
 					err = n.cfgErrorf("%s redeclared in this block", name)
 					return false
 				}
@@ -290,7 +286,6 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 			asImportName := filepath.Join(typeName, baseName)
 			if _, exists := sc.sym[asImportName]; exists {
 				// redeclaration error
-				// TODO(mpl): improve error with position of previous declaration.
 				err = n.cfgErrorf("%s redeclared in this block", typeName)
 				return false
 			}

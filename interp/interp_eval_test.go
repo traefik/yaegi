@@ -661,3 +661,74 @@ func TestMultiEvalNoName(t *testing.T) {
 		}
 	}
 }
+
+func TestImportPathIsKey(t *testing.T) {
+	// No need to check the results of Eval, as TestFile already does it.
+	i := interp.New(interp.Options{GoPath: filepath.FromSlash("../_test/testdata/redeclaration-global7")})
+	i.Use(stdlib.Symbols)
+
+	filePath := filepath.Join("..", "_test", "ipp_as_key.go")
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := i.Eval(string(data), filePath, false); err != nil {
+		t.Fatal(err)
+	}
+
+	wantScopes := map[string][]string{
+		"main": {
+			"titi/ipp_as_key.go",
+			"tutu/ipp_as_key.go",
+			"main",
+		},
+		"guthib.com/toto": {
+			"quux/titi.go",
+			"Quux",
+		},
+		"guthib.com/bar": {
+			"Quux",
+		},
+		"guthib.com/tata": {
+			"quux/tutu.go",
+			"Quux",
+		},
+		"guthib.com/baz": {
+			"Quux",
+		},
+	}
+	wantPackages := map[string]string{
+		"guthib.com/baz":  "quux",
+		"guthib.com/tata": "tutu",
+		"main":            "main",
+		"guthib.com/bar":  "quux",
+		"guthib.com/toto": "titi",
+	}
+
+	scopes := i.Scopes()
+	if len(scopes) != len(wantScopes) {
+		t.Fatalf("want %d, got %d", len(wantScopes), len(scopes))
+	}
+	for k, v := range scopes {
+		wantSym := wantScopes[k]
+		if len(v) != len(wantSym) {
+			t.Fatalf("want %d, got %d", len(wantSym), len(v))
+		}
+		for _, sym := range wantSym {
+			if _, ok := v[sym]; !ok {
+				t.Fatalf("symbol %s not found in scope %s", sym, k)
+			}
+		}
+	}
+
+	packages := i.Packages()
+	if len(packages) != len(wantPackages) {
+		t.Fatalf("want %d, got %d", len(wantPackages), len(packages))
+	}
+	for k, v := range wantPackages {
+		pkg := packages[k]
+		if pkg != v {
+			t.Fatalf("for import path %s, want %s, got %s", k, v, pkg)
+		}
+	}
+}
