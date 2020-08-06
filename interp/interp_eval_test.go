@@ -463,7 +463,7 @@ func TestEvalCall(t *testing.T) {
 		{src: ` test := func(a int, b float64) int { return a }
 				a := test(1, 2.3)`, res: "1"},
 		{src: ` test := func(a int, b float64) int { return a }
-				a := test(1)`, err: "2:15: too few arguments in call to \"test\""},
+				a := test(1)`, err: "2:10: not enough arguments in call to test"},
 		{src: ` test := func(a int, b float64) int { return a }
 				s := "test"
 				a := test(1, s)`, err: "3:18: cannot use type string as type float64"},
@@ -480,7 +480,7 @@ func TestEvalCall(t *testing.T) {
 				i := 1
 				a := test(i...)`, err: "3:15: cannot use int as type []int"},
 		{src: ` test := func(a int) int { return a }
-				a := test([]int{1}...)`, err: "2:15: invalid use of ..., corresponding parameter is non-variadic"},
+				a := test([]int{1}...)`, err: "2:10: invalid use of ..., corresponding parameter is non-variadic"},
 		{src: ` test := func(a ...int) int { return 1 }
 				blah := func() (int, int) { return 1, 1 }
 				a := test(blah()...)`, err: "3:15: cannot use ... with 2-valued func()(int,int)"},
@@ -496,6 +496,19 @@ func TestEvalCall(t *testing.T) {
 		{src: ` test := func(a, b int) int { return a }
 				blah := func() (int, float64) { return 1, 1.1 }
 				a := test(blah())`, err: "3:15: cannot use func()(int,float64) as type (int,int)"},
+	})
+}
+
+func TestEvalBinCall(t *testing.T) {
+	i := interp.New(interp.Options{})
+	i.Use(stdlib.Symbols)
+	i.Eval(`import "fmt"`)
+	runTests(t, i, []testCase{
+		{src: `a := fmt.Sprint(1, 2.3)`, res: "1 2.3"},
+		{src: `a := fmt.Sprintf()`, err: "1:33: not enough arguments in call to fmt.Sprintf"},
+		{src: `i := 1
+			   a := fmt.Sprintf(i)`, err: "2:24: cannot use type int as type string"},
+		{src: `a := fmt.Sprint()`, res: ""},
 	})
 }
 

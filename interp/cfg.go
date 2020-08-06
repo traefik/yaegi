@@ -861,23 +861,13 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.findex = sc.add(n.typ)
 				}
 			case isBinCall(n):
-				n.gen = callBin
-				typ := n.child[0].typ.rtype
-				numIn := len(n.child) - 1
-				tni := typ.NumIn()
-				if numIn == 1 && isCall(n.child[1]) {
-					numIn = n.child[1].typ.numOut()
-				}
-				if n.child[0].action == aGetMethod {
-					tni-- // The first argument is the method receiver.
-				}
-				if typ.IsVariadic() {
-					tni-- // The last argument could be empty.
-				}
-				if numIn < tni {
-					err = n.cfgErrorf("not enough arguments in call to %v", n.child[0].name())
+				err = check.arguments(n, n.child[1:], n.child[0], n.action == aCallSlice)
+				if err != nil {
 					break
 				}
+
+				n.gen = callBin
+				typ := n.child[0].typ.rtype
 				if typ.NumOut() > 0 {
 					if funcType := n.child[0].typ.val; funcType != nil {
 						// Use the original unwrapped function type, to allow future field and
@@ -900,7 +890,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					}
 				}
 			default:
-				err = check.arguments(n.child[1:], n.child[0], n.action == aCallSlice)
+				err = check.arguments(n, n.child[1:], n.child[0], n.action == aCallSlice)
 				if err != nil {
 					break
 				}

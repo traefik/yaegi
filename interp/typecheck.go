@@ -480,30 +480,12 @@ func (check typecheck) conversion(n *node, typ *itype) error {
 	return nil
 }
 
-func unpackArgs(child []*node, params []*node) []*node {
-	var args []*node
-
-	for _, c := range child {
-		switch {
-		case isBinCall(c):
-
-		case isRegularCall(c):
-
-		default:
-			// a callExpr has the type of the first return so it can be used directly in
-			// the case that
-			args = append(args, c)
-		}
-	}
-	return args
-}
-
 // arguments type checks the call expression arguments.
-func (check typecheck) arguments(child []*node, fun *node, ellipsis bool) error {
+func (check typecheck) arguments(n *node, child []*node, fun *node, ellipsis bool) error {
 	l := len(child)
 	if ellipsis {
 		if !fun.typ.isVariadic() {
-			return child[l-1].cfgErrorf("invalid use of ..., corresponding parameter is non-variadic")
+			return n.cfgErrorf("invalid use of ..., corresponding parameter is non-variadic")
 		}
 		if len(child) == 1 && isCall(child[0]) && child[0].child[0].typ.numOut() > 1 {
 			return child[0].cfgErrorf("cannot use ... with %d-valued %s", child[0].child[0].typ.numOut(), child[0].child[0].typ.id())
@@ -514,34 +496,40 @@ func (check typecheck) arguments(child []*node, fun *node, ellipsis bool) error 
 		// Handle the case of unpacking a n-valued function into the params.
 		c := child[0].child[0]
 		l := c.typ.numOut()
-		switch {
-		case l < len(fun.typ.arg):
-			return child[0].cfgErrorf("too few arguments in call to %q", fun.name())
-		case l > len(fun.typ.arg):
-			return child[0].cfgErrorf("too many arguments")
+		if l < fun.typ.numIn() {
+			return child[0].cfgErrorf("not enough arguments in call to %s", fun.name())
 		}
 		for i := 0; i < l; i++ {
-			if !c.typ.out(i).assignableTo(getArg(fun.typ, i)) {
+			arg := getArg(fun.typ, i)
+			if arg == nil {
+				return child[0].cfgErrorf("too many arguments")
+			}
+			if !c.typ.out(i).assignableTo(arg) {
 				return child[0].cfgErrorf("cannot use %s as type %s", c.typ.id(), getArgsId(fun.typ))
 			}
 		}
 		return nil
 	}
 
-	var n int
-	for i, arg := range child {
-		ellip := i == l-1 && ellipsis
-		if err := check.argument(arg, fun.typ, n, ellip); err != nil {
+	var cnt int
+	if fun.kind == selectorExpr && fun.typ.cat == valueT && fun.recv != nil && !isInterface(fun.recv.node.typ) {
+		// If this is a bin call, and we have a receiver and the receiver is
+		// not an interface, then the first input is the receiver, so skip it.
+		cnt++
+	}
+	for _, arg := range child {
+		ellip := cnt == l-1 && ellipsis
+		if err := check.argument(arg, fun.typ, cnt, ellip); err != nil {
 			return err
 		}
-		n++
+		cnt++
 	}
 
 	if fun.typ.isVariadic() {
-		n++
+		cnt++
 	}
-	if n < len(fun.typ.arg) {
-		return child[l-1].cfgErrorf("too few arguments in call to %q", fun.name())
+	if cnt < fun.typ.numIn() {
+		return n.cfgErrorf("not enough arguments in call to %s", fun.name())
 	}
 	return nil
 }
@@ -557,7 +545,7 @@ func (check typecheck) argument(n *node, ftyp *itype, i int, ellipsis bool) erro
 	}
 
 	if ellipsis {
-		if i != len(ftyp.arg)-1 {
+		if i != ftyp.numIn()-1 {
 			return n.cfgErrorf("can only use ... with matching parameter")
 		}
 		t := n.typ.TypeOf()
@@ -572,12 +560,13 @@ func (check typecheck) argument(n *node, ftyp *itype, i int, ellipsis bool) erro
 }
 
 func getArg(ftyp *itype, i int) *itype {
-	l := len(ftyp.arg)
+	l := ftyp.numIn()
 	switch {
 	case ftyp.isVariadic() && i >= l-1:
-		return ftyp.arg[l-1].val
+		arg := ftyp.in(l-1).val
+		return arg
 	case i < l:
-		return ftyp.arg[i]
+		return ftyp.in(i)
 	default:
 		return nil
 	}

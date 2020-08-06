@@ -578,6 +578,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		if err == nil && t.size != 0 {
 			t1 := *t
 			t1.size = 0
+			t1.sizedef = false
 			t1.rtype = nil
 			t = &t1
 		}
@@ -756,6 +757,33 @@ func (t *itype) referTo(name string, seen map[*itype]bool) bool {
 	return false
 }
 
+func (t *itype) numIn() int {
+	switch t.cat {
+	case funcT:
+		return len(t.arg)
+	case valueT:
+		if t.rtype.Kind() == reflect.Func {
+			return t.rtype.NumIn()
+		}
+	}
+	return 1
+}
+
+func (t *itype) in(i int) *itype {
+	switch t.cat {
+	case funcT:
+		return t.arg[i]
+	case valueT:
+		if t.rtype.Kind() == reflect.Func {
+			if t.rtype.IsVariadic() && i == t.rtype.NumIn()-1 {
+				return &itype{cat: variadicT, val: &itype{cat: valueT, rtype: t.rtype.In(i).Elem()}}
+			}
+			return &itype{cat: valueT, rtype: t.rtype.In(i)}
+		}
+	}
+	return nil
+}
+
 func (t *itype) numOut() int {
 	switch t.cat {
 	case funcT:
@@ -808,10 +836,15 @@ func (t *itype) isRecursive() bool {
 // If the type is not a function or is not variadic, it will
 // return false.
 func (t *itype) isVariadic() bool {
-	if t.cat != funcT || len(t.arg) == 0 {
-		return false
+	switch t.cat {
+	case funcT:
+		return len(t.arg) > 0 && t.arg[len(t.arg)-1].cat == variadicT
+	case valueT:
+		if t.rtype.Kind() == reflect.Func {
+			return t.rtype.IsVariadic()
+		}
 	}
-	return t.arg[len(t.arg)-1].cat == variadicT
+	return false
 }
 
 // isComplete returns true if type definition is complete.
@@ -932,41 +965,58 @@ func (m methodSet) equals(n methodSet) bool {
 
 // Methods returns a map of method type strings, indexed by method names.
 func (t *itype) methods() methodSet {
-	res := make(methodSet)
-	switch t.cat {
-	case interfaceT:
-		// Get methods from recursive analysis of interface fields.
-		for _, f := range t.field {
-			if f.typ.cat == funcT {
-				res[f.name] = f.typ.TypeOf().String()
-			} else {
-				for k, v := range f.typ.methods() {
+	seen := map[*itype]bool{}
+	var getMethods func(typ *itype) methodSet
+
+	getMethods = func(typ *itype) methodSet {
+		res := make(methodSet)
+
+		if seen[typ] {
+			// Stop the recursion, we have seen this type.
+			return res
+		}
+		seen[typ] = true
+
+		switch typ.cat {
+		case interfaceT:
+			// Get methods from recursive analysis of interface fields.
+			for _, f := range typ.field {
+				if f.typ.cat == funcT {
+					res[f.name] = f.typ.TypeOf().String()
+				} else {
+					for k, v := range getMethods(f.typ) {
+						res[k] = v
+					}
+				}
+			}
+		case valueT, errorT:
+			// Get method from corresponding reflect.Type.
+			for i := typ.rtype.NumMethod() - 1; i >= 0; i-- {
+				m := typ.rtype.Method(i)
+				res[m.Name] = m.Type.String()
+			}
+		case ptrT:
+			for k, v := range getMethods(typ.val) {
+				res[k] = v
+			}
+		case structT:
+			for _, f := range typ.field {
+				if !f.embed {
+					continue
+				}
+				for k, v := range getMethods(f.typ) {
 					res[k] = v
 				}
 			}
 		}
-	case valueT, errorT:
-		// Get method from corresponding reflect.Type.
-		for i := t.rtype.NumMethod() - 1; i >= 0; i-- {
-			m := t.rtype.Method(i)
-			res[m.Name] = m.Type.String()
+		// Get all methods defined on this type.
+		for _, m := range typ.method {
+			res[m.ident] = m.typ.TypeOf().String()
 		}
-	case ptrT:
-		for k, v := range t.val.methods() {
-			res[k] = v
-		}
-	case structT:
-		for _, f := range t.field {
-			for k, v := range f.typ.methods() {
-				res[k] = v
-			}
-		}
+		return res
 	}
-	// Get all methods defined on this type.
-	for _, m := range t.method {
-		res[m.ident] = m.typ.TypeOf().String()
-	}
-	return res
+
+	return getMethods(t)
 }
 
 // id returns a unique type identificator string.
