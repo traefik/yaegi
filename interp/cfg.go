@@ -1172,7 +1172,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				// TODO(mpl): maybe we improve lookup itself so it can deal with that.
 				sym, level, found = sc.lookup(filepath.Join(n.ident, baseName))
 				if !found {
-					err = n.cfgErrorf("undefined: %s(/%s)", n.ident, baseName)
+					err = n.cfgErrorf("undefined: %s", n.ident)
 					break
 				}
 			}
@@ -1913,7 +1913,12 @@ func childPos(n *node) int {
 }
 
 func (n *node) cfgErrorf(format string, a ...interface{}) *cfgError {
-	a = append([]interface{}{n.interp.fset.Position(n.pos)}, a...)
+	pos := n.interp.fset.Position(n.pos)
+	posString := n.interp.fset.Position(n.pos).String()
+	if pos.Filename == DefaultSourceName {
+		posString = strings.TrimPrefix(posString, DefaultSourceName+":")
+	}
+	a = append([]interface{}{posString}, a...)
 	return &cfgError{n, fmt.Errorf("%s: "+format, a...)}
 }
 

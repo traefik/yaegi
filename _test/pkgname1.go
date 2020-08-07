@@ -10,4 +10,4 @@ func main() {
 
 // GOPATH:testdata/redeclaration-global7
 // Error:
-// ../_test/pkgname1.go:8:19: undefined: bar(/pkgname1.go)
+// ../_test/pkgname1.go:8:19: undefined: bar

@@ -183,7 +183,7 @@ func TestPackagesError(t *testing.T) {
 		{
 			desc:     "different packages in the same directory",
 			goPath:   "./_pkg9/",
-			expected: interp.DefaultSourceName + ":1:21: import \"github.com/foo/pkg\" error: found packages pkg and pkgfalse in _pkg9/src/github.com/foo/pkg",
+			expected: "1:21: import \"github.com/foo/pkg\" error: found packages pkg and pkgfalse in _pkg9/src/github.com/foo/pkg",
 		},
 	}
 
