@@ -1,11 +1,15 @@
 package interp_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -576,4 +580,96 @@ func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expecte
 	if fmt.Sprintf("%v", res) != expectedRes {
 		t.Fatalf("got %v, want %s", res, expectedRes)
 	}
+}
+
+func TestEvalEOF(t *testing.T) {
+	tests := []struct {
+		desc      string
+		src       []string
+		errorLine int
+	}{
+		{
+			desc: "no error",
+			src: []string{
+				`func main() {`,
+				`println("foo")`,
+				`}`,
+			},
+			errorLine: -1,
+		},
+		{
+			desc: "no parsing error, but block error",
+			src: []string{
+				`func main() {`,
+				`println(foo)`,
+				`}`,
+			},
+			errorLine: 2,
+		},
+		{
+			desc: "parsing error",
+			src: []string{
+				`func main() {`,
+				`println(/foo)`,
+				`}`,
+			},
+			errorLine: 1,
+		},
+	}
+
+	for _, test := range tests {
+		i := interp.New(interp.Options{})
+		var stderr bytes.Buffer
+		pin, pout := io.Pipe()
+		defer func() {
+			// Closing the pipe also takes care of making i.REPL terminate,
+			// hence freeing its goroutine.
+			_ = pin.Close()
+			_ = pout.Close()
+		}()
+
+		go func() {
+			i.REPL(pin, &stderr)
+		}()
+		for k, v := range test.src {
+			if _, err := pout.Write([]byte(v + "\n")); err != nil {
+				t.Error(err)
+			}
+			Sleep(100 * time.Millisecond)
+
+			errMsg := stderr.String()
+			if k == test.errorLine {
+				if errMsg == "" {
+					t.Fatalf("statement %q should have produced an error", v)
+				}
+				break
+			}
+			if errMsg != "" {
+				t.Fatalf("unexpected error: %v", errMsg)
+			}
+		}
+	}
+}
+
+const (
+	// CITimeoutMultiplier is the multiplier for all timeouts in the CI
+	CITimeoutMultiplier = 3
+)
+
+// Sleep pauses the current goroutine for at least the duration d.
+func Sleep(d time.Duration) {
+	d = applyCIMultiplier(d)
+	time.Sleep(d)
+}
+
+func applyCIMultiplier(timeout time.Duration) time.Duration {
+	ci := os.Getenv("CI")
+	if ci == "" {
+		return timeout
+	}
+	b, err := strconv.ParseBool(ci)
+	if err != nil || !b {
+		return timeout
+	}
+	return time.Duration(float64(timeout) * CITimeoutMultiplier)
 }
