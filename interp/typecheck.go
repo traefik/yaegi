@@ -469,8 +469,7 @@ func (check typecheck) conversion(n *node, typ *itype) error {
 	}
 
 	if n.typ.untyped {
-		switch {
-		case isInterface(typ) || c != nil && !isConstType(typ):
+		if isInterface(typ) || c != nil && !isConstType(typ) {
 			typ = n.typ.defaultType()
 		}
 		if err := check.convertUntyped(n, typ); err != nil {
@@ -505,7 +504,7 @@ func (check typecheck) arguments(n *node, child []*node, fun *node, ellipsis boo
 				return child[0].cfgErrorf("too many arguments")
 			}
 			if !c.typ.out(i).assignableTo(arg) {
-				return child[0].cfgErrorf("cannot use %s as type %s", c.typ.id(), getArgsId(fun.typ))
+				return child[0].cfgErrorf("cannot use %s as type %s", c.typ.id(), getArgsID(fun.typ))
 			}
 		}
 		return nil
@@ -563,7 +562,7 @@ func getArg(ftyp *itype, i int) *itype {
 	l := ftyp.numIn()
 	switch {
 	case ftyp.isVariadic() && i >= l-1:
-		arg := ftyp.in(l-1).val
+		arg := ftyp.in(l - 1).val
 		return arg
 	case i < l:
 		return ftyp.in(i)
@@ -572,7 +571,7 @@ func getArg(ftyp *itype, i int) *itype {
 	}
 }
 
-func getArgsId(ftyp *itype) string {
+func getArgsID(ftyp *itype) string {
 	res := "("
 	for i, arg := range ftyp.arg {
 		if i > 0 {

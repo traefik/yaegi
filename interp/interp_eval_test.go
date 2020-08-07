@@ -502,7 +502,9 @@ func TestEvalCall(t *testing.T) {
 func TestEvalBinCall(t *testing.T) {
 	i := interp.New(interp.Options{})
 	i.Use(stdlib.Symbols)
-	i.Eval(`import "fmt"`)
+	if _, err := i.Eval(`import "fmt"`); err != nil {
+		t.Fatal(err)
+	}
 	runTests(t, i, []testCase{
 		{src: `a := fmt.Sprint(1, 2.3)`, res: "1 2.3"},
 		{src: `a := fmt.Sprintf()`, err: "1:33: not enough arguments in call to fmt.Sprintf"},
