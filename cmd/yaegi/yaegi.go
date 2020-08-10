@@ -85,94 +85,53 @@ Debugging support (may be removed at any time):
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
-	"go/build"
-	"io/ioutil"
 	"log"
 	"os"
-	"strings"
+)
 
-	"github.com/containous/yaegi/interp"
-	"github.com/containous/yaegi/stdlib"
-	"github.com/containous/yaegi/stdlib/syscall"
-	"github.com/containous/yaegi/stdlib/unrestricted"
-	"github.com/containous/yaegi/stdlib/unsafe"
+const (
+	Extract = "extract"
+	Help    = "help"
+	Run     = "run"
+	Test    = "test"
 )
 
 func main() {
-	var interactive bool
-	var useSyscall bool
-	var useUnrestricted bool
-	var useUnsafe bool
-	var tags string
 	var cmd string
-	flag.BoolVar(&interactive, "i", false, "start an interactive REPL")
-	flag.BoolVar(&useSyscall, "syscall", false, "include syscall symbols")
-	flag.BoolVar(&useUnrestricted, "unrestricted", false, "include unrestricted symbols")
-	flag.StringVar(&tags, "tags", "", "set a list of build tags")
-	flag.BoolVar(&useUnsafe, "unsafe", false, "include usafe symbols")
-	flag.StringVar(&cmd, "e", "", "set the command to be executed (instead of script or/and shell)")
-	flag.Usage = func() {
-		fmt.Println("Usage:", os.Args[0], "[options] [script] [args]")
-		fmt.Println("Options:")
-		flag.PrintDefaults()
-	}
-	flag.Parse()
-	args := flag.Args()
-	log.SetFlags(log.Lshortfile)
+	var err error
+	var exitCode int
 
-	i := interp.New(interp.Options{GoPath: build.Default.GOPATH, BuildTags: strings.Split(tags, ",")})
-	i.Use(stdlib.Symbols)
-	i.Use(interp.Symbols)
-	if useSyscall {
-		i.Use(syscall.Symbols)
-	}
-	if useUnsafe {
-		i.Use(unsafe.Symbols)
-	}
-	if useUnrestricted {
-		// Use of unrestricted symbols should always follow use of stdlib symbols, to update them.
-		i.Use(unrestricted.Symbols)
+	log.SetFlags(log.Lshortfile) // Ease debugging.
+
+	if len(os.Args) > 1 {
+		cmd = os.Args[1]
 	}
 
-	if cmd != `` {
-		i.REPL(strings.NewReader(cmd), os.Stderr)
+	switch cmd {
+	case Extract:
+		err = extractCmd(os.Args[2:])
+	case Help, "-h", "--help":
+		err = help(os.Args[2:])
+	case Run:
+		err = run(os.Args[2:])
+	case Test:
+		err = fmt.Errorf("test not implemented")
+	default:
+		// If no command is given, fallback to default "run" command.
+		// This allows scripts starting with "#!/usr/bin/env yaegi",
+		// as passing more than 1 argument to #! executable may be not supported
+		// on all platforms.
+		cmd = Run
+		err = run(os.Args[1:])
 	}
 
-	if len(args) == 0 {
-		if interactive || cmd == `` {
-			i.REPL(os.Stdin, os.Stdout)
-		}
-		return
+	if err != nil && !errors.Is(err, flag.ErrHelp) {
+		err = fmt.Errorf("%s: %w", cmd, err)
+		fmt.Fprintln(os.Stderr, err)
+		exitCode = 1
 	}
-
-	// Skip first os arg to set command line as expected by interpreted main
-	os.Args = os.Args[1:]
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-
-	b, err := ioutil.ReadFile(args[0])
-	if err != nil {
-		log.Fatal("Could not read file: ", args[0])
-	}
-
-	if s := string(b); strings.HasPrefix(s, "#!") {
-		// Allow executable go scripts, Have the same behavior as in interactive mode.
-		s = strings.Replace(s, "#!", "//", 1)
-		i.REPL(strings.NewReader(s), os.Stdout)
-	} else {
-		// Files not starting with "#!" are supposed to be pure Go, directly Evaled.
-		i.Name = args[0]
-		_, err := i.Eval(s)
-		if err != nil {
-			fmt.Println(err)
-			if p, ok := err.(interp.Panic); ok {
-				fmt.Println(string(p.Stack))
-			}
-		}
-	}
-
-	if interactive {
-		i.REPL(os.Stdin, os.Stdout)
-	}
+	os.Exit(exitCode)
 }
