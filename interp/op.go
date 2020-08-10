@@ -867,7 +867,7 @@ func shl(n *node) {
 
 func shlConst(n *node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
-	isConst := (v0.IsValid() && isConstantValue(v0.Type())) && (v1.IsValid() && isConstantValue(v1.Type()))
+	isConst := (v0.IsValid() && isConstantValue(v0.Type()))
 	t := n.typ.rtype
 	if isConst {
 		t = constVal
@@ -875,8 +875,7 @@ func shlConst(n *node) {
 	n.rval = reflect.New(t).Elem()
 	switch {
 	case isConst:
-		s, _ := constant.Uint64Val(vConstantValue(v1))
-		v := constant.Shift(vConstantValue(v0), token.SHL, uint(s))
+		v := constant.Shift(vConstantValue(v0), token.SHL, uint(vUint(v1)))
 		n.rval.Set(reflect.ValueOf(v))
 	case isUint(t):
 		n.rval.SetUint(vUint(v0) << vUint(v1))
@@ -953,7 +952,7 @@ func shr(n *node) {
 
 func shrConst(n *node) {
 	v0, v1 := n.child[0].rval, n.child[1].rval
-	isConst := (v0.IsValid() && isConstantValue(v0.Type())) && (v1.IsValid() && isConstantValue(v1.Type()))
+	isConst := (v0.IsValid() && isConstantValue(v0.Type()))
 	t := n.typ.rtype
 	if isConst {
 		t = constVal
@@ -961,8 +960,7 @@ func shrConst(n *node) {
 	n.rval = reflect.New(t).Elem()
 	switch {
 	case isConst:
-		s, _ := constant.Uint64Val(vConstantValue(v1))
-		v := constant.Shift(vConstantValue(v0), token.SHR, uint(s))
+		v := constant.Shift(vConstantValue(v0), token.SHR, uint(vUint(v1)))
 		n.rval.Set(reflect.ValueOf(v))
 	case isUint(t):
 		n.rval.SetUint(vUint(v0) >> vUint(v1))

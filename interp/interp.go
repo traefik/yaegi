@@ -30,7 +30,7 @@ type node struct {
 	index  int64          // node index (dot display)
 	findex int            // index of value in frame or frame size (func def, type def)
 	level  int            // number of frame indirections to access value
-	nleft  int            // number of children in left part (assign)
+	nleft  int            // number of children in left part (assign) or indicates preceding type (compositeLit)
 	nright int            // number of children in right part (assign)
 	kind   nkind          // kind of node
 	pos    token.Pos      // position in source code, relative to fset
@@ -271,9 +271,9 @@ func initUniverse() *scope {
 		"uintptr":     {kind: typeSym, typ: &itype{cat: uintptrT, name: "uintptr"}},
 
 		// predefined Go constants
-		"false": {kind: constSym, typ: &itype{cat: boolT, name: "bool"}, rval: reflect.ValueOf(false)},
-		"true":  {kind: constSym, typ: &itype{cat: boolT, name: "bool"}, rval: reflect.ValueOf(true)},
-		"iota":  {kind: constSym, typ: &itype{cat: intT}},
+		"false": {kind: constSym, typ: untypedBool, rval: reflect.ValueOf(false)},
+		"true":  {kind: constSym, typ: untypedBool, rval: reflect.ValueOf(true)},
+		"iota":  {kind: constSym, typ: untypedInt},
 
 		// predefined Go zero value
 		"nil": {typ: &itype{cat: nilT, untyped: true}},

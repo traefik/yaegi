@@ -124,6 +124,15 @@ type itype struct {
 	scope       *scope        // type declaration scope (in case of re-parse incomplete type)
 }
 
+var (
+	untypedBool    = &itype{cat: boolT, name: "bool", untyped: true}
+	untypedString  = &itype{cat: stringT, name: "string", untyped: true}
+	untypedRune    = &itype{cat: int32T, name: "int32", untyped: true}
+	untypedInt     = &itype{cat: intT, name: "int", untyped: true}
+	untypedFloat   = &itype{cat: float64T, name: "float64", untyped: true}
+	untypedComplex = &itype{cat: complex128T, name: "complex128", untyped: true}
+)
+
 // nodeType returns a type definition for the corresponding AST subtree.
 func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	if n.typ != nil && !n.typ.incomplete {
@@ -207,57 +216,27 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	case basicLit:
 		switch v := n.rval.Interface().(type) {
 		case bool:
-			t.cat = boolT
-			t.name = "bool"
-		case byte:
-			t.cat = uint8T
-			t.name = "uint8"
-			t.untyped = true
-		case complex64:
-			t.cat = complex64T
-			t.name = "complex64"
-		case complex128:
-			t.cat = complex128T
-			t.name = "complex128"
-			t.untyped = true
-		case float32:
-			t.cat = float32T
-			t.name = "float32"
-			t.untyped = true
-		case float64:
-			t.cat = float64T
-			t.name = "float64"
-			t.untyped = true
-		case int:
-			t.cat = intT
-			t.name = "int"
-			t.untyped = true
-		case uint:
-			t.cat = uintT
-			t.name = "uint"
-			t.untyped = true
+			n.rval = reflect.ValueOf(constant.MakeBool(v))
+			t = untypedBool
 		case rune:
-			t.cat = int32T
-			t.name = "int32"
-			t.untyped = true
+			// It is impossible to work out rune const literals in AST
+			// with the correct type so we must make the const type here.
+			n.rval = reflect.ValueOf(constant.MakeInt64(int64(v)))
+			t = untypedRune
 		case string:
-			t.cat = stringT
-			t.name = "string"
-			t.untyped = true
+			t = untypedString
 		case constant.Value:
 			switch v.Kind() {
+			case constant.Bool:
+				t = untypedBool
+			case constant.String:
+				t = untypedString
 			case constant.Int:
-				t.cat = intT
-				t.name = "int"
-				t.untyped = true
+				t = untypedInt
 			case constant.Float:
-				t.cat = float64T
-				t.name = "float64"
-				t.untyped = true
+				t = untypedFloat
 			case constant.Complex:
-				t.cat = complex128T
-				t.name = "complex128"
-				t.untyped = true
+				t = untypedComplex
 			default:
 				err = n.cfgErrorf("missing support for type %v", n.rval)
 			}
@@ -690,10 +669,7 @@ func fieldName(n *node) string {
 	}
 }
 
-var (
-	zeroValues [maxT]reflect.Value
-	okFor      [aMax][maxT]bool
-)
+var zeroValues [maxT]reflect.Value
 
 func init() {
 	zeroValues[boolT] = reflect.ValueOf(false)
@@ -714,77 +690,6 @@ func init() {
 	zeroValues[uint32T] = reflect.ValueOf(uint32(0))
 	zeroValues[uint64T] = reflect.ValueOf(uint64(0))
 	zeroValues[uintptrT] = reflect.ValueOf(uintptr(0))
-
-	// Calculate the action -> type allowances
-	var (
-		okForEq    [maxT]bool
-		okForCmp   [maxT]bool
-		okForAdd   [maxT]bool
-		okForAnd   [maxT]bool
-		okForBool  [maxT]bool
-		okForArith [maxT]bool
-	)
-	for cat := tcat(0); cat < maxT; cat++ {
-		if (cat >= intT && cat <= int64T) || (cat >= uintT && cat <= uintptrT) {
-			okForEq[cat] = true
-			okForCmp[cat] = true
-			okForAdd[cat] = true
-			okForAnd[cat] = true
-			okForArith[cat] = true
-		}
-		if cat == float32T || cat == float64T {
-			okForEq[cat] = true
-			okForCmp[cat] = true
-			okForAdd[cat] = true
-			okForArith[cat] = true
-		}
-		if cat == complex64T || cat == complex128T {
-			okForEq[cat] = true
-			okForAdd[cat] = true
-			okForArith[cat] = true
-		}
-	}
-
-	okForAdd[stringT] = true
-
-	okForBool[boolT] = true
-
-	okForEq[nilT] = true
-	okForEq[ptrT] = true
-	okForEq[interfaceT] = true
-	okForEq[errorT] = true
-	okForEq[chanT] = true
-	okForEq[stringT] = true
-	okForEq[boolT] = true
-	okForEq[mapT] = true    // nil only
-	okForEq[funcT] = true   // nil only
-	okForEq[arrayT] = true  // array: only if element type is comparable slice: nil only
-	okForEq[structT] = true // only if all struct fields are comparable
-
-	okForCmp[stringT] = true
-
-	okFor[aAdd] = okForAdd
-	okFor[aAnd] = okForAnd
-	okFor[aLand] = okForBool
-	okFor[aAndNot] = okForAnd
-	okFor[aQuo] = okForArith
-	okFor[aEqual] = okForEq
-	okFor[aGreaterEqual] = okForCmp
-	okFor[aGreater] = okForCmp
-	okFor[aLowerEqual] = okForCmp
-	okFor[aLower] = okForCmp
-	okFor[aRem] = okForAnd
-	okFor[aMul] = okForArith
-	okFor[aNotEqual] = okForEq
-	okFor[aOr] = okForAnd
-	okFor[aLor] = okForBool
-	okFor[aSub] = okForArith
-	okFor[aXor] = okForAnd
-	okFor[aShl] = okForAnd
-	okFor[aShr] = okForAnd
-	okFor[aNeg] = okForArith
-	okFor[aNot] = okForBool
-	okFor[aPos] = okForArith
 }
 
 // Finalize returns a type pointer and error. It reparses a type from the
@@ -935,6 +840,26 @@ func (t *itype) comparable() bool {
 	return t.cat == nilT || typ != nil && typ.Comparable()
 }
 
+func (t *itype) assignableTo(o *itype) bool {
+	if t.equals(o) {
+		return true
+	}
+	if t.cat == aliasT && o.cat == aliasT {
+		// if alias types are not identical, it is not assignable.
+		return false
+	}
+	if t.isNil() && o.hasNil() || o.isNil() && t.hasNil() {
+		return true
+	}
+	return t.TypeOf().AssignableTo(o.TypeOf())
+}
+
+// ordered returns true if the type is ordered.
+func (t *itype) ordered() bool {
+	typ := t.TypeOf()
+	return isInt(typ) || isFloat(typ) || isString(typ)
+}
+
 // Equals returns true if the given type is identical to the receiver one.
 func (t *itype) equals(o *itype) bool {
 	switch ti, oi := isInterface(t), isInterface(o); {
@@ -1009,9 +934,14 @@ func (t *itype) methods() methodSet {
 // id returns a unique type identificator string.
 func (t *itype) id() (res string) {
 	if t.name != "" {
-		return t.path + "." + t.name
+		if t.path != "" {
+			return t.path + "." + t.name
+		}
+		return t.name
 	}
 	switch t.cat {
+	case nilT:
+		res = "nil"
 	case arrayT:
 		res = "[" + strconv.Itoa(t.size) + "]" + t.val.id()
 	case chanT:
@@ -1047,7 +977,11 @@ func (t *itype) id() (res string) {
 		}
 		res += "}"
 	case valueT:
-		res = t.rtype.PkgPath() + "." + t.rtype.Name()
+		res = ""
+		if t.rtype.PkgPath() != "" {
+			res += t.rtype.PkgPath() + "."
+		}
+		res += t.rtype.Name()
 	}
 	return res
 }
@@ -1371,6 +1305,28 @@ func (t *itype) implements(it *itype) bool {
 	return t.methods().contains(it.methods())
 }
 
+// defaultType returns the default type of an untyped type.
+func (t *itype) defaultType() *itype {
+	if !t.untyped {
+		return t
+	}
+	typ := *t
+	typ.untyped = false
+	return &typ
+}
+
+func (t *itype) isNil() bool { return t.cat == nilT }
+
+func (t *itype) hasNil() bool {
+	switch t.TypeOf().Kind() {
+	case reflect.UnsafePointer:
+		return true
+	case reflect.Slice, reflect.Ptr, reflect.Func, reflect.Interface, reflect.Map, reflect.Chan:
+		return true
+	}
+	return false
+}
+
 func copyDefined(m map[string]*itype) map[string]*itype {
 	n := make(map[string]*itype, len(m))
 	for k, v := range m {
@@ -1409,88 +1365,6 @@ func hasRecursiveStruct(t *itype, defined map[string]*itype) bool {
 	return false
 }
 
-var errType = reflect.TypeOf((*error)(nil)).Elem()
-
-func catOf(t reflect.Type) tcat {
-	if t == nil {
-		return nilT
-	}
-	if t == errType {
-		return errorT
-	}
-	switch t.Kind() {
-	case reflect.Bool:
-		return boolT
-	case reflect.Int:
-		return intT
-	case reflect.Int8:
-		return int8T
-	case reflect.Int16:
-		return int16T
-	case reflect.Int32:
-		return int32T
-	case reflect.Int64:
-		return int64T
-	case reflect.Uint:
-		return uintT
-	case reflect.Uint8:
-		return uint8T
-	case reflect.Uint16:
-		return uint16T
-	case reflect.Uint32:
-		return uint32T
-	case reflect.Uint64:
-		return uint64T
-	case reflect.Uintptr:
-		return uintptrT
-	case reflect.Float32:
-		return float32T
-	case reflect.Float64:
-		return float64T
-	case reflect.Complex64:
-		return complex64T
-	case reflect.Complex128:
-		return complex128T
-	case reflect.Array, reflect.Slice:
-		return arrayT
-	case reflect.Chan:
-		return chanT
-	case reflect.Func:
-		return funcT
-	case reflect.Interface:
-		return interfaceT
-	case reflect.Map:
-		return mapT
-	case reflect.Ptr:
-		return ptrT
-	case reflect.String:
-		return stringT
-	case reflect.Struct:
-		return structT
-	case reflect.UnsafePointer:
-		return uintptrT
-	}
-	return nilT
-}
-
-func catOfConst(v reflect.Value) tcat {
-	c, ok := v.Interface().(constant.Value)
-	if !ok {
-		return nilT
-	}
-
-	switch c.Kind() {
-	case constant.Int:
-		return intT
-	case constant.Float:
-		return float64T
-	case constant.Complex:
-		return complex128T
-	default:
-		return nilT
-	}
-}
-
 func constToInt(c constant.Value) int {
 	if constant.BitLen(c) > 64 {
 		panic(fmt.Sprintf("constant %s overflows int64", c.ExactString()))
@@ -1517,14 +1391,6 @@ func isShiftNode(n *node) bool {
 	return false
 }
 
-func isComparisonNode(n *node) bool {
-	switch n.action {
-	case aEqual, aNotEqual, aGreater, aGreaterEqual, aLower, aLowerEqual:
-		return true
-	}
-	return false
-}
-
 // chanElement returns the channel element type.
 func chanElement(t *itype) *itype {
 	switch t.cat {
@@ -1542,6 +1408,8 @@ func isBool(t *itype) bool { return t.TypeOf().Kind() == reflect.Bool }
 func isChan(t *itype) bool { return t.TypeOf().Kind() == reflect.Chan }
 func isFunc(t *itype) bool { return t.TypeOf().Kind() == reflect.Func }
 func isMap(t *itype) bool  { return t.TypeOf().Kind() == reflect.Map }
+func isPtr(t *itype) bool  { return t.TypeOf().Kind() == reflect.Ptr }
+
 func isSendChan(t *itype) bool {
 	rt := t.TypeOf()
 	return rt.Kind() == reflect.Chan && rt.ChanDir() == reflect.SendDir
@@ -1574,6 +1442,11 @@ func isStruct(t *itype) bool {
 	default:
 		return false
 	}
+}
+
+func isConstType(t *itype) bool {
+	rt := t.TypeOf()
+	return isBoolean(rt) || isString(rt) || isNumber(rt)
 }
 
 func isInt(t reflect.Type) bool {
@@ -1633,5 +1506,6 @@ func isFloat64(t reflect.Type) bool { return t != nil && t.Kind() == reflect.Flo
 func isNumber(t reflect.Type) bool {
 	return isInt(t) || isFloat(t) || isComplex(t) || isConstantValue(t)
 }
+func isBoolean(t reflect.Type) bool       { return t != nil && t.Kind() == reflect.Bool }
 func isString(t reflect.Type) bool        { return t != nil && t.Kind() == reflect.String }
 func isConstantValue(t reflect.Type) bool { return t != nil && t.Implements(constVal) }

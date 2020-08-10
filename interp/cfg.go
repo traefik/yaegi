@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"strings"
 	"unicode"
 )
 
@@ -46,12 +45,15 @@ var constBltn = map[string]func(*node){
 
 var identifier = regexp.MustCompile(`([\pL_][\pL_\d]*)$`)
 
+const nilIdent = "nil"
+
 // cfg generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
 // Following this pass, the CFG is ready to run.
 func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 	sc := interp.initScopePkg(pkgID)
+	check := typecheck{}
 	var initNodes []*node
 	var err error
 
@@ -193,7 +195,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				if len(n.child) == 2 {
 					// 1 type in clause: define the var with this type in the case clause scope
 					switch {
-					case n.child[0].ident == "nil":
+					case n.child[0].ident == nilIdent:
 						typ = sc.getType("interface{}")
 					case !n.child[0].isType(sc):
 						err = n.cfgErrorf("%s is not a type", n.child[0].ident)
@@ -243,6 +245,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				if n.typ, err = nodeType(interp, sc, n.child[0]); err != nil {
 					return false
 				}
+				n.nleft = 1
 			} else {
 				// Get type from ancestor (implicit type)
 				if n.anc.kind == keyValueExpr && n == n.anc.child[0] {
@@ -254,7 +257,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					err = n.cfgErrorf("undefined type")
 					return false
 				}
-				n.typ.untyped = true
 			}
 			// Propagate type to children, to handle implicit types
 			for _, c := range n.child {
@@ -430,6 +432,12 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		switch n.kind {
 		case addressExpr:
 			wireChild(n)
+
+			err = check.addressExpr(n)
+			if err != nil {
+				break
+			}
+
 			n.typ = &itype{cat: ptrT, val: n.child[0].typ}
 			n.findex = sc.add(n.typ)
 
@@ -498,46 +506,12 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				} else {
 					sym, level, _ = sc.lookup(dest.ident)
 				}
-				switch t0, t1 := dest.typ.TypeOf(), src.typ.TypeOf(); n.action {
-				case aAddAssign:
-					if !(isNumber(t0) && isNumber(t1) || isString(t0) && isString(t1)) || isInt(t0) && isFloat(t1) {
-						err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
-					}
-				case aSubAssign, aMulAssign, aQuoAssign:
-					if !(isNumber(t0) && isNumber(t1)) || isInt(t0) && isFloat(t1) {
-						err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
-					}
-				case aRemAssign, aAndAssign, aOrAssign, aXorAssign, aAndNotAssign:
-					if !(isInt(t0) && isInt(t1)) {
-						err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
-					}
-				case aShlAssign, aShrAssign:
-					if !(dest.isInteger() && src.isNatural()) {
-						err = n.cfgErrorf("illegal operand types for '%v' operator", n.action)
-					}
-				default:
-					// Detect invalid float truncate.
-					if isInt(t0) && isFloat(t1) {
-						err = src.cfgErrorf("invalid float truncate")
-						return
-					}
 
-					// TODO: Rudimentary type check at this point,
-					// improvements need to be made to make it better.
-					switch {
-					case dest.typ.untyped || src.typ.untyped:
-						// Both side of the assignment must be typed.
-					case isRecursiveType(dest.typ, dest.typ.rtype) || isRecursiveType(src.typ, src.typ.rtype):
-						// Recursive types cannot be type checked.
-					case t0.Kind() == reflect.Interface || t0.Kind() == reflect.Func:
-						// We have no way of checking interfaces and functions.
-					case t1.AssignableTo(t0):
-						// All is well when they are assignable.
-					default:
-						err = src.cfgErrorf("cannot use type %s as type %s in assignment", src.typ.id(), dest.typ.id())
-						return
-					}
+				err = check.assignExpr(n, dest, src)
+				if err != nil {
+					break
 				}
+
 				n.findex = dest.findex
 				n.level = dest.level
 
@@ -568,23 +542,9 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.gen = nop
 					src.findex = dest.findex
 					src.level = level
-				case src.kind == basicLit:
-					// TODO: perform constant folding and propagation here.
-					switch {
-					case dest.typ.cat == interfaceT:
-					case isComplex(dest.typ.TypeOf()):
-						// Value set in genValue.
-					case !src.rval.IsValid():
-						// Assign to nil.
-						src.rval = reflect.New(dest.typ.TypeOf()).Elem()
-					case n.anc.kind == constDecl:
-						// Possible conversion from const to actual type will be handled later
-					default:
-						// Convert literal value to destination type.
-						convertConstantValue(src)
-						src.rval = src.rval.Convert(dest.typ.TypeOf())
-						src.typ = dest.typ
-					}
+				case src.kind == basicLit && !src.rval.IsValid():
+					// Assign to nil.
+					src.rval = reflect.New(dest.typ.TypeOf()).Elem()
 				}
 				n.typ = dest.typ
 				if sym != nil {
@@ -596,10 +556,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					dest.gen = nop // skip getIndexMap
 				}
 				if n.anc.kind == constDecl {
-					if !dest.typ.untyped {
-						// If the dest is untyped, any constant rval needs to be converted
-						convertConstantValue(src)
-					}
 					n.gen = nop
 					n.findex = -1
 					if sym, _, ok := sc.lookup(dest.ident); ok {
@@ -662,75 +618,12 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case binaryExpr:
 			wireChild(n)
-			nilSym := interp.universe.sym["nil"]
+			nilSym := interp.universe.sym[nilIdent]
 			c0, c1 := n.child[0], n.child[1]
-			t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 
-			isConstVal := func(n *node) bool {
-				return n.rval.IsValid() && isConstantValue(n.rval.Type())
-			}
-
-			// Type check the binary expression. Mimics Gos logic as closely and possible.
-			c := c0
-			if isConstVal(c) {
-				c = c1
-			}
-
-			if isShiftNode(n) {
-				if !c1.isNatural() {
-					err = n.cfgErrorf("invalid operation: shift count type %v, must be integer", strings.TrimLeft(c1.typ.id(), "."))
-					break
-				}
-
-				if !c0.isInteger() {
-					err = n.cfgErrorf("invalid operation: shift of type %v", strings.TrimLeft(c0.typ.id(), "."))
-					break
-				}
-			}
-			if !isShiftNode(n) && isComparisonNode(n) && !isConstVal(c) && !c0.typ.equals(c1.typ) {
-				if isInterface(c1.typ) && !isInterface(c0.typ) && !c0.typ.comparable() {
-					err = n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, strings.TrimLeft(c0.typ.id(), "."))
-					break
-				}
-
-				if isInterface(c0.typ) && !isInterface(c1.typ) && !c1.typ.comparable() {
-					err = n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, strings.TrimLeft(c1.typ.id(), "."))
-					break
-				}
-			}
-			if !isShiftNode(n) && !isConstVal(c) && !c0.typ.equals(c1.typ) && t0 != nil && t1 != nil {
-				switch {
-				case isConstVal(c0) && isNumber(t1) || isConstVal(c1) && isNumber(t0): // const <-> numberic case
-				case isNumber(t0) && isNumber(t1) && (c0.typ.untyped || c1.typ.untyped):
-				case t0.Kind() == reflect.Uint8 && t1.Kind() == reflect.Int32 || t1.Kind() == reflect.Uint8 && t0.Kind() == reflect.Int32: // byte <-> rune case
-				case isInterface(c0.typ) && isInterface(c1.typ): // interface <-> interface case
-				default:
-					err = n.cfgErrorf("invalid operation: mismatched types %s and %s", strings.TrimLeft(c0.typ.id(), "."), strings.TrimLeft(c1.typ.id(), "."))
-				}
-				if err != nil {
-					break
-				}
-			}
-
-			cat := c.typ.cat
-			switch {
-			case isConstVal(c):
-				cat = catOfConst(c.rval)
-			case c.typ.cat == valueT:
-				cat = catOf(c.typ.rtype)
-			case c.typ.cat == aliasT:
-				cat = c.typ.val.cat
-			}
-			if !isShiftNode(n) && !okFor[n.action][cat] {
-				err = n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, strings.TrimLeft(c0.typ.id(), "."))
+			err = check.binaryExpr(n)
+			if err != nil {
 				break
-			}
-			if !isShiftNode(n) && isConstVal(c0) && isConstVal(c1) {
-				// If both are constants, check the left type as well.
-				if !okFor[n.action][catOfConst(c0.rval)] {
-					err = n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, strings.TrimLeft(c0.typ.id(), "."))
-					break
-				}
 			}
 
 			switch n.action {
@@ -738,19 +631,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				n.typ = c0.typ
 			case aEqual, aNotEqual:
 				n.typ = sc.getType("bool")
-				if isConstVal(c0) && !isConstVal(c1) || !isConstVal(c0) && isConstVal(c1) {
-					// if either node is a constant value, but the other is not, the constant
-					// must be converted into the non-constants type.
-					switch {
-					case isConstVal(c0):
-						convertConstantValue(c0)
-						c0.rval = c0.rval.Convert(c1.typ.TypeOf())
-					default:
-						convertConstantValue(c1)
-						c1.rval = c1.rval.Convert(c0.typ.TypeOf())
-					}
-				}
-				if n.child[0].sym == nilSym || n.child[1].sym == nilSym {
+				if c0.sym == nilSym || c1.sym == nilSym {
 					if n.action == aEqual {
 						n.gen = isNil
 					} else {
@@ -918,9 +799,11 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				// Type conversion expression
 				if isInt(n.child[0].typ.TypeOf()) && n.child[1].kind == basicLit && isFloat(n.child[1].typ.TypeOf()) {
 					err = n.cfgErrorf("truncated to integer")
+					break
 				}
 				n.action = aConvert
-				if isInterface(n.child[0].typ) && !n.child[1].isNil() {
+				switch {
+				case isInterface(n.child[0].typ) && !n.child[1].isNil():
 					// Convert to interface: just check that all required methods are defined by concrete type.
 					c0, c1 := n.child[0], n.child[1]
 					if !c1.typ.implements(c0.typ) {
@@ -933,7 +816,13 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.level = n.child[1].level
 					n.val = n.child[1].val
 					n.rval = n.child[1].rval
-				} else {
+				case n.child[1].rval.IsValid() && isConstType(n.child[0].typ):
+					n.gen = nop
+					n.findex = -1
+					n.typ = n.child[0].typ
+					n.rval = n.child[1].rval
+					convertConstantValue(n)
+				default:
 					n.gen = convert
 					n.typ = n.child[0].typ
 					n.findex = sc.add(n.typ)
@@ -1036,7 +925,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			wireChild(n)
 			n.findex = sc.add(n.typ)
 			// TODO: Check that composite literal expr matches corresponding type
-			n.gen = compositeGenerator(n, sc)
+			n.gen = compositeGenerator(n)
 
 		case fallthroughtStmt:
 			if n.anc.kind != caseBody {
@@ -1201,10 +1090,9 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					n.rval = sym.rval
 					n.kind = basicLit
 				case n.ident == "iota":
-					n.rval = reflect.ValueOf(sc.iota)
+					n.rval = reflect.ValueOf(constant.MakeInt64(int64(sc.iota)))
 					n.kind = basicLit
-					n.typ.untyped = true
-				case n.ident == "nil":
+				case n.ident == nilIdent:
 					n.kind = basicLit
 				case sym.kind == binSym:
 					n.typ = sym.typ
@@ -1755,29 +1643,19 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case unaryExpr:
 			wireChild(n)
+
+			err = check.unaryExpr(n)
+			if err != nil {
+				break
+			}
+
 			n.typ = n.child[0].typ
-			switch n.action {
-			case aRecv:
+			if n.action == aRecv {
 				// Channel receive operation: set type to the channel data type
 				if n.typ.cat == valueT {
 					n.typ = &itype{cat: valueT, rtype: n.typ.rtype.Elem()}
 				} else {
 					n.typ = n.typ.val
-				}
-			case aBitNot:
-				if !isInt(n.typ.TypeOf()) {
-					err = n.cfgErrorf("illegal operand type for '^' operator")
-					return
-				}
-			case aNot:
-				if !isBool(n.typ) {
-					err = n.cfgErrorf("illegal operand type for '!' operator")
-					return
-				}
-			case aNeg, aPos:
-				if !isNumber(n.typ.TypeOf()) {
-					err = n.cfgErrorf("illegal operand type for '%v' operator", n.action)
-					return
 				}
 			}
 			if n.typ == nil {
@@ -1785,6 +1663,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					return
 				}
 			}
+
 			// TODO: Optimisation: avoid allocation if boolean branch op (i.e. '!' in an 'if' expr)
 			if n.child[0].rval.IsValid() && !isInterface(n.typ) && constOp[n.action] != nil {
 				n.typ.TypeOf() // init reflect type
@@ -2172,43 +2051,6 @@ func (n *node) name() (s string) {
 	return s
 }
 
-// isInteger returns true if node type is integer, false otherwise.
-func (n *node) isInteger() bool {
-	if isInt(n.typ.TypeOf()) {
-		return true
-	}
-	if n.rval.IsValid() {
-		t := n.rval.Type()
-		if isInt(t) {
-			return true
-		}
-		if isFloat(t) {
-			// untyped float constant with null decimal part is ok
-			f := n.rval.Float()
-			if f == math.Trunc(f) {
-				n.rval = reflect.ValueOf(int(f))
-				n.typ.rtype = n.rval.Type()
-				return true
-			}
-		}
-		if isConstantValue(t) {
-			c := n.rval.Interface().(constant.Value)
-			switch c.Kind() {
-			case constant.Int:
-				return true
-			case constant.Float:
-				f, _ := constant.Float64Val(c)
-				if f == math.Trunc(f) {
-					n.rval = reflect.ValueOf(constant.ToInt(c))
-					n.typ.rtype = n.rval.Type()
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
 // isNatural returns true if node type is natural, false otherwise.
 func (n *node) isNatural() bool {
 	if isUint(n.typ.TypeOf()) {
@@ -2438,12 +2280,11 @@ func gotoLabel(s *symbol) {
 	}
 }
 
-func compositeGenerator(n *node, sc *scope) (gen bltnGenerator) {
+func compositeGenerator(n *node) (gen bltnGenerator) {
 	switch n.typ.cat {
 	case aliasT, ptrT:
-		n.typ.val.untyped = n.typ.untyped
 		n.typ = n.typ.val
-		gen = compositeGenerator(n, sc)
+		gen = compositeGenerator(n)
 	case arrayT:
 		gen = arrayLit
 	case mapT:
@@ -2453,13 +2294,13 @@ func compositeGenerator(n *node, sc *scope) (gen bltnGenerator) {
 		case len(n.child) == 0:
 			gen = compositeLitNotype
 		case n.lastChild().kind == keyValueExpr:
-			if n.child[0].isType(sc) {
+			if n.nleft == 1 {
 				gen = compositeSparse
 			} else {
 				gen = compositeSparseNotype
 			}
 		default:
-			if n.child[0].isType(sc) {
+			if n.nleft == 1 {
 				gen = compositeLit
 			} else {
 				gen = compositeLitNotype

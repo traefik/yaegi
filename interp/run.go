@@ -1894,7 +1894,7 @@ func arrayLit(n *node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child
-	if !n.typ.untyped {
+	if n.nleft == 1 {
 		child = n.child[1:]
 	}
 
@@ -1947,7 +1947,7 @@ func mapLit(n *node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child
-	if !n.typ.untyped {
+	if n.nleft == 1 {
 		child = n.child[1:]
 	}
 	typ := n.typ.TypeOf()
@@ -1982,7 +1982,7 @@ func compositeBinMap(n *node) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child
-	if !n.typ.untyped {
+	if n.nleft == 1 {
 		child = n.child[1:]
 	}
 	typ := n.typ.TypeOf()
@@ -2793,20 +2793,6 @@ func convertLiteralValue(n *node, t reflect.Type) {
 		// Create a zero value of target type.
 		n.rval = reflect.New(t).Elem()
 	}
-}
-
-var bitlen = [...]int{
-	reflect.Int:     64,
-	reflect.Int8:    8,
-	reflect.Int16:   16,
-	reflect.Int32:   32,
-	reflect.Int64:   64,
-	reflect.Uint:    64,
-	reflect.Uint8:   8,
-	reflect.Uint16:  16,
-	reflect.Uint32:  32,
-	reflect.Uint64:  64,
-	reflect.Uintptr: 64,
 }
 
 func convertConstantValue(n *node) {
