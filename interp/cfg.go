@@ -271,7 +271,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				case binaryExpr, unaryExpr, compositeLitExpr:
 					// Do not attempt to propagate composite type to operator expressions,
 					// it breaks constant folding.
-				case keyValueExpr, typeAssertExpr:
+				case keyValueExpr, typeAssertExpr, indexExpr:
 					c.typ = n.typ
 				default:
 					if c.ident == nilIdent {
