@@ -1315,7 +1315,6 @@ func getIndexMap(n *node) {
 	z := reflect.New(n.child[0].typ.frameType().Elem()).Elem()
 
 	if n.child[1].rval.IsValid() { // constant map index
-		convertConstantValue(n.child[1])
 		mi := n.child[1].rval
 
 		switch {
@@ -1409,7 +1408,6 @@ func getIndexMap2(n *node) {
 		return
 	}
 	if n.child[1].rval.IsValid() { // constant map index
-		convertConstantValue(n.child[1])
 		mi := n.child[1].rval
 		switch {
 		case !doValue:
