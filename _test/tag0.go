@@ -1,5 +1,5 @@
 // The following comment line has the same effect as 'go run -tags=dummy'
-//yaegi:tags dummy
+// yaegi:tags dummy
 
 package main
 
