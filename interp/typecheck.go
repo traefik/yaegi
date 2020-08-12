@@ -457,7 +457,7 @@ func (check typecheck) conversion(n *node, typ *itype) error {
 			if i, ok := constant.Int64Val(c); ok {
 				codepoint = i
 			}
-			n.rval = reflect.ValueOf(constant.MakeString(string(codepoint)))
+			n.rval = reflect.ValueOf(constant.MakeString(string(rune(codepoint))))
 			ok = true
 		}
 
