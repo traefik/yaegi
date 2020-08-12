@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -492,6 +493,15 @@ func (interp *Interpreter) Use(values Exports) {
 	}
 }
 
+type scannerErrors scanner.ErrorList
+
+func (sce scannerErrors) isEOF() bool {
+	for _, v := range sce {
+		return strings.HasSuffix(v.Msg, `, found 'EOF'`)
+	}
+	return true
+}
+
 // REPL performs a Read-Eval-Print-Loop on input reader.
 // Results are printed on output writer.
 func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
@@ -527,10 +537,13 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		if err != nil {
 			switch e := err.(type) {
 			case scanner.ErrorList:
-				// Early failure in the scanner: the source is incomplete
-				// and no AST could be produced, neither compiled / run.
-				// Get one more line, and retry
-				continue
+				if scannerErrors(e).isEOF() {
+					// Early failure in the scanner: the source is incomplete
+					// and no AST could be produced, neither compiled / run.
+					// Get one more line, and retry
+					continue
+				}
+				fmt.Fprintln(out, err)
 			case Panic:
 				fmt.Fprintln(out, e.Value)
 				fmt.Fprintln(out, string(e.Stack))
@@ -541,6 +554,7 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		src = ""
 		prompt(v)
 	}
+	// TODO(mpl): log s.Err() if not nil?
 }
 
 // Repl performs a Read-Eval-Print-Loop on input file descriptor.

@@ -1,12 +1,17 @@
 package interp_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"reflect"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -610,4 +615,118 @@ func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expecte
 	if fmt.Sprintf("%v", res) != expectedRes {
 		t.Fatalf("got %v, want %s", res, expectedRes)
 	}
+}
+
+func TestEvalEOF(t *testing.T) {
+	tests := []struct {
+		desc      string
+		src       []string
+		errorLine int
+	}{
+		{
+			desc: "no error",
+			src: []string{
+				`func main() {`,
+				`println("foo")`,
+				`}`,
+			},
+			errorLine: -1,
+		},
+		{
+			desc: "no parsing error, but block error",
+			src: []string{
+				`func main() {`,
+				`println(foo)`,
+				`}`,
+			},
+			errorLine: 2,
+		},
+		{
+			desc: "parsing error",
+			src: []string{
+				`func main() {`,
+				`println(/foo)`,
+				`}`,
+			},
+			errorLine: 1,
+		},
+	}
+
+	for it, test := range tests {
+		i := interp.New(interp.Options{})
+		var stderr bytes.Buffer
+		safeStderr := &safeBuffer{buf: &stderr}
+		pin, pout := io.Pipe()
+		defer func() {
+			// Closing the pipe also takes care of making i.REPL terminate,
+			// hence freeing its goroutine.
+			_ = pin.Close()
+			_ = pout.Close()
+		}()
+
+		go func() {
+			i.REPL(pin, safeStderr)
+		}()
+		for k, v := range test.src {
+			if _, err := pout.Write([]byte(v + "\n")); err != nil {
+				t.Error(err)
+			}
+			Sleep(100 * time.Millisecond)
+
+			errMsg := safeStderr.String()
+			if k == test.errorLine {
+				if errMsg == "" {
+					t.Fatalf("%d: statement %q should have produced an error", it, v)
+				}
+				break
+			}
+			if errMsg != "" {
+				t.Fatalf("%d: unexpected error: %v", it, errMsg)
+			}
+		}
+	}
+}
+
+type safeBuffer struct {
+	mu  sync.RWMutex
+	buf *bytes.Buffer
+}
+
+func (sb *safeBuffer) Read(p []byte) (int, error) {
+	return sb.buf.Read(p)
+}
+
+func (sb *safeBuffer) String() string {
+	sb.mu.RLock()
+	defer sb.mu.RUnlock()
+	return sb.buf.String()
+}
+
+func (sb *safeBuffer) Write(p []byte) (int, error) {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.buf.Write(p)
+}
+
+const (
+	// CITimeoutMultiplier is the multiplier for all timeouts in the CI.
+	CITimeoutMultiplier = 3
+)
+
+// Sleep pauses the current goroutine for at least the duration d.
+func Sleep(d time.Duration) {
+	d = applyCIMultiplier(d)
+	time.Sleep(d)
+}
+
+func applyCIMultiplier(timeout time.Duration) time.Duration {
+	ci := os.Getenv("CI")
+	if ci == "" {
+		return timeout
+	}
+	b, err := strconv.ParseBool(ci)
+	if err != nil || !b {
+		return timeout
+	}
+	return time.Duration(float64(timeout) * CITimeoutMultiplier)
 }
