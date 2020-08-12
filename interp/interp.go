@@ -3,6 +3,7 @@ package interp
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"go/build"
 	"go/scanner"
@@ -493,13 +494,20 @@ func (interp *Interpreter) Use(values Exports) {
 	}
 }
 
-type scannerErrors scanner.ErrorList
-
-func (sce scannerErrors) isEOF() bool {
-	for _, v := range sce {
-		return strings.HasSuffix(v.Msg, `, found 'EOF'`)
+// ignoreScannerError returns true if the error from Go scanner can be safely ignored
+// to let the caller grab one more line before retrying to parse its input.
+func ignoreScannerError(e *scanner.Error, s string) bool {
+	msg := e.Msg
+	if strings.HasSuffix(msg, "found 'EOF'") {
+		return true
 	}
-	return true
+	if msg == "raw string literal not terminated" {
+		return true
+	}
+	if strings.HasPrefix(msg, "expected operand, found '}'") && !strings.HasSuffix(s, "}") {
+		return true
+	}
+	return false
 }
 
 // REPL performs a Read-Eval-Print-Loop on input reader.
@@ -518,32 +526,38 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: k, scope: sc}}
 	}
 
-	// Set prompt.
-	var v reflect.Value
-	var err error
-	prompt := getPrompt(in, out)
+	ctx, cancel := context.WithCancel(context.Background())
+	end := make(chan struct{})     // channel to terminate signal handling goroutine
+	sig := make(chan os.Signal, 1) // channel to trap interrupt signal (Ctrl-C)
+	prompt := getPrompt(in, out)   // prompt activated on tty like IO stream
+	s := bufio.NewScanner(in)      // read input stream line by line
+	var v reflect.Value            // result value from eval
+	var err error                  // error from eval
+	src := ""                      // source string to evaluate
+	signal.Notify(sig, os.Interrupt)
 	prompt(v)
 
 	// Read, Eval, Print in a Loop.
-	src := ""
-	s := bufio.NewScanner(in)
 	for s.Scan() {
 		src += s.Text() + "\n"
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		handleSignal(ctx, cancel)
+
+		// The following goroutine handles interrupt signal by canceling eval.
+		go func() {
+			select {
+			case <-sig:
+				cancel()
+			case <-end:
+			}
+		}()
+
 		v, err = interp.EvalWithContext(ctx, src)
-		signal.Reset()
 		if err != nil {
 			switch e := err.(type) {
 			case scanner.ErrorList:
-				if scannerErrors(e).isEOF() {
-					// Early failure in the scanner: the source is incomplete
-					// and no AST could be produced, neither compiled / run.
-					// Get one more line, and retry
+				if len(e) == 0 || ignoreScannerError(e[0], s.Text()) {
 					continue
 				}
-				fmt.Fprintln(out, err)
+				fmt.Fprintln(out, e[0])
 			case Panic:
 				fmt.Fprintln(out, e.Value)
 				fmt.Fprintln(out, string(e.Stack))
@@ -551,9 +565,19 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 				fmt.Fprintln(out, err)
 			}
 		}
+
+		if errors.Is(err, context.Canceled) {
+			// Eval has been interrupted by the above signal handling goroutine.
+			ctx, cancel = context.WithCancel(context.Background())
+		} else {
+			// No interrupt, release the above signal handling goroutine.
+			end <- struct{}{}
+		}
+
 		src = ""
 		prompt(v)
 	}
+	cancel() // Do not defer, as cancel func may change over time.
 	// TODO(mpl): log s.Err() if not nil?
 }
 
@@ -580,17 +604,4 @@ func getPrompt(in io.Reader, out io.Writer) func(reflect.Value) {
 		}
 	}
 	return func(reflect.Value) {}
-}
-
-// handleSignal wraps signal handling for eval cancellation.
-func handleSignal(ctx context.Context, cancel context.CancelFunc) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		select {
-		case <-c:
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
 }
