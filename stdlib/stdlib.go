@@ -33,7 +33,7 @@ func init() {
 //go:generate ../cmd/goexports/goexports errors expvar flag fmt
 //go:generate ../cmd/goexports/goexports go/ast go/build go/constant go/doc go/format go/importer
 //go:generate ../cmd/goexports/goexports go/parser go/printer go/scanner go/token go/types
-//go:generate ../cmd/goexports/goexports hash hash/adler32 hash/crc32 hash/crc64 hash/fnv
+//go:generate ../cmd/goexports/goexports hash hash/adler32 hash/crc32 hash/crc64 hash/fnv hash/maphash
 //go:generate ../cmd/goexports/goexports html html/template
 //go:generate ../cmd/goexports/goexports image image/color image/color/palette
 //go:generate ../cmd/goexports/goexports image/draw image/gif image/jpeg image/png index/suffixarray
