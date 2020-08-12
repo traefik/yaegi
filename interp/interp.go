@@ -3,6 +3,7 @@ package interp
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"go/build"
 	"go/scanner"
@@ -521,7 +522,6 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 
 	// Read, Eval, Print in a Loop.
 	for s.Scan() {
-		canceled := false
 		src += s.Text() + "\n"
 
 		// The following goroutine handles interrupt signal by canceling eval.
@@ -546,16 +546,17 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 				fmt.Fprintln(out, string(e.Stack))
 			default:
 				fmt.Fprintln(out, err)
-				if err.Error() == "context canceled" {
-					ctx, cancel = context.WithCancel(context.Background())
-					canceled = true
-				}
 			}
 		}
 
-		if !canceled {
-			end <- struct{}{} // Release the above signal handling goroutine.
+		if errors.Is(err, context.Canceled) {
+			// Eval has been interrupted by the above signal handling goroutine.
+			ctx, cancel = context.WithCancel(context.Background())
+		} else {
+			// No interrupt, release the above signal handling goroutine.
+			end <- struct{}{}
 		}
+
 		src = ""
 		prompt(v)
 	}
