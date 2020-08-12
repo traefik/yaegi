@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	// CITimeoutMultiplier is the multiplier for all timeouts in the CI
+	// CITimeoutMultiplier is the multiplier for all timeouts in the CI.
 	CITimeoutMultiplier = 3
 )
 
