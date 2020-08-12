@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -617,9 +618,10 @@ func TestEvalEOF(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for it, test := range tests {
 		i := interp.New(interp.Options{})
 		var stderr bytes.Buffer
+		safeStderr := &safeBuffer{buf: &stderr}
 		pin, pout := io.Pipe()
 		defer func() {
 			// Closing the pipe also takes care of making i.REPL terminate,
@@ -629,7 +631,7 @@ func TestEvalEOF(t *testing.T) {
 		}()
 
 		go func() {
-			i.REPL(pin, &stderr)
+			i.REPL(pin, safeStderr)
 		}()
 		for k, v := range test.src {
 			if _, err := pout.Write([]byte(v + "\n")); err != nil {
@@ -637,18 +639,40 @@ func TestEvalEOF(t *testing.T) {
 			}
 			Sleep(100 * time.Millisecond)
 
-			errMsg := stderr.String()
+			errMsg := safeStderr.String()
 			if k == test.errorLine {
 				if errMsg == "" {
-					t.Fatalf("statement %q should have produced an error", v)
+					t.Fatalf("%d: statement %q should have produced an error", it, v)
 				}
 				break
 			}
 			if errMsg != "" {
-				t.Fatalf("unexpected error: %v", errMsg)
+				t.Fatalf("%d: unexpected error: %v", it, errMsg)
 			}
+
 		}
 	}
+}
+
+type safeBuffer struct {
+	mu  sync.RWMutex
+	buf *bytes.Buffer
+}
+
+func (sb *safeBuffer) Read(p []byte) (int, error) {
+	return sb.buf.Read(p)
+}
+
+func (sb *safeBuffer) String() string {
+	sb.mu.RLock()
+	defer sb.mu.RUnlock()
+	return sb.buf.String()
+}
+
+func (sb *safeBuffer) Write(p []byte) (int, error) {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.buf.Write(p)
 }
 
 const (
