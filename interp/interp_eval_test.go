@@ -649,7 +649,6 @@ func TestEvalEOF(t *testing.T) {
 			if errMsg != "" {
 				t.Fatalf("%d: unexpected error: %v", it, errMsg)
 			}
-
 		}
 	}
 }
@@ -676,7 +675,7 @@ func (sb *safeBuffer) Write(p []byte) (int, error) {
 }
 
 const (
-	// CITimeoutMultiplier is the multiplier for all timeouts in the CI
+	// CITimeoutMultiplier is the multiplier for all timeouts in the CI.
 	CITimeoutMultiplier = 3
 )
 
