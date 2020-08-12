@@ -1,12 +1,17 @@
 package interp_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"reflect"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -311,6 +316,40 @@ func TestEvalCompositeArray(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{src: "a := []int{1, 2, 7: 20, 30}", res: "[1 2 0 0 0 0 0 20 30]"},
+		{src: `a := []int{1, 1.2}`, err: "1:42: 6/5 truncated to int"},
+		{src: `a := []int{0:1, 0:1}`, err: "1:46: duplicate index 0 in array or slice literal"},
+		{src: `a := []int{1.1:1, 1.2:"test"}`, err: "1:39: index float64 must be integer constant"},
+		{src: `a := [2]int{1, 1.2}`, err: "1:43: 6/5 truncated to int"},
+		{src: `a := [1]int{1, 2}`, err: "1:43: index 1 is out of bounds (>= 1)"},
+	})
+}
+
+func TestEvalCompositeMap(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `a := map[string]int{"one":1, "two":2}`, res: "map[one:1 two:2]"},
+		{src: `a := map[string]int{1:1, 2:2}`, err: "1:48: cannot convert 1 to string"},
+		{src: `a := map[string]int{"one":1, "two":2.2}`, err: "1:63: 11/5 truncated to int"},
+		{src: `a := map[string]int{1, "two":2}`, err: "1:48: missing key in map literal"},
+		{src: `a := map[string]int{"one":1, "one":2}`, err: "1:57: duplicate key one in map literal"},
+	})
+}
+
+func TestEvalCompositeStruct(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `a := struct{A,B,C int}{}`, res: "{0 0 0}"},
+		{src: `a := struct{A,B,C int}{1,2,3}`, res: "{1 2 3}"},
+		{src: `a := struct{A,B,C int}{1,2.2,3}`, err: "1:53: 11/5 truncated to int"},
+		{src: `a := struct{A,B,C int}{1,2}`, err: "1:53: too few values in struct literal"},
+		{src: `a := struct{A,B,C int}{1,2,3,4}`, err: "1:57: too many values in struct literal"},
+		{src: `a := struct{A,B,C int}{1,B:2,3}`, err: "1:53: mixture of field:value and value elements in struct literal"},
+		{src: `a := struct{A,B,C int}{A:1,B:2,C:3}`, res: "{1 2 3}"},
+		{src: `a := struct{A,B,C int}{B:2}`, res: "{0 2 0}"},
+		{src: `a := struct{A,B,C int}{A:1,D:2,C:3}`, err: "1:55: unknown field D in struct literal"},
+		{src: `a := struct{A,B,C int}{A:1,A:2,C:3}`, err: "1:55: duplicate field name A in struct literal"},
+		{src: `a := struct{A,B,C int}{A:1,B:2.2,C:3}`, err: "1:57: 11/5 truncated to int"},
+		{src: `a := struct{A,B,C int}{A:1,2,C:3}`, err: "1:55: mixture of field:value and value elements in struct literal"},
 	})
 }
 
@@ -576,4 +615,118 @@ func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expecte
 	if fmt.Sprintf("%v", res) != expectedRes {
 		t.Fatalf("got %v, want %s", res, expectedRes)
 	}
+}
+
+func TestEvalEOF(t *testing.T) {
+	tests := []struct {
+		desc      string
+		src       []string
+		errorLine int
+	}{
+		{
+			desc: "no error",
+			src: []string{
+				`func main() {`,
+				`println("foo")`,
+				`}`,
+			},
+			errorLine: -1,
+		},
+		{
+			desc: "no parsing error, but block error",
+			src: []string{
+				`func main() {`,
+				`println(foo)`,
+				`}`,
+			},
+			errorLine: 2,
+		},
+		{
+			desc: "parsing error",
+			src: []string{
+				`func main() {`,
+				`println(/foo)`,
+				`}`,
+			},
+			errorLine: 1,
+		},
+	}
+
+	for it, test := range tests {
+		i := interp.New(interp.Options{})
+		var stderr bytes.Buffer
+		safeStderr := &safeBuffer{buf: &stderr}
+		pin, pout := io.Pipe()
+		defer func() {
+			// Closing the pipe also takes care of making i.REPL terminate,
+			// hence freeing its goroutine.
+			_ = pin.Close()
+			_ = pout.Close()
+		}()
+
+		go func() {
+			i.REPL(pin, safeStderr)
+		}()
+		for k, v := range test.src {
+			if _, err := pout.Write([]byte(v + "\n")); err != nil {
+				t.Error(err)
+			}
+			Sleep(100 * time.Millisecond)
+
+			errMsg := safeStderr.String()
+			if k == test.errorLine {
+				if errMsg == "" {
+					t.Fatalf("%d: statement %q should have produced an error", it, v)
+				}
+				break
+			}
+			if errMsg != "" {
+				t.Fatalf("%d: unexpected error: %v", it, errMsg)
+			}
+		}
+	}
+}
+
+type safeBuffer struct {
+	mu  sync.RWMutex
+	buf *bytes.Buffer
+}
+
+func (sb *safeBuffer) Read(p []byte) (int, error) {
+	return sb.buf.Read(p)
+}
+
+func (sb *safeBuffer) String() string {
+	sb.mu.RLock()
+	defer sb.mu.RUnlock()
+	return sb.buf.String()
+}
+
+func (sb *safeBuffer) Write(p []byte) (int, error) {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.buf.Write(p)
+}
+
+const (
+	// CITimeoutMultiplier is the multiplier for all timeouts in the CI.
+	CITimeoutMultiplier = 3
+)
+
+// Sleep pauses the current goroutine for at least the duration d.
+func Sleep(d time.Duration) {
+	d = applyCIMultiplier(d)
+	time.Sleep(d)
+}
+
+func applyCIMultiplier(timeout time.Duration) time.Duration {
+	ci := os.Getenv("CI")
+	if ci == "" {
+		return timeout
+	}
+	b, err := strconv.ParseBool(ci)
+	if err != nil || !b {
+		return timeout
+	}
+	return time.Duration(float64(timeout) * CITimeoutMultiplier)
 }

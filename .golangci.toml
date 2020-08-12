@@ -42,6 +42,7 @@
     "goerr113",
     "nestif",
     "exhaustive",
+    "nlreturn",
   ]
 
 [issues]
