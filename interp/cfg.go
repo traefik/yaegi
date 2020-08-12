@@ -245,6 +245,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 				if n.typ, err = nodeType(interp, sc, n.child[0]); err != nil {
 					return false
 				}
+				// Indicate that the first child is the type
 				n.nleft = 1
 			} else {
 				// Get type from ancestor (implicit type)
@@ -258,18 +259,28 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 					return false
 				}
 			}
+
+			child := n.child
+			if n.nleft > 0 {
+				n.child[0].typ = n.typ
+				child = n.child[1:]
+			}
 			// Propagate type to children, to handle implicit types
-			for _, c := range n.child {
+			for _, c := range child {
 				switch c.kind {
-				case binaryExpr, unaryExpr:
+				case binaryExpr, unaryExpr, compositeLitExpr:
 					// Do not attempt to propagate composite type to operator expressions,
 					// it breaks constant folding.
-				case callExpr:
+				case keyValueExpr, typeAssertExpr, indexExpr:
+					c.typ = n.typ
+				default:
+					if c.ident == nilIdent {
+						c.typ = sc.getType(nilIdent)
+						continue
+					}
 					if c.typ, err = nodeType(interp, sc, c); err != nil {
 						return false
 					}
-				default:
-					c.typ = n.typ
 				}
 			}
 
@@ -701,13 +712,22 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			}
 			n.findex = sc.add(n.typ)
 			typ := t.TypeOf()
-			switch k := typ.Kind(); k {
-			case reflect.Map:
+			if typ.Kind() == reflect.Map {
+				err = check.assignment(n.child[1], t.key, "map index")
 				n.gen = getIndexMap
-			case reflect.Array, reflect.Slice, reflect.String:
+				break
+			}
+
+			l := -1
+			switch k := typ.Kind(); k {
+			case reflect.Array:
+				l = typ.Len()
+				fallthrough
+			case reflect.Slice, reflect.String:
 				n.gen = getIndexArray
 			case reflect.Ptr:
 				if typ2 := typ.Elem(); typ2.Kind() == reflect.Array {
+					l = typ2.Len()
 					n.gen = getIndexArray
 				} else {
 					err = n.cfgErrorf("type %v does not support indexing", typ)
@@ -715,6 +735,8 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 			default:
 				err = n.cfgErrorf("type is not an array, slice, string or map: %v", t.id())
 			}
+
+			err = check.index(n.child[1], l)
 
 		case blockStmt:
 			wireChild(n)
@@ -923,6 +945,46 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 		case compositeLitExpr:
 			wireChild(n)
+
+			underlying := func(t *itype) *itype {
+				for {
+					switch t.cat {
+					case ptrT, aliasT:
+						t = t.val
+						continue
+					default:
+						return t
+					}
+				}
+			}
+
+			child := n.child
+			if n.nleft > 0 {
+				child = child[1:]
+			}
+
+			switch n.typ.cat {
+			case arrayT:
+				err = check.arrayLitExpr(child, underlying(n.typ.val), n.typ.size)
+			case mapT:
+				err = check.mapLitExpr(child, n.typ.key, underlying(n.typ.val))
+			case structT:
+				err = check.structLitExpr(child, n.typ)
+			case valueT:
+				rtype := n.typ.rtype
+				switch rtype.Kind() {
+				case reflect.Struct:
+					err = check.structBinLitExpr(child, rtype)
+				case reflect.Map:
+					ktyp := &itype{cat: valueT, rtype: rtype.Key()}
+					vtyp := &itype{cat: valueT, rtype: rtype.Elem()}
+					err = check.mapLitExpr(child, ktyp, vtyp)
+				}
+			}
+			if err != nil {
+				break
+			}
+
 			n.findex = sc.add(n.typ)
 			// TODO: Check that composite literal expr matches corresponding type
 			n.gen = compositeGenerator(n)

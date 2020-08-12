@@ -316,6 +316,40 @@ func TestEvalCompositeArray(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{src: "a := []int{1, 2, 7: 20, 30}", res: "[1 2 0 0 0 0 0 20 30]"},
+		{src: `a := []int{1, 1.2}`, err: "1:42: 6/5 truncated to int"},
+		{src: `a := []int{0:1, 0:1}`, err: "1:46: duplicate index 0 in array or slice literal"},
+		{src: `a := []int{1.1:1, 1.2:"test"}`, err: "1:39: index float64 must be integer constant"},
+		{src: `a := [2]int{1, 1.2}`, err: "1:43: 6/5 truncated to int"},
+		{src: `a := [1]int{1, 2}`, err: "1:43: index 1 is out of bounds (>= 1)"},
+	})
+}
+
+func TestEvalCompositeMap(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `a := map[string]int{"one":1, "two":2}`, res: "map[one:1 two:2]"},
+		{src: `a := map[string]int{1:1, 2:2}`, err: "1:48: cannot convert 1 to string"},
+		{src: `a := map[string]int{"one":1, "two":2.2}`, err: "1:63: 11/5 truncated to int"},
+		{src: `a := map[string]int{1, "two":2}`, err: "1:48: missing key in map literal"},
+		{src: `a := map[string]int{"one":1, "one":2}`, err: "1:57: duplicate key one in map literal"},
+	})
+}
+
+func TestEvalCompositeStruct(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `a := struct{A,B,C int}{}`, res: "{0 0 0}"},
+		{src: `a := struct{A,B,C int}{1,2,3}`, res: "{1 2 3}"},
+		{src: `a := struct{A,B,C int}{1,2.2,3}`, err: "1:53: 11/5 truncated to int"},
+		{src: `a := struct{A,B,C int}{1,2}`, err: "1:53: too few values in struct literal"},
+		{src: `a := struct{A,B,C int}{1,2,3,4}`, err: "1:57: too many values in struct literal"},
+		{src: `a := struct{A,B,C int}{1,B:2,3}`, err: "1:53: mixture of field:value and value elements in struct literal"},
+		{src: `a := struct{A,B,C int}{A:1,B:2,C:3}`, res: "{1 2 3}"},
+		{src: `a := struct{A,B,C int}{B:2}`, res: "{0 2 0}"},
+		{src: `a := struct{A,B,C int}{A:1,D:2,C:3}`, err: "1:55: unknown field D in struct literal"},
+		{src: `a := struct{A,B,C int}{A:1,A:2,C:3}`, err: "1:55: duplicate field name A in struct literal"},
+		{src: `a := struct{A,B,C int}{A:1,B:2.2,C:3}`, err: "1:57: 11/5 truncated to int"},
+		{src: `a := struct{A,B,C int}{A:1,2,C:3}`, err: "1:55: mixture of field:value and value elements in struct literal"},
 	})
 }
 
