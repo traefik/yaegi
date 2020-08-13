@@ -952,18 +952,6 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 		case compositeLitExpr:
 			wireChild(n)
 
-			underlying := func(t *itype) *itype {
-				for {
-					switch t.cat {
-					case ptrT, aliasT:
-						t = t.val
-						continue
-					default:
-						return t
-					}
-				}
-			}
-
 			child := n.child
 			if n.nleft > 0 {
 				child = child[1:]
@@ -971,9 +959,9 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 			switch n.typ.cat {
 			case arrayT:
-				err = check.arrayLitExpr(child, underlying(n.typ.val), n.typ.size)
+				err = check.arrayLitExpr(child, n.typ.val, n.typ.size)
 			case mapT:
-				err = check.mapLitExpr(child, n.typ.key, underlying(n.typ.val))
+				err = check.mapLitExpr(child, n.typ.key, n.typ.val)
 			case structT:
 				err = check.structLitExpr(child, n.typ)
 			case valueT:
@@ -993,7 +981,7 @@ func (interp *Interpreter) cfg(root *node, pkgID string) ([]*node, error) {
 
 			n.findex = sc.add(n.typ)
 			// TODO: Check that composite literal expr matches corresponding type
-			n.gen = compositeGenerator(n)
+			n.gen = compositeGenerator(n, n.typ)
 
 		case fallthroughtStmt:
 			if n.anc.kind != caseBody {
@@ -2348,11 +2336,10 @@ func gotoLabel(s *symbol) {
 	}
 }
 
-func compositeGenerator(n *node) (gen bltnGenerator) {
-	switch n.typ.cat {
+func compositeGenerator(n *node, typ *itype) (gen bltnGenerator) {
+	switch typ.cat {
 	case aliasT, ptrT:
-		n.typ = n.typ.val
-		gen = compositeGenerator(n)
+		gen = compositeGenerator(n, n.typ.val)
 	case arrayT:
 		gen = arrayLit
 	case mapT:
