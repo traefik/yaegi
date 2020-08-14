@@ -97,9 +97,9 @@ func (interp *Interpreter) run(n *node, cf *frame) {
 	c := reflect.ValueOf(interp.done)
 	interp.mutex.RUnlock()
 
-	f.mutex.RLock()
+	f.mutex.Lock()
 	f.done = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: c}
-	f.mutex.RUnlock()
+	f.mutex.Unlock()
 
 	for i, t := range n.types {
 		f.data[i] = reflect.New(t).Elem()
