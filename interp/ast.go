@@ -487,19 +487,11 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 			n.ident = a.Value
 			switch a.Kind {
 			case token.CHAR:
+				// Char cannot be converted to a const here as we cannot tell the type.
 				v, _, _, _ := strconv.UnquoteChar(a.Value[1:len(a.Value)-1], '\'')
 				n.rval = reflect.ValueOf(v)
-			case token.FLOAT:
+			case token.FLOAT, token.IMAG, token.INT, token.STRING:
 				v := constant.MakeFromLiteral(a.Value, a.Kind, 0)
-				n.rval = reflect.ValueOf(v)
-			case token.IMAG:
-				v := constant.MakeFromLiteral(a.Value, a.Kind, 0)
-				n.rval = reflect.ValueOf(v)
-			case token.INT:
-				v := constant.MakeFromLiteral(a.Value, a.Kind, 0)
-				n.rval = reflect.ValueOf(v)
-			case token.STRING:
-				v, _ := strconv.Unquote(a.Value)
 				n.rval = reflect.ValueOf(v)
 			}
 			st.push(n, nod)

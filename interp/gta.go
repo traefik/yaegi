@@ -205,10 +205,10 @@ func (interp *Interpreter) gta(root *node, rpath, pkgID string) ([]*node, error)
 		case importSpec:
 			var name, ipath string
 			if len(n.child) == 2 {
-				ipath = n.child[1].rval.String()
+				ipath = constToString(n.child[1].rval)
 				name = n.child[0].ident
 			} else {
-				ipath = n.child[0].rval.String()
+				ipath = constToString(n.child[0].rval)
 			}
 			// Try to import a binary package first, or a source package
 			var pkgName string

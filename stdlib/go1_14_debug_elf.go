@@ -79,7 +79,7 @@ func init() {
 		"ELFDATA2LSB":                        reflect.ValueOf(elf.ELFDATA2LSB),
 		"ELFDATA2MSB":                        reflect.ValueOf(elf.ELFDATA2MSB),
 		"ELFDATANONE":                        reflect.ValueOf(elf.ELFDATANONE),
-		"ELFMAG":                             reflect.ValueOf(elf.ELFMAG),
+		"ELFMAG":                             reflect.ValueOf(constant.MakeFromLiteral("\"\\u007fELF\"", token.STRING, 0)),
 		"ELFOSABI_86OPEN":                    reflect.ValueOf(elf.ELFOSABI_86OPEN),
 		"ELFOSABI_AIX":                       reflect.ValueOf(elf.ELFOSABI_AIX),
 		"ELFOSABI_ARM":                       reflect.ValueOf(elf.ELFOSABI_ARM),

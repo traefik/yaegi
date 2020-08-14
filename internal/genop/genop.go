@@ -32,7 +32,7 @@ func {{$name}}(n *node) {
 	case reflect.String:
 		switch {
 		case c0.rval.IsValid():
-			s0 := c0.rval.String()
+			s0 := vString(c0.rval)
 			v1 := genValue(c1)
 			n.exec = func(f *frame) bltn {
 				dest(f).SetString(s0 {{$op.Name}} v1(f).String())
@@ -40,7 +40,7 @@ func {{$name}}(n *node) {
 			}
 		case c1.rval.IsValid():
 			v0 := genValue(c0)
-			s1 := c1.rval.String()
+			s1 :=  vString(c1.rval)
 			n.exec = func(f *frame) bltn {
 				dest(f).SetString(v0(f).String() {{$op.Name}} s1)
 				return next
@@ -202,7 +202,7 @@ func {{$name}}Const(n *node) {
 		{{- end}}
 	{{- if $op.Str}}
 	case isString(t):
-		n.rval.SetString(v0.String() {{$op.Name}} v1.String())
+		n.rval.SetString(vString(v0) {{$op.Name}} vString(v1))
 	{{- end}}
 	{{- if $op.Float}}
 	case isComplex(t):
@@ -233,7 +233,7 @@ func {{$name}}Assign(n *node) {
 		{{- if $op.Str}}
 		case reflect.String:
 			v0 := genValueString(c0)
-			v1 := c1.rval.String()
+			v1 := vString(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, s := v0(f)
 				v.SetString(s {{$op.Name}} v1)
@@ -496,7 +496,7 @@ func {{$name}}(n *node) {
 	case isString(t0) || isString(t1):
 		switch {
 		case c0.rval.IsValid():
-			s0 := c0.rval.String()
+			s0 :=  vString(c0.rval)
 			v1 := genValueString(n.child[1])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
@@ -517,7 +517,7 @@ func {{$name}}(n *node) {
 				}
 			}
 		case c1.rval.IsValid():
-			s1 := c1.rval.String()
+			s1 :=  vString(c1.rval)
 			v0 := genValueString(n.child[0])
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
