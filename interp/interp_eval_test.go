@@ -686,7 +686,7 @@ func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expecte
 	}
 }
 
-func TestEvalEOF(t *testing.T) {
+func TestEvalScanner(t *testing.T) {
 	tests := []struct {
 		desc      string
 		src       []string
@@ -718,6 +718,31 @@ func TestEvalEOF(t *testing.T) {
 				`}`,
 			},
 			errorLine: 1,
+		},
+		{
+			desc: "multi-line string literal",
+			src: []string{
+				"var a = `hello",
+				"there, how",
+				"are you?`",
+			},
+			errorLine: -1,
+		},
+		{
+			desc: "multi-line comma operand",
+			src: []string{
+				`println(2,`,
+				`3)`,
+			},
+			errorLine: -1,
+		},
+		{
+			desc: "multi-line arithmetic operand",
+			src: []string{
+				`println(2. /`,
+				`3.)`,
+			},
+			errorLine: -1,
 		},
 	}
 
