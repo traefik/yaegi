@@ -279,7 +279,7 @@ func init() {
 		"UpperLower":                         reflect.ValueOf(constant.MakeFromLiteral("1114112", token.INT, 0)),
 		"Vai":                                reflect.ValueOf(&unicode.Vai).Elem(),
 		"Variation_Selector":                 reflect.ValueOf(&unicode.Variation_Selector).Elem(),
-		"Version":                            reflect.ValueOf(unicode.Version),
+		"Version":                            reflect.ValueOf(constant.MakeFromLiteral("\"12.0.0\"", token.STRING, 0)),
 		"Wancho":                             reflect.ValueOf(&unicode.Wancho).Elem(),
 		"Warang_Citi":                        reflect.ValueOf(&unicode.Warang_Citi).Elem(),
 		"White_Space":                        reflect.ValueOf(&unicode.White_Space).Elem(),

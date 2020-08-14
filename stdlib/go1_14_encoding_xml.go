@@ -6,6 +6,8 @@ package stdlib
 
 import (
 	"encoding/xml"
+	"go/constant"
+	"go/token"
 	"reflect"
 )
 
@@ -17,7 +19,7 @@ func init() {
 		"EscapeText":      reflect.ValueOf(xml.EscapeText),
 		"HTMLAutoClose":   reflect.ValueOf(&xml.HTMLAutoClose).Elem(),
 		"HTMLEntity":      reflect.ValueOf(&xml.HTMLEntity).Elem(),
-		"Header":          reflect.ValueOf(xml.Header),
+		"Header":          reflect.ValueOf(constant.MakeFromLiteral("\"<?xml version=\\\"1.0\\\" encoding=\\\"UTF-8\\\"?>\\n\"", token.STRING, 0)),
 		"Marshal":         reflect.ValueOf(xml.Marshal),
 		"MarshalIndent":   reflect.ValueOf(xml.MarshalIndent),
 		"NewDecoder":      reflect.ValueOf(xml.NewDecoder),

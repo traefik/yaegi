@@ -962,9 +962,11 @@ func call(n *node) {
 		}
 
 		// Init variadic argument vector
+		varIndex := variadic
 		if variadic >= 0 {
 			if method {
 				vararg = nf.data[numRet+variadic+1]
+				varIndex++
 			} else {
 				vararg = nf.data[numRet+variadic]
 			}
@@ -1000,7 +1002,7 @@ func call(n *node) {
 					} else {
 						d.Set(src)
 					}
-				case variadic >= 0 && i >= variadic:
+				case variadic >= 0 && i >= varIndex:
 					if v(f).Type() == vararg.Type() {
 						vararg.Set(v(f))
 					} else {
@@ -2057,6 +2059,10 @@ func destType(n *node) *itype {
 func doCompositeLit(n *node, hasType bool) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
+	typ := n.typ
+	if typ.cat == ptrT || typ.cat == aliasT {
+		typ = typ.val
+	}
 	child := n.child
 	if hasType {
 		child = n.child[1:]
@@ -2065,7 +2071,7 @@ func doCompositeLit(n *node, hasType bool) {
 
 	values := make([]func(*frame) reflect.Value, len(child))
 	for i, c := range child {
-		convertLiteralValue(c, n.typ.field[i].typ.TypeOf())
+		convertLiteralValue(c, typ.field[i].typ.TypeOf())
 		if c.typ.cat == funcT {
 			values[i] = genFunctionWrapper(c)
 		} else {
@@ -2076,7 +2082,7 @@ func doCompositeLit(n *node, hasType bool) {
 	i := n.findex
 	l := n.level
 	n.exec = func(f *frame) bltn {
-		a := reflect.New(n.typ.TypeOf()).Elem()
+		a := reflect.New(typ.TypeOf()).Elem()
 		for i, v := range values {
 			a.Field(i).Set(v(f))
 		}
@@ -2099,6 +2105,10 @@ func compositeLitNotype(n *node) { doCompositeLit(n, false) }
 func doCompositeSparse(n *node, hasType bool) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
+	typ := n.typ
+	if typ.cat == ptrT || typ.cat == aliasT {
+		typ = typ.val
+	}
 	child := n.child
 	if hasType {
 		child = n.child[1:]
@@ -2106,18 +2116,18 @@ func doCompositeSparse(n *node, hasType bool) {
 	destInterface := destType(n).cat == interfaceT
 
 	values := make(map[int]func(*frame) reflect.Value)
-	a, _ := n.typ.zero()
+	a, _ := typ.zero()
 	for _, c := range child {
 		c1 := c.child[1]
-		field := n.typ.fieldIndex(c.child[0].ident)
-		convertLiteralValue(c1, n.typ.field[field].typ.TypeOf())
+		field := typ.fieldIndex(c.child[0].ident)
+		convertLiteralValue(c1, typ.field[field].typ.TypeOf())
 		switch {
 		case c1.typ.cat == funcT:
 			values[field] = genFunctionWrapper(c1)
 		case isArray(c1.typ) && c1.typ.val != nil && c1.typ.val.cat == interfaceT:
 			values[field] = genValueInterfaceArray(c1)
-		case isRecursiveType(n.typ.field[field].typ, n.typ.field[field].typ.rtype):
-			values[field] = genValueRecursiveInterface(c1, n.typ.field[field].typ.rtype)
+		case isRecursiveType(typ.field[field].typ, typ.field[field].typ.rtype):
+			values[field] = genValueRecursiveInterface(c1, typ.field[field].typ.rtype)
 		default:
 			values[field] = genValue(c1)
 		}

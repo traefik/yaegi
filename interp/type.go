@@ -223,8 +223,6 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			// with the correct type so we must make the const type here.
 			n.rval = reflect.ValueOf(constant.MakeInt64(int64(v)))
 			t = untypedRune
-		case string:
-			t = untypedString
 		case constant.Value:
 			switch v.Kind() {
 			case constant.Bool:
@@ -580,6 +578,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		if err == nil && t.size != 0 {
 			t1 := *t
 			t1.size = 0
+			t1.sizedef = false
 			t1.rtype = nil
 			t = &t1
 		}
@@ -758,6 +757,33 @@ func (t *itype) referTo(name string, seen map[*itype]bool) bool {
 	return false
 }
 
+func (t *itype) numIn() int {
+	switch t.cat {
+	case funcT:
+		return len(t.arg)
+	case valueT:
+		if t.rtype.Kind() == reflect.Func {
+			return t.rtype.NumIn()
+		}
+	}
+	return 1
+}
+
+func (t *itype) in(i int) *itype {
+	switch t.cat {
+	case funcT:
+		return t.arg[i]
+	case valueT:
+		if t.rtype.Kind() == reflect.Func {
+			if t.rtype.IsVariadic() && i == t.rtype.NumIn()-1 {
+				return &itype{cat: variadicT, val: &itype{cat: valueT, rtype: t.rtype.In(i).Elem()}}
+			}
+			return &itype{cat: valueT, rtype: t.rtype.In(i)}
+		}
+	}
+	return nil
+}
+
 func (t *itype) numOut() int {
 	switch t.cat {
 	case funcT:
@@ -768,6 +794,18 @@ func (t *itype) numOut() int {
 		}
 	}
 	return 1
+}
+
+func (t *itype) out(i int) *itype {
+	switch t.cat {
+	case funcT:
+		return t.ret[i]
+	case valueT:
+		if t.rtype.Kind() == reflect.Func {
+			return &itype{cat: valueT, rtype: t.rtype.Out(i)}
+		}
+	}
+	return nil
 }
 
 func (t *itype) concrete() *itype {
@@ -789,6 +827,21 @@ func (t *itype) isRecursive() bool {
 			if f.typ.referTo(t.path+"/"+t.name, map[*itype]bool{}) {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+// isVariadic returns true if the function type is variadic.
+// If the type is not a function or is not variadic, it will
+// return false.
+func (t *itype) isVariadic() bool {
+	switch t.cat {
+	case funcT:
+		return len(t.arg) > 0 && t.arg[len(t.arg)-1].cat == variadicT
+	case valueT:
+		if t.rtype.Kind() == reflect.Func {
+			return t.rtype.IsVariadic()
 		}
 	}
 	return false
@@ -854,6 +907,24 @@ func (t *itype) assignableTo(o *itype) bool {
 	return t.TypeOf().AssignableTo(o.TypeOf())
 }
 
+// convertibleTo returns true if t is convertible to o.
+func (t *itype) convertibleTo(o *itype) bool {
+	if t.assignableTo(o) {
+		return true
+	}
+
+	// unsafe checkes
+	tt, ot := t.TypeOf(), o.TypeOf()
+	if (tt.Kind() == reflect.Ptr || tt.Kind() == reflect.Uintptr) && ot.Kind() == reflect.UnsafePointer {
+		return true
+	}
+	if tt.Kind() == reflect.UnsafePointer && (ot.Kind() == reflect.Ptr || ot.Kind() == reflect.Uintptr) {
+		return true
+	}
+
+	return t.TypeOf().ConvertibleTo(o.TypeOf())
+}
+
 // ordered returns true if the type is ordered.
 func (t *itype) ordered() bool {
 	typ := t.TypeOf()
@@ -894,41 +965,58 @@ func (m methodSet) equals(n methodSet) bool {
 
 // Methods returns a map of method type strings, indexed by method names.
 func (t *itype) methods() methodSet {
-	res := make(methodSet)
-	switch t.cat {
-	case interfaceT:
-		// Get methods from recursive analysis of interface fields.
-		for _, f := range t.field {
-			if f.typ.cat == funcT {
-				res[f.name] = f.typ.TypeOf().String()
-			} else {
-				for k, v := range f.typ.methods() {
+	seen := map[*itype]bool{}
+	var getMethods func(typ *itype) methodSet
+
+	getMethods = func(typ *itype) methodSet {
+		res := make(methodSet)
+
+		if seen[typ] {
+			// Stop the recursion, we have seen this type.
+			return res
+		}
+		seen[typ] = true
+
+		switch typ.cat {
+		case interfaceT:
+			// Get methods from recursive analysis of interface fields.
+			for _, f := range typ.field {
+				if f.typ.cat == funcT {
+					res[f.name] = f.typ.TypeOf().String()
+				} else {
+					for k, v := range getMethods(f.typ) {
+						res[k] = v
+					}
+				}
+			}
+		case valueT, errorT:
+			// Get method from corresponding reflect.Type.
+			for i := typ.rtype.NumMethod() - 1; i >= 0; i-- {
+				m := typ.rtype.Method(i)
+				res[m.Name] = m.Type.String()
+			}
+		case ptrT:
+			for k, v := range getMethods(typ.val) {
+				res[k] = v
+			}
+		case structT:
+			for _, f := range typ.field {
+				if !f.embed {
+					continue
+				}
+				for k, v := range getMethods(f.typ) {
 					res[k] = v
 				}
 			}
 		}
-	case valueT, errorT:
-		// Get method from corresponding reflect.Type.
-		for i := t.rtype.NumMethod() - 1; i >= 0; i-- {
-			m := t.rtype.Method(i)
-			res[m.Name] = m.Type.String()
+		// Get all methods defined on this type.
+		for _, m := range typ.method {
+			res[m.ident] = m.typ.TypeOf().String()
 		}
-	case ptrT:
-		for k, v := range t.val.methods() {
-			res[k] = v
-		}
-	case structT:
-		for _, f := range t.field {
-			for k, v := range f.typ.methods() {
-				res[k] = v
-			}
-		}
+		return res
 	}
-	// Get all methods defined on this type.
-	for _, m := range t.method {
-		res[m.ident] = m.typ.TypeOf().String()
-	}
-	return res
+
+	return getMethods(t)
 }
 
 // id returns a unique type identificator string.
@@ -943,7 +1031,11 @@ func (t *itype) id() (res string) {
 	case nilT:
 		res = "nil"
 	case arrayT:
-		res = "[" + strconv.Itoa(t.size) + "]" + t.val.id()
+		if t.size == 0 {
+			res = "[]" + t.val.id()
+		} else {
+			res = "[" + strconv.Itoa(t.size) + "]" + t.val.id()
+		}
 	case chanT:
 		res = "chan " + t.val.id()
 	case chanSendT:
@@ -952,12 +1044,18 @@ func (t *itype) id() (res string) {
 		res = "<-chan " + t.val.id()
 	case funcT:
 		res = "func("
-		for _, t := range t.arg {
-			res += t.id() + ","
+		for i, t := range t.arg {
+			if i > 0 {
+				res += ","
+			}
+			res += t.id()
 		}
 		res += ")("
-		for _, t := range t.ret {
-			res += t.id() + ","
+		for i, t := range t.ret {
+			if i > 0 {
+				res += ","
+			}
+			res += t.id()
 		}
 		res += ")"
 	case interfaceT:
@@ -1371,6 +1469,11 @@ func constToInt(c constant.Value) int {
 	}
 	i, _ := constant.Int64Val(c)
 	return int(i)
+}
+
+func constToString(v reflect.Value) string {
+	c := v.Interface().(constant.Value)
+	return constant.StringVal(c)
 }
 
 func defRecvType(n *node) *itype {
