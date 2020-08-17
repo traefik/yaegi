@@ -318,7 +318,7 @@ func (check typecheck) mapLitExpr(child []*node, ktyp, vtyp *itype) error {
 	return nil
 }
 
-// structLitExpr type checks an struct composite literal expression.
+// structLitExpr type checks a struct composite literal expression.
 func (check typecheck) structLitExpr(child []*node, typ *itype) error {
 	if len(child) == 0 {
 		return nil
@@ -377,7 +377,7 @@ func (check typecheck) structLitExpr(child []*node, typ *itype) error {
 	return nil
 }
 
-// structBinLitExpr type checks an struct composite literal expression on a binary type.
+// structBinLitExpr type checks a struct composite literal expression on a binary type.
 func (check typecheck) structBinLitExpr(child []*node, typ reflect.Type) error {
 	if len(child) == 0 {
 		return nil
@@ -433,6 +433,96 @@ func (check typecheck) structBinLitExpr(child []*node, typ reflect.Type) error {
 	}
 	if len(child) < typ.NumField() {
 		return child[len(child)-1].cfgErrorf("too few values in struct literal")
+	}
+	return nil
+}
+
+// sliceExpr type checks a slice expression.
+func (check typecheck) sliceExpr(n *node) error {
+	c, child := n.child[0], n.child[1:]
+
+	t := c.typ.TypeOf()
+	var low, high, max *node
+	if len(child) >= 1 {
+		if n.action == aSlice {
+			low = child[0]
+		} else {
+			high = child[0]
+		}
+	}
+	if len(child) >= 2 {
+		if n.action == aSlice {
+			high = child[1]
+		} else {
+			max = child[1]
+		}
+	}
+	if len(child) == 3 && n.action == aSlice {
+		max = child[2]
+	}
+
+	l := -1
+	valid := false
+	switch t.Kind() {
+	case reflect.String:
+		valid = true
+		if c.rval.IsValid() {
+			l = len(vString(c.rval))
+		}
+		if max != nil {
+			return max.cfgErrorf("invalid operation: 3-index slice of string")
+		}
+	case reflect.Array:
+		valid = true
+		l = t.Len()
+		if c.sym == nil || c.sym.kind != varSym {
+			return c.cfgErrorf("cannot slice type %s", c.typ.id())
+		}
+	case reflect.Slice:
+		valid = true
+	case reflect.Ptr:
+		if t.Elem().Kind() == reflect.Array {
+			valid = true
+			l = t.Elem().Len()
+		}
+	}
+	if !valid {
+		return c.cfgErrorf("cannot slice type %s", c.typ.id())
+	}
+
+	var ind [3]int64
+	for i, nod := range []*node{low, high, max} {
+		x := int64(-1)
+		switch {
+		case nod != nil:
+			max := -1
+			if l >= 0 {
+				max = l + 1
+			}
+			if err := check.index(nod, max); err != nil {
+				return err
+			}
+			if nod.rval.IsValid() {
+				x = vInt(nod.rval)
+			}
+		case i == 0:
+			x = 0
+		case l >= 0:
+			x = int64(l)
+		}
+		ind[i] = x
+	}
+
+	for i, x := range ind[:len(ind)-1] {
+		if x <= 0 {
+			continue
+		}
+		for _, y := range ind[i+1:] {
+			if y < 0 || x <= y {
+				continue
+			}
+			return n.cfgErrorf("invalid index values, must be low <= high <= max")
+		}
 	}
 	return nil
 }

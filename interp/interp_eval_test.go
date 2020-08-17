@@ -355,6 +355,33 @@ func TestEvalCompositeStruct(t *testing.T) {
 	})
 }
 
+func TestEvalSliceExpression(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `a := []int{0,1,2}[1:3]`, res: "[1 2]"},
+		{src: `a := []int{0,1,2}[:3]`, res: "[0 1 2]"},
+		{src: `a := []int{0,1,2}[:]`, res: "[0 1 2]"},
+		{src: `a := []int{0,1,2,3}[1:3:4]`, res: "[1 2]"},
+		{src: `a := []int{0,1,2,3}[:3:4]`, res: "[0 1 2]"},
+		{src: `ar := [3]int{0,1,2}
+			   a := ar[1:3]`, res: "[1 2]"},
+		{src: `a := (&[3]int{0,1,2})[1:3]`, res: "[1 2]"},
+		{src: `a := (&[3]int{0,1,2})[1:3]`, res: "[1 2]"},
+		{src: `s := "hello"[1:3]`, res: "el"},
+		{src: `str := "hello"
+			   s := str[1:3]`, res: "el"},
+		{src: `a := int(1)[0:1]`, err: "1:33: cannot slice type int"},
+		{src: `a := ([3]int{0,1,2})[1:3]`, err: "1:33: cannot slice type [3]int"},
+		{src: `a := (&[]int{0,1,2,3})[1:3]`, err: "1:33: cannot slice type *[]int"},
+		{src: `a := "hello"[1:3:4]`, err: "1:45: invalid operation: 3-index slice of string"},
+		{src: `ar := [3]int{0,1,2}
+			   a := ar[:4]`, err: "2:16: index int is out of bounds"},
+		{src: `a := []int{0,1,2,3}[1::4]`, err: "1:49: 2nd index required in 3-index slice"},
+		{src: `a := []int{0,1,2,3}[1:3:]`, err: "1:51: 3rd index required in 3-index slice"},
+		{src: `a := []int{0,1,2}[3:1]`, err: "invalid index values, must be low <= high <= max"},
+	})
+}
+
 func TestEvalConversion(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
