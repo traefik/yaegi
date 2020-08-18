@@ -527,6 +527,39 @@ func (check typecheck) sliceExpr(n *node) error {
 	return nil
 }
 
+// typeAssertionExpr type checks a type assert expression.
+func (check typecheck) typeAssertionExpr(n *node, typ *itype) error {
+	// TODO(nick): This type check is not complete and should be revisited once
+	// https://github.com/golang/go/issues/39717 lands. It is currently impractical to
+	// type check Named types as they cannot be asserted. There are also issues checking
+	// the method signatures. We also cannot check if a method has a ptr receiver right
+	// now.
+
+	if n.typ.TypeOf().Kind() != reflect.Interface {
+		return n.cfgErrorf("invalid type assertion: non-interface type %s on left", n.typ.id())
+	}
+	if len(n.typ.methods()) == 0 {
+		// Empty interface must be a dynamic check.
+		return nil
+	}
+
+	if isInterface(typ) {
+		// Asserting to an interface is a dynamic check as we must look to the
+		// underlying struct.
+		return nil
+	}
+
+	m := typ.methods()
+	for k, _ := range n.typ.methods() {
+		// TODO: We cannot compare methods, as in the valueT case
+		// 		 the method has the receiver as the first param.
+		if m[k] == "" {
+			return n.cfgErrorf("impossible type assertion: %s does not implement %s (missing %v method)", typ.id(), n.typ.id(), k)
+		}
+	}
+	return nil
+}
+
 // conversion type checks the conversion of n to typ.
 func (check typecheck) conversion(n *node, typ *itype) error {
 	var c constant.Value

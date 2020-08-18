@@ -1658,25 +1658,33 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			n.child[0].tnext = sbn.start
 
 		case typeAssertExpr:
-			if len(n.child) > 1 {
-				wireChild(n)
-				c1 := n.child[1]
-				if c1.typ == nil {
-					if c1.typ, err = nodeType(interp, sc, c1); err != nil {
-						return
-					}
-				}
-				if n.anc.action != aAssignX {
-					if n.child[0].typ.cat == valueT && isFunc(c1.typ) {
-						// Avoid special wrapping of interfaces and func types.
-						n.typ = &itype{cat: valueT, rtype: c1.typ.TypeOf()}
-					} else {
-						n.typ = c1.typ
-					}
-					n.findex = sc.add(n.typ)
-				}
-			} else {
+			if len(n.child) == 1 {
+				// The "o.(type)" is handled by typeSwitch.
 				n.gen = nop
+				break
+			}
+
+			wireChild(n)
+			c0, c1 := n.child[0], n.child[1]
+			if c1.typ == nil {
+				if c1.typ, err = nodeType(interp, sc, c1); err != nil {
+					return
+				}
+			}
+
+			err = check.typeAssertionExpr(c0, c1.typ)
+			if err != nil {
+				break
+			}
+
+			if n.anc.action != aAssignX {
+				if c0.typ.cat == valueT && isFunc(c1.typ) {
+					// Avoid special wrapping of interfaces and func types.
+					n.typ = &itype{cat: valueT, rtype: c1.typ.TypeOf()}
+				} else {
+					n.typ = c1.typ
+				}
+				n.findex = sc.add(n.typ)
 			}
 
 		case sliceExpr:

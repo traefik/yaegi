@@ -995,6 +995,14 @@ func (t *itype) methods() methodSet {
 				res[m.Name] = m.Type.String()
 			}
 		case ptrT:
+			if typ.val.cat == valueT {
+				// Ptr receiver methods need to be found with the ptr type.
+				typ.TypeOf() // Ensure the rtype exists.
+				for i := typ.rtype.NumMethod() - 1; i >= 0; i-- {
+					m := typ.rtype.Method(i)
+					res[m.Name] = m.Type.String()
+				}
+			}
 			for k, v := range getMethods(typ.val) {
 				res[k] = v
 			}

@@ -152,7 +152,7 @@ func typeAssertStatus(n *node) {
 			value1(f).SetBool(ok)
 			return next
 		}
-	case c0.typ.cat == valueT:
+	case c0.typ.cat == valueT || c0.typ.cat == errorT:
 		n.exec = func(f *frame) bltn {
 			v := value(f)
 			ok := v.IsValid() && canAssertTypes(v.Elem().Type(), rtype)
@@ -205,7 +205,7 @@ func typeAssert(n *node) {
 			value0(f).Set(v)
 			return next
 		}
-	case c0.typ.cat == valueT:
+	case c0.typ.cat == valueT || c0.typ.cat == errorT:
 		n.exec = func(f *frame) bltn {
 			v := value(f).Elem()
 			typ := value0(f).Type()
@@ -272,7 +272,7 @@ func typeAssert2(n *node) {
 			}
 			return next
 		}
-	case n.child[0].typ.cat == valueT:
+	case n.child[0].typ.cat == valueT || n.child[0].typ.cat == errorT:
 		n.exec = func(f *frame) bltn {
 			v := value(f).Elem()
 			ok := v.IsValid() && canAssertTypes(v.Type(), rtype)
