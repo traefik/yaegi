@@ -961,9 +961,33 @@ func TestEvalScanner(t *testing.T) {
 			},
 			errorLine: -1,
 		},
+		{
+			desc: "anonymous func call with no assignment",
+			src: []string{
+				`func() { println(3) }()`,
+			},
+			errorLine: -1,
+		},
+		{
+			// to make sure that special handling of the above anonymous, does not break this general case.
+			desc: "just func",
+			src: []string{
+				`func foo() { println(3) }`,
+			},
+			errorLine: -1,
+		},
+		{
+			// to make sure that special handling of the above anonymous, does not break this general case.
+			desc: "just method",
+			src: []string{
+				`type bar string`,
+				`func (b bar) foo() { println(3) }`,
+			},
+			errorLine: -1,
+		},
 	}
 
-	for it, test := range tests {
+	for _, test := range tests {
 		i := interp.New(interp.Options{})
 		var stderr bytes.Buffer
 		safeStderr := &safeBuffer{buf: &stderr}
@@ -987,12 +1011,12 @@ func TestEvalScanner(t *testing.T) {
 			errMsg := safeStderr.String()
 			if k == test.errorLine {
 				if errMsg == "" {
-					t.Fatalf("%d: statement %q should have produced an error", it, v)
+					t.Fatalf("test %q: statement %q should have produced an error", test.desc, v)
 				}
 				break
 			}
 			if errMsg != "" {
-				t.Fatalf("%d: unexpected error: %v", it, errMsg)
+				t.Fatalf("test %q: unexpected error: %v", test.desc, errMsg)
 			}
 		}
 	}

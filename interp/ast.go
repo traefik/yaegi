@@ -348,18 +348,32 @@ func (interp *Interpreter) firstToken(src string) token.Token {
 // The given name is used to set the filename of the relevant source file in the
 // interpreter's FileSet.
 func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error) {
-	var inFunc bool
+	var inFunc, shouldRetry bool
+	var initialError error
+	initialSrc := src
 	var mode parser.Mode
 
+LREPL:
 	// Allow incremental parsing of declarations or statements, by inserting
 	// them in a pseudo file package or function. Those statements or
 	// declarations will be always evaluated in the global scope.
 	if inc {
-		switch interp.firstToken(src) {
+		tok := interp.firstToken(src)
+		switch tok {
 		case token.PACKAGE:
 			// nothing to do.
 		case token.CONST, token.FUNC, token.IMPORT, token.TYPE, token.VAR:
-			src = "package main;" + src
+			if initialError == nil {
+				// first try with "limited" source code wrapping.
+				if tok == token.FUNC {
+					shouldRetry = true
+				}
+				src = "package main;" + src
+				break
+			}
+			// retry
+			shouldRetry = false
+			fallthrough
 		default:
 			inFunc = true
 			src = "package main; func main() {" + src + "}"
@@ -374,7 +388,23 @@ func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error
 
 	f, err := parser.ParseFile(interp.fset, name, src, mode)
 	if err != nil {
-		return "", nil, err
+		if !shouldRetry {
+			if initialError != nil {
+				err = initialError
+			}
+			return "", nil, err
+		}
+		// do not bother retrying if we know it's an error we're going to ignore later on.
+		if se, ok := err.(scanner.ErrorList); ok {
+			if len(se) == 0 || ignoreScannerError(se[0], src) {
+				return "", nil, err
+			}
+		}
+		// do not lose initial error, in case retrying fails.
+		initialError = err
+		// retry with default source code "wrapping".
+		src = initialSrc
+		goto LREPL
 	}
 
 	setYaegiTags(&interp.context, f.Comments)
