@@ -475,7 +475,7 @@ func (check typecheck) sliceExpr(n *node) error {
 	case reflect.Array:
 		valid = true
 		l = t.Len()
-		if c.sym == nil || c.sym.kind != varSym {
+		if c.kind != selectorExpr && (c.sym == nil || c.sym.kind != varSym) {
 			return c.cfgErrorf("cannot slice type %s", c.typ.id())
 		}
 	case reflect.Slice:
