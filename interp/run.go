@@ -94,8 +94,12 @@ func (interp *Interpreter) run(n *node, cf *frame) {
 		f = newFrame(cf, len(n.types), interp.runid())
 	}
 	interp.mutex.RLock()
-	f.done = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(interp.done)}
+	c := reflect.ValueOf(interp.done)
 	interp.mutex.RUnlock()
+
+	f.mutex.Lock()
+	f.done = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: c}
+	f.mutex.Unlock()
 
 	for i, t := range n.types {
 		f.data[i] = reflect.New(t).Elem()
@@ -2216,7 +2220,11 @@ func rangeChan(n *node) {
 	tnext := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		chosen, v, ok := reflect.Select([]reflect.SelectCase{f.done, {Dir: reflect.SelectRecv, Chan: value(f)}})
+		f.mutex.RLock()
+		done := f.done
+		f.mutex.RUnlock()
+
+		chosen, v, ok := reflect.Select([]reflect.SelectCase{done, {Dir: reflect.SelectRecv, Chan: value(f)}})
 		if chosen == 0 {
 			return nil
 		}
@@ -2701,7 +2709,11 @@ func recv(n *node) {
 					return fnext
 				}
 				// Slow: channel read blocks, allow cancel
-				chosen, v, _ := reflect.Select([]reflect.SelectCase{f.done, {Dir: reflect.SelectRecv, Chan: ch}})
+				f.mutex.RLock()
+				done := f.done
+				f.mutex.RUnlock()
+
+				chosen, v, _ := reflect.Select([]reflect.SelectCase{done, {Dir: reflect.SelectRecv, Chan: ch}})
 				if chosen == 0 {
 					return nil
 				}
@@ -2719,8 +2731,12 @@ func recv(n *node) {
 					return tnext
 				}
 				// Slow: channel is blocked, allow cancel
+				f.mutex.RLock()
+				done := f.done
+				f.mutex.RUnlock()
+
 				var chosen int
-				chosen, getFrame(f, l).data[i], _ = reflect.Select([]reflect.SelectCase{f.done, {Dir: reflect.SelectRecv, Chan: ch}})
+				chosen, getFrame(f, l).data[i], _ = reflect.Select([]reflect.SelectCase{done, {Dir: reflect.SelectRecv, Chan: ch}})
 				if chosen == 0 {
 					return nil
 				}
@@ -2765,7 +2781,11 @@ func recv2(n *node) {
 				return tnext
 			}
 			// Slow: channel is blocked, allow cancel
-			chosen, v, ok := reflect.Select([]reflect.SelectCase{f.done, {Dir: reflect.SelectRecv, Chan: ch}})
+			f.mutex.RLock()
+			done := f.done
+			f.mutex.RUnlock()
+
+			chosen, v, ok := reflect.Select([]reflect.SelectCase{done, {Dir: reflect.SelectRecv, Chan: ch}})
 			if chosen == 0 {
 				return nil
 			}
@@ -2887,7 +2907,11 @@ func send(n *node) {
 				return next
 			}
 			// Slow: send on channel blocks, allow cancel
-			chosen, _, _ := reflect.Select([]reflect.SelectCase{f.done, {Dir: reflect.SelectSend, Chan: ch, Send: data}})
+			f.mutex.RLock()
+			done := f.done
+			f.mutex.RUnlock()
+
+			chosen, _, _ := reflect.Select([]reflect.SelectCase{done, {Dir: reflect.SelectSend, Chan: ch, Send: data}})
 			if chosen == 0 {
 				return nil
 			}
@@ -2979,7 +3003,10 @@ func _select(n *node) {
 	}
 
 	n.exec = func(f *frame) bltn {
+		f.mutex.RLock()
 		cases[nbClause] = f.done
+		f.mutex.RUnlock()
+
 		for i := range cases[:nbClause] {
 			switch cases[i].Dir {
 			case reflect.SelectRecv:
