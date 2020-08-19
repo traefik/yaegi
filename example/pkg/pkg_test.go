@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -111,11 +110,6 @@ func TestPackages(t *testing.T) {
 
 			var msg string
 			if test.evalFile != "" {
-				data, err := ioutil.ReadFile(test.evalFile)
-				if err != nil {
-					t.Fatal(err)
-				}
-
 				// TODO(mpl): this is brittle if we do concurrent tests and stuff, do better later.
 				stdout := os.Stdout
 				defer func() { os.Stdout = stdout }()
@@ -125,7 +119,7 @@ func TestPackages(t *testing.T) {
 				}
 				os.Stdout = pw
 
-				if _, err := i.Eval(string(data), test.evalFile, false); err != nil {
+				if _, err := i.EvalPath(test.evalFile); err != nil {
 					fatalStderrf(t, "%v", err)
 				}
 
@@ -149,10 +143,10 @@ func TestPackages(t *testing.T) {
 				if test.topImport != "" {
 					topImport = test.topImport
 				}
-				if _, err = i.EvalInc(fmt.Sprintf(`import "%s"`, topImport)); err != nil {
+				if _, err = i.Eval(fmt.Sprintf(`import "%s"`, topImport)); err != nil {
 					t.Fatal(err)
 				}
-				value, err := i.EvalInc(`pkg.NewSample()`)
+				value, err := i.Eval(`pkg.NewSample()`)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -195,7 +189,7 @@ func TestPackagesError(t *testing.T) {
 			i.Use(stdlib.Symbols) // Use binary standard library
 
 			// Load pkg from sources
-			_, err := i.EvalInc(`import "github.com/foo/pkg"`)
+			_, err := i.Eval(`import "github.com/foo/pkg"`)
 			if err == nil {
 				t.Fatalf("got no error, want %q", test.expected)
 			}

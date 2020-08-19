@@ -102,11 +102,6 @@ func TestInterpConsistencyBuild(t *testing.T) {
 		t.Run(file.Name(), func(t *testing.T) {
 			filePath := filepath.Join(baseDir, file.Name())
 
-			src, err := ioutil.ReadFile(filePath)
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			// catch stdout
 			backupStdout := os.Stdout
 			defer func() {
@@ -120,7 +115,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			i.Use(interp.Symbols)
 			i.Use(unsafe.Symbols)
 
-			_, err = i.Eval(string(src), filePath, false)
+			_, err = i.EvalPath(filePath)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -208,7 +203,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 		},
 		{
 			fileName:       "op1.go",
-			expectedInterp: "5:2: illegal operand types for '+=' operator",
+			expectedInterp: "5:2: invalid operation: mismatched types int and float64",
 			expectedExec:   "5:4: constant 1.3 truncated to integer",
 		},
 		{
@@ -250,15 +245,10 @@ func TestInterpErrorConsistency(t *testing.T) {
 
 			filePath := filepath.Join("..", "_test", test.fileName)
 
-			src, err := ioutil.ReadFile(filePath)
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
 			i.Use(stdlib.Symbols)
 
-			_, errEval := i.Eval(string(src), filePath, false)
+			_, errEval := i.EvalPath(filePath)
 			if errEval == nil {
 				t.Fatal("An error is expected but got none.")
 			}

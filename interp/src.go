@@ -79,7 +79,7 @@ func (interp *Interpreter) importSrc(rPath, importPath string) (string, error) {
 		}
 
 		var pname string
-		if pname, root, err = interp.ast(string(buf), name); err != nil {
+		if pname, root, err = interp.ast(string(buf), name, false); err != nil {
 			return "", err
 		}
 		if root == nil {

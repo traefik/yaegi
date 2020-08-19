@@ -1,15 +1,19 @@
 package interp_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -45,7 +49,9 @@ func TestEvalArithmetic(t *testing.T) {
 		{desc: "mul_II", src: "2 * 3", res: "6"},
 		{desc: "mul_FI", src: "2.2 * 3", res: "6.6"},
 		{desc: "mul_IF", src: "3 * 2.2", res: "6.6"},
+		{desc: "quo_Z", src: "3 / 0", err: "1:28: invalid operation: division by zero"},
 		{desc: "rem_FI", src: "8.2 % 4", err: "1:28: invalid operation: operator % not defined on float64"},
+		{desc: "rem_Z", src: "8 % 0", err: "1:28: invalid operation: division by zero"},
 		{desc: "shl_II", src: "1 << 8", res: "256"},
 		{desc: "shl_IN", src: "1 << -1", err: "1:28: invalid operation: shift count type int, must be integer"},
 		{desc: "shl_IF", src: "1 << 1.0", res: "2"},
@@ -58,9 +64,9 @@ func TestEvalArithmetic(t *testing.T) {
 		{desc: "neg_I", src: "-2", res: "-2"},
 		{desc: "pos_I", src: "+2", res: "2"},
 		{desc: "bitnot_I", src: "^2", res: "-3"},
-		{desc: "bitnot_F", src: "^0.2", err: "1:28: illegal operand type for '^' operator"},
+		{desc: "bitnot_F", src: "^0.2", err: "1:28: invalid operation: operator ^ not defined on float64"},
 		{desc: "not_B", src: "!false", res: "true"},
-		{desc: "not_I", src: "!0", err: "1:28: illegal operand type for '!' operator"},
+		{desc: "not_I", src: "!0", err: "1:28: invalid operation: operator ! not defined on int"},
 	})
 }
 
@@ -68,10 +74,10 @@ func TestEvalAssign(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{src: `a := "Hello"; a += " world"`, res: "Hello world"},
-		{src: `b := "Hello"; b += 1`, err: "1:42: illegal operand types for '+=' operator"},
-		{src: `c := "Hello"; c -= " world"`, err: "1:42: illegal operand types for '-=' operator"},
-		{src: "e := 64.4; e %= 64", err: "1:39: illegal operand types for '%=' operator"},
-		{src: "f := int64(3.2)", err: "1:33: truncated to integer"},
+		{src: `b := "Hello"; b += 1`, err: "1:42: invalid operation: mismatched types string and int"},
+		{src: `c := "Hello"; c -= " world"`, err: "1:42: invalid operation: operator -= not defined on string"},
+		{src: "e := 64.4; e %= 64", err: "1:39: invalid operation: operator %= not defined on float64"},
+		{src: "f := int64(3.2)", err: "1:39: cannot convert expression of type float64 to type int64"},
 		{src: "g := 1; g <<= 8", res: "256"},
 		{src: "h := 1; h >>= 8", res: "0"},
 	})
@@ -292,6 +298,8 @@ func Foo() {
 func TestEvalComparison(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
+		{src: `2 > 1`, res: "true"},
+		{src: `1.2 > 1.1`, res: "true"},
 		{src: `"hhh" > "ggg"`, res: "true"},
 		{
 			desc: "mismatched types",
@@ -312,6 +320,50 @@ func TestEvalCompositeArray(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{src: "a := []int{1, 2, 7: 20, 30}", res: "[1 2 0 0 0 0 0 20 30]"},
+		{src: `a := []int{1, 1.2}`, err: "1:42: 6/5 truncated to int"},
+		{src: `a := []int{0:1, 0:1}`, err: "1:46: duplicate index 0 in array or slice literal"},
+		{src: `a := []int{1.1:1, 1.2:"test"}`, err: "1:39: index float64 must be integer constant"},
+		{src: `a := [2]int{1, 1.2}`, err: "1:43: 6/5 truncated to int"},
+		{src: `a := [1]int{1, 2}`, err: "1:43: index 1 is out of bounds (>= 1)"},
+	})
+}
+
+func TestEvalCompositeMap(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `a := map[string]int{"one":1, "two":2}`, res: "map[one:1 two:2]"},
+		{src: `a := map[string]int{1:1, 2:2}`, err: "1:48: cannot convert 1 to string"},
+		{src: `a := map[string]int{"one":1, "two":2.2}`, err: "1:63: 11/5 truncated to int"},
+		{src: `a := map[string]int{1, "two":2}`, err: "1:48: missing key in map literal"},
+		{src: `a := map[string]int{"one":1, "one":2}`, err: "1:57: duplicate key one in map literal"},
+	})
+}
+
+func TestEvalCompositeStruct(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `a := struct{A,B,C int}{}`, res: "{0 0 0}"},
+		{src: `a := struct{A,B,C int}{1,2,3}`, res: "{1 2 3}"},
+		{src: `a := struct{A,B,C int}{1,2.2,3}`, err: "1:53: 11/5 truncated to int"},
+		{src: `a := struct{A,B,C int}{1,2}`, err: "1:53: too few values in struct literal"},
+		{src: `a := struct{A,B,C int}{1,2,3,4}`, err: "1:57: too many values in struct literal"},
+		{src: `a := struct{A,B,C int}{1,B:2,3}`, err: "1:53: mixture of field:value and value elements in struct literal"},
+		{src: `a := struct{A,B,C int}{A:1,B:2,C:3}`, res: "{1 2 3}"},
+		{src: `a := struct{A,B,C int}{B:2}`, res: "{0 2 0}"},
+		{src: `a := struct{A,B,C int}{A:1,D:2,C:3}`, err: "1:55: unknown field D in struct literal"},
+		{src: `a := struct{A,B,C int}{A:1,A:2,C:3}`, err: "1:55: duplicate field name A in struct literal"},
+		{src: `a := struct{A,B,C int}{A:1,B:2.2,C:3}`, err: "1:57: 11/5 truncated to int"},
+		{src: `a := struct{A,B,C int}{A:1,2,C:3}`, err: "1:55: mixture of field:value and value elements in struct literal"},
+	})
+}
+
+func TestEvalConversion(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `a := uint64(1)`, res: "1"},
+		{src: `i := 1.1; a := uint64(i)`, res: "1"},
+		{src: `b := string(49)`, res: "1"},
+		{src: `c := uint64(1.1)`, err: "1:40: cannot convert expression of type float64 to type uint64"},
 	})
 }
 
@@ -407,6 +459,63 @@ func TestEvalFunctionCallWithFunctionParam(t *testing.T) {
 	}
 }
 
+func TestEvalCall(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: ` test := func(a int, b float64) int { return a }
+				a := test(1, 2.3)`, res: "1"},
+		{src: ` test := func(a int, b float64) int { return a }
+				a := test(1)`, err: "2:10: not enough arguments in call to test"},
+		{src: ` test := func(a int, b float64) int { return a }
+				s := "test"
+				a := test(1, s)`, err: "3:18: cannot use type string as type float64"},
+		{src: ` test := func(a ...int) int { return 1 }
+				a := test([]int{1}...)`, res: "1"},
+		{src: ` test := func(a ...int) int { return 1 }
+				a := test()`, res: "1"},
+		{src: ` test := func(a ...int) int { return 1 }
+				blah := func() []int { return []int{1,1} }
+				a := test(blah()...)`, res: "1"},
+		{src: ` test := func(a ...int) int { return 1 }
+				a := test([]string{"1"}...)`, err: "2:15: cannot use []string as type []int"},
+		{src: ` test := func(a ...int) int { return 1 }
+				i := 1
+				a := test(i...)`, err: "3:15: cannot use int as type []int"},
+		{src: ` test := func(a int) int { return a }
+				a := test([]int{1}...)`, err: "2:10: invalid use of ..., corresponding parameter is non-variadic"},
+		{src: ` test := func(a ...int) int { return 1 }
+				blah := func() (int, int) { return 1, 1 }
+				a := test(blah()...)`, err: "3:15: cannot use ... with 2-valued func()(int,int)"},
+		{src: ` test := func(a, b int) int { return a }
+				blah := func() (int, int) { return 1, 1 }
+				a := test(blah())`, res: "1"},
+		{src: ` test := func(a, b int) int { return a }
+				blah := func() int { return 1 }
+				a := test(blah(), blah())`, res: "1"},
+		{src: ` test := func(a, b, c, d int) int { return a }
+				blah := func() (int, int) { return 1, 1 }
+				a := test(blah(), blah())`, err: "3:15: cannot use func()(int,int) as type int"},
+		{src: ` test := func(a, b int) int { return a }
+				blah := func() (int, float64) { return 1, 1.1 }
+				a := test(blah())`, err: "3:15: cannot use func()(int,float64) as type (int,int)"},
+	})
+}
+
+func TestEvalBinCall(t *testing.T) {
+	i := interp.New(interp.Options{})
+	i.Use(stdlib.Symbols)
+	if _, err := i.Eval(`import "fmt"`); err != nil {
+		t.Fatal(err)
+	}
+	runTests(t, i, []testCase{
+		{src: `a := fmt.Sprint(1, 2.3)`, res: "1 2.3"},
+		{src: `a := fmt.Sprintf()`, err: "1:33: not enough arguments in call to fmt.Sprintf"},
+		{src: `i := 1
+			   a := fmt.Sprintf(i)`, err: "2:24: cannot use type int as type string"},
+		{src: `a := fmt.Sprint()`, res: ""},
+	})
+}
+
 func TestEvalMissingSymbol(t *testing.T) {
 	defer func() {
 		r := recover()
@@ -423,11 +532,11 @@ func TestEvalMissingSymbol(t *testing.T) {
 	i.Use(interp.Exports{"p": map[string]reflect.Value{
 		"S1": reflect.Zero(reflect.TypeOf(&S1{})),
 	}})
-	_, err := i.EvalInc(`import "p"`)
+	_, err := i.Eval(`import "p"`)
 	if err != nil {
 		t.Fatalf("failed to import package: %v", err)
 	}
-	_, err = i.EvalInc(`p.S1{F: p.S2{}}`)
+	_, err = i.Eval(`p.S1{F: p.S2{}}`)
 	if err == nil {
 		t.Error("unexpected nil error for expression with undefined type")
 	}
@@ -492,20 +601,20 @@ func TestEvalWithContext(t *testing.T) {
 			defer close(done)
 			i := interp.New(interp.Options{})
 			i.Use(stdlib.Symbols)
-			_, err := i.EvalInc(`import "sync"`)
+			_, err := i.Eval(`import "sync"`)
 			if err != nil {
 				t.Errorf(`failed to import "sync": %v`, err)
 				return
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 			defer cancel()
-			_, err = i.EvalWithContext(ctx, src, "", true)
+			_, err = i.EvalWithContext(ctx, src, "")
 			switch err {
 			case context.DeadlineExceeded:
 				// Successful cancellation.
 
 				// Check we can still execute an expression.
-				v, err := i.EvalWithContext(context.Background(), "1+1\n", "", true)
+				v, err := i.EvalWithContext(context.Background(), "1+1\n", "")
 				if err != nil {
 					t.Errorf("failed to evaluate expression after cancellation: %v", err)
 				}
@@ -545,7 +654,7 @@ func runTests(t *testing.T, i *interp.Interpreter, tests []testCase) {
 
 func eval(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
 	t.Helper()
-	res, err := i.EvalInc(src)
+	res, err := i.Eval(src)
 	if err != nil {
 		t.Logf("Error: %v", err)
 		if e, ok := err.(interp.Panic); ok {
@@ -557,7 +666,7 @@ func eval(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
 }
 
 func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expectedRes string) {
-	res, err := i.EvalInc(src)
+	res, err := i.Eval(src)
 
 	if expectedError != "" {
 		if err == nil || !strings.Contains(err.Error(), expectedError) {
@@ -605,7 +714,7 @@ func TestMultiEval(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := i.Eval(string(data), v, false); err != nil {
+		if _, err := i.EvalName(string(data), v); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -647,7 +756,7 @@ func TestMultiEvalNoName(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = i.Eval(string(data), "", false)
+		_, err = i.Eval(string(data))
 		if k == 1 {
 			expectedErr := fmt.Errorf("3:8: fmt/%s redeclared in this block", interp.DefaultSourceName)
 			if err.Error() != expectedErr.Error() {
@@ -671,7 +780,7 @@ func TestImportPathIsKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := i.Eval(string(data), filePath, false); err != nil {
+	if _, err := i.EvalName(string(data), filePath); err != nil {
 		t.Fatal(err)
 	}
 
@@ -730,4 +839,143 @@ func TestImportPathIsKey(t *testing.T) {
 			t.Fatalf("for import path %s, want %s, got %s", k, v, pkg)
 		}
 	}
+}
+
+func TestEvalScanner(t *testing.T) {
+	tests := []struct {
+		desc      string
+		src       []string
+		errorLine int
+	}{
+		{
+			desc: "no error",
+			src: []string{
+				`func main() {`,
+				`println("foo")`,
+				`}`,
+			},
+			errorLine: -1,
+		},
+		{
+			desc: "no parsing error, but block error",
+			src: []string{
+				`func main() {`,
+				`println(foo)`,
+				`}`,
+			},
+			errorLine: 2,
+		},
+		{
+			desc: "parsing error",
+			src: []string{
+				`func main() {`,
+				`println(/foo)`,
+				`}`,
+			},
+			errorLine: 1,
+		},
+		{
+			desc: "multi-line string literal",
+			src: []string{
+				"var a = `hello",
+				"there, how",
+				"are you?`",
+			},
+			errorLine: -1,
+		},
+		{
+			desc: "multi-line comma operand",
+			src: []string{
+				`println(2,`,
+				`3)`,
+			},
+			errorLine: -1,
+		},
+		{
+			desc: "multi-line arithmetic operand",
+			src: []string{
+				`println(2. /`,
+				`3.)`,
+			},
+			errorLine: -1,
+		},
+	}
+
+	for it, test := range tests {
+		i := interp.New(interp.Options{})
+		var stderr bytes.Buffer
+		safeStderr := &safeBuffer{buf: &stderr}
+		pin, pout := io.Pipe()
+		defer func() {
+			// Closing the pipe also takes care of making i.REPL terminate,
+			// hence freeing its goroutine.
+			_ = pin.Close()
+			_ = pout.Close()
+		}()
+
+		go func() {
+			i.REPL(pin, safeStderr)
+		}()
+		for k, v := range test.src {
+			if _, err := pout.Write([]byte(v + "\n")); err != nil {
+				t.Error(err)
+			}
+			Sleep(100 * time.Millisecond)
+
+			errMsg := safeStderr.String()
+			if k == test.errorLine {
+				if errMsg == "" {
+					t.Fatalf("%d: statement %q should have produced an error", it, v)
+				}
+				break
+			}
+			if errMsg != "" {
+				t.Fatalf("%d: unexpected error: %v", it, errMsg)
+			}
+		}
+	}
+}
+
+type safeBuffer struct {
+	mu  sync.RWMutex
+	buf *bytes.Buffer
+}
+
+func (sb *safeBuffer) Read(p []byte) (int, error) {
+	return sb.buf.Read(p)
+}
+
+func (sb *safeBuffer) String() string {
+	sb.mu.RLock()
+	defer sb.mu.RUnlock()
+	return sb.buf.String()
+}
+
+func (sb *safeBuffer) Write(p []byte) (int, error) {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.buf.Write(p)
+}
+
+const (
+	// CITimeoutMultiplier is the multiplier for all timeouts in the CI.
+	CITimeoutMultiplier = 3
+)
+
+// Sleep pauses the current goroutine for at least the duration d.
+func Sleep(d time.Duration) {
+	d = applyCIMultiplier(d)
+	time.Sleep(d)
+}
+
+func applyCIMultiplier(timeout time.Duration) time.Duration {
+	ci := os.Getenv("CI")
+	if ci == "" {
+		return timeout
+	}
+	b, err := strconv.ParseBool(ci)
+	if err != nil || !b {
+		return timeout
+	}
+	return time.Duration(float64(timeout) * CITimeoutMultiplier)
 }

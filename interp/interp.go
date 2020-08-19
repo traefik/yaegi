@@ -3,17 +3,20 @@ package interp
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"go/build"
 	"go/scanner"
 	"go/token"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"reflect"
 	"runtime"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -30,7 +33,7 @@ type node struct {
 	index  int64          // node index (dot display)
 	findex int            // index of value in frame or frame size (func def, type def)
 	level  int            // number of frame indirections to access value
-	nleft  int            // number of children in left part (assign)
+	nleft  int            // number of children in left part (assign) or indicates preceding type (compositeLit)
 	nright int            // number of children in right part (assign)
 	kind   nkind          // kind of node
 	pos    token.Pos      // position in source code, relative to fset
@@ -122,8 +125,7 @@ type Interpreter struct {
 	// architectures.
 	id uint64
 
-	name   string // name of the input source file (or main)
-	inREPL bool
+	name string // name of the input source file (or main)
 
 	opt                        // user settable options
 	cancelChan bool            // enables cancellable chan operations
@@ -224,7 +226,6 @@ func New(options Options) *Interpreter {
 		pkgNames: map[string]string{},
 		rdir:     map[string]bool{},
 		hooks:    &hooks{},
-		inREPL:   true,
 	}
 
 	i.opt.context.GOPATH = options.GoPath
@@ -277,9 +278,9 @@ func initUniverse() *scope {
 		"uintptr":     {kind: typeSym, typ: &itype{cat: uintptrT, name: "uintptr"}},
 
 		// predefined Go constants
-		"false": {kind: constSym, typ: &itype{cat: boolT, name: "bool"}, rval: reflect.ValueOf(false)},
-		"true":  {kind: constSym, typ: &itype{cat: boolT, name: "bool"}, rval: reflect.ValueOf(true)},
-		"iota":  {kind: constSym, typ: &itype{cat: intT}},
+		"false": {kind: constSym, typ: untypedBool, rval: reflect.ValueOf(false)},
+		"true":  {kind: constSym, typ: untypedBool, rval: reflect.ValueOf(true)},
+		"iota":  {kind: constSym, typ: untypedInt},
 
 		// predefined Go zero value
 		"nil": {typ: &itype{cat: nilT, untyped: true}},
@@ -328,25 +329,37 @@ func (interp *Interpreter) main() *node {
 	return nil
 }
 
-// EvalInc is Eval in incremental mode, with the default input name.
-func (interp *Interpreter) EvalInc(src string) (res reflect.Value, err error) {
-	return interp.Eval(src, "", true)
+// Eval evaluates Go code represented as a string. Eval returns the last result
+// computed by the interpreter, and a non nil error in case of failure.
+func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
+	return interp.eval(src, "", true)
 }
 
-// Eval evaluates Go code represented as a string. It returns a map on
-// current interpreted package exported symbols.
-// Name is the file path to the Go source file containing src. It defaults to the
-// special value "_.go".
-// Incremental is whether the given source should be considered an integral
-// valid Go source file, or only a fragment.
-func (interp *Interpreter) Eval(src, name string, incremental bool) (res reflect.Value, err error) {
+// EvalName evaluates Go code represented as a string. Name is the import path of code
+// and can be left to "" for main. EvalName returns the last result computed by the
+// interpreter, and a non nil error in case of failure.
+func (interp *Interpreter) EvalName(src, name string) (res reflect.Value, err error) {
+	return interp.eval(src, name, true)
+}
+
+// EvalPath evaluates Go file by path. EvalPath returns the last result
+// computed by the interpreter, and a non nil error in case of failure.
+func (interp *Interpreter) EvalPath(path string) (res reflect.Value, err error) {
+	// TODO(marc): implement eval of a directory, package and tests.
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return res, err
+	}
+	return interp.eval(string(b), path, false)
+}
+
+func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, err error) {
 	if name != "" {
 		interp.name = name
-	} else if interp.name == "" {
+	}
+	if interp.name == "" {
 		interp.name = DefaultSourceName
 	}
-
-	interp.inREPL = incremental
 
 	defer func() {
 		r := recover()
@@ -358,7 +371,7 @@ func (interp *Interpreter) Eval(src, name string, incremental bool) (res reflect
 	}()
 
 	// Parse source to AST.
-	pkgName, root, err := interp.ast(src, interp.name)
+	pkgName, root, err := interp.ast(src, interp.name, inc)
 	if err != nil || root == nil {
 		return res, err
 	}
@@ -462,7 +475,7 @@ func (interp *Interpreter) Eval(src, name string, incremental bool) (res reflect
 
 // EvalWithContext evaluates Go code represented as a string. It returns
 // a map on current interpreted package exported symbols.
-func (interp *Interpreter) EvalWithContext(ctx context.Context, src, name string, incremental bool) (reflect.Value, error) {
+func (interp *Interpreter) EvalWithContext(ctx context.Context, src, name string) (reflect.Value, error) {
 	var v reflect.Value
 	var err error
 
@@ -474,7 +487,7 @@ func (interp *Interpreter) EvalWithContext(ctx context.Context, src, name string
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		v, err = interp.Eval(src, name, incremental)
+		v, err = interp.EvalName(src, name)
 	}()
 
 	select {
@@ -524,6 +537,22 @@ func (interp *Interpreter) Use(values Exports) {
 	}
 }
 
+// ignoreScannerError returns true if the error from Go scanner can be safely ignored
+// to let the caller grab one more line before retrying to parse its input.
+func ignoreScannerError(e *scanner.Error, s string) bool {
+	msg := e.Msg
+	if strings.HasSuffix(msg, "found 'EOF'") {
+		return true
+	}
+	if msg == "raw string literal not terminated" {
+		return true
+	}
+	if strings.HasPrefix(msg, "expected operand, found '}'") && !strings.HasSuffix(s, "}") {
+		return true
+	}
+	return false
+}
+
 // REPL performs a Read-Eval-Print-Loop on input reader.
 // Results are printed on output writer.
 func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
@@ -540,29 +569,38 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: k, scope: sc}}
 	}
 
-	// Set prompt.
-	var v reflect.Value
-	var err error
-	prompt := getPrompt(in, out)
+	ctx, cancel := context.WithCancel(context.Background())
+	end := make(chan struct{})     // channel to terminate signal handling goroutine
+	sig := make(chan os.Signal, 1) // channel to trap interrupt signal (Ctrl-C)
+	prompt := getPrompt(in, out)   // prompt activated on tty like IO stream
+	s := bufio.NewScanner(in)      // read input stream line by line
+	var v reflect.Value            // result value from eval
+	var err error                  // error from eval
+	src := ""                      // source string to evaluate
+	signal.Notify(sig, os.Interrupt)
 	prompt(v)
 
 	// Read, Eval, Print in a Loop.
-	src := ""
-	s := bufio.NewScanner(in)
 	for s.Scan() {
 		src += s.Text() + "\n"
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		handleSignal(ctx, cancel)
-		v, err = interp.EvalWithContext(ctx, src, "", true)
-		signal.Reset()
+
+		// The following goroutine handles interrupt signal by canceling eval.
+		go func() {
+			select {
+			case <-sig:
+				cancel()
+			case <-end:
+			}
+		}()
+
+		v, err = interp.EvalWithContext(ctx, src, "")
 		if err != nil {
 			switch e := err.(type) {
 			case scanner.ErrorList:
-				// Early failure in the scanner: the source is incomplete
-				// and no AST could be produced, neither compiled / run.
-				// Get one more line, and retry
-				continue
+				if len(e) == 0 || ignoreScannerError(e[0], s.Text()) {
+					continue
+				}
+				fmt.Fprintln(out, e[0])
 			case Panic:
 				fmt.Fprintln(out, e.Value)
 				fmt.Fprintln(out, string(e.Stack))
@@ -570,9 +608,20 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 				fmt.Fprintln(out, err)
 			}
 		}
+
+		if errors.Is(err, context.Canceled) {
+			// Eval has been interrupted by the above signal handling goroutine.
+			ctx, cancel = context.WithCancel(context.Background())
+		} else {
+			// No interrupt, release the above signal handling goroutine.
+			end <- struct{}{}
+		}
+
 		src = ""
 		prompt(v)
 	}
+	cancel() // Do not defer, as cancel func may change over time.
+	// TODO(mpl): log s.Err() if not nil?
 }
 
 // Repl performs a Read-Eval-Print-Loop on input file descriptor.
@@ -598,17 +647,4 @@ func getPrompt(in io.Reader, out io.Writer) func(reflect.Value) {
 		}
 	}
 	return func(reflect.Value) {}
-}
-
-// handleSignal wraps signal handling for eval cancellation.
-func handleSignal(ctx context.Context, cancel context.CancelFunc) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		select {
-		case <-c:
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
 }

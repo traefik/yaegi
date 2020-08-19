@@ -7,4 +7,4 @@ func main() {
 }
 
 // Error:
-// 5:2: illegal operand types for '+=' operator
+// 5:2: invalid operation: mismatched types int and float64

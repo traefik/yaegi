@@ -191,6 +191,8 @@ type astError error
 type action uint
 
 // Node actions for the go language.
+// It is important for type checking that *Assign directly
+// follows it non-assign counterpart.
 const (
 	aNop action = iota
 	aAddr
@@ -251,7 +253,6 @@ const (
 	aTypeAssert
 	aXor
 	aXorAssign
-	aMax
 )
 
 var actions = [...]string{
@@ -321,6 +322,15 @@ func (a action) String() string {
 	return "Action(" + strconv.Itoa(int(a)) + ")"
 }
 
+func isAssignAction(a action) bool {
+	switch a {
+	case aAddAssign, aAndAssign, aAndNotAssign, aMulAssign, aOrAssign,
+		aQuoAssign, aRemAssign, aShlAssign, aShrAssign, aSubAssign, aXorAssign:
+		return true
+	}
+	return false
+}
+
 func (interp *Interpreter) firstToken(src string) token.Token {
 	var s scanner.Scanner
 	file := interp.fset.AddFile("", interp.fset.Base(), len(src))
@@ -331,30 +341,30 @@ func (interp *Interpreter) firstToken(src string) token.Token {
 }
 
 // Note: no type analysis is performed at this stage, it is done in pre-order
-// processing of CFG, in order to accommodate forward type declarations
+// processing of CFG, in order to accommodate forward type declarations.
 
 // ast parses src string containing Go code and generates the corresponding AST.
 // The package name and the AST root node are returned.
 // The given name is used to set the filename of the relevant source file in the
 // interpreter's FileSet.
-func (interp *Interpreter) ast(src, name string) (string, *node, error) {
+func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error) {
 	var inFunc bool
 	var mode parser.Mode
 
 	// Allow incremental parsing of declarations or statements, by inserting
 	// them in a pseudo file package or function. Those statements or
-	// declarations will be always evaluated in the global scope
-	if interp.inREPL {
+	// declarations will be always evaluated in the global scope.
+	if inc {
 		switch interp.firstToken(src) {
 		case token.PACKAGE:
-			// nothing to do
+			// nothing to do.
 		case token.CONST, token.FUNC, token.IMPORT, token.TYPE, token.VAR:
 			src = "package main;" + src
 		default:
 			inFunc = true
 			src = "package main; func main() {" + src + "}"
 		}
-		// Parse comments in REPL mode, to allow tag setting
+		// Parse comments in REPL mode, to allow tag setting.
 		mode |= parser.ParseComments
 	}
 
@@ -479,19 +489,11 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 			n.ident = a.Value
 			switch a.Kind {
 			case token.CHAR:
+				// Char cannot be converted to a const here as we cannot tell the type.
 				v, _, _, _ := strconv.UnquoteChar(a.Value[1:len(a.Value)-1], '\'')
 				n.rval = reflect.ValueOf(v)
-			case token.FLOAT:
+			case token.FLOAT, token.IMAG, token.INT, token.STRING:
 				v := constant.MakeFromLiteral(a.Value, a.Kind, 0)
-				n.rval = reflect.ValueOf(v)
-			case token.IMAG:
-				v := constant.MakeFromLiteral(a.Value, a.Kind, 0)
-				n.rval = reflect.ValueOf(v)
-			case token.INT:
-				v := constant.MakeFromLiteral(a.Value, a.Kind, 0)
-				n.rval = reflect.ValueOf(v)
-			case token.STRING:
-				v, _ := strconv.Unquote(a.Value)
 				n.rval = reflect.ValueOf(v)
 			}
 			st.push(n, nod)
@@ -797,7 +799,7 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 			}
 
 		case *ast.UnaryExpr:
-			var kind = unaryExpr
+			kind := unaryExpr
 			var act action
 			switch a.Op {
 			case token.ADD:
@@ -851,7 +853,7 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 	})
 	if inFunc {
 		// Incremental parsing: statements were inserted in a pseudo function.
-		// Set root to function body so its statements are evaluated in global scope
+		// Set root to function body so its statements are evaluated in global scope.
 		root = root.child[1].child[3]
 		root.anc = nil
 	}

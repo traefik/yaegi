@@ -42,11 +42,6 @@ func runCheck(t *testing.T, p string) {
 	}
 	wanted = strings.TrimSpace(wanted)
 
-	src, err := ioutil.ReadFile(p)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// catch stdout
 	backupStdout := os.Stdout
 	defer func() { os.Stdout = backupStdout }()
@@ -61,7 +56,7 @@ func runCheck(t *testing.T, p string) {
 	i.Use(stdlib.Symbols)
 	i.Use(unsafe.Symbols)
 
-	_, err = i.Eval(string(src), p, false)
+	_, err := i.EvalPath(p)
 	if errWanted {
 		if err == nil {
 			t.Fatalf("got nil error, want: %q", wanted)

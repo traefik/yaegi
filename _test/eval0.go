@@ -9,13 +9,13 @@ import (
 func main() {
 	log.SetFlags(log.Lshortfile)
 	i := interp.New(interp.Options{})
-	if _, err := i.EvalInc(`func f() (int, int) { return 1, 2 }`); err != nil {
+	if _, err := i.Eval(`func f() (int, int) { return 1, 2 }`); err != nil {
 		log.Fatal(err)
 	}
-	if _, err := i.EvalInc(`a, b := f()`); err != nil {
+	if _, err := i.Eval(`a, b := f()`); err != nil {
 		log.Fatal(err)
 	}
-	if _, err := i.EvalInc(`println(a, b)`); err != nil {
+	if _, err := i.Eval(`println(a, b)`); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -41,6 +41,8 @@
     "testpackage",
     "goerr113",
     "nestif",
+    "exhaustive",
+    "nlreturn",
   ]
 
 [issues]

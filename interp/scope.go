@@ -53,8 +53,6 @@ type symbol struct {
 	rval    reflect.Value // default value (used for constants)
 	builtin bltnGenerator // Builtin function or nil
 	global  bool          // true if symbol is defined in global space
-	// TODO: implement constant checking
-	//constant bool             // true if symbol value is constant
 }
 
 // scope type stores symbols in maps, and frame layout as array of types

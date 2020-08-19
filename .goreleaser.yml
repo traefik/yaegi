@@ -3,7 +3,7 @@ project_name: yaegi
 builds:
   - id: yaegi
     binary: yaegi
-    main: ./cmd/yaegi/yaegi.go
+    main: ./cmd/yaegi/
 
     goos:
       - darwin
@@ -28,7 +28,7 @@ builds:
 
   - id: goexports
     binary: goexports
-    main: ./cmd/goexports/goexports.go
+    main: ./cmd/goexports/
 
     goos:
       - darwin
