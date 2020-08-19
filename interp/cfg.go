@@ -334,6 +334,8 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					return false
 				}
 				recvTypeNode.typ = typ
+				n.child[2].typ.recv = typ
+				n.typ.recv = typ
 				index := sc.add(typ)
 				if len(fr.child) > 1 {
 					sc.sym[fr.child[0].ident] = &symbol{index: index, kind: varSym, typ: typ}
@@ -1334,11 +1336,15 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				// Search for field must then be performed on type T only (not *T)
 				switch method, ok := n.typ.rtype.MethodByName(n.child[1].ident); {
 				case ok:
+					hasRecvType := n.typ.rtype.Kind() != reflect.Interface
 					n.val = method.Index
 					n.gen = getIndexBinMethod
 					n.action = aGetMethod
 					n.recv = &receiver{node: n.child[0]}
 					n.typ = &itype{cat: valueT, rtype: method.Type, isBinMethod: true}
+					if hasRecvType {
+						n.typ.recv = n.typ
+					}
 				case n.typ.rtype.Kind() == reflect.Ptr:
 					if field, ok := n.typ.rtype.Elem().FieldByName(n.child[1].ident); ok {
 						n.typ = &itype{cat: valueT, rtype: field.Type}
@@ -1358,7 +1364,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						if m2, ok2 := pt.MethodByName(n.child[1].ident); ok2 {
 							n.val = m2.Index
 							n.gen = getIndexBinPtrMethod
-							n.typ = &itype{cat: valueT, rtype: m2.Type}
+							n.typ = &itype{cat: valueT, rtype: m2.Type, recv: &itype{cat: valueT, rtype: pt}}
 							n.recv = &receiver{node: n.child[0]}
 							n.action = aGetMethod
 						} else {
@@ -1372,14 +1378,14 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				// Handle pointer on object defined in runtime
 				if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
 					n.val = method.Index
-					n.typ = &itype{cat: valueT, rtype: method.Type}
+					n.typ = &itype{cat: valueT, rtype: method.Type, recv: n.typ}
 					n.recv = &receiver{node: n.child[0]}
 					n.gen = getIndexBinMethod
 					n.action = aGetMethod
 				} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
 					n.val = method.Index
 					n.gen = getIndexBinMethod
-					n.typ = &itype{cat: valueT, rtype: method.Type}
+					n.typ = &itype{cat: valueT, rtype: method.Type, recv: &itype{cat: valueT, rtype: reflect.PtrTo(n.typ.val.rtype)}}
 					n.recv = &receiver{node: n.child[0]}
 					n.action = aGetMethod
 				} else if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
@@ -1445,7 +1451,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				}
 				n.recv = &receiver{node: n.child[0], index: lind}
 				n.val = append([]int{m.Index}, lind...)
-				n.typ = &itype{cat: valueT, rtype: m.Type}
+				n.typ = &itype{cat: valueT, rtype: m.Type, recv: n.child[0].typ}
 			} else if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
 				// Handle struct field
 				n.val = ti

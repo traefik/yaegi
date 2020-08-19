@@ -634,11 +634,6 @@ func (check typecheck) arguments(n *node, child []*node, fun *node, ellipsis boo
 	}
 
 	var cnt int
-	if fun.kind == selectorExpr && fun.typ.cat == valueT && fun.recv != nil && !isInterface(fun.recv.node.typ) {
-		// If this is a bin call, and we have a receiver and the receiver is
-		// not an interface, then the first input is the receiver, so skip it.
-		cnt++
-	}
 	for i, arg := range child {
 		ellip := i == l-1 && ellipsis
 		if err := check.argument(arg, fun.typ, cnt, ellip); err != nil {
