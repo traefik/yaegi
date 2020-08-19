@@ -1261,6 +1261,36 @@ func (t *itype) lookupBinMethod(name string) (m reflect.Method, index []int, isP
 	return m, index, isPtr, ok
 }
 
+func lookupFieldOrMethod(t *itype, name string) *itype {
+	switch {
+	case t.cat == valueT || t.cat == ptrT && t.val.cat == valueT:
+		m, _, isPtr, ok := t.lookupBinMethod(name)
+		if !ok {
+			return nil
+		}
+		var recv *itype
+		if t.rtype.Kind() != reflect.Interface {
+			recv = t
+			if isPtr && t.cat != ptrT && t.rtype.Kind() != reflect.Ptr {
+				recv = &itype{cat: ptrT, val: t}
+			}
+		}
+		return &itype{cat: valueT, rtype: m.Type, recv: recv}
+	case t.cat == interfaceT:
+		seq := t.lookupField(name)
+		if seq == nil {
+			return nil
+		}
+		return t.fieldSeq(seq)
+	default:
+		n, _ := t.lookupMethod(name)
+		if n == nil {
+			return nil
+		}
+		return n.typ
+	}
+}
+
 func exportName(s string) string {
 	if canExport(s) {
 		return s

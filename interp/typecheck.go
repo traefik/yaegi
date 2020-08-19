@@ -531,14 +531,13 @@ func (check typecheck) sliceExpr(n *node) error {
 func (check typecheck) typeAssertionExpr(n *node, typ *itype) error {
 	// TODO(nick): This type check is not complete and should be revisited once
 	// https://github.com/golang/go/issues/39717 lands. It is currently impractical to
-	// type check Named types as they cannot be asserted. There are also issues checking
-	// the method signatures. We also cannot check if a method has a ptr receiver right
-	// now.
+	// type check Named types as they cannot be asserted.
 
 	if n.typ.TypeOf().Kind() != reflect.Interface {
 		return n.cfgErrorf("invalid type assertion: non-interface type %s on left", n.typ.id())
 	}
-	if len(n.typ.methods()) == 0 {
+	ims := n.typ.methods()
+	if len(ims) == 0 {
 		// Empty interface must be a dynamic check.
 		return nil
 	}
@@ -549,12 +548,33 @@ func (check typecheck) typeAssertionExpr(n *node, typ *itype) error {
 		return nil
 	}
 
-	m := typ.methods()
-	for k, _ := range n.typ.methods() {
-		// TODO: We cannot compare methods, as in the valueT case
-		// 		 the method has the receiver as the first param.
-		if m[k] == "" {
-			return n.cfgErrorf("impossible type assertion: %s does not implement %s (missing %v method)", typ.id(), n.typ.id(), k)
+	for name := range ims {
+		im := lookupFieldOrMethod(n.typ, name)
+		tm := lookupFieldOrMethod(typ, name)
+		if im == nil {
+			// This should not be possible.
+			continue
+		}
+		if tm == nil {
+			return n.cfgErrorf("impossible type assertion: %s does not implement %s (missing %v method)", typ.id(), n.typ.id(), name)
+		}
+		if tm.recv != nil && tm.recv.TypeOf().Kind() == reflect.Ptr && typ.TypeOf().Kind() != reflect.Ptr {
+			return n.cfgErrorf("impossible type assertion: %s does not implement %s as %q method has a pointer receiver", typ.id(), n.typ.id(), name)
+		}
+
+		err := n.cfgErrorf("impossible type assertion: %s does not implement %s", typ.id(), n.typ.id())
+		if im.numIn() != tm.numIn() || im.numOut() != tm.numOut() {
+			return err
+		}
+		for i := 0; i < im.numIn(); i++ {
+			if !im.in(i).equals(tm.in(i)) {
+				return err
+			}
+		}
+		for i := 0; i < im.numOut(); i++ {
+			if !im.out(i).equals(tm.out(i)) {
+				return err
+			}
 		}
 	}
 	return nil
