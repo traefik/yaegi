@@ -1222,7 +1222,7 @@ func (t *itype) lookupMethod(name string) (*node, []int) {
 }
 
 // LookupBinMethod returns a method and a path to access a field in a struct object (the receiver).
-func (t *itype) lookupBinMethod(name string) (m reflect.Method, index []int, isPtr bool, ok bool) {
+func (t *itype) lookupBinMethod(name string) (m reflect.Method, index []int, isPtr, ok bool) {
 	if t.cat == ptrT {
 		return t.val.lookupBinMethod(name)
 	}
@@ -1349,8 +1349,14 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 			defined[name] = t
 		}
 		var fields []reflect.StructField
+		// TODO(mpl): make Anonymous work for recursive types too. Maybe not worth the
+		// effort, and we're better off just waiting for
+		// https://github.com/golang/go/issues/39717 to land.
 		for _, f := range t.field {
-			field := reflect.StructField{Name: exportName(f.name), Type: f.typ.refType(defined, wrapRecursive), Tag: reflect.StructTag(f.tag)}
+			field := reflect.StructField{
+				Name: exportName(f.name), Type: f.typ.refType(defined, wrapRecursive),
+				Tag: reflect.StructTag(f.tag), Anonymous: (f.embed && !recursive),
+			}
 			fields = append(fields, field)
 		}
 		if recursive && wrapRecursive {
