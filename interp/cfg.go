@@ -1681,6 +1681,12 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 
 		case sliceExpr:
 			wireChild(n)
+
+			err = check.sliceExpr(n)
+			if err != nil {
+				break
+			}
+
 			if n.typ, err = nodeType(interp, sc, n); err != nil {
 				return
 			}
