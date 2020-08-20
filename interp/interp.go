@@ -615,11 +615,13 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 	}()
 
 	for {
+		var line string
+
 		select {
 		case <-end:
 			cancel()
 			return
-		case line := <-lines:
+		case line = <-lines:
 			src += line + "\n"
 		}
 
@@ -627,7 +629,7 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		if err != nil {
 			switch e := err.(type) {
 			case scanner.ErrorList:
-				if len(e) == 0 || ignoreScannerError(e[0], s.Text()) {
+				if len(e) == 0 || ignoreScannerError(e[0], line) {
 					continue
 				}
 				fmt.Fprintln(out, e[0])
