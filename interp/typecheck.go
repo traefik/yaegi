@@ -630,41 +630,48 @@ func (check typecheck) conversion(n *node, typ *itype) error {
 	return nil
 }
 
+type param struct {
+	nod *node
+	typ *itype
+}
+
+// unpackParams unpacks child parameters into a slice of param.
+// If there is only 1 child and it is a callExpr with an n-value return,
+// the return types are returned, otherwise the original child nodes are
+// returned with nil typ.
+func (check typecheck) unpackParams(child []*node) (params []param) {
+	if len(child) == 1 && isCall(child[0]) && child[0].child[0].typ.numOut() > 1 {
+		c0 := child[0]
+		ftyp := child[0].child[0].typ
+		for i := 0; i < ftyp.numOut(); i++ {
+			params = append(params, param{nod: c0, typ: ftyp.out(i)})
+		}
+		return params
+	}
+
+	for _, c := range child {
+		params = append(params, param{nod: c})
+	}
+	return params
+}
+
 // arguments type checks the call expression arguments.
 func (check typecheck) arguments(n *node, child []*node, fun *node, ellipsis bool) error {
+	params := check.unpackParams(child)
 	l := len(child)
 	if ellipsis {
 		if !fun.typ.isVariadic() {
 			return n.cfgErrorf("invalid use of ..., corresponding parameter is non-variadic")
 		}
-		if len(child) == 1 && isCall(child[0]) && child[0].child[0].typ.numOut() > 1 {
+		if len(params) > l {
 			return child[0].cfgErrorf("cannot use ... with %d-valued %s", child[0].child[0].typ.numOut(), child[0].child[0].typ.id())
 		}
 	}
 
-	if len(child) == 1 && isCall(child[0]) && child[0].child[0].typ.numOut() > 1 {
-		// Handle the case of unpacking a n-valued function into the params.
-		c := child[0].child[0]
-		l := c.typ.numOut()
-		if l < fun.typ.numIn() {
-			return child[0].cfgErrorf("not enough arguments in call to %s", fun.name())
-		}
-		for i := 0; i < l; i++ {
-			arg := getArg(fun.typ, i)
-			if arg == nil {
-				return child[0].cfgErrorf("too many arguments")
-			}
-			if !c.typ.out(i).assignableTo(arg) {
-				return child[0].cfgErrorf("cannot use %s as type %s", c.typ.id(), getArgsID(fun.typ))
-			}
-		}
-		return nil
-	}
-
 	var cnt int
-	for i, arg := range child {
+	for i, param := range params {
 		ellip := i == l-1 && ellipsis
-		if err := check.argument(arg, fun.typ, cnt, ellip); err != nil {
+		if err := check.argument(param, fun.typ, cnt, l, ellip); err != nil {
 			return err
 		}
 		cnt++
@@ -679,29 +686,40 @@ func (check typecheck) arguments(n *node, child []*node, fun *node, ellipsis boo
 	return nil
 }
 
-func (check typecheck) argument(n *node, ftyp *itype, i int, ellipsis bool) error {
-	typ := getArg(ftyp, i)
-	if typ == nil {
-		return n.cfgErrorf("too many arguments")
+func (check typecheck) argument(p param, ftyp *itype, i, l int, ellipsis bool) error {
+	atyp := getArg(ftyp, i)
+	if atyp == nil {
+		return p.nod.cfgErrorf("too many arguments")
 	}
 
-	if isCall(n) && n.child[0].typ.numOut() != 1 {
-		return n.cfgErrorf("cannot use %s as type %s", n.child[0].typ.id(), typ.id())
+	if p.typ == nil && isCall(p.nod) && p.nod.child[0].typ.numOut() != 1 {
+		if l == 1 {
+			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.child[0].typ.id(), getArgsID(ftyp))
+		}
+		return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.child[0].typ.id(), atyp.id())
 	}
 
 	if ellipsis {
 		if i != ftyp.numIn()-1 {
-			return n.cfgErrorf("can only use ... with matching parameter")
+			return p.nod.cfgErrorf("can only use ... with matching parameter")
 		}
-		t := n.typ.TypeOf()
-		if t.Kind() != reflect.Slice || !(&itype{cat: valueT, rtype: t.Elem()}).assignableTo(typ) {
-			return n.cfgErrorf("cannot use %s as type %s", n.typ.id(), (&itype{cat: arrayT, val: typ}).id())
+		t := p.nod.typ.TypeOf()
+		if p.typ != nil {
+			t = p.typ.TypeOf()
+		}
+		if t.Kind() != reflect.Slice || !(&itype{cat: valueT, rtype: t.Elem()}).assignableTo(atyp) {
+			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.typ.id(), (&itype{cat: arrayT, val: atyp}).id())
 		}
 		return nil
 	}
 
-	err := check.assignment(n, typ, "")
-	return err
+	if p.typ != nil {
+		if !p.typ.assignableTo(atyp) {
+			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.child[0].typ.id(), getArgsID(ftyp))
+		}
+		return nil
+	}
+	return check.assignment(p.nod, atyp, "")
 }
 
 func getArg(ftyp *itype, i int) *itype {
