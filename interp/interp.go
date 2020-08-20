@@ -598,12 +598,25 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		// TODO(mpl): log s.Err() if not nil?
 	}()
 
+	go func() {
+		for {
+			select {
+			case <-sig:
+				// Catch interrupt while EvalWithContext is running.
+				cancel()
+			case <-end:
+				return
+			}
+		}
+	}()
+
 	for {
 		select {
 		case <-end:
 			cancel()
 			return
 		case <-sig:
+			// Catch interrupt while input scanning.
 			cancel()
 		case line := <-lines:
 			src += line + "\n"
