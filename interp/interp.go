@@ -486,7 +486,10 @@ func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, 
 
 // EvalWithContext evaluates Go code represented as a string. It returns
 // a map on current interpreted package exported symbols.
-func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (v reflect.Value, err error) {
+func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (reflect.Value, error) {
+	var v reflect.Value
+	var err error
+
 	interp.mutex.Lock()
 	interp.done = make(chan struct{})
 	interp.cancelChan = !interp.opt.fastChan
@@ -503,8 +506,8 @@ func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (v r
 		interp.stop()
 		return reflect.Value{}, ctx.Err()
 	case <-done:
-		return v, err
 	}
+	return v, err
 }
 
 // stop sends a semaphore to all running frames and closes the chan
@@ -591,10 +594,10 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 	prompt(v)
 
 	go func() {
+		defer close(end)
 		for s.Scan() {
 			lines <- s.Text()
 		}
-		close(end)
 		// TODO(mpl): log s.Err() if not nil?
 	}()
 
