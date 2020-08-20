@@ -527,6 +527,59 @@ func (check typecheck) sliceExpr(n *node) error {
 	return nil
 }
 
+// typeAssertionExpr type checks a type assert expression.
+func (check typecheck) typeAssertionExpr(n *node, typ *itype) error {
+	// TODO(nick): This type check is not complete and should be revisited once
+	// https://github.com/golang/go/issues/39717 lands. It is currently impractical to
+	// type check Named types as they cannot be asserted.
+
+	if n.typ.TypeOf().Kind() != reflect.Interface {
+		return n.cfgErrorf("invalid type assertion: non-interface type %s on left", n.typ.id())
+	}
+	ims := n.typ.methods()
+	if len(ims) == 0 {
+		// Empty interface must be a dynamic check.
+		return nil
+	}
+
+	if isInterface(typ) {
+		// Asserting to an interface is a dynamic check as we must look to the
+		// underlying struct.
+		return nil
+	}
+
+	for name := range ims {
+		im := lookupFieldOrMethod(n.typ, name)
+		tm := lookupFieldOrMethod(typ, name)
+		if im == nil {
+			// This should not be possible.
+			continue
+		}
+		if tm == nil {
+			return n.cfgErrorf("impossible type assertion: %s does not implement %s (missing %v method)", typ.id(), n.typ.id(), name)
+		}
+		if tm.recv != nil && tm.recv.TypeOf().Kind() == reflect.Ptr && typ.TypeOf().Kind() != reflect.Ptr {
+			return n.cfgErrorf("impossible type assertion: %s does not implement %s as %q method has a pointer receiver", typ.id(), n.typ.id(), name)
+		}
+
+		err := n.cfgErrorf("impossible type assertion: %s does not implement %s", typ.id(), n.typ.id())
+		if im.numIn() != tm.numIn() || im.numOut() != tm.numOut() {
+			return err
+		}
+		for i := 0; i < im.numIn(); i++ {
+			if !im.in(i).equals(tm.in(i)) {
+				return err
+			}
+		}
+		for i := 0; i < im.numOut(); i++ {
+			if !im.out(i).equals(tm.out(i)) {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // conversion type checks the conversion of n to typ.
 func (check typecheck) conversion(n *node, typ *itype) error {
 	var c constant.Value
@@ -601,11 +654,6 @@ func (check typecheck) arguments(n *node, child []*node, fun *node, ellipsis boo
 	}
 
 	var cnt int
-	if fun.kind == selectorExpr && fun.typ.cat == valueT && fun.recv != nil && !isInterface(fun.recv.node.typ) {
-		// If this is a bin call, and we have a receiver and the receiver is
-		// not an interface, then the first input is the receiver, so skip it.
-		cnt++
-	}
 	for i, arg := range child {
 		ellip := i == l-1 && ellipsis
 		if err := check.argument(arg, fun.typ, cnt, ellip); err != nil {

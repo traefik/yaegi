@@ -108,6 +108,7 @@ type itype struct {
 	field       []structField // Array of struct fields if structT or interfaceT
 	key         *itype        // Type of key element if MapT or nil
 	val         *itype        // Type of value element if chanT,chanSendT, chanRecvT, mapT, ptrT, aliasT, arrayT or variadicT
+	recv        *itype        // Receiver type for funcT or nil
 	arg         []*itype      // Argument types if funcT or nil
 	ret         []*itype      // Return types if funcT or nil
 	method      []*node       // Associated methods or nil
@@ -559,7 +560,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			if m, _ := lt.lookupMethod(name); m != nil {
 				t, err = nodeType(interp, sc, m.child[2])
 			} else if bm, _, _, ok := lt.lookupBinMethod(name); ok {
-				t = &itype{cat: valueT, rtype: bm.Type, isBinMethod: true, scope: sc}
+				t = &itype{cat: valueT, rtype: bm.Type, recv: lt, isBinMethod: true, scope: sc}
 			} else if ti := lt.lookupField(name); len(ti) > 0 {
 				t = lt.fieldSeq(ti)
 			} else if bs, _, ok := lt.lookupBinField(name); ok {
@@ -761,11 +762,16 @@ func (t *itype) numIn() int {
 	case funcT:
 		return len(t.arg)
 	case valueT:
-		if t.rtype.Kind() == reflect.Func {
-			return t.rtype.NumIn()
+		if t.rtype.Kind() != reflect.Func {
+			return 0
 		}
+		in := t.rtype.NumIn()
+		if t.recv != nil {
+			in--
+		}
+		return in
 	}
-	return 1
+	return 0
 }
 
 func (t *itype) in(i int) *itype {
@@ -774,6 +780,9 @@ func (t *itype) in(i int) *itype {
 		return t.arg[i]
 	case valueT:
 		if t.rtype.Kind() == reflect.Func {
+			if t.recv != nil {
+				i++
+			}
 			if t.rtype.IsVariadic() && i == t.rtype.NumIn()-1 {
 				return &itype{cat: variadicT, val: &itype{cat: valueT, rtype: t.rtype.In(i).Elem()}}
 			}
@@ -995,6 +1004,14 @@ func (t *itype) methods() methodSet {
 				res[m.Name] = m.Type.String()
 			}
 		case ptrT:
+			if typ.val.cat == valueT {
+				// Ptr receiver methods need to be found with the ptr type.
+				typ.TypeOf() // Ensure the rtype exists.
+				for i := typ.rtype.NumMethod() - 1; i >= 0; i-- {
+					m := typ.rtype.Method(i)
+					res[m.Name] = m.Type.String()
+				}
+			}
 			for k, v := range getMethods(typ.val) {
 				res[k] = v
 			}
@@ -1242,6 +1259,36 @@ func (t *itype) lookupBinMethod(name string) (m reflect.Method, index []int, isP
 		}
 	}
 	return m, index, isPtr, ok
+}
+
+func lookupFieldOrMethod(t *itype, name string) *itype {
+	switch {
+	case t.cat == valueT || t.cat == ptrT && t.val.cat == valueT:
+		m, _, isPtr, ok := t.lookupBinMethod(name)
+		if !ok {
+			return nil
+		}
+		var recv *itype
+		if t.rtype.Kind() != reflect.Interface {
+			recv = t
+			if isPtr && t.cat != ptrT && t.rtype.Kind() != reflect.Ptr {
+				recv = &itype{cat: ptrT, val: t}
+			}
+		}
+		return &itype{cat: valueT, rtype: m.Type, recv: recv}
+	case t.cat == interfaceT:
+		seq := t.lookupField(name)
+		if seq == nil {
+			return nil
+		}
+		return t.fieldSeq(seq)
+	default:
+		n, _ := t.lookupMethod(name)
+		if n == nil {
+			return nil
+		}
+		return n.typ
+	}
 }
 
 func exportName(s string) string {
