@@ -8,12 +8,19 @@ import (
 	"strings"
 )
 
-func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
+// importSrc calls gta on the source code for the package identified by
+// importPath. rPath is the relative path to the directory containing the source
+// code for the package. It can also be "main" as a special value.
+func (interp *Interpreter) importSrc(rPath, importPath string) (string, error) {
 	var dir string
 	var err error
 
-	if interp.srcPkg[path] != nil {
-		return interp.pkgNames[path], nil
+	if interp.srcPkg[importPath] != nil {
+		name, ok := interp.pkgNames[importPath]
+		if !ok {
+			return "", fmt.Errorf("inconsistent knowledge about %s", importPath)
+		}
+		return name, nil
 	}
 
 	// For relative import paths in the form "./xxx" or "../xxx", the initial
@@ -21,25 +28,30 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 	// was provided.
 	// In all other cases, absolute import paths are resolved from the GOPATH
 	// and the nested "vendor" directories.
-	if isPathRelative(path) {
+	if isPathRelative(importPath) {
 		if rPath == mainID {
 			rPath = "."
 		}
-		dir = filepath.Join(filepath.Dir(interp.Name), rPath, path)
+		dir = filepath.Join(filepath.Dir(interp.name), rPath, importPath)
 	} else {
-		root, err := interp.rootFromSourceLocation(rPath)
-		if err != nil {
-			return "", err
+		var root string
+		if rPath == mainID {
+			root, err = interp.rootFromSourceLocation()
+			if err != nil {
+				return "", err
+			}
+		} else {
+			root = rPath
 		}
-		if dir, rPath, err = pkgDir(interp.context.GOPATH, root, path); err != nil {
+		if dir, rPath, err = pkgDir(interp.context.GOPATH, root, importPath); err != nil {
 			return "", err
 		}
 	}
 
-	if interp.rdir[path] {
-		return "", fmt.Errorf("import cycle not allowed\n\timports %s", path)
+	if interp.rdir[importPath] {
+		return "", fmt.Errorf("import cycle not allowed\n\timports %s", importPath)
 	}
-	interp.rdir[path] = true
+	interp.rdir[importPath] = true
 
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
@@ -67,7 +79,7 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 		}
 
 		var pname string
-		if pname, root, err = interp.ast(string(buf), name); err != nil {
+		if pname, root, err = interp.ast(string(buf), name, false); err != nil {
 			return "", err
 		}
 		if root == nil {
@@ -88,9 +100,9 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 		}
 		rootNodes = append(rootNodes, root)
 
-		subRPath := effectivePkg(rPath, path)
+		subRPath := effectivePkg(rPath, importPath)
 		var list []*node
-		list, err = interp.gta(root, subRPath, path)
+		list, err = interp.gta(root, subRPath, importPath)
 		if err != nil {
 			return "", err
 		}
@@ -98,8 +110,8 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 	}
 
 	// Revisit incomplete nodes where GTA could not complete.
-	for pkg, nodes := range revisit {
-		if err = interp.gtaRetry(nodes, pkg, path); err != nil {
+	for _, nodes := range revisit {
+		if err = interp.gtaRetry(nodes, importPath); err != nil {
 			return "", err
 		}
 	}
@@ -107,7 +119,7 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 	// Generate control flow graphs
 	for _, root := range rootNodes {
 		var nodes []*node
-		if nodes, err = interp.cfg(root, path); err != nil {
+		if nodes, err = interp.cfg(root, importPath); err != nil {
 			return "", err
 		}
 		initNodes = append(initNodes, nodes...)
@@ -116,8 +128,8 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 	// Register source package in the interpreter. The package contains only
 	// the global symbols in the package scope.
 	interp.mutex.Lock()
-	interp.srcPkg[path] = interp.scopes[path].sym
-	interp.pkgNames[path] = pkgName
+	interp.srcPkg[importPath] = interp.scopes[importPath].sym
+	interp.pkgNames[importPath] = pkgName
 
 	interp.frame.mutex.Lock()
 	interp.resizeFrame()
@@ -133,7 +145,7 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 	}
 
 	// Wire and execute global vars
-	n, err := genGlobalVars(rootNodes, interp.scopes[path])
+	n, err := genGlobalVars(rootNodes, interp.scopes[importPath])
 	if err != nil {
 		return "", err
 	}
@@ -151,10 +163,13 @@ func (interp *Interpreter) importSrc(rPath, path string) (string, error) {
 	return pkgName, nil
 }
 
-func (interp *Interpreter) rootFromSourceLocation(rPath string) (string, error) {
-	sourceFile := interp.Name
-	if rPath != mainID || !strings.HasSuffix(sourceFile, ".go") {
-		return rPath, nil
+// rootFromSourceLocation returns the path to the directory containing the input
+// Go file given to the interpreter, relative to $GOPATH/src.
+// It is meant to be called in the case when the initial input is a main package.
+func (interp *Interpreter) rootFromSourceLocation() (string, error) {
+	sourceFile := interp.name
+	if sourceFile == DefaultSourceName {
+		return "", nil
 	}
 	wd, err := os.Getwd()
 	if err != nil {
@@ -168,24 +183,24 @@ func (interp *Interpreter) rootFromSourceLocation(rPath string) (string, error) 
 	return root, nil
 }
 
-// pkgDir returns the absolute path in filesystem for a package given its name and
-// the root of the subtree dependencies.
-func pkgDir(goPath string, root, path string) (string, string, error) {
+// pkgDir returns the absolute path in filesystem for a package given its import path
+// and the root of the subtree dependencies.
+func pkgDir(goPath string, root, importPath string) (string, string, error) {
 	rPath := filepath.Join(root, "vendor")
-	dir := filepath.Join(goPath, "src", rPath, path)
+	dir := filepath.Join(goPath, "src", rPath, importPath)
 
 	if _, err := os.Stat(dir); err == nil {
 		return dir, rPath, nil // found!
 	}
 
-	dir = filepath.Join(goPath, "src", effectivePkg(root, path))
+	dir = filepath.Join(goPath, "src", effectivePkg(root, importPath))
 
 	if _, err := os.Stat(dir); err == nil {
 		return dir, root, nil // found!
 	}
 
 	if len(root) == 0 {
-		return "", "", fmt.Errorf("unable to find source related to: %q", path)
+		return "", "", fmt.Errorf("unable to find source related to: %q", importPath)
 	}
 
 	rootPath := filepath.Join(goPath, "src", root)
@@ -194,7 +209,7 @@ func pkgDir(goPath string, root, path string) (string, string, error) {
 		return "", "", err
 	}
 
-	return pkgDir(goPath, prevRoot, path)
+	return pkgDir(goPath, prevRoot, importPath)
 }
 
 const vendor = "vendor"
@@ -208,7 +223,7 @@ func previousRoot(rootPath, root string) (string, error) {
 	// TODO(mpl): maybe it works for the special case main, but can't be bothered for now.
 	if root != mainID && final != vendor {
 		root = strings.TrimSuffix(root, string(filepath.Separator))
-		prefix := strings.TrimSuffix(rootPath, root)
+		prefix := strings.TrimSuffix(strings.TrimSuffix(rootPath, root), string(filepath.Separator))
 
 		// look for the closest vendor in one of our direct ancestors, as it takes priority.
 		var vendored string
@@ -228,10 +243,11 @@ func previousRoot(rootPath, root string) (string, error) {
 				break
 			}
 
-			// just an additional failsafe, stop if we reach the filesystem root.
+			// just an additional failsafe, stop if we reach the filesystem root, or dot (if
+			// we are dealing with relative paths).
 			// TODO(mpl): It should probably be a critical error actually,
 			// as we shouldn't have gone that high up in the tree.
-			if parent == string(filepath.Separator) {
+			if parent == string(filepath.Separator) || parent == "." {
 				break
 			}
 		}

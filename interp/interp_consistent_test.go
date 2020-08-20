@@ -76,6 +76,11 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "redeclaration-global4.go" || // expect error
 			file.Name() == "redeclaration-global5.go" || // expect error
 			file.Name() == "redeclaration-global6.go" || // expect error
+			file.Name() == "redeclaration-global7.go" || // expect error
+			file.Name() == "pkgname0.go" || // has deps
+			file.Name() == "pkgname1.go" || // expect error
+			file.Name() == "pkgname2.go" || // has deps
+			file.Name() == "ipp_as_key.go" || // has deps
 			file.Name() == "restricted0.go" || // expect error
 			file.Name() == "restricted1.go" || // expect error
 			file.Name() == "restricted2.go" || // expect error
@@ -97,11 +102,6 @@ func TestInterpConsistencyBuild(t *testing.T) {
 		t.Run(file.Name(), func(t *testing.T) {
 			filePath := filepath.Join(baseDir, file.Name())
 
-			src, err := ioutil.ReadFile(filePath)
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			// catch stdout
 			backupStdout := os.Stdout
 			defer func() {
@@ -111,12 +111,11 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			os.Stdout = w
 
 			i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
-			i.Name = filePath
 			i.Use(stdlib.Symbols)
 			i.Use(interp.Symbols)
 			i.Use(unsafe.Symbols)
 
-			_, err = i.Eval(string(src))
+			_, err = i.EvalPath(filePath)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -246,16 +245,10 @@ func TestInterpErrorConsistency(t *testing.T) {
 
 			filePath := filepath.Join("..", "_test", test.fileName)
 
-			src, err := ioutil.ReadFile(filePath)
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
-			i.Name = filePath
 			i.Use(stdlib.Symbols)
 
-			_, errEval := i.Eval(string(src))
+			_, errEval := i.EvalPath(filePath)
 			if errEval == nil {
 				t.Fatal("An error is expected but got none.")
 			}

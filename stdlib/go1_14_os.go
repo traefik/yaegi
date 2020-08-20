@@ -22,7 +22,7 @@ func init() {
 		"Chtimes":           reflect.ValueOf(os.Chtimes),
 		"Clearenv":          reflect.ValueOf(os.Clearenv),
 		"Create":            reflect.ValueOf(os.Create),
-		"DevNull":           reflect.ValueOf(os.DevNull),
+		"DevNull":           reflect.ValueOf(constant.MakeFromLiteral("\"/dev/null\"", token.STRING, 0)),
 		"Environ":           reflect.ValueOf(os.Environ),
 		"ErrClosed":         reflect.ValueOf(&os.ErrClosed).Elem(),
 		"ErrExist":          reflect.ValueOf(&os.ErrExist).Elem(),

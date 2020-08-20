@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -111,13 +110,6 @@ func TestPackages(t *testing.T) {
 
 			var msg string
 			if test.evalFile != "" {
-				// setting i.Name as this is how it's actually done in cmd/yaegi
-				i.Name = test.evalFile
-				data, err := ioutil.ReadFile(test.evalFile)
-				if err != nil {
-					t.Fatal(err)
-				}
-
 				// TODO(mpl): this is brittle if we do concurrent tests and stuff, do better later.
 				stdout := os.Stdout
 				defer func() { os.Stdout = stdout }()
@@ -127,7 +119,7 @@ func TestPackages(t *testing.T) {
 				}
 				os.Stdout = pw
 
-				if _, err := i.Eval(string(data)); err != nil {
+				if _, err := i.EvalPath(test.evalFile); err != nil {
 					fatalStderrf(t, "%v", err)
 				}
 

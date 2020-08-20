@@ -77,7 +77,7 @@ func init() {
 		"CS8":                           reflect.ValueOf(constant.MakeFromLiteral("48", token.INT, 0)),
 		"CSIOCGIFCONF":                  reflect.ValueOf(constant.MakeFromLiteral("-1072666332", token.INT, 0)),
 		"CSIZE":                         reflect.ValueOf(constant.MakeFromLiteral("48", token.INT, 0)),
-		"CSMAP_DIR":                     reflect.ValueOf(syscall.CSMAP_DIR),
+		"CSMAP_DIR":                     reflect.ValueOf(constant.MakeFromLiteral("\"/usr/lib/nls/csmap/\"", token.STRING, 0)),
 		"CSTART":                        reflect.ValueOf(constant.MakeFromLiteral("17", token.INT, 0)),
 		"CSTOP":                         reflect.ValueOf(constant.MakeFromLiteral("19", token.INT, 0)),
 		"CSTOPB":                        reflect.ValueOf(constant.MakeFromLiteral("64", token.INT, 0)),
@@ -1313,7 +1313,7 @@ func init() {
 		"VWERSE":                        reflect.ValueOf(constant.MakeFromLiteral("13", token.INT, 0)),
 		"WPARSTART":                     reflect.ValueOf(constant.MakeFromLiteral("1", token.INT, 0)),
 		"WPARSTOP":                      reflect.ValueOf(constant.MakeFromLiteral("2", token.INT, 0)),
-		"WPARTTYNAME":                   reflect.ValueOf(syscall.WPARTTYNAME),
+		"WPARTTYNAME":                   reflect.ValueOf(constant.MakeFromLiteral("\"Global\"", token.STRING, 0)),
 		"Wait4":                         reflect.ValueOf(syscall.Wait4),
 		"Write":                         reflect.ValueOf(syscall.Write),
 

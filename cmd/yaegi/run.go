@@ -91,7 +91,7 @@ func run(arg []string) error {
 }
 
 func isPackageName(path string) bool {
-	return !strings.HasPrefix(path, "/") && !strings.HasPrefix(path, "./") && !strings.HasPrefix(path, "../")
+	return !strings.HasPrefix(path, "/") && !strings.HasPrefix(path, "./") && !strings.HasPrefix(path, "../") && !strings.HasSuffix(path, ".go")
 }
 
 func isDir(path string) bool {
@@ -119,8 +119,7 @@ func runFile(i *interp.Interpreter, path string) error {
 		i.REPL(strings.NewReader(s), os.Stdout)
 	} else {
 		// Files not starting with "#!" are supposed to be pure Go, directly Evaled.
-		i.Name = path
-		_, err := i.Eval(s)
+		_, err := i.EvalPath(path)
 		if err != nil {
 			fmt.Println(err)
 			if p, ok := err.(interp.Panic); ok {

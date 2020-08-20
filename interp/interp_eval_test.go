@@ -5,9 +5,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -75,7 +77,7 @@ func TestEvalAssign(t *testing.T) {
 		{src: `b := "Hello"; b += 1`, err: "1:42: invalid operation: mismatched types string and int"},
 		{src: `c := "Hello"; c -= " world"`, err: "1:42: invalid operation: operator -= not defined on string"},
 		{src: "e := 64.4; e %= 64", err: "1:39: invalid operation: operator %= not defined on float64"},
-		{src: "f := int64(3.2)", err: "1:33: truncated to integer"},
+		{src: "f := int64(3.2)", err: "1:39: cannot convert expression of type float64 to type int64"},
 		{src: "g := 1; g <<= 8", res: "256"},
 		{src: "h := 1; h >>= 8", res: "0"},
 	})
@@ -296,6 +298,8 @@ func Foo() {
 func TestEvalComparison(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
+		{src: `2 > 1`, res: "true"},
+		{src: `1.2 > 1.1`, res: "true"},
 		{src: `"hhh" > "ggg"`, res: "true"},
 		{
 			desc: "mismatched types",
@@ -350,6 +354,43 @@ func TestEvalCompositeStruct(t *testing.T) {
 		{src: `a := struct{A,B,C int}{A:1,A:2,C:3}`, err: "1:55: duplicate field name A in struct literal"},
 		{src: `a := struct{A,B,C int}{A:1,B:2.2,C:3}`, err: "1:57: 11/5 truncated to int"},
 		{src: `a := struct{A,B,C int}{A:1,2,C:3}`, err: "1:55: mixture of field:value and value elements in struct literal"},
+	})
+}
+
+func TestEvalSliceExpression(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `a := []int{0,1,2}[1:3]`, res: "[1 2]"},
+		{src: `a := []int{0,1,2}[:3]`, res: "[0 1 2]"},
+		{src: `a := []int{0,1,2}[:]`, res: "[0 1 2]"},
+		{src: `a := []int{0,1,2,3}[1:3:4]`, res: "[1 2]"},
+		{src: `a := []int{0,1,2,3}[:3:4]`, res: "[0 1 2]"},
+		{src: `ar := [3]int{0,1,2}
+			   a := ar[1:3]`, res: "[1 2]"},
+		{src: `a := (&[3]int{0,1,2})[1:3]`, res: "[1 2]"},
+		{src: `a := (&[3]int{0,1,2})[1:3]`, res: "[1 2]"},
+		{src: `s := "hello"[1:3]`, res: "el"},
+		{src: `str := "hello"
+			   s := str[1:3]`, res: "el"},
+		{src: `a := int(1)[0:1]`, err: "1:33: cannot slice type int"},
+		{src: `a := ([3]int{0,1,2})[1:3]`, err: "1:33: cannot slice type [3]int"},
+		{src: `a := (&[]int{0,1,2,3})[1:3]`, err: "1:33: cannot slice type *[]int"},
+		{src: `a := "hello"[1:3:4]`, err: "1:45: invalid operation: 3-index slice of string"},
+		{src: `ar := [3]int{0,1,2}
+			   a := ar[:4]`, err: "2:16: index int is out of bounds"},
+		{src: `a := []int{0,1,2,3}[1::4]`, err: "1:49: 2nd index required in 3-index slice"},
+		{src: `a := []int{0,1,2,3}[1:3:]`, err: "1:51: 3rd index required in 3-index slice"},
+		{src: `a := []int{0,1,2}[3:1]`, err: "invalid index values, must be low <= high <= max"},
+	})
+}
+
+func TestEvalConversion(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `a := uint64(1)`, res: "1"},
+		{src: `i := 1.1; a := uint64(i)`, res: "1"},
+		{src: `b := string(49)`, res: "1"},
+		{src: `c := uint64(1.1)`, err: "1:40: cannot convert expression of type float64 to type uint64"},
 	})
 }
 
@@ -443,6 +484,63 @@ func TestEvalFunctionCallWithFunctionParam(t *testing.T) {
 	if got != want {
 		t.Errorf("unexpected result of function eval: got %q, want %q", got, want)
 	}
+}
+
+func TestEvalCall(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: ` test := func(a int, b float64) int { return a }
+				a := test(1, 2.3)`, res: "1"},
+		{src: ` test := func(a int, b float64) int { return a }
+				a := test(1)`, err: "2:10: not enough arguments in call to test"},
+		{src: ` test := func(a int, b float64) int { return a }
+				s := "test"
+				a := test(1, s)`, err: "3:18: cannot use type string as type float64"},
+		{src: ` test := func(a ...int) int { return 1 }
+				a := test([]int{1}...)`, res: "1"},
+		{src: ` test := func(a ...int) int { return 1 }
+				a := test()`, res: "1"},
+		{src: ` test := func(a ...int) int { return 1 }
+				blah := func() []int { return []int{1,1} }
+				a := test(blah()...)`, res: "1"},
+		{src: ` test := func(a ...int) int { return 1 }
+				a := test([]string{"1"}...)`, err: "2:15: cannot use []string as type []int"},
+		{src: ` test := func(a ...int) int { return 1 }
+				i := 1
+				a := test(i...)`, err: "3:15: cannot use int as type []int"},
+		{src: ` test := func(a int) int { return a }
+				a := test([]int{1}...)`, err: "2:10: invalid use of ..., corresponding parameter is non-variadic"},
+		{src: ` test := func(a ...int) int { return 1 }
+				blah := func() (int, int) { return 1, 1 }
+				a := test(blah()...)`, err: "3:15: cannot use ... with 2-valued func()(int,int)"},
+		{src: ` test := func(a, b int) int { return a }
+				blah := func() (int, int) { return 1, 1 }
+				a := test(blah())`, res: "1"},
+		{src: ` test := func(a, b int) int { return a }
+				blah := func() int { return 1 }
+				a := test(blah(), blah())`, res: "1"},
+		{src: ` test := func(a, b, c, d int) int { return a }
+				blah := func() (int, int) { return 1, 1 }
+				a := test(blah(), blah())`, err: "3:15: cannot use func()(int,int) as type int"},
+		{src: ` test := func(a, b int) int { return a }
+				blah := func() (int, float64) { return 1, 1.1 }
+				a := test(blah())`, err: "3:15: cannot use func()(int,float64) as type (int,int)"},
+	})
+}
+
+func TestEvalBinCall(t *testing.T) {
+	i := interp.New(interp.Options{})
+	i.Use(stdlib.Symbols)
+	if _, err := i.Eval(`import "fmt"`); err != nil {
+		t.Fatal(err)
+	}
+	runTests(t, i, []testCase{
+		{src: `a := fmt.Sprint(1, 2.3)`, res: "1 2.3"},
+		{src: `a := fmt.Sprintf()`, err: "1:33: not enough arguments in call to fmt.Sprintf"},
+		{src: `i := 1
+			   a := fmt.Sprintf(i)`, err: "2:24: cannot use type int as type string"},
+		{src: `a := fmt.Sprint()`, res: ""},
+	})
 }
 
 func TestEvalMissingSymbol(t *testing.T) {
@@ -617,7 +715,152 @@ func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expecte
 	}
 }
 
-func TestEvalEOF(t *testing.T) {
+func TestMultiEval(t *testing.T) {
+	// catch stdout
+	backupStdout := os.Stdout
+	defer func() {
+		os.Stdout = backupStdout
+	}()
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	i := interp.New(interp.Options{})
+	i.Use(stdlib.Symbols)
+	var err error
+
+	f, err := os.Open(filepath.Join("testdata", "multi", "731"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	names, err := f.Readdirnames(-1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range names {
+		if _, err := i.EvalPath(filepath.Join(f.Name(), v)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// read stdout
+	if err = w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	outInterp, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// restore Stdout
+	os.Stdout = backupStdout
+
+	want := "A\nB\n"
+	got := string(outInterp)
+	if got != want {
+		t.Fatalf("unexpected output: got %v, wanted %v", got, want)
+	}
+}
+
+func TestMultiEvalNoName(t *testing.T) {
+	i := interp.New(interp.Options{})
+	i.Use(stdlib.Symbols)
+	var err error
+
+	f, err := os.Open(filepath.Join("testdata", "multi", "731"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	names, err := f.Readdirnames(-1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for k, v := range names {
+		data, err := ioutil.ReadFile(filepath.Join(f.Name(), v))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = i.Eval(string(data))
+		if k == 1 {
+			expectedErr := fmt.Errorf("3:8: fmt/%s redeclared in this block", interp.DefaultSourceName)
+			if err.Error() != expectedErr.Error() {
+				t.Fatalf("unexpected result; wanted error %v, got %v", expectedErr, err)
+			}
+			return
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestImportPathIsKey(t *testing.T) {
+	// No need to check the results of Eval, as TestFile already does it.
+	i := interp.New(interp.Options{GoPath: filepath.FromSlash("../_test/testdata/redeclaration-global7")})
+	i.Use(stdlib.Symbols)
+
+	filePath := filepath.Join("..", "_test", "ipp_as_key.go")
+	if _, err := i.EvalPath(filePath); err != nil {
+		t.Fatal(err)
+	}
+
+	wantScopes := map[string][]string{
+		"main": {
+			"titi/ipp_as_key.go",
+			"tutu/ipp_as_key.go",
+			"main",
+		},
+		"guthib.com/toto": {
+			"quux/titi.go",
+			"Quux",
+		},
+		"guthib.com/bar": {
+			"Quux",
+		},
+		"guthib.com/tata": {
+			"quux/tutu.go",
+			"Quux",
+		},
+		"guthib.com/baz": {
+			"Quux",
+		},
+	}
+	wantPackages := map[string]string{
+		"guthib.com/baz":  "quux",
+		"guthib.com/tata": "tutu",
+		"main":            "main",
+		"guthib.com/bar":  "quux",
+		"guthib.com/toto": "titi",
+	}
+
+	scopes := i.Scopes()
+	if len(scopes) != len(wantScopes) {
+		t.Fatalf("want %d, got %d", len(wantScopes), len(scopes))
+	}
+	for k, v := range scopes {
+		wantSym := wantScopes[k]
+		if len(v) != len(wantSym) {
+			t.Fatalf("want %d, got %d", len(wantSym), len(v))
+		}
+		for _, sym := range wantSym {
+			if _, ok := v[sym]; !ok {
+				t.Fatalf("symbol %s not found in scope %s", sym, k)
+			}
+		}
+	}
+
+	packages := i.Packages()
+	if len(packages) != len(wantPackages) {
+		t.Fatalf("want %d, got %d", len(wantPackages), len(packages))
+	}
+	for k, v := range wantPackages {
+		pkg := packages[k]
+		if pkg != v {
+			t.Fatalf("for import path %s, want %s, got %s", k, v, pkg)
+		}
+	}
+}
+
+func TestEvalScanner(t *testing.T) {
 	tests := []struct {
 		desc      string
 		src       []string
@@ -649,6 +892,31 @@ func TestEvalEOF(t *testing.T) {
 				`}`,
 			},
 			errorLine: 1,
+		},
+		{
+			desc: "multi-line string literal",
+			src: []string{
+				"var a = `hello",
+				"there, how",
+				"are you?`",
+			},
+			errorLine: -1,
+		},
+		{
+			desc: "multi-line comma operand",
+			src: []string{
+				`println(2,`,
+				`3)`,
+			},
+			errorLine: -1,
+		},
+		{
+			desc: "multi-line arithmetic operand",
+			src: []string{
+				`println(2. /`,
+				`3.)`,
+			},
+			errorLine: -1,
 		},
 	}
 

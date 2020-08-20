@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"net/rpc"
 	"reflect"
 )
@@ -13,8 +15,8 @@ func init() {
 	Symbols["net/rpc"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Accept":             reflect.ValueOf(rpc.Accept),
-		"DefaultDebugPath":   reflect.ValueOf(rpc.DefaultDebugPath),
-		"DefaultRPCPath":     reflect.ValueOf(rpc.DefaultRPCPath),
+		"DefaultDebugPath":   reflect.ValueOf(constant.MakeFromLiteral("\"/debug/rpc\"", token.STRING, 0)),
+		"DefaultRPCPath":     reflect.ValueOf(constant.MakeFromLiteral("\"/_goRPC_\"", token.STRING, 0)),
 		"DefaultServer":      reflect.ValueOf(&rpc.DefaultServer).Elem(),
 		"Dial":               reflect.ValueOf(rpc.Dial),
 		"DialHTTP":           reflect.ValueOf(rpc.DialHTTP),

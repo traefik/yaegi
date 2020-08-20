@@ -5,6 +5,8 @@
 package stdlib
 
 import (
+	"go/constant"
+	"go/token"
 	"net/http/httptest"
 	"reflect"
 )
@@ -12,7 +14,7 @@ import (
 func init() {
 	Symbols["net/http/httptest"] = map[string]reflect.Value{
 		// function, constant and variable definitions
-		"DefaultRemoteAddr":  reflect.ValueOf(httptest.DefaultRemoteAddr),
+		"DefaultRemoteAddr":  reflect.ValueOf(constant.MakeFromLiteral("\"1.2.3.4\"", token.STRING, 0)),
 		"NewRecorder":        reflect.ValueOf(httptest.NewRecorder),
 		"NewRequest":         reflect.ValueOf(httptest.NewRequest),
 		"NewServer":          reflect.ValueOf(httptest.NewServer),
