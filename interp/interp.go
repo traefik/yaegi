@@ -335,14 +335,7 @@ func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
 	return interp.eval(src, "", true)
 }
 
-// EvalName evaluates Go code represented as a string. Name is the import path of code
-// and can be left to "" for main. EvalName returns the last result computed by the
-// interpreter, and a non nil error in case of failure.
-func (interp *Interpreter) EvalName(src, name string) (res reflect.Value, err error) {
-	return interp.eval(src, name, true)
-}
-
-// EvalPath evaluates Go file by path. EvalPath returns the last result
+// EvalPath evaluates Go code located at path. EvalPath returns the last result
 // computed by the interpreter, and a non nil error in case of failure.
 func (interp *Interpreter) EvalPath(path string) (res reflect.Value, err error) {
 	// TODO(marc): implement eval of a directory, package and tests.
@@ -475,7 +468,7 @@ func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, 
 
 // EvalWithContext evaluates Go code represented as a string. It returns
 // a map on current interpreted package exported symbols.
-func (interp *Interpreter) EvalWithContext(ctx context.Context, src, name string) (reflect.Value, error) {
+func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (reflect.Value, error) {
 	var v reflect.Value
 	var err error
 
@@ -487,7 +480,7 @@ func (interp *Interpreter) EvalWithContext(ctx context.Context, src, name string
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		v, err = interp.EvalName(src, name)
+		v, err = interp.Eval(src)
 	}()
 
 	select {
@@ -593,7 +586,7 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 			}
 		}()
 
-		v, err = interp.EvalWithContext(ctx, src, "")
+		v, err = interp.EvalWithContext(ctx, src)
 		if err != nil {
 			switch e := err.(type) {
 			case scanner.ErrorList:

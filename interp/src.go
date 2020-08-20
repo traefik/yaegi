@@ -110,7 +110,6 @@ func (interp *Interpreter) importSrc(rPath, importPath string) (string, error) {
 	}
 
 	// Revisit incomplete nodes where GTA could not complete.
-	//	for pkg, nodes := range revisit {
 	for _, nodes := range revisit {
 		if err = interp.gtaRetry(nodes, importPath); err != nil {
 			return "", err

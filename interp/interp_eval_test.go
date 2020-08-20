@@ -608,13 +608,13 @@ func TestEvalWithContext(t *testing.T) {
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 			defer cancel()
-			_, err = i.EvalWithContext(ctx, src, "")
+			_, err = i.EvalWithContext(ctx, src)
 			switch err {
 			case context.DeadlineExceeded:
 				// Successful cancellation.
 
 				// Check we can still execute an expression.
-				v, err := i.EvalWithContext(context.Background(), "1+1\n", "")
+				v, err := i.EvalWithContext(context.Background(), "1+1\n")
 				if err != nil {
 					t.Errorf("failed to evaluate expression after cancellation: %v", err)
 				}
@@ -710,11 +710,7 @@ func TestMultiEval(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, v := range names {
-		data, err := ioutil.ReadFile(filepath.Join(f.Name(), v))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := i.EvalName(string(data), v); err != nil {
+		if _, err := i.EvalPath(filepath.Join(f.Name(), v)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -776,11 +772,7 @@ func TestImportPathIsKey(t *testing.T) {
 	i.Use(stdlib.Symbols)
 
 	filePath := filepath.Join("..", "_test", "ipp_as_key.go")
-	data, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := i.EvalName(string(data), filePath); err != nil {
+	if _, err := i.EvalPath(filePath); err != nil {
 		t.Fatal(err)
 	}
 
