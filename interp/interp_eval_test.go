@@ -5,9 +5,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -710,6 +712,151 @@ func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expecte
 
 	if fmt.Sprintf("%v", res) != expectedRes {
 		t.Fatalf("got %v, want %s", res, expectedRes)
+	}
+}
+
+func TestMultiEval(t *testing.T) {
+	// catch stdout
+	backupStdout := os.Stdout
+	defer func() {
+		os.Stdout = backupStdout
+	}()
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	i := interp.New(interp.Options{})
+	i.Use(stdlib.Symbols)
+	var err error
+
+	f, err := os.Open(filepath.Join("testdata", "multi", "731"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	names, err := f.Readdirnames(-1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range names {
+		if _, err := i.EvalPath(filepath.Join(f.Name(), v)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// read stdout
+	if err = w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	outInterp, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// restore Stdout
+	os.Stdout = backupStdout
+
+	want := "A\nB\n"
+	got := string(outInterp)
+	if got != want {
+		t.Fatalf("unexpected output: got %v, wanted %v", got, want)
+	}
+}
+
+func TestMultiEvalNoName(t *testing.T) {
+	i := interp.New(interp.Options{})
+	i.Use(stdlib.Symbols)
+	var err error
+
+	f, err := os.Open(filepath.Join("testdata", "multi", "731"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	names, err := f.Readdirnames(-1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for k, v := range names {
+		data, err := ioutil.ReadFile(filepath.Join(f.Name(), v))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = i.Eval(string(data))
+		if k == 1 {
+			expectedErr := fmt.Errorf("3:8: fmt/%s redeclared in this block", interp.DefaultSourceName)
+			if err.Error() != expectedErr.Error() {
+				t.Fatalf("unexpected result; wanted error %v, got %v", expectedErr, err)
+			}
+			return
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestImportPathIsKey(t *testing.T) {
+	// No need to check the results of Eval, as TestFile already does it.
+	i := interp.New(interp.Options{GoPath: filepath.FromSlash("../_test/testdata/redeclaration-global7")})
+	i.Use(stdlib.Symbols)
+
+	filePath := filepath.Join("..", "_test", "ipp_as_key.go")
+	if _, err := i.EvalPath(filePath); err != nil {
+		t.Fatal(err)
+	}
+
+	wantScopes := map[string][]string{
+		"main": {
+			"titi/ipp_as_key.go",
+			"tutu/ipp_as_key.go",
+			"main",
+		},
+		"guthib.com/toto": {
+			"quux/titi.go",
+			"Quux",
+		},
+		"guthib.com/bar": {
+			"Quux",
+		},
+		"guthib.com/tata": {
+			"quux/tutu.go",
+			"Quux",
+		},
+		"guthib.com/baz": {
+			"Quux",
+		},
+	}
+	wantPackages := map[string]string{
+		"guthib.com/baz":  "quux",
+		"guthib.com/tata": "tutu",
+		"main":            "main",
+		"guthib.com/bar":  "quux",
+		"guthib.com/toto": "titi",
+	}
+
+	scopes := i.Scopes()
+	if len(scopes) != len(wantScopes) {
+		t.Fatalf("want %d, got %d", len(wantScopes), len(scopes))
+	}
+	for k, v := range scopes {
+		wantSym := wantScopes[k]
+		if len(v) != len(wantSym) {
+			t.Fatalf("want %d, got %d", len(wantSym), len(v))
+		}
+		for _, sym := range wantSym {
+			if _, ok := v[sym]; !ok {
+				t.Fatalf("symbol %s not found in scope %s", sym, k)
+			}
+		}
+	}
+
+	packages := i.Packages()
+	if len(packages) != len(wantPackages) {
+		t.Fatalf("want %d, got %d", len(wantPackages), len(packages))
+	}
+	for k, v := range wantPackages {
+		pkg := packages[k]
+		if pkg != v {
+			t.Fatalf("for import path %s, want %s, got %s", k, v, pkg)
+		}
 	}
 }
 

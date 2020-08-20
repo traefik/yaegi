@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/constant"
@@ -340,29 +341,30 @@ func (interp *Interpreter) firstToken(src string) token.Token {
 }
 
 // Note: no type analysis is performed at this stage, it is done in pre-order
-// processing of CFG, in order to accommodate forward type declarations
+// processing of CFG, in order to accommodate forward type declarations.
 
 // ast parses src string containing Go code and generates the corresponding AST.
 // The package name and the AST root node are returned.
-func (interp *Interpreter) ast(src, name string) (string, *node, error) {
-	inRepl := name == ""
+// The given name is used to set the filename of the relevant source file in the
+// interpreter's FileSet.
+func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error) {
 	var inFunc bool
 	var mode parser.Mode
 
 	// Allow incremental parsing of declarations or statements, by inserting
 	// them in a pseudo file package or function. Those statements or
-	// declarations will be always evaluated in the global scope
-	if inRepl {
+	// declarations will be always evaluated in the global scope.
+	if inc {
 		switch interp.firstToken(src) {
 		case token.PACKAGE:
-			// nothing to do
+			// nothing to do.
 		case token.CONST, token.FUNC, token.IMPORT, token.TYPE, token.VAR:
 			src = "package main;" + src
 		default:
 			inFunc = true
 			src = "package main; func main() {" + src + "}"
 		}
-		// Parse comments in REPL mode, to allow tag setting
+		// Parse comments in REPL mode, to allow tag setting.
 		mode |= parser.ParseComments
 	}
 
@@ -851,9 +853,12 @@ func (interp *Interpreter) ast(src, name string) (string, *node, error) {
 	})
 	if inFunc {
 		// Incremental parsing: statements were inserted in a pseudo function.
-		// Set root to function body so its statements are evaluated in global scope
+		// Set root to function body so its statements are evaluated in global scope.
 		root = root.child[1].child[3]
 		root.anc = nil
+	}
+	if pkgName == "" {
+		return "", root, errors.New("no package name found")
 	}
 	return pkgName, root, err
 }
