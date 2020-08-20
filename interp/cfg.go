@@ -1559,6 +1559,12 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			default:
 				// dereference expression
 				wireChild(n)
+
+				err = check.starExpr(n.child[0])
+				if err != nil {
+					break
+				}
+
 				if c0 := n.child[0]; c0.typ.cat == valueT {
 					n.typ = &itype{cat: valueT, rtype: c0.typ.rtype.Elem()}
 				} else {

@@ -106,6 +106,14 @@ func (check typecheck) addressExpr(n *node) error {
 	return nil
 }
 
+// starExpr type checks a star expression on a variable.
+func (check typecheck) starExpr(n *node) error {
+	if n.typ.TypeOf().Kind() != reflect.Ptr {
+		return n.cfgErrorf("invalid operation: cannot indirect %q", n.name())
+	}
+	return nil
+}
+
 var unaryOpPredicates = opPredicates{
 	aPos:    isNumber,
 	aNeg:    isNumber,
