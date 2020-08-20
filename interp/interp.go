@@ -591,6 +591,7 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 	src := ""                      // source string to evaluate
 
 	signal.Notify(sig, os.Interrupt)
+	defer signal.Stop(sig)
 	prompt(v)
 
 	go func() {
@@ -605,8 +606,8 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		for {
 			select {
 			case <-sig:
-				// Catch interrupt while EvalWithContext is running.
 				cancel()
+				lines <- ""
 			case <-end:
 				return
 			}
@@ -618,9 +619,6 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		case <-end:
 			cancel()
 			return
-		case <-sig:
-			// Catch interrupt while input scanning.
-			cancel()
 		case line := <-lines:
 			src += line + "\n"
 		}
