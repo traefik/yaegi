@@ -39,9 +39,9 @@ var constOp = map[action]func(*node){
 }
 
 var constBltn = map[string]func(*node){
-	"complex": complexConst,
-	"imag":    imagConst,
-	"real":    realConst,
+	bltnComplex: complexConst,
+	bltnImag:    imagConst,
+	bltnReal:    realConst,
 }
 
 var identifier = regexp.MustCompile(`([\pL_][\pL_\d]*)$`)
