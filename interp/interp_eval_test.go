@@ -70,6 +70,14 @@ func TestEvalArithmetic(t *testing.T) {
 	})
 }
 
+func TestEvalStar(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `a := &struct{A int}{1}; b := *a`, res: "{1}"},
+		{src: `a := struct{A int}{1}; b := *a`, err: "1:57: invalid operation: cannot indirect \"a\""},
+	})
+}
+
 func TestEvalAssign(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{

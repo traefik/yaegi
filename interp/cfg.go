@@ -518,6 +518,11 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				if updateSym {
 					sym.typ = dest.typ
 					sym.rval = src.rval
+					// As we are updating the sym type, we need to update the sc.type
+					// when the sym has an index.
+					if sym.index >= 0 {
+						sc.types[sym.index] = sym.typ.frameType()
+					}
 				}
 				n.findex = dest.findex
 				n.level = dest.level
@@ -1554,6 +1559,12 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			default:
 				// dereference expression
 				wireChild(n)
+
+				err = check.starExpr(n.child[0])
+				if err != nil {
+					break
+				}
+
 				if c0 := n.child[0]; c0.typ.cat == valueT {
 					n.typ = &itype{cat: valueT, rtype: c0.typ.rtype.Elem()}
 				} else {
