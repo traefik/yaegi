@@ -635,6 +635,13 @@ type param struct {
 	typ *itype
 }
 
+func (p param) Type() *itype {
+	if p.typ != nil {
+		return p.typ
+	}
+	return p.nod.typ
+}
+
 // unpackParams unpacks child parameters into a slice of param.
 // If there is only 1 child and it is a callExpr with an n-value return,
 // the return types are returned, otherwise the original child nodes are
@@ -653,6 +660,239 @@ func (check typecheck) unpackParams(child []*node) (params []param) {
 		params = append(params, param{nod: c})
 	}
 	return params
+}
+
+var builtinFuncs = map[string]struct {
+	args     int
+	variadic bool
+}{
+	bltnAppend:  {args: 1, variadic: true},
+	bltnCap:     {args: 1, variadic: false},
+	bltnClose:   {args: 1, variadic: false},
+	bltnComplex: {args: 2, variadic: false},
+	bltnImag:    {args: 1, variadic: false},
+	bltnCopy:    {args: 2, variadic: false},
+	bltnDelete:  {args: 2, variadic: false},
+	bltnLen:     {args: 1, variadic: false},
+	bltnMake:    {args: 1, variadic: true},
+	bltnNew:     {args: 1, variadic: false},
+	bltnPanic:   {args: 1, variadic: false},
+	bltnPrint:   {args: 0, variadic: true},
+	bltnPrintln: {args: 0, variadic: true},
+	bltnReal:    {args: 1, variadic: false},
+	bltnRecover: {args: 0, variadic: false},
+}
+
+func (check typecheck) builtin(name string, n *node, child []*node, ellipsis bool) error {
+	fun := builtinFuncs[name]
+	if ellipsis && name != bltnAppend {
+		return n.cfgErrorf("invalid use of ... with builtin %s", name)
+	}
+
+	var params []param
+	nparams := len(child)
+	switch name {
+	case bltnMake, bltnNew:
+		// Special param handling
+	default:
+		params = check.unpackParams(child)
+		nparams = len(params)
+	}
+
+	if nparams < fun.args {
+		return n.cfgErrorf("not enough arguments in call to %s", name)
+	} else if !fun.variadic && nparams > fun.args {
+		return n.cfgErrorf("too many arguments for %s", name)
+	}
+
+	switch name {
+	case bltnAppend:
+		typ := params[0].Type()
+		t := typ.TypeOf()
+		if t.Kind() != reflect.Slice {
+			return params[0].nod.cfgErrorf("first argument to append must be slice; have %s", typ.id())
+		}
+
+		// Special case append([]byte, "test"...) is allowed.
+		t1 := params[1].Type()
+		if nparams == 2 && ellipsis && t.Elem().Kind() == reflect.Uint8 && t1.TypeOf().Kind() == reflect.String {
+			if t1.untyped {
+				return check.convertUntyped(params[1].nod, &itype{cat: stringT, name: "string"})
+			}
+			return nil
+		}
+		// We cannot check a recursive type.
+		if isRecursiveType(typ, typ.TypeOf()) {
+			return nil
+		}
+
+		fun := &node{
+			typ: &itype{
+				cat: funcT,
+				arg: []*itype{
+					typ,
+					{cat: variadicT, val: &itype{cat: valueT, rtype: t.Elem()}},
+				},
+				ret: []*itype{typ},
+			},
+			ident: "append",
+		}
+		return check.arguments(n, child, fun, ellipsis)
+	case bltnCap, bltnLen:
+		typ := arrayDeref(params[0].Type())
+		ok := false
+		switch typ.TypeOf().Kind() {
+		case reflect.Array, reflect.Slice, reflect.Chan:
+			ok = true
+		case reflect.String, reflect.Map:
+			ok = name == bltnLen
+		}
+		if !ok {
+			return params[0].nod.cfgErrorf("invalid argument for %s", name)
+		}
+	case bltnClose:
+		p := params[0]
+		typ := p.Type()
+		t := typ.TypeOf()
+		if t.Kind() != reflect.Chan {
+			return p.nod.cfgErrorf("invalid operation: non-chan type %s", p.nod.typ.id())
+		}
+		if t.ChanDir() == reflect.RecvDir {
+			return p.nod.cfgErrorf("invalid operation: cannot close receive-only channel")
+		}
+	case bltnComplex:
+		var err error
+		p0, p1 := params[0], params[1]
+		typ0, typ1 := p0.Type(), p1.Type()
+		switch {
+		case typ0.untyped && !typ1.untyped:
+			err = check.convertUntyped(p0.nod, typ1)
+		case !typ0.untyped && typ1.untyped:
+			err = check.convertUntyped(p1.nod, typ0)
+		case typ0.untyped && typ1.untyped:
+			fltType := &itype{cat: float64T, name: "float64"}
+			err = check.convertUntyped(p0.nod, fltType)
+			if err != nil {
+				break
+			}
+			err = check.convertUntyped(p1.nod, fltType)
+		}
+		if err != nil {
+			return err
+		}
+
+		// check we have the correct types after conversion.
+		typ0, typ1 = p0.Type(), p1.Type()
+		if !typ0.equals(typ1) {
+			return n.cfgErrorf("invalid operation: mismatched types %s and %s", typ0.id(), typ1.id())
+		}
+		if !isFloat(typ0.TypeOf()) {
+			return n.cfgErrorf("invalid operation: arguments have type %s, expected floating-point", typ0.id())
+		}
+	case bltnImag, bltnReal:
+		p := params[0]
+		typ := p.Type()
+		if typ.untyped {
+			if err := check.convertUntyped(p.nod, &itype{cat: complex128T, name: "complex128"}); err != nil {
+				return err
+			}
+		}
+		typ = p.Type()
+		if !isComplex(typ.TypeOf()) {
+			return p.nod.cfgErrorf("invalid argument type %s for %s", typ.id(), name)
+		}
+	case bltnCopy:
+		typ0, typ1 := params[0].Type(), params[1].Type()
+		var t0, t1 reflect.Type
+		if t := typ0.TypeOf(); t.Kind() == reflect.Slice {
+			t0 = t.Elem()
+		}
+
+		switch t := typ1.TypeOf(); t.Kind() {
+		case reflect.String:
+			t1 = reflect.TypeOf(byte(1))
+		case reflect.Slice:
+			t1 = t.Elem()
+		}
+
+		if t0 == nil || t1 == nil {
+			return n.cfgErrorf("copy expects slice arguments")
+		}
+		if !reflect.DeepEqual(t0, t1) {
+			return n.cfgErrorf("arguments to copy have different element types %s and %s", typ0.id(), typ1.id())
+		}
+	case bltnDelete:
+		typ := params[0].Type()
+		if typ.TypeOf().Kind() != reflect.Map {
+			return params[0].nod.cfgErrorf("first argument to delete must be map; have %s", typ.id())
+		}
+		ktyp := params[1].Type()
+		if !ktyp.assignableTo(typ.key) {
+			return params[1].nod.cfgErrorf("cannot use %s as type %s in delete", ktyp.id(), typ.key.id())
+		}
+	case bltnMake:
+		var min int
+		switch child[0].typ.TypeOf().Kind() {
+		case reflect.Slice:
+			min = 2
+		case reflect.Map, reflect.Chan:
+			min = 1
+		default:
+			return child[0].cfgErrorf("cannot make %s; type must be slice, map, or channel", child[0].typ.id())
+		}
+		if nparams < min {
+			return n.cfgErrorf("not enough arguments in call to make")
+		} else if nparams > min+1 {
+			return n.cfgErrorf("too many arguments for make")
+		}
+
+		var sizes []int
+		for _, c := range child[1:] {
+			if err := check.index(c, -1); err != nil {
+				return err
+			}
+			if c.rval.IsValid() {
+				sizes = append(sizes, int(vInt(c.rval)))
+			}
+		}
+		for len(sizes) == 2 && sizes[0] > sizes[1] {
+			return n.cfgErrorf("len larger than cap in make")
+		}
+
+	case bltnPanic:
+		return check.assignment(params[0].nod, &itype{cat: interfaceT}, "argument to panic")
+	case bltnPrint, bltnPrintln:
+		for _, param := range params {
+			if param.typ != nil {
+				continue
+			}
+
+			if err := check.assignment(param.nod, nil, "argument to "+name); err != nil {
+				return err
+			}
+		}
+	case bltnRecover, bltnNew:
+		// Nothing to do.
+	default:
+		return n.cfgErrorf("unsupported builtin %s", name)
+	}
+	return nil
+}
+
+// arrayDeref returns A if typ is *A, otherwise typ.
+func arrayDeref(typ *itype) *itype {
+	if typ.cat == valueT && typ.TypeOf().Kind() == reflect.Ptr {
+		t := typ.TypeOf()
+		if t.Elem().Kind() == reflect.Array {
+			return &itype{cat: valueT, rtype: t.Elem()}
+		}
+		return typ
+	}
+
+	if typ.cat == ptrT && typ.val.cat == arrayT && typ.val.sizedef {
+		return typ.val
+	}
+	return typ
 }
 
 // arguments type checks the call expression arguments.
@@ -703,10 +943,7 @@ func (check typecheck) argument(p param, ftyp *itype, i, l int, ellipsis bool) e
 		if i != ftyp.numIn()-1 {
 			return p.nod.cfgErrorf("can only use ... with matching parameter")
 		}
-		t := p.nod.typ.TypeOf()
-		if p.typ != nil {
-			t = p.typ.TypeOf()
-		}
+		t := p.Type().TypeOf()
 		if t.Kind() != reflect.Slice || !(&itype{cat: valueT, rtype: t.Elem()}).assignableTo(atyp) {
 			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.typ.id(), (&itype{cat: arrayT, val: atyp}).id())
 		}

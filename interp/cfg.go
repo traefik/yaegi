@@ -799,6 +799,11 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			wireChild(n)
 			switch {
 			case interp.isBuiltinCall(n):
+				err = check.builtin(n.child[0].ident, n, n.child[1:], n.action == aCallSlice)
+				if err != nil {
+					break
+				}
+
 				n.gen = n.child[0].sym.builtin
 				n.child[0].typ = &itype{cat: builtinT}
 				if n.typ, err = nodeType(interp, sc, n); err != nil {
