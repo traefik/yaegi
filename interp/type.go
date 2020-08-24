@@ -182,6 +182,9 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				t.size = arrayTypeLen(n.anc)
 			default:
 				if sym, _, ok := sc.lookup(n.child[0].ident); ok {
+					if sym.kind != constSym {
+						return nil, n.child[0].cfgErrorf("non-constant array bound %q", n.child[0].ident)
+					}
 					// Resolve symbol to get size value
 					if sym.typ != nil && sym.typ.cat == intT {
 						if v, ok := sym.rval.Interface().(int); ok {

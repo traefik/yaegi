@@ -326,6 +326,7 @@ func TestEvalComparison(t *testing.T) {
 
 func TestEvalCompositeArray(t *testing.T) {
 	i := interp.New(interp.Options{})
+	eval(t, i, `const l = 10`)
 	runTests(t, i, []testCase{
 		{src: "a := []int{1, 2, 7: 20, 30}", res: "[1 2 0 0 0 0 0 20 30]"},
 		{src: `a := []int{1, 1.2}`, err: "1:42: 6/5 truncated to int"},
@@ -333,6 +334,8 @@ func TestEvalCompositeArray(t *testing.T) {
 		{src: `a := []int{1.1:1, 1.2:"test"}`, err: "1:39: index float64 must be integer constant"},
 		{src: `a := [2]int{1, 1.2}`, err: "1:43: 6/5 truncated to int"},
 		{src: `a := [1]int{1, 2}`, err: "1:43: index 1 is out of bounds (>= 1)"},
+		{src: `b := [l]int{1, 2}`, res: "[1 2 0 0 0 0 0 0 0 0]"},
+		{src: `i := 10; a := [i]int{1, 2}`, err: "1:43: non-constant array bound \"i\""},
 	})
 }
 
