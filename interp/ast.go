@@ -342,10 +342,14 @@ func (interp *Interpreter) firstToken(src string) token.Token {
 }
 
 func ignoreError(err error, src string) bool {
-	if se, ok := err.(scanner.ErrorList); ok {
-		return len(se) == 0 || ignoreScannerError(se[0], src)
+	se, ok := err.(scanner.ErrorList)
+	if !ok {
+		return false
 	}
-	return false
+	if len(se) == 0 {
+		return false
+	}
+	return ignoreScannerError(se[0], src)
 }
 
 func wrapInMain(src string) string {
