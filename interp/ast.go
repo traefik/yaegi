@@ -349,7 +349,7 @@ func (interp *Interpreter) firstToken(src string) token.Token {
 // interpreter's FileSet.
 func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error) {
 	var inFunc bool
-	var mode parser.Mode
+	mode := parser.DeclarationErrors
 
 	// Allow incremental parsing of declarations or statements, by inserting
 	// them in a pseudo file package or function. Those statements or

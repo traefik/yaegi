@@ -790,7 +790,7 @@ func TestMultiEvalNoName(t *testing.T) {
 		_, err = i.Eval(string(data))
 		if k == 1 {
 			expectedErr := fmt.Errorf("3:8: fmt/%s redeclared in this block", interp.DefaultSourceName)
-			if err.Error() != expectedErr.Error() {
+			if err == nil || err.Error() != expectedErr.Error() {
 				t.Fatalf("unexpected result; wanted error %v, got %v", expectedErr, err)
 			}
 			return
