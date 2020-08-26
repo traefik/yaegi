@@ -20,6 +20,3 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
-// Output:
-// 42

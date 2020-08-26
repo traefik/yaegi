@@ -56,14 +56,14 @@ func run(arg []string) error {
 	}
 
 	if cmd != "" {
-		i.REPL(strings.NewReader(cmd), os.Stderr)
+		_, err = i.Eval(cmd)
 	}
 
 	if len(args) == 0 {
 		if interactive || cmd == "" {
-			i.REPL(os.Stdin, os.Stdout)
+			_, err = i.REPL()
 		}
-		return nil
+		return err
 	}
 
 	// Skip first os arg to set command line as expected by interpreted main
@@ -85,9 +85,9 @@ func run(arg []string) error {
 	}
 
 	if interactive {
-		i.REPL(os.Stdin, os.Stdout)
+		_, err = i.REPL()
 	}
-	return nil
+	return err
 }
 
 func isPackageName(path string) bool {
@@ -116,7 +116,7 @@ func runFile(i *interp.Interpreter, path string) error {
 	if s := string(b); strings.HasPrefix(s, "#!") {
 		// Allow executable go scripts, Have the same behavior as in interactive mode.
 		s = strings.Replace(s, "#!", "//", 1)
-		i.REPL(strings.NewReader(s), os.Stdout)
+		_, err = i.Eval(s)
 	} else {
 		// Files not starting with "#!" are supposed to be pure Go, directly Evaled.
 		_, err := i.EvalPath(path)
@@ -127,5 +127,5 @@ func runFile(i *interp.Interpreter, path string) error {
 			}
 		}
 	}
-	return nil
+	return err
 }

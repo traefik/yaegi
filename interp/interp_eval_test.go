@@ -134,6 +134,17 @@ func TestEvalImport(t *testing.T) {
 	})
 }
 
+func TestEvalStdout(t *testing.T) {
+	var out, err bytes.Buffer
+	i := interp.New(interp.Options{Stdout: &out, Stderr: &err})
+	i.Use(stdlib.Symbols)
+	i.Eval(`import "fmt"; func main() { fmt.Println("hello") }`)
+	wanted := "hello\n"
+	if res := out.String(); res != wanted {
+		t.Fatalf("got %v, want %v", res, wanted)
+	}
+}
+
 func TestEvalNil(t *testing.T) {
 	i := interp.New(interp.Options{})
 	i.Use(stdlib.Symbols)
@@ -929,10 +940,12 @@ func TestEvalScanner(t *testing.T) {
 	}
 
 	for it, test := range tests {
-		i := interp.New(interp.Options{})
+		var stdout bytes.Buffer
+		safeStdout := &safeBuffer{buf: &stdout}
 		var stderr bytes.Buffer
 		safeStderr := &safeBuffer{buf: &stderr}
 		pin, pout := io.Pipe()
+		i := interp.New(interp.Options{Stdin: pin, Stdout: safeStdout, Stderr: safeStderr})
 		defer func() {
 			// Closing the pipe also takes care of making i.REPL terminate,
 			// hence freeing its goroutine.
@@ -941,7 +954,7 @@ func TestEvalScanner(t *testing.T) {
 		}()
 
 		go func() {
-			i.REPL(pin, safeStderr)
+			i.REPL()
 		}()
 		for k, v := range test.src {
 			if _, err := pout.Write([]byte(v + "\n")); err != nil {
