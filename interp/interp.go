@@ -504,7 +504,7 @@ func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (ref
 	select {
 	case <-ctx.Done():
 		interp.stop()
-		v, err = reflect.Value{}, ctx.Err()
+		return reflect.Value{}, ctx.Err()
 	case <-done:
 	}
 	return v, err
