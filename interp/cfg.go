@@ -39,9 +39,9 @@ var constOp = map[action]func(*node){
 }
 
 var constBltn = map[string]func(*node){
-	"complex": complexConst,
-	"imag":    imagConst,
-	"real":    realConst,
+	bltnComplex: complexConst,
+	bltnImag:    imagConst,
+	bltnReal:    realConst,
 }
 
 var identifier = regexp.MustCompile(`([\pL_][\pL_\d]*)$`)
@@ -799,6 +799,11 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			wireChild(n)
 			switch {
 			case interp.isBuiltinCall(n):
+				err = check.builtin(n.child[0].ident, n, n.child[1:], n.action == aCallSlice)
+				if err != nil {
+					break
+				}
+
 				n.gen = n.child[0].sym.builtin
 				n.child[0].typ = &itype{cat: builtinT}
 				if n.typ, err = nodeType(interp, sc, n); err != nil {

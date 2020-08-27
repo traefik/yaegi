@@ -252,6 +252,24 @@ func New(options Options) *Interpreter {
 	return &i
 }
 
+const (
+	bltnAppend  = "append"
+	bltnCap     = "cap"
+	bltnClose   = "close"
+	bltnComplex = "complex"
+	bltnImag    = "imag"
+	bltnCopy    = "copy"
+	bltnDelete  = "delete"
+	bltnLen     = "len"
+	bltnMake    = "make"
+	bltnNew     = "new"
+	bltnPanic   = "panic"
+	bltnPrint   = "print"
+	bltnPrintln = "println"
+	bltnReal    = "real"
+	bltnRecover = "recover"
+)
+
 func initUniverse() *scope {
 	sc := &scope{global: true, sym: map[string]*symbol{
 		// predefined Go types
@@ -286,21 +304,21 @@ func initUniverse() *scope {
 		"nil": {typ: &itype{cat: nilT, untyped: true}},
 
 		// predefined Go builtins
-		"append":  {kind: bltnSym, builtin: _append},
-		"cap":     {kind: bltnSym, builtin: _cap},
-		"close":   {kind: bltnSym, builtin: _close},
-		"complex": {kind: bltnSym, builtin: _complex},
-		"imag":    {kind: bltnSym, builtin: _imag},
-		"copy":    {kind: bltnSym, builtin: _copy},
-		"delete":  {kind: bltnSym, builtin: _delete},
-		"len":     {kind: bltnSym, builtin: _len},
-		"make":    {kind: bltnSym, builtin: _make},
-		"new":     {kind: bltnSym, builtin: _new},
-		"panic":   {kind: bltnSym, builtin: _panic},
-		"print":   {kind: bltnSym, builtin: _print},
-		"println": {kind: bltnSym, builtin: _println},
-		"real":    {kind: bltnSym, builtin: _real},
-		"recover": {kind: bltnSym, builtin: _recover},
+		bltnAppend:  {kind: bltnSym, builtin: _append},
+		bltnCap:     {kind: bltnSym, builtin: _cap},
+		bltnClose:   {kind: bltnSym, builtin: _close},
+		bltnComplex: {kind: bltnSym, builtin: _complex},
+		bltnImag:    {kind: bltnSym, builtin: _imag},
+		bltnCopy:    {kind: bltnSym, builtin: _copy},
+		bltnDelete:  {kind: bltnSym, builtin: _delete},
+		bltnLen:     {kind: bltnSym, builtin: _len},
+		bltnMake:    {kind: bltnSym, builtin: _make},
+		bltnNew:     {kind: bltnSym, builtin: _new},
+		bltnPanic:   {kind: bltnSym, builtin: _panic},
+		bltnPrint:   {kind: bltnSym, builtin: _print},
+		bltnPrintln: {kind: bltnSym, builtin: _println},
+		bltnReal:    {kind: bltnSym, builtin: _real},
+		bltnRecover: {kind: bltnSym, builtin: _recover},
 	}}
 	return sc
 }

@@ -282,7 +282,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			// Builtin types are special and may depend from their input arguments.
 			t.cat = builtinT
 			switch n.child[0].ident {
-			case "complex":
+			case bltnComplex:
 				var nt0, nt1 *itype
 				if nt0, err = nodeType(interp, sc, n.child[1]); err != nil {
 					return nil, err
@@ -299,7 +299,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					case isFloat64(t0) && isFloat64(t1):
 						t = sc.getType("complex128")
 					case nt0.untyped && isNumber(t0) && nt1.untyped && isNumber(t1):
-						t = &itype{cat: valueT, rtype: complexType, scope: sc}
+						t = untypedComplex
 					case nt0.untyped && isFloat32(t1) || nt1.untyped && isFloat32(t0):
 						t = sc.getType("complex64")
 					case nt0.untyped && isFloat64(t1) || nt1.untyped && isFloat64(t0):
@@ -311,7 +311,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 						t.untyped = true
 					}
 				}
-			case "real", "imag":
+			case bltnReal, bltnImag:
 				if t, err = nodeType(interp, sc, n.child[1]); err != nil {
 					return nil, err
 				}
@@ -327,14 +327,14 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 						err = n.cfgErrorf("invalid complex type %s", k)
 					}
 				}
-			case "cap", "copy", "len":
+			case bltnCap, bltnCopy, bltnLen:
 				t = sc.getType("int")
-			case "append", "make":
+			case bltnAppend, bltnMake:
 				t, err = nodeType(interp, sc, n.child[1])
-			case "new":
+			case bltnNew:
 				t, err = nodeType(interp, sc, n.child[1])
 				t = &itype{cat: ptrT, val: t, incomplete: t.incomplete, scope: sc}
-			case "recover":
+			case bltnRecover:
 				t = sc.getType("interface{}")
 			}
 			if err != nil {
