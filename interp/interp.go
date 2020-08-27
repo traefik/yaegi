@@ -506,8 +506,8 @@ func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (ref
 		interp.stop()
 		return reflect.Value{}, ctx.Err()
 	case <-done:
-		return v, err
 	}
+	return v, err
 }
 
 // stop sends a semaphore to all running frames and closes the chan
@@ -581,34 +581,55 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	end := make(chan struct{})     // channel to terminate signal handling goroutine
+	end := make(chan struct{})     // channel to terminate the REPL
 	sig := make(chan os.Signal, 1) // channel to trap interrupt signal (Ctrl-C)
+	lines := make(chan string)     // channel to read REPL input lines
 	prompt := getPrompt(in, out)   // prompt activated on tty like IO stream
 	s := bufio.NewScanner(in)      // read input stream line by line
 	var v reflect.Value            // result value from eval
 	var err error                  // error from eval
 	src := ""                      // source string to evaluate
+
 	signal.Notify(sig, os.Interrupt)
+	defer signal.Stop(sig)
 	prompt(v)
 
-	// Read, Eval, Print in a Loop.
-	for s.Scan() {
-		src += s.Text() + "\n"
+	go func() {
+		defer close(end)
+		for s.Scan() {
+			lines <- s.Text()
+		}
+		// TODO(mpl): log s.Err() if not nil?
+	}()
 
-		// The following goroutine handles interrupt signal by canceling eval.
-		go func() {
+	go func() {
+		for {
 			select {
 			case <-sig:
 				cancel()
+				lines <- ""
 			case <-end:
+				return
 			}
-		}()
+		}
+	}()
+
+	for {
+		var line string
+
+		select {
+		case <-end:
+			cancel()
+			return
+		case line = <-lines:
+			src += line + "\n"
+		}
 
 		v, err = interp.EvalWithContext(ctx, src)
 		if err != nil {
 			switch e := err.(type) {
 			case scanner.ErrorList:
-				if len(e) == 0 || ignoreScannerError(e[0], s.Text()) {
+				if len(e) == 0 || ignoreScannerError(e[0], line) {
 					continue
 				}
 				fmt.Fprintln(out, e[0])
@@ -619,20 +640,12 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 				fmt.Fprintln(out, err)
 			}
 		}
-
 		if errors.Is(err, context.Canceled) {
-			// Eval has been interrupted by the above signal handling goroutine.
 			ctx, cancel = context.WithCancel(context.Background())
-		} else {
-			// No interrupt, release the above signal handling goroutine.
-			end <- struct{}{}
 		}
-
 		src = ""
 		prompt(v)
 	}
-	cancel() // Do not defer, as cancel func may change over time.
-	// TODO(mpl): log s.Err() if not nil?
 }
 
 // Repl performs a Read-Eval-Print-Loop on input file descriptor.
