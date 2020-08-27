@@ -581,22 +581,22 @@ func fixStdio(interp *Interpreter) {
 	if p = interp.binPkg["log"]; p != nil {
 		l := log.New(stderr, "", log.LstdFlags)
 		// Restrict Fatal symbols to panic instead of exit.
-		p["Fatal"] = reflect.ValueOf(func(a ...interface{}) { l.Panic(a...) })
-		p["Fatalf"] = reflect.ValueOf(func(f string, a ...interface{}) { l.Panicf(f, a...) })
-		p["Fatalln"] = reflect.ValueOf(func(a ...interface{}) { l.Panicln(a...) })
+		p["Fatal"] = reflect.ValueOf(l.Panic)
+		p["Fatalf"] = reflect.ValueOf(l.Panicf)
+		p["Fatalln"] = reflect.ValueOf(l.Panicln)
 
 		p["Flags"] = reflect.ValueOf(l.Flags)
 		p["Output"] = reflect.ValueOf(l.Output)
 		p["Panic"] = reflect.ValueOf(l.Panic)
-		p["Panicf"] = reflect.ValueOf(func(f string, a ...interface{}) { l.Panicf(f, a...) })
-		p["Panicln"] = reflect.ValueOf(func(a ...interface{}) { l.Panicln(a...) })
+		p["Panicf"] = reflect.ValueOf(l.Panicf)
+		p["Panicln"] = reflect.ValueOf(l.Panicln)
 		p["Prefix"] = reflect.ValueOf(l.Prefix)
 		p["Print"] = reflect.ValueOf(l.Print)
-		p["Printf"] = reflect.ValueOf(func(f string, a ...interface{}) { l.Printf(f, a...) })
+		p["Printf"] = reflect.ValueOf(l.Printf)
 		p["Println"] = reflect.ValueOf(l.Println)
-		p["SetFlags"] = reflect.ValueOf(func(f int) { l.SetFlags(f) })
-		p["SetOutput"] = reflect.ValueOf(func(w io.Writer) { l.SetOutput(w) })
-		p["SetPrefix"] = reflect.ValueOf(func(s string) { l.SetPrefix(s) })
+		p["SetFlags"] = reflect.ValueOf(l.SetFlags)
+		p["SetOutput"] = reflect.ValueOf(l.SetOutput)
+		p["SetPrefix"] = reflect.ValueOf(l.SetPrefix)
 		p["Writer"] = reflect.ValueOf(l.Writer)
 	}
 
