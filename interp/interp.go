@@ -216,7 +216,7 @@ type Options struct {
 	GoPath string
 	// BuildTags sets build constraints for the interpreter.
 	BuildTags []string
-	// Standard input, ouput and error streams.
+	// Standard input, output and error streams.
 	Stdin          io.Reader
 	Stdout, Stderr io.Writer
 }
@@ -584,19 +584,20 @@ func fixStdio(interp *Interpreter) {
 		p["Fatal"] = reflect.ValueOf(func(a ...interface{}) { l.Panic(a...) })
 		p["Fatalf"] = reflect.ValueOf(func(f string, a ...interface{}) { l.Panicf(f, a...) })
 		p["Fatalln"] = reflect.ValueOf(func(a ...interface{}) { l.Panicln(a...) })
-		p["Flags"] = reflect.ValueOf(func() int { return l.Flags() })
-		p["Output"] = reflect.ValueOf(func(c int, s string) error { return l.Output(c, s) })
-		p["Panic"] = reflect.ValueOf(func(a ...interface{}) { l.Panic(a...) })
+
+		p["Flags"] = reflect.ValueOf(l.Flags)
+		p["Output"] = reflect.ValueOf(l.Output)
+		p["Panic"] = reflect.ValueOf(l.Panic)
 		p["Panicf"] = reflect.ValueOf(func(f string, a ...interface{}) { l.Panicf(f, a...) })
 		p["Panicln"] = reflect.ValueOf(func(a ...interface{}) { l.Panicln(a...) })
-		p["Prefix"] = reflect.ValueOf(func() string { return l.Prefix() })
-		p["Print"] = reflect.ValueOf(func(a ...interface{}) { l.Print(a...) })
+		p["Prefix"] = reflect.ValueOf(l.Prefix)
+		p["Print"] = reflect.ValueOf(l.Print)
 		p["Printf"] = reflect.ValueOf(func(f string, a ...interface{}) { l.Printf(f, a...) })
-		p["Println"] = reflect.ValueOf(func(a ...interface{}) { l.Println(a...) })
+		p["Println"] = reflect.ValueOf(l.Println)
 		p["SetFlags"] = reflect.ValueOf(func(f int) { l.SetFlags(f) })
 		p["SetOutput"] = reflect.ValueOf(func(w io.Writer) { l.SetOutput(w) })
 		p["SetPrefix"] = reflect.ValueOf(func(s string) { l.SetPrefix(s) })
-		p["Writer"] = reflect.ValueOf(func() io.Writer { return l.Writer() })
+		p["Writer"] = reflect.ValueOf(l.Writer)
 	}
 
 	if p = interp.binPkg["os"]; p != nil {

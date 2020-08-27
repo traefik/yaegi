@@ -138,7 +138,10 @@ func TestEvalStdout(t *testing.T) {
 	var out, err bytes.Buffer
 	i := interp.New(interp.Options{Stdout: &out, Stderr: &err})
 	i.Use(stdlib.Symbols)
-	i.Eval(`import "fmt"; func main() { fmt.Println("hello") }`)
+	_, e := i.Eval(`import "fmt"; func main() { fmt.Println("hello") }`)
+	if e != nil {
+		t.Fatal(e)
+	}
 	wanted := "hello\n"
 	if res := out.String(); res != wanted {
 		t.Fatalf("got %v, want %v", res, wanted)
@@ -954,7 +957,7 @@ func TestEvalScanner(t *testing.T) {
 		}()
 
 		go func() {
-			i.REPL()
+			_, _ = i.REPL()
 		}()
 		for k, v := range test.src {
 			if _, err := pout.Write([]byte(v + "\n")); err != nil {
