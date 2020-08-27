@@ -629,7 +629,7 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		if err != nil {
 			switch e := err.(type) {
 			case scanner.ErrorList:
-				if len(e) > 0 && ignoreScannerError(e[0], s.Text()) {
+				if len(e) > 0 && ignoreScannerError(e[0], line) {
 					continue
 				}
 				fmt.Fprintln(out, strings.TrimPrefix(e[0].Error(), DefaultSourceName+":"))
