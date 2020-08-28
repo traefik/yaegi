@@ -386,12 +386,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				return false
 			}
 
-			if _, exists := sc.sym[typeName]; exists {
-				// TODO(mpl): find the exact location of the previous declaration
-				err = n.cfgErrorf("%s redeclared in this block", typeName)
-				return false
-			}
-
 			if n.child[1].kind == identExpr {
 				n.typ = &itype{cat: aliasT, val: typ, name: typeName}
 			} else {
@@ -1781,18 +1775,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					// Global object allocation is already performed in GTA.
 					index = sc.sym[c.ident].index
 				} else {
-					if sym, exists := sc.sym[c.ident]; exists {
-						if sym.typ.node != nil &&
-							sym.typ.node.anc != nil {
-							// for non-predeclared identifiers (struct, map, etc)
-							prevDecl := n.interp.fset.Position(sym.typ.node.anc.pos)
-							err = n.cfgErrorf("%s redeclared in this block\n\tprevious declaration at %v", c.ident, prevDecl)
-							return
-						}
-						// for predeclared identifiers (int, string, etc)
-						err = n.cfgErrorf("%s redeclared in this block", c.ident)
-						return
-					}
 					index = sc.add(n.typ)
 					sc.sym[c.ident] = &symbol{index: index, kind: varSym, typ: n.typ}
 				}
