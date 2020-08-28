@@ -10,6 +10,7 @@ import (
 	"go/token"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync/atomic"
 )
 
@@ -340,6 +341,21 @@ func (interp *Interpreter) firstToken(src string) token.Token {
 	return tok
 }
 
+func ignoreError(err error, src string) bool {
+	se, ok := err.(scanner.ErrorList)
+	if !ok {
+		return false
+	}
+	if len(se) == 0 {
+		return false
+	}
+	return ignoreScannerError(se[0], src)
+}
+
+func wrapInMain(src string) string {
+	return fmt.Sprintf("package main; func main() {%s}", src)
+}
+
 // Note: no type analysis is performed at this stage, it is done in pre-order
 // processing of CFG, in order to accommodate forward type declarations.
 
@@ -354,15 +370,17 @@ func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error
 	// Allow incremental parsing of declarations or statements, by inserting
 	// them in a pseudo file package or function. Those statements or
 	// declarations will be always evaluated in the global scope.
+	var tok token.Token
 	if inc {
-		switch interp.firstToken(src) {
+		tok = interp.firstToken(src)
+		switch tok {
 		case token.PACKAGE:
 			// nothing to do.
 		case token.CONST, token.FUNC, token.IMPORT, token.TYPE, token.VAR:
 			src = "package main;" + src
 		default:
 			inFunc = true
-			src = "package main; func main() {" + src + "}"
+			src = wrapInMain(src)
 		}
 		// Parse comments in REPL mode, to allow tag setting.
 		mode |= parser.ParseComments
@@ -374,7 +392,22 @@ func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error
 
 	f, err := parser.ParseFile(interp.fset, name, src, mode)
 	if err != nil {
-		return "", nil, err
+		// only retry if we're on an expression/statement about a func
+		if !inc || tok != token.FUNC {
+			return "", nil, err
+		}
+		// do not bother retrying if we know it's an error we're going to ignore later on.
+		if ignoreError(err, src) {
+			return "", nil, err
+		}
+		// do not lose initial error, in case retrying fails.
+		initialError := err
+		// retry with default source code "wrapping", in the main function scope.
+		src := wrapInMain(strings.TrimPrefix(src, "package main;"))
+		f, err = parser.ParseFile(interp.fset, name, src, mode)
+		if err != nil {
+			return "", nil, initialError
+		}
 	}
 
 	setYaegiTags(&interp.context, f.Comments)

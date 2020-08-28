@@ -629,10 +629,10 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		if err != nil {
 			switch e := err.(type) {
 			case scanner.ErrorList:
-				if len(e) == 0 || ignoreScannerError(e[0], line) {
+				if len(e) > 0 && ignoreScannerError(e[0], line) {
 					continue
 				}
-				fmt.Fprintln(out, e[0])
+				fmt.Fprintln(out, strings.TrimPrefix(e[0].Error(), DefaultSourceName+":"))
 			case Panic:
 				fmt.Fprintln(out, e.Value)
 				fmt.Fprintln(out, string(e.Stack))
