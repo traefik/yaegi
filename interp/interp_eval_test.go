@@ -1,15 +1,19 @@
 package interp_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -899,15 +903,13 @@ func TestImportPathIsKey(t *testing.T) {
 	}
 }
 
-// Disabled for now, because it reveals a data race, and we want our current PRs
-// to pass the CI.
-/*
 func TestEvalScanner(t *testing.T) {
-	tests := []struct {
+	type testCase struct {
 		desc      string
 		src       []string
 		errorLine int
-	}{
+	}
+	tests := []testCase{
 		{
 			desc: "no error",
 			src: []string{
@@ -962,36 +964,33 @@ func TestEvalScanner(t *testing.T) {
 			},
 			errorLine: -1,
 		},
-		// TODO: these tests are showing that we handle retries properly for func
-		// closure calls, but they reveal a data race we seem to have in EvalWithContext,
-		// so they're disabled for now to avoid the CI nagging us about it.
-			{
-				desc: "anonymous func call with no assignment",
-				src: []string{
-					`func() { println(3) }()`,
-				},
-				errorLine: -1,
+		{
+			desc: "anonymous func call with no assignment",
+			src: []string{
+				`func() { println(3) }()`,
 			},
-			{
-				// to make sure that special handling of the above anonymous, does not break this general case.
-				desc: "just func",
-				src: []string{
-					`func foo() { println(3) }`,
-				},
-				errorLine: -1,
+			errorLine: -1,
+		},
+		{
+			// to make sure that special handling of the above anonymous, does not break this general case.
+			desc: "just func",
+			src: []string{
+				`func foo() { println(3) }`,
 			},
-			{
-				// to make sure that special handling of the above anonymous, does not break this general case.
-				desc: "just method",
-				src: []string{
-					`type bar string`,
-					`func (b bar) foo() { println(3) }`,
-				},
-				errorLine: -1,
+			errorLine: -1,
+		},
+		{
+			// to make sure that special handling of the above anonymous, does not break this general case.
+			desc: "just method",
+			src: []string{
+				`type bar string`,
+				`func (b bar) foo() { println(3) }`,
 			},
+			errorLine: -1,
+		},
 	}
 
-	for _, test := range tests {
+	runREPL := func(t *testing.T, test testCase) {
 		i := interp.New(interp.Options{})
 		var stderr bytes.Buffer
 		safeStderr := &safeBuffer{buf: &stderr}
@@ -1023,6 +1022,10 @@ func TestEvalScanner(t *testing.T) {
 				t.Fatalf("test %q: unexpected error: %v", test.desc, errMsg)
 			}
 		}
+	}
+
+	for _, test := range tests {
+		runREPL(t, test)
 	}
 }
 
@@ -1069,4 +1072,3 @@ func applyCIMultiplier(timeout time.Duration) time.Duration {
 	}
 	return time.Duration(float64(timeout) * CITimeoutMultiplier)
 }
-*/
