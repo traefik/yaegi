@@ -275,6 +275,24 @@ func New(options Options) *Interpreter {
 	return &i
 }
 
+const (
+	bltnAppend  = "append"
+	bltnCap     = "cap"
+	bltnClose   = "close"
+	bltnComplex = "complex"
+	bltnImag    = "imag"
+	bltnCopy    = "copy"
+	bltnDelete  = "delete"
+	bltnLen     = "len"
+	bltnMake    = "make"
+	bltnNew     = "new"
+	bltnPanic   = "panic"
+	bltnPrint   = "print"
+	bltnPrintln = "println"
+	bltnReal    = "real"
+	bltnRecover = "recover"
+)
+
 func initUniverse() *scope {
 	sc := &scope{global: true, sym: map[string]*symbol{
 		// predefined Go types
@@ -309,21 +327,21 @@ func initUniverse() *scope {
 		"nil": {typ: &itype{cat: nilT, untyped: true}},
 
 		// predefined Go builtins
-		"append":  {kind: bltnSym, builtin: _append},
-		"cap":     {kind: bltnSym, builtin: _cap},
-		"close":   {kind: bltnSym, builtin: _close},
-		"complex": {kind: bltnSym, builtin: _complex},
-		"imag":    {kind: bltnSym, builtin: _imag},
-		"copy":    {kind: bltnSym, builtin: _copy},
-		"delete":  {kind: bltnSym, builtin: _delete},
-		"len":     {kind: bltnSym, builtin: _len},
-		"make":    {kind: bltnSym, builtin: _make},
-		"new":     {kind: bltnSym, builtin: _new},
-		"panic":   {kind: bltnSym, builtin: _panic},
-		"print":   {kind: bltnSym, builtin: _print},
-		"println": {kind: bltnSym, builtin: _println},
-		"real":    {kind: bltnSym, builtin: _real},
-		"recover": {kind: bltnSym, builtin: _recover},
+		bltnAppend:  {kind: bltnSym, builtin: _append},
+		bltnCap:     {kind: bltnSym, builtin: _cap},
+		bltnClose:   {kind: bltnSym, builtin: _close},
+		bltnComplex: {kind: bltnSym, builtin: _complex},
+		bltnImag:    {kind: bltnSym, builtin: _imag},
+		bltnCopy:    {kind: bltnSym, builtin: _copy},
+		bltnDelete:  {kind: bltnSym, builtin: _delete},
+		bltnLen:     {kind: bltnSym, builtin: _len},
+		bltnMake:    {kind: bltnSym, builtin: _make},
+		bltnNew:     {kind: bltnSym, builtin: _new},
+		bltnPanic:   {kind: bltnSym, builtin: _panic},
+		bltnPrint:   {kind: bltnSym, builtin: _print},
+		bltnPrintln: {kind: bltnSym, builtin: _println},
+		bltnReal:    {kind: bltnSym, builtin: _real},
+		bltnRecover: {kind: bltnSym, builtin: _recover},
 	}}
 	return sc
 }
@@ -511,8 +529,8 @@ func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (ref
 		interp.stop()
 		return reflect.Value{}, ctx.Err()
 	case <-done:
-		return v, err
 	}
+	return v, err
 }
 
 // stop sends a semaphore to all running frames and closes the chan
@@ -559,8 +577,11 @@ func (interp *Interpreter) Use(values Exports) {
 	}
 }
 
-// fixStdio redefines interpreter stdlib symbols to use the standard input, output and errror assigned to the interpreter.
-// The changes are limited to the interpreter only. Global values os.Stdin, os.Stdout and os.Stderr are not changed.
+// fixStdio redefines interpreter stdlib symbols to use the standard input,
+// output and errror assigned to the interpreter. The changes are limited to
+// the interpreter only. Global values os.Stdin, os.Stdout and os.Stderr are
+// not changed. Note that it is possible to escape the virtualized stdio by
+// read/write directly to file descriptors 0, 1, 2.
 func fixStdio(interp *Interpreter) {
 	p := interp.binPkg["fmt"]
 	if p == nil {
@@ -648,34 +669,57 @@ func (interp *Interpreter) REPL() (reflect.Value, error) {
 
 	in, out, errs := interp.stdin, interp.stdout, interp.stderr
 	ctx, cancel := context.WithCancel(context.Background())
-	end := make(chan struct{})     // channel to terminate signal handling goroutine
+	end := make(chan struct{})     // channel to terminate the REPL
 	sig := make(chan os.Signal, 1) // channel to trap interrupt signal (Ctrl-C)
+	lines := make(chan string)     // channel to read REPL input lines
 	prompt := getPrompt(in, out)   // prompt activated on tty like IO stream
 	s := bufio.NewScanner(in)      // read input stream line by line
 	var v reflect.Value            // result value from eval
 	var err error                  // error from eval
 	src := ""                      // source string to evaluate
+
 	signal.Notify(sig, os.Interrupt)
+	defer signal.Stop(sig)
 	prompt(v)
 
-	// Read, Eval, Print in a Loop.
-	for s.Scan() {
-		src += s.Text() + "\n"
+	go func() {
+		defer close(end)
+		for s.Scan() {
+			lines <- s.Text()
+		}
+		if e := s.Err(); e != nil {
+			fmt.Fprintln(errs, e)
+		}
+	}()
 
-		// The following goroutine handles interrupt signal by canceling eval.
-		go func() {
+	go func() {
+		for {
 			select {
 			case <-sig:
 				cancel()
+				lines <- ""
 			case <-end:
+				return
 			}
-		}()
+		}
+	}()
+
+	for {
+		var line string
+
+		select {
+		case <-end:
+			cancel()
+			return v, err
+		case line = <-lines:
+			src += line + "\n"
+		}
 
 		v, err = interp.EvalWithContext(ctx, src)
 		if err != nil {
 			switch e := err.(type) {
 			case scanner.ErrorList:
-				if len(e) == 0 || ignoreScannerError(e[0], s.Text()) {
+				if len(e) > 0 && ignoreScannerError(e[0], line) {
 					continue
 				}
 				fmt.Fprintln(errs, e[0])
@@ -686,21 +730,12 @@ func (interp *Interpreter) REPL() (reflect.Value, error) {
 				fmt.Fprintln(errs, err)
 			}
 		}
-
 		if errors.Is(err, context.Canceled) {
-			// Eval has been interrupted by the above signal handling goroutine.
 			ctx, cancel = context.WithCancel(context.Background())
-		} else {
-			// No interrupt, release the above signal handling goroutine.
-			end <- struct{}{}
 		}
-
 		src = ""
 		prompt(v)
 	}
-	cancel() // Do not defer, as cancel func may change over time.
-	return v, err
-	// TODO(mpl): log s.Err() if not nil?
 }
 
 // getPrompt returns a function which prints a prompt only if input is a terminal.

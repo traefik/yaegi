@@ -39,9 +39,9 @@ var constOp = map[action]func(*node){
 }
 
 var constBltn = map[string]func(*node){
-	"complex": complexConst,
-	"imag":    imagConst,
-	"real":    realConst,
+	bltnComplex: complexConst,
+	bltnImag:    imagConst,
+	bltnReal:    realConst,
 }
 
 var identifier = regexp.MustCompile(`([\pL_][\pL_\d]*)$`)
@@ -383,12 +383,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			}
 			if typ.incomplete {
 				err = n.cfgErrorf("invalid type declaration")
-				return false
-			}
-
-			if _, exists := sc.sym[typeName]; exists {
-				// TODO(mpl): find the exact location of the previous declaration
-				err = n.cfgErrorf("%s redeclared in this block", typeName)
 				return false
 			}
 
@@ -799,6 +793,11 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			wireChild(n)
 			switch {
 			case interp.isBuiltinCall(n):
+				err = check.builtin(n.child[0].ident, n, n.child[1:], n.action == aCallSlice)
+				if err != nil {
+					break
+				}
+
 				n.gen = n.child[0].sym.builtin
 				n.child[0].typ = &itype{cat: builtinT}
 				if n.typ, err = nodeType(interp, sc, n); err != nil {
@@ -1776,18 +1775,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					// Global object allocation is already performed in GTA.
 					index = sc.sym[c.ident].index
 				} else {
-					if sym, exists := sc.sym[c.ident]; exists {
-						if sym.typ.node != nil &&
-							sym.typ.node.anc != nil {
-							// for non-predeclared identifiers (struct, map, etc)
-							prevDecl := n.interp.fset.Position(sym.typ.node.anc.pos)
-							err = n.cfgErrorf("%s redeclared in this block\n\tprevious declaration at %v", c.ident, prevDecl)
-							return
-						}
-						// for predeclared identifiers (int, string, etc)
-						err = n.cfgErrorf("%s redeclared in this block", c.ident)
-						return
-					}
 					index = sc.add(n.typ)
 					sc.sym[c.ident] = &symbol{index: index, kind: varSym, typ: n.typ}
 				}

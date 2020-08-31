@@ -110,21 +110,12 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 			}
 			for _, c := range n.child[:l] {
 				asImportName := filepath.Join(c.ident, baseName)
-				sym1, exists1 := sc.sym[asImportName]
-				sym2, exists2 := sc.sym[c.ident]
-				if !exists1 && !exists2 {
+				sym, exists := sc.sym[asImportName]
+				if !exists {
 					sc.sym[c.ident] = &symbol{index: sc.add(n.typ), kind: varSym, global: true, typ: n.typ, node: n}
 					continue
 				}
 
-				var sym *symbol
-				if exists1 {
-					// prev declaration is an import statement
-					sym = sym1
-				} else {
-					// prev declaration is whatever else (var, type, etc)
-					sym = sym2
-				}
 				// redeclaration error
 				if sym.typ.node != nil && sym.typ.node.anc != nil {
 					prevDecl := n.interp.fset.Position(sym.typ.node.anc.pos)
@@ -142,7 +133,6 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 			ident := n.child[1].ident
 			switch {
 			case isMethod(n):
-				// TODO(mpl): redeclaration detection
 				// Add a method symbol in the receiver type name space
 				var rcvrtype *itype
 				n.ident = ident
@@ -178,19 +168,6 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 					// redeclaration error
 					err = n.cfgErrorf("%s redeclared in this block", ident)
 					return false
-				}
-				sym, exists := sc.sym[ident]
-				if exists {
-					// Make sure the symbol we found seems to be about another node, before calling
-					// it a redeclaration.
-					if sym.typ.isComplete() {
-						// TODO(mpl): this check might be too permissive?
-						if sym.kind != funcSym || sym.typ.cat != n.typ.cat || sym.node != n || sym.index != -1 {
-							// redeclaration error
-							err = n.cfgErrorf("%s redeclared in this block", ident)
-							return false
-						}
-					}
 				}
 				// Add a function symbol in the package name space except for init
 				sc.sym[n.child[1].ident] = &symbol{kind: funcSym, typ: n.typ, node: n, index: -1}
@@ -235,7 +212,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 						break
 					}
 
-					// redeclaration error
+					// redeclaration error. Not caught by the parser.
 					err = n.cfgErrorf("%s redeclared in this block", name)
 					return false
 				}
