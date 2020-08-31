@@ -722,7 +722,7 @@ func (interp *Interpreter) REPL() (reflect.Value, error) {
 				if len(e) > 0 && ignoreScannerError(e[0], line) {
 					continue
 				}
-				fmt.Fprintln(errs, e[0])
+				fmt.Fprintln(errs, strings.TrimPrefix(e[0].Error(), DefaultSourceName+":"))
 			case Panic:
 				fmt.Fprintln(errs, e.Value)
 				fmt.Fprintln(errs, string(e.Stack))
