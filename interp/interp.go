@@ -214,30 +214,20 @@ func (n *node) Walk(in func(n *node) bool, out func(n *node)) {
 type Options struct {
 	// GoPath sets GOPATH for the interpreter.
 	GoPath string
+
 	// BuildTags sets build constraints for the interpreter.
 	BuildTags []string
+
 	// Standard input, output and error streams.
+	// They default to os.Stding, os.Stdout and os.Stderr respectively.
 	Stdin          io.Reader
 	Stdout, Stderr io.Writer
 }
 
 // New returns a new interpreter.
 func New(options Options) *Interpreter {
-	in := options.Stdin
-	if in == nil {
-		in = os.Stdin
-	}
-	out := options.Stdout
-	if out == nil {
-		out = os.Stdout
-	}
-	err := options.Stderr
-	if err == nil {
-		err = os.Stderr
-	}
-
 	i := Interpreter{
-		opt:      opt{context: build.Default, stdin: in, stdout: out, stderr: err},
+		opt:      opt{context: build.Default},
 		frame:    &frame{data: []reflect.Value{}},
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
@@ -247,6 +237,18 @@ func New(options Options) *Interpreter {
 		pkgNames: map[string]string{},
 		rdir:     map[string]bool{},
 		hooks:    &hooks{},
+	}
+
+	if i.opt.stdin = options.Stdin; i.opt.stdin == nil {
+		i.opt.stdin = os.Stdin
+	}
+
+	if i.opt.stdout = options.Stdout; i.opt.stdout == nil {
+		i.opt.stdout = os.Stdout
+	}
+
+	if i.opt.stderr = options.Stderr; i.opt.stderr == nil {
+		i.opt.stderr = os.Stderr
 	}
 
 	i.opt.context.GOPATH = options.GoPath
@@ -549,6 +551,9 @@ func (interp *Interpreter) Use(values Exports) {
 			interp.binPkg[k][s] = sym
 		}
 	}
+
+	// Checks if input values correspond to stdlib packages by looking for one
+	// well knwonw stdlib package path.
 	if _, ok := values["fmt"]; ok {
 		fixStdio(interp)
 	}
@@ -624,7 +629,8 @@ func ignoreScannerError(e *scanner.Error, s string) bool {
 }
 
 // REPL performs a Read-Eval-Print-Loop on input reader.
-// Results are printed on output writer. Errors are printed on errs writer.
+// Results are printed to the output writer of the Interpreter, provided as option
+// at creation time. Errors are printed to the similarly defined errors writer.
 // The last interpreter result value and error are returned.
 func (interp *Interpreter) REPL() (reflect.Value, error) {
 	// Preimport used bin packages, to avoid having to import these packages manually
