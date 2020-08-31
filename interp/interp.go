@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"go/build"
 	"go/scanner"
 	"go/token"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/signal"
 	"reflect"
@@ -115,6 +117,9 @@ type opt struct {
 	noRun    bool          // compile, but do not run
 	fastChan bool          // disable cancellable chan operations
 	context  build.Context // build context: GOPATH, build constraints
+	stdin    io.Reader     // standard input
+	stdout   io.Writer     // standard output
+	stderr   io.Writer     // standard error
 }
 
 // Interpreter contains global resources and state.
@@ -207,10 +212,16 @@ func (n *node) Walk(in func(n *node) bool, out func(n *node)) {
 
 // Options are the interpreter options.
 type Options struct {
-	// GoPath sets GOPATH for the interpreter
+	// GoPath sets GOPATH for the interpreter.
 	GoPath string
-	// BuildTags sets build constraints for the interpreter
+
+	// BuildTags sets build constraints for the interpreter.
 	BuildTags []string
+
+	// Standard input, output and error streams.
+	// They default to os.Stding, os.Stdout and os.Stderr respectively.
+	Stdin          io.Reader
+	Stdout, Stderr io.Writer
 }
 
 // New returns a new interpreter.
@@ -226,6 +237,18 @@ func New(options Options) *Interpreter {
 		pkgNames: map[string]string{},
 		rdir:     map[string]bool{},
 		hooks:    &hooks{},
+	}
+
+	if i.opt.stdin = options.Stdin; i.opt.stdin == nil {
+		i.opt.stdin = os.Stdin
+	}
+
+	if i.opt.stdout = options.Stdout; i.opt.stdout == nil {
+		i.opt.stdout = os.Stdout
+	}
+
+	if i.opt.stderr = options.Stderr; i.opt.stderr == nil {
+		i.opt.stderr = os.Stderr
 	}
 
 	i.opt.context.GOPATH = options.GoPath
@@ -546,6 +569,68 @@ func (interp *Interpreter) Use(values Exports) {
 			interp.binPkg[k][s] = sym
 		}
 	}
+
+	// Checks if input values correspond to stdlib packages by looking for one
+	// well knwonw stdlib package path.
+	if _, ok := values["fmt"]; ok {
+		fixStdio(interp)
+	}
+}
+
+// fixStdio redefines interpreter stdlib symbols to use the standard input,
+// output and errror assigned to the interpreter. The changes are limited to
+// the interpreter only. Global values os.Stdin, os.Stdout and os.Stderr are
+// not changed. Note that it is possible to escape the virtualized stdio by
+// read/write directly to file descriptors 0, 1, 2.
+func fixStdio(interp *Interpreter) {
+	p := interp.binPkg["fmt"]
+	if p == nil {
+		return
+	}
+
+	stdin, stdout, stderr := interp.stdin, interp.stdout, interp.stderr
+
+	p["Print"] = reflect.ValueOf(func(a ...interface{}) (n int, err error) { return fmt.Fprint(stdout, a...) })
+	p["Printf"] = reflect.ValueOf(func(f string, a ...interface{}) (n int, err error) { return fmt.Fprintf(stdout, f, a...) })
+	p["Println"] = reflect.ValueOf(func(a ...interface{}) (n int, err error) { return fmt.Fprintln(stdout, a...) })
+
+	p["Scan"] = reflect.ValueOf(func(a ...interface{}) (n int, err error) { return fmt.Fscan(stdin, a...) })
+	p["Scanf"] = reflect.ValueOf(func(f string, a ...interface{}) (n int, err error) { return fmt.Fscanf(stdin, f, a...) })
+	p["Scanln"] = reflect.ValueOf(func(a ...interface{}) (n int, err error) { return fmt.Fscanln(stdin, a...) })
+
+	if p = interp.binPkg["flag"]; p != nil {
+		c := flag.NewFlagSet(os.Args[0], flag.PanicOnError)
+		c.SetOutput(stderr)
+		p["CommandLine"] = reflect.ValueOf(&c).Elem()
+	}
+
+	if p = interp.binPkg["log"]; p != nil {
+		l := log.New(stderr, "", log.LstdFlags)
+		// Restrict Fatal symbols to panic instead of exit.
+		p["Fatal"] = reflect.ValueOf(l.Panic)
+		p["Fatalf"] = reflect.ValueOf(l.Panicf)
+		p["Fatalln"] = reflect.ValueOf(l.Panicln)
+
+		p["Flags"] = reflect.ValueOf(l.Flags)
+		p["Output"] = reflect.ValueOf(l.Output)
+		p["Panic"] = reflect.ValueOf(l.Panic)
+		p["Panicf"] = reflect.ValueOf(l.Panicf)
+		p["Panicln"] = reflect.ValueOf(l.Panicln)
+		p["Prefix"] = reflect.ValueOf(l.Prefix)
+		p["Print"] = reflect.ValueOf(l.Print)
+		p["Printf"] = reflect.ValueOf(l.Printf)
+		p["Println"] = reflect.ValueOf(l.Println)
+		p["SetFlags"] = reflect.ValueOf(l.SetFlags)
+		p["SetOutput"] = reflect.ValueOf(l.SetOutput)
+		p["SetPrefix"] = reflect.ValueOf(l.SetPrefix)
+		p["Writer"] = reflect.ValueOf(l.Writer)
+	}
+
+	if p = interp.binPkg["os"]; p != nil {
+		p["Stdin"] = reflect.ValueOf(&stdin).Elem()
+		p["Stdout"] = reflect.ValueOf(&stdout).Elem()
+		p["Stderr"] = reflect.ValueOf(&stderr).Elem()
+	}
 }
 
 // ignoreScannerError returns true if the error from Go scanner can be safely ignored
@@ -565,8 +650,10 @@ func ignoreScannerError(e *scanner.Error, s string) bool {
 }
 
 // REPL performs a Read-Eval-Print-Loop on input reader.
-// Results are printed on output writer.
-func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
+// Results are printed to the output writer of the Interpreter, provided as option
+// at creation time. Errors are printed to the similarly defined errors writer.
+// The last interpreter result value and error are returned.
+func (interp *Interpreter) REPL() (reflect.Value, error) {
 	// Preimport used bin packages, to avoid having to import these packages manually
 	// in REPL mode. These packages are already loaded anyway.
 	sc := interp.universe
@@ -580,6 +667,7 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: k, scope: sc}}
 	}
 
+	in, out, errs := interp.stdin, interp.stdout, interp.stderr
 	ctx, cancel := context.WithCancel(context.Background())
 	end := make(chan struct{})     // channel to terminate the REPL
 	sig := make(chan os.Signal, 1) // channel to trap interrupt signal (Ctrl-C)
@@ -599,7 +687,9 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		for s.Scan() {
 			lines <- s.Text()
 		}
-		// TODO(mpl): log s.Err() if not nil?
+		if e := s.Err(); e != nil {
+			fmt.Fprintln(errs, e)
+		}
 	}()
 
 	go func() {
@@ -620,7 +710,7 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		select {
 		case <-end:
 			cancel()
-			return
+			return v, err
 		case line = <-lines:
 			src += line + "\n"
 		}
@@ -632,12 +722,12 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 				if len(e) > 0 && ignoreScannerError(e[0], line) {
 					continue
 				}
-				fmt.Fprintln(out, strings.TrimPrefix(e[0].Error(), DefaultSourceName+":"))
+				fmt.Fprintln(errs, strings.TrimPrefix(e[0].Error(), DefaultSourceName+":"))
 			case Panic:
-				fmt.Fprintln(out, e.Value)
-				fmt.Fprintln(out, string(e.Stack))
+				fmt.Fprintln(errs, e.Value)
+				fmt.Fprintln(errs, string(e.Stack))
 			default:
-				fmt.Fprintln(out, err)
+				fmt.Fprintln(errs, err)
 			}
 		}
 		if errors.Is(err, context.Canceled) {
@@ -646,13 +736,6 @@ func (interp *Interpreter) REPL(in io.Reader, out io.Writer) {
 		src = ""
 		prompt(v)
 	}
-}
-
-// Repl performs a Read-Eval-Print-Loop on input file descriptor.
-// Results are printed on output.
-// Deprecated: use REPL instead.
-func (interp *Interpreter) Repl(in, out *os.File) {
-	interp.REPL(in, out)
 }
 
 // getPrompt returns a function which prints a prompt only if input is a terminal.

@@ -2,13 +2,14 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/containous/yaegi/interp"
 )
 
 func main() {
 	log.SetFlags(log.Lshortfile)
-	i := interp.New(interp.Options{})
+	i := interp.New(interp.Options{Stdout: os.Stdout})
 	if _, err := i.Eval(`func f() (int, int) { return 1, 2 }`); err != nil {
 		log.Fatal(err)
 	}

@@ -2,11 +2,13 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -108,8 +110,8 @@ func TestYaegiCmdCancel(t *testing.T) {
 			continue
 		}
 
-		if outBuf.String() != "context canceled\n" {
-			t.Errorf("unexpected output: %q", &outBuf)
+		if strings.TrimSuffix(errBuf.String(), "\n") != context.Canceled.Error() {
+			t.Errorf("unexpected error: %q", &errBuf)
 		}
 	}
 }

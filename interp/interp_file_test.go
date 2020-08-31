@@ -1,6 +1,7 @@
 package interp_test
 
 import (
+	"bytes"
 	"go/build"
 	"go/parser"
 	"go/token"
@@ -42,16 +43,11 @@ func runCheck(t *testing.T, p string) {
 	}
 	wanted = strings.TrimSpace(wanted)
 
-	// catch stdout
-	backupStdout := os.Stdout
-	defer func() { os.Stdout = backupStdout }()
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
 	if goPath == "" {
 		goPath = build.Default.GOPATH
 	}
-	i := interp.New(interp.Options{GoPath: goPath})
+	var stdout, stderr bytes.Buffer
+	i := interp.New(interp.Options{GoPath: goPath, Stdout: &stdout, Stderr: &stderr})
 	i.Use(interp.Symbols)
 	i.Use(stdlib.Symbols)
 	i.Use(unsafe.Symbols)
@@ -71,15 +67,7 @@ func runCheck(t *testing.T, p string) {
 		t.Fatal(err)
 	}
 
-	// read stdout
-	if err = w.Close(); err != nil {
-		t.Fatal(err)
-	}
-	outInterp, err := ioutil.ReadAll(r)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if res := strings.TrimSpace(string(outInterp)); res != wanted {
+	if res := strings.TrimSpace(stdout.String()); res != wanted {
 		t.Errorf("\ngot:  %q,\nwant: %q", res, wanted)
 	}
 }

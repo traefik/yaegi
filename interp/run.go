@@ -555,13 +555,14 @@ func _print(n *node) {
 	for i, c := range child {
 		values[i] = genValue(c)
 	}
+	out := n.interp.stdout
 
 	genBuiltinDeferWrapper(n, values, nil, func(args []reflect.Value) []reflect.Value {
 		for i, value := range args {
 			if i > 0 {
-				fmt.Printf(" ")
+				fmt.Fprintf(out, " ")
 			}
-			fmt.Printf("%v", value)
+			fmt.Fprintf(out, "%v", value)
 		}
 		return nil
 	})
@@ -573,15 +574,16 @@ func _println(n *node) {
 	for i, c := range child {
 		values[i] = genValue(c)
 	}
+	out := n.interp.stdout
 
 	genBuiltinDeferWrapper(n, values, nil, func(args []reflect.Value) []reflect.Value {
 		for i, value := range args {
 			if i > 0 {
-				fmt.Printf(" ")
+				fmt.Fprintf(out, " ")
 			}
-			fmt.Printf("%v", value)
+			fmt.Fprintf(out, "%v", value)
 		}
-		fmt.Println("")
+		fmt.Fprintln(out, "")
 		return nil
 	})
 }
