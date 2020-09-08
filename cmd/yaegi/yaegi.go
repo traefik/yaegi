@@ -118,7 +118,7 @@ func main() {
 	case Run:
 		err = run(os.Args[2:])
 	case Test:
-		err = fmt.Errorf("test not implemented")
+		err = test(os.Args[2:])
 	default:
 		// If no command is given, fallback to default "run" command.
 		// This allows scripts starting with "#!/usr/bin/env yaegi",

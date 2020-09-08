@@ -57,11 +57,13 @@ func run(arg []string) error {
 
 	if cmd != "" {
 		_, err = i.Eval(cmd)
+		showError(err)
 	}
 
 	if len(args) == 0 {
 		if interactive || cmd == "" {
 			_, err = i.REPL()
+			showError(err)
 		}
 		return err
 	}
@@ -71,40 +73,27 @@ func run(arg []string) error {
 	os.Args = arg[1:]
 	flag.CommandLine = flag.NewFlagSet(path, flag.ExitOnError)
 
-	if isPackageName(path) {
-		err = runPackage(i, path)
+	if isFile(path) {
+		err = runFile(i, path)
 	} else {
-		if isDir(path) {
-			err = runDir(i, path)
-		} else {
-			err = runFile(i, path)
-		}
+		_, err = i.EvalPath(path, interp.NoTest)
 	}
+	showError(err)
+
 	if err != nil {
 		return err
 	}
 
 	if interactive {
 		_, err = i.REPL()
+		showError(err)
 	}
 	return err
 }
 
-func isPackageName(path string) bool {
-	return !strings.HasPrefix(path, "/") && !strings.HasPrefix(path, "./") && !strings.HasPrefix(path, "../") && !strings.HasSuffix(path, ".go")
-}
-
-func isDir(path string) bool {
-	fi, err := os.Lstat(path)
-	return err == nil && fi.IsDir()
-}
-
-func runPackage(i *interp.Interpreter, path string) error {
-	return fmt.Errorf("runPackage not implemented")
-}
-
-func runDir(i *interp.Interpreter, path string) error {
-	return fmt.Errorf("runDir not implemented")
+func isFile(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && fi.Mode().IsRegular()
 }
 
 func runFile(i *interp.Interpreter, path string) error {
@@ -117,15 +106,20 @@ func runFile(i *interp.Interpreter, path string) error {
 		// Allow executable go scripts, Have the same behavior as in interactive mode.
 		s = strings.Replace(s, "#!", "//", 1)
 		_, err = i.Eval(s)
-	} else {
-		// Files not starting with "#!" are supposed to be pure Go, directly Evaled.
-		_, err := i.EvalPath(path)
-		if err != nil {
-			fmt.Println(err)
-			if p, ok := err.(interp.Panic); ok {
-				fmt.Println(string(p.Stack))
-			}
-		}
+		return err
 	}
+
+	// Files not starting with "#!" are supposed to be pure Go, directly Evaled.
+	_, err = i.EvalPath(path, interp.NoTest)
 	return err
+}
+
+func showError(err error) {
+	if err == nil {
+		return
+	}
+	fmt.Fprintln(os.Stderr, err)
+	if p, ok := err.(interp.Panic); ok {
+		fmt.Fprintln(os.Stderr, string(p.Stack))
+	}
 }

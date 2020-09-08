@@ -108,9 +108,9 @@ func main() {
 
 		var oFile string
 		if pkgIdent == "syscall" {
-			oFile = strings.Replace(importPath, "/", "_", -1) + "_" + goos + "_" + goarch + ".go"
+			oFile = strings.ReplaceAll(importPath, "/", "_") + "_" + goos + "_" + goarch + ".go"
 		} else {
-			oFile = strings.Replace(importPath, "/", "_", -1) + ".go"
+			oFile = strings.ReplaceAll(importPath, "/", "_") + ".go"
 		}
 
 		prefix := runtime.Version()

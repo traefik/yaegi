@@ -19,7 +19,7 @@ func (n *node) astDot(out io.Writer, name string) {
 		var label string
 		switch n.kind {
 		case basicLit, identExpr:
-			label = strings.Replace(n.ident, "\"", "\\\"", -1)
+			label = strings.ReplaceAll(n.ident, "\"", "\\\"")
 		default:
 			if n.action != aNop {
 				label = n.action.String()

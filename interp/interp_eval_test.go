@@ -794,7 +794,7 @@ func TestMultiEval(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, v := range names {
-		if _, err := i.EvalPath(filepath.Join(f.Name(), v)); err != nil {
+		if _, err := i.EvalPath(filepath.Join(f.Name(), v), interp.NoTest); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -856,7 +856,7 @@ func TestImportPathIsKey(t *testing.T) {
 	i.Use(stdlib.Symbols)
 
 	filePath := filepath.Join("..", "_test", "ipp_as_key.go")
-	if _, err := i.EvalPath(filePath); err != nil {
+	if _, err := i.EvalPath(filePath, interp.NoTest); err != nil {
 		t.Fatal(err)
 	}
 

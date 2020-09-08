@@ -11,7 +11,7 @@ import (
 // importSrc calls gta on the source code for the package identified by
 // importPath. rPath is the relative path to the directory containing the source
 // code for the package. It can also be "main" as a special value.
-func (interp *Interpreter) importSrc(rPath, importPath string) (string, error) {
+func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (string, error) {
 	var dir string
 	var err error
 
@@ -68,7 +68,7 @@ func (interp *Interpreter) importSrc(rPath, importPath string) (string, error) {
 	// Parse source files.
 	for _, file := range files {
 		name := file.Name()
-		if skipFile(&interp.context, name) {
+		if skipFile(&interp.context, name, skipTest) {
 			continue
 		}
 
@@ -116,7 +116,7 @@ func (interp *Interpreter) importSrc(rPath, importPath string) (string, error) {
 		}
 	}
 
-	// Generate control flow graphs
+	// Generate control flow graphs.
 	for _, root := range rootNodes {
 		var nodes []*node
 		if nodes, err = interp.cfg(root, importPath); err != nil {
@@ -128,7 +128,8 @@ func (interp *Interpreter) importSrc(rPath, importPath string) (string, error) {
 	// Register source package in the interpreter. The package contains only
 	// the global symbols in the package scope.
 	interp.mutex.Lock()
-	interp.srcPkg[importPath] = interp.scopes[importPath].sym
+	gs := interp.scopes[importPath]
+	interp.srcPkg[importPath] = gs.sym
 	interp.pkgNames[importPath] = pkgName
 
 	interp.frame.mutex.Lock()
@@ -136,7 +137,7 @@ func (interp *Interpreter) importSrc(rPath, importPath string) (string, error) {
 	interp.frame.mutex.Unlock()
 	interp.mutex.Unlock()
 
-	// Once all package sources have been parsed, execute entry points then init functions
+	// Once all package sources have been parsed, execute entry points then init functions.
 	for _, n := range rootNodes {
 		if err = genRun(n); err != nil {
 			return "", err
@@ -144,16 +145,16 @@ func (interp *Interpreter) importSrc(rPath, importPath string) (string, error) {
 		interp.run(n, nil)
 	}
 
-	// Wire and execute global vars
-	n, err := genGlobalVars(rootNodes, interp.scopes[importPath])
+	// Wire and execute global vars in global scope gs.
+	n, err := genGlobalVars(rootNodes, gs)
 	if err != nil {
 		return "", err
 	}
 	interp.run(n, nil)
 
-	// Add main to list of functions to run, after all inits
-	if m := interp.main(); m != nil {
-		initNodes = append(initNodes, m)
+	// Add main to list of functions to run, after all inits.
+	if m := gs.sym[mainID]; m != nil && skipTest {
+		initNodes = append(initNodes, m.node)
 	}
 
 	for _, n := range initNodes {

@@ -52,7 +52,7 @@ func runCheck(t *testing.T, p string) {
 	i.Use(stdlib.Symbols)
 	i.Use(unsafe.Symbols)
 
-	_, err := i.EvalPath(p)
+	_, err := i.EvalPath(p, interp.NoTest)
 	if errWanted {
 		if err == nil {
 			t.Fatalf("got nil error, want: %q", wanted)
