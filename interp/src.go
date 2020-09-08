@@ -95,7 +95,7 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 		}
 		if pkgName == "" {
 			pkgName = pname
-		} else if pkgName != pname {
+		} else if pkgName != pname && skipTest {
 			return "", fmt.Errorf("found packages %s and %s in %s", pkgName, pname, dir)
 		}
 		rootNodes = append(rootNodes, root)
