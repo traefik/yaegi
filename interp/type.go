@@ -125,14 +125,12 @@ type itype struct {
 	scope       *scope        // type declaration scope (in case of re-parse incomplete type)
 }
 
-var (
-	untypedBool    = &itype{cat: boolT, name: "bool", untyped: true}
-	untypedString  = &itype{cat: stringT, name: "string", untyped: true}
-	untypedRune    = &itype{cat: int32T, name: "int32", untyped: true}
-	untypedInt     = &itype{cat: intT, name: "int", untyped: true}
-	untypedFloat   = &itype{cat: float64T, name: "float64", untyped: true}
-	untypedComplex = &itype{cat: complex128T, name: "complex128", untyped: true}
-)
+func untypedBool() *itype    { return &itype{cat: boolT, name: "bool", untyped: true} }
+func untypedString() *itype  { return &itype{cat: stringT, name: "string", untyped: true} }
+func untypedRune() *itype    { return &itype{cat: int32T, name: "int32", untyped: true} }
+func untypedInt() *itype     { return &itype{cat: intT, name: "int", untyped: true} }
+func untypedFloat() *itype   { return &itype{cat: float64T, name: "float64", untyped: true} }
+func untypedComplex() *itype { return &itype{cat: complex128T, name: "complex128", untyped: true} }
 
 // nodeType returns a type definition for the corresponding AST subtree.
 func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
@@ -221,24 +219,24 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		switch v := n.rval.Interface().(type) {
 		case bool:
 			n.rval = reflect.ValueOf(constant.MakeBool(v))
-			t = untypedBool
+			t = untypedBool()
 		case rune:
 			// It is impossible to work out rune const literals in AST
 			// with the correct type so we must make the const type here.
 			n.rval = reflect.ValueOf(constant.MakeInt64(int64(v)))
-			t = untypedRune
+			t = untypedRune()
 		case constant.Value:
 			switch v.Kind() {
 			case constant.Bool:
-				t = untypedBool
+				t = untypedBool()
 			case constant.String:
-				t = untypedString
+				t = untypedString()
 			case constant.Int:
-				t = untypedInt
+				t = untypedInt()
 			case constant.Float:
-				t = untypedFloat
+				t = untypedFloat()
 			case constant.Complex:
-				t = untypedComplex
+				t = untypedComplex()
 			default:
 				err = n.cfgErrorf("missing support for type %v", n.rval)
 			}
@@ -299,7 +297,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					case isFloat64(t0) && isFloat64(t1):
 						t = sc.getType("complex128")
 					case nt0.untyped && isNumber(t0) && nt1.untyped && isNumber(t1):
-						t = untypedComplex
+						t = untypedComplex()
 					case nt0.untyped && isFloat32(t1) || nt1.untyped && isFloat32(t0):
 						t = sc.getType("complex64")
 					case nt0.untyped && isFloat64(t1) || nt1.untyped && isFloat64(t0):
@@ -1302,6 +1300,7 @@ func exportName(s string) string {
 }
 
 var (
+	// TODO(mpl): generators.
 	interf   = reflect.TypeOf((*interface{})(nil)).Elem()
 	constVal = reflect.TypeOf((*constant.Value)(nil)).Elem()
 )
