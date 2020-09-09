@@ -938,10 +938,10 @@ func TestConcurrentEvals(t *testing.T) {
 	interpr := interp.New(interp.Options{Stdout: pout})
 	interpr.Use(stdlib.Symbols)
 
-	if _, err := interpr.EvalPath("testdata/concurrent/hello1.go"); err != nil {
+	if _, err := interpr.EvalPath("testdata/concurrent/hello1.go", interp.NoTest); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := interpr.EvalPath("testdata/concurrent/hello2.go"); err != nil {
+	if _, err := interpr.EvalPath("testdata/concurrent/hello2.go", interp.NoTest); err != nil {
 		t.Fatal(err)
 	}
 
