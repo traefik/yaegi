@@ -324,9 +324,9 @@ func initUniverse() *scope {
 		"uintptr":     {kind: typeSym, typ: &itype{cat: uintptrT, name: "uintptr"}},
 
 		// predefined Go constants
-		"false": {kind: constSym, typ: untypedBool, rval: reflect.ValueOf(false)},
-		"true":  {kind: constSym, typ: untypedBool, rval: reflect.ValueOf(true)},
-		"iota":  {kind: constSym, typ: untypedInt},
+		"false": {kind: constSym, typ: untypedBool(), rval: reflect.ValueOf(false)},
+		"true":  {kind: constSym, typ: untypedBool(), rval: reflect.ValueOf(true)},
+		"iota":  {kind: constSym, typ: untypedInt()},
 
 		// predefined Go zero value
 		"nil": {typ: &itype{cat: nilT, untyped: true}},
@@ -601,8 +601,7 @@ func (interp *Interpreter) Use(values Exports) {
 		}
 
 		if interp.binPkg[k] == nil {
-			interp.binPkg[k] = v
-			continue
+			interp.binPkg[k] = make(map[string]reflect.Value)
 		}
 
 		for s, sym := range v {
@@ -611,7 +610,7 @@ func (interp *Interpreter) Use(values Exports) {
 	}
 
 	// Checks if input values correspond to stdlib packages by looking for one
-	// well knwonw stdlib package path.
+	// well known stdlib package path.
 	if _, ok := values["fmt"]; ok {
 		fixStdio(interp)
 	}

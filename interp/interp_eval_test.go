@@ -1,6 +1,7 @@
 package interp_test
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -917,6 +918,199 @@ func TestImportPathIsKey(t *testing.T) {
 	}
 }
 
+// The code in hello1.go and hello2.go spawns a "long-running" goroutine, which
+// means each call to EvalPath actually terminates before the evaled code is done
+// running. So this test demonstrates:
+// 1) That two sequential calls to EvalPath don't see their "compilation phases"
+// collide (no data race on the fields of the interpreter), which is somewhat
+// obvious since the calls (and hence the "compilation phases") are sequential too.
+// 2) That two concurrent goroutine runs spawned by the same interpreter do not
+// collide either.
+func TestConcurrentEvals(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	pin, pout := io.Pipe()
+	defer func() {
+		_ = pin.Close()
+		_ = pout.Close()
+	}()
+	interpr := interp.New(interp.Options{Stdout: pout})
+	interpr.Use(stdlib.Symbols)
+
+	if _, err := interpr.EvalPath("testdata/concurrent/hello1.go"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := interpr.EvalPath("testdata/concurrent/hello2.go"); err != nil {
+		t.Fatal(err)
+	}
+
+	c := make(chan error)
+	go func() {
+		hello1, hello2 := false, false
+		sc := bufio.NewScanner(pin)
+		for sc.Scan() {
+			l := sc.Text()
+			switch l {
+			case "hello world1":
+				hello1 = true
+			case "hello world2":
+				hello2 = true
+			default:
+				c <- fmt.Errorf("unexpected output: %v", l)
+				return
+			}
+			if hello1 && hello2 {
+				break
+			}
+		}
+		c <- nil
+	}()
+
+	timeout := time.NewTimer(5 * time.Second)
+	select {
+	case <-timeout.C:
+		t.Fatal("timeout")
+	case err := <-c:
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// TestConcurrentEvals2 shows that even though EvalWithContext calls Eval in a
+// goroutine, it indeed waits for Eval to terminate, and that therefore the code
+// called by EvalWithContext is sequential. And that there is no data race for the
+// interp package global vars or the interpreter fields in this case.
+func TestConcurrentEvals2(t *testing.T) {
+	pin, pout := io.Pipe()
+	defer func() {
+		_ = pin.Close()
+		_ = pout.Close()
+	}()
+	interpr := interp.New(interp.Options{Stdout: pout})
+	interpr.Use(stdlib.Symbols)
+
+	done := make(chan error)
+	go func() {
+		hello1 := false
+		sc := bufio.NewScanner(pin)
+		for sc.Scan() {
+			l := sc.Text()
+			if hello1 {
+				if l == "hello world2" {
+					break
+				} else {
+					done <- fmt.Errorf("unexpected output: %v", l)
+					return
+				}
+			}
+			if l == "hello world1" {
+				hello1 = true
+			} else {
+				done <- fmt.Errorf("unexpected output: %v", l)
+				return
+			}
+		}
+		done <- nil
+	}()
+
+	ctx := context.Background()
+	if _, err := interpr.EvalWithContext(ctx, `import "time"`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := interpr.EvalWithContext(ctx, `time.Sleep(time.Second); println("hello world1")`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := interpr.EvalWithContext(ctx, `time.Sleep(time.Second); println("hello world2")`); err != nil {
+		t.Fatal(err)
+	}
+
+	timeout := time.NewTimer(5 * time.Second)
+	select {
+	case <-timeout.C:
+		t.Fatal("timeout")
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// TestConcurrentEvals3 makes sure that we don't regress into data races at the package level, i.e from:
+// - global vars, which should obviously not be mutated.
+// - when calling Interpreter.Use, the symbols given as argument should be
+// copied when being inserted into interp.binPkg, and not directly used as-is.
+func TestConcurrentEvals3(t *testing.T) {
+	allDone := make(chan bool)
+	runREPL := func() {
+		done := make(chan error)
+		pinin, poutin := io.Pipe()
+		pinout, poutout := io.Pipe()
+		i := interp.New(interp.Options{Stdin: pinin, Stdout: poutout})
+		i.Use(stdlib.Symbols)
+
+		go func() {
+			_, _ = i.REPL()
+		}()
+
+		input := []string{
+			`hello one`,
+			`hello two`,
+			`hello three`,
+		}
+
+		go func() {
+			sc := bufio.NewScanner(pinout)
+			k := 0
+			for sc.Scan() {
+				l := sc.Text()
+				if l != input[k] {
+					done <- fmt.Errorf("unexpected output, want %q, got %q", input[k], l)
+					return
+				}
+				k++
+				if k > 2 {
+					break
+				}
+			}
+			done <- nil
+		}()
+
+		for _, v := range input {
+			in := strings.NewReader(fmt.Sprintf("println(\"%s\")\n", v))
+			if _, err := io.Copy(poutin, in); err != nil {
+				t.Fatal(err)
+			}
+			time.Sleep(time.Second)
+		}
+
+		if err := <-done; err != nil {
+			t.Fatal(err)
+		}
+		_ = pinin.Close()
+		_ = poutin.Close()
+		_ = pinout.Close()
+		_ = poutout.Close()
+		allDone <- true
+	}
+
+	for i := 0; i < 2; i++ {
+		go func() {
+			runREPL()
+		}()
+	}
+
+	timeout := time.NewTimer(10 * time.Second)
+	for i := 0; i < 2; i++ {
+		select {
+		case <-allDone:
+		case <-timeout.C:
+			t.Fatal("timeout")
+		}
+	}
+}
+
 func TestEvalScanner(t *testing.T) {
 	type testCase struct {
 		desc      string
@@ -1005,6 +1199,7 @@ func TestEvalScanner(t *testing.T) {
 	}
 
 	runREPL := func(t *testing.T, test testCase) {
+		// TODO(mpl): use a pipe for the output as well, just as in TestConcurrentEvals5
 		var stdout bytes.Buffer
 		safeStdout := &safeBuffer{buf: &stdout}
 		var stderr bytes.Buffer
