@@ -115,7 +115,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			i.Use(interp.Symbols)
 			i.Use(unsafe.Symbols)
 
-			_, err = i.EvalPath(filePath, interp.NoTest)
+			_, err = i.EvalPath(filePath)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -248,7 +248,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 			i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
 			i.Use(stdlib.Symbols)
 
-			_, errEval := i.EvalPath(filePath, interp.NoTest)
+			_, errEval := i.EvalPath(filePath)
 			if errEval == nil {
 				t.Fatal("An error is expected but got none.")
 			}

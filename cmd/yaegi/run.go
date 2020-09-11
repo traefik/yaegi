@@ -76,7 +76,7 @@ func run(arg []string) error {
 	if isFile(path) {
 		err = runFile(i, path)
 	} else {
-		_, err = i.EvalPath(path, interp.NoTest)
+		_, err = i.EvalPath(path)
 	}
 	showError(err)
 
@@ -110,7 +110,7 @@ func runFile(i *interp.Interpreter, path string) error {
 	}
 
 	// Files not starting with "#!" are supposed to be pure Go, directly Evaled.
-	_, err = i.EvalPath(path, interp.NoTest)
+	_, err = i.EvalPath(path)
 	return err
 }
 

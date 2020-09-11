@@ -111,8 +111,7 @@ func test(arg []string) (err error) {
 	if useUnsafe {
 		i.Use(unsafe.Symbols)
 	}
-	_, err = i.EvalPath(path, interp.Test)
-	if err != nil {
+	if err = i.EvalTest(path); err != nil {
 		return err
 	}
 

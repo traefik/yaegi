@@ -372,13 +372,12 @@ func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
 	return interp.eval(src, "", true)
 }
 
-// EvalPath evaluates Go code located at path, running tests specified by tfe
-// which is the test filter regular expression. If tfe is empty, the main function
-// is evaluated. EvalPath returns the last result computed by the interpreter,
-// and a non nil error in case of failure.
-func (interp *Interpreter) EvalPath(path string, skiptest bool) (res reflect.Value, err error) {
+// EvalPath evaluates Go code located at path and returns the last result computed
+// by the interpreter, and a non nil error in case of failure.
+// The main function of the main package is executed if present.
+func (interp *Interpreter) EvalPath(path string) (res reflect.Value, err error) {
 	if !isFile(path) {
-		_, err = interp.importSrc("main", path, skiptest)
+		_, err := interp.importSrc(mainID, path, NoTest)
 		return res, err
 	}
 
@@ -387,6 +386,15 @@ func (interp *Interpreter) EvalPath(path string, skiptest bool) (res reflect.Val
 		return res, err
 	}
 	return interp.eval(string(b), path, false)
+}
+
+// EvalTest evaluates Go code located at path, including test files with "_test.go" suffix.
+// A non nil error is returned in case of failure.
+// The main function, test functions and benchmark functions are internally compiled but not
+// executed. Test functions can be retrieved using the Symbol() method.
+func (interp *Interpreter) EvalTest(path string) error {
+	_, err := interp.importSrc(mainID, path, Test)
+	return err
 }
 
 // Symbols returns a map of interpreter exported symbol values for the given path.

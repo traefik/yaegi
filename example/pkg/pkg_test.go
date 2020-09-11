@@ -109,7 +109,7 @@ func TestPackages(t *testing.T) {
 
 			var msg string
 			if test.evalFile != "" {
-				if _, err := i.EvalPath(test.evalFile, interp.NoTest); err != nil {
+				if _, err := i.EvalPath(test.evalFile); err != nil {
 					fatalStderrf(t, "%v", err)
 				}
 				msg = stdout.String()

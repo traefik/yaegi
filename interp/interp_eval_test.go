@@ -795,7 +795,7 @@ func TestMultiEval(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, v := range names {
-		if _, err := i.EvalPath(filepath.Join(f.Name(), v), interp.NoTest); err != nil {
+		if _, err := i.EvalPath(filepath.Join(f.Name(), v)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -857,7 +857,7 @@ func TestImportPathIsKey(t *testing.T) {
 	i.Use(stdlib.Symbols)
 
 	filePath := filepath.Join("..", "_test", "ipp_as_key.go")
-	if _, err := i.EvalPath(filePath, interp.NoTest); err != nil {
+	if _, err := i.EvalPath(filePath); err != nil {
 		t.Fatal(err)
 	}
 
@@ -938,10 +938,10 @@ func TestConcurrentEvals(t *testing.T) {
 	interpr := interp.New(interp.Options{Stdout: pout})
 	interpr.Use(stdlib.Symbols)
 
-	if _, err := interpr.EvalPath("testdata/concurrent/hello1.go", interp.NoTest); err != nil {
+	if _, err := interpr.EvalPath("testdata/concurrent/hello1.go"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := interpr.EvalPath("testdata/concurrent/hello2.go", interp.NoTest); err != nil {
+	if _, err := interpr.EvalPath("testdata/concurrent/hello2.go"); err != nil {
 		t.Fatal(err)
 	}
 
