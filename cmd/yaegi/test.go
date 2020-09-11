@@ -128,5 +128,5 @@ func test(arg []string) (err error) {
 	}
 
 	testing.Main(regexp.MatchString, tests, benchmarks, nil)
-	return err
+	return nil
 }

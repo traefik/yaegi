@@ -153,7 +153,7 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 	interp.run(n, nil)
 
 	// Add main to list of functions to run, after all inits.
-	if m := gs.sym[mainID]; m != nil && skipTest {
+	if m := gs.sym[mainID]; pkgName == mainID && m != nil && skipTest {
 		initNodes = append(initNodes, m.node)
 	}
 

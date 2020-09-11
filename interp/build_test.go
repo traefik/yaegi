@@ -74,7 +74,7 @@ func TestBuildFile(t *testing.T) {
 	for _, test := range tests {
 		test := test
 		t.Run(test.src, func(t *testing.T) {
-			if r := skipFile(&ctx, test.src, true); r != test.res {
+			if r := skipFile(&ctx, test.src, NoTest); r != test.res {
 				t.Errorf("got %v, want %v", r, test.res)
 			}
 		})
