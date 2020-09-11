@@ -130,11 +130,15 @@ type Interpreter struct {
 	// architectures.
 	id uint64
 
+	// nindex is a node number incremented for each new node.
+	// It is used for debug (AST and CFG graphs). As it is atomically
+	// incremented, keep it aligned on 64 bits boundary.
+	nindex int64
+
 	name string // name of the input source file (or main)
 
 	opt                        // user settable options
 	cancelChan bool            // enables cancellable chan operations
-	nindex     int64           // next node index
 	fset       *token.FileSet  // fileset to locate node in source code
 	binPkg     Exports         // binary packages used in interpreter, indexed by path
 	rdir       map[string]bool // for src import cycle detection
