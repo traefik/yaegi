@@ -8,7 +8,6 @@ import (
 
 func TestMain(t *testing.T) {
 	fmt.Println("in test")
-	//t.Errorf("This is test")
 }
 
 func BenchmarkMain(b *testing.B) {
