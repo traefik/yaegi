@@ -157,6 +157,11 @@ const (
 	// source file has not been specified for an Eval.
 	// TODO(mpl): something even more special as a name?
 	DefaultSourceName = "_.go"
+
+	// Test is the value to pass to EvalPath to activate evaluation of test functions.
+	Test = false
+	// NoTest is the value to pass to EvalPath to skip evaluation of test functions.
+	NoTest = true
 )
 
 // Symbols exposes interpreter values.
@@ -361,30 +366,69 @@ func (interp *Interpreter) resizeFrame() {
 	interp.frame.data = data
 }
 
-func (interp *Interpreter) main() *node {
-	interp.mutex.RLock()
-	defer interp.mutex.RUnlock()
-	if m, ok := interp.scopes[mainID]; ok && m.sym[mainID] != nil {
-		return m.sym[mainID].node
-	}
-	return nil
-}
-
 // Eval evaluates Go code represented as a string. Eval returns the last result
 // computed by the interpreter, and a non nil error in case of failure.
 func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
 	return interp.eval(src, "", true)
 }
 
-// EvalPath evaluates Go code located at path. EvalPath returns the last result
-// computed by the interpreter, and a non nil error in case of failure.
+// EvalPath evaluates Go code located at path and returns the last result computed
+// by the interpreter, and a non nil error in case of failure.
+// The main function of the main package is executed if present.
 func (interp *Interpreter) EvalPath(path string) (res reflect.Value, err error) {
-	// TODO(marc): implement eval of a directory, package and tests.
+	if !isFile(path) {
+		_, err := interp.importSrc(mainID, path, NoTest)
+		return res, err
+	}
+
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		return res, err
 	}
 	return interp.eval(string(b), path, false)
+}
+
+// EvalTest evaluates Go code located at path, including test files with "_test.go" suffix.
+// A non nil error is returned in case of failure.
+// The main function, test functions and benchmark functions are internally compiled but not
+// executed. Test functions can be retrieved using the Symbol() method.
+func (interp *Interpreter) EvalTest(path string) error {
+	_, err := interp.importSrc(mainID, path, Test)
+	return err
+}
+
+// Symbols returns a map of interpreter exported symbol values for the given path.
+func (interp *Interpreter) Symbols(path string) map[string]reflect.Value {
+	m := map[string]reflect.Value{}
+
+	interp.mutex.RLock()
+	if interp.scopes[path] == nil {
+		interp.mutex.RUnlock()
+		return m
+	}
+	sym := interp.scopes[path].sym
+	interp.mutex.RUnlock()
+
+	for n, s := range sym {
+		if !canExport(n) {
+			// Skip private non-exported symbols.
+			continue
+		}
+		switch s.kind {
+		case constSym:
+			m[n] = s.rval
+		case funcSym:
+			m[n] = genFunctionWrapper(s.node)(interp.frame)
+		case varSym:
+			m[n] = interp.frame.data[s.index]
+		}
+	}
+	return m
+}
+
+func isFile(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && fi.Mode().IsRegular()
 }
 
 func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, err error) {
@@ -426,7 +470,7 @@ func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, 
 		return res, err
 	}
 
-	// Annotate AST with CFG infos
+	// Annotate AST with CFG informations.
 	initNodes, err := interp.cfg(root, pkgName)
 	if err != nil {
 		if interp.cfgDot {
@@ -439,24 +483,24 @@ func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, 
 		return res, err
 	}
 
-	// Add main to list of functions to run, after all inits
-	if m := interp.main(); m != nil {
-		initNodes = append(initNodes, m)
-	}
-
 	if root.kind != fileStmt {
-		// REPL may skip package statement
+		// REPL may skip package statement.
 		setExec(root.start)
 	}
 	interp.mutex.Lock()
+	gs := interp.scopes[pkgName]
 	if interp.universe.sym[pkgName] == nil {
-		// Make the package visible under a path identical to its name
-		// TODO(mpl): srcPkg is supposed to be keyed by importPath. Verify it is necessary, and implement.
-		interp.srcPkg[pkgName] = interp.scopes[pkgName].sym
+		// Make the package visible under a path identical to its name.
+		interp.srcPkg[pkgName] = gs.sym
 		interp.universe.sym[pkgName] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: pkgName}}
 		interp.pkgNames[pkgName] = pkgName
 	}
 	interp.mutex.Unlock()
+
+	// Add main to list of functions to run, after all inits.
+	if m := gs.sym[mainID]; pkgName == mainID && m != nil {
+		initNodes = append(initNodes, m.node)
+	}
 
 	if interp.cfgDot {
 		dotCmd := interp.dotCmd
@@ -470,21 +514,21 @@ func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, 
 		return res, err
 	}
 
-	// Generate node exec closures
+	// Generate node exec closures.
 	if err = genRun(root); err != nil {
 		return res, err
 	}
 
-	// Init interpreter execution memory frame
+	// Init interpreter execution memory frame.
 	interp.frame.setrunid(interp.runid())
 	interp.frame.mutex.Lock()
 	interp.resizeFrame()
 	interp.frame.mutex.Unlock()
 
-	// Execute node closures
+	// Execute node closures.
 	interp.run(root, nil)
 
-	// Wire and execute global vars
+	// Wire and execute global vars.
 	n, err := genGlobalVars([]*node{root}, interp.scopes[pkgName])
 	if err != nil {
 		return res, err
@@ -497,7 +541,7 @@ func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, 
 	v := genValue(root)
 	res = v(interp.frame)
 
-	// If result is an interpreter node, wrap it in a runtime callable function
+	// If result is an interpreter node, wrap it in a runtime callable function.
 	if res.IsValid() {
 		if n, ok := res.Interface().(*node); ok {
 			res = genFunctionWrapper(n)(interp.frame)

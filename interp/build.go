@@ -5,6 +5,7 @@ import (
 	"go/build"
 	"go/parser"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -129,12 +130,15 @@ func goMinorVersion(ctx *build.Context) int {
 }
 
 // skipFile returns true if file should be skipped.
-func skipFile(ctx *build.Context, p string) bool {
+func skipFile(ctx *build.Context, p string, skipTest bool) bool {
 	if !strings.HasSuffix(p, ".go") {
 		return true
 	}
 	p = strings.TrimSuffix(path.Base(p), ".go")
-	if strings.HasSuffix(p, "_test") {
+	if pp := filepath.Base(p); strings.HasPrefix(pp, "_") || strings.HasPrefix(pp, ".") {
+		return true
+	}
+	if skipTest && strings.HasSuffix(p, "_test") {
 		return true
 	}
 	i := strings.Index(p, "_")

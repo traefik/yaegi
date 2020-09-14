@@ -216,7 +216,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 					err = n.cfgErrorf("%s redeclared in this block", name)
 					return false
 				}
-			} else if pkgName, err = interp.importSrc(rpath, ipath); err == nil {
+			} else if pkgName, err = interp.importSrc(rpath, ipath, NoTest); err == nil {
 				sc.types = interp.universe.types
 				switch name {
 				case "_": // no import of symbols

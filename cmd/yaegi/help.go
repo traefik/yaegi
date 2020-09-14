@@ -36,7 +36,7 @@ func help(arg []string) error {
 	case Run:
 		return run([]string{"-h"})
 	case Test:
-		return fmt.Errorf("help: test not implemented")
+		return test([]string{"-h"})
 	default:
 		return fmt.Errorf("help: invalid yaegi command: %v", cmd)
 	}
