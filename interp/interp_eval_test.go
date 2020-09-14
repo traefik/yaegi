@@ -1111,6 +1111,51 @@ func TestConcurrentEvals3(t *testing.T) {
 	}
 }
 
+func TestConcurrentComposite1(t *testing.T) {
+	testConcurrentComposite(t, "./testdata/concurrent/composite/composite_lit.go")
+}
+
+func TestConcurrentComposite2(t *testing.T) {
+	testConcurrentComposite(t, "./testdata/concurrent/composite/composite_sparse.go")
+}
+
+func testConcurrentComposite(t *testing.T, filePath string) {
+	pin, pout := io.Pipe()
+	i := interp.New(interp.Options{Stdout: pout})
+	i.Use(stdlib.Symbols)
+
+	errc := make(chan error)
+	var output string
+	go func() {
+		sc := bufio.NewScanner(pin)
+		k := 0
+		for sc.Scan() {
+			output += sc.Text()
+			k++
+			if k > 1 {
+				break
+			}
+		}
+		errc <- nil
+	}()
+
+	if _, err := i.EvalPath(filePath); err != nil {
+		t.Fatal(err)
+	}
+
+	_ = pin.Close()
+	_ = pout.Close()
+
+	if err := <-errc; err != nil {
+		t.Fatal(err)
+	}
+
+	expected := "{hello}{hello}"
+	if output != expected {
+		t.Fatalf("unexpected output, want %q, got %q", expected, output)
+	}
+}
+
 func TestEvalScanner(t *testing.T) {
 	type testCase struct {
 		desc      string

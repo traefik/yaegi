@@ -7,6 +7,7 @@ import (
 	"go/constant"
 	"log"
 	"reflect"
+	"sync"
 	"unsafe"
 )
 
@@ -2069,6 +2070,8 @@ func doCompositeLit(n *node, hasType bool) {
 	if typ.cat == ptrT || typ.cat == aliasT {
 		typ = typ.val
 	}
+	var mu sync.Mutex
+	typ.mu = &mu
 	child := n.child
 	if hasType {
 		child = n.child[1:]
@@ -2095,7 +2098,12 @@ func doCompositeLit(n *node, hasType bool) {
 	i := n.findex
 	l := n.level
 	n.exec = func(f *frame) bltn {
+		// TODO: it seems fishy that the typ might be modified post-compilation, and
+		// hence that several goroutines might be using the same typ that they all modify.
+		// We probably need to revisit that.
+		typ.mu.Lock()
 		a := reflect.New(typ.TypeOf()).Elem()
+		typ.mu.Unlock()
 		for i, v := range values {
 			a.Field(i).Set(v(f))
 		}
@@ -2122,6 +2130,8 @@ func doCompositeSparse(n *node, hasType bool) {
 	if typ.cat == ptrT || typ.cat == aliasT {
 		typ = typ.val
 	}
+	var mu sync.Mutex
+	typ.mu = &mu
 	child := n.child
 	if hasType {
 		child = n.child[1:]
@@ -2129,7 +2139,6 @@ func doCompositeSparse(n *node, hasType bool) {
 	destInterface := destType(n).cat == interfaceT
 
 	values := make(map[int]func(*frame) reflect.Value)
-	a, _ := typ.zero()
 	for _, c := range child {
 		c1 := c.child[1]
 		field := typ.fieldIndex(c.child[0].ident)
@@ -2149,6 +2158,9 @@ func doCompositeSparse(n *node, hasType bool) {
 	}
 
 	n.exec = func(f *frame) bltn {
+		typ.mu.Lock()
+		a, _ := typ.zero()
+		typ.mu.Unlock()
 		for i, v := range values {
 			a.Field(i).Set(v(f))
 		}
