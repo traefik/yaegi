@@ -2078,9 +2078,16 @@ func doCompositeLit(n *node, hasType bool) {
 	values := make([]func(*frame) reflect.Value, len(child))
 	for i, c := range child {
 		convertLiteralValue(c, typ.field[i].typ.TypeOf())
-		if c.typ.cat == funcT {
+		switch {
+		case c.typ.cat == funcT:
 			values[i] = genFunctionWrapper(c)
-		} else {
+		case isArray(c.typ) && c.typ.val != nil && c.typ.val.cat == interfaceT:
+			values[i] = genValueInterfaceArray(c)
+		case isRecursiveType(typ.field[i].typ, typ.field[i].typ.rtype):
+			values[i] = genValueRecursiveInterface(c, typ.field[i].typ.rtype)
+		case isInterface(typ.field[i].typ):
+			values[i] = genInterfaceWrapper(c, typ.field[i].typ.rtype)
+		default:
 			values[i] = genValue(c)
 		}
 	}
@@ -2134,6 +2141,8 @@ func doCompositeSparse(n *node, hasType bool) {
 			values[field] = genValueInterfaceArray(c1)
 		case isRecursiveType(typ.field[field].typ, typ.field[field].typ.rtype):
 			values[field] = genValueRecursiveInterface(c1, typ.field[field].typ.rtype)
+		case isInterface(typ.field[field].typ):
+			values[field] = genInterfaceWrapper(c1, typ.field[field].typ.rtype)
 		default:
 			values[field] = genValue(c1)
 		}

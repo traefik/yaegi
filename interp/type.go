@@ -1244,20 +1244,18 @@ func (t *itype) lookupBinMethod(name string) (m reflect.Method, index []int, isP
 	if t.cat == ptrT {
 		return t.val.lookupBinMethod(name)
 	}
+	for i, f := range t.field {
+		if f.embed {
+			if m2, index2, isPtr2, ok2 := f.typ.lookupBinMethod(name); ok2 {
+				index = append([]int{i}, index2...)
+				return m2, index, isPtr2, ok2
+			}
+		}
+	}
 	m, ok = t.TypeOf().MethodByName(name)
 	if !ok {
 		m, ok = reflect.PtrTo(t.TypeOf()).MethodByName(name)
 		isPtr = ok
-	}
-	if !ok {
-		for i, f := range t.field {
-			if f.embed {
-				if m2, index2, isPtr2, ok2 := f.typ.lookupBinMethod(name); ok2 {
-					index = append([]int{i}, index2...)
-					return m2, index, isPtr2, ok2
-				}
-			}
-		}
 	}
 	return m, index, isPtr, ok
 }
