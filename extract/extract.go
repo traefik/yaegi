@@ -216,6 +216,19 @@ func genContent(dest, importPath, license string, p *types.Package, skip map[str
 		buildTags += ",!windows,!nacl,!plan9"
 	}
 
+	if importPath == "syscall" {
+		// As per https://golang.org/cmd/go/#hdr-Build_constraints,
+		// using GOOS=android also matches tags and files for GOOS=linux,
+		// so exclude it explicitly to avoid collisions (issue #843).
+		// Also using GOOS=illumos matches tags and files for GOOS=solaris.
+		switch os.Getenv("GOOS") {
+		case "android":
+			buildTags += ",!linux"
+		case "illumos":
+			buildTags += ",!solaris"
+		}
+	}
+
 	b := new(bytes.Buffer)
 	data := map[string]interface{}{
 		"Dest":      dest,
