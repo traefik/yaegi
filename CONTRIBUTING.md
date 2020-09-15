@@ -13,7 +13,7 @@ discussions.
 Once the proposal is approved, a Pull Request can be opened. If you want
 to provide early visibility to reviewers, create a [Draft Pull Request].
 
-We will also require you to sign the [Containous Contributor License Agreement]
+We will also require you to sign the [Traefik Contributor License Agreement]
 after you submit your first pull request to this project. The link to sign the
 agreement will be presented to you in the web interface of the pull request.
 
