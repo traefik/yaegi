@@ -1,6 +1,6 @@
 package main
 
-import "github.com/containous/yaegi/_test/vars"
+import "github.com/traefik/yaegi/_test/vars"
 
 func main() {
 	println(vars.A)

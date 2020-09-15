@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/containous/yaegi/interp"
-	"github.com/containous/yaegi/stdlib"
-	"github.com/containous/yaegi/stdlib/unsafe"
+	"github.com/traefik/yaegi/interp"
+	"github.com/traefik/yaegi/stdlib"
+	"github.com/traefik/yaegi/stdlib/unsafe"
 )
 
 func TestFile(t *testing.T) {

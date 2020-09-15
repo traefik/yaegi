@@ -8,11 +8,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/containous/yaegi/interp"
-	"github.com/containous/yaegi/stdlib"
-	"github.com/containous/yaegi/stdlib/syscall"
-	"github.com/containous/yaegi/stdlib/unrestricted"
-	"github.com/containous/yaegi/stdlib/unsafe"
+	"github.com/traefik/yaegi/interp"
+	"github.com/traefik/yaegi/stdlib"
+	"github.com/traefik/yaegi/stdlib/syscall"
+	"github.com/traefik/yaegi/stdlib/unrestricted"
+	"github.com/traefik/yaegi/stdlib/unsafe"
 )
 
 func run(arg []string) error {

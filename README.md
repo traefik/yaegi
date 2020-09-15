@@ -2,9 +2,9 @@
 <img width="400" src="doc/images/yaegi.png" alt="Yaegi" title="Yaegi" />
 </p>
 
-[![release](https://img.shields.io/github/tag-date/containous/yaegi.svg?label=alpha)](https://github.com/containous/yaegi/releases)
-[![Build Status](https://travis-ci.com/containous/yaegi.svg?branch=master)](https://travis-ci.com/containous/yaegi)
-[![GoDoc](https://godoc.org/github.com/containous/yaegi?status.svg)](https://godoc.org/github.com/containous/yaegi)
+[![release](https://img.shields.io/github/tag-date/traefik/yaegi.svg?label=alpha)](https://github.com/traefik/yaegi/releases)
+[![Build Status](https://travis-ci.com/traefik/yaegi.svg?branch=master)](https://travis-ci.com/traefik/yaegi)
+[![GoDoc](https://godoc.org/github.com/traefik/yaegi?status.svg)](https://godoc.org/github.com/traefik/yaegi)
 [![Discourse status](https://img.shields.io/discourse/https/community.containo.us/status?label=Community&style=social)](https://community.containo.us/c/yaegi)
 
 Yaegi is Another Elegant Go Interpreter.
@@ -25,13 +25,13 @@ It powers executable Go scripts and plugins, in embedded interpreters or interac
 ### Go package
 
 ```go
-import "github.com/containous/yaegi/interp"
+import "github.com/traefik/yaegi/interp"
 ```
 
 ### Command-line executable
 
 ```bash
-go get -u github.com/containous/yaegi/cmd/yaegi
+go get -u github.com/traefik/yaegi/cmd/yaegi
 ```
 
 Note that you can use [rlwrap](https://github.com/hanslub42/rlwrap) (install with your favorite package manager),
@@ -47,8 +47,8 @@ Create an interpreter with `New()`, run Go code with `Eval()`:
 package main
 
 import (
-	"github.com/containous/yaegi/interp"
-	"github.com/containous/yaegi/stdlib"
+	"github.com/traefik/yaegi/interp"
+	"github.com/traefik/yaegi/stdlib"
 )
 
 func main() {
@@ -81,7 +81,7 @@ The following program is compiled ahead of time, except `bar()` which is interpr
 ```go
 package main
 
-import "github.com/containous/yaegi/interp"
+import "github.com/traefik/yaegi/interp"
 
 const src = `package foo
 func Bar(s string) string { return s + "-Foo" }`
@@ -170,7 +170,7 @@ Beside the known [bugs] which are supposed to be fixed in the short term, there 
 [Apache 2.0][License].
 
 [specs]: https://golang.org/ref/spec
-[docs]: https://godoc.org/github.com/containous/yaegi
-[license]: https://github.com/containous/yaegi/blob/master/LICENSE
-[github]: https://github.com/containous/yaegi
-[bugs]: https://github.com/containous/yaegi/issues?q=is%3Aissue+is%3Aopen+label%3Abug
+[docs]: https://godoc.org/github.com/traefik/yaegi
+[license]: https://github.com/traefik/yaegi/blob/master/LICENSE
+[github]: https://github.com/traefik/yaegi
+[bugs]: https://github.com/traefik/yaegi/issues?q=is%3Aissue+is%3Aopen+label%3Abug

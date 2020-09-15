@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/containous/yaegi/interp"
-	"github.com/containous/yaegi/stdlib"
+	"github.com/traefik/yaegi/interp"
+	"github.com/traefik/yaegi/stdlib"
 )
 
 func TestGetFunc(t *testing.T) {

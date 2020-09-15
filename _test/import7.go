@@ -1,6 +1,6 @@
 package main
 
-import "github.com/containous/yaegi/_test/foo-bar"
+import bar "github.com/traefik/yaegi/_test/foo-bar"
 
 func main() {
 	println(bar.Name)

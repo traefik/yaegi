@@ -3,7 +3,7 @@ package pkg
 import (
 	"fmt"
 
-	"guthib.com/containous/fromage"
+	"guthib.com/traefik/fromage"
 )
 
 func Here() string {

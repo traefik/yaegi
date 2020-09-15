@@ -156,7 +156,7 @@ type Interpreter struct {
 
 const (
 	mainID   = "main"
-	selfPath = "github.com/containous/yaegi/interp"
+	selfPath = "github.com/traefik/yaegi/interp"
 	// DefaultSourceName is the name used by default when the name of the input
 	// source file has not been specified for an Eval.
 	// TODO(mpl): something even more special as a name?
