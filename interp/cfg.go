@@ -543,6 +543,12 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						// which require and additional operation to set the value
 						break
 					}
+					if dest.action == aGetIndex {
+						// optimization does not work when assigning to a struct field. Maybe we're not
+						// setting the right frame index or something, and we would end up not writing at
+						// the right place. So disabling it for now.
+						break
+					}
 					// Skip the assign operation entirely, the source frame index is set
 					// to destination index, avoiding extra memory alloc and duplication.
 					n.gen = nop
@@ -2368,9 +2374,9 @@ func compositeGenerator(n *node, typ *itype) (gen bltnGenerator) {
 			gen = compositeLitNotype
 		case n.lastChild().kind == keyValueExpr:
 			if n.nleft == 1 {
-				gen = compositeSparse
+				gen = compositeLitKeyed
 			} else {
-				gen = compositeSparseNotype
+				gen = compositeLitKeyedNotype
 			}
 		default:
 			if n.nleft == 1 {

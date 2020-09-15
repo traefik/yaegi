@@ -2060,68 +2060,7 @@ func destType(n *node) *itype {
 	}
 }
 
-// doCompositeLit creates and populates a struct object.
-func doCompositeLit(n *node, hasType bool) {
-	value := valueGenerator(n, n.findex)
-	next := getExec(n.tnext)
-	typ := n.typ
-	if typ.cat == ptrT || typ.cat == aliasT {
-		typ = typ.val
-	}
-	var mu sync.Mutex
-	typ.mu = &mu
-	child := n.child
-	if hasType {
-		child = n.child[1:]
-	}
-	destInterface := destType(n).cat == interfaceT
-
-	values := make([]func(*frame) reflect.Value, len(child))
-	for i, c := range child {
-		convertLiteralValue(c, typ.field[i].typ.TypeOf())
-		switch {
-		case c.typ.cat == funcT:
-			values[i] = genFunctionWrapper(c)
-		case isArray(c.typ) && c.typ.val != nil && c.typ.val.cat == interfaceT:
-			values[i] = genValueInterfaceArray(c)
-		case isRecursiveType(typ.field[i].typ, typ.field[i].typ.rtype):
-			values[i] = genValueRecursiveInterface(c, typ.field[i].typ.rtype)
-		case isInterface(typ.field[i].typ):
-			values[i] = genInterfaceWrapper(c, typ.field[i].typ.rtype)
-		default:
-			values[i] = genValue(c)
-		}
-	}
-
-	i := n.findex
-	l := n.level
-	n.exec = func(f *frame) bltn {
-		// TODO: it seems fishy that the typ might be modified post-compilation, and
-		// hence that several goroutines might be using the same typ that they all modify.
-		// We probably need to revisit that.
-		typ.mu.Lock()
-		a := reflect.New(typ.TypeOf()).Elem()
-		typ.mu.Unlock()
-		for i, v := range values {
-			a.Field(i).Set(v(f))
-		}
-		switch d := value(f); {
-		case d.Type().Kind() == reflect.Ptr:
-			d.Set(a.Addr())
-		case destInterface:
-			d.Set(reflect.ValueOf(valueInterface{n, a}))
-		default:
-			getFrame(f, l).data[i] = a
-		}
-		return next
-	}
-}
-
-func compositeLit(n *node)       { doCompositeLit(n, true) }
-func compositeLitNotype(n *node) { doCompositeLit(n, false) }
-
-// doCompositeSparse creates a struct Object, filling fields from sparse key-values.
-func doCompositeSparse(n *node, hasType bool) {
+func doComposite(n *node, hasType bool, keyed bool) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	typ := n.typ
@@ -2137,27 +2076,37 @@ func doCompositeSparse(n *node, hasType bool) {
 	destInterface := destType(n).cat == interfaceT
 
 	values := make(map[int]func(*frame) reflect.Value)
-	for _, c := range child {
-		c1 := c.child[1]
-		field := typ.fieldIndex(c.child[0].ident)
-		convertLiteralValue(c1, typ.field[field].typ.TypeOf())
+	for i, c := range child {
+		var val *node
+		var fieldIndex int
+		if keyed {
+			val = c.child[1]
+			fieldIndex = typ.fieldIndex(c.child[0].ident)
+		} else {
+			val = c
+			fieldIndex = i
+		}
+		convertLiteralValue(val, typ.field[fieldIndex].typ.TypeOf())
 		switch {
-		case c1.typ.cat == funcT:
-			values[field] = genFunctionWrapper(c1)
-		case isArray(c1.typ) && c1.typ.val != nil && c1.typ.val.cat == interfaceT:
-			values[field] = genValueInterfaceArray(c1)
-		case isRecursiveType(typ.field[field].typ, typ.field[field].typ.rtype):
-			values[field] = genValueRecursiveInterface(c1, typ.field[field].typ.rtype)
-		case isInterface(typ.field[field].typ):
-			values[field] = genInterfaceWrapper(c1, typ.field[field].typ.rtype)
+		case val.typ.cat == funcT:
+			values[fieldIndex] = genFunctionWrapper(val)
+		case isArray(val.typ) && val.typ.val != nil && val.typ.val.cat == interfaceT:
+			values[fieldIndex] = genValueInterfaceArray(val)
+		case isRecursiveType(typ.field[fieldIndex].typ, typ.field[fieldIndex].typ.rtype):
+			values[fieldIndex] = genValueRecursiveInterface(val, typ.field[fieldIndex].typ.rtype)
+		case isInterface(typ.field[fieldIndex].typ):
+			values[fieldIndex] = genInterfaceWrapper(val, typ.field[fieldIndex].typ.rtype)
 		default:
-			values[field] = genValue(c1)
+			values[fieldIndex] = genValue(val)
 		}
 	}
 
+	frameIndex := n.findex
+	l := n.level
 	n.exec = func(f *frame) bltn {
 		typ.mu.Lock()
-		a, _ := typ.zero()
+		// No need to call zero() as doComposite is only called for a structT
+		a := reflect.New(typ.TypeOf()).Elem()
 		typ.mu.Unlock()
 		for i, v := range values {
 			a.Field(i).Set(v(f))
@@ -2169,14 +2118,27 @@ func doCompositeSparse(n *node, hasType bool) {
 		case destInterface:
 			d.Set(reflect.ValueOf(valueInterface{n, a}))
 		default:
-			d.Set(a)
+			getFrame(f, l).data[frameIndex] = a
 		}
 		return next
 	}
 }
 
-func compositeSparse(n *node)       { doCompositeSparse(n, true) }
-func compositeSparseNotype(n *node) { doCompositeSparse(n, false) }
+// doCompositeLit creates and populates a struct object.
+func doCompositeLit(n *node, hasType bool) {
+	doComposite(n, hasType, false)
+}
+
+func compositeLit(n *node)       { doCompositeLit(n, true) }
+func compositeLitNotype(n *node) { doCompositeLit(n, false) }
+
+// doCompositeLitKeyed creates a struct Object, filling fields from sparse key-values.
+func doCompositeLitKeyed(n *node, hasType bool) {
+	doComposite(n, hasType, true)
+}
+
+func compositeLitKeyed(n *node)       { doCompositeLitKeyed(n, true) }
+func compositeLitKeyedNotype(n *node) { doCompositeLitKeyed(n, false) }
 
 func empty(n *node) {}
 
