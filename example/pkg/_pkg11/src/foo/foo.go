@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"guthib.com/containous/fromage"
+	"guthib.com/traefik/fromage"
 )
 
 func main() {

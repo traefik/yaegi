@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/containous/yaegi/_test/ct1"
+	"github.com/traefik/yaegi/_test/ct1"
 )
 
 type T struct {

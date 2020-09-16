@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/containous/yaegi/interp"
+	"github.com/traefik/yaegi/interp"
 )
 
 func main() {

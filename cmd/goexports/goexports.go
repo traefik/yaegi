@@ -11,7 +11,7 @@ Usage:
 
 Example:
 
-    goexports github.com/containous/yaegi/interp
+    goexports github.com/traefik/yaegi/interp
 
 The same goexport program is used for all target operating systems and architectures.
 The GOOS and GOARCH environment variables set the desired target.
@@ -30,7 +30,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/containous/yaegi/extract"
+	"github.com/traefik/yaegi/extract"
 )
 
 // genLicense generates the correct LICENSE header text from the provided

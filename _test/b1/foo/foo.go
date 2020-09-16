@@ -1,6 +1,6 @@
 package foo
 
-import bar "github.com/containous/yaegi/_test/b2/foo"
+import bar "github.com/traefik/yaegi/_test/b2/foo"
 
 var Desc = "in b1/foo"
 

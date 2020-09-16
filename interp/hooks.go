@@ -2,7 +2,7 @@ package interp
 
 import "reflect"
 
-const hooksPath = "github.com/containous/yaegi"
+const hooksPath = "github.com/traefik/yaegi"
 
 // convertFn is the signature of a symbol converter.
 type convertFn func(from, to reflect.Type) func(src, dest reflect.Value)
