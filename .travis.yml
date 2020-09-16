@@ -27,7 +27,7 @@ env:
   global:
     - GO111MODULE=on
 
-go_import_path: github.com/containous/yaegi
+go_import_path: github.com/traefik/yaegi
 
 before_install:
   # Install linters and misspell

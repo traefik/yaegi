@@ -21,4 +21,4 @@ agreement will be presented to you in the web interface of the pull request.
 [Pull Requests]: https://github.com/traefik/yaegi/issues
 [Feature Request]: https://github.com/traefik/yaegi/issues/new?template=feature_request.md
 [Draft Pull Request]: https://github.blog/2019-02-14-introducing-draft-pull-requests/
-[Containous Contributor License Agreement]: https://cla-assistant.io/traefik/yaegi
+[Traefik Labs Contributor License Agreement]: https://cla-assistant.io/traefik/yaegi
