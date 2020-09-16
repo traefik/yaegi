@@ -155,11 +155,11 @@ Documentation about Yaegi commands and libraries can be found at usual [godoc.or
 
 Beside the known [bugs] which are supposed to be fixed in the short term, there are some limitations not planned to be addressed soon:
 
-- assembly files (`.s`) are not supported
-- calling C code is not supported (no virtual "C" package)
-- interfaces to be used from the pre-compiled code can not be added dynamically, as it is required to pre-compile interface wrappers
-- representation of types by `reflect` and printing values using %T may give different results between compiled mode and interpreted mode
-- interpreting computation intensive code is likely to remain significantly slower than in compiled mode
+- Assembly files (`.s`) are not supported.
+- Calling C code is not supported (no virtual "C" package).
+- Interfaces to be used from the pre-compiled code can not be added dynamically, as it is required to pre-compile interface wrappers.
+- Representation of types by `reflect` and printing values using %T may give different results between compiled mode and interpreted mode.
+- Interpreting computation intensive code is likely to remain significantly slower than in compiled mode.
 
 ## Contributing
 
