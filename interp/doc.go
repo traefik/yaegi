@@ -44,4 +44,5 @@ And include files containing
 */
 package interp
 
-// BUG(marc): Type checking is not implemented yet.
+// BUG(marc): Support for recursive types is incomplete.
+// BUG(marc): Support of types implementing multiple interfaces is incomplete.
