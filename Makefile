@@ -20,4 +20,8 @@ tests:
 	GO111MODULE=off go test -v ./...
 	GO111MODULE=off go test -race ./interp
 
-.PHONY: check gen_all_syscall gen_tests
+# https://github.com/goreleaser/godownloader
+generate_downloader:
+	godownloader --repo=traefik/yaegi -o install.sh
+
+.PHONY: check gen_all_syscall gen_tests generate_downloader
