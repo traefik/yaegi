@@ -1070,7 +1070,7 @@ func callBin(n *node) {
 	rcvrOffset := 0
 	if recv := n.child[0].recv; recv != nil && !isInterface(recv.node.typ) {
 		numIn, numChild := funcType.NumIn(), len(child)
-		if variadic > 0 && numIn >= numChild || numIn > numChild {
+		if variadic > 0 && numIn > variadic || numIn > numChild {
 			rcvrOffset = 1
 		}
 	}
