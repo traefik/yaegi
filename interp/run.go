@@ -1039,14 +1039,6 @@ func call(n *node) {
 	}
 }
 
-// pindex returns definition parameter index for function call.
-func pindex(i, variadic int) int {
-	if variadic < 0 || i <= variadic {
-		return i
-	}
-	return variadic
-}
-
 func getFrame(f *frame, l int) *frame {
 	switch l {
 	case 0:
@@ -1077,7 +1069,8 @@ func callBin(n *node) {
 	// A method signature obtained from reflect.Type includes receiver as 1st arg, except for interface types.
 	rcvrOffset := 0
 	if recv := n.child[0].recv; recv != nil && !isInterface(recv.node.typ) {
-		if funcType.NumIn() > len(child) {
+		numIn, numChild := funcType.NumIn(), len(child)
+		if variadic > 0 && numIn >= numChild || numIn > numChild {
 			rcvrOffset = 1
 		}
 	}
@@ -1089,7 +1082,13 @@ func callBin(n *node) {
 	}
 
 	for i, c := range child {
-		defType := funcType.In(rcvrOffset + pindex(i, variadic))
+		var defType reflect.Type
+		if variadic >= 0 && i >= variadic {
+			defType = funcType.In(variadic)
+		} else {
+			defType = funcType.In(rcvrOffset + i)
+		}
+
 		switch {
 		case isBinCall(c):
 			// Handle nested function calls: pass returned values as arguments
