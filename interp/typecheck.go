@@ -1041,7 +1041,15 @@ func (check typecheck) convertUntyped(n *node, typ *itype) error {
 	}
 
 	if err := check.representable(n, rtyp); err != nil {
-		return err
+		if !isInt(rtyp) || n.action != aQuo {
+			return err
+		}
+		// retry in the case of a division, and pretend we want a float. Because if we
+		// can represent a float, then it follows that we can represent the integer
+		// part of that float as an int.
+		if err := check.representable(n, reflect.TypeOf(1.0)); err != nil {
+			return err
+		}
 	}
 	n.rval, err = check.convertConst(n.rval, rtyp)
 	if err != nil {
@@ -1103,6 +1111,12 @@ func (check typecheck) convertConst(v reflect.Value, t reflect.Type) (reflect.Va
 	case reflect.String:
 		v = reflect.ValueOf(constant.StringVal(c))
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		f := constant.ToFloat(c)
+		if f.Kind() == constant.Float {
+			fl, _ := constant.Float64Val(c)
+			v = reflect.ValueOf(int(fl)).Convert(t)
+			break
+		}
 		i, _ := constant.Int64Val(constant.ToInt(c))
 		v = reflect.ValueOf(i).Convert(t)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
