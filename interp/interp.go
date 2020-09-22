@@ -60,7 +60,7 @@ type receiver struct {
 
 // frame contains values for the current execution level (a function context).
 type frame struct {
-	// id is an atomic counter used for cancellation, only access
+	// id is an atomic counter used for cancellation, only accessed
 	// via newFrame/runid/setrunid/clone.
 	// Located at start of struct to ensure proper aligment.
 	id uint64
