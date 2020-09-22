@@ -1069,8 +1069,7 @@ func callBin(n *node) {
 	// A method signature obtained from reflect.Type includes receiver as 1st arg, except for interface types.
 	rcvrOffset := 0
 	if recv := n.child[0].recv; recv != nil && !isInterface(recv.node.typ) {
-		numIn, numChild := funcType.NumIn(), len(child)
-		if variadic > 0 && numIn > variadic || numIn > numChild {
+		if variadic > 0 || funcType.NumIn() > len(child) {
 			rcvrOffset = 1
 		}
 	}
