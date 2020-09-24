@@ -1040,6 +1040,7 @@ func (check typecheck) convertUntyped(n *node, typ *itype) error {
 		return convErr
 	}
 
+	isFloatToIntDivision := false
 	if err := check.representable(n, rtyp); err != nil {
 		if !isInt(rtyp) || n.action != aQuo {
 			return err
@@ -1050,8 +1051,13 @@ func (check typecheck) convertUntyped(n *node, typ *itype) error {
 		if err := check.representable(n, reflect.TypeOf(1.0)); err != nil {
 			return err
 		}
+		isFloatToIntDivision = true
 	}
-	n.rval, err = check.convertConst(n.rval, rtyp)
+	if isFloatToIntDivision {
+		n.rval, err = check.convertConstFloatToInt(n.rval)
+	} else {
+		n.rval, err = check.convertConst(n.rval, rtyp)
+	}
 	if err != nil {
 		if errors.Is(err, errCantConvert) {
 			return convErr
@@ -1093,6 +1099,22 @@ func (check typecheck) representable(n *node, t reflect.Type) error {
 	return nil
 }
 
+func (check typecheck) convertConstFloatToInt(v reflect.Value) (reflect.Value, error) {
+	if !v.IsValid() {
+		return v, errors.New("invalid float reflect value")
+	}
+	c, ok := v.Interface().(constant.Value)
+	if !ok {
+		return v, errors.New("unexpected non-constant value")
+	}
+
+	if constant.ToFloat(c).Kind() != constant.Float {
+		return v, errors.New("const value cannot be converted to float")
+	}
+	fl, _ := constant.Float64Val(c)
+	return reflect.ValueOf(int(fl)).Convert(reflect.TypeOf(1.0)), nil
+}
+
 func (check typecheck) convertConst(v reflect.Value, t reflect.Type) (reflect.Value, error) {
 	if !v.IsValid() {
 		// TODO(nick): This should be an error as the const is in the frame which is undesirable.
@@ -1111,12 +1133,6 @@ func (check typecheck) convertConst(v reflect.Value, t reflect.Type) (reflect.Va
 	case reflect.String:
 		v = reflect.ValueOf(constant.StringVal(c))
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		f := constant.ToFloat(c)
-		if f.Kind() == constant.Float {
-			fl, _ := constant.Float64Val(c)
-			v = reflect.ValueOf(int(fl)).Convert(t)
-			break
-		}
 		i, _ := constant.Int64Val(constant.ToInt(c))
 		v = reflect.ValueOf(i).Convert(t)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
