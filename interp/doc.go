@@ -13,8 +13,8 @@ found in vendor, sources modules will be searched in GOPATH. Go modules
 are not supported yet by yaegi.
 
 Binary form packages are compiled and linked with the interpreter
-executable, and exposed to scripts with the Use method. The goexports
-command can be used to generate package wrappers.
+executable, and exposed to scripts with the Use method. The extract
+subcommand can be used to generate package wrappers.
 
 Custom build tags
 

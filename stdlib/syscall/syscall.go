@@ -14,4 +14,4 @@ func init() {
 	}
 }
 
-//go:generate ../../cmd/goexports/goexports syscall
+//go:generate ../../internal/extract/extract -exclude=^Exec,Exit,ForkExec,Kill,Ptrace,Reboot,Shutdown,StartProcess,Syscall syscall

@@ -28,7 +28,7 @@ func init() {
 `
 
 func init() {
-	buildTags, err := buildTags()
+	buildTags, err := genBuildTags()
 	if err != nil {
 		panic(err)
 	}

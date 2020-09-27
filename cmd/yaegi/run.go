@@ -51,7 +51,7 @@ func run(arg []string) error {
 		i.Use(unsafe.Symbols)
 	}
 	if useUnrestricted {
-		// Use of unrestricted symbols should always follow use of stdlib symbols, to update them.
+		// Use of unrestricted symbols should always follow stdlib and syscall symbols, to update them.
 		i.Use(unrestricted.Symbols)
 	}
 
