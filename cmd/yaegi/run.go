@@ -70,7 +70,7 @@ func run(arg []string) error {
 
 	// Skip first os arg to set command line as expected by interpreted main
 	path := args[0]
-	os.Args = arg[1:]
+	os.Args = arg
 	flag.CommandLine = flag.NewFlagSet(path, flag.ExitOnError)
 
 	if isFile(path) {
