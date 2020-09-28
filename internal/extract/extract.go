@@ -32,8 +32,8 @@ import (
 )
 
 var (
-	exclude = flag.String("exclude", "", "comma separated list of regexp matching symbols to         exclude")
-	include = flag.String("include", "", "comma separated list of regexp matching symbols to         include")
+	exclude = flag.String("exclude", "", "comma separated list of regexp matching symbols to exclude")
+	include = flag.String("include", "", "comma separated list of regexp matching symbols to include")
 )
 
 func main() {
