@@ -604,7 +604,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				t.field = append(t.field, structField{name: fieldName(c.child[0]), embed: true, typ: typ})
 				incomplete = incomplete || typ.incomplete
 			case len(c.child) == 2 && c.child[1].kind == basicLit:
-				tag := c.child[1].rval.String()
+				tag := vString(c.child[1].rval)
 				typ, err := nodeType(interp, sc, c.child[0])
 				if err != nil {
 					return nil, err
@@ -615,7 +615,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				var tag string
 				l := len(c.child)
 				if c.lastChild().kind == basicLit {
-					tag = c.lastChild().rval.String()
+					tag = vString(c.lastChild().rval)
 					l--
 				}
 				typ, err := nodeType(interp, sc, c.child[l-1])
