@@ -956,6 +956,9 @@ func TestConcurrentEvals(t *testing.T) {
 				hello1 = true
 			case "hello world2":
 				hello2 = true
+			case "hello world1hello world2", "hello world2hello world1":
+				hello1 = true
+				hello2 = true
 			default:
 				c <- fmt.Errorf("unexpected output: %v", l)
 				return
