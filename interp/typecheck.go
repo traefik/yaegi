@@ -1040,10 +1040,24 @@ func (check typecheck) convertUntyped(n *node, typ *itype) error {
 		return convErr
 	}
 
+	isFloatToIntDivision := false
 	if err := check.representable(n, rtyp); err != nil {
-		return err
+		if !isInt(rtyp) || n.action != aQuo {
+			return err
+		}
+		// retry in the case of a division, and pretend we want a float. Because if we
+		// can represent a float, then it follows that we can represent the integer
+		// part of that float as an int.
+		if err := check.representable(n, reflect.TypeOf(1.0)); err != nil {
+			return err
+		}
+		isFloatToIntDivision = true
 	}
-	n.rval, err = check.convertConst(n.rval, rtyp)
+	if isFloatToIntDivision {
+		n.rval, err = check.convertConstFloatToInt(n.rval)
+	} else {
+		n.rval, err = check.convertConst(n.rval, rtyp)
+	}
 	if err != nil {
 		if errors.Is(err, errCantConvert) {
 			return convErr
@@ -1083,6 +1097,22 @@ func (check typecheck) representable(n *node, t reflect.Type) error {
 		return n.cfgErrorf("cannot convert %s to %s", c.ExactString(), t.Kind().String())
 	}
 	return nil
+}
+
+func (check typecheck) convertConstFloatToInt(v reflect.Value) (reflect.Value, error) {
+	if !v.IsValid() {
+		return v, errors.New("invalid float reflect value")
+	}
+	c, ok := v.Interface().(constant.Value)
+	if !ok {
+		return v, errors.New("unexpected non-constant value")
+	}
+
+	if constant.ToFloat(c).Kind() != constant.Float {
+		return v, errors.New("const value cannot be converted to float")
+	}
+	fl, _ := constant.Float64Val(c)
+	return reflect.ValueOf(int(fl)).Convert(reflect.TypeOf(1.0)), nil
 }
 
 func (check typecheck) convertConst(v reflect.Value, t reflect.Type) (reflect.Value, error) {
