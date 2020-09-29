@@ -230,7 +230,7 @@ func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, err
 		}
 	}
 
-	// Genereate buildTags with Go version only for stdlib packages.
+	// Generate buildTags with Go version only for stdlib packages.
 	// Third party packages do not depend on Go compiler version by default.
 	var buildTags string
 	if isInStdlib(importPath) {

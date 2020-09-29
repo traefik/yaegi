@@ -14,7 +14,7 @@ are not supported yet by yaegi.
 
 Binary form packages are compiled and linked with the interpreter
 executable, and exposed to scripts with the Use method. The extract
-subcommand can be used to generate package wrappers.
+subcommand of yaegi can be used to generate package wrappers.
 
 Custom build tags
 
