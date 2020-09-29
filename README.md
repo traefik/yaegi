@@ -74,7 +74,7 @@ func main() {
 }
 ```
 
-[Go Playground](https://play.golang.org/p/zzvw4VlerLP)
+[Go Playground](https://play.golang.org/p/2n-EpZbMYI9)
 
 ### As a dynamic extension framework
 
