@@ -198,11 +198,16 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 						t.incomplete = true
 					}
 				} else {
+					c0 := n.child[0]
 					// Evaluate constant array size expression
-					if _, err = interp.cfg(n.child[0], sc.pkgID); err != nil {
+					if _, err = interp.cfg(c0, sc.pkgID); err != nil {
 						return nil, err
 					}
-					t.incomplete = true
+					if v, ok := c0.rval.Interface().(constant.Value); ok {
+						t.size = constToInt(v)
+					} else {
+						t.incomplete = true
+					}
 				}
 			}
 			if t.val, err = nodeType(interp, sc, n.child[1]); err != nil {

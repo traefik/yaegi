@@ -248,6 +248,8 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 			typeName := n.child[0].ident
 			var typ *itype
 			if typ, err = nodeType(interp, sc, n.child[1]); err != nil {
+				err = nil
+				revisit = append(revisit, n)
 				return false
 			}
 
