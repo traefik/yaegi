@@ -39,3 +39,5 @@ func init() {
 		"Symbols": reflect.ValueOf(Symbols),
 	}
 }
+
+//go:generate ../../internal/cmd/extract/extract -include=^Exec,Exit,ForkExec,Kill,Ptrace,Reboot,Shutdown,StartProcess,Syscall syscall

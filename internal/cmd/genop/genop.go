@@ -931,7 +931,7 @@ type Op struct {
 }
 
 func main() {
-	base := template.New("goexports")
+	base := template.New("genop")
 	base.Funcs(template.FuncMap{
 		"tokenFromName": func(name string) string {
 			switch name {

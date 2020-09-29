@@ -10,16 +10,20 @@ import (
 	"path"
 	"strings"
 
-	"github.com/traefik/yaegi/extract"
+	"github.com/traefik/yaegi/internal/extract"
 )
 
 func extractCmd(arg []string) error {
 	var licensePath string
-	var importPath string
+	var name string
+	var exclude string
+	var include string
 
 	eflag := flag.NewFlagSet("run", flag.ContinueOnError)
 	eflag.StringVar(&licensePath, "license", "", "path to a LICENSE file")
-	eflag.StringVar(&importPath, "import_path", "", "the namespace for the extracted symbols")
+	eflag.StringVar(&name, "name", "", "the namespace for the extracted symbols")
+	eflag.StringVar(&exclude, "exclude", "", "comma separated list of regexp matching symbols to exclude")
+	eflag.StringVar(&include, "include", "", "comma separated list of regexp matching symbols to include")
 	eflag.Usage = func() {
 		fmt.Println("Usage: yaegi extract [options] packages...")
 		fmt.Println("Options:")
@@ -45,20 +49,32 @@ func extractCmd(arg []string) error {
 		return err
 	}
 
+	if name == "" {
+		name = path.Base(wd)
+	}
 	ext := extract.Extractor{
-		Dest:    path.Base(wd),
+		Dest:    name,
 		License: license,
 	}
 
+	if exclude != "" {
+		ext.Exclude = strings.Split(exclude, ",")
+	}
+	if include != "" {
+		ext.Include = strings.Split(include, ",")
+	}
+
+	r := strings.NewReplacer("/", "-", ".", "_")
+
 	for _, pkgIdent := range args {
 		var buf bytes.Buffer
-		importPath, err := ext.Extract(pkgIdent, importPath, &buf)
+		importPath, err := ext.Extract(pkgIdent, name, &buf)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			continue
 		}
 
-		oFile := strings.ReplaceAll(importPath, "/", "_") + ".go"
+		oFile := r.Replace(importPath) + ".go"
 		f, err := os.Create(oFile)
 		if err != nil {
 			return err
