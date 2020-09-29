@@ -112,7 +112,7 @@ func main() {
 }
 ```
 
-[Go Playground](https://play.golang.org/p/6SEAoaO7n0U)
+[Go Playground](https://play.golang.org/p/WvwH4JqrU-p)
 
 ### As a command-line interpreter
 
