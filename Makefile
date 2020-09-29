@@ -9,8 +9,8 @@ gen_all_syscall: internal/cmd/extract/extract
 		GOOS=$${v%/*} GOARCH=$${v#*/} go generate ./stdlib/syscall ./stdlib/unrestricted; \
 	done
 
-internal/cmd/extract/extract: internal/cmd/extract/extract.go
-	go generate internal/cmd/extract/extract.go
+internal/cmd/extract/extract:
+	go generate internal/cmd/extract
 
 generate: gen_all_syscall
 	go generate

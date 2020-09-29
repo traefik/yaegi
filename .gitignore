@@ -3,7 +3,7 @@
 *.dot
 .idea/
 /yaegi
-internal/extract/extract
+internal/cmd/extract/extract
 example/inception/inception
 _test/tmp/
 /dist
