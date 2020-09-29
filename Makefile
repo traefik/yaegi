@@ -10,7 +10,8 @@ gen_all_syscall: internal/cmd/extract/extract
 	done
 
 internal/cmd/extract/extract:
-	go generate internal/cmd/extract
+	rm -f internal/cmd/extract/extract
+	go generate ./internal/cmd/extract
 
 generate: gen_all_syscall
 	go generate
@@ -23,4 +24,4 @@ tests:
 install.sh: .goreleaser.yml
 	godownloader --repo=traefik/yaegi -o install.sh .goreleaser.yml
 
-.PHONY: check gen_all_syscall gen_tests generate_downloader
+.PHONY: check gen_all_syscall gen_tests generate_downloader internal/cmd/extract/extract
