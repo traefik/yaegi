@@ -114,9 +114,6 @@ var restricted = map[string]bool{
 
 func matchList(name string, list []string) (match bool, err error) {
 	for _, re := range list {
-		if re == "" {
-			continue
-		}
 		match, err = regexp.MatchString(re, name)
 		if err != nil || match {
 			return
