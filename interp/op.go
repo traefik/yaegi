@@ -701,7 +701,14 @@ func quoConst(n *node) {
 	n.rval = reflect.New(t).Elem()
 	switch {
 	case isConst:
-		v := constant.BinaryOp(vConstantValue(v0), token.QUO, vConstantValue(v1))
+		// TODO(mpl): exclude uints?
+		var operator token.Token
+		if n.typ.untyped && isInt(n.typ.rtype) {
+			operator = token.QUO_ASSIGN
+		} else {
+			operator = token.QUO
+		}
+		v := constant.BinaryOp(vConstantValue(v0), operator, vConstantValue(v1))
 		n.rval.Set(reflect.ValueOf(v))
 	case isComplex(t):
 		n.rval.SetComplex(vComplex(v0) / vComplex(v1))

@@ -785,20 +785,28 @@ func (interp *Interpreter) REPL() (reflect.Value, error) {
 	}
 }
 
+func doPrompt(out io.Writer) func(v reflect.Value) {
+	return func(v reflect.Value) {
+		if v.IsValid() {
+			fmt.Fprintln(out, ":", v)
+		}
+		fmt.Fprint(out, "> ")
+	}
+}
+
 // getPrompt returns a function which prints a prompt only if input is a terminal.
 func getPrompt(in io.Reader, out io.Writer) func(reflect.Value) {
+	forcePrompt, _ := strconv.ParseBool(os.Getenv("YAEGI_PROMPT"))
+	if forcePrompt {
+		return doPrompt(out)
+	}
 	s, ok := in.(interface{ Stat() (os.FileInfo, error) })
 	if !ok {
 		return func(reflect.Value) {}
 	}
 	stat, err := s.Stat()
 	if err == nil && stat.Mode()&os.ModeCharDevice != 0 {
-		return func(v reflect.Value) {
-			if v.IsValid() {
-				fmt.Fprintln(out, ":", v)
-			}
-			fmt.Fprint(out, "> ")
-		}
+		return doPrompt(out)
 	}
 	return func(reflect.Value) {}
 }

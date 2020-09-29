@@ -196,6 +196,16 @@ func {{$name}}Const(n *node) {
 		{{- if $op.Shift}}
 		v := constant.Shift(vConstantValue(v0), token.{{tokenFromName $name}}, uint(vUint(v1)))
 		n.rval.Set(reflect.ValueOf(v))
+		{{- else if (eq $op.Name "/")}}
+		// TODO(mpl): exclude uints?
+		var operator token.Token
+		if n.typ.untyped && isInt(n.typ.rtype) {
+			operator = token.QUO_ASSIGN
+		} else {
+			operator = token.QUO
+		}
+		v := constant.BinaryOp(vConstantValue(v0), operator, vConstantValue(v1))
+		n.rval.Set(reflect.ValueOf(v))
 		{{- else}}
 		v := constant.BinaryOp(vConstantValue(v0), token.{{tokenFromName $name}}, vConstantValue(v1))
 		n.rval.Set(reflect.ValueOf(v))
