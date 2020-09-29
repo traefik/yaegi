@@ -1,6 +1,6 @@
 package interp
 
-//go:generate go run ../internal/genop/genop.go
+//go:generate go run ../internal/cmd/genop/genop.go
 
 import (
 	"fmt"

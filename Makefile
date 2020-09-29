@@ -3,14 +3,14 @@ check:
 	golangci-lint run
 
 # Generate stdlib/syscall/syscall_GOOS_GOARCH.go for all platforms
-gen_all_syscall: internal/extract/extract
+gen_all_syscall: internal/cmd/extract/extract
 	@for v in $$(go tool dist list); do \
 		echo syscall_$${v%/*}_$${v#*/}.go; \
 		GOOS=$${v%/*} GOARCH=$${v#*/} go generate ./stdlib/syscall ./stdlib/unrestricted; \
 	done
 
-internal/extract/extract: internal/extract/extract.go
-	go generate internal/extract/extract.go
+internal/cmd/extract/extract: internal/cmd/extract/extract.go
+	go generate internal/cmd/extract/extract.go
 
 generate: gen_all_syscall
 	go generate

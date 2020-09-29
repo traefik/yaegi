@@ -40,4 +40,4 @@ func init() {
 	}
 }
 
-//go:generate ../../internal/extract/extract -include=^Exec,Exit,ForkExec,Kill,Ptrace,Reboot,Shutdown,StartProcess,Syscall syscall
+//go:generate ../../internal/cmd/extract/extract -include=^Exec,Exit,ForkExec,Kill,Ptrace,Reboot,Shutdown,StartProcess,Syscall syscall

@@ -61,4 +61,4 @@ func uintptrToUnsafePtr(src, dest reflect.Value) {
 	dest.SetPointer(unsafe.Pointer(src.Interface().(uintptr))) //nolint:govet
 }
 
-//go:generate ../../internal/extract/extract unsafe
+//go:generate ../../internal/cmd/extract/extract unsafe

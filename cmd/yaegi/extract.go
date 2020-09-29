@@ -10,7 +10,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/traefik/yaegi/extract"
+	"github.com/traefik/yaegi/internal/extract"
 )
 
 func extractCmd(arg []string) error {
