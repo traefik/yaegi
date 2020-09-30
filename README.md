@@ -74,7 +74,7 @@ func main() {
 }
 ```
 
-[Go Playground](https://play.golang.org/p/zzvw4VlerLP)
+[Go Playground](https://play.golang.org/p/2n-EpZbMYI9)
 
 ### As a dynamic extension framework
 
@@ -112,7 +112,7 @@ func main() {
 }
 ```
 
-[Go Playground](https://play.golang.org/p/6SEAoaO7n0U)
+[Go Playground](https://play.golang.org/p/WvwH4JqrU-p)
 
 ### As a command-line interpreter
 
