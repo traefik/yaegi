@@ -2010,12 +2010,15 @@ func compositeBinMap(n *node) {
 	}
 }
 
-// compositeBinStruct creates and populates a struct object from a binary type.
-func compositeBinStruct(n *node) {
+// doCompositeBinStruct creates and populates a struct object from a binary type.
+func doCompositeBinStruct(n *node, hasType bool) {
 	next := getExec(n.tnext)
 	value := valueGenerator(n, n.findex)
 	typ := n.typ.rtype
-	child := n.child[1:]
+	child := n.child
+	if hasType {
+		child = n.child[1:]
+	}
 	values := make([]func(*frame) reflect.Value, len(child))
 	fieldIndex := make([][]int, len(child))
 	for i, c := range child {
@@ -2050,6 +2053,9 @@ func compositeBinStruct(n *node) {
 		return next
 	}
 }
+
+func compositeBinStruct(n *node)       { doCompositeBinStruct(n, true) }
+func compositeBinStructNotype(n *node) { doCompositeBinStruct(n, false) }
 
 func destType(n *node) *itype {
 	switch n.anc.kind {

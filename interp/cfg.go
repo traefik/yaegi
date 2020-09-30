@@ -1129,7 +1129,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			sym, level, found := sc.lookup(n.ident)
 			if !found {
 				// retry with the filename, in case ident is a package name.
-				// TODO(mpl): maybe we improve lookup itself so it can deal with that.
 				sym, level, found = sc.lookup(filepath.Join(n.ident, baseName))
 				if !found {
 					err = n.cfgErrorf("undefined: %s", n.ident)
@@ -2388,8 +2387,13 @@ func compositeGenerator(n *node, typ *itype) (gen bltnGenerator) {
 	case valueT:
 		switch k := n.typ.rtype.Kind(); k {
 		case reflect.Struct:
-			gen = compositeBinStruct
+			if n.nleft == 1 {
+				gen = compositeBinStruct
+			} else {
+				gen = compositeBinStructNotype
+			}
 		case reflect.Map:
+			// TODO(mpl): maybe needs a NoType VS Type too
 			gen = compositeBinMap
 		default:
 			log.Panic(n.cfgErrorf("compositeGenerator not implemented for type kind: %s", k))
