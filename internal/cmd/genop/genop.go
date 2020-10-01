@@ -197,8 +197,10 @@ func {{$name}}Const(n *node) {
 		v := constant.Shift(vConstantValue(v0), token.{{tokenFromName $name}}, uint(vUint(v1)))
 		n.rval.Set(reflect.ValueOf(v))
 		{{- else if (eq $op.Name "/")}}
-		// TODO(mpl): exclude uints?
 		var operator token.Token
+		// When the result of the operation is expected to be an int (because both
+		// operands are ints), we want to force the type of the whole expression to be an
+		// int (and not a float), which is achieved by using the QUO_ASSIGN operator.
 		if n.typ.untyped && isInt(n.typ.rtype) {
 			operator = token.QUO_ASSIGN
 		} else {
