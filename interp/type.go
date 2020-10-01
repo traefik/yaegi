@@ -186,14 +186,14 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 						return nil, n.child[0].cfgErrorf("non-constant array bound %q", n.child[0].ident)
 					}
 					// Resolve symbol to get size value
-					if sym.typ != nil && sym.typ.cat == intT {
-						if v, ok := sym.rval.Interface().(int); ok {
-							t.size = v
-						} else if c, ok := sym.rval.Interface().(constant.Value); ok {
-							t.size = constToInt(c)
-						} else {
-							t.incomplete = true
-						}
+					if sym.typ == nil || sym.typ.cat != intT {
+						t.incomplete = true
+						break
+					}
+					if v, ok := sym.rval.Interface().(int); ok {
+						t.size = v
+					} else if c, ok := sym.rval.Interface().(constant.Value); ok {
+						t.size = constToInt(c)
 					} else {
 						t.incomplete = true
 					}
@@ -203,11 +203,12 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					if _, err = interp.cfg(c0, sc.pkgID); err != nil {
 						return nil, err
 					}
-					if v, ok := c0.rval.Interface().(constant.Value); ok {
-						t.size = constToInt(v)
-					} else {
+					v, ok := c0.rval.Interface().(constant.Value)
+					if !ok {
 						t.incomplete = true
+						break
 					}
+					t.size = constToInt(v)
 				}
 			}
 			if t.val, err = nodeType(interp, sc, n.child[1]); err != nil {
