@@ -166,62 +166,65 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 
 	case arrayType:
 		t.cat = arrayT
-		if len(n.child) > 1 {
-			v := n.child[0].rval
-			switch {
-			case v.IsValid():
-				// constant size
-				if isConstantValue(v.Type()) {
-					c := v.Interface().(constant.Value)
-					t.size = constToInt(c)
-				} else {
-					t.size = int(v.Int())
-				}
-			case n.child[0].kind == ellipsisExpr:
-				// [...]T expression
-				t.size = arrayTypeLen(n.anc)
-			default:
-				if sym, _, ok := sc.lookup(n.child[0].ident); ok {
-					if sym.kind != constSym {
-						return nil, n.child[0].cfgErrorf("non-constant array bound %q", n.child[0].ident)
-					}
-					// Resolve symbol to get size value
-					if sym.typ == nil || sym.typ.cat != intT {
-						t.incomplete = true
-						break
-					}
-					if v, ok := sym.rval.Interface().(int); ok {
-						t.size = v
-					} else if c, ok := sym.rval.Interface().(constant.Value); ok {
-						t.size = constToInt(c)
-					} else {
-						t.incomplete = true
-					}
-				} else {
-					c0 := n.child[0]
-					// Evaluate constant array size expression
-					if _, err = interp.cfg(c0, sc.pkgID); err != nil {
-						return nil, err
-					}
-					v, ok := c0.rval.Interface().(constant.Value)
-					if !ok {
-						t.incomplete = true
-						break
-					}
-					t.size = constToInt(v)
-				}
-			}
-			if t.val, err = nodeType(interp, sc, n.child[1]); err != nil {
-				return nil, err
-			}
-			t.sizedef = true
-			t.incomplete = t.incomplete || t.val.incomplete
-		} else {
-			if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
+		c0 := n.child[0]
+		if len(n.child) == 1 {
+			// Array size is not defined.
+			if t.val, err = nodeType(interp, sc, c0); err != nil {
 				return nil, err
 			}
 			t.incomplete = t.val.incomplete
+			break
 		}
+		// Array size is defined.
+		switch v := c0.rval; {
+		case v.IsValid():
+			// Size if defined by a constant litteral value.
+			if isConstantValue(v.Type()) {
+				c := v.Interface().(constant.Value)
+				t.size = constToInt(c)
+			} else {
+				t.size = int(v.Int())
+			}
+		case n.child[0].kind == ellipsisExpr:
+			// [...]T expression, get size from the length of composite array.
+			t.size = arrayTypeLen(n.anc)
+		default:
+			if sym, _, ok := sc.lookup(c0.ident); ok {
+				// Size is defined by a symbol which must be a constant integer.
+				if sym.kind != constSym {
+					return nil, c0.cfgErrorf("non-constant array bound %q", c0.ident)
+				}
+				if sym.typ == nil || sym.typ.cat != intT {
+					t.incomplete = true
+					break
+				}
+				if v, ok := sym.rval.Interface().(int); ok {
+					t.size = v
+					break
+				}
+				if c, ok := sym.rval.Interface().(constant.Value); ok {
+					t.size = constToInt(c)
+					break
+				}
+				t.incomplete = true
+				break
+			}
+			// Size is defined by a numeric constant expression.
+			if _, err = interp.cfg(c0, sc.pkgID); err != nil {
+				return nil, err
+			}
+			v, ok := c0.rval.Interface().(constant.Value)
+			if !ok {
+				t.incomplete = true
+				break
+			}
+			t.size = constToInt(v)
+		}
+		if t.val, err = nodeType(interp, sc, n.child[1]); err != nil {
+			return nil, err
+		}
+		t.sizedef = true
+		t.incomplete = t.incomplete || t.val.incomplete
 
 	case basicLit:
 		switch v := n.rval.Interface().(type) {
