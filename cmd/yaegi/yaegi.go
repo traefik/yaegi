@@ -72,6 +72,9 @@ Options:
 	  include unsafe symbols.
 
 Debugging support (may be removed at any time):
+  YAEGI_PROMPT=1
+    Force enable the printing of the REPL prompt and the result of last instruction,
+    even if stdin is not a terminal.
   YAEGI_AST_DOT=1
     Generate and display graphviz dot of AST with dotty(1)
   YAEGI_CFG_DOT=1

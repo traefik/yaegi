@@ -1331,3 +1331,91 @@ func applyCIMultiplier(timeout time.Duration) time.Duration {
 	}
 	return time.Duration(float64(timeout) * CITimeoutMultiplier)
 }
+
+func TestREPLDivision(t *testing.T) {
+	_ = os.Setenv("YAEGI_PROMPT", "1")
+	defer func() {
+		_ = os.Setenv("YAEGI_PROMPT", "0")
+	}()
+	allDone := make(chan bool)
+	runREPL := func() {
+		done := make(chan error)
+		pinin, poutin := io.Pipe()
+		pinout, poutout := io.Pipe()
+		i := interp.New(interp.Options{Stdin: pinin, Stdout: poutout})
+		i.Use(stdlib.Symbols)
+
+		go func() {
+			_, _ = i.REPL()
+		}()
+
+		defer func() {
+			_ = pinin.Close()
+			_ = poutin.Close()
+			_ = pinout.Close()
+			_ = poutout.Close()
+			allDone <- true
+		}()
+
+		input := []string{
+			`1/1`,
+			`7/3`,
+			`16/5`,
+			`3./2`, // float
+		}
+		output := []string{
+			`1`,
+			`2`,
+			`3`,
+			`1.5`,
+		}
+
+		go func() {
+			sc := bufio.NewScanner(pinout)
+			k := 0
+			for sc.Scan() {
+				l := sc.Text()
+				if l != "> : "+output[k] {
+					done <- fmt.Errorf("unexpected output, want %q, got %q", output[k], l)
+					return
+				}
+				k++
+				if k > 3 {
+					break
+				}
+			}
+			done <- nil
+		}()
+
+		for _, v := range input {
+			in := strings.NewReader(v + "\n")
+			if _, err := io.Copy(poutin, in); err != nil {
+				t.Fatal(err)
+			}
+			select {
+			case err := <-done:
+				if err != nil {
+					t.Fatal(err)
+				}
+				return
+			default:
+				time.Sleep(time.Second)
+			}
+		}
+
+		if err := <-done; err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	go func() {
+		runREPL()
+	}()
+
+	timeout := time.NewTimer(10 * time.Second)
+	select {
+	case <-allDone:
+	case <-timeout.C:
+		t.Fatal("timeout")
+	}
+}
