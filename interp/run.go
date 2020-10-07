@@ -2037,7 +2037,7 @@ func doCompositeBinStruct(n *node, hasType bool) {
 			}
 		} else {
 			fieldIndex[i] = []int{i}
-			if c.typ.cat == funcT {
+			if c.typ.cat == funcT && len(c.child) > 1 {
 				convertLiteralValue(c.child[1], typ.Field(i).Type)
 				values[i] = genFunctionWrapper(c.child[1])
 			} else {

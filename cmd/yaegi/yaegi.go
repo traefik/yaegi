@@ -71,7 +71,13 @@ Options:
 	-unsafe
 	  include unsafe symbols.
 
-Debugging support (may be removed at any time):
+Environment variables:
+  YAEGI_SYSCALL=1
+    Include syscall symbols (same as -syscall flag).
+  YAEGI_UNRESTRICTED=1
+    Include unrestricted symbols (same as -unrestricted flag).
+  YAEGI_UNSAFE=1
+    Include unsafe symbols (same as -unsafe flag).
   YAEGI_PROMPT=1
     Force enable the printing of the REPL prompt and the result of last instruction,
     even if stdin is not a terminal.
