@@ -975,7 +975,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					vtyp := &itype{cat: valueT, rtype: rtype.Elem()}
 					err = check.mapLitExpr(child, ktyp, vtyp)
 				}
-				// TODO(mpl): how come we don't have anything to do for reflect.Ptr here?
 			}
 			if err != nil {
 				break
