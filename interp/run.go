@@ -1869,7 +1869,7 @@ func _return(n *node) {
 	case 0:
 		n.exec = nil
 	case 1:
-		if child[0].kind == binaryExpr || isCall(child[0]) {
+		if !child[0].rval.IsValid() && child[0].kind == binaryExpr || isCall(child[0]) {
 			n.exec = nil
 		} else {
 			v := values[0]
