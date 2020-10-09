@@ -32,7 +32,7 @@ func run(arg []string) error {
 	rflag.BoolVar(&useSyscall, "syscall", useSyscall, "include syscall symbols")
 	rflag.BoolVar(&useUnrestricted, "unrestricted", useUnrestricted, "include unrestricted symbols")
 	rflag.StringVar(&tags, "tags", "", "set a list of build tags")
-	rflag.BoolVar(&useUnsafe, "unsafe", useUnsafe, "include usafe symbols")
+	rflag.BoolVar(&useUnsafe, "unsafe", useUnsafe, "include unsafe symbols")
 	rflag.StringVar(&cmd, "e", "", "set the command to be executed (instead of script or/and shell)")
 	rflag.Usage = func() {
 		fmt.Println("Usage: yaegi run [options] [path] [args]")
@@ -49,6 +49,7 @@ func run(arg []string) error {
 	i.Use(interp.Symbols)
 	if useSyscall {
 		i.Use(syscall.Symbols)
+		// Using a environment var allows a nested interpreter to import the syscall package.
 		if err := os.Setenv("YAEGI_SYSCALL", "1"); err != nil {
 			return err
 		}
