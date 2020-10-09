@@ -128,10 +128,20 @@ Hello World
 >
 ```
 
-Or interpret Go files:
+Note that in interactive mode, all stdlib package are pre-imported,
+you can use them directly:
 
 ```console
-$ yaegi cmd/yaegi/yaegi.go
+$ yaegi
+> reflect.TypeOf(time.Date)
+: func(int, time.Month, int, int, int, int, int, *time.Location) time.Time
+>
+```
+
+Or interpret Go packages, directories or files, including itself:
+
+```console
+$ yaegi -syscall -unsafe -unrestricted github.com/traefik/yaegi/cmd/yaegi
 >
 ```
 

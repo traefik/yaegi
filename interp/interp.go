@@ -155,8 +155,9 @@ type Interpreter struct {
 }
 
 const (
-	mainID   = "main"
-	selfPath = "github.com/traefik/yaegi/interp"
+	mainID     = "main"
+	selfPrefix = "github.com/traefik/yaegi"
+	selfPath   = selfPrefix + "/interp"
 	// DefaultSourceName is the name used by default when the name of the input
 	// source file has not been specified for an Eval.
 	// TODO(mpl): something even more special as a name?
@@ -175,6 +176,7 @@ var Symbols = Exports{
 
 		"Interpreter": reflect.ValueOf((*Interpreter)(nil)),
 		"Options":     reflect.ValueOf((*Options)(nil)),
+		"Panic":       reflect.ValueOf((*Panic)(nil)),
 	},
 }
 
@@ -603,7 +605,7 @@ func (interp *Interpreter) getWrapper(t reflect.Type) reflect.Type {
 // they can be used in interpreted code.
 func (interp *Interpreter) Use(values Exports) {
 	for k, v := range values {
-		if k == hooksPath {
+		if k == selfPrefix {
 			interp.hooks.Parse(v)
 			continue
 		}

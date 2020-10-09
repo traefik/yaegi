@@ -33,17 +33,12 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 			rPath = "."
 		}
 		dir = filepath.Join(filepath.Dir(interp.name), rPath, importPath)
-	} else {
-		var root string
-		if rPath == mainID {
-			root, err = interp.rootFromSourceLocation()
-			if err != nil {
-				return "", err
-			}
-		} else {
-			root = rPath
+	} else if dir, rPath, err = pkgDir(interp.context.GOPATH, rPath, importPath); err != nil {
+		// Try again, assuming a root dir at the source location.
+		if rPath, err = interp.rootFromSourceLocation(); err != nil {
+			return "", err
 		}
-		if dir, rPath, err = pkgDir(interp.context.GOPATH, root, importPath); err != nil {
+		if dir, rPath, err = pkgDir(interp.context.GOPATH, rPath, importPath); err != nil {
 			return "", err
 		}
 	}

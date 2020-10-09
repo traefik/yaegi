@@ -559,7 +559,6 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				}
 			} else {
 				err = n.cfgErrorf("undefined selector %s.%s", lt.path, name)
-				panic(err)
 			}
 		case srcPkgT:
 			pkg := interp.srcPkg[lt.path]
