@@ -2015,6 +2015,9 @@ func doCompositeBinStruct(n *node, hasType bool) {
 	next := getExec(n.tnext)
 	value := valueGenerator(n, n.findex)
 	typ := n.typ.rtype
+	if n.typ.cat == ptrT || n.typ.cat == aliasT {
+		typ = n.typ.val.rtype
+	}
 	child := n.child
 	if hasType {
 		child = n.child[1:]
@@ -2049,7 +2052,13 @@ func doCompositeBinStruct(n *node, hasType bool) {
 		for i, v := range values {
 			s.FieldByIndex(fieldIndex[i]).Set(v(f))
 		}
-		value(f).Set(s)
+		d := value(f)
+		switch {
+		case d.Type().Kind() == reflect.Ptr:
+			d.Set(s.Addr())
+		default:
+			d.Set(s)
+		}
 		return next
 	}
 }

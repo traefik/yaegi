@@ -982,7 +982,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 
 			n.findex = sc.add(n.typ)
 			// TODO: Check that composite literal expr matches corresponding type
-			n.gen = compositeGenerator(n, n.typ)
+			n.gen = compositeGenerator(n, n.typ, nil)
 
 		case fallthroughtStmt:
 			if n.anc.kind != caseBody {
@@ -2359,10 +2359,10 @@ func gotoLabel(s *symbol) {
 	}
 }
 
-func compositeGenerator(n *node, typ *itype) (gen bltnGenerator) {
+func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerator) {
 	switch typ.cat {
 	case aliasT, ptrT:
-		gen = compositeGenerator(n, n.typ.val)
+		gen = compositeGenerator(n, n.typ.val, rtyp)
 	case arrayT:
 		gen = arrayLit
 	case mapT:
@@ -2385,7 +2385,10 @@ func compositeGenerator(n *node, typ *itype) (gen bltnGenerator) {
 			}
 		}
 	case valueT:
-		switch k := n.typ.rtype.Kind(); k {
+		if rtyp == nil {
+			rtyp = n.typ.rtype
+		}
+		switch k := rtyp.Kind(); k {
 		case reflect.Struct:
 			if n.nleft == 1 {
 				gen = compositeBinStruct
@@ -2393,8 +2396,10 @@ func compositeGenerator(n *node, typ *itype) (gen bltnGenerator) {
 				gen = compositeBinStructNotype
 			}
 		case reflect.Map:
-			// TODO(mpl): maybe needs a NoType VS Type too
+			// TODO(mpl): maybe needs a NoType version too
 			gen = compositeBinMap
+		case reflect.Ptr:
+			gen = compositeGenerator(n, typ, n.typ.val.rtype)
 		default:
 			log.Panic(n.cfgErrorf("compositeGenerator not implemented for type kind: %s", k))
 		}
