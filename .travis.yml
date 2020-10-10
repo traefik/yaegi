@@ -26,7 +26,7 @@ matrix:
 env:
   global:
     - GO111MODULE=on
-    - GOFLAGS=-ldflags=-X=main.version=$(git describe --tags)
+    - GOFLAGS="-ldflags=-X=main.version=$(git describe --tags)"
 
 go_import_path: github.com/traefik/yaegi
 
