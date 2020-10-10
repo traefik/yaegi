@@ -106,7 +106,10 @@ const (
 	Help    = "help"
 	Run     = "run"
 	Test    = "test"
+	Version = "version"
 )
+
+var version = "devel" // This may be overwritten at build time.
 
 func main() {
 	var cmd string
@@ -128,6 +131,8 @@ func main() {
 		err = run(os.Args[2:])
 	case Test:
 		err = test(os.Args[2:])
+	case Version:
+		fmt.Println(version)
 	default:
 		// If no command is given, fallback to default "run" command.
 		// This allows scripts starting with "#!/usr/bin/env yaegi",
