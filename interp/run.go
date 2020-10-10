@@ -2430,11 +2430,16 @@ func appendSlice(n *node) {
 }
 
 func _append(n *node) {
-	if c1, c2 := n.child[1], n.child[2]; len(n.child) == 3 && c2.typ.cat == arrayT && c2.typ.val.id() == n.typ.val.id() ||
-		isByteArray(c1.typ.TypeOf()) && isString(c2.typ.TypeOf()) {
-		appendSlice(n)
-		return
+	if len(n.child) == 3 {
+		c1, c2 := n.child[1], n.child[2]
+		if (c1.typ.cat == valueT || c2.typ.cat == valueT) && c1.typ.rtype == c2.typ.rtype ||
+			c2.typ.cat == arrayT && c2.typ.val.id() == n.typ.val.id() ||
+			isByteArray(c1.typ.TypeOf()) && isString(c2.typ.TypeOf()) {
+			appendSlice(n)
+			return
+		}
 	}
+
 	dest := genValueOutput(n, n.typ.rtype)
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
