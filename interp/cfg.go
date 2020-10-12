@@ -443,10 +443,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				n.gen = nop
 				break
 			}
-			if n.anc.kind == commClause {
-				n.gen = nop
-				break
-			}
+
 			var atyp *itype
 			if n.nleft+n.nright < len(n.child) {
 				if atyp, err = nodeType(interp, sc, n.child[n.nleft]); err != nil {

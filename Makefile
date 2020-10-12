@@ -17,8 +17,8 @@ generate: gen_all_syscall
 	go generate
 
 tests:
-	GO111MODULE=off go test -v ./...
-	GO111MODULE=off go test -race ./interp
+	go test -v ./...
+	go test -race ./interp
 
 # https://github.com/goreleaser/godownloader
 install.sh: .goreleaser.yml
