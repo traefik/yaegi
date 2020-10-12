@@ -855,7 +855,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					n.gen = nop
 					n.findex = -1
 					n.typ = c0.typ
-					n.rval = c1.rval
+					n.rval = c1.rval.Convert(c0.typ.rtype)
 				default:
 					n.gen = convert
 					n.typ = c0.typ
