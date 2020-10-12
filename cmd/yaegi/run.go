@@ -70,13 +70,12 @@ func run(arg []string) error {
 
 	if cmd != "" {
 		_, err = i.Eval(cmd)
-		showError(err)
 	}
 
 	if len(args) == 0 {
 		if interactive || cmd == "" {
-			_, err = i.REPL()
 			showError(err)
+			_, err = i.REPL()
 		}
 		return err
 	}
@@ -91,7 +90,6 @@ func run(arg []string) error {
 	} else {
 		_, err = i.EvalPath(path)
 	}
-	showError(err)
 
 	if err != nil {
 		return err
@@ -99,7 +97,6 @@ func run(arg []string) error {
 
 	if interactive {
 		_, err = i.REPL()
-		showError(err)
 	}
 	return err
 }

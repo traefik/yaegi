@@ -1308,6 +1308,10 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					break
 				}
 			}
+			if len(n.child) > sc.def.typ.numOut() {
+				err = n.cfgErrorf("too many arguments to return")
+				break
+			}
 			wireChild(n)
 			n.tnext = nil
 			n.val = sc.def
