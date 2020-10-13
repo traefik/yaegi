@@ -2970,33 +2970,34 @@ func _select(n *node) {
 			// The comm clause is an empty default, exit select.
 			cases[i].Dir = reflect.SelectDefault
 			clause[i] = func(*frame) bltn { return next }
-		} else {
-			switch c0 := n.child[i].child[0]; {
-			case len(n.child[i].child) > 1:
-				// The comm clause contains a channel operation and a clause body.
-				clause[i] = getExec(n.child[i].child[1].start)
-				chans[i], assigned[i], ok[i], cases[i].Dir = clauseChanDir(n.child[i])
-				chanValues[i] = genValue(chans[i])
-				if assigned[i] != nil {
-					assignedValues[i] = genValue(assigned[i])
-				}
-				if ok[i] != nil {
-					okValues[i] = genValue(ok[i])
-				}
-			case c0.kind == exprStmt && len(c0.child) == 1 && c0.child[0].action == aRecv:
-				// The comm clause has an empty body clause after channel receive.
-				chanValues[i] = genValue(c0.child[0].child[0])
-				cases[i].Dir = reflect.SelectRecv
-			case c0.kind == sendStmt:
-				// The comm clause as an empty body clause after channel send.
-				chanValues[i] = genValue(c0.child[0])
-				cases[i].Dir = reflect.SelectSend
-				assignedValues[i] = genValue(c0.child[1])
-			default:
-				// The comm clause has a default clause.
-				clause[i] = getExec(c0.start)
-				cases[i].Dir = reflect.SelectDefault
+			continue
+		}
+		switch c0 := n.child[i].child[0]; {
+		case len(n.child[i].child) > 1:
+			// The comm clause contains a channel operation and a clause body.
+			clause[i] = getExec(n.child[i].child[1].start)
+			chans[i], assigned[i], ok[i], cases[i].Dir = clauseChanDir(n.child[i])
+			chanValues[i] = genValue(chans[i])
+			if assigned[i] != nil {
+				assignedValues[i] = genValue(assigned[i])
 			}
+			if ok[i] != nil {
+				okValues[i] = genValue(ok[i])
+			}
+		case c0.kind == exprStmt && len(c0.child) == 1 && c0.child[0].action == aRecv:
+			// The comm clause has an empty body clause after channel receive.
+			chanValues[i] = genValue(c0.child[0].child[0])
+			cases[i].Dir = reflect.SelectRecv
+			clause[i] = func(*frame) bltn { return next }
+		case c0.kind == sendStmt:
+			// The comm clause as an empty body clause after channel send.
+			chanValues[i] = genValue(c0.child[0])
+			cases[i].Dir = reflect.SelectSend
+			assignedValues[i] = genValue(c0.child[1])
+		default:
+			// The comm clause has a default clause.
+			clause[i] = getExec(c0.start)
+			cases[i].Dir = reflect.SelectDefault
 		}
 	}
 
