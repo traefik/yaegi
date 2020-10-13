@@ -427,6 +427,8 @@ func (interp *Interpreter) Symbols(path string) map[string]reflect.Value {
 			m[n] = genFunctionWrapper(s.node)(interp.frame)
 		case varSym:
 			m[n] = interp.frame.data[s.index]
+		case typeSym:
+			m[n] = reflect.New(s.typ.TypeOf())
 		}
 	}
 	return m
