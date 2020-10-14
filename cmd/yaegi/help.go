@@ -14,6 +14,7 @@ The commands are:
     help        print usage information
     run         execute a Go program from source
     test        execute test functions in a Go package
+    version     print version
 
 Use "yaegi help <command>" for more information about a command.
 
@@ -37,6 +38,9 @@ func help(arg []string) error {
 		return run([]string{"-h"})
 	case Test:
 		return test([]string{"-h"})
+	case Version:
+		fmt.Println("Usage: yaegi version")
+		return nil
 	default:
 		return fmt.Errorf("help: invalid yaegi command: %v", cmd)
 	}

@@ -16,6 +16,9 @@ internal/cmd/extract/extract:
 generate: gen_all_syscall
 	go generate
 
+install:
+	GOFLAGS=-ldflags=-X=main.version=$$(git describe --tags) go install ./...
+
 tests:
 	go test -v ./...
 	go test -race ./interp
@@ -24,4 +27,4 @@ tests:
 install.sh: .goreleaser.yml
 	godownloader --repo=traefik/yaegi -o install.sh .goreleaser.yml
 
-.PHONY: check gen_all_syscall gen_tests generate_downloader internal/cmd/extract/extract
+.PHONY: check gen_all_syscall gen_tests generate_downloader internal/cmd/extract/extract install
