@@ -1298,6 +1298,10 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			}
 
 		case returnStmt:
+			if len(n.child) > sc.def.typ.numOut() {
+				err = n.cfgErrorf("too many arguments to return")
+				break
+			}
 			if mustReturnValue(sc.def.child[2]) {
 				nret := len(n.child)
 				if nret == 1 && isCall(n.child[0]) {
@@ -1307,10 +1311,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					err = n.cfgErrorf("not enough arguments to return")
 					break
 				}
-			}
-			if len(n.child) > sc.def.typ.numOut() {
-				err = n.cfgErrorf("too many arguments to return")
-				break
 			}
 			wireChild(n)
 			n.tnext = nil
