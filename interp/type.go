@@ -1188,7 +1188,11 @@ func (t *itype) lookupBinField(name string) (s reflect.StructField, index []int,
 	if !isStruct(t) {
 		return
 	}
-	s, ok = t.TypeOf().FieldByName(name)
+	rt := t.rtype
+	if t.cat == valueT && rt.Kind() == reflect.Ptr {
+		rt = rt.Elem()
+	}
+	s, ok = rt.FieldByName(name)
 	if !ok {
 		for i, f := range t.field {
 			if f.embed {

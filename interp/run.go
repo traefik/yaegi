@@ -2974,17 +2974,22 @@ func _select(n *node) {
 	next := getExec(n.tnext)
 
 	for i := 0; i < nbClause; i++ {
-		if len(n.child[i].child) == 0 {
-			// The comm clause is an empty default, exit select.
+		cl := n.child[i]
+		if cl.kind == commClauseDefault {
 			cases[i].Dir = reflect.SelectDefault
-			clause[i] = func(*frame) bltn { return next }
+			if len(cl.child) == 0 {
+				clause[i] = func(*frame) bltn { return next }
+			} else {
+				clause[i] = getExec(cl.child[0].start)
+			}
 			continue
 		}
-		switch c0 := n.child[i].child[0]; {
-		case len(n.child[i].child) > 1:
+		// The comm clause is in send or recv direction.
+		switch c0 := cl.child[0]; {
+		case len(cl.child) > 1:
 			// The comm clause contains a channel operation and a clause body.
-			clause[i] = getExec(n.child[i].child[1].start)
-			chans[i], assigned[i], ok[i], cases[i].Dir = clauseChanDir(n.child[i])
+			clause[i] = getExec(cl.child[1].start)
+			chans[i], assigned[i], ok[i], cases[i].Dir = clauseChanDir(c0)
 			chanValues[i] = genValue(chans[i])
 			if assigned[i] != nil {
 				assignedValues[i] = genValue(assigned[i])
@@ -3002,10 +3007,7 @@ func _select(n *node) {
 			chanValues[i] = genValue(c0.child[0])
 			cases[i].Dir = reflect.SelectSend
 			assignedValues[i] = genValue(c0.child[1])
-		default:
-			// The comm clause has a default clause.
-			clause[i] = getExec(c0.start)
-			cases[i].Dir = reflect.SelectDefault
+			clause[i] = func(*frame) bltn { return next }
 		}
 	}
 
