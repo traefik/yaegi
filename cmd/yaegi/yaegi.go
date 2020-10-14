@@ -99,6 +99,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/traefik/yaegi/interp"
 )
 
 const (
@@ -143,8 +145,10 @@ func main() {
 	}
 
 	if err != nil && !errors.Is(err, flag.ErrHelp) {
-		err = fmt.Errorf("%s: %w", cmd, err)
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, fmt.Errorf("%s: %w", cmd, err))
+		if p, ok := err.(interp.Panic); ok {
+			fmt.Fprintln(os.Stderr, string(p.Stack))
+		}
 		exitCode = 1
 	}
 	os.Exit(exitCode)

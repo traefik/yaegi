@@ -43,6 +43,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "for7.go" || // expect error
 			file.Name() == "fun21.go" || // expect error
 			file.Name() == "fun22.go" || // expect error
+			file.Name() == "fun23.go" || // expect error
 			file.Name() == "if2.go" || // expect error
 			file.Name() == "import6.go" || // expect error
 			file.Name() == "init1.go" || // expect error
@@ -200,6 +201,11 @@ func TestInterpErrorConsistency(t *testing.T) {
 			fileName:       "fun22.go",
 			expectedInterp: "6:2: not enough arguments in call to time.Date",
 			expectedExec:   "6:11: not enough arguments in call to time.Date",
+		},
+		{
+			fileName:       "fun23.go",
+			expectedInterp: "3:17: too many arguments to return",
+			expectedExec:   "3:17: too many arguments to return",
 		},
 		{
 			fileName:       "op1.go",
