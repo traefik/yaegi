@@ -403,34 +403,59 @@ func (interp *Interpreter) EvalTest(path string) error {
 	return err
 }
 
-// Symbols returns a map of interpreter exported symbol values for the given path.
-func (interp *Interpreter) Symbols(path string) map[string]reflect.Value {
-	m := map[string]reflect.Value{}
-
+// Symbols returns a map of interpreter exported symbol values for the given
+// import path. If the argument is the empty string, all known symbols are
+// returned.
+func (interp *Interpreter) Symbols(importPath string) Exports {
+	m := map[string]map[string]reflect.Value{}
 	interp.mutex.RLock()
-	if interp.scopes[path] == nil {
-		interp.mutex.RUnlock()
-		return m
-	}
-	sym := interp.scopes[path].sym
-	interp.mutex.RUnlock()
+	defer interp.mutex.RUnlock()
 
-	for n, s := range sym {
-		if !canExport(n) {
-			// Skip private non-exported symbols.
+	for k, v := range interp.srcPkg {
+		if importPath != "" && k != importPath {
 			continue
 		}
-		switch s.kind {
-		case constSym:
-			m[n] = s.rval
-		case funcSym:
-			m[n] = genFunctionWrapper(s.node)(interp.frame)
-		case varSym:
-			m[n] = interp.frame.data[s.index]
-		case typeSym:
-			m[n] = reflect.New(s.typ.TypeOf())
+		syms := map[string]reflect.Value{}
+		for n, s := range v {
+			if !canExport(n) {
+				// Skip private non-exported symbols.
+				continue
+			}
+			switch s.kind {
+			case constSym:
+				syms[n] = s.rval
+			case funcSym:
+				syms[n] = genFunctionWrapper(s.node)(interp.frame)
+			case varSym:
+				syms[n] = interp.frame.data[s.index]
+			case typeSym:
+				syms[n] = reflect.New(s.typ.TypeOf())
+			}
+		}
+
+		if len(syms) > 0 {
+			m[k] = syms
+		}
+
+		if importPath != "" {
+			return m
 		}
 	}
+
+	if importPath != "" && len(m) > 0 {
+		return m
+	}
+
+	for k, v := range interp.binPkg {
+		if importPath != "" && k != importPath {
+			continue
+		}
+		m[k] = v
+		if importPath != "" {
+			return m
+		}
+	}
+
 	return m
 }
 
