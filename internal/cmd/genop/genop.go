@@ -407,10 +407,10 @@ func {{$name}}Const(n *node) {
 	case isConst:
 		v := constant.UnaryOp(token.{{tokenFromName $name}}, vConstantValue(v0), 0)
 		n.rval.Set(reflect.ValueOf(v))
-	case isInt(t):
-		n.rval.SetInt({{$op.Name}} v0.Int())
 	case isUint(t):
 		n.rval.SetUint({{$op.Name}} v0.Uint())
+	case isInt(t):
+		n.rval.SetInt({{$op.Name}} v0.Int())
 	{{- if $op.Float}}
 	case isFloat(t):
 		n.rval.SetFloat({{$op.Name}} v0.Float())
