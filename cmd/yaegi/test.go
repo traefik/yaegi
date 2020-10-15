@@ -7,6 +7,7 @@ import (
 	"go/build"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -19,21 +20,23 @@ import (
 
 func test(arg []string) (err error) {
 	var (
-		bench           string
-		benchmem        bool
-		benchtime       string
-		count           string
-		cpu             string
-		failfast        bool
-		run             string
-		short           bool
-		tags            string
-		useUnrestricted bool
-		useUnsafe       bool
-		useSyscall      bool
-		timeout         string
-		verbose         bool
+		bench     string
+		benchmem  bool
+		benchtime string
+		count     string
+		cpu       string
+		failfast  bool
+		run       string
+		short     bool
+		tags      string
+		timeout   string
+		verbose   bool
 	)
+
+	// The following flags are initialized from environment.
+	useSyscall, _ := strconv.ParseBool(os.Getenv("YAEGI_SYSCALL"))
+	useUnrestricted, _ := strconv.ParseBool(os.Getenv("YAEGI_UNRESTRICTED"))
+	useUnsafe, _ := strconv.ParseBool(os.Getenv("YAEGI_UNSAFE"))
 
 	tflag := flag.NewFlagSet("test", flag.ContinueOnError)
 	tflag.StringVar(&bench, "bench", "", "Run only those benchmarks matching a regular expression.")
@@ -46,9 +49,9 @@ func test(arg []string) (err error) {
 	tflag.BoolVar(&short, "short", false, "Tell long-running tests to shorten their run time.")
 	tflag.StringVar(&tags, "tags", "", "Set a list of build tags.")
 	tflag.StringVar(&timeout, "timeout", "", "If a test binary runs longer than duration d, panic.")
-	tflag.BoolVar(&useUnrestricted, "unrestricted", false, "Include unrestricted symbols.")
-	tflag.BoolVar(&useUnsafe, "unsafe", false, "Include usafe symbols.")
-	tflag.BoolVar(&useSyscall, "syscall", false, "Include syscall symbols.")
+	tflag.BoolVar(&useUnrestricted, "unrestricted", useUnrestricted, "Include unrestricted symbols.")
+	tflag.BoolVar(&useUnsafe, "unsafe", useUnsafe, "Include usafe symbols.")
+	tflag.BoolVar(&useSyscall, "syscall", useSyscall, "Include syscall symbols.")
 	tflag.BoolVar(&verbose, "v", false, "Verbose output: log all tests as they are run.")
 	tflag.Usage = func() {
 		fmt.Println("Usage: yaegi test [options] [path]")
@@ -105,12 +108,22 @@ func test(arg []string) (err error) {
 	i.Use(interp.Symbols)
 	if useSyscall {
 		i.Use(syscall.Symbols)
+		// Using a environment var allows a nested interpreter to import the syscall package.
+		if err := os.Setenv("YAEGI_SYSCALL", "1"); err != nil {
+			return err
+		}
 	}
 	if useUnrestricted {
 		i.Use(unrestricted.Symbols)
+		if err := os.Setenv("YAEGI_UNRESTRICTED", "1"); err != nil {
+			return err
+		}
 	}
 	if useUnsafe {
 		i.Use(unsafe.Symbols)
+		if err := os.Setenv("YAEGI_UNSAFE", "1"); err != nil {
+			return err
+		}
 	}
 	if err = i.EvalTest(path); err != nil {
 		return err
