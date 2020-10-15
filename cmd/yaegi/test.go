@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"go/build"
@@ -117,7 +118,11 @@ func test(arg []string) (err error) {
 
 	benchmarks := []testing.InternalBenchmark{}
 	tests := []testing.InternalTest{}
-	for name, sym := range i.Symbols(path) {
+	syms, ok := i.Symbols(path)[path]
+	if !ok {
+		return errors.New("No tests found")
+	}
+	for name, sym := range syms {
 		switch fun := sym.Interface().(type) {
 		case func(*testing.B):
 			benchmarks = append(benchmarks, testing.InternalBenchmark{name, fun})
