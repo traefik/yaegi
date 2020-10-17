@@ -45,3 +45,19 @@ archives:
         format: zip
     files:
       - LICENSE
+
+brews:
+  - github:
+      owner: traefik
+      name: homebrew-tap
+    commit_author:
+      name: traefiker
+      email: 30906710+traefiker@users.noreply.github.com
+    folder: Formula
+    homepage: https://github.com/traefik/yaegi
+    description: |
+      Yaegi is Another Elegant Go Interpreter.
+      It powers executable Go scripts and plugins, in embedded interpreters
+      or interactive shells, on top of the Go runtime.
+    test: |
+      system "#{bin}/yaegi version"
