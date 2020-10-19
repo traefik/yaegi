@@ -1966,10 +1966,10 @@ func bitNotConst(n *node) {
 	case isConst:
 		v := constant.UnaryOp(token.XOR, vConstantValue(v0), 0)
 		n.rval.Set(reflect.ValueOf(v))
-	case isInt(t):
-		n.rval.SetInt(^v0.Int())
 	case isUint(t):
 		n.rval.SetUint(^v0.Uint())
+	case isInt(t):
+		n.rval.SetInt(^v0.Int())
 	}
 }
 
@@ -1985,10 +1985,10 @@ func negConst(n *node) {
 	case isConst:
 		v := constant.UnaryOp(token.SUB, vConstantValue(v0), 0)
 		n.rval.Set(reflect.ValueOf(v))
-	case isInt(t):
-		n.rval.SetInt(-v0.Int())
 	case isUint(t):
 		n.rval.SetUint(-v0.Uint())
+	case isInt(t):
+		n.rval.SetInt(-v0.Int())
 	case isFloat(t):
 		n.rval.SetFloat(-v0.Float())
 	case isComplex(t):
@@ -2024,10 +2024,10 @@ func posConst(n *node) {
 	case isConst:
 		v := constant.UnaryOp(token.ADD, vConstantValue(v0), 0)
 		n.rval.Set(reflect.ValueOf(v))
-	case isInt(t):
-		n.rval.SetInt(+v0.Int())
 	case isUint(t):
 		n.rval.SetUint(+v0.Uint())
+	case isInt(t):
+		n.rval.SetInt(+v0.Int())
 	case isFloat(t):
 		n.rval.SetFloat(+v0.Float())
 	case isComplex(t):
