@@ -101,7 +101,7 @@ func (check typecheck) addressExpr(n *node) error {
 			found = true
 			continue
 		}
-		return n.cfgErrorf("invalid operation: cannot take address of %s", c0.typ.id())
+		return n.cfgErrorf("invalid operation: cannot take address of %s [kind: %s]", c0.typ.id(), kinds[c0.kind])
 	}
 	return nil
 }
