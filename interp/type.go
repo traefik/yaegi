@@ -923,7 +923,23 @@ func (t *itype) assignableTo(o *itype) bool {
 	if t.isNil() && o.hasNil() || o.isNil() && t.hasNil() {
 		return true
 	}
-	return t.TypeOf().AssignableTo(o.TypeOf())
+
+	if t.TypeOf().AssignableTo(o.TypeOf()) {
+		return true
+	}
+
+	n := t.node
+	if n == nil || !n.rval.IsValid() {
+		return false
+	}
+	con, ok := n.rval.Interface().(constant.Value)
+	if !ok {
+		return false
+	}
+	if con == nil || !isConstType(o) {
+		return false
+	}
+	return representableConst(con, o.TypeOf())
 }
 
 // convertibleTo returns true if t is convertible to o.
@@ -932,7 +948,7 @@ func (t *itype) convertibleTo(o *itype) bool {
 		return true
 	}
 
-	// unsafe checkes
+	// unsafe checks
 	tt, ot := t.TypeOf(), o.TypeOf()
 	if (tt.Kind() == reflect.Ptr || tt.Kind() == reflect.Uintptr) && ot.Kind() == reflect.UnsafePointer {
 		return true
