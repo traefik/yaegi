@@ -96,7 +96,7 @@ func (check typecheck) addressExpr(n *node) error {
 			continue
 		case indexExpr, sliceExpr:
 			c := c0.child[0]
-			if isArray(c.typ) || isMap(c.typ) || isSlice(c.typ) {
+			if isArray(c.typ) || isMap(c.typ) {
 				c0 = c
 				continue
 			}
