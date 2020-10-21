@@ -185,30 +185,33 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			} else {
 				t.size = int(v.Int())
 			}
-		case n.child[0].kind == ellipsisExpr:
+		case c0.kind == ellipsisExpr:
 			// [...]T expression, get size from the length of composite array.
 			t.size = arrayTypeLen(n.anc)
-		default:
-			if sym, _, ok := sc.lookup(c0.ident); ok {
-				// Size is defined by a symbol which must be a constant integer.
-				if sym.kind != constSym {
-					return nil, c0.cfgErrorf("non-constant array bound %q", c0.ident)
-				}
-				if sym.typ == nil || sym.typ.cat != intT {
-					t.incomplete = true
-					break
-				}
-				if v, ok := sym.rval.Interface().(int); ok {
-					t.size = v
-					break
-				}
-				if c, ok := sym.rval.Interface().(constant.Value); ok {
-					t.size = constToInt(c)
-					break
-				}
+		case c0.kind == identExpr:
+			sym, _, ok := sc.lookup(c0.ident)
+			if !ok {
 				t.incomplete = true
 				break
 			}
+			// Size is defined by a symbol which must be a constant integer.
+			if sym.kind != constSym {
+				return nil, c0.cfgErrorf("non-constant array bound %q", c0.ident)
+			}
+			if sym.typ == nil || sym.typ.cat != intT {
+				t.incomplete = true
+				break
+			}
+			if v, ok := sym.rval.Interface().(int); ok {
+				t.size = v
+				break
+			}
+			if c, ok := sym.rval.Interface().(constant.Value); ok {
+				t.size = constToInt(c)
+				break
+			}
+			t.incomplete = true
+		default:
 			// Size is defined by a numeric constant expression.
 			if _, err = interp.cfg(c0, sc.pkgID); err != nil {
 				return nil, err
