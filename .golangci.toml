@@ -43,10 +43,6 @@
     "nestif",
     "exhaustive",
     "nlreturn",
-    "wrapcheck",
-    "exhaustivestruct",
-    "errorlint",
-    "tparallel",
   ]
 
 [issues]
