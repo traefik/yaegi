@@ -13,7 +13,7 @@ func main() {
 		{3, 4},
 	}
 	fmt.Println("a:", a)
-	x := &(*a)[0]
+	x := &(*a)[1:][0]
 	fmt.Println("x:", x)
 }
 

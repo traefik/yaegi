@@ -1597,7 +1597,6 @@ func isChan(t *itype) bool { return t.TypeOf().Kind() == reflect.Chan }
 func isFunc(t *itype) bool { return t.TypeOf().Kind() == reflect.Func }
 func isMap(t *itype) bool  { return t.TypeOf().Kind() == reflect.Map }
 func isPtr(t *itype) bool  { return t.TypeOf().Kind() == reflect.Ptr }
-func isSlice(t *itype) bool  { return t.TypeOf().Kind() == reflect.Slice }
 
 func isSendChan(t *itype) bool {
 	rt := t.TypeOf()
