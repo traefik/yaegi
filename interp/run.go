@@ -2836,65 +2836,29 @@ func convertConstantValue(n *node) {
 		return
 	}
 
-	v := n.rval
-	typ := n.typ.TypeOf()
-	kind := typ.Kind()
-	switch kind {
-	case reflect.Bool:
-		v = reflect.ValueOf(constant.BoolVal(c)).Convert(typ)
-	case reflect.String:
-		v = reflect.ValueOf(constant.StringVal(c)).Convert(typ)
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		i, _ := constant.Int64Val(c)
-		l := constant.BitLen(c)
-		if l > bitlen[kind] {
-			panic(fmt.Sprintf("constant %s overflows int%d", c.ExactString(), bitlen[kind]))
+	var v reflect.Value
+
+	switch c.Kind() {
+	case constant.Bool:
+		v = reflect.ValueOf(constant.BoolVal(c))
+	case constant.String:
+		v = reflect.ValueOf(constant.StringVal(c))
+	case constant.Int:
+		i, x := constant.Int64Val(c)
+		if !x {
+			panic(fmt.Sprintf("constant %s overflows int64", c.ExactString()))
 		}
-		v = reflect.ValueOf(i).Convert(typ)
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		i, _ := constant.Uint64Val(c)
-		l := constant.BitLen(c)
-		if l > bitlen[kind] {
-			panic(fmt.Sprintf("constant %s overflows uint%d", c.ExactString(), bitlen[kind]))
-		}
-		v = reflect.ValueOf(i).Convert(typ)
-	case reflect.Float32:
-		f, _ := constant.Float32Val(c)
-		v = reflect.ValueOf(f).Convert(typ)
-	case reflect.Float64:
+		v = reflect.ValueOf(int(i))
+	case constant.Float:
 		f, _ := constant.Float64Val(c)
-		v = reflect.ValueOf(f).Convert(typ)
-	case reflect.Complex64:
-		r, _ := constant.Float32Val(constant.Real(c))
-		i, _ := constant.Float32Val(constant.Imag(c))
-		v = reflect.ValueOf(complex(r, i)).Convert(typ)
-	case reflect.Complex128:
+		v = reflect.ValueOf(f)
+	case constant.Complex:
 		r, _ := constant.Float64Val(constant.Real(c))
 		i, _ := constant.Float64Val(constant.Imag(c))
-		v = reflect.ValueOf(complex(r, i)).Convert(typ)
-	default:
-		// Type kind is from internal constant representation. Only use default types here.
-		switch c.Kind() {
-		case constant.Bool:
-			v = reflect.ValueOf(constant.BoolVal(c))
-		case constant.String:
-			v = reflect.ValueOf(constant.StringVal(c))
-		case constant.Int:
-			i, x := constant.Int64Val(c)
-			if !x {
-				panic(fmt.Sprintf("constant %s overflows int64", c.ExactString()))
-			}
-			v = reflect.ValueOf(int(i))
-		case constant.Float:
-			f, _ := constant.Float64Val(c)
-			v = reflect.ValueOf(f)
-		case constant.Complex:
-			r, _ := constant.Float64Val(constant.Real(c))
-			i, _ := constant.Float64Val(constant.Imag(c))
-			v = reflect.ValueOf(complex(r, i))
-		}
+		v = reflect.ValueOf(complex(r, i))
 	}
-	n.rval = v
+
+	n.rval = v.Convert(n.typ.TypeOf())
 }
 
 // Write to a channel.
