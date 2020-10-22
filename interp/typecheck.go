@@ -151,7 +151,7 @@ func (check typecheck) shift(n *node) error {
 	t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 
 	var v0 constant.Value
-	if c0.typ.untyped {
+	if c0.typ.untyped && c0.rval.IsValid() {
 		v0 = constant.ToInt(c0.rval.Interface().(constant.Value))
 		c0.rval = reflect.ValueOf(v0)
 	}
@@ -486,7 +486,7 @@ func (check typecheck) sliceExpr(n *node) error {
 	case reflect.Array:
 		valid = true
 		l = t.Len()
-		if c.kind != selectorExpr && (c.sym == nil || c.sym.kind != varSym) {
+		if c.kind != selectorExpr && c.kind != indexExpr && (c.sym == nil || c.sym.kind != varSym) {
 			return c.cfgErrorf("cannot slice type %s", c.typ.id())
 		}
 	case reflect.Slice:
