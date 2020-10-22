@@ -677,7 +677,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				n.gen = nop
 				n.findex = -1
 			case n.anc.kind == assignStmt && n.anc.action == aAssign:
-				//case (n.anc.kind == assignStmt || n.anc.kind == defineStmt) && n.anc.action == aAssign:
 				// To avoid a copy in frame, if the result is to be assigned, store it directly
 				// at the frame location of destination.
 				dest := n.anc.child[childPos(n)-n.anc.nright]
@@ -2459,7 +2458,7 @@ func isValueUntyped(v reflect.Value) bool {
 	return t.String() == t.Kind().String()
 }
 
-// isArithmeticAction returns true if the node action is an arithmetic operator
+// isArithmeticAction returns true if the node action is an arithmetic operator.
 func isArithmeticAction(n *node) bool {
 	switch n.action {
 	case aAdd, aAnd, aAndNot, aBitNot, aMul, aQuo, aRem, aShl, aShr, aSub, aXor:
