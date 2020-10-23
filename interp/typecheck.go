@@ -151,7 +151,7 @@ func (check typecheck) shift(n *node) error {
 	t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 
 	var v0 constant.Value
-	if c0.typ.untyped {
+	if c0.typ.untyped && c0.rval.IsValid() {
 		v0 = constant.ToInt(c0.rval.Interface().(constant.Value))
 		c0.rval = reflect.ValueOf(v0)
 	}

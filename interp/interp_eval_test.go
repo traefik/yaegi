@@ -986,6 +986,9 @@ func TestConcurrentEvals(t *testing.T) {
 // called by EvalWithContext is sequential. And that there is no data race for the
 // interp package global vars or the interpreter fields in this case.
 func TestConcurrentEvals2(t *testing.T) {
+	if testing.Short() {
+		return
+	}
 	pin, pout := io.Pipe()
 	defer func() {
 		_ = pin.Close()
@@ -1045,6 +1048,9 @@ func TestConcurrentEvals2(t *testing.T) {
 // - when calling Interpreter.Use, the symbols given as argument should be
 // copied when being inserted into interp.binPkg, and not directly used as-is.
 func TestConcurrentEvals3(t *testing.T) {
+	if testing.Short() {
+		return
+	}
 	allDone := make(chan bool)
 	runREPL := func() {
 		done := make(chan error)
@@ -1123,6 +1129,9 @@ func TestConcurrentComposite2(t *testing.T) {
 }
 
 func testConcurrentComposite(t *testing.T, filePath string) {
+	if testing.Short() {
+		return
+	}
 	pin, pout := io.Pipe()
 	i := interp.New(interp.Options{Stdout: pout})
 	i.Use(stdlib.Symbols)
@@ -1160,6 +1169,9 @@ func testConcurrentComposite(t *testing.T, filePath string) {
 }
 
 func TestEvalScanner(t *testing.T) {
+	if testing.Short() {
+		return
+	}
 	type testCase struct {
 		desc      string
 		src       []string
@@ -1333,6 +1345,9 @@ func applyCIMultiplier(timeout time.Duration) time.Duration {
 }
 
 func TestREPLDivision(t *testing.T) {
+	if testing.Short() {
+		return
+	}
 	_ = os.Setenv("YAEGI_PROMPT", "1")
 	defer func() {
 		_ = os.Setenv("YAEGI_PROMPT", "0")

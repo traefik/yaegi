@@ -551,6 +551,14 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					n.gen = nop
 					src.findex = dest.findex
 					src.level = level
+				case n.action == aAssign && len(n.child) < 4 && !src.rval.IsValid() && isArithmeticAction(src):
+					// Optimize single assignments from some arithmetic operations.
+					// Skip the assign operation entirely, the source frame index is set
+					// to destination index, avoiding extra memory alloc and duplication.
+					src.typ = dest.typ
+					src.findex = dest.findex
+					src.level = level
+					n.gen = nop
 				case src.kind == basicLit && !src.rval.IsValid():
 					// Assign to nil.
 					src.rval = reflect.New(dest.typ.TypeOf()).Elem()
@@ -2448,4 +2456,14 @@ func isValueUntyped(v reflect.Value) bool {
 		return true
 	}
 	return t.String() == t.Kind().String()
+}
+
+// isArithmeticAction returns true if the node action is an arithmetic operator.
+func isArithmeticAction(n *node) bool {
+	switch n.action {
+	case aAdd, aAnd, aAndNot, aBitNot, aMul, aQuo, aRem, aShl, aShr, aSub, aXor:
+		return true
+	default:
+		return false
+	}
 }
