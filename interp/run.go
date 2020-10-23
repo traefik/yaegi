@@ -3091,9 +3091,9 @@ func isNil(n *node) {
 		fnext := getExec(n.fnext)
 		if c0.typ.cat == interfaceT {
 			n.exec = func(f *frame) bltn {
-				vi := value(f).Interface().(valueInterface)
-				if (vi == valueInterface{} ||
-					vi.node.kind == basicLit && vi.node.typ.cat == nilT) {
+				v := value(f)
+				vi, ok := v.Interface().(valueInterface)
+				if ok && (vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT) || v.IsNil() {
 					dest(f).SetBool(true)
 					return tnext
 				}
@@ -3113,7 +3113,12 @@ func isNil(n *node) {
 	} else {
 		if c0.typ.cat == interfaceT {
 			n.exec = func(f *frame) bltn {
-				dest(f).SetBool(value(f).Interface().(valueInterface) == valueInterface{})
+				v := value(f)
+				if vi, ok := v.Interface().(valueInterface); ok {
+					dest(f).SetBool(vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT)
+				} else {
+					dest(f).SetBool(v.IsNil())
+				}
 				return tnext
 			}
 		} else {
@@ -3140,9 +3145,9 @@ func isNotNil(n *node) {
 		fnext := getExec(n.fnext)
 		if c0.typ.cat == interfaceT {
 			n.exec = func(f *frame) bltn {
-				vi := value(f).Interface().(valueInterface)
-				if (vi == valueInterface{} ||
-					vi.node.kind == basicLit && vi.node.typ.cat == nilT) {
+				v := value(f)
+				vi, ok := v.Interface().(valueInterface)
+				if ok && (vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT) || v.IsNil() {
 					dest(f).SetBool(false)
 					return fnext
 				}
@@ -3162,7 +3167,12 @@ func isNotNil(n *node) {
 	} else {
 		if c0.typ.cat == interfaceT {
 			n.exec = func(f *frame) bltn {
-				dest(f).SetBool(!(value(f).Interface().(valueInterface) == valueInterface{}))
+				v := value(f)
+				if vi, ok := v.Interface().(valueInterface); ok {
+					dest(f).SetBool(!(vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT))
+				} else {
+					dest(f).SetBool(!v.IsNil())
+				}
 				return tnext
 			}
 		} else {
