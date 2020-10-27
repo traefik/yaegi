@@ -2104,16 +2104,20 @@ func doComposite(n *node, hasType bool, keyed bool) {
 			val = c
 			fieldIndex = i
 		}
-		convertLiteralValue(val, typ.field[fieldIndex].typ.TypeOf())
+		ft := typ.field[fieldIndex].typ
+		rft := ft.TypeOf()
+		convertLiteralValue(val, rft)
 		switch {
+		case val.typ.cat == nilT:
+			values[fieldIndex] = func(*frame) reflect.Value { return reflect.New(rft).Elem() }
 		case val.typ.cat == funcT:
 			values[fieldIndex] = genFunctionWrapper(val)
 		case isArray(val.typ) && val.typ.val != nil && val.typ.val.cat == interfaceT:
 			values[fieldIndex] = genValueInterfaceArray(val)
-		case isRecursiveType(typ.field[fieldIndex].typ, typ.field[fieldIndex].typ.rtype):
-			values[fieldIndex] = genValueRecursiveInterface(val, typ.field[fieldIndex].typ.rtype)
-		case isInterface(typ.field[fieldIndex].typ):
-			values[fieldIndex] = genInterfaceWrapper(val, typ.field[fieldIndex].typ.rtype)
+		case isRecursiveType(ft, rft):
+			values[fieldIndex] = genValueRecursiveInterface(val, rft)
+		case isInterface(ft):
+			values[fieldIndex] = genInterfaceWrapper(val, rft)
 		default:
 			values[fieldIndex] = genValue(val)
 		}
