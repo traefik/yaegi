@@ -108,10 +108,53 @@ func (interp *Interpreter) run(n *node, cf *frame) {
 	runCfg(n.start, f)
 }
 
+// originalExecNode looks in the tree of nodes for the node which has exec,
+// aside from n, in order to know where n "inherited" that exec from.
+func originalExecNode(n *node, exec bltn) *node {
+	execAddr := reflect.ValueOf(exec).Pointer()
+	var originalNode *node
+	seen := make(map[int64]struct{})
+	root := n
+	for {
+		root = root.anc
+		if root == nil {
+			break
+		}
+		if _, ok := seen[root.index]; ok {
+			continue
+		}
+
+		root.Walk(func(wn *node) bool {
+			if _, ok := seen[wn.index]; ok {
+				return true
+			}
+			seen[wn.index] = struct{}{}
+			if wn.index == n.index {
+				return true
+			}
+			if wn.exec == nil {
+				return true
+			}
+			if reflect.ValueOf(wn.exec).Pointer() == execAddr {
+				originalNode = wn
+				return false
+			}
+			return true
+		}, nil)
+
+		if originalNode != nil {
+			break
+		}
+	}
+
+	return originalNode
+}
+
 // Functions set to run during execution of CFG.
 
 // runCfg executes a node AST by walking its CFG and running node builtin at each step.
 func runCfg(n *node, f *frame) {
+	var exec bltn
 	defer func() {
 		f.mutex.Lock()
 		f.recovered = recover()
@@ -119,14 +162,18 @@ func runCfg(n *node, f *frame) {
 			val[0].Call(val[1:])
 		}
 		if f.recovered != nil {
-			fmt.Println(n.cfgErrorf("panic"))
+			oNode := originalExecNode(n, exec)
+			if oNode == nil {
+				oNode = n
+			}
+			fmt.Println(oNode.cfgErrorf("panic"))
 			f.mutex.Unlock()
 			panic(f.recovered)
 		}
 		f.mutex.Unlock()
 	}()
 
-	for exec := n.exec; exec != nil && f.runid() == n.interp.runid(); {
+	for exec = n.exec; exec != nil && f.runid() == n.interp.runid(); {
 		exec = exec(f)
 	}
 }
