@@ -66,6 +66,24 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			return false
 		}
 		switch n.kind {
+		case binaryExpr, unaryExpr, parenExpr:
+			if isBoolAction(n) {
+				break
+			}
+			// Gather assigned type if set, to give context for type propagation at post-order.
+			switch n.anc.kind {
+			case assignStmt, defineStmt:
+				a := n.anc
+				i := childPos(n) - a.nright
+				if len(a.child) > a.nright+a.nleft {
+					i--
+				}
+				dest := a.child[i]
+				n.typ = dest.typ
+			case binaryExpr, unaryExpr, parenExpr:
+				n.typ = n.anc.typ
+			}
+
 		case blockStmt:
 			if n.anc != nil && n.anc.kind == rangeStmt {
 				// For range block: ensure that array or map type is propagated to iterators
@@ -644,7 +662,12 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			}
 
 			switch n.action {
-			case aRem, aShl, aShr:
+			case aRem:
+				n.typ = c0.typ
+			case aShl, aShr:
+				if c0.typ.untyped {
+					break
+				}
 				n.typ = c0.typ
 			case aEqual, aNotEqual:
 				n.typ = sc.getType("bool")
@@ -860,7 +883,12 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					n.gen = nop
 					n.findex = -1
 					n.typ = c0.typ
-					n.rval = c1.rval.Convert(c0.typ.rtype)
+					if c, ok := c1.rval.Interface().(constant.Value); ok {
+						i, _ := constant.Int64Val(constant.ToInt(c))
+						n.rval = reflect.ValueOf(i).Convert(c0.typ.rtype)
+					} else {
+						n.rval = c1.rval.Convert(c0.typ.rtype)
+					}
 				default:
 					n.gen = convert
 					n.typ = c0.typ
@@ -2462,6 +2490,15 @@ func isValueUntyped(v reflect.Value) bool {
 func isArithmeticAction(n *node) bool {
 	switch n.action {
 	case aAdd, aAnd, aAndNot, aBitNot, aMul, aQuo, aRem, aShl, aShr, aSub, aXor:
+		return true
+	default:
+		return false
+	}
+}
+
+func isBoolAction(n *node) bool {
+	switch n.action {
+	case aEqual, aGreater, aGreaterEqual, aLand, aLor, aLower, aLowerEqual, aNot, aNotEqual:
 		return true
 	default:
 		return false
