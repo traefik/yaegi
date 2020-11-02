@@ -79,9 +79,26 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					i--
 				}
 				dest := a.child[i]
-				n.typ = dest.typ
+				if dest.typ != nil && !isInterface(dest.typ) {
+					// Interface type are not propagated, and will be resolved at post-order.
+					n.typ = dest.typ
+				}
 			case binaryExpr, unaryExpr, parenExpr:
 				n.typ = n.anc.typ
+			}
+
+		case defineStmt:
+			// Determine type of variables initialized at declaration, so it can be propagated.
+			if n.nleft+n.nright == len(n.child) {
+				// No type was specified on the left hand side, it will resolved at post-order.
+				break
+			}
+			n.typ, err = nodeType(interp, sc, n.child[n.nleft])
+			if err != nil {
+				break
+			}
+			for i := 0; i < n.nleft; i++ {
+				n.child[i].typ = n.typ
 			}
 
 		case blockStmt:
@@ -465,7 +482,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			var atyp *itype
 			if n.nleft+n.nright < len(n.child) {
 				if atyp, err = nodeType(interp, sc, n.child[n.nleft]); err != nil {
-					return
+					break
 				}
 			}
 
@@ -655,6 +672,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			wireChild(n)
 			nilSym := interp.universe.sym[nilIdent]
 			c0, c1 := n.child[0], n.child[1]
+			rval0, rval1 := c0.rval, c1.rval
 
 			err = check.binaryExpr(n)
 			if err != nil {
@@ -662,6 +680,10 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			}
 
 			switch n.action {
+			case aQuo:
+				// Restore original constant values as before check to allow automatic integer conversion.
+				// TODO(marc) To avoid this, constant values should be stored separately than rval.
+				c0.rval, c1.rval = rval0, rval1
 			case aRem:
 				n.typ = c0.typ
 			case aShl, aShr:
