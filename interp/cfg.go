@@ -672,7 +672,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			wireChild(n)
 			nilSym := interp.universe.sym[nilIdent]
 			c0, c1 := n.child[0], n.child[1]
-			rval0, rval1 := c0.rval, c1.rval
 
 			err = check.binaryExpr(n)
 			if err != nil {
@@ -680,10 +679,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			}
 
 			switch n.action {
-			case aQuo:
-				// Restore original constant values as before check to allow automatic integer conversion.
-				// TODO(marc) To avoid this, constant values should be stored separately than rval.
-				c0.rval, c1.rval = rval0, rval1
 			case aRem:
 				n.typ = c0.typ
 			case aShl, aShr:

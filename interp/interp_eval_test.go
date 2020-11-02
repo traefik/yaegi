@@ -76,6 +76,7 @@ func TestEvalShift(t *testing.T) {
 	runTests(t, i, []testCase{
 		{src: "a, b, m := uint32(1), uint32(2), uint32(0); m = a + (1 << b)", res: "5"},
 		{src: "c := uint(1); d := uint(+(-(1 << c)))", res: "18446744073709551614"},
+		{src: "e, f := uint32(0), uint32(0); f = 1 << -(e * 2)", res: "1"},
 		{pre: func() { eval(t, i, "const k uint = 1 << 17") }, src: "int(k)", res: "131072"},
 	})
 }

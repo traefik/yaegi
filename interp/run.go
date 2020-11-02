@@ -1766,6 +1766,11 @@ func neg(n *node) {
 			dest(f).SetInt(-value(f).Int())
 			return next
 		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		n.exec = func(f *frame) bltn {
+			dest(f).SetUint(-value(f).Uint())
+			return next
+		}
 	case reflect.Float32, reflect.Float64:
 		n.exec = func(f *frame) bltn {
 			dest(f).SetFloat(-value(f).Float())
