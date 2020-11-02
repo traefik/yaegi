@@ -66,6 +66,41 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			return false
 		}
 		switch n.kind {
+		case binaryExpr, unaryExpr, parenExpr:
+			if isBoolAction(n) {
+				break
+			}
+			// Gather assigned type if set, to give context for type propagation at post-order.
+			switch n.anc.kind {
+			case assignStmt, defineStmt:
+				a := n.anc
+				i := childPos(n) - a.nright
+				if len(a.child) > a.nright+a.nleft {
+					i--
+				}
+				dest := a.child[i]
+				if dest.typ != nil && !isInterface(dest.typ) {
+					// Interface type are not propagated, and will be resolved at post-order.
+					n.typ = dest.typ
+				}
+			case binaryExpr, unaryExpr, parenExpr:
+				n.typ = n.anc.typ
+			}
+
+		case defineStmt:
+			// Determine type of variables initialized at declaration, so it can be propagated.
+			if n.nleft+n.nright == len(n.child) {
+				// No type was specified on the left hand side, it will resolved at post-order.
+				break
+			}
+			n.typ, err = nodeType(interp, sc, n.child[n.nleft])
+			if err != nil {
+				break
+			}
+			for i := 0; i < n.nleft; i++ {
+				n.child[i].typ = n.typ
+			}
+
 		case blockStmt:
 			if n.anc != nil && n.anc.kind == rangeStmt {
 				// For range block: ensure that array or map type is propagated to iterators
@@ -447,7 +482,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			var atyp *itype
 			if n.nleft+n.nright < len(n.child) {
 				if atyp, err = nodeType(interp, sc, n.child[n.nleft]); err != nil {
-					return
+					break
 				}
 			}
 
@@ -644,7 +679,12 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			}
 
 			switch n.action {
-			case aRem, aShl, aShr:
+			case aRem:
+				n.typ = c0.typ
+			case aShl, aShr:
+				if c0.typ.untyped {
+					break
+				}
 				n.typ = c0.typ
 			case aEqual, aNotEqual:
 				n.typ = sc.getType("bool")
@@ -860,7 +900,12 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					n.gen = nop
 					n.findex = -1
 					n.typ = c0.typ
-					n.rval = c1.rval.Convert(c0.typ.rtype)
+					if c, ok := c1.rval.Interface().(constant.Value); ok {
+						i, _ := constant.Int64Val(constant.ToInt(c))
+						n.rval = reflect.ValueOf(i).Convert(c0.typ.rtype)
+					} else {
+						n.rval = c1.rval.Convert(c0.typ.rtype)
+					}
 				default:
 					n.gen = convert
 					n.typ = c0.typ
@@ -2469,6 +2514,15 @@ func isValueUntyped(v reflect.Value) bool {
 func isArithmeticAction(n *node) bool {
 	switch n.action {
 	case aAdd, aAnd, aAndNot, aBitNot, aMul, aQuo, aRem, aShl, aShr, aSub, aXor:
+		return true
+	default:
+		return false
+	}
+}
+
+func isBoolAction(n *node) bool {
+	switch n.action {
+	case aEqual, aGreater, aGreaterEqual, aLand, aLor, aLower, aLowerEqual, aNot, aNotEqual:
 		return true
 	default:
 		return false
