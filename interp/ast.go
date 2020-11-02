@@ -51,6 +51,7 @@ const (
 	fieldList
 	fileStmt
 	forStmt0     // for {}
+	forStmt0a    // for init; ; {}
 	forStmt1     // for cond {}
 	forStmt2     // for init; cond; {}
 	forStmt3     // for ; cond; post {}
@@ -131,6 +132,7 @@ var kinds = [...]string{
 	fieldList:         "fieldList",
 	fileStmt:          "fileStmt",
 	forStmt0:          "forStmt0",
+	forStmt0a:         "forStmt0a",
 	forStmt1:          "forStmt1",
 	forStmt2:          "forStmt2",
 	forStmt3:          "forStmt3",
@@ -655,8 +657,12 @@ func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error
 			// Disambiguate variants of FOR statements with a node kind per variant
 			var kind nkind
 			if a.Cond == nil {
-				if a.Init != nil && a.Post != nil {
-					kind = forStmt3a
+				if a.Init != nil {
+					if a.Post != nil {
+						kind = forStmt3a
+					} else {
+						kind = forStmt0a
+					}
 				} else {
 					kind = forStmt0
 				}
