@@ -289,7 +289,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			sc = sc.pushBloc()
 			sc.loop, sc.loopRestart = n, n.child[0]
 
-		case forStmt1, forStmt2, forStmt3, forStmt3a, forStmt4:
+		case forStmt0a, forStmt1, forStmt2, forStmt3, forStmt3a, forStmt4:
 			sc = sc.pushBloc()
 			sc.loop, sc.loopRestart = n, n.lastChild()
 
@@ -1002,6 +1002,13 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 		case forStmt0: // for {}
 			body := n.child[0]
 			n.start = body.start
+			body.tnext = n.start
+			sc = sc.pop()
+
+		case forStmt0a: // for init; ; {}
+			init, body := n.child[0], n.child[1]
+			n.start = init.start
+			init.tnext = body.start
 			body.tnext = n.start
 			sc = sc.pop()
 
