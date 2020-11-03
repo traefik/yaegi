@@ -390,6 +390,21 @@ func convert(n *node) {
 		return
 	}
 
+	if n.child[0].typ.cat == funcT && c.typ.cat == funcT {
+		value := genValue(c)
+		n.exec = func(f *frame) bltn {
+			n, ok := value(f).Interface().(*node)
+			if !ok || !n.typ.convertibleTo(c.typ) {
+				panic("cannot convert")
+			}
+			n1 := *n
+			n1.typ = c.typ
+			dest(f).Set(reflect.ValueOf(&n1))
+			return next
+		}
+		return
+	}
+
 	var value func(*frame) reflect.Value
 	if c.typ.cat == funcT {
 		value = genFunctionWrapper(c)
