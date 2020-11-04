@@ -145,7 +145,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 					elementType := sc.getType(typeName)
 					if elementType == nil {
 						// Add type if necessary, so method can be registered
-						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: rpath, incomplete: true, node: rtn.child[0], scope: sc}}
+						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: importPath, incomplete: true, node: rtn.child[0], scope: sc}}
 						elementType = sc.sym[typeName].typ
 					}
 					rcvrtype = &itype{cat: ptrT, val: elementType, incomplete: elementType.incomplete, node: rtn, scope: sc}
@@ -154,7 +154,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 					rcvrtype = sc.getType(typeName)
 					if rcvrtype == nil {
 						// Add type if necessary, so method can be registered
-						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: rpath, incomplete: true, node: rtn, scope: sc}}
+						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: importPath, incomplete: true, node: rtn, scope: sc}}
 						rcvrtype = sc.sym[typeName].typ
 					}
 				}
@@ -254,12 +254,12 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 			}
 
 			if n.child[1].kind == identExpr {
-				n.typ = &itype{cat: aliasT, val: typ, name: typeName, path: rpath, field: typ.field, incomplete: typ.incomplete, scope: sc, node: n.child[0]}
+				n.typ = &itype{cat: aliasT, val: typ, name: typeName, path: importPath, field: typ.field, incomplete: typ.incomplete, scope: sc, node: n.child[0]}
 				copy(n.typ.method, typ.method)
 			} else {
 				n.typ = typ
 				n.typ.name = typeName
-				n.typ.path = rpath
+				n.typ.path = importPath
 			}
 
 			asImportName := filepath.Join(typeName, baseName)
