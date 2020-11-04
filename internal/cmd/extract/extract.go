@@ -84,11 +84,12 @@ func main() {
 			oFile = strings.ReplaceAll(importPath, "/", "_") + ".go"
 		}
 
-		prefix := runtime.Version()
-		if runtime.Version() != "devel" {
-			parts := strings.Split(runtime.Version(), ".")
-			prefix = parts[0] + "_" + extract.GetMinor(parts[1])
+		version := runtime.Version()
+		if strings.HasPrefix(version, "devel") {
+			log.Fatalf("extracting only supported with stable releases of Go, not %v", version)
 		}
+		parts := strings.Split(version, ".")
+		prefix := parts[0] + "_" + extract.GetMinor(parts[1])
 
 		f, err := os.Create(prefix + "_" + oFile)
 		if err != nil {
