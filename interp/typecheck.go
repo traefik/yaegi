@@ -634,16 +634,13 @@ func (check typecheck) conversion(n *node, typ *itype) error {
 	if !ok {
 		return n.cfgErrorf("cannot convert expression of type %s to type %s", n.typ.id(), typ.id())
 	}
-
-	if n.typ.untyped {
-		if isInterface(typ) || c != nil && !isConstType(typ) {
-			typ = n.typ.defaultType()
-		}
-		if err := check.convertUntyped(n, typ); err != nil {
-			return err
-		}
+	if !n.typ.untyped || c == nil {
+		return nil
 	}
-	return nil
+	if isInterface(typ) || !isConstType(typ) {
+		typ = n.typ.defaultType()
+	}
+	return check.convertUntyped(n, typ)
 }
 
 type param struct {
