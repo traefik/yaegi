@@ -436,10 +436,12 @@ func GetMinor(part string) string {
 	return minor
 }
 
+const defaultMinorVersion = 15
+
 func genBuildTags() (string, error) {
 	version := runtime.Version()
-	if version == "devel" {
-		return "", nil
+	if strings.HasPrefix(version, "devel") {
+		return "", fmt.Errorf("extracting only supported with stable releases of Go, not %v", version)
 	}
 	parts := strings.Split(version, ".")
 
@@ -450,6 +452,11 @@ func genBuildTags() (string, error) {
 	minor, err := strconv.Atoi(minorRaw)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse version: %v", err)
+	}
+
+	// Only append an upper bound if we are not on the latest go
+	if minor >= defaultMinorVersion {
+		return currentGoVersion, nil
 	}
 
 	nextGoVersion := parts[0] + "." + strconv.Itoa(minor+1)
