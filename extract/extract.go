@@ -441,7 +441,7 @@ const defaultMinorVersion = 15
 func genBuildTags() (string, error) {
 	version := runtime.Version()
 	if strings.HasPrefix(version, "devel") {
-		return fmt.Sprintf("1.%d", defaultMinorVersion), nil
+		return "", fmt.Errorf("extracting only supported with stable releases of Go, not %v", version)
 	}
 	parts := strings.Split(version, ".")
 
