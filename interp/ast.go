@@ -51,13 +51,14 @@ const (
 	fieldList
 	fileStmt
 	forStmt0     // for {}
-	forStmt0a    // for init; ; {}
-	forStmt1     // for cond {}
-	forStmt2     // for init; cond; {}
-	forStmt3     // for ; cond; post {}
-	forStmt3a    // for init; ; post {}
-	forStmt4     // for init; cond; post {}
-	forRangeStmt // for range
+	forStmt1     // for init; ; {}
+	forStmt2     // for cond {}
+	forStmt3     // for init; cond; {}
+	forStmt4     // for ; ; post {}
+	forStmt5     // for ; cond; post {}
+	forStmt6     // for init; ; post {}
+	forStmt7     // for init; cond; post {}
+	forRangeStmt // for range {}
 	funcDecl
 	funcLit
 	funcType
@@ -132,12 +133,13 @@ var kinds = [...]string{
 	fieldList:         "fieldList",
 	fileStmt:          "fileStmt",
 	forStmt0:          "forStmt0",
-	forStmt0a:         "forStmt0a",
 	forStmt1:          "forStmt1",
 	forStmt2:          "forStmt2",
 	forStmt3:          "forStmt3",
-	forStmt3a:         "forStmt3a",
 	forStmt4:          "forStmt4",
+	forStmt5:          "forStmt5",
+	forStmt6:          "forStmt6",
+	forStmt7:          "forStmt7",
 	forRangeStmt:      "forRangeStmt",
 	funcDecl:          "funcDecl",
 	funcType:          "funcType",
@@ -656,27 +658,23 @@ func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error
 		case *ast.ForStmt:
 			// Disambiguate variants of FOR statements with a node kind per variant
 			var kind nkind
-			if a.Cond == nil {
-				if a.Init != nil {
-					if a.Post != nil {
-						kind = forStmt3a
-					} else {
-						kind = forStmt0a
-					}
-				} else {
-					kind = forStmt0
-				}
-			} else {
-				switch {
-				case a.Init == nil && a.Post == nil:
-					kind = forStmt1
-				case a.Init != nil && a.Post == nil:
-					kind = forStmt2
-				case a.Init == nil && a.Post != nil:
-					kind = forStmt3
-				default:
-					kind = forStmt4
-				}
+			switch {
+			case a.Cond == nil && a.Init == nil && a.Post == nil:
+				kind = forStmt0
+			case a.Cond == nil && a.Init != nil && a.Post == nil:
+				kind = forStmt1
+			case a.Cond != nil && a.Init == nil && a.Post == nil:
+				kind = forStmt2
+			case a.Cond != nil && a.Init != nil && a.Post == nil:
+				kind = forStmt3
+			case a.Cond == nil && a.Init == nil && a.Post != nil:
+				kind = forStmt4
+			case a.Cond != nil && a.Init == nil && a.Post != nil:
+				kind = forStmt5
+			case a.Cond == nil && a.Init != nil && a.Post != nil:
+				kind = forStmt6
+			case a.Cond != nil && a.Init != nil && a.Post != nil:
+				kind = forStmt7
 			}
 			st.push(addChild(&root, anc, pos, kind, aNop), nod)
 
