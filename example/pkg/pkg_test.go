@@ -93,6 +93,12 @@ func TestPackages(t *testing.T) {
 			expected: "Yo hello",
 			evalFile: "./_pkg12/src/guthib.com/foo/main.go",
 		},
+		{
+			desc:     "eval main with vendor",
+			goPath:   "./_pkg13/",
+			expected: "foobar",
+			evalFile: "./_pkg13/src/guthib.com/foo/bar/main.go",
+		},
 	}
 
 	for _, test := range testCases {
