@@ -82,6 +82,16 @@ func TestEvalShift(t *testing.T) {
 	})
 }
 
+func TestOpVarConst(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{pre: func() { eval(t, i, "const a uint = 8 + 2") }, src: "a", res: "10"},
+		{src: "b := uint(5); a+b", res: "15"},
+		{src: "b := uint(5); b+a", res: "15"},
+		{src: "b := uint(5); b>a", res: "false"},
+	})
+}
+
 func TestEvalStar(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
