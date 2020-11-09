@@ -552,7 +552,8 @@ func (check typecheck) sliceExpr(n *node) error {
 }
 
 // typeAssertionExpr type checks a type assert expression.
-func (check typecheck) typeAssertionExpr(n *node, typ *itype) error {
+// func (check typecheck) typeAssertionExpr(n *node, typ *itype) error {
+func typeAssertionExpr(n *node, typ *itype) error {
 	// TODO(nick): This type check is not complete and should be revisited once
 	// https://github.com/golang/go/issues/39717 lands. It is currently impractical to
 	// type check Named types as they cannot be asserted.

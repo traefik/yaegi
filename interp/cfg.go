@@ -1766,7 +1766,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				}
 			}
 
-			err = check.typeAssertionExpr(c0, c1.typ)
+			err = typeAssertionExpr(c0, c1.typ)
 			if err != nil {
 				break
 			}
