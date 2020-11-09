@@ -473,6 +473,59 @@ func TestEvalConversion(t *testing.T) {
 	})
 }
 
+func TestEvalFuncConversion(t *testing.T) {
+	i := interp.New(interp.Options{})
+	i.Use(stdlib.Symbols)
+	runTests(t, i, []testCase{
+		{
+			pre: func() {
+				eval(t, i, `var output string
+				type T struct {
+					v int
+				}
+
+				type comparator func(T, T) bool
+
+				func sort(items []T, comp comparator) {
+					output = "in sort"
+				}
+
+				func compT(t0, t1 T) bool { return t0.v < t1.v }`)
+			},
+			src: `a := []T{}; sort(a, comparator(compT)); foo := output`,
+			res: "in sort",
+		},
+		{
+			pre: func() {
+				eval(t, i, `import "strconv"
+				type atoidef func(s string) (int, error)`)
+			},
+			src: `stdatoi := atoidef(strconv.Atoi)
+				n, err := stdatoi("7")
+				if err != nil {
+					panic(err)
+				}
+				bar := n`,
+			res: "7",
+		},
+		{
+			pre: func() {
+				eval(t, i, `import "bufio"
+				func fakeSplitFunc(data []byte, atEOF bool) (advance int, token []byte, err error) {
+					return 7, nil, nil
+				}`)
+			},
+			src: `splitfunc := bufio.SplitFunc(fakeSplitFunc)
+				n, _, err := splitfunc(nil, true)
+				if err != nil {
+					panic(err)
+				}
+				baz := n`,
+			res: "7",
+		},
+	})
+}
+
 func TestEvalUnary(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
