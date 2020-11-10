@@ -1178,6 +1178,7 @@ func callBin(n *node) {
 					c.val = reflect.Zero(argType)
 				}
 			}
+
 			switch c.typ.cat {
 			case funcT:
 				values = append(values, genFunctionWrapper(c))
@@ -1190,6 +1191,14 @@ func callBin(n *node) {
 				default:
 					values = append(values, genInterfaceWrapper(c, defType))
 				}
+			case ptrT:
+				if c.typ.val.cat == valueT {
+					values = append(values, genValue(c))
+				} else {
+					values = append(values, genInterfaceWrapper(c, defType))
+				}
+			case valueT:
+				values = append(values, genValue(c))
 			default:
 				values = append(values, genInterfaceWrapper(c, defType))
 			}
