@@ -72,26 +72,28 @@ type symbol struct {
 // execution to the index in frame, created exactly from the types layout.
 //
 type scope struct {
-	anc         *scope             // Ancestor upper scope
+	anc         *scope             // ancestor upper scope
+	child       []*scope           // included scopes
 	def         *node              // function definition node this scope belongs to, or nil
 	loop        *node              // loop exit node for break statement
 	loopRestart *node              // loop restart node for continue statement
 	pkgID       string             // unique id of package in which scope is defined
-	types       []reflect.Type     // Frame layout, may be shared by same level scopes
-	level       int                // Frame level: number of frame indirections to access var during execution
-	sym         map[string]*symbol // Map of symbols defined in this current scope
+	types       []reflect.Type     // frame layout, may be shared by same level scopes
+	level       int                // frame level: number of frame indirections to access var during execution
+	sym         map[string]*symbol // map of symbols defined in this current scope
 	global      bool               // true if scope refers to global space (single frame for universe and package level scopes)
 	iota        int                // iota value in this scope
 }
 
-// push creates a new scope and chain it to the current one.
+// push creates a new child scope and chain it to the current one.
 func (s *scope) push(indirect bool) *scope {
-	sc := scope{anc: s, level: s.level, sym: map[string]*symbol{}}
+	sc := &scope{anc: s, level: s.level, sym: map[string]*symbol{}}
+	s.child = append(s.child, sc)
 	if indirect {
 		sc.types = []reflect.Type{}
 		sc.level = s.level + 1
 	} else {
-		// propagate size, types, def and global as scopes at same level share the same frame
+		// Propagate size, types, def and global as scopes at same level share the same frame.
 		sc.types = s.types
 		sc.def = s.def
 		sc.global = s.global
@@ -99,7 +101,7 @@ func (s *scope) push(indirect bool) *scope {
 	}
 	// inherit loop state and pkgID from ancestor
 	sc.loop, sc.loopRestart, sc.pkgID = s.loop, s.loopRestart, s.pkgID
-	return &sc
+	return sc
 }
 
 func (s *scope) pushBloc() *scope { return s.push(false) }
@@ -107,7 +109,7 @@ func (s *scope) pushFunc() *scope { return s.push(true) }
 
 func (s *scope) pop() *scope {
 	if s.level == s.anc.level {
-		// propagate size and types, as scopes at same level share the same frame
+		// Propagate size and types, as scopes at same level share the same frame.
 		s.anc.types = s.types
 	}
 	return s.anc
@@ -128,6 +130,20 @@ func (s *scope) lookup(ident string) (*symbol, int, bool) {
 		s = s.anc
 	}
 	return nil, 0, false
+}
+
+// lookdown searches for a symbol in the current scope and included ones, recursively.
+// It returns the first found symbol and true, or nil and false.
+func (s *scope) lookdown(ident string) (*symbol, bool) {
+	if sym, ok := s.sym[ident]; ok {
+		return sym, true
+	}
+	for _, c := range s.child {
+		if sym, ok := c.lookdown(ident); ok {
+			return sym, true
+		}
+	}
+	return nil, false
 }
 
 func (s *scope) rangeChanType(n *node) *itype {
