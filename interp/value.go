@@ -342,6 +342,10 @@ func vInt(v reflect.Value) (i int64) {
 }
 
 func vUint(v reflect.Value) (i uint64) {
+	if c := vConstantValue(v); c != nil {
+		i, _ = constant.Uint64Val(constant.ToInt(c))
+		return i
+	}
 	switch v.Type().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		i = uint64(v.Int())
