@@ -113,6 +113,14 @@ func (s *scope) pop() *scope {
 	return s.anc
 }
 
+func (s *scope) upperLevel() *scope {
+	level := s.level
+	for s != nil && s.level == level {
+		s = s.anc
+	}
+	return s
+}
+
 // lookup searches for a symbol in the current scope, and upper ones if not found
 // it returns the symbol, the number of indirections level from the current scope
 // and status (false if no result).
