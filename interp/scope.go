@@ -113,9 +113,9 @@ func (s *scope) pop() *scope {
 	return s.anc
 }
 
-// global returns the global scope from the current one.
-func global(s *scope) *scope {
-	for s != nil && !s.global {
+func (s *scope) upperLevel() *scope {
+	level := s.level
+	for s != nil && s.level == level {
 		s = s.anc
 	}
 	return s
