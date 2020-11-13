@@ -1381,7 +1381,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			n.val = sc.def
 			for i, c := range n.child {
 				var typ *itype
-				typ, err = nodeType(interp, sc, returnSig.child[1].fieldType(i))
+				typ, err = nodeType(interp, global(sc), returnSig.child[1].fieldType(i))
 				if err != nil {
 					return
 				}

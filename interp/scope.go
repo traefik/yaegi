@@ -113,6 +113,14 @@ func (s *scope) pop() *scope {
 	return s.anc
 }
 
+// global returns the global scope from the current one.
+func global(s *scope) *scope {
+	for s != nil && !s.global {
+		s = s.anc
+	}
+	return s
+}
+
 // lookup searches for a symbol in the current scope, and upper ones if not found
 // it returns the symbol, the number of indirections level from the current scope
 // and status (false if no result).
