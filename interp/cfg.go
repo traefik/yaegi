@@ -2333,7 +2333,7 @@ func isCall(n *node) bool {
 }
 
 func isBinCall(n *node) bool {
-	return n.kind == callExpr && n.child[0].typ.cat == valueT && n.child[0].typ.rtype.Kind() == reflect.Func
+	return isCall(n) && n.child[0].typ.cat == valueT && n.child[0].typ.rtype.Kind() == reflect.Func
 }
 
 func mustReturnValue(n *node) bool {
@@ -2349,7 +2349,7 @@ func mustReturnValue(n *node) bool {
 }
 
 func isRegularCall(n *node) bool {
-	return n.kind == callExpr && n.child[0].typ.cat == funcT
+	return isCall(n) && n.child[0].typ.cat == funcT
 }
 
 func variadicPos(n *node) int {
