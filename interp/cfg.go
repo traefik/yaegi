@@ -211,6 +211,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 
 		case labeledStmt:
 			label := n.child[0].ident
+			// TODO(marc): labels must be stored outside of symbols to avoid collisions
 			// Used labels are searched in current and sub scopes, not upper ones.
 			if sym, ok := sc.lookdown(label); ok {
 				sym.node = n
