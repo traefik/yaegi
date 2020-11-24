@@ -588,12 +588,23 @@ func not(n *node) {
 
 func addr(n *node) {
 	dest := genValue(n)
-	value := genValue(n.child[0])
 	next := getExec(n.tnext)
-
-	n.exec = func(f *frame) bltn {
-		dest(f).Set(value(f).Addr())
-		return next
+	c0 := n.child[0]
+	value := genValue(c0)
+	switch c0.typ.cat {
+	case interfaceT:
+		i := n.findex
+		l := n.level
+		n.exec = func(f *frame) bltn {
+			v := value(f).Interface().(valueInterface).value
+			getFrame(f, l).data[i] = reflect.ValueOf(v.Interface())
+			return next
+		}
+	default:
+		n.exec = func(f *frame) bltn {
+			dest(f).Set(value(f).Addr())
+			return next
+		}
 	}
 }
 
