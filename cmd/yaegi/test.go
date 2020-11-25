@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go/build"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -102,6 +103,18 @@ func test(arg []string) (err error) {
 	testing.Init()
 	os.Args = tf
 	flag.Parse()
+	path += string(filepath.Separator)
+	var dir string
+
+	switch strings.Split(path, string(filepath.Separator))[0] {
+	case ".", "..", string(filepath.Separator):
+		dir = path
+	default:
+		dir = filepath.Join(build.Default.GOPATH, "src", path)
+	}
+	if err = os.Chdir(dir); err != nil {
+		return err
+	}
 
 	i := interp.New(interp.Options{GoPath: build.Default.GOPATH, BuildTags: strings.Split(tags, ",")})
 	i.Use(stdlib.Symbols)
