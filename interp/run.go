@@ -364,10 +364,10 @@ func typeAssert2(n *node) {
 				// TODO(mpl): I would have expected that we could have relied on tm.isBinMethod
 				// to know whether we should bother trying harder. But apparently not. why? ask
 				// Marc.
-				if !tm.isBinMethod {
-					// ok = false
-					// return next
-				}
+				// if !tm.isBinMethod {
+				// ok = false
+				// return next
+				// }
 
 				var err error
 				meth0, err = stripReceiverFromArgs(meth0)
@@ -958,7 +958,8 @@ func call(n *node) {
 	var values []func(*frame) reflect.Value
 
 	recvIndexLater := false
-	if n.child[0].recv != nil {
+	switch {
+	case n.child[0].recv != nil:
 		// Compute method receiver value.
 		if isRecursiveType(n.child[0].recv.node.typ, n.child[0].recv.node.typ.rtype) {
 			values = append(values, genValueRecvInterfacePtr(n.child[0]))
@@ -966,12 +967,12 @@ func call(n *node) {
 			values = append(values, genValueRecv(n.child[0]))
 		}
 		method = true
-	} else if len(n.child[0].child) > 0 && n.child[0].child[0].typ != nil && n.child[0].child[0].typ.cat == interfaceT {
+	case len(n.child[0].child) > 0 && n.child[0].child[0].typ != nil && n.child[0].child[0].typ.cat == interfaceT:
 		recvIndexLater = true
 		values = append(values, genValueBinRecv(n.child[0], &receiver{node: n.child[0].child[0]}))
 		value = genValueBinMethodOnInterface(n, value)
 		method = true
-	} else if n.child[0].action == aMethod {
+	case n.child[0].action == aMethod:
 		// Add a place holder for interface method receiver.
 		values = append(values, nil)
 		method = true
