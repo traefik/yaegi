@@ -52,7 +52,7 @@ func main() {
 	}
 }
 
-// Output
+// Output:
 // TestStruct implements MyWriter
 // time.Nanosecond implements MyStringer
 // 1ns
