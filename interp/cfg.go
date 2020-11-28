@@ -75,6 +75,9 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			case assignStmt, defineStmt:
 				a := n.anc
 				i := childPos(n) - a.nright
+				if i < 0 {
+					break
+				}
 				if len(a.child) > a.nright+a.nleft {
 					i--
 				}
