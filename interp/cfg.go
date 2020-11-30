@@ -415,9 +415,10 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				return false
 			}
 
-			if n.child[1].kind == identExpr {
+			switch n.child[1].kind {
+			case identExpr, selectorExpr:
 				n.typ = &itype{cat: aliasT, val: typ, name: typeName}
-			} else {
+			default:
 				n.typ = typ
 				n.typ.name = typeName
 			}
