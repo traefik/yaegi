@@ -557,7 +557,8 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			if v, ok := pkg[name]; ok {
 				t.cat = valueT
 				t.rtype = v.Type()
-				if isBinType(v) { // a bin type is encoded as a pointer on nil value
+				if isBinType(v) {
+					// A bin type is encoded as a pointer on a typed nil value.
 					t.rtype = t.rtype.Elem()
 				}
 			} else {
@@ -736,7 +737,7 @@ func (t *itype) finalize() (*itype, error) {
 }
 
 // ReferTo returns true if the type contains a reference to a
-// full type name. It allows to asses a type recursive status.
+// full type name. It allows to assess a type recursive status.
 func (t *itype) referTo(name string, seen map[*itype]bool) bool {
 	if t.path+"/"+t.name == name {
 		return true
