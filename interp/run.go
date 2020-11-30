@@ -361,13 +361,6 @@ func typeAssert2(n *node) {
 					ok = false
 					return next
 				}
-				// TODO(mpl): I would have expected that we could have relied on tm.isBinMethod
-				// to know whether we should bother trying harder. But apparently not. why? ask
-				// Marc.
-				// if !tm.isBinMethod {
-				// ok = false
-				// return next
-				// }
 
 				var err error
 				meth0, err = stripReceiverFromArgs(meth0)
