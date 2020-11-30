@@ -110,6 +110,7 @@ func TestEvalAssign(t *testing.T) {
 		{src: "f := int64(3.2)", err: "1:39: cannot convert expression of type float64 to type int64"},
 		{src: "g := 1; g <<= 8", res: "256"},
 		{src: "h := 1; h >>= 8", res: "0"},
+		{src: "i := 1; j := &i; (*j) = 2", res: "2"},
 	})
 }
 
