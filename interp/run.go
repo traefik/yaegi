@@ -3,10 +3,12 @@ package interp
 //go:generate go run ../internal/cmd/genop/genop.go
 
 import (
+	"errors"
 	"fmt"
 	"go/constant"
 	"log"
 	"reflect"
+	"regexp"
 	"sync"
 	"unsafe"
 )
@@ -70,6 +72,17 @@ var builtin = [...]bltnGenerator{
 	aTypeAssert:   typeAssert,
 	aXor:          xor,
 	aXorAssign:    xorAssign,
+}
+
+var receiverStripperRxp *regexp.Regexp
+
+func init() {
+	re := `func\(((.*?(, |\)))(.*))`
+	var err error
+	receiverStripperRxp, err = regexp.Compile(re)
+	if err != nil {
+		panic(err)
+	}
 }
 
 type valueInterface struct {
@@ -283,6 +296,17 @@ func typeAssert(n *node) {
 	}
 }
 
+func stripReceiverFromArgs(signature string) (string, error) {
+	fields := receiverStripperRxp.FindStringSubmatch(signature)
+	if len(fields) < 5 {
+		return "", errors.New("error while matching method signature")
+	}
+	if fields[3] == ")" {
+		return fmt.Sprintf("func()%s", fields[4]), nil
+	}
+	return fmt.Sprintf("func(%s", fields[4]), nil
+}
+
 func typeAssert2(n *node) {
 	c0, c1 := n.child[0], n.child[1]
 	value := genValue(c0)                    // input value
@@ -298,14 +322,60 @@ func typeAssert2(n *node) {
 	case isInterfaceSrc(typ):
 		n.exec = func(f *frame) bltn {
 			v, ok := value(f).Interface().(valueInterface)
-			if ok && v.node.typ.id() == typID {
+			defer func() {
+				assertOk := ok
+				if setStatus {
+					value1(f).SetBool(assertOk)
+				}
+			}()
+			if !ok {
+				return next
+			}
+			if v.node.typ.id() == typID {
 				value0(f).Set(value(f))
-			} else {
+				return next
+			}
+			m0 := v.node.typ.methods()
+			m1 := typ.methods()
+			if len(m0) < len(m1) {
 				ok = false
+				return next
 			}
-			if setStatus {
-				value1(f).SetBool(ok)
+
+			for k, meth1 := range m1 {
+				var meth0 string
+				meth0, ok = m0[k]
+				if !ok {
+					return next
+				}
+				// As far as we know this equality check can fail because they are two ways to
+				// represent the signature of a method: one where the receiver appears before the
+				// func keyword, and one where it is just a func signature, and the receiver is
+				// seen as the first argument. That's why if that equality fails, we try harder to
+				// compare them afterwards. Hopefully that is the only reason this equality can fail.
+				if meth0 == meth1 {
+					continue
+				}
+				tm := lookupFieldOrMethod(v.node.typ, k)
+				if tm == nil {
+					ok = false
+					return next
+				}
+
+				var err error
+				meth0, err = stripReceiverFromArgs(meth0)
+				if err != nil {
+					ok = false
+					return next
+				}
+
+				if meth0 != meth1 {
+					ok = false
+					return next
+				}
 			}
+
+			value0(f).Set(value(f))
 			return next
 		}
 	case isInterface(typ):
@@ -879,7 +949,10 @@ func call(n *node) {
 	var method bool
 	value := genValue(n.child[0])
 	var values []func(*frame) reflect.Value
-	if n.child[0].recv != nil {
+
+	recvIndexLater := false
+	switch {
+	case n.child[0].recv != nil:
 		// Compute method receiver value.
 		if isRecursiveType(n.child[0].recv.node.typ, n.child[0].recv.node.typ.rtype) {
 			values = append(values, genValueRecvInterfacePtr(n.child[0]))
@@ -887,11 +960,17 @@ func call(n *node) {
 			values = append(values, genValueRecv(n.child[0]))
 		}
 		method = true
-	} else if n.child[0].action == aMethod {
+	case len(n.child[0].child) > 0 && n.child[0].child[0].typ != nil && n.child[0].child[0].typ.cat == interfaceT:
+		recvIndexLater = true
+		values = append(values, genValueBinRecv(n.child[0], &receiver{node: n.child[0].child[0]}))
+		value = genValueBinMethodOnInterface(n, value)
+		method = true
+	case n.child[0].action == aMethod:
 		// Add a place holder for interface method receiver.
 		values = append(values, nil)
 		method = true
 	}
+
 	numRet := len(n.child[0].typ.ret)
 	variadic := variadicPos(n)
 	child := n.child[1:]
@@ -1001,6 +1080,7 @@ func call(n *node) {
 	n.exec = func(f *frame) bltn {
 		var def *node
 		var ok bool
+
 		bf := value(f)
 		if def, ok = bf.Interface().(*node); ok {
 			bf = def.rval
@@ -1070,15 +1150,15 @@ func call(n *node) {
 					var src reflect.Value
 					if v == nil {
 						src = def.recv.val
-						if len(def.recv.index) > 0 {
-							if src.Kind() == reflect.Ptr {
-								src = src.Elem().FieldByIndex(def.recv.index)
-							} else {
-								src = src.FieldByIndex(def.recv.index)
-							}
-						}
 					} else {
 						src = v(f)
+					}
+					if recvIndexLater && def.recv != nil && len(def.recv.index) > 0 {
+						if src.Kind() == reflect.Ptr {
+							src = src.Elem().FieldByIndex(def.recv.index)
+						} else {
+							src = src.FieldByIndex(def.recv.index)
+						}
 					}
 					// Accommodate to receiver type
 					d := dest[0]
@@ -1619,6 +1699,15 @@ func getMethodByName(n *node) {
 
 	n.exec = func(f *frame) bltn {
 		val := value0(f).Interface().(valueInterface)
+		typ := val.node.typ
+		if typ.node == nil && typ.cat == valueT {
+			// happens with a var of empty interface type, that has value of concrete type
+			// from runtime, being asserted to "user-defined" interface.
+			if _, ok := typ.rtype.MethodByName(name); !ok {
+				panic(fmt.Sprintf("method %s not found", name))
+			}
+			return next
+		}
 		m, li := val.node.typ.lookupMethod(name)
 		fr := f.clone()
 		nod := *m
