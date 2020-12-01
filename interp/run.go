@@ -378,9 +378,6 @@ func typeAssert(n *node, withOk bool) {
 				ok = true
 			}
 			ok = v.IsValid()
-			// TODO(mpl): I tested on master that using rtype (c1.typ.rtype) seems to be
-			// working for typeAssert1 too, even though the previous code was using
-			// value0(f).Type() instead. Confirm with Marc.
 			if !ok {
 				if !withOk {
 					panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", rtype.String()))
