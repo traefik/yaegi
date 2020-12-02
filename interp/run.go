@@ -69,7 +69,7 @@ var builtin = [...]bltnGenerator{
 	aStar:         deref,
 	aSub:          sub,
 	aSubAssign:    subAssign,
-	aTypeAssert:   typeAssert,
+	aTypeAssert:   typeAssert1,
 	aXor:          xor,
 	aXorAssign:    xorAssign,
 }
@@ -230,72 +230,6 @@ func typeAssertStatus(n *node) {
 	}
 }
 
-func typeAssert(n *node) {
-	c0, c1 := n.child[0], n.child[1]
-	value := genValue(c0) // input value
-	value0 := genValue(n) // returned result
-	next := getExec(n.tnext)
-
-	switch {
-	case isInterfaceSrc(c1.typ):
-		typ := n.child[1].typ
-		typID := n.child[1].typ.id()
-		n.exec = func(f *frame) bltn {
-			v := value(f)
-			vi, ok := v.Interface().(valueInterface)
-			if !ok {
-				panic(n.cfgErrorf("interface conversion: nil is not %v", typID))
-			}
-			if !vi.node.typ.implements(typ) {
-				panic(n.cfgErrorf("interface conversion: %v is not %v", vi.node.typ.id(), typID))
-			}
-			value0(f).Set(v)
-			return next
-		}
-	case isInterface(c1.typ):
-		n.exec = func(f *frame) bltn {
-			v := value(f).Elem()
-			typ := value0(f).Type()
-			if !v.IsValid() {
-				panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", typ.String()))
-			}
-			if !canAssertTypes(v.Type(), typ) {
-				method := firstMissingMethod(v.Type(), typ)
-				panic(fmt.Sprintf("interface conversion: %s is not %s: missing method %s", v.Type().String(), typ.String(), method))
-			}
-			value0(f).Set(v)
-			return next
-		}
-	case c0.typ.cat == valueT || c0.typ.cat == errorT:
-		n.exec = func(f *frame) bltn {
-			v := value(f).Elem()
-			typ := value0(f).Type()
-			if !v.IsValid() {
-				panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", typ.String()))
-			}
-			if !canAssertTypes(v.Type(), typ) {
-				method := firstMissingMethod(v.Type(), typ)
-				panic(fmt.Sprintf("interface conversion: %s is not %s: missing method %s", v.Type().String(), typ.String(), method))
-			}
-			value0(f).Set(v)
-			return next
-		}
-	default:
-		n.exec = func(f *frame) bltn {
-			v := value(f).Interface().(valueInterface)
-			typ := value0(f).Type()
-			if !v.value.IsValid() {
-				panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", typ.String()))
-			}
-			if !canAssertTypes(v.value.Type(), typ) {
-				panic(fmt.Sprintf("interface conversion: interface {} is %s, not %s", v.value.Type().String(), typ.String()))
-			}
-			value0(f).Set(v.value)
-			return next
-		}
-	}
-}
-
 func stripReceiverFromArgs(signature string) (string, error) {
 	fields := receiverStripperRxp.FindStringSubmatch(signature)
 	if len(fields) < 5 {
@@ -307,13 +241,28 @@ func stripReceiverFromArgs(signature string) (string, error) {
 	return fmt.Sprintf("func(%s", fields[4]), nil
 }
 
+func typeAssert1(n *node) {
+	typeAssert(n, false)
+}
+
 func typeAssert2(n *node) {
+	typeAssert(n, true)
+}
+
+func typeAssert(n *node, withOk bool) {
 	c0, c1 := n.child[0], n.child[1]
-	value := genValue(c0)                    // input value
-	value0 := genValue(n.anc.child[0])       // returned result
-	value1 := genValue(n.anc.child[1])       // returned status
-	setStatus := n.anc.child[1].ident != "_" // do not assign status to "_"
-	typ := c1.typ                            // type to assert or convert to
+	value := genValue(c0) // input value
+	var value0, value1 func(*frame) reflect.Value
+	setStatus := false
+	if withOk {
+		value0 = genValue(n.anc.child[0])       // returned result
+		value1 = genValue(n.anc.child[1])       // returned status
+		setStatus = n.anc.child[1].ident != "_" // do not assign status to "_"
+	} else {
+		value0 = genValue(n) // returned result
+	}
+
+	typ := c1.typ // type to assert or convert to
 	typID := typ.id()
 	rtype := typ.rtype // type to assert
 	next := getExec(n.tnext)
@@ -322,13 +271,15 @@ func typeAssert2(n *node) {
 	case isInterfaceSrc(typ):
 		n.exec = func(f *frame) bltn {
 			v, ok := value(f).Interface().(valueInterface)
-			defer func() {
-				assertOk := ok
-				if setStatus {
-					value1(f).SetBool(assertOk)
-				}
-			}()
+			if setStatus {
+				defer func() {
+					value1(f).SetBool(ok)
+				}()
+			}
 			if !ok {
+				if !withOk {
+					panic(n.cfgErrorf("interface conversion: nil is not %v", typID))
+				}
 				return next
 			}
 			if v.node.typ.id() == typID {
@@ -339,6 +290,9 @@ func typeAssert2(n *node) {
 			m1 := typ.methods()
 			if len(m0) < len(m1) {
 				ok = false
+				if !withOk {
+					panic(n.cfgErrorf("interface conversion: %v is not %v", v.node.typ.id(), typID))
+				}
 				return next
 			}
 
@@ -383,12 +337,11 @@ func typeAssert2(n *node) {
 			var leftType reflect.Type
 			v := value(f)
 			val, ok := v.Interface().(valueInterface)
-			defer func() {
-				assertOk := ok
-				if setStatus {
-					value1(f).SetBool(assertOk)
-				}
-			}()
+			if setStatus {
+				defer func() {
+					value1(f).SetBool(ok)
+				}()
+			}
 			if ok && val.node.typ.cat != valueT {
 				m0 := val.node.typ.methods()
 				m1 := typ.methods()
@@ -409,6 +362,7 @@ func typeAssert2(n *node) {
 					}
 				}
 
+				// TODO(mpl): make this case compliant with reflect's Implements.
 				v = genInterfaceWrapper(val.node, rtype)(f)
 				value0(f).Set(v)
 				ok = true
@@ -423,8 +377,19 @@ func typeAssert2(n *node) {
 				leftType = v.Type()
 				ok = true
 			}
-			ok = v.IsValid() && canAssertTypes(leftType, rtype)
+			ok = v.IsValid()
 			if !ok {
+				if !withOk {
+					panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", rtype.String()))
+				}
+				return next
+			}
+			ok = canAssertTypes(leftType, rtype)
+			if !ok {
+				if !withOk {
+					method := firstMissingMethod(leftType, rtype)
+					panic(fmt.Sprintf("interface conversion: %s is not %s: missing method %s", leftType.String(), rtype.String(), method))
+				}
 				return next
 			}
 			value0(f).Set(v)
@@ -433,25 +398,52 @@ func typeAssert2(n *node) {
 	case n.child[0].typ.cat == valueT || n.child[0].typ.cat == errorT:
 		n.exec = func(f *frame) bltn {
 			v := value(f).Elem()
-			ok := v.IsValid() && canAssertTypes(v.Type(), rtype)
-			if ok {
-				value0(f).Set(v)
-			}
+			ok := v.IsValid()
 			if setStatus {
-				value1(f).SetBool(ok)
+				defer func() {
+					value1(f).SetBool(ok)
+				}()
 			}
+			if !ok {
+				if !withOk {
+					panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", rtype.String()))
+				}
+				return next
+			}
+			ok = canAssertTypes(v.Type(), rtype)
+			if !ok {
+				if !withOk {
+					method := firstMissingMethod(v.Type(), rtype)
+					panic(fmt.Sprintf("interface conversion: %s is not %s: missing method %s", v.Type().String(), rtype.String(), method))
+				}
+				return next
+			}
+			value0(f).Set(v)
 			return next
 		}
 	default:
 		n.exec = func(f *frame) bltn {
 			v, ok := value(f).Interface().(valueInterface)
-			ok = ok && v.value.IsValid() && canAssertTypes(v.value.Type(), rtype)
-			if ok {
-				value0(f).Set(v.value)
-			}
 			if setStatus {
-				value1(f).SetBool(ok)
+				defer func() {
+					value1(f).SetBool(ok)
+				}()
 			}
+			if !ok || !v.value.IsValid() {
+				ok = false
+				if !withOk {
+					panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", rtype.String()))
+				}
+				return next
+			}
+			ok = canAssertTypes(v.value.Type(), rtype)
+			if !ok {
+				if !withOk {
+					panic(fmt.Sprintf("interface conversion: interface {} is %s, not %s", v.value.Type().String(), rtype.String()))
+				}
+				return next
+			}
+			value0(f).Set(v.value)
 			return next
 		}
 	}

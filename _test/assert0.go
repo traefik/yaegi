@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 )
 
@@ -16,7 +17,8 @@ func (t TestStruct) Write(p []byte) (n int, err error) {
 }
 
 func usesWriter(w MyWriter) {
-	w.Write(nil)
+	n, _ := w.Write([]byte("hello world"))
+	fmt.Println(n)
 }
 
 type MyStringer interface {
@@ -28,6 +30,8 @@ func usesStringer(s MyStringer) {
 }
 
 func main() {
+	aType := reflect.TypeOf((*MyWriter)(nil)).Elem()
+
 	var t interface{}
 	t = TestStruct{}
 	var tw MyWriter
@@ -39,6 +43,19 @@ func main() {
 		fmt.Println("TestStruct implements MyWriter")
 		usesWriter(tw)
 	}
+	n, _ := t.(MyWriter).Write([]byte("hello world"))
+	fmt.Println(n)
+	bType := reflect.TypeOf(TestStruct{})
+	fmt.Println(bType.Implements(aType))
+
+	t = 42
+	foo, ok := t.(MyWriter)
+	if !ok {
+		fmt.Println("42 does not implement MyWriter")
+	} else {
+		fmt.Println("42 implements MyWriter")
+	}
+	_ = foo
 
 	var tt interface{}
 	tt = time.Nanosecond
@@ -50,9 +67,30 @@ func main() {
 		fmt.Println("time.Nanosecond implements MyStringer")
 		usesStringer(myD)
 	}
+	fmt.Println(tt.(MyStringer).String())
+	cType := reflect.TypeOf((*MyStringer)(nil)).Elem()
+	dType := reflect.TypeOf(time.Nanosecond)
+	fmt.Println(dType.Implements(cType))
+
+	tt = 42
+	bar, ok := tt.(MyStringer)
+	if !ok {
+		fmt.Println("42 does not implement MyStringer")
+	} else {
+		fmt.Println("42 implements MyStringer")
+	}
+	_ = bar
+
 }
 
 // Output:
 // TestStruct implements MyWriter
+// 11
+// 11
+// true
+// 42 does not implement MyWriter
 // time.Nanosecond implements MyStringer
 // 1ns
+// 1ns
+// true
+// 42 does not implement MyStringer

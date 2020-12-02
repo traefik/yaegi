@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 )
 
@@ -12,6 +13,8 @@ func (t TestStruct) String() string {
 }
 
 func main() {
+	aType := reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
+
 	var t interface{}
 	t = time.Nanosecond
 	s, ok := t.(fmt.Stringer)
@@ -20,6 +23,19 @@ func main() {
 		return
 	}
 	fmt.Println(s.String())
+	fmt.Println(t.(fmt.Stringer).String())
+	bType := reflect.TypeOf(time.Nanosecond)
+	fmt.Println(bType.Implements(aType))
+
+
+	t = 42
+	foo, ok := t.(fmt.Stringer)
+	if !ok {
+		fmt.Println("42 does not implement fmt.Stringer")
+	} else {
+		fmt.Println("42 implements fmt.Stringer")
+	}
+	_ = foo
 
 	var tt interface{}
 	tt = TestStruct{}
@@ -29,8 +45,16 @@ func main() {
 		return
 	}
 	fmt.Println(ss.String())
+	fmt.Println(tt.(fmt.Stringer).String())
+	// TODO(mpl): uncomment when fixed
+	// cType := reflect.TypeOf(TestStruct{})
+	// fmt.Println(cType.Implements(aType))
 }
 
 // Output:
 // 1ns
+// 1ns
+// true
+// 42 does not implement fmt.Stringer
+// hello world
 // hello world
