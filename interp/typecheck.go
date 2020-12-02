@@ -499,9 +499,7 @@ func (check typecheck) sliceExpr(n *node) error {
 	case reflect.Array:
 		valid = true
 		l = t.Len()
-		if c.kind != indexExpr && c.kind != selectorExpr && (c.sym == nil || c.sym.kind != varSym) {
-			return c.cfgErrorf("cannot slice type %s", c.typ.id())
-		}
+		// TODO(marc): check addressable status of array object (i.e. composite arrays are not).
 	case reflect.Slice:
 		valid = true
 	case reflect.Ptr:
