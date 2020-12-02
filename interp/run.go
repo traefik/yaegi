@@ -69,7 +69,7 @@ var builtin = [...]bltnGenerator{
 	aStar:         deref,
 	aSub:          sub,
 	aSubAssign:    subAssign,
-	aTypeAssert:   typeAssert1,
+	aTypeAssert:   typeAssertShort,
 	aXor:          xor,
 	aXorAssign:    xorAssign,
 }
@@ -191,6 +191,7 @@ func runCfg(n *node, f *frame) {
 	}
 }
 
+/*
 func typeAssertStatus(n *node) {
 	c0, c1 := n.child[0], n.child[1]   // cO contains the input value, c1 the type to assert
 	value := genValue(c0)              // input value
@@ -229,6 +230,7 @@ func typeAssertStatus(n *node) {
 		}
 	}
 }
+*/
 
 func stripReceiverFromArgs(signature string) (string, error) {
 	fields := receiverStripperRxp.FindStringSubmatch(signature)
@@ -241,25 +243,33 @@ func stripReceiverFromArgs(signature string) (string, error) {
 	return fmt.Sprintf("func(%s", fields[4]), nil
 }
 
-func typeAssert1(n *node) {
-	typeAssert(n, false)
+func typeAssertShort(n *node) {
+	typeAssert(n, true, false)
 }
 
-func typeAssert2(n *node) {
-	typeAssert(n, true)
+func typeAssertLong(n *node) {
+	typeAssert(n, true, true)
 }
 
-func typeAssert(n *node, withOk bool) {
+func typeAssertStatus(n *node) {
+	typeAssert(n, false, true)
+}
+
+func typeAssert(n *node, withResult, withOk bool) {
 	c0, c1 := n.child[0], n.child[1]
 	value := genValue(c0) // input value
 	var value0, value1 func(*frame) reflect.Value
 	setStatus := false
-	if withOk {
+	switch {
+	case withResult && withOk:
 		value0 = genValue(n.anc.child[0])       // returned result
 		value1 = genValue(n.anc.child[1])       // returned status
 		setStatus = n.anc.child[1].ident != "_" // do not assign status to "_"
-	} else {
+	case withResult && !withOk:
 		value0 = genValue(n) // returned result
+	case !withResult && withOk:
+		value1 = genValue(n.anc.child[1])       // returned status
+		setStatus = n.anc.child[1].ident != "_" // do not assign status to "_"
 	}
 
 	typ := c1.typ // type to assert or convert to
@@ -270,7 +280,8 @@ func typeAssert(n *node, withOk bool) {
 	switch {
 	case isInterfaceSrc(typ):
 		n.exec = func(f *frame) bltn {
-			v, ok := value(f).Interface().(valueInterface)
+			valf := value(f)
+			v, ok := valf.Interface().(valueInterface)
 			if setStatus {
 				defer func() {
 					value1(f).SetBool(ok)
@@ -283,7 +294,9 @@ func typeAssert(n *node, withOk bool) {
 				return next
 			}
 			if v.node.typ.id() == typID {
-				value0(f).Set(value(f))
+				if withResult {
+					value0(f).Set(valf)
+				}
 				return next
 			}
 			m0 := v.node.typ.methods()
@@ -329,7 +342,9 @@ func typeAssert(n *node, withOk bool) {
 				}
 			}
 
-			value0(f).Set(value(f))
+			if withResult {
+				value0(f).Set(valf)
+			}
 			return next
 		}
 	case isInterface(typ):
@@ -362,9 +377,9 @@ func typeAssert(n *node, withOk bool) {
 					}
 				}
 
-				// TODO(mpl): make this case compliant with reflect's Implements.
-				v = genInterfaceWrapper(val.node, rtype)(f)
-				value0(f).Set(v)
+				if withResult {
+					value0(f).Set(genInterfaceWrapper(val.node, rtype)(f))
+				}
 				ok = true
 				return next
 			}
@@ -392,7 +407,9 @@ func typeAssert(n *node, withOk bool) {
 				}
 				return next
 			}
-			value0(f).Set(v)
+			if withResult {
+				value0(f).Set(v)
+			}
 			return next
 		}
 	case n.child[0].typ.cat == valueT || n.child[0].typ.cat == errorT:
@@ -418,7 +435,9 @@ func typeAssert(n *node, withOk bool) {
 				}
 				return next
 			}
-			value0(f).Set(v)
+			if withResult {
+				value0(f).Set(v)
+			}
 			return next
 		}
 	default:
@@ -443,7 +462,9 @@ func typeAssert(n *node, withOk bool) {
 				}
 				return next
 			}
-			value0(f).Set(v.value)
+			if withResult {
+				value0(f).Set(v.value)
+			}
 			return next
 		}
 	}
