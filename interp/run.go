@@ -191,47 +191,6 @@ func runCfg(n *node, f *frame) {
 	}
 }
 
-/*
-func typeAssertStatus(n *node) {
-	c0, c1 := n.child[0], n.child[1]   // cO contains the input value, c1 the type to assert
-	value := genValue(c0)              // input value
-	value1 := genValue(n.anc.child[1]) // returned status
-	rtype := c1.typ.rtype              // type to assert
-	next := getExec(n.tnext)
-
-	switch {
-	case isInterfaceSrc(c1.typ):
-		typ := c1.typ
-		n.exec = func(f *frame) bltn {
-			v, ok := value(f).Interface().(valueInterface)
-			value1(f).SetBool(ok && v.node.typ.implements(typ))
-			return next
-		}
-	case isInterface(c1.typ):
-		n.exec = func(f *frame) bltn {
-			v := value(f)
-			ok := v.IsValid() && canAssertTypes(v.Elem().Type(), rtype)
-			value1(f).SetBool(ok)
-			return next
-		}
-	case c0.typ.cat == valueT || c0.typ.cat == errorT:
-		n.exec = func(f *frame) bltn {
-			v := value(f)
-			ok := v.IsValid() && canAssertTypes(v.Elem().Type(), rtype)
-			value1(f).SetBool(ok)
-			return next
-		}
-	default:
-		n.exec = func(f *frame) bltn {
-			v, ok := value(f).Interface().(valueInterface)
-			ok = ok && v.value.IsValid() && canAssertTypes(v.value.Type(), rtype)
-			value1(f).SetBool(ok)
-			return next
-		}
-	}
-}
-*/
-
 func stripReceiverFromArgs(signature string) (string, error) {
 	fields := receiverStripperRxp.FindStringSubmatch(signature)
 	if len(fields) < 5 {
