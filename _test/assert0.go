@@ -48,6 +48,14 @@ func main() {
 	bType := reflect.TypeOf(TestStruct{})
 	fmt.Println(bType.Implements(aType))
 
+	// not redundant with the above, because it goes through a slightly different code path.
+	if _, ok := t.(MyWriter); !ok {
+		fmt.Println("TestStruct does not implement MyWriter")
+		return
+	} else {
+		fmt.Println("TestStruct implements MyWriter")
+	}
+
 	t = 42
 	foo, ok := t.(MyWriter)
 	if !ok {
@@ -56,6 +64,12 @@ func main() {
 		fmt.Println("42 implements MyWriter")
 	}
 	_ = foo
+
+	if _, ok := t.(MyWriter); !ok {
+		fmt.Println("42 does not implement MyWriter")
+	} else {
+		fmt.Println("42 implements MyWriter")
+	}
 
 	var tt interface{}
 	tt = time.Nanosecond
@@ -72,6 +86,12 @@ func main() {
 	dType := reflect.TypeOf(time.Nanosecond)
 	fmt.Println(dType.Implements(cType))
 
+	if _, ok := tt.(MyStringer); !ok {
+		fmt.Println("time.Nanosecond does not implement MyStringer")
+	} else {
+		fmt.Println("time.Nanosecond implements MyStringer")
+	}
+
 	tt = 42
 	bar, ok := tt.(MyStringer)
 	if !ok {
@@ -81,6 +101,11 @@ func main() {
 	}
 	_ = bar
 
+	if _, ok := tt.(MyStringer); !ok {
+		fmt.Println("42 does not implement MyStringer")
+	} else {
+		fmt.Println("42 implements MyStringer")
+	}
 }
 
 // Output:
@@ -88,9 +113,13 @@ func main() {
 // 11
 // 11
 // true
+// TestStruct implements MyWriter
+// 42 does not implement MyWriter
 // 42 does not implement MyWriter
 // time.Nanosecond implements MyStringer
 // 1ns
 // 1ns
 // true
+// time.Nanosecond implements MyStringer
+// 42 does not implement MyStringer
 // 42 does not implement MyStringer
