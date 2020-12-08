@@ -415,7 +415,14 @@ func typeAssert(n *node, withResult, withOk bool) {
 				}
 				return next
 			}
-			ok = canAssertTypes(v.value.Type(), rtype)
+
+			styp := v.value.Type()
+			// TODO(mpl): probably also maps and others. and might have to recurse too.
+			if styp.String() == "[]interp.valueInterface" {
+				styp = v.node.typ.rtype
+			}
+
+			ok = canAssertTypes(styp, rtype)
 			if !ok {
 				if !withOk {
 					panic(fmt.Sprintf("interface conversion: interface {} is %s, not %s", v.value.Type().String(), rtype.String()))
@@ -2153,7 +2160,11 @@ func arrayLit(n *node) {
 		for i, v := range values {
 			a.Index(index[i]).Set(v(f))
 		}
-		value(f).Set(a)
+		dest := value(f)
+		if _, ok := dest.Interface().(valueInterface); ok {
+			a = reflect.ValueOf(valueInterface{n, a})
+		}
+		dest.Set(a)
 		return next
 	}
 }
