@@ -1878,8 +1878,12 @@ func compDefineX(sc *scope, n *node) error {
 		if err != nil {
 			return err
 		}
+		for funtype.cat == valueT && funtype.val != nil {
+			// Retrieve original interpreter type from a wrapped function.
+			funtype = funtype.val
+		}
 		if funtype.cat == valueT {
-			// Handle functions imported from runtime
+			// Handle functions imported from runtime.
 			for i := 0; i < funtype.rtype.NumOut(); i++ {
 				types = append(types, &itype{cat: valueT, rtype: funtype.rtype.Out(i)})
 			}
