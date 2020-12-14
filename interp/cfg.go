@@ -288,8 +288,12 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				// Get type from ancestor (implicit type)
 				if n.anc.kind == keyValueExpr && n == n.anc.child[0] {
 					n.typ = n.anc.typ.key
-				} else if n.anc.typ != nil {
-					n.typ = n.anc.typ.val
+				} else if atyp := n.anc.typ; atyp != nil {
+					if atyp.cat == valueT {
+						n.typ = &itype{cat: valueT, rtype: atyp.rtype.Elem()}
+					} else {
+						n.typ = atyp.val
+					}
 				}
 				if n.typ == nil {
 					err = n.cfgErrorf("undefined type")
@@ -2473,6 +2477,8 @@ func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerat
 			gen = compositeBinMap
 		case reflect.Ptr:
 			gen = compositeGenerator(n, typ, n.typ.val.rtype)
+		case reflect.Slice:
+			gen = compositeBinSlice
 		default:
 			log.Panic(n.cfgErrorf("compositeGenerator not implemented for type kind: %s", k))
 		}

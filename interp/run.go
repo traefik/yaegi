@@ -2213,6 +2213,51 @@ func compositeBinMap(n *node) {
 	}
 }
 
+func compositeBinSlice(n *node) {
+	value := valueGenerator(n, n.findex)
+	next := getExec(n.tnext)
+	child := n.child
+	if n.nleft == 1 {
+		child = n.child[1:]
+	}
+
+	values := make([]func(*frame) reflect.Value, len(child))
+	index := make([]int, len(child))
+	rtype := n.typ.rtype.Elem()
+	var max, prev int
+
+	for i, c := range child {
+		if c.kind == keyValueExpr {
+			convertLiteralValue(c.child[1], rtype)
+			values[i] = genValue(c.child[1])
+			index[i] = int(vInt(c.child[0].rval))
+		} else {
+			convertLiteralValue(c, rtype)
+			values[i] = genValue(c)
+			index[i] = prev
+		}
+		prev = index[i] + 1
+		if prev > max {
+			max = prev
+		}
+	}
+
+	typ := n.typ.frameType()
+	n.exec = func(f *frame) bltn {
+		var a reflect.Value
+		if n.typ.sizedef {
+			a, _ = n.typ.zero()
+		} else {
+			a = reflect.MakeSlice(typ, max, max)
+		}
+		for i, v := range values {
+			a.Index(index[i]).Set(v(f))
+		}
+		value(f).Set(a)
+		return next
+	}
+}
+
 // doCompositeBinStruct creates and populates a struct object from a binary type.
 func doCompositeBinStruct(n *node, hasType bool) {
 	next := getExec(n.tnext)
