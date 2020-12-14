@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/xml"
+	"errors"
 	"fmt"
 )
 
@@ -10,7 +11,29 @@ type Email struct {
 	Addr  string
 }
 
-func f(s string, r interface{}) error {
+func f(r interface{}) error {
+	return withPointerAsInterface(&r)
+}
+
+func withPointerAsInterface(r interface{}) error {
+	rp, ok := (r).(*interface{})
+	if !ok {
+		return errors.New("cannot assert to *interface{}")
+	}
+	em, ok := (*rp).(*Email)
+	if !ok {
+		return errors.New("cannot assert to *Email")
+	}
+	em.Where = "work"
+	em.Addr = "bob@work.com"
+	return nil
+}
+
+func ff(s string, r interface{}) error {
+	return xml.Unmarshal([]byte(s), r)
+}
+
+func fff(s string, r interface{}) error {
 	return xml.Unmarshal([]byte(s), &r)
 }
 
@@ -21,9 +44,19 @@ func main() {
 		</Email>
 	`
 	v := Email{}
-	err := f(data, &v)
+	err := f(&v)
 	fmt.Println(err, v)
+
+	vv := Email{}
+	err = ff(data, &vv)
+	fmt.Println(err, vv)
+
+	vvv := Email{}
+	err = ff(data, &vvv)
+	fmt.Println(err, vvv)
 }
 
 // Ouput:
+// <nil> {work bob@work.com}
+// <nil> {work bob@work.com}
 // <nil> {work bob@work.com}

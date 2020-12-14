@@ -418,7 +418,9 @@ func typeAssert(n *node, withResult, withOk bool) {
 
 			styp := v.value.Type()
 			// TODO(mpl): probably also maps and others. and might have to recurse too.
-			if styp.String() == "[]interp.valueInterface" {
+			sstyp := styp.String()
+			if sstyp == "[]interp.valueInterface" ||
+				sstyp == "*interp.valueInterface" {
 				styp = v.node.typ.rtype
 			}
 
@@ -466,10 +468,11 @@ func firstMissingMethod(src, dest reflect.Type) string {
 func convert(n *node) {
 	dest := genValue(n)
 	c := n.child[1]
-	typ := n.child[0].typ.TypeOf()
+	typ := n.child[0].typ.frameType()
 	next := getExec(n.tnext)
 
 	if c.isNil() { // convert nil to type
+		// TODO(mpl): we might even be able to remove that, now that we rely on frameType.
 		if n.child[0].typ.cat == interfaceT {
 			typ = reflect.TypeOf((*valueInterface)(nil)).Elem()
 		}
@@ -682,12 +685,11 @@ func addr(n *node) {
 	c0 := n.child[0]
 	value := genValue(c0)
 	switch c0.typ.cat {
-	case interfaceT:
+	case interfaceT, ptrT:
 		i := n.findex
 		l := n.level
 		n.exec = func(f *frame) bltn {
-			v := value(f).Interface().(valueInterface).value
-			getFrame(f, l).data[i] = reflect.ValueOf(v.Interface())
+			getFrame(f, l).data[i] = value(f).Addr()
 			return next
 		}
 	default:

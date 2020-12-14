@@ -2470,7 +2470,7 @@ func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerat
 		}
 	case valueT:
 		if rtyp == nil {
-			rtyp = n.typ.rtype
+			rtyp = n.typ.TypeOf()
 		}
 		switch k := rtyp.Kind(); k {
 		case reflect.Struct:

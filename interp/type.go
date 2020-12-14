@@ -1476,6 +1476,8 @@ func (t *itype) frameType() (r reflect.Type) {
 		r = reflect.TypeOf((*node)(nil))
 	case interfaceT:
 		r = reflect.TypeOf((*valueInterface)(nil)).Elem()
+	case ptrT:
+		r = reflect.PtrTo(t.val.frameType())
 	default:
 		r = t.TypeOf()
 	}
