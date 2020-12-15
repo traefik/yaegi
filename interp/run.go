@@ -386,6 +386,7 @@ func typeAssert(n *node, withResult, withOk bool) {
 				}
 				return next
 			}
+			v = valueInterfaceValue(v)
 			ok = canAssertTypes(v.Type(), rtype)
 			if !ok {
 				if !withOk {
@@ -887,11 +888,6 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 				if v, ok := r.Interface().(*node); ok {
 					result[i] = genFunctionWrapper(v)(f)
 				}
-				if def.typ.ret[i].cat == interfaceT {
-					x := result[i].Interface().(valueInterface).value
-					result[i] = reflect.New(reflect.TypeOf((*interface{})(nil)).Elem()).Elem()
-					result[i].Set(x)
-				}
 			}
 			return result
 		})
@@ -1271,13 +1267,13 @@ func callBin(n *node) {
 			numOut := c.child[0].typ.rtype.NumOut()
 			for j := 0; j < numOut; j++ {
 				ind := c.findex + j
-				values = append(values, func(f *frame) reflect.Value { return f.data[ind] })
+				values = append(values, func(f *frame) reflect.Value { return valueInterfaceValue(f.data[ind]) })
 			}
 		case isRegularCall(c):
 			// Handle nested function calls: pass returned values as arguments
 			for j := range c.child[0].typ.ret {
 				ind := c.findex + j
-				values = append(values, func(f *frame) reflect.Value { return f.data[ind] })
+				values = append(values, func(f *frame) reflect.Value { return valueInterfaceValue(f.data[ind]) })
 			}
 		default:
 			if c.kind == basicLit || c.rval.IsValid() {
@@ -1371,7 +1367,11 @@ func callBin(n *node) {
 			for i := range rvalues {
 				c := n.anc.child[i]
 				if c.ident != "_" {
-					rvalues[i] = genValue(c)
+					if c.typ.cat == interfaceT {
+						rvalues[i] = genValueInterfaceValue(c)
+					} else {
+						rvalues[i] = genValue(c)
+					}
 				}
 			}
 			n.exec = func(f *frame) bltn {
@@ -1714,6 +1714,13 @@ func getMethodByName(n *node) {
 
 	n.exec = func(f *frame) bltn {
 		val := value0(f).Interface().(valueInterface)
+		for {
+			v, ok := val.value.Interface().(valueInterface)
+			if !ok {
+				break
+			}
+			val = v
+		}
 		typ := val.node.typ
 		if typ.node == nil && typ.cat == valueT {
 			// happens with a var of empty interface type, that has value of concrete type
