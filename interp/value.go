@@ -297,6 +297,17 @@ func genValueOutput(n *node, t reflect.Type) func(*frame) reflect.Value {
 	return value
 }
 
+func valueInterfaceValue(v reflect.Value) reflect.Value {
+	for {
+		vv, ok := v.Interface().(valueInterface)
+		if !ok {
+			break
+		}
+		v = vv.value
+	}
+	return v
+}
+
 func genValueInterfaceValue(n *node) func(*frame) reflect.Value {
 	value := genValue(n)
 
@@ -307,7 +318,7 @@ func genValueInterfaceValue(n *node) func(*frame) reflect.Value {
 			v.Set(zeroInterfaceValue())
 			v = value(f)
 		}
-		return v.Interface().(valueInterface).value
+		return valueInterfaceValue(v)
 	}
 }
 
