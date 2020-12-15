@@ -1880,6 +1880,9 @@ func compDefineX(sc *scope, n *node) error {
 		}
 		for funtype.cat == valueT && funtype.val != nil {
 			// Retrieve original interpreter type from a wrapped function.
+			// Struct fields of function types are always wrapped in valueT to ensure
+			// their possible use in runtime. In that case, the val field retains the
+			// original interpreter type, which is used now.
 			funtype = funtype.val
 		}
 		if funtype.cat == valueT {
