@@ -221,21 +221,25 @@ func genValueRangeArray(n *node) func(*frame) reflect.Value {
 			return value(f).Elem()
 		}
 	case n.typ.val != nil && n.typ.val.cat == interfaceT:
-		return func(f *frame) reflect.Value {
-			val := value(f)
-			v := []valueInterface{}
-			for i := 0; i < val.Len(); i++ {
-				switch av := val.Index(i).Interface().(type) {
-				case []valueInterface:
-					v = append(v, av...)
-				case valueInterface:
-					v = append(v, av)
-				default:
-					panic(n.cfgErrorf("invalid type %v", val.Index(i).Type()))
+		if len(n.typ.val.field) > 0 {
+			return func(f *frame) reflect.Value {
+				val := value(f)
+				v := []valueInterface{}
+				for i := 0; i < val.Len(); i++ {
+					switch av := val.Index(i).Interface().(type) {
+					case []valueInterface:
+						v = append(v, av...)
+					case valueInterface:
+						v = append(v, av)
+					default:
+						panic(n.cfgErrorf("invalid type %v", val.Index(i).Type()))
+					}
 				}
+				return reflect.ValueOf(v)
 			}
-			return reflect.ValueOf(v)
 		}
+		// empty interface, do not wrap.
+		fallthrough
 	default:
 		return func(f *frame) reflect.Value {
 			// This is necessary to prevent changes in the returned
@@ -265,6 +269,7 @@ func genValueInterface(n *node) func(*frame) reflect.Value {
 	return func(f *frame) reflect.Value {
 		v := value(f)
 		nod := n
+
 		for v.IsValid() {
 			// traverse interface indirections to find out concrete type
 			vi, ok := v.Interface().(valueInterface)
@@ -274,6 +279,12 @@ func genValueInterface(n *node) func(*frame) reflect.Value {
 			v = vi.value
 			nod = vi.node
 		}
+
+		// empty interface, do not wrap.
+		if nod.typ.cat == interfaceT && len(nod.typ.field) == 0 {
+			return v
+		}
+
 		return reflect.ValueOf(valueInterface{nod, v})
 	}
 }
@@ -288,8 +299,20 @@ func genValueOutput(n *node, t reflect.Type) func(*frame) reflect.Value {
 	value := genValue(n)
 	switch {
 	case n.anc.action == aAssign && n.anc.typ.cat == interfaceT:
+		if len(n.anc.typ.field) == 0 {
+			// empty interface, do not wrap
+			return func(f *frame) reflect.Value {
+				dest := value(f)
+				dest.Set(reflect.New(t).Elem())
+				return dest
+			}
+		}
 		fallthrough
 	case n.anc.kind == returnStmt && n.anc.val.(*node).typ.ret[0].cat == interfaceT:
+		if len(n.anc.val.(*node).typ.ret[0].field) == 0 {
+			// empty interface, do not wrap
+			return value
+		}
 		// The result of the builtin has to be returned as an interface type.
 		// Wrap it in a valueInterface and return the dereferenced value.
 		return func(f *frame) reflect.Value {

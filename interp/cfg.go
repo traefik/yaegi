@@ -605,6 +605,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				case src.kind == basicLit:
 					// Assign to nil.
 					src.rval = reflect.New(dest.typ.TypeOf()).Elem()
+				default:
 				}
 
 				n.typ = dest.typ
@@ -612,6 +613,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					sym.typ = n.typ
 					sym.recv = src.recv
 				}
+
 				n.level = level
 
 				if n.anc.kind == constDecl {
@@ -713,7 +715,9 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					break
 				}
 			}
-			if c0.rval.IsValid() && c1.rval.IsValid() && !isInterface(n.typ) && constOp[n.action] != nil {
+			if c0.rval.IsValid() && c1.rval.IsValid() &&
+				// (!isInterface(n.typ) || len(n.typ.field) == 0) && constOp[n.action] != nil {
+				(!isInterface(n.typ)) && constOp[n.action] != nil {
 				n.typ.TypeOf()       // Force compute of reflection type.
 				constOp[n.action](n) // Compute a constant result now rather than during exec.
 			}
@@ -1885,6 +1889,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					return
 				}
 			}
+
 			for _, c := range n.child[:l] {
 				var index int
 				if sc.global {
@@ -2459,7 +2464,9 @@ func setExec(n *node) {
 		if n.tnext != nil && n.tnext.exec == nil {
 			if seen[n.tnext] {
 				m := n.tnext
-				n.tnext.exec = func(f *frame) bltn { return m.exec(f) }
+				n.tnext.exec = func(f *frame) bltn {
+					return m.exec(f)
+				}
 			} else {
 				set(n.tnext)
 			}
@@ -2467,7 +2474,9 @@ func setExec(n *node) {
 		if n.fnext != nil && n.fnext.exec == nil {
 			if seen[n.fnext] {
 				m := n.fnext
-				n.fnext.exec = func(f *frame) bltn { return m.exec(f) }
+				n.fnext.exec = func(f *frame) bltn {
+					return m.exec(f)
+				}
 			} else {
 				set(n.fnext)
 			}
@@ -2520,6 +2529,10 @@ func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerat
 	case valueT:
 		if rtyp == nil {
 			rtyp = n.typ.rtype
+		}
+		// TODO(mpl): I do not understand where this side-effect is coming from, and why it happens. quickfix for now.
+		if rtyp == nil {
+			rtyp = n.typ.val.rtype
 		}
 		switch k := rtyp.Kind(); k {
 		case reflect.Struct:

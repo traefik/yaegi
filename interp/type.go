@@ -274,8 +274,10 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				t = t1
 			}
 		}
+
 		// If the node is to be assigned or returned, the node type is the destination type.
 		dt := t
+
 		switch a := n.anc; {
 		case a.kind == defineStmt && len(a.child) > a.nleft+a.nright:
 			if dt, err = nodeType(interp, sc, a.child[a.nleft]); err != nil {
@@ -1487,7 +1489,14 @@ func (t *itype) frameType() (r reflect.Type) {
 	case funcT:
 		r = reflect.TypeOf((*node)(nil))
 	case interfaceT:
+		if len(t.field) == 0 {
+			// empty interface, do not wrap it
+			r = reflect.TypeOf((*interface{})(nil)).Elem()
+			break
+		}
 		r = reflect.TypeOf((*valueInterface)(nil)).Elem()
+	case ptrT:
+		r = reflect.PtrTo(t.val.frameType())
 	default:
 		r = t.TypeOf()
 	}
