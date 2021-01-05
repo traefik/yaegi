@@ -115,6 +115,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 					sc.sym[c.ident] = &symbol{index: sc.add(n.typ), kind: varSym, global: true, typ: n.typ, node: n}
 					continue
 				}
+				c.level = globalFrame
 
 				// redeclaration error
 				if sym.typ.node != nil && sym.typ.node.anc != nil {

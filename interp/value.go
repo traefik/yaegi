@@ -5,8 +5,15 @@ import (
 	"reflect"
 )
 
+const (
+	notInFrame  = -1 // value of node.findex for literal values (not in frame)
+	globalFrame = -1 // value of node.level for global symbols
+)
+
 func valueGenerator(n *node, i int) func(*frame) reflect.Value {
 	switch n.level {
+	case globalFrame:
+		return func(f *frame) reflect.Value { return valueOf(f.root.data, i) }
 	case 0:
 		return func(f *frame) reflect.Value { return valueOf(f.data, i) }
 	case 1:
@@ -171,18 +178,16 @@ func genValue(n *node) func(*frame) reflect.Value {
 			return func(f *frame) reflect.Value { return v }
 		}
 		if n.sym != nil {
-			if n.sym.index < 0 {
+			i := n.sym.index
+			if i < 0 {
 				return genValue(n.sym.node)
 			}
-			i := n.sym.index
 			if n.sym.global {
-				return func(f *frame) reflect.Value {
-					return n.interp.frame.data[i]
-				}
+				return func(f *frame) reflect.Value { return f.root.data[i] }
 			}
 			return valueGenerator(n, i)
 		}
-		if n.findex < 0 {
+		if n.findex == notInFrame {
 			var v reflect.Value
 			if w, ok := n.val.(reflect.Value); ok {
 				v = w

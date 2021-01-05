@@ -1221,6 +1221,8 @@ func call(n *node) {
 
 func getFrame(f *frame, l int) *frame {
 	switch l {
+	case globalFrame:
+		return f.root
 	case 0:
 		return f
 	case 1:

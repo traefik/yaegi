@@ -65,7 +65,8 @@ type frame struct {
 	// Located at start of struct to ensure proper aligment.
 	id uint64
 
-	anc  *frame          // ancestor frame (global space)
+	root *frame          // global space
+	anc  *frame          // ancestor frame (caller space)
 	data []reflect.Value // values
 
 	mutex     sync.RWMutex
@@ -80,8 +81,11 @@ func newFrame(anc *frame, len int, id uint64) *frame {
 		data: make([]reflect.Value, len),
 		id:   id,
 	}
-	if anc != nil {
+	if anc == nil {
+		f.root = f
+	} else {
 		f.done = anc.done
+		f.root = anc.root
 	}
 	return f
 }
@@ -93,6 +97,7 @@ func (f *frame) clone() *frame {
 	defer f.mutex.RUnlock()
 	return &frame{
 		anc:       f.anc,
+		root:      f.root,
 		data:      f.data,
 		deferred:  f.deferred,
 		recovered: f.recovered,
@@ -239,7 +244,7 @@ type Options struct {
 func New(options Options) *Interpreter {
 	i := Interpreter{
 		opt:      opt{context: build.Default},
-		frame:    &frame{data: []reflect.Value{}},
+		frame:    newFrame(nil, 0, 0),
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
 		scopes:   map[string]*scope{},
