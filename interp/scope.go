@@ -130,6 +130,9 @@ func (s *scope) lookup(ident string) (*symbol, int, bool) {
 	level := s.level
 	for {
 		if sym, ok := s.sym[ident]; ok {
+			if sym.global {
+				return sym, globalFrame, true
+			}
 			return sym, level - s.level, true
 		}
 		if s.anc == nil {

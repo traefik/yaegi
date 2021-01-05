@@ -611,7 +611,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				}
 				if n.anc.kind == constDecl {
 					n.gen = nop
-					n.findex = -1
+					n.findex = notInFrame
 					if sym, _, ok := sc.lookup(dest.ident); ok {
 						sym.kind = constSym
 					}
@@ -717,7 +717,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				// This operation involved constants, and the result is already computed
 				// by constOp and available in n.rval. Nothing else to do at execution.
 				n.gen = nop
-				n.findex = -1
+				n.findex = notInFrame
 			case n.anc.kind == assignStmt && n.anc.action == aAssign:
 				// To avoid a copy in frame, if the result is to be assigned, store it directly
 				// at the frame location of destination.
@@ -858,7 +858,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				}
 				switch {
 				case n.typ.cat == builtinT:
-					n.findex = -1
+					n.findex = notInFrame
 					n.val = nil
 				case n.anc.kind == returnStmt:
 					// Store result directly to frame output location, to avoid a frame copy.
@@ -900,7 +900,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					n.rval = c1.rval
 				case c1.rval.IsValid() && isConstType(c0.typ):
 					n.gen = nop
-					n.findex = -1
+					n.findex = notInFrame
 					n.typ = c0.typ
 					if c, ok := c1.rval.Interface().(constant.Value); ok {
 						i, _ := constant.Int64Val(constant.ToInt(c))
@@ -963,7 +963,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						}
 					}
 				} else {
-					n.findex = -1
+					n.findex = notInFrame
 				}
 			}
 
@@ -1044,7 +1044,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 		case fileStmt:
 			wireChild(n, varDecl)
 			sc = sc.pop()
-			n.findex = -1
+			n.findex = notInFrame
 
 		case forStmt0: // for {}
 			body := n.child[0]
@@ -1502,6 +1502,9 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				// Resolve source package symbol
 				if sym, ok := interp.srcPkg[pkg][name]; ok {
 					n.findex = sym.index
+					if sym.global {
+						n.level = globalFrame
+					}
 					n.val = sym.node
 					n.gen = nop
 					n.action = aGetSym
@@ -1516,7 +1519,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				if n.child[0].isType(sc) {
 					// Handle method as a function with receiver in 1st argument
 					n.val = m
-					n.findex = -1
+					n.findex = notInFrame
 					n.gen = nop
 					n.typ = &itype{}
 					*n.typ = *m.typ
@@ -1829,7 +1832,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			switch {
 			case n.rval.IsValid():
 				n.gen = nop
-				n.findex = -1
+				n.findex = notInFrame
 			case n.anc.kind == assignStmt && n.anc.action == aAssign:
 				dest := n.anc.child[childPos(n)-n.anc.nright]
 				n.typ = dest.typ
@@ -1856,6 +1859,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				if sc.global {
 					// Global object allocation is already performed in GTA.
 					index = sc.sym[c.ident].index
+					c.level = globalFrame
 				} else {
 					index = sc.add(n.typ)
 					sc.sym[c.ident] = &symbol{index: index, kind: varSym, typ: n.typ}
