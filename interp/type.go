@@ -109,7 +109,7 @@ type itype struct {
 	cat         tcat          // Type category
 	field       []structField // Array of struct fields if structT or interfaceT
 	key         *itype        // Type of key element if MapT or nil
-	val         *itype        // Type of value element if chanT,chanSendT, chanRecvT, mapT, ptrT, aliasT, arrayT or variadicT
+	val         *itype        // Type of value element if chanT, chanSendT, chanRecvT, mapT, ptrT, aliasT, arrayT or variadicT
 	recv        *itype        // Receiver type for funcT or nil
 	arg         []*itype      // Argument types if funcT or nil
 	ret         []*itype      // Return types if funcT or nil
@@ -449,6 +449,9 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			}
 		}
 		t = sym.typ
+		if t.incomplete && t.cat == aliasT && t.val != nil && t.val.cat != nilT {
+			t.incomplete = false
+		}
 		if t.incomplete && t.node != n {
 			m := t.method
 			if t, err = nodeType(interp, sc, t.node); err != nil {
@@ -885,7 +888,13 @@ func isComplete(t *itype, visited map[string]bool) bool {
 		visited[name] = true
 	}
 	switch t.cat {
-	case aliasT, arrayT, chanT, chanRecvT, chanSendT, ptrT:
+	case aliasT:
+		if t.val != nil && t.val.incomplete && t.val.cat != nilT {
+			// A type aliased to a partially defined type is considered complete, to allow recursivity.
+			return true
+		}
+		fallthrough
+	case arrayT, chanT, chanRecvT, chanSendT, ptrT:
 		return isComplete(t.val, visited)
 	case funcT:
 		complete := true
@@ -899,6 +908,8 @@ func isComplete(t *itype, visited map[string]bool) bool {
 	case interfaceT, structT:
 		complete := true
 		for _, f := range t.field {
+			// Fiedld implicit type names must be marked as visited, to break false circles.
+			visited[f.typ.path+"/"+f.typ.name] = true
 			complete = complete && isComplete(f.typ, visited)
 		}
 		return complete

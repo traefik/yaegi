@@ -319,7 +319,56 @@ func (interp *Interpreter) gtaRetry(nodes []*node, importPath string) error {
 	}
 
 	if len(revisit) > 0 {
-		return revisit[0].cfgErrorf("constant definition loop")
+		for _, n := range revisit {
+			if n.kind == typeSpec {
+				if err := definedType(n.typ); err != nil {
+					return err
+				}
+			}
+		}
+		switch revisit[0].kind {
+		case typeSpec:
+			return revisit[0].cfgErrorf("incomplete type definition: %s", revisit[0].typ.name)
+		default:
+			return revisit[0].cfgErrorf("constant definition loop")
+		}
+	}
+	return nil
+}
+
+func definedType(typ *itype) error {
+	if !typ.incomplete {
+		return nil
+	}
+	switch typ.cat {
+	case interfaceT, structT:
+		for _, f := range typ.field {
+			if err := definedType(f.typ); err != nil {
+				return err
+			}
+		}
+	case funcT:
+		for _, t := range typ.arg {
+			if err := definedType(t); err != nil {
+				return err
+			}
+		}
+		for _, t := range typ.ret {
+			if err := definedType(t); err != nil {
+				return err
+			}
+		}
+	case mapT:
+		if err := definedType(typ.key); err != nil {
+			return err
+		}
+		fallthrough
+	case aliasT, arrayT, chanT, chanSendT, chanRecvT, ptrT, variadicT:
+		if err := definedType(typ.val); err != nil {
+			return err
+		}
+	case nilT:
+		return typ.node.cfgErrorf("undefined: %s", typ.node.ident)
 	}
 	return nil
 }
