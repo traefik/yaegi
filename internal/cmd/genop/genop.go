@@ -209,7 +209,11 @@ func {{$name}}Const(n *node) {
 		v := constant.BinaryOp(vConstantValue(v0), operator, vConstantValue(v1))
 		n.rval.Set(reflect.ValueOf(v))
 		{{- else}}
+		{{- if $op.Int}}
+		v := constant.BinaryOp(constant.ToInt(vConstantValue(v0)), token.{{tokenFromName $name}}, constant.ToInt(vConstantValue(v1)))
+		{{- else}}
 		v := constant.BinaryOp(vConstantValue(v0), token.{{tokenFromName $name}}, vConstantValue(v1))
+		{{- end}}
 		n.rval.Set(reflect.ValueOf(v))
 		{{- end}}
 	{{- if $op.Str}}
@@ -940,6 +944,7 @@ type Op struct {
 	Complex bool   // true if operator applies to complex
 	Shift   bool   // true if operator is a shift operation
 	Bool    bool   // true if operator applies to bool
+	Int     bool   // true if operator applies to int only
 }
 
 func main() {
@@ -968,17 +973,17 @@ func main() {
 	b := &bytes.Buffer{}
 	data := map[string]interface{}{
 		"Arithmetic": map[string]Op{
-			"add":    {"+", true, true, true, false, false},
-			"sub":    {"-", false, true, true, false, false},
-			"mul":    {"*", false, true, true, false, false},
-			"quo":    {"/", false, true, true, false, false},
-			"rem":    {"%", false, false, false, false, false},
-			"shl":    {"<<", false, false, false, true, false},
-			"shr":    {">>", false, false, false, true, false},
-			"and":    {"&", false, false, false, false, false},
-			"or":     {"|", false, false, false, false, false},
-			"xor":    {"^", false, false, false, false, false},
-			"andNot": {"&^", false, false, false, false, false},
+			"add":    {"+", true, true, true, false, false, false},
+			"sub":    {"-", false, true, true, false, false, false},
+			"mul":    {"*", false, true, true, false, false, false},
+			"quo":    {"/", false, true, true, false, false, false},
+			"rem":    {"%", false, false, false, false, false, true},
+			"shl":    {"<<", false, false, false, true, false, true},
+			"shr":    {">>", false, false, false, true, false, true},
+			"and":    {"&", false, false, false, false, false, true},
+			"or":     {"|", false, false, false, false, false, true},
+			"xor":    {"^", false, false, false, false, false, true},
+			"andNot": {"&^", false, false, false, false, false, true},
 		},
 		"IncDec": map[string]Op{
 			"inc": {Name: "+"},
@@ -996,7 +1001,7 @@ func main() {
 			"not":    {Name: "!", Float: false, Bool: true},
 			"neg":    {Name: "-", Float: true, Bool: false},
 			"pos":    {Name: "+", Float: true, Bool: false},
-			"bitNot": {Name: "^", Float: false, Bool: false},
+			"bitNot": {Name: "^", Float: false, Bool: false, Int: true},
 		},
 	}
 	if err = parse.Execute(b, data); err != nil {

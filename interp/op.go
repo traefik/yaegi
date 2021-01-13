@@ -253,7 +253,7 @@ func andConst(n *node) {
 	n.rval = reflect.New(t).Elem()
 	switch {
 	case isConst:
-		v := constant.BinaryOp(vConstantValue(v0), token.AND, vConstantValue(v1))
+		v := constant.BinaryOp(constant.ToInt(vConstantValue(v0)), token.AND, constant.ToInt(vConstantValue(v1)))
 		n.rval.Set(reflect.ValueOf(v))
 	case isUint(t):
 		n.rval.SetUint(vUint(v0) & vUint(v1))
@@ -338,7 +338,7 @@ func andNotConst(n *node) {
 	n.rval = reflect.New(t).Elem()
 	switch {
 	case isConst:
-		v := constant.BinaryOp(vConstantValue(v0), token.AND_NOT, vConstantValue(v1))
+		v := constant.BinaryOp(constant.ToInt(vConstantValue(v0)), token.AND_NOT, constant.ToInt(vConstantValue(v1)))
 		n.rval.Set(reflect.ValueOf(v))
 	case isUint(t):
 		n.rval.SetUint(vUint(v0) &^ vUint(v1))
@@ -564,7 +564,7 @@ func orConst(n *node) {
 	n.rval = reflect.New(t).Elem()
 	switch {
 	case isConst:
-		v := constant.BinaryOp(vConstantValue(v0), token.OR, vConstantValue(v1))
+		v := constant.BinaryOp(constant.ToInt(vConstantValue(v0)), token.OR, constant.ToInt(vConstantValue(v1)))
 		n.rval.Set(reflect.ValueOf(v))
 	case isUint(t):
 		n.rval.SetUint(vUint(v0) | vUint(v1))
@@ -799,7 +799,7 @@ func remConst(n *node) {
 	n.rval = reflect.New(t).Elem()
 	switch {
 	case isConst:
-		v := constant.BinaryOp(vConstantValue(v0), token.REM, vConstantValue(v1))
+		v := constant.BinaryOp(constant.ToInt(vConstantValue(v0)), token.REM, constant.ToInt(vConstantValue(v1)))
 		n.rval.Set(reflect.ValueOf(v))
 	case isUint(t):
 		n.rval.SetUint(vUint(v0) % vUint(v1))
@@ -1195,7 +1195,7 @@ func xorConst(n *node) {
 	n.rval = reflect.New(t).Elem()
 	switch {
 	case isConst:
-		v := constant.BinaryOp(vConstantValue(v0), token.XOR, vConstantValue(v1))
+		v := constant.BinaryOp(constant.ToInt(vConstantValue(v0)), token.XOR, constant.ToInt(vConstantValue(v1)))
 		n.rval.Set(reflect.ValueOf(v))
 	case isUint(t):
 		n.rval.SetUint(vUint(v0) ^ vUint(v1))
