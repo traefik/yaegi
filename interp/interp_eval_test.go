@@ -457,6 +457,7 @@ func TestEvalSliceExpression(t *testing.T) {
 		{src: `a := []int{0,1,2,3}[1::4]`, err: "1:49: 2nd index required in 3-index slice"},
 		{src: `a := []int{0,1,2,3}[1:3:]`, err: "1:51: 3rd index required in 3-index slice"},
 		{src: `a := []int{0,1,2}[3:1]`, err: "invalid index values, must be low <= high <= max"},
+		{pre: func() { eval(t, i, `type Str = string; var r Str = "truc"`) }, src: `r[1]`, res: "114"},
 	})
 }
 
