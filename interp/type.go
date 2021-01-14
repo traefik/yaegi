@@ -889,7 +889,7 @@ func isComplete(t *itype, visited map[string]bool) bool {
 	}
 	switch t.cat {
 	case aliasT:
-		if t.val != nil && t.val.incomplete && t.val.cat != nilT {
+		if t.val != nil && t.val.cat != nilT {
 			// A type aliased to a partially defined type is considered complete, to allow recursivity.
 			return true
 		}
