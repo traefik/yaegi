@@ -882,7 +882,7 @@ func isComplete(t *itype, visited map[string]bool) bool {
 	}
 	name := t.path + "/" + t.name
 	if visited[name] {
-		return !t.incomplete
+		return true
 	}
 	if t.name != "" {
 		visited[name] = true
@@ -908,7 +908,7 @@ func isComplete(t *itype, visited map[string]bool) bool {
 	case interfaceT, structT:
 		complete := true
 		for _, f := range t.field {
-			// Fiedld implicit type names must be marked as visited, to break false circles.
+			// Field implicit type names must be marked as visited, to break false circles.
 			visited[f.typ.path+"/"+f.typ.name] = true
 			complete = complete && isComplete(f.typ, visited)
 		}

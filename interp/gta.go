@@ -319,19 +319,13 @@ func (interp *Interpreter) gtaRetry(nodes []*node, importPath string) error {
 	}
 
 	if len(revisit) > 0 {
-		for _, n := range revisit {
-			if n.kind == typeSpec {
-				if err := definedType(n.typ); err != nil {
-					return err
-				}
+		n := revisit[0]
+		if n.kind == typeSpec {
+			if err := definedType(n.typ); err != nil {
+				return err
 			}
 		}
-		switch revisit[0].kind {
-		case typeSpec:
-			return revisit[0].cfgErrorf("incomplete type definition: %s", revisit[0].typ.name)
-		default:
-			return revisit[0].cfgErrorf("constant definition loop")
-		}
+		return n.cfgErrorf("constant definition loop")
 	}
 	return nil
 }
