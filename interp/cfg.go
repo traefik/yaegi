@@ -745,12 +745,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					n.typ = sc.getType("byte")
 					break
 				}
-				n.typ = t.val
-				if t.val.cat == valueT {
-					n.typ = &itype{cat: valueT, rtype: t.val.rtype.Elem()}
-				} else {
-					n.typ = t.val.val
-				}
+				fallthrough
 			case ptrT:
 				n.typ = t.val
 				if t.val.cat == valueT {
