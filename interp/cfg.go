@@ -564,7 +564,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				//
 				switch {
 				case n.action != aAssign:
-					break
+					// Skip assign combined with another operator
 				case isMapEntry(dest):
 					// Setting a map entry needs an additional step, do not optimize.
 					// As we only write, skip the default useless getIndexMap dest action.
