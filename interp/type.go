@@ -1551,7 +1551,7 @@ func hasRecursiveStruct(t *itype, defined map[string]*itype) bool {
 		defined[typ.path+"/"+typ.name] = typ
 
 		for _, f := range typ.field {
-			if hasRecursiveStruct(f.typ, defined) {
+			if hasRecursiveStruct(f.typ, copyDefined(defined)) {
 				return true
 			}
 		}
