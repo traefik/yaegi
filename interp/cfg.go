@@ -564,12 +564,11 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				//
 				switch {
 				case n.action != aAssign:
-					// Skip assign combined with another operator
+					// Do not optimize assign combined with another operator.
 				case isMapEntry(dest):
 					// Setting a map entry needs an additional step, do not optimize.
 					// As we only write, skip the default useless getIndexMap dest action.
 					dest.gen = nop
-					break
 				case isCall(src) && dest.typ.cat != interfaceT && !isRecursiveField(dest):
 					// Call action may perform the assignment directly.
 					n.gen = nop
