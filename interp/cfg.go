@@ -555,10 +555,23 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				n.findex = dest.findex
 				n.level = dest.level
 
-				// Propagate type
-				// TODO: Check that existing destination type matches source type
+				// Propagate type.
+				// TODO: Check that existing destination type matches source type.
+
+				// In the following, we attempt to optimize by skipping the assign
+				// operation and setting the source location directly to the destination
+				// location in the frame.
+				//
 				switch {
-				case n.action == aAssign && isCall(src) && dest.typ.cat != interfaceT && !isMapEntry(dest) && !isRecursiveField(dest):
+				case n.action != aAssign:
+					break
+				case isMapEntry(dest):
+					// Setting a map entry needs an additional step, do not optimize.
+					// But, as we only write, skip the default getIndexMap dest action
+					// used for reading a map entry, useless here.
+					dest.gen = nop
+					break
+				case isCall(src) && dest.typ.cat != interfaceT && !isRecursiveField(dest):
 					// Call action may perform the assignment directly.
 					n.gen = nop
 					src.level = level
@@ -566,32 +579,28 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					if src.typ.untyped && !dest.typ.untyped {
 						src.typ = dest.typ
 					}
-				case n.action == aAssign && src.action == aRecv:
+				case src.action == aRecv:
 					// Assign by reading from a receiving channel.
 					n.gen = nop
-					src.findex = dest.findex // Set recv address to LHS
+					src.findex = dest.findex // Set recv address to LHS.
 					dest.typ = src.typ
-				case n.action == aAssign && src.action == aCompositeLit && !isMapEntry(dest):
+				case src.action == aCompositeLit:
 					if dest.typ.cat == valueT && dest.typ.rtype.Kind() == reflect.Interface {
-						// Skip optimisation for assigned binary interface or map entry
-						// which require and additional operation to set the value
+						// Skip optimisation for assigned interface.
 						break
 					}
 					if dest.action == aGetIndex {
-						// optimization does not work when assigning to a struct field. Maybe we're not
-						// setting the right frame index or something, and we would end up not writing at
-						// the right place. So disabling it for now.
+						// Optimization does not work when assigning to a struct field.
+						// Maybe we're not setting the right frame index or something,
+						// and we would end up not writing at the right place.
+						// So disabling it for now.
 						break
 					}
-					// Skip the assign operation entirely, the source frame index is set
-					// to destination index, avoiding extra memory alloc and duplication.
 					n.gen = nop
 					src.findex = dest.findex
 					src.level = level
-				case n.action == aAssign && len(n.child) < 4 && !src.rval.IsValid() && isArithmeticAction(src):
+				case len(n.child) < 4 && !src.rval.IsValid() && isArithmeticAction(src):
 					// Optimize single assignments from some arithmetic operations.
-					// Skip the assign operation entirely, the source frame index is set
-					// to destination index, avoiding extra memory alloc and duplication.
 					src.typ = dest.typ
 					src.findex = dest.findex
 					src.level = level
@@ -600,15 +609,14 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					// Assign to nil.
 					src.rval = reflect.New(dest.typ.TypeOf()).Elem()
 				}
+
 				n.typ = dest.typ
 				if sym != nil {
 					sym.typ = n.typ
 					sym.recv = src.recv
 				}
 				n.level = level
-				if isMapEntry(dest) {
-					dest.gen = nop // skip getIndexMap
-				}
+
 				if n.anc.kind == constDecl {
 					n.gen = nop
 					n.findex = notInFrame
