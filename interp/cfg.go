@@ -567,8 +567,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					break
 				case isMapEntry(dest):
 					// Setting a map entry needs an additional step, do not optimize.
-					// But, as we only write, skip the default getIndexMap dest action
-					// used for reading a map entry, useless here.
+					// As we only write, skip the default useless getIndexMap dest action.
 					dest.gen = nop
 					break
 				case isCall(src) && dest.typ.cat != interfaceT && !isRecursiveField(dest):
@@ -591,9 +590,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					}
 					if dest.action == aGetIndex {
 						// Optimization does not work when assigning to a struct field.
-						// Maybe we're not setting the right frame index or something,
-						// and we would end up not writing at the right place.
-						// So disabling it for now.
 						break
 					}
 					n.gen = nop
