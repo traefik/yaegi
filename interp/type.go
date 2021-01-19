@@ -1435,6 +1435,7 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 		t.rtype = reflect.PtrTo(t.val.refType(defined, wrapRecursive))
 	case structT:
 		if t.name != "" {
+			// Check against local t.name and not name to catch recursive type definitions.
 			if defined[t.name] != nil {
 				recursive = true
 			}
