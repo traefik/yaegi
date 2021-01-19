@@ -1414,7 +1414,7 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 		t.rtype = reflect.TypeOf(new(error)).Elem()
 	case funcT:
 		if t.name != "" {
-			defined[name] = t
+			defined[name] = t // TODO(marc): make sure that key is name and not t.name.
 		}
 		variadic := false
 		in := make([]reflect.Type, len(t.arg))
