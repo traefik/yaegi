@@ -1435,10 +1435,10 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 		t.rtype = reflect.PtrTo(t.val.refType(defined, wrapRecursive))
 	case structT:
 		if t.name != "" {
-			if defined[name] != nil {
+			if defined[t.name] != nil {
 				recursive = true
 			}
-			defined[name] = t
+			defined[t.name] = t
 		}
 		var fields []reflect.StructField
 		// TODO(mpl): make Anonymous work for recursive types too. Maybe not worth the
