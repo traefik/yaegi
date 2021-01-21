@@ -565,6 +565,8 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				switch {
 				case n.action != aAssign:
 					// Do not optimize assign combined with another operator.
+				case src.rval.IsValid():
+					// Do not skip assign operation when setting from a constant value.
 				case isMapEntry(dest):
 					// Setting a map entry needs an additional step, do not optimize.
 					// As we only write, skip the default useless getIndexMap dest action.
@@ -855,13 +857,15 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			wireChild(n)
 			switch {
 			case interp.isBuiltinCall(n):
-				err = check.builtin(n.child[0].ident, n, n.child[1:], n.action == aCallSlice)
+				c0 := n.child[0]
+				bname := c0.ident
+				err = check.builtin(bname, n, n.child[1:], n.action == aCallSlice)
 				if err != nil {
 					break
 				}
 
-				n.gen = n.child[0].sym.builtin
-				n.child[0].typ = &itype{cat: builtinT}
+				n.gen = c0.sym.builtin
+				c0.typ = &itype{cat: builtinT}
 				if n.typ, err = nodeType(interp, sc, n); err != nil {
 					return
 				}
@@ -872,10 +876,14 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				case n.anc.kind == returnStmt:
 					// Store result directly to frame output location, to avoid a frame copy.
 					n.findex = 0
+				case bname == "len" && n.child[1].rval.IsValid(): //  && n.anc.action != aAssign:
+					lenConstString(n)
+					n.findex = notInFrame
+					n.gen = nop
 				default:
 					n.findex = sc.add(n.typ)
 				}
-				if op, ok := constBltn[n.child[0].ident]; ok && n.anc.action != aAssign {
+				if op, ok := constBltn[bname]; ok && n.anc.action != aAssign {
 					op(n) // pre-compute non-assigned constant :
 				}
 			case n.child[0].isType(sc):

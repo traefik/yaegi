@@ -2847,6 +2847,11 @@ func _delete(n *node) {
 	})
 }
 
+func lenConstString(n *node) {
+	n.rval = reflect.New(reflect.TypeOf(int(0))).Elem()
+	n.rval.SetInt(int64(len(vString(n.child[1].rval))))
+}
+
 func _len(n *node) {
 	dest := genValueOutput(n, reflect.TypeOf(int(0)))
 	value := genValue(n.child[1])
