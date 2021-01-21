@@ -876,7 +876,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				case n.anc.kind == returnStmt:
 					// Store result directly to frame output location, to avoid a frame copy.
 					n.findex = 0
-				case bname == "len" && n.child[1].rval.IsValid(): //  && n.anc.action != aAssign:
+				case bname == "len" && n.child[1].rval.IsValid():
 					lenConstString(n)
 					n.findex = notInFrame
 					n.gen = nop
