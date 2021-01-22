@@ -2847,9 +2847,19 @@ func _delete(n *node) {
 	})
 }
 
-func lenConstString(n *node) {
+func capConst(n *node) {
 	n.rval = reflect.New(reflect.TypeOf(int(0))).Elem()
-	n.rval.SetInt(int64(len(vString(n.child[1].rval))))
+	// There is no Cap() method for reflect.Type, just return Len() instead.
+	n.rval.SetInt(int64(n.child[1].typ.TypeOf().Len()))
+}
+
+func lenConst(n *node) {
+	n.rval = reflect.New(reflect.TypeOf(int(0))).Elem()
+	if c1 := n.child[1]; c1.rval.IsValid() {
+		n.rval.SetInt(int64(len(vString(c1.rval))))
+	} else {
+		n.rval.SetInt(int64(c1.typ.TypeOf().Len()))
+	}
 }
 
 func _len(n *node) {
