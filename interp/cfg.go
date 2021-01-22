@@ -876,8 +876,12 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				case n.anc.kind == returnStmt:
 					// Store result directly to frame output location, to avoid a frame copy.
 					n.findex = 0
-				case bname == "len" && n.child[1].rval.IsValid():
-					lenConstString(n)
+				case bname == "cap" && isInConstOrTypeDecl(n):
+					capConst(n)
+					n.findex = notInFrame
+					n.gen = nop
+				case bname == "len" && isInConstOrTypeDecl(n):
+					lenConst(n)
 					n.findex = notInFrame
 					n.gen = nop
 				default:
@@ -2330,6 +2334,20 @@ func isRecursiveField(n *node) bool {
 			return true
 		}
 		t = t.val
+	}
+	return false
+}
+
+func isInConstOrTypeDecl(n *node) bool {
+	anc := n.anc
+	for anc != nil {
+		switch anc.kind {
+		case constDecl, typeDecl:
+			return true
+		case varDecl, funcDecl:
+			return false
+		}
+		anc = anc.anc
 	}
 	return false
 }
