@@ -1,0 +1,110 @@
+name: Main
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+env:
+  GO_VERSION: 1.15
+  GOLANGCI_LINT_VERSION: v1.36.0
+
+jobs:
+
+  linting:
+    name: Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Check and get dependencies
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod
+          # git diff --exit-code go.sum
+          go mod download
+
+      - name: Install golangci-lint ${{ env.GOLANGCI_LINT_VERSION }}
+        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin ${GOLANGCI_LINT_VERSION}
+
+      - name: Run golangci-lint ${{ env.GOLANGCI_LINT_VERSION }}
+        run: make check
+
+  generate:
+    name: Checks code and generated code
+    runs-on: ubuntu-latest
+    needs: linting
+    strategy:
+      matrix:
+        go-version: [ 1.14, 1.15 ]
+    steps:
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Check generated code
+        run: |
+          rm -f interp/op.go
+          make generate
+          git update-index -q --refresh
+          CHANGED=$(git diff-index --name-only HEAD --)
+          test -z "$CHANGED" || echo $CHANGED
+          test -z "$CHANGED"
+
+  main:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    needs: linting
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/go/src/github.com/traefik/yaegi
+    strategy:
+      matrix:
+        go-version: [ 1.14, 1.15 ]
+
+    steps:
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          path: go/src/github.com/traefik/yaegi
+          fetch-depth: 0
+
+      # https://github.com/marketplace/actions/cache
+      - name: Cache Go modules
+        uses: actions/cache@v2
+        with:
+          path: ./_test/tmp
+          key: ${{ runner.os }}-yaegi-${{ hashFiles('**//_test/tmp/') }}
+          restore-keys: |
+            ${{ runner.os }}-yaegi-
+
+      - name: Setup GOPATH
+        run: go env -w GOPATH=${{ github.workspace }}/go
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Run tests
+        run: make tests
+        env:
+          GOPATH: ${{ github.workspace }}/go

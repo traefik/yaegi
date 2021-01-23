@@ -102,7 +102,7 @@ func genLicense(fname string) (string, error) {
 
 	f, err := os.Open(fname)
 	if err != nil {
-		return "", fmt.Errorf("could not open LICENSE file: %v", err)
+		return "", fmt.Errorf("could not open LICENSE file: %w", err)
 	}
 	defer func() { _ = f.Close() }()
 
@@ -116,7 +116,7 @@ func genLicense(fname string) (string, error) {
 		license.WriteString("//" + txt + "\n")
 	}
 	if sc.Err() != nil {
-		return "", fmt.Errorf("could not scan LICENSE file: %v", err)
+		return "", fmt.Errorf("could not scan LICENSE file: %w", err)
 	}
 
 	return license.String(), nil

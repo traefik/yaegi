@@ -2902,8 +2902,8 @@ func _make(n *node) {
 		switch len(n.child) {
 		case 3:
 			n.exec = func(f *frame) bltn {
-				len := int(vInt(value(f)))
-				dest(f).Set(reflect.MakeSlice(typ, len, len))
+				length := int(vInt(value(f)))
+				dest(f).Set(reflect.MakeSlice(typ, length, length))
 				return next
 			}
 		case 4:

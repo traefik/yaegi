@@ -33,16 +33,23 @@
     "gochecknoinits",
     "gochecknoglobals",
     "wsl",
+    "nlreturn",
     "godox",
     "funlen",
     "gocognit",
     "stylecheck",
     "gomnd",
     "testpackage",
+    "paralleltest",
+    "tparallel",
     "goerr113",
+    "wrapcheck",
     "nestif",
     "exhaustive",
-    "nlreturn",
+    "exhaustivestruct",
+    "forbidigo",
+    "ifshort",
+    "errorlint", # TODO: must be reactivate before fixes
   ]
 
 [issues]
@@ -61,3 +68,6 @@
   [[issues.exclude-rules]]
     path = "interp/interp.go"
     text = "`out` can be `io.Writer`"
+  [[issues.exclude-rules]]
+    path = "interp/interp_eval_test.go"
+    linters = ["thelper"]
