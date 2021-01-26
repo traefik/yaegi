@@ -9,6 +9,7 @@ import (
 	"log"
 	"reflect"
 	"regexp"
+	"strings"
 	"sync"
 	"unsafe"
 )
@@ -239,7 +240,6 @@ func typeAssert(n *node, withResult, withOk bool) {
 	switch {
 	case isInterfaceSrc(typ):
 		n.exec = func(f *frame) bltn {
-			// TODO(mpl): handle empty interface. But maybe branching differently for best refactoring.
 			valf := value(f)
 			v, ok := valf.Interface().(valueInterface)
 			if setStatus {
@@ -2626,7 +2626,11 @@ func rangeMap(n *node) {
 						return fnext
 					}
 					f.data[index0].Set(iter.Key())
-					f.data[index1].Set(iter.Value().Elem())
+					if iter.Value().Elem().IsValid() {
+						f.data[index1].Set(iter.Value().Elem())
+					} else {
+						f.data[index1].Set(reflect.New(interf).Elem())
+					}
 					return tnext
 				}
 			}
@@ -2664,6 +2668,7 @@ func rangeMap(n *node) {
 func _case(n *node) {
 	tnext := getExec(n.tnext)
 
+	// TODO(mpl): a lot of what is done in typeAssert should probably be redone/reused here.
 	switch {
 	case n.anc.anc.kind == typeSwitch:
 		fnext := getExec(n.fnext)
@@ -2673,73 +2678,8 @@ func _case(n *node) {
 			types[i] = n.child[i].typ
 		}
 		srcValue := genValue(sn.child[1].lastChild().child[0])
-		if len(sn.child[1].child) == 2 {
-			// assign in switch guard
-			destValue := genValue(n.lastChild().child[0])
-			switch len(types) {
-			case 0:
-				// default clause: assign var to interface value
-				n.exec = func(f *frame) bltn {
-					destValue(f).Set(srcValue(f))
-					return tnext
-				}
-			case 1:
-				// match against 1 type: assign var to concrete value
-				typ := types[0]
-				n.exec = func(f *frame) bltn {
-					v := srcValue(f)
-					if !v.IsValid() {
-						// match zero value against nil
-						if typ.cat == nilT {
-							return tnext
-						}
-						return fnext
-					}
-					if t := v.Type(); t.Kind() == reflect.Interface {
-						if typ.cat == nilT && v.IsNil() {
-							return tnext
-						}
-						if typ.TypeOf().String() == t.String() {
-							destValue(f).Set(v.Elem())
-							return tnext
-						}
-						ival := v.Interface()
-						if ival != nil && typ.TypeOf().String() == reflect.TypeOf(ival).String() {
-							destValue(f).Set(v.Elem())
-							return tnext
-						}
-						return fnext
-					}
-					vi := v.Interface().(valueInterface)
-					if vi.node == nil {
-						if typ.cat == nilT {
-							return tnext
-						}
-						return fnext
-					}
-					if vi.node.typ.id() == typ.id() {
-						destValue(f).Set(vi.value)
-						return tnext
-					}
-					return fnext
-				}
-			default:
-				// TODO(mpl): probably needs to be fixed for empty interfaces, like above.
-				// match against multiple types: assign var to interface value
-				n.exec = func(f *frame) bltn {
-					val := srcValue(f)
-					if v := srcValue(f).Interface().(valueInterface).node; v != nil {
-						for _, typ := range types {
-							if v.typ.id() == typ.id() {
-								destValue(f).Set(val)
-								return tnext
-							}
-						}
-					}
-					return fnext
-				}
-			}
-		} else {
+
+		if len(sn.child[1].child) != 2 {
 			// no assign in switch guard
 			if len(n.child) <= 1 {
 				n.exec = func(f *frame) bltn { return tnext }
@@ -2751,10 +2691,21 @@ func _case(n *node) {
 					// interface case. But maybe we should make sure by checking the relevant cat
 					// instead? later. Use t := v.Type(); t.Kind() == reflect.Interface , like above.
 					if !ok {
+						var stype string
+						if ival != nil {
+							stype = strings.ReplaceAll(reflect.TypeOf(ival).String(), " {}", "{}")
+						}
 						for _, typ := range types {
 							// TODO(mpl): we should actually use canAssertTypes, but need to find a valid
-							// rtype for typ. weak check instead for now.
-							if reflect.TypeOf(ival).String() == typ.id() {
+							// rtype for typ. Plus we need to refactor with typeAssert().
+							// weak check instead for now.
+							if ival == nil {
+								if typ.cat == nilT {
+									return tnext
+								}
+								continue
+							}
+							if stype == typ.id() {
 								return tnext
 							}
 						}
@@ -2769,6 +2720,73 @@ func _case(n *node) {
 					}
 					return fnext
 				}
+			}
+			break
+		}
+
+		// assign in switch guard
+		destValue := genValue(n.lastChild().child[0])
+		switch len(types) {
+		case 0:
+			// default clause: assign var to interface value
+			n.exec = func(f *frame) bltn {
+				destValue(f).Set(srcValue(f))
+				return tnext
+			}
+		case 1:
+			// match against 1 type: assign var to concrete value
+			typ := types[0]
+			n.exec = func(f *frame) bltn {
+				v := srcValue(f)
+				if !v.IsValid() {
+					// match zero value against nil
+					if typ.cat == nilT {
+						return tnext
+					}
+					return fnext
+				}
+				if t := v.Type(); t.Kind() == reflect.Interface {
+					if typ.cat == nilT && v.IsNil() {
+						return tnext
+					}
+					if typ.TypeOf().String() == t.String() {
+						destValue(f).Set(v.Elem())
+						return tnext
+					}
+					ival := v.Interface()
+					if ival != nil && typ.TypeOf().String() == reflect.TypeOf(ival).String() {
+						destValue(f).Set(v.Elem())
+						return tnext
+					}
+					return fnext
+				}
+				vi := v.Interface().(valueInterface)
+				if vi.node == nil {
+					if typ.cat == nilT {
+						return tnext
+					}
+					return fnext
+				}
+				if vi.node.typ.id() == typ.id() {
+					destValue(f).Set(vi.value)
+					return tnext
+				}
+				return fnext
+			}
+		default:
+			// TODO(mpl): probably needs to be fixed for empty interfaces, like above.
+			// match against multiple types: assign var to interface value
+			n.exec = func(f *frame) bltn {
+				val := srcValue(f)
+				if v := srcValue(f).Interface().(valueInterface).node; v != nil {
+					for _, typ := range types {
+						if v.typ.id() == typ.id() {
+							destValue(f).Set(val)
+							return tnext
+						}
+					}
+				}
+				return fnext
 			}
 		}
 
