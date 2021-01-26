@@ -3160,31 +3160,32 @@ func send(n *node) {
 		value1 = genValue(c1)
 	}
 
-	if n.interp.cancelChan {
-		// Send is cancelable, may have some overhead.
-		n.exec = func(f *frame) bltn {
-			ch, data := value0(f), value1(f)
-			// Fast: send on channel doesn't block.
-			if ok := ch.TrySend(data); ok {
-				return next
-			}
-			// Slow: send on channel blocks, allow cancel.
-			f.mutex.RLock()
-			done := f.done
-			f.mutex.RUnlock()
-
-			chosen, _, _ := reflect.Select([]reflect.SelectCase{done, {Dir: reflect.SelectSend, Chan: ch, Send: data}})
-			if chosen == 0 {
-				return nil
-			}
-			return next
-		}
-	} else {
+	if !n.interp.cancelChan {
 		// Send is non-cancellable, has the least overhead.
 		n.exec = func(f *frame) bltn {
 			value0(f).Send(value1(f))
 			return next
 		}
+		return
+	}
+
+	// Send is cancellable, may have some overhead.
+	n.exec = func(f *frame) bltn {
+		ch, data := value0(f), value1(f)
+		// Fast: send on channel doesn't block.
+		if ok := ch.TrySend(data); ok {
+			return next
+		}
+		// Slow: send on channel blocks, allow cancel.
+		f.mutex.RLock()
+		done := f.done
+		f.mutex.RUnlock()
+
+		chosen, _, _ := reflect.Select([]reflect.SelectCase{done, {Dir: reflect.SelectSend, Chan: ch, Send: data}})
+		if chosen == 0 {
+			return nil
+		}
+		return next
 	}
 }
 
