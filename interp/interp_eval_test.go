@@ -89,7 +89,7 @@ func TestOpVarConst(t *testing.T) {
 		{src: "b := uint(5); a+b", res: "15"},
 		{src: "b := uint(5); b+a", res: "15"},
 		{src: "b := uint(5); b>a", res: "false"},
-		{src: "const maxlen = cap(aa); var a = []int{1,2}", err: "1:20: constant definition loop"},
+		{src: "const maxlen = cap(aa); var aa = []int{1,2}", err: "1:20: constant definition loop"},
 	})
 }
 
