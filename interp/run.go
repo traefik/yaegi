@@ -2143,7 +2143,7 @@ func _return(n *node) {
 			if len(t.field) == 0 {
 				// empty interface case.
 				// we can't let genValueInterface deal with it, because we call on c,
-				// not on n, which means so the interfaceT knowledge is lost.
+				// not on n, which means that the interfaceT knowledge is lost.
 				values[i] = genValue(c)
 				break
 			}
@@ -2894,7 +2894,6 @@ func _cap(n *node) {
 
 	n.exec = func(f *frame) bltn {
 		val := dest(f)
-		// TODO(mpl): do it for _len, etc.
 		if val.Kind() == reflect.Interface {
 			val.Set(reflect.ValueOf(value(f).Cap()))
 			return next
@@ -2934,8 +2933,12 @@ func _complex(n *node) {
 
 	if typ := n.typ.TypeOf(); isComplex(typ) {
 		n.exec = func(f *frame) bltn {
-			//			dest(f).SetComplex(complex(value0(f).Float(), value1(f).Float()))
-			dest(f).Set(reflect.ValueOf(complex(value0(f).Float(), value1(f).Float())))
+			val := dest(f)
+			if val.Kind() == reflect.Interface {
+				val.Set(reflect.ValueOf(complex(value0(f).Float(), value1(f).Float())))
+				return next
+			}
+			val.SetComplex(complex(value0(f).Float(), value1(f).Float()))
 			return next
 		}
 	} else {
@@ -2954,8 +2957,12 @@ func _imag(n *node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		// dest(f).SetFloat(imag(value(f).Complex()))
-		dest(f).Set(reflect.ValueOf(imag(value(f).Complex())))
+		val := dest(f)
+		if val.Kind() == reflect.Interface {
+			val.Set(reflect.ValueOf(imag(value(f).Complex())))
+			return next
+		}
+		val.SetFloat(imag(value(f).Complex()))
 		return next
 	}
 }
@@ -2967,8 +2974,12 @@ func _real(n *node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		// dest(f).SetFloat(real(value(f).Complex()))
-		dest(f).Set(reflect.ValueOf(real(value(f).Complex())))
+		val := dest(f)
+		if val.Kind() == reflect.Interface {
+			val.Set(reflect.ValueOf(real(value(f).Complex())))
+			return next
+		}
+		val.SetFloat(real(value(f).Complex()))
 		return next
 	}
 }
@@ -3006,8 +3017,12 @@ func _len(n *node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		// dest(f).SetInt(int64(value(f).Len()))
-		dest(f).Set(reflect.ValueOf(value(f).Len()))
+		val := dest(f)
+		if val.Kind() == reflect.Interface {
+			val.Set(reflect.ValueOf(value(f).Len()))
+			return next
+		}
+		val.SetInt(int64(value(f).Len()))
 		return next
 	}
 }
