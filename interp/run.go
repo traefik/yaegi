@@ -723,8 +723,6 @@ func addr(n *node) {
 		i := n.findex
 		l := n.level
 		n.exec = func(f *frame) bltn {
-			// v := value(f).Interface().(valueInterface).value
-			// getFrame(f, l).data[i] = reflect.ValueOf(v.Interface())
 			getFrame(f, l).data[i] = value(f).Addr()
 			return next
 		}
@@ -1447,7 +1445,6 @@ func callBin(n *node) {
 				c := n.anc.child[i]
 				if c.ident != "_" {
 					if c.typ.cat == interfaceT {
-						// panic("EMBALLAGE")
 						rvalues[i] = genValueInterfaceValue(c)
 					} else {
 						rvalues[i] = genValue(c)
@@ -1653,7 +1650,6 @@ func getIndexMap(n *node) {
 					if e := v.Elem(); e.Type().AssignableTo(valueInterfaceType) {
 						dest(f).Set(e)
 					} else {
-						// panic("EMBALLAGE")
 						dest(f).Set(reflect.ValueOf(valueInterface{n, e}))
 					}
 				} else {
@@ -1704,7 +1700,6 @@ func getIndexMap2(n *node) {
 					if e := v.Elem(); e.Type().AssignableTo(valueInterfaceType) {
 						dest(f).Set(e)
 					} else {
-						// panic("EMBALLAGE")
 						dest(f).Set(reflect.ValueOf(valueInterface{n, e}))
 					}
 				}
@@ -1741,7 +1736,6 @@ func getIndexMap2(n *node) {
 					if e := v.Elem(); e.Type().AssignableTo(valueInterfaceType) {
 						dest(f).Set(e)
 					} else {
-						// panic("EMBALLAGE")
 						dest(f).Set(reflect.ValueOf(valueInterface{n, e}))
 					}
 				}
@@ -2240,8 +2234,6 @@ func arrayLit(n *node) {
 	}
 
 	typ := n.typ.frameType()
-	// frameIndex := n.findex
-	// l := n.level
 	n.exec = func(f *frame) bltn {
 		var a reflect.Value
 		if n.typ.sizedef {
@@ -2252,16 +2244,6 @@ func arrayLit(n *node) {
 		for i, v := range values {
 			a.Index(index[i]).Set(v(f))
 		}
-		/*
-			dest := value(f)
-			if _, ok := dest.Interface().(valueInterface); ok {
-				a = reflect.ValueOf(valueInterface{n, a})
-			}
-			dest.Set(a)
-			// TODO(mpl): shouldn't we fix the problem before, i.e. we should not have been wrapped in a valueInterface when the type is empty interface?
-			// So try to revert that into a Set() afterwards.
-			getFrame(f, l).data[frameIndex] = a
-		*/
 		value(f).Set(a)
 		return next
 	}
@@ -2632,7 +2614,6 @@ func rangeMap(n *node) {
 					if e := iter.Value().Elem(); e.Type().AssignableTo(valueInterfaceType) {
 						f.data[index1].Set(e)
 					} else {
-						// panic("EMBALLAGE")
 						f.data[index1].Set(reflect.ValueOf(valueInterface{n, e}))
 					}
 					return tnext
