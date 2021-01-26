@@ -1414,7 +1414,7 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 		t.rtype = reflect.TypeOf(new(error)).Elem()
 	case funcT:
 		if t.name != "" {
-			defined[name] = t
+			defined[name] = t // TODO(marc): make sure that key is name and not t.name.
 		}
 		variadic := false
 		in := make([]reflect.Type, len(t.arg))
@@ -1435,10 +1435,11 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 		t.rtype = reflect.PtrTo(t.val.refType(defined, wrapRecursive))
 	case structT:
 		if t.name != "" {
-			if defined[name] != nil {
+			// Check against local t.name and not name to catch recursive type definitions.
+			if defined[t.name] != nil {
 				recursive = true
 			}
-			defined[name] = t
+			defined[t.name] = t
 		}
 		var fields []reflect.StructField
 		// TODO(mpl): make Anonymous work for recursive types too. Maybe not worth the
