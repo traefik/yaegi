@@ -237,40 +237,6 @@ func typeAssert(n *node, withResult, withOk bool) {
 	next := getExec(n.tnext)
 
 	switch {
-	// empty interface
-	case n.child[0].typ.cat == interfaceT && len(n.child[0].typ.field) == 0:
-		n.exec = func(f *frame) bltn {
-			var ok bool
-			if setStatus {
-				defer func() {
-					value1(f).SetBool(ok)
-				}()
-			}
-			val := value(f)
-			concrete := val.Interface()
-			ctyp := reflect.TypeOf(concrete)
-
-			ok = canAssertTypes(ctyp, rtype)
-			if !ok {
-				if !withOk {
-					// TODO(mpl): think about whether this should ever happen.
-					if ctyp == nil {
-						panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", rtype.String()))
-					}
-					panic(fmt.Sprintf("interface conversion: interface {} is %s, not %s", ctyp.String(), rtype.String()))
-				}
-				return next
-			}
-			if withResult {
-				if isInterfaceSrc(typ) {
-					// TODO(mpl): this requires more work. the wrapped node is not complete enough.
-					value0(f).Set(reflect.ValueOf(valueInterface{n.child[0], reflect.ValueOf(concrete)}))
-				} else {
-					value0(f).Set(reflect.ValueOf(concrete))
-				}
-			}
-			return next
-		}
 	case isInterfaceSrc(typ):
 		n.exec = func(f *frame) bltn {
 			// TODO(mpl): handle empty interface. But maybe branching differently for best refactoring.
@@ -403,6 +369,40 @@ func typeAssert(n *node, withResult, withOk bool) {
 			}
 			if withResult {
 				value0(f).Set(v)
+			}
+			return next
+		}
+	// empty interface
+	case n.child[0].typ.cat == interfaceT && len(n.child[0].typ.field) == 0:
+		n.exec = func(f *frame) bltn {
+			var ok bool
+			if setStatus {
+				defer func() {
+					value1(f).SetBool(ok)
+				}()
+			}
+			val := value(f)
+			concrete := val.Interface()
+			ctyp := reflect.TypeOf(concrete)
+
+			ok = canAssertTypes(ctyp, rtype)
+			if !ok {
+				if !withOk {
+					// TODO(mpl): think about whether this should ever happen.
+					if ctyp == nil {
+						panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", rtype.String()))
+					}
+					panic(fmt.Sprintf("interface conversion: interface {} is %s, not %s", ctyp.String(), rtype.String()))
+				}
+				return next
+			}
+			if withResult {
+				if isInterfaceSrc(typ) {
+					// TODO(mpl): this requires more work. the wrapped node is not complete enough.
+					value0(f).Set(reflect.ValueOf(valueInterface{n.child[0], reflect.ValueOf(concrete)}))
+				} else {
+					value0(f).Set(reflect.ValueOf(concrete))
+				}
 			}
 			return next
 		}
