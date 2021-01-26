@@ -2392,7 +2392,7 @@ func doComposite(n *node, hasType bool, keyed bool) {
 	l := n.level
 	n.exec = func(f *frame) bltn {
 		typ.mu.Lock()
-		// No need to call zero() as doComposite is only called for a structT
+		// No need to call zero() as doComposite is only called for a structT.
 		a := reflect.New(typ.TypeOf()).Elem()
 		typ.mu.Unlock()
 		for i, v := range values {
@@ -3148,35 +3148,44 @@ func convertConstantValue(n *node) {
 // Write to a channel.
 func send(n *node) {
 	next := getExec(n.tnext)
-	value0 := genValue(n.child[0]) // channel
-	convertLiteralValue(n.child[1], n.child[0].typ.val.TypeOf())
-	value1 := genValue(n.child[1]) // value to send
+	c0, c1 := n.child[0], n.child[1]
+	value0 := genValue(c0) // Send channel.
+	convertLiteralValue(c1, c0.typ.val.TypeOf())
 
-	if n.interp.cancelChan {
-		// Cancellable send
-		n.exec = func(f *frame) bltn {
-			ch, data := value0(f), value1(f)
-			// Fast: send on channel doesn't block
-			if ok := ch.TrySend(data); ok {
-				return next
-			}
-			// Slow: send on channel blocks, allow cancel
-			f.mutex.RLock()
-			done := f.done
-			f.mutex.RUnlock()
+	var value1 func(*frame) reflect.Value // Value to send.
+	switch {
+	case isInterfaceBin(c0.typ.val):
+		value1 = genInterfaceWrapper(c1, c0.typ.val.rtype)
+	default:
+		value1 = genValue(c1)
+	}
 
-			chosen, _, _ := reflect.Select([]reflect.SelectCase{done, {Dir: reflect.SelectSend, Chan: ch, Send: data}})
-			if chosen == 0 {
-				return nil
-			}
-			return next
-		}
-	} else {
-		// Blocking send (less overhead)
+	if !n.interp.cancelChan {
+		// Send is non-cancellable, has the least overhead.
 		n.exec = func(f *frame) bltn {
 			value0(f).Send(value1(f))
 			return next
 		}
+		return
+	}
+
+	// Send is cancellable, may have some overhead.
+	n.exec = func(f *frame) bltn {
+		ch, data := value0(f), value1(f)
+		// Fast: send on channel doesn't block.
+		if ok := ch.TrySend(data); ok {
+			return next
+		}
+		// Slow: send on channel blocks, allow cancel.
+		f.mutex.RLock()
+		done := f.done
+		f.mutex.RUnlock()
+
+		chosen, _, _ := reflect.Select([]reflect.SelectCase{done, {Dir: reflect.SelectSend, Chan: ch, Send: data}})
+		if chosen == 0 {
+			return nil
+		}
+		return next
 	}
 }
 
