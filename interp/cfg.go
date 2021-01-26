@@ -564,11 +564,11 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				//
 				switch {
 				case n.action != aAssign:
-					// Do not optimize assign combined with another operator.
+					// Do not skip assign operation if it is combined with another operator.
 				case src.rval.IsValid():
-					// Do not skip assign operation when setting from a constant value.
+					// Do not skip assign operation if setting from a constant value.
 				case isMapEntry(dest):
-					// Setting a map entry needs an additional step, do not optimize.
+					// Setting a map entry requires an additional step, do not optimize.
 					// As we only write, skip the default useless getIndexMap dest action.
 					dest.gen = nop
 				case isCall(src) && dest.typ.cat != interfaceT && !isRecursiveField(dest):
@@ -590,19 +590,19 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						break
 					}
 					if dest.action == aGetIndex {
-						// Optimization does not work when assigning to a struct field.
+						// Skip optimization, as it does not work when assigning to a struct field.
 						break
 					}
 					n.gen = nop
 					src.findex = dest.findex
 					src.level = level
-				case len(n.child) < 4 && !src.rval.IsValid() && isArithmeticAction(src):
+				case len(n.child) < 4 && isArithmeticAction(src):
 					// Optimize single assignments from some arithmetic operations.
 					src.typ = dest.typ
 					src.findex = dest.findex
 					src.level = level
 					n.gen = nop
-				case src.kind == basicLit && !src.rval.IsValid():
+				case src.kind == basicLit:
 					// Assign to nil.
 					src.rval = reflect.New(dest.typ.TypeOf()).Elem()
 				}
@@ -877,11 +877,21 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					// Store result directly to frame output location, to avoid a frame copy.
 					n.findex = 0
 				case bname == "cap" && isInConstOrTypeDecl(n):
-					capConst(n)
+					switch n.child[1].typ.TypeOf().Kind() {
+					case reflect.Array, reflect.Chan:
+						capConst(n)
+					default:
+						err = n.cfgErrorf("cap argument is not an array or channel")
+					}
 					n.findex = notInFrame
 					n.gen = nop
 				case bname == "len" && isInConstOrTypeDecl(n):
-					lenConst(n)
+					switch n.child[1].typ.TypeOf().Kind() {
+					case reflect.Array, reflect.Chan, reflect.String:
+						lenConst(n)
+					default:
+						err = n.cfgErrorf("len argument is not an array, channel or string")
+					}
 					n.findex = notInFrame
 					n.gen = nop
 				default:
@@ -2570,18 +2580,16 @@ func isValueUntyped(v reflect.Value) bool {
 // isArithmeticAction returns true if the node action is an arithmetic operator.
 func isArithmeticAction(n *node) bool {
 	switch n.action {
-	case aAdd, aAnd, aAndNot, aBitNot, aMul, aQuo, aRem, aShl, aShr, aSub, aXor:
+	case aAdd, aAnd, aAndNot, aBitNot, aMul, aNeg, aOr, aPos, aQuo, aRem, aShl, aShr, aSub, aXor:
 		return true
-	default:
-		return false
 	}
+	return false
 }
 
 func isBoolAction(n *node) bool {
 	switch n.action {
 	case aEqual, aGreater, aGreaterEqual, aLand, aLor, aLower, aLowerEqual, aNot, aNotEqual:
 		return true
-	default:
-		return false
 	}
+	return false
 }
