@@ -46,37 +46,58 @@ func add(n *node) {
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
 			v1 := genValueInt(c1)
-			n.exec = func(f *frame) bltn {
-				_, j := v1(f)
-				val := dest(f)
-				if val.Kind() == reflect.Interface {
-					switch typ.Kind() {
-					case reflect.Int:
-						val.Set(reflect.ValueOf(int(i + j)))
-					case reflect.Int32:
-						val.Set(reflect.ValueOf(int32(i + j)))
-					default: // int64
-						val.Set(reflect.ValueOf(i + j))
-					}
+			if n.typ.cat != interfaceT || len(n.typ.field) > 0 {
+				n.exec = func(f *frame) bltn {
+					_, j := v1(f)
+					dest(f).SetInt(i + j)
 					return next
 				}
-				dest(f).SetInt(i + j)
+				return
+
+			}
+			n.exec = func(f *frame) bltn {
+				_, j := v1(f)
+				switch typ.Kind() {
+				case reflect.Int:
+					dest(f).Set(reflect.ValueOf(int(i + j)))
+				case reflect.Int32:
+					dest(f).Set(reflect.ValueOf(int32(i + j)))
+				default: // int64
+					dest(f).Set(reflect.ValueOf(i + j))
+				}
 				return next
 			}
 		case c1.rval.IsValid():
 			v0 := genValueInt(c0)
 			j := vInt(c1.rval)
+			if wantEmptyInterface(n) {
+				n.exec = func(f *frame) bltn {
+					_, i := v0(f)
+					switch typ.Kind() {
+					case reflect.Int:
+						dest(f).Set(reflect.ValueOf(int(i + j)))
+					case reflect.Int32:
+						dest(f).Set(reflect.ValueOf(int32(i + j)))
+					default: // int64
+						dest(f).Set(reflect.ValueOf(i + j))
+					}
+					return next
+				}
+				return
+			}
 			n.exec = func(f *frame) bltn {
+				// TODO(mpl): not enough to do the check at CFG time, because of a case like in
+				// e.g. fun16.go. So we gotta do it at runtime too for now. Figure it out.
 				_, i := v0(f)
 				val := dest(f)
 				if val.Kind() == reflect.Interface {
 					switch typ.Kind() {
 					case reflect.Int:
-						val.Set(reflect.ValueOf(int(i + j)))
+						dest(f).Set(reflect.ValueOf(int(i + j)))
 					case reflect.Int32:
-						val.Set(reflect.ValueOf(int32(i + j)))
+						dest(f).Set(reflect.ValueOf(int32(i + j)))
 					default: // int64
-						val.Set(reflect.ValueOf(i + j))
+						dest(f).Set(reflect.ValueOf(i + j))
 					}
 					return next
 				}

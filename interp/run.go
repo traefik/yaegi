@@ -2910,13 +2910,15 @@ func _cap(n *node) {
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
-	n.exec = func(f *frame) bltn {
-		val := dest(f)
-		if val.Kind() == reflect.Interface {
-			val.Set(reflect.ValueOf(value(f).Cap()))
+	if wantEmptyInterface(n) {
+		n.exec = func(f *frame) bltn {
+			dest(f).Set(reflect.ValueOf(value(f).Cap()))
 			return next
 		}
-		val.SetInt(int64(value(f).Cap()))
+		return
+	}
+	n.exec = func(f *frame) bltn {
+		dest(f).SetInt(int64(value(f).Cap()))
 		return next
 	}
 }
@@ -2949,22 +2951,25 @@ func _complex(n *node) {
 	value1 := genValue(c2)
 	next := getExec(n.tnext)
 
-	if typ := n.typ.TypeOf(); isComplex(typ) {
-		n.exec = func(f *frame) bltn {
-			val := dest(f)
-			if val.Kind() == reflect.Interface {
-				val.Set(reflect.ValueOf(complex(value0(f).Float(), value1(f).Float())))
+	typ := n.typ.TypeOf()
+	if isComplex(typ) {
+		if wantEmptyInterface(n) {
+			n.exec = func(f *frame) bltn {
+				dest(f).Set(reflect.ValueOf(complex(value0(f).Float(), value1(f).Float())))
 				return next
 			}
-			val.SetComplex(complex(value0(f).Float(), value1(f).Float()))
-			return next
+			return
 		}
-	} else {
-		// Not a complex type: ignore imaginary part
 		n.exec = func(f *frame) bltn {
-			dest(f).Set(value0(f).Convert(typ))
+			dest(f).SetComplex(complex(value0(f).Float(), value1(f).Float()))
 			return next
 		}
+		return
+	}
+	// Not a complex type: ignore imaginary part
+	n.exec = func(f *frame) bltn {
+		dest(f).Set(value0(f).Convert(typ))
+		return next
 	}
 }
 
@@ -2974,13 +2979,15 @@ func _imag(n *node) {
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
-	n.exec = func(f *frame) bltn {
-		val := dest(f)
-		if val.Kind() == reflect.Interface {
-			val.Set(reflect.ValueOf(imag(value(f).Complex())))
+	if wantEmptyInterface(n) {
+		n.exec = func(f *frame) bltn {
+			dest(f).Set(reflect.ValueOf(imag(value(f).Complex())))
 			return next
 		}
-		val.SetFloat(imag(value(f).Complex()))
+		return
+	}
+	n.exec = func(f *frame) bltn {
+		dest(f).SetFloat(imag(value(f).Complex()))
 		return next
 	}
 }
@@ -2991,13 +2998,15 @@ func _real(n *node) {
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
-	n.exec = func(f *frame) bltn {
-		val := dest(f)
-		if val.Kind() == reflect.Interface {
-			val.Set(reflect.ValueOf(real(value(f).Complex())))
+	if wantEmptyInterface(n) {
+		n.exec = func(f *frame) bltn {
+			dest(f).Set(reflect.ValueOf(real(value(f).Complex())))
 			return next
 		}
-		val.SetFloat(real(value(f).Complex()))
+		return
+	}
+	n.exec = func(f *frame) bltn {
+		dest(f).SetFloat(real(value(f).Complex()))
 		return next
 	}
 }
@@ -3034,13 +3043,15 @@ func _len(n *node) {
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
-	n.exec = func(f *frame) bltn {
-		val := dest(f)
-		if val.Kind() == reflect.Interface {
-			val.Set(reflect.ValueOf(value(f).Len()))
+	if wantEmptyInterface(n) {
+		n.exec = func(f *frame) bltn {
+			dest(f).Set(reflect.ValueOf(value(f).Len()))
 			return next
 		}
-		val.SetInt(int64(value(f).Len()))
+		return
+	}
+	n.exec = func(f *frame) bltn {
+		dest(f).SetInt(int64(value(f).Len()))
 		return next
 	}
 }

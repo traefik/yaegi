@@ -295,6 +295,12 @@ func zeroInterfaceValue() reflect.Value {
 	return reflect.ValueOf(valueInterface{n, v})
 }
 
+func wantEmptyInterface(n *node) bool {
+	return n.typ.cat == interfaceT && len(n.typ.field) == 0 ||
+		n.anc.action == aAssign && n.anc.typ.cat == interfaceT && len(n.anc.typ.field) == 0 ||
+		n.anc.kind == returnStmt && n.anc.val.(*node).typ.ret[0].cat == interfaceT && len(n.anc.val.(*node).typ.ret[0].field) == 0
+}
+
 func genValueOutput(n *node, t reflect.Type) func(*frame) reflect.Value {
 	value := genValue(n)
 	switch {
