@@ -567,8 +567,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					// Do not skip assign operation if it is combined with another operator.
 				case src.rval.IsValid():
 					// Do not skip assign operation if setting from a constant value.
-				case src.rval.IsValid():
-					// Do not skip assign operation when setting from a constant value.
 				case isMapEntry(dest):
 					// Setting a map entry requires an additional step, do not optimize.
 					// As we only write, skip the default useless getIndexMap dest action.
