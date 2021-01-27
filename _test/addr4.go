@@ -78,14 +78,21 @@ func intoMap() {
 
 	b := a.(map[string]interface{})
 
-	// TODO(mpl): make it sorted or something.
+	seenFoo := false
 	for k, v := range b {
 		vv := v.(string)
+		if vv != "foo" {
+			if seenFoo {
+				fmt.Println(k, ":", vv)
+				break
+			}
+			kk := k
+			vvv := vv
+			defer fmt.Println(kk, ":", vvv)
+			continue
+		}
+		seenFoo = true
 		fmt.Println(k, ":", vv)
-	}
-
-	for k, v := range b {
-		fmt.Println(k, ":", v)
 	}
 }
 
@@ -103,7 +110,5 @@ func main() {
 // 1 : bar
 // 0 : map[foo:foo]
 // 1 : map[bar:bar]
-// foo : foo
-// bar : bar
 // foo : foo
 // bar : bar
