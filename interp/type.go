@@ -1625,6 +1625,10 @@ func isInterfaceSrc(t *itype) bool {
 	return t.cat == interfaceT || (t.cat == aliasT && isInterfaceSrc(t.val))
 }
 
+func isInterfaceBin(t *itype) bool {
+	return t.cat == valueT && t.rtype.Kind() == reflect.Interface
+}
+
 func isInterface(t *itype) bool {
 	return isInterfaceSrc(t) || t.TypeOf() != nil && t.TypeOf().Kind() == reflect.Interface
 }
