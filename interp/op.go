@@ -46,6 +46,7 @@ func add(n *node) {
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
 			v1 := genValueInt(c1)
+
 			if n.typ.cat != interfaceT || len(n.typ.field) > 0 {
 				n.exec = func(f *frame) bltn {
 					_, j := v1(f)
@@ -53,7 +54,6 @@ func add(n *node) {
 					return next
 				}
 				return
-
 			}
 			var valf func(sum int64) reflect.Value
 			switch typ.Kind() {
@@ -64,7 +64,6 @@ func add(n *node) {
 			default: // int64
 				valf = func(sum int64) reflect.Value { return reflect.ValueOf(sum) }
 			}
-
 			n.exec = func(f *frame) bltn {
 				_, j := v1(f)
 				dest(f).Set(valf(i + j))
@@ -83,7 +82,6 @@ func add(n *node) {
 			default: // int64
 				valf = func(sum int64) reflect.Value { return reflect.ValueOf(sum) }
 			}
-
 			if wantEmptyInterface(n) {
 				n.exec = func(f *frame) bltn {
 					_, i := v0(f)
@@ -94,13 +92,6 @@ func add(n *node) {
 			}
 			n.exec = func(f *frame) bltn {
 				_, i := v0(f)
-				// TODO(mpl): not enough to do the check at CFG time, because of a case like in
-				// e.g. fun16.go. So we gotta do it at runtime too for now. Figure it out.
-				val := dest(f)
-				if val.Kind() == reflect.Interface {
-					val.Set(valf(i + j))
-					return next
-				}
 				dest(f).SetInt(i + j)
 				return next
 			}

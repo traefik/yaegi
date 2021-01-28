@@ -63,26 +63,36 @@ func {{$name}}(n *node) {
 			{{else}}
 			v1 := genValueInt(c1)
 			{{end -}}
-			n.exec = func(f *frame) bltn {
-				_, j := v1(f)
-				{{- if (eq $name "add")}}
-				val := dest(f)
-				if val.Kind() == reflect.Interface {
-					switch typ.Kind() {
-					case reflect.Int:
-						val.Set(reflect.ValueOf(int(i + j)))
-					case reflect.Int32:
-						val.Set(reflect.ValueOf(int32(i + j)))
-					default: // int64
-						val.Set(reflect.ValueOf(i + j))
-					}
+			{{- if (eq $name "add")}}
+			if n.typ.cat != interfaceT || len(n.typ.field) > 0 {
+				n.exec = func(f *frame) bltn {
+					_, j := v1(f)
+					dest(f).SetInt(i + j)
 					return next
 				}
-				{{else}}
-				{{end -}}
+				return
+			}
+			var valf func(sum int64) reflect.Value
+			switch typ.Kind() {
+			case reflect.Int:
+				valf = func(sum int64) reflect.Value { return reflect.ValueOf(int(sum)) }
+			case reflect.Int32:
+				valf = func(sum int64) reflect.Value { return reflect.ValueOf(int32(sum)) }
+			default: // int64
+				valf = func(sum int64) reflect.Value { return reflect.ValueOf(sum) }
+			}
+			n.exec = func(f *frame) bltn {
+				_, j := v1(f)
+				dest(f).Set(valf(i + j))
+				return next
+			}
+			{{else -}}
+			n.exec = func(f *frame) bltn {
+				_, j := v1(f)
 				dest(f).SetInt(i {{$op.Name}} j)
 				return next
 			}
+			{{end -}}
 		case c1.rval.IsValid():
 			v0 := genValueInt(c0)
 			{{- if $op.Shift}}
@@ -90,26 +100,36 @@ func {{$name}}(n *node) {
 			{{else}}
 			j := vInt(c1.rval)
 			{{end -}}
-			n.exec = func(f *frame) bltn {
-				_, i := v0(f)
-				{{- if (eq $name "add")}}
-				val := dest(f)
-				if val.Kind() == reflect.Interface {
-					switch typ.Kind() {
-					case reflect.Int:
-						val.Set(reflect.ValueOf(int(i + j)))
-					case reflect.Int32:
-						val.Set(reflect.ValueOf(int32(i + j)))
-					default: // int64
-						val.Set(reflect.ValueOf(i + j))
-					}
+			{{- if (eq $name "add")}}
+			var valf func(sum int64) reflect.Value
+			switch typ.Kind() {
+			case reflect.Int:
+				valf = func(sum int64) reflect.Value { return reflect.ValueOf(int(sum)) }
+			case reflect.Int32:
+				valf = func(sum int64) reflect.Value { return reflect.ValueOf(int32(sum)) }
+			default: // int64
+				valf = func(sum int64) reflect.Value { return reflect.ValueOf(sum) }
+			}
+			if wantEmptyInterface(n) {
+				n.exec = func(f *frame) bltn {
+					_, i := v0(f)
+					dest(f).Set(valf(i + j))
 					return next
 				}
-				{{else}}
-				{{end -}}
+				return
+			}
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				dest(f).SetInt(i + j)
+				return next
+			}
+			{{else -}}
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
 				dest(f).SetInt(i {{$op.Name}} j)
 				return next
 			}
+			{{end -}}
 		default:
 			v0 := genValueInt(c0)
 			{{- if $op.Shift}}
