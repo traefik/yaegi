@@ -55,50 +55,50 @@ func add(n *node) {
 				return
 
 			}
+			var valf func(sum int64) reflect.Value
+			switch typ.Kind() {
+			case reflect.Int:
+				valf = func(sum int64) reflect.Value { return reflect.ValueOf(int(sum)) }
+			case reflect.Int32:
+				valf = func(sum int64) reflect.Value { return reflect.ValueOf(int32(sum)) }
+			default: // int64
+				valf = func(sum int64) reflect.Value { return reflect.ValueOf(sum) }
+			}
+
 			n.exec = func(f *frame) bltn {
 				_, j := v1(f)
-				switch typ.Kind() {
-				case reflect.Int:
-					dest(f).Set(reflect.ValueOf(int(i + j)))
-				case reflect.Int32:
-					dest(f).Set(reflect.ValueOf(int32(i + j)))
-				default: // int64
-					dest(f).Set(reflect.ValueOf(i + j))
-				}
+				dest(f).Set(valf(i + j))
 				return next
 			}
 		case c1.rval.IsValid():
 			v0 := genValueInt(c0)
 			j := vInt(c1.rval)
+
+			var valf func(sum int64) reflect.Value
+			switch typ.Kind() {
+			case reflect.Int:
+				valf = func(sum int64) reflect.Value { return reflect.ValueOf(int(sum)) }
+			case reflect.Int32:
+				valf = func(sum int64) reflect.Value { return reflect.ValueOf(int32(sum)) }
+			default: // int64
+				valf = func(sum int64) reflect.Value { return reflect.ValueOf(sum) }
+			}
+
 			if wantEmptyInterface(n) {
 				n.exec = func(f *frame) bltn {
 					_, i := v0(f)
-					switch typ.Kind() {
-					case reflect.Int:
-						dest(f).Set(reflect.ValueOf(int(i + j)))
-					case reflect.Int32:
-						dest(f).Set(reflect.ValueOf(int32(i + j)))
-					default: // int64
-						dest(f).Set(reflect.ValueOf(i + j))
-					}
+					dest(f).Set(valf(i + j))
 					return next
 				}
 				return
 			}
 			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
 				// TODO(mpl): not enough to do the check at CFG time, because of a case like in
 				// e.g. fun16.go. So we gotta do it at runtime too for now. Figure it out.
-				_, i := v0(f)
 				val := dest(f)
 				if val.Kind() == reflect.Interface {
-					switch typ.Kind() {
-					case reflect.Int:
-						dest(f).Set(reflect.ValueOf(int(i + j)))
-					case reflect.Int32:
-						dest(f).Set(reflect.ValueOf(int32(i + j)))
-					default: // int64
-						dest(f).Set(reflect.ValueOf(i + j))
-					}
+					val.Set(valf(i + j))
 					return next
 				}
 				dest(f).SetInt(i + j)
