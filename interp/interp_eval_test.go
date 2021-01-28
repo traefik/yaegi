@@ -103,6 +103,16 @@ func TestEvalStar(t *testing.T) {
 
 func TestEvalAssign(t *testing.T) {
 	i := interp.New(interp.Options{})
+	i.Use(interp.Exports{
+		"testpkg": {
+			"val": reflect.ValueOf(int64(11)),
+		},
+	})
+	_, e := i.Eval(`import "testpkg"`)
+	if e != nil {
+		t.Fatal(e)
+	}
+
 	runTests(t, i, []testCase{
 		{src: `a := "Hello"; a += " world"`, res: "Hello world"},
 		{src: `b := "Hello"; b += 1`, err: "1:42: invalid operation: mismatched types string and int"},
@@ -112,6 +122,7 @@ func TestEvalAssign(t *testing.T) {
 		{src: "g := 1; g <<= 8", res: "256"},
 		{src: "h := 1; h >>= 8", res: "0"},
 		{src: "i := 1; j := &i; (*j) = 2", res: "2"},
+		{src: "i64 := testpkg.val; i64 == 11", res: "true"},
 	})
 }
 

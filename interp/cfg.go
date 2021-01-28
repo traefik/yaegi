@@ -2570,11 +2570,7 @@ func isValueUntyped(v reflect.Value) bool {
 	if v.CanSet() {
 		return false
 	}
-	t := v.Type()
-	if t.Implements(constVal) {
-		return true
-	}
-	return t.String() == t.Kind().String()
+	return v.Type().Implements(constVal)
 }
 
 // isArithmeticAction returns true if the node action is an arithmetic operator.
