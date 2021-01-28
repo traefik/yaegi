@@ -6,24 +6,28 @@ func main() {
 	var c int = 5 + b
 	println(c)
 
-	var d int32 = 5 + int32(b)
+	var d int32 = 6 + int32(b)
 	println(d)
 
-	var a interface{} = 5 + b
+	var a interface{} = 7 + b
 	println(a.(int))
 
 	var e int32 = 2
-	var f interface{} = 5 + e
+	var f interface{} = 8 + e
 	println(f.(int32))
 
-	// TODO(mpl): make this work
-//	a = 5 + e
-//	println(a.(int32))
+	a = 9 + e
+	println(a.(int32))
+
+	var g int = 2
+	a = 10 + g
+	println(a.(int))
 }
 
 // Output:
 // 7
-// 7
-// 7
-// 7
-
+// 8
+// 9
+// 10
+// 11
+// 12

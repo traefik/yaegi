@@ -46,7 +46,6 @@ func add(n *node) {
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
 			v1 := genValueInt(c1)
-
 			if n.typ.cat != interfaceT || len(n.typ.field) > 0 {
 				n.exec = func(f *frame) bltn {
 					_, j := v1(f)
