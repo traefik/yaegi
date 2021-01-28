@@ -2220,7 +2220,12 @@ func compositeBinMap(n *node) {
 		convertLiteralValue(c.child[0], typ.Key())
 		convertLiteralValue(c.child[1], typ.Elem())
 		keys[i] = genValue(c.child[0])
-		values[i] = genValue(c.child[1])
+
+		if c.child[1].typ.cat == funcT {
+			values[i] = genFunctionWrapper(c.child[1])
+		} else {
+			values[i] = genValue(c.child[1])
+		}
 	}
 
 	n.exec = func(f *frame) bltn {
