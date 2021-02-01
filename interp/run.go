@@ -3432,7 +3432,6 @@ func isNil(n *node) {
 		dest(f).SetBool(false)
 		return fnext
 	}
-
 }
 
 func isNotNil(n *node) {
