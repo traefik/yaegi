@@ -32,7 +32,7 @@ func Hi(h Helloer) {
 // The method calls will be forwarded to the interpreter.
 //
 // Only the Wrap type definition needs to be exported to the interpreter (not
-// the interfaces and methods  definitions)
+// the interfaces and methods definitions).
 //
 type Wrap struct {
 	DoHello func() // related to the Hello() method.

@@ -50,9 +50,9 @@ func TestYaegiCmdCancel(t *testing.T) {
 
 	yaegi := filepath.Join(tmp, "yaegi")
 	build := exec.Command("go", "build", "-race", "-o", yaegi, ".")
-	err = build.Run()
+	out, err := build.CombinedOutput()
 	if err != nil {
-		t.Fatalf("failed to build yaegi command: %v", err)
+		t.Fatalf("failed to build yaegi command: %v: %s", err, out)
 	}
 
 	// Test src must be terminated by a single newline.

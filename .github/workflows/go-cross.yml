@@ -1,0 +1,67 @@
+name: Build Cross OS
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+
+  cross:
+    name: Go
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/go/src/github.com/traefik/yaegi
+
+    strategy:
+      matrix:
+        go-version: [ 1.14, 1.15 ]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+        include:
+          - os: ubuntu-latest
+            go-path-suffix: /go
+          - os: macos-latest
+            go-path-suffix: /go
+          - os: windows-latest
+            go-path-suffix: \go
+
+    steps:
+      # https://github.com/marketplace/actions/setup-go-environment
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      # https://github.com/marketplace/actions/checkout
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          path: go/src/github.com/traefik/yaegi
+
+      # https://github.com/marketplace/actions/cache
+      - name: Cache Go modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod              # Module download cache
+            ~/.cache/go-build         # Build cache (Linux)
+            ~/Library/Caches/go-build # Build cache (Mac)
+            '%LocalAppData%\go-build' # Build cache (Windows)
+          key: ${{ runner.os }}-${{ matrix.go-version }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.go-version }}-go-
+
+      - name: Setup GOPATH
+        run: go env -w GOPATH=${{ github.workspace }}${{ matrix.go-path-suffix }}
+
+# TODO fail on windows
+#      - name: Tests
+#        run: go test -v -cover ./...
+#        env:
+#          GOPATH: ${{ github.workspace }}${{ matrix.go-path }}
+
+      - name: Build
+        run: go build -race -v -ldflags "-s -w" -trimpath

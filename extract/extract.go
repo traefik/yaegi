@@ -241,7 +241,7 @@ func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, err
 	base := template.New("extract")
 	parse, err := base.Parse(model)
 	if err != nil {
-		return nil, fmt.Errorf("template parsing error: %v", err)
+		return nil, fmt.Errorf("template parsing error: %w", err)
 	}
 
 	if importPath == "log/syslog" {
@@ -274,13 +274,13 @@ func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, err
 	}
 	err = parse.Execute(b, data)
 	if err != nil {
-		return nil, fmt.Errorf("template error: %v", err)
+		return nil, fmt.Errorf("template error: %w", err)
 	}
 
 	// gofmt
 	source, err := format.Source(b.Bytes())
 	if err != nil {
-		return nil, fmt.Errorf("failed to format source: %v: %s", err, b.Bytes())
+		return nil, fmt.Errorf("failed to format source: %w: %s", err, b.Bytes())
 	}
 	return source, nil
 }
@@ -451,7 +451,7 @@ func genBuildTags() (string, error) {
 
 	minor, err := strconv.Atoi(minorRaw)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse version: %v", err)
+		return "", fmt.Errorf("failed to parse version: %w", err)
 	}
 
 	// Only append an upper bound if we are not on the latest go

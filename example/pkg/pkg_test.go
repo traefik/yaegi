@@ -104,7 +104,7 @@ func TestPackages(t *testing.T) {
 	for _, test := range testCases {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
-			goPath, err := filepath.Abs(test.goPath)
+			goPath, err := filepath.Abs(filepath.FromSlash(test.goPath))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -115,7 +115,7 @@ func TestPackages(t *testing.T) {
 
 			var msg string
 			if test.evalFile != "" {
-				if _, err := i.EvalPath(test.evalFile); err != nil {
+				if _, err := i.EvalPath(filepath.FromSlash(test.evalFile)); err != nil {
 					fatalStderrf(t, "%v", err)
 				}
 				msg = stdout.String()
@@ -146,6 +146,8 @@ func TestPackages(t *testing.T) {
 }
 
 func fatalStderrf(t *testing.T, format string, args ...interface{}) {
+	t.Helper()
+
 	fmt.Fprintf(os.Stderr, format+"\n", args...)
 	t.FailNow()
 }
@@ -159,7 +161,7 @@ func TestPackagesError(t *testing.T) {
 		{
 			desc:     "different packages in the same directory",
 			goPath:   "./_pkg9/",
-			expected: "1:21: import \"github.com/foo/pkg\" error: found packages pkg and pkgfalse in _pkg9/src/github.com/foo/pkg",
+			expected: `1:21: import "github.com/foo/pkg" error: found packages pkg and pkgfalse in ` + filepath.FromSlash("_pkg9/src/github.com/foo/pkg"),
 		},
 	}
 

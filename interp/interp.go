@@ -75,10 +75,10 @@ type frame struct {
 	done      reflect.SelectCase // for cancellation of channel operations
 }
 
-func newFrame(anc *frame, len int, id uint64) *frame {
+func newFrame(anc *frame, length int, id uint64) *frame {
 	f := &frame{
 		anc:  anc,
-		data: make([]reflect.Value, len),
+		data: make([]reflect.Value, length),
 		id:   id,
 	}
 	if anc == nil {

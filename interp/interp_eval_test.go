@@ -753,6 +753,8 @@ func TestEvalWithContext(t *testing.T) {
 }
 
 func runTests(t *testing.T, i *interp.Interpreter, tests []testCase) {
+	t.Helper()
+
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			if test.skip != "" {
@@ -782,6 +784,8 @@ func eval(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
 }
 
 func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expectedRes string) {
+	t.Helper()
+
 	res, err := i.Eval(src)
 
 	if expectedError != "" {
@@ -1160,6 +1164,8 @@ func TestConcurrentComposite2(t *testing.T) {
 }
 
 func testConcurrentComposite(t *testing.T, filePath string) {
+	t.Helper()
+
 	if testing.Short() {
 		return
 	}

@@ -37,6 +37,8 @@ func TestFile(t *testing.T) {
 }
 
 func runCheck(t *testing.T, p string) {
+	t.Helper()
+
 	wanted, goPath, errWanted := wantedFromComment(p)
 	if wanted == "" {
 		t.Skip(p, "has no comment 'Output:' or 'Error:'")
