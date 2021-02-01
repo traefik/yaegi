@@ -33,12 +33,12 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 			rPath = "."
 		}
 		dir = filepath.Join(filepath.Dir(interp.name), rPath, importPath)
-	} else if dir, rPath, err = pkgDir(interp.context.GOPATH, rPath, importPath); err != nil {
+	} else if dir, rPath, err = interp.pkgDir(interp.context.GOPATH, rPath, importPath); err != nil {
 		// Try again, assuming a root dir at the source location.
 		if rPath, err = interp.rootFromSourceLocation(); err != nil {
 			return "", err
 		}
-		if dir, rPath, err = pkgDir(interp.context.GOPATH, rPath, importPath); err != nil {
+		if dir, rPath, err = interp.pkgDir(interp.context.GOPATH, rPath, importPath); err != nil {
 			return "", err
 		}
 	}
@@ -181,7 +181,7 @@ func (interp *Interpreter) rootFromSourceLocation() (string, error) {
 
 // pkgDir returns the absolute path in filesystem for a package given its import path
 // and the root of the subtree dependencies.
-func pkgDir(goPath string, root, importPath string) (string, string, error) {
+func (interp *Interpreter) pkgDir(goPath string, root, importPath string) (string, string, error) {
 	rPath := filepath.Join(root, "vendor")
 	dir := filepath.Join(goPath, "src", rPath, importPath)
 
@@ -196,6 +196,9 @@ func pkgDir(goPath string, root, importPath string) (string, string, error) {
 	}
 
 	if len(root) == 0 {
+		if interp.context.GOPATH == "" {
+			return "", "", fmt.Errorf("unable to find source related to: %q. Either the GOPATH environment variable, or the Interpreter.Options.GoPath needs to be set", importPath)
+		}
 		return "", "", fmt.Errorf("unable to find source related to: %q", importPath)
 	}
 
@@ -205,7 +208,7 @@ func pkgDir(goPath string, root, importPath string) (string, string, error) {
 		return "", "", err
 	}
 
-	return pkgDir(goPath, prevRoot, importPath)
+	return interp.pkgDir(goPath, prevRoot, importPath)
 }
 
 const vendor = "vendor"
