@@ -161,6 +161,8 @@ func Test_pkgDir(t *testing.T) {
 		},
 	}
 
+	interp := &Interpreter{}
+
 	for _, test := range testCases {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
@@ -178,7 +180,7 @@ func Test_pkgDir(t *testing.T) {
 				}
 			}
 
-			dir, rPath, err := pkgDir(goPath, test.root, test.path)
+			dir, rPath, err := interp.pkgDir(goPath, test.root, test.path)
 			if err != nil {
 				t.Fatal(err)
 			}
