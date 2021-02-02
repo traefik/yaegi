@@ -5,7 +5,7 @@ import "fmt"
 func main() {
 	defer func() {
 		r := recover()
-		if r != nil { // <- panic here
+		if r != nil {
 			fmt.Println(r)
 		}
 	}()
