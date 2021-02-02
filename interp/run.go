@@ -3381,46 +3381,56 @@ func isNil(n *node) {
 	tnext := getExec(n.tnext)
 	dest := genValue(n)
 
-	if n.fnext != nil {
-		fnext := getExec(n.fnext)
-		if c0.typ.cat == interfaceT {
-			n.exec = func(f *frame) bltn {
-				v := value(f)
-				vi, ok := v.Interface().(valueInterface)
-				if ok && (vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT) || v.IsNil() {
-					dest(f).SetBool(true)
-					return tnext
-				}
-				dest(f).SetBool(false)
-				return fnext
-			}
-		} else {
-			n.exec = func(f *frame) bltn {
-				if value(f).IsNil() {
-					dest(f).SetBool(true)
-					return tnext
-				}
-				dest(f).SetBool(false)
-				return fnext
-			}
-		}
-	} else {
-		if c0.typ.cat == interfaceT {
-			n.exec = func(f *frame) bltn {
-				v := value(f)
-				if vi, ok := v.Interface().(valueInterface); ok {
-					dest(f).SetBool(vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT)
-				} else {
-					dest(f).SetBool(v.IsNil())
-				}
-				return tnext
-			}
-		} else {
+	if n.fnext == nil {
+		if c0.typ.cat != interfaceT {
 			n.exec = func(f *frame) bltn {
 				dest(f).SetBool(value(f).IsNil())
 				return tnext
 			}
+			return
 		}
+		n.exec = func(f *frame) bltn {
+			v := value(f)
+			if vi, ok := v.Interface().(valueInterface); ok {
+				dest(f).SetBool(vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT)
+			} else {
+				dest(f).SetBool(v.IsNil())
+			}
+			return tnext
+		}
+		return
+	}
+
+	fnext := getExec(n.fnext)
+
+	if c0.typ.cat != interfaceT {
+		n.exec = func(f *frame) bltn {
+			if value(f).IsNil() {
+				dest(f).SetBool(true)
+				return tnext
+			}
+			dest(f).SetBool(false)
+			return fnext
+		}
+		return
+	}
+
+	n.exec = func(f *frame) bltn {
+		v := value(f)
+		if vi, ok := v.Interface().(valueInterface); ok {
+			if (vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT) {
+				dest(f).SetBool(true)
+				return tnext
+			}
+			dest(f).SetBool(false)
+			return fnext
+		}
+		if v.IsNil() {
+			dest(f).SetBool(true)
+			return tnext
+		}
+		dest(f).SetBool(false)
+		return fnext
 	}
 }
 
@@ -3435,46 +3445,57 @@ func isNotNil(n *node) {
 	tnext := getExec(n.tnext)
 	dest := genValue(n)
 
-	if n.fnext != nil {
-		fnext := getExec(n.fnext)
-		if c0.typ.cat == interfaceT {
-			n.exec = func(f *frame) bltn {
-				v := value(f)
-				vi, ok := v.Interface().(valueInterface)
-				if ok && (vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT) || v.IsNil() {
-					dest(f).SetBool(false)
-					return fnext
-				}
-				dest(f).SetBool(true)
-				return tnext
-			}
-		} else {
-			n.exec = func(f *frame) bltn {
-				if value(f).IsNil() {
-					dest(f).SetBool(false)
-					return fnext
-				}
-				dest(f).SetBool(true)
-				return tnext
-			}
-		}
-	} else {
-		if c0.typ.cat == interfaceT {
-			n.exec = func(f *frame) bltn {
-				v := value(f)
-				if vi, ok := v.Interface().(valueInterface); ok {
-					dest(f).SetBool(!(vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT))
-				} else {
-					dest(f).SetBool(!v.IsNil())
-				}
-				return tnext
-			}
-		} else {
+	if n.fnext == nil {
+		if c0.typ.cat != interfaceT {
 			n.exec = func(f *frame) bltn {
 				dest(f).SetBool(!value(f).IsNil())
 				return tnext
 			}
+			return
 		}
+
+		n.exec = func(f *frame) bltn {
+			v := value(f)
+			if vi, ok := v.Interface().(valueInterface); ok {
+				dest(f).SetBool(!(vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT))
+			} else {
+				dest(f).SetBool(!v.IsNil())
+			}
+			return tnext
+		}
+		return
+	}
+
+	fnext := getExec(n.fnext)
+
+	if c0.typ.cat != interfaceT {
+		n.exec = func(f *frame) bltn {
+			if value(f).IsNil() {
+				dest(f).SetBool(false)
+				return fnext
+			}
+			dest(f).SetBool(true)
+			return tnext
+		}
+		return
+	}
+
+	n.exec = func(f *frame) bltn {
+		v := value(f)
+		if vi, ok := v.Interface().(valueInterface); ok {
+			if (vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT) {
+				dest(f).SetBool(false)
+				return fnext
+			}
+			dest(f).SetBool(true)
+			return tnext
+		}
+		if v.IsNil() {
+			dest(f).SetBool(false)
+			return fnext
+		}
+		dest(f).SetBool(true)
+		return tnext
 	}
 }
 
