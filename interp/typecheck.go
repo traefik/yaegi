@@ -37,7 +37,7 @@ func (check typecheck) assignment(n *node, typ *itype, context string) error {
 			if typ == nil && n.typ.cat == nilT {
 				return n.cfgErrorf("use of untyped nil in %s", context)
 			}
-			typ = n.typ.defaultType()
+			typ = n.typ.defaultType(n.rval)
 		}
 		if err := check.convertUntyped(n, typ); err != nil {
 			return err
@@ -65,7 +65,7 @@ func (check typecheck) assignExpr(n, dest, src *node) error {
 		isConst := n.anc.kind == constDecl
 		if !isConst {
 			// var operations must be typed
-			dest.typ = dest.typ.defaultType()
+			dest.typ = dest.typ.defaultType(src.rval)
 		}
 
 		return check.assignment(src, dest.typ, "assignment")
@@ -636,7 +636,7 @@ func (check typecheck) conversion(n *node, typ *itype) error {
 		return nil
 	}
 	if isInterface(typ) || !isConstType(typ) {
-		typ = n.typ.defaultType()
+		typ = n.typ.defaultType(n.rval)
 	}
 	return check.convertUntyped(n, typ)
 }
@@ -1037,9 +1037,8 @@ func (check typecheck) convertUntyped(n *node, typ *itype) error {
 		if len(n.typ.methods()) > 0 { // untyped cannot be set to iface
 			return convErr
 		}
-		ityp = n.typ.defaultType()
+		ityp = n.typ.defaultType(n.rval)
 		rtyp = ntyp
-
 	case isArray(typ) || isMap(typ) || isChan(typ) || isFunc(typ) || isPtr(typ):
 		// TODO(nick): above we are acting on itype, but really it is an rtype check. This is not clear which type
 		// 		 	   plain we are in. Fix this later.
