@@ -73,6 +73,8 @@ func {{$name}}(n *node) {
 				return
 			}
 			var valf func(sum int64) reflect.Value
+			// TODO: cover other int types, and actually other numbers, and even all
+			// relevant operations, not just add.
 			switch typ.Kind() {
 			case reflect.Int:
 				valf = func(sum int64) reflect.Value { return reflect.ValueOf(int(sum)) }
@@ -102,6 +104,8 @@ func {{$name}}(n *node) {
 			{{end -}}
 			{{- if (eq $name "add")}}
 			var valf func(sum int64) reflect.Value
+			// TODO: cover other int types, and actually other numbers, and even all
+			// relevant operations, not just add.
 			switch typ.Kind() {
 			case reflect.Int:
 				valf = func(sum int64) reflect.Value { return reflect.ValueOf(int(sum)) }
