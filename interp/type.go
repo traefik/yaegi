@@ -1502,9 +1502,24 @@ func (t *itype) implements(it *itype) bool {
 }
 
 // defaultType returns the default type of an untyped type.
-func (t *itype) defaultType() *itype {
+func (t *itype) defaultType(v reflect.Value) *itype {
 	if !t.untyped {
 		return t
+	}
+	// The default type can also be derived from a constant value.
+	if v.IsValid() && t.TypeOf().Implements(constVal) {
+		switch v.Interface().(constant.Value).Kind() {
+		case constant.String:
+			t = untypedString()
+		case constant.Bool:
+			t = untypedBool()
+		case constant.Int:
+			t = untypedInt()
+		case constant.Float:
+			t = untypedFloat()
+		case constant.Complex:
+			t = untypedComplex()
+		}
 	}
 	typ := *t
 	typ.untyped = false
