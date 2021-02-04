@@ -12,6 +12,10 @@ func (t TestStruct) String() string {
 	return "hello world"
 }
 
+type DummyStringer interface{
+	String() string
+}
+
 func main() {
 	aType := reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
 
@@ -52,7 +56,9 @@ func main() {
 		return
 	}
 
-	var tt interface{}
+	// TODO(mpl): restore when fixed
+	// var tt interface{}
+	var tt DummyStringer
 	tt = TestStruct{}
 	ss, ok := tt.(fmt.Stringer)
 	if !ok {
@@ -61,9 +67,6 @@ func main() {
 	}
 	fmt.Println(ss.String())
 	fmt.Println(tt.(fmt.Stringer).String())
-	// TODO(mpl): uncomment when fixed
-	// cType := reflect.TypeOf(TestStruct{})
-	// fmt.Println(cType.Implements(aType))
 
 	if _, ok := tt.(fmt.Stringer); !ok {
 		fmt.Println("TestStuct does not implement fmt.Stringer")

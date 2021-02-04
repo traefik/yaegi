@@ -32,6 +32,7 @@ func interfaceAsInterfaces() {
 		println("nope")
 		return
 	}
+	fmt.Println(d)
 
 	for _, v := range d {
 		fmt.Println(v)
@@ -46,5 +47,6 @@ func main() {
 // Output:
 // 2
 // 3
+// [2 3]
 // 2
 // 3

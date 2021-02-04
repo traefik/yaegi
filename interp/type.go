@@ -274,8 +274,33 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				t = t1
 			}
 		}
+
+		// Because an empty interface concrete type "mutates" as different values are
+		// assigned to it, we need to make a new itype from scratch everytime a new
+		// assignment is made, and not let different nodes (of the same variable) share the
+		// same itype. Otherwise they would overwrite each other.
+		if n.anc.kind == assignStmt && isInterface(n.anc.child[0].typ) && len(n.anc.child[0].typ.field) == 0 {
+			// TODO(mpl): do the indexes properly for multiple assignments on the same line.
+			// Also, maybe we should use nodeType to figure out dt.cat? but isn't it always
+			// gonna be an interfaceT anyway?
+			dt := new(itype)
+			dt.cat = interfaceT
+			val := new(itype)
+			val.cat = t.cat
+			dt.val = val
+			// TODO(mpl): do the indexes properly for multiple assignments on the same line.
+			// Also, maybe we should use nodeType to figure out dt.cat? but isn't it always
+			// gonna be an interfaceT anyway?
+			n.anc.child[0].typ = dt
+			// TODO(mpl): not sure yet whether we should do that last step. It doesn't seem
+			// to change anything either way though.
+			// t = dt
+			break
+		}
+
 		// If the node is to be assigned or returned, the node type is the destination type.
 		dt := t
+
 		switch a := n.anc; {
 		case a.kind == defineStmt && len(a.child) > a.nleft+a.nright:
 			if dt, err = nodeType(interp, sc, a.child[a.nleft]); err != nil {
@@ -1487,7 +1512,14 @@ func (t *itype) frameType() (r reflect.Type) {
 	case funcT:
 		r = reflect.TypeOf((*node)(nil))
 	case interfaceT:
+		if len(t.field) == 0 {
+			// empty interface, do not wrap it
+			r = reflect.TypeOf((*interface{})(nil)).Elem()
+			break
+		}
 		r = reflect.TypeOf((*valueInterface)(nil)).Elem()
+	case ptrT:
+		r = reflect.PtrTo(t.val.frameType())
 	default:
 		r = t.TypeOf()
 	}

@@ -612,6 +612,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					sym.typ = n.typ
 					sym.recv = src.recv
 				}
+
 				n.level = level
 
 				if n.anc.kind == constDecl {
@@ -713,7 +714,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					break
 				}
 			}
-			if c0.rval.IsValid() && c1.rval.IsValid() && !isInterface(n.typ) && constOp[n.action] != nil {
+			if c0.rval.IsValid() && c1.rval.IsValid() && (!isInterface(n.typ)) && constOp[n.action] != nil {
 				n.typ.TypeOf()       // Force compute of reflection type.
 				constOp[n.action](n) // Compute a constant result now rather than during exec.
 			}
@@ -1885,6 +1886,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					return
 				}
 			}
+
 			for _, c := range n.child[:l] {
 				var index int
 				if sc.global {
@@ -2520,6 +2522,10 @@ func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerat
 	case valueT:
 		if rtyp == nil {
 			rtyp = n.typ.rtype
+		}
+		// TODO(mpl): I do not understand where this side-effect is coming from, and why it happens. quickfix for now.
+		if rtyp == nil {
+			rtyp = n.typ.val.rtype
 		}
 		switch k := rtyp.Kind(); k {
 		case reflect.Struct:

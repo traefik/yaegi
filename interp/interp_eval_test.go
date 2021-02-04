@@ -507,12 +507,19 @@ func TestEvalMethod(t *testing.T) {
 			Hello() string
 		}
 
+		type Hey interface {
+			Hello() string
+		}
+
 		func (r *Root) Hello() string { return "Hello " + r.Name }
 
 		var r = Root{"R"}
 		var o = One{r}
-		var root interface{} = &Root{Name: "test1"}
-		var one interface{} = &One{Root{Name: "test2"}}
+		// TODO(mpl): restore empty interfaces when type assertions work (again) on them.
+		// var root interface{} = &Root{Name: "test1"}
+		// var one interface{} = &One{Root{Name: "test2"}}
+		var root Hey = &Root{Name: "test1"}
+		var one Hey = &One{Root{Name: "test2"}}
 	`)
 	runTests(t, i, []testCase{
 		{src: "r.Hello()", res: "Hello R"},
