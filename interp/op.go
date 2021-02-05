@@ -13,12 +13,20 @@ import (
 func add(n *node) {
 	next := getExec(n.tnext)
 	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
 	case reflect.String:
 		switch {
+		case isInterface:
+			v0 := genValue(c0)
+			v1 := genValue(c1)
+			n.exec = func(f *frame) bltn {
+				dest(f).Set(reflect.ValueOf(v0(f).String() + v1(f).String()).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			s0 := vString(c0.rval)
 			v1 := genValue(c1)
@@ -43,57 +51,26 @@ func add(n *node) {
 		}
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueInt(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i + j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
 			v1 := genValueInt(c1)
-
-			if n.typ.cat != interfaceT || len(n.typ.field) > 0 {
-				n.exec = func(f *frame) bltn {
-					_, j := v1(f)
-					dest(f).SetInt(i + j)
-					return next
-				}
-				return
-			}
-			var valf func(sum int64) reflect.Value
-			// TODO: cover other int types, and actually other numbers, and even all
-			// relevant operations, not just add.
-			switch typ.Kind() {
-			case reflect.Int:
-				valf = func(sum int64) reflect.Value { return reflect.ValueOf(int(sum)) }
-			case reflect.Int32:
-				valf = func(sum int64) reflect.Value { return reflect.ValueOf(int32(sum)) }
-			default: // int64
-				valf = func(sum int64) reflect.Value { return reflect.ValueOf(sum) }
-			}
 			n.exec = func(f *frame) bltn {
 				_, j := v1(f)
-				dest(f).Set(valf(i + j))
+				dest(f).SetInt(i + j)
 				return next
 			}
 		case c1.rval.IsValid():
 			v0 := genValueInt(c0)
 			j := vInt(c1.rval)
-
-			var valf func(sum int64) reflect.Value
-			// TODO: cover other int types, and actually other numbers, and even all
-			// relevant operations, not just add.
-			switch typ.Kind() {
-			case reflect.Int:
-				valf = func(sum int64) reflect.Value { return reflect.ValueOf(int(sum)) }
-			case reflect.Int32:
-				valf = func(sum int64) reflect.Value { return reflect.ValueOf(int32(sum)) }
-			default: // int64
-				valf = func(sum int64) reflect.Value { return reflect.ValueOf(sum) }
-			}
-			if wantEmptyInterface(n) {
-				n.exec = func(f *frame) bltn {
-					_, i := v0(f)
-					dest(f).Set(valf(i + j))
-					return next
-				}
-				return
-			}
 			n.exec = func(f *frame) bltn {
 				_, i := v0(f)
 				dest(f).SetInt(i + j)
@@ -111,6 +88,15 @@ func add(n *node) {
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i + j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -139,6 +125,15 @@ func add(n *node) {
 		}
 	case reflect.Float32, reflect.Float64:
 		switch {
+		case isInterface:
+			v0 := genValueFloat(c0)
+			v1 := genValueFloat(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i + j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vFloat(c0.rval)
 			v1 := genValueFloat(c1)
@@ -167,6 +162,13 @@ func add(n *node) {
 		}
 	case reflect.Complex64, reflect.Complex128:
 		switch {
+		case isInterface:
+			v0 := genValue(c0)
+			v1 := genValue(c1)
+			n.exec = func(f *frame) bltn {
+				dest(f).Set(reflect.ValueOf(v0(f).Complex() + v1(f).Complex()).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			r0 := vComplex(c0.rval)
 			v1 := genValue(c1)
@@ -220,12 +222,22 @@ func addConst(n *node) {
 func and(n *node) {
 	next := getExec(n.tnext)
 	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueInt(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i & j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
 			v1 := genValueInt(c1)
@@ -254,6 +266,15 @@ func and(n *node) {
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i & j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -305,12 +326,22 @@ func andConst(n *node) {
 func andNot(n *node) {
 	next := getExec(n.tnext)
 	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueInt(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i &^ j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
 			v1 := genValueInt(c1)
@@ -339,6 +370,15 @@ func andNot(n *node) {
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i &^ j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -390,12 +430,22 @@ func andNotConst(n *node) {
 func mul(n *node) {
 	next := getExec(n.tnext)
 	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueInt(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i * j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
 			v1 := genValueInt(c1)
@@ -424,6 +474,15 @@ func mul(n *node) {
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i * j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -452,6 +511,15 @@ func mul(n *node) {
 		}
 	case reflect.Float32, reflect.Float64:
 		switch {
+		case isInterface:
+			v0 := genValueFloat(c0)
+			v1 := genValueFloat(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i * j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vFloat(c0.rval)
 			v1 := genValueFloat(c1)
@@ -480,6 +548,13 @@ func mul(n *node) {
 		}
 	case reflect.Complex64, reflect.Complex128:
 		switch {
+		case isInterface:
+			v0 := genValue(c0)
+			v1 := genValue(c1)
+			n.exec = func(f *frame) bltn {
+				dest(f).Set(reflect.ValueOf(v0(f).Complex() * v1(f).Complex()).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			r0 := vComplex(c0.rval)
 			v1 := genValue(c1)
@@ -531,12 +606,22 @@ func mulConst(n *node) {
 func or(n *node) {
 	next := getExec(n.tnext)
 	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueInt(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i | j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
 			v1 := genValueInt(c1)
@@ -565,6 +650,15 @@ func or(n *node) {
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i | j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -616,12 +710,22 @@ func orConst(n *node) {
 func quo(n *node) {
 	next := getExec(n.tnext)
 	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueInt(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i / j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
 			v1 := genValueInt(c1)
@@ -650,6 +754,15 @@ func quo(n *node) {
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i / j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -678,6 +791,15 @@ func quo(n *node) {
 		}
 	case reflect.Float32, reflect.Float64:
 		switch {
+		case isInterface:
+			v0 := genValueFloat(c0)
+			v1 := genValueFloat(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i / j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vFloat(c0.rval)
 			v1 := genValueFloat(c1)
@@ -706,6 +828,13 @@ func quo(n *node) {
 		}
 	case reflect.Complex64, reflect.Complex128:
 		switch {
+		case isInterface:
+			v0 := genValue(c0)
+			v1 := genValue(c1)
+			n.exec = func(f *frame) bltn {
+				dest(f).Set(reflect.ValueOf(v0(f).Complex() / v1(f).Complex()).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			r0 := vComplex(c0.rval)
 			v1 := genValue(c1)
@@ -766,12 +895,22 @@ func quoConst(n *node) {
 func rem(n *node) {
 	next := getExec(n.tnext)
 	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueInt(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i % j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
 			v1 := genValueInt(c1)
@@ -800,6 +939,15 @@ func rem(n *node) {
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i % j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -851,12 +999,22 @@ func remConst(n *node) {
 func shl(n *node) {
 	next := getExec(n.tnext)
 	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i << j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
 			v1 := genValueUint(c1)
@@ -885,6 +1043,15 @@ func shl(n *node) {
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i << j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -936,12 +1103,22 @@ func shlConst(n *node) {
 func shr(n *node) {
 	next := getExec(n.tnext)
 	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i >> j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
 			v1 := genValueUint(c1)
@@ -970,6 +1147,15 @@ func shr(n *node) {
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i >> j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -1021,12 +1207,22 @@ func shrConst(n *node) {
 func sub(n *node) {
 	next := getExec(n.tnext)
 	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueInt(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i - j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
 			v1 := genValueInt(c1)
@@ -1055,6 +1251,15 @@ func sub(n *node) {
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i - j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -1083,6 +1288,15 @@ func sub(n *node) {
 		}
 	case reflect.Float32, reflect.Float64:
 		switch {
+		case isInterface:
+			v0 := genValueFloat(c0)
+			v1 := genValueFloat(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i - j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vFloat(c0.rval)
 			v1 := genValueFloat(c1)
@@ -1111,6 +1325,13 @@ func sub(n *node) {
 		}
 	case reflect.Complex64, reflect.Complex128:
 		switch {
+		case isInterface:
+			v0 := genValue(c0)
+			v1 := genValue(c1)
+			n.exec = func(f *frame) bltn {
+				dest(f).Set(reflect.ValueOf(v0(f).Complex() - v1(f).Complex()).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			r0 := vComplex(c0.rval)
 			v1 := genValue(c1)
@@ -1162,12 +1383,22 @@ func subConst(n *node) {
 func xor(n *node) {
 	next := getExec(n.tnext)
 	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	dest := genValueOutput(n, typ)
 	c0, c1 := n.child[0], n.child[1]
 
 	switch typ.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueInt(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i ^ j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
 			v1 := genValueInt(c1)
@@ -1196,6 +1427,15 @@ func xor(n *node) {
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, i := v0(f)
+				_, j := v1(f)
+				dest(f).Set(reflect.ValueOf(i ^ j).Convert(typ))
+				return next
+			}
 		case c0.rval.IsValid():
 			i := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -2078,10 +2318,22 @@ func posConst(n *node) {
 func equal(n *node) {
 	tnext := getExec(n.tnext)
 	dest := genValueOutput(n, reflect.TypeOf(true))
+	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	c0, c1 := n.child[0], n.child[1]
 
 	if c0.typ.cat == aliasT || c1.typ.cat == aliasT {
 		switch {
+		case isInterface:
+			v0 := genValue(c0)
+			v1 := genValue(c1)
+			dest := genValue(n)
+			n.exec = func(f *frame) bltn {
+				i0 := v0(f).Interface()
+				i1 := v1(f).Interface()
+				dest(f).Set(reflect.ValueOf(i0 == i1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			i0 := c0.rval.Interface()
 			v1 := genValue(c1)
@@ -2157,9 +2409,18 @@ func equal(n *node) {
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
+		case isInterface:
+			v0 := genValueString(c0)
+			v1 := genValueString(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 == s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vString(c0.rval)
-			v1 := genValueString(n.child[1])
+			v1 := genValueString(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -2180,7 +2441,7 @@ func equal(n *node) {
 			}
 		case c1.rval.IsValid():
 			s1 := vString(c1.rval)
-			v0 := genValueString(n.child[0])
+			v0 := genValueString(c0)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -2200,8 +2461,8 @@ func equal(n *node) {
 				}
 			}
 		default:
-			v0 := genValueString(n.child[0])
-			v1 := genValueString(n.child[1])
+			v0 := genValueString(c0)
+			v1 := genValueString(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -2225,6 +2486,15 @@ func equal(n *node) {
 		}
 	case isFloat(t0) || isFloat(t1):
 		switch {
+		case isInterface:
+			v0 := genValueFloat(c0)
+			v1 := genValueFloat(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 == s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vFloat(c0.rval)
 			v1 := genValueFloat(c1)
@@ -2295,6 +2565,15 @@ func equal(n *node) {
 		}
 	case isUint(t0) || isUint(t1):
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 == s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -2366,6 +2645,15 @@ func equal(n *node) {
 		}
 	case isInt(t0) || isInt(t1):
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueInt(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 == s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vInt(c0.rval)
 			v1 := genValueInt(c1)
@@ -2437,6 +2725,15 @@ func equal(n *node) {
 		}
 	case isComplex(t0) || isComplex(t1):
 		switch {
+		case isInterface:
+			v0 := genComplex(c0)
+			v1 := genComplex(c1)
+			n.exec = func(f *frame) bltn {
+				s0 := v0(f)
+				s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 == s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vComplex(c0.rval)
 			v1 := genComplex(c1)
@@ -2481,8 +2778,8 @@ func equal(n *node) {
 				}
 			}
 		default:
-			v0 := genComplex(n.child[0])
-			v1 := genComplex(n.child[1])
+			v0 := genComplex(c0)
+			v1 := genComplex(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -2506,6 +2803,15 @@ func equal(n *node) {
 		}
 	default:
 		switch {
+		case isInterface:
+			v0 := genValue(c0)
+			v1 := genValue(c1)
+			n.exec = func(f *frame) bltn {
+				i0 := v0(f).Interface()
+				i1 := v1(f).Interface()
+				dest(f).Set(reflect.ValueOf(i0 == i1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			i0 := c0.rval.Interface()
 			v1 := genValue(c1)
@@ -2581,14 +2887,25 @@ func equal(n *node) {
 func greater(n *node) {
 	tnext := getExec(n.tnext)
 	dest := genValueOutput(n, reflect.TypeOf(true))
+	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
+		case isInterface:
+			v0 := genValueString(c0)
+			v1 := genValueString(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 > s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vString(c0.rval)
-			v1 := genValueString(n.child[1])
+			v1 := genValueString(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -2609,7 +2926,7 @@ func greater(n *node) {
 			}
 		case c1.rval.IsValid():
 			s1 := vString(c1.rval)
-			v0 := genValueString(n.child[0])
+			v0 := genValueString(c0)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -2629,8 +2946,8 @@ func greater(n *node) {
 				}
 			}
 		default:
-			v0 := genValueString(n.child[0])
-			v1 := genValueString(n.child[1])
+			v0 := genValueString(c0)
+			v1 := genValueString(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -2654,6 +2971,15 @@ func greater(n *node) {
 		}
 	case isFloat(t0) || isFloat(t1):
 		switch {
+		case isInterface:
+			v0 := genValueFloat(c0)
+			v1 := genValueFloat(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 > s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vFloat(c0.rval)
 			v1 := genValueFloat(c1)
@@ -2724,6 +3050,15 @@ func greater(n *node) {
 		}
 	case isUint(t0) || isUint(t1):
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 > s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -2795,6 +3130,15 @@ func greater(n *node) {
 		}
 	case isInt(t0) || isInt(t1):
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueInt(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 > s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vInt(c0.rval)
 			v1 := genValueInt(c1)
@@ -2870,14 +3214,25 @@ func greater(n *node) {
 func greaterEqual(n *node) {
 	tnext := getExec(n.tnext)
 	dest := genValueOutput(n, reflect.TypeOf(true))
+	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
+		case isInterface:
+			v0 := genValueString(c0)
+			v1 := genValueString(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 >= s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vString(c0.rval)
-			v1 := genValueString(n.child[1])
+			v1 := genValueString(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -2898,7 +3253,7 @@ func greaterEqual(n *node) {
 			}
 		case c1.rval.IsValid():
 			s1 := vString(c1.rval)
-			v0 := genValueString(n.child[0])
+			v0 := genValueString(c0)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -2918,8 +3273,8 @@ func greaterEqual(n *node) {
 				}
 			}
 		default:
-			v0 := genValueString(n.child[0])
-			v1 := genValueString(n.child[1])
+			v0 := genValueString(c0)
+			v1 := genValueString(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -2943,6 +3298,15 @@ func greaterEqual(n *node) {
 		}
 	case isFloat(t0) || isFloat(t1):
 		switch {
+		case isInterface:
+			v0 := genValueFloat(c0)
+			v1 := genValueFloat(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 >= s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vFloat(c0.rval)
 			v1 := genValueFloat(c1)
@@ -3013,6 +3377,15 @@ func greaterEqual(n *node) {
 		}
 	case isUint(t0) || isUint(t1):
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 >= s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -3084,6 +3457,15 @@ func greaterEqual(n *node) {
 		}
 	case isInt(t0) || isInt(t1):
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueInt(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 >= s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vInt(c0.rval)
 			v1 := genValueInt(c1)
@@ -3159,14 +3541,25 @@ func greaterEqual(n *node) {
 func lower(n *node) {
 	tnext := getExec(n.tnext)
 	dest := genValueOutput(n, reflect.TypeOf(true))
+	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
+		case isInterface:
+			v0 := genValueString(c0)
+			v1 := genValueString(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 < s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vString(c0.rval)
-			v1 := genValueString(n.child[1])
+			v1 := genValueString(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -3187,7 +3580,7 @@ func lower(n *node) {
 			}
 		case c1.rval.IsValid():
 			s1 := vString(c1.rval)
-			v0 := genValueString(n.child[0])
+			v0 := genValueString(c0)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -3207,8 +3600,8 @@ func lower(n *node) {
 				}
 			}
 		default:
-			v0 := genValueString(n.child[0])
-			v1 := genValueString(n.child[1])
+			v0 := genValueString(c0)
+			v1 := genValueString(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -3232,6 +3625,15 @@ func lower(n *node) {
 		}
 	case isFloat(t0) || isFloat(t1):
 		switch {
+		case isInterface:
+			v0 := genValueFloat(c0)
+			v1 := genValueFloat(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 < s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vFloat(c0.rval)
 			v1 := genValueFloat(c1)
@@ -3302,6 +3704,15 @@ func lower(n *node) {
 		}
 	case isUint(t0) || isUint(t1):
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 < s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -3373,6 +3784,15 @@ func lower(n *node) {
 		}
 	case isInt(t0) || isInt(t1):
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueInt(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 < s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vInt(c0.rval)
 			v1 := genValueInt(c1)
@@ -3448,14 +3868,25 @@ func lower(n *node) {
 func lowerEqual(n *node) {
 	tnext := getExec(n.tnext)
 	dest := genValueOutput(n, reflect.TypeOf(true))
+	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	c0, c1 := n.child[0], n.child[1]
 
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
+		case isInterface:
+			v0 := genValueString(c0)
+			v1 := genValueString(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 <= s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vString(c0.rval)
-			v1 := genValueString(n.child[1])
+			v1 := genValueString(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -3476,7 +3907,7 @@ func lowerEqual(n *node) {
 			}
 		case c1.rval.IsValid():
 			s1 := vString(c1.rval)
-			v0 := genValueString(n.child[0])
+			v0 := genValueString(c0)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -3496,8 +3927,8 @@ func lowerEqual(n *node) {
 				}
 			}
 		default:
-			v0 := genValueString(n.child[0])
-			v1 := genValueString(n.child[1])
+			v0 := genValueString(c0)
+			v1 := genValueString(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -3521,6 +3952,15 @@ func lowerEqual(n *node) {
 		}
 	case isFloat(t0) || isFloat(t1):
 		switch {
+		case isInterface:
+			v0 := genValueFloat(c0)
+			v1 := genValueFloat(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 <= s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vFloat(c0.rval)
 			v1 := genValueFloat(c1)
@@ -3591,6 +4031,15 @@ func lowerEqual(n *node) {
 		}
 	case isUint(t0) || isUint(t1):
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 <= s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -3662,6 +4111,15 @@ func lowerEqual(n *node) {
 		}
 	case isInt(t0) || isInt(t1):
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueInt(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 <= s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vInt(c0.rval)
 			v1 := genValueInt(c1)
@@ -3737,10 +4195,22 @@ func lowerEqual(n *node) {
 func notEqual(n *node) {
 	tnext := getExec(n.tnext)
 	dest := genValueOutput(n, reflect.TypeOf(true))
+	typ := n.typ.concrete().TypeOf()
+	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	c0, c1 := n.child[0], n.child[1]
 
 	if c0.typ.cat == aliasT || c1.typ.cat == aliasT {
 		switch {
+		case isInterface:
+			v0 := genValue(c0)
+			v1 := genValue(c1)
+			dest := genValue(n)
+			n.exec = func(f *frame) bltn {
+				i0 := v0(f).Interface()
+				i1 := v1(f).Interface()
+				dest(f).Set(reflect.ValueOf(i0 != i1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			i0 := c0.rval.Interface()
 			v1 := genValue(c1)
@@ -3816,9 +4286,18 @@ func notEqual(n *node) {
 	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
 	case isString(t0) || isString(t1):
 		switch {
+		case isInterface:
+			v0 := genValueString(c0)
+			v1 := genValueString(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 != s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vString(c0.rval)
-			v1 := genValueString(n.child[1])
+			v1 := genValueString(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -3839,7 +4318,7 @@ func notEqual(n *node) {
 			}
 		case c1.rval.IsValid():
 			s1 := vString(c1.rval)
-			v0 := genValueString(n.child[0])
+			v0 := genValueString(c0)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -3859,8 +4338,8 @@ func notEqual(n *node) {
 				}
 			}
 		default:
-			v0 := genValueString(n.child[0])
-			v1 := genValueString(n.child[1])
+			v0 := genValueString(c0)
+			v1 := genValueString(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -3884,6 +4363,15 @@ func notEqual(n *node) {
 		}
 	case isFloat(t0) || isFloat(t1):
 		switch {
+		case isInterface:
+			v0 := genValueFloat(c0)
+			v1 := genValueFloat(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 != s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vFloat(c0.rval)
 			v1 := genValueFloat(c1)
@@ -3954,6 +4442,15 @@ func notEqual(n *node) {
 		}
 	case isUint(t0) || isUint(t1):
 		switch {
+		case isInterface:
+			v0 := genValueUint(c0)
+			v1 := genValueUint(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 != s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vUint(c0.rval)
 			v1 := genValueUint(c1)
@@ -4025,6 +4522,15 @@ func notEqual(n *node) {
 		}
 	case isInt(t0) || isInt(t1):
 		switch {
+		case isInterface:
+			v0 := genValueInt(c0)
+			v1 := genValueInt(c1)
+			n.exec = func(f *frame) bltn {
+				_, s0 := v0(f)
+				_, s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 != s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vInt(c0.rval)
 			v1 := genValueInt(c1)
@@ -4096,6 +4602,15 @@ func notEqual(n *node) {
 		}
 	case isComplex(t0) || isComplex(t1):
 		switch {
+		case isInterface:
+			v0 := genComplex(c0)
+			v1 := genComplex(c1)
+			n.exec = func(f *frame) bltn {
+				s0 := v0(f)
+				s1 := v1(f)
+				dest(f).Set(reflect.ValueOf(s0 != s1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			s0 := vComplex(c0.rval)
 			v1 := genComplex(c1)
@@ -4140,8 +4655,8 @@ func notEqual(n *node) {
 				}
 			}
 		default:
-			v0 := genComplex(n.child[0])
-			v1 := genComplex(n.child[1])
+			v0 := genComplex(c0)
+			v1 := genComplex(c1)
 			if n.fnext != nil {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
@@ -4165,6 +4680,15 @@ func notEqual(n *node) {
 		}
 	default:
 		switch {
+		case isInterface:
+			v0 := genValue(c0)
+			v1 := genValue(c1)
+			n.exec = func(f *frame) bltn {
+				i0 := v0(f).Interface()
+				i1 := v1(f).Interface()
+				dest(f).Set(reflect.ValueOf(i0 != i1).Convert(typ))
+				return tnext
+			}
 		case c0.rval.IsValid():
 			i0 := c0.rval.Interface()
 			v1 := genValue(c1)
