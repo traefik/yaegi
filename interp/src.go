@@ -33,6 +33,8 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 			rPath = "."
 		}
 		dir = filepath.Join(filepath.Dir(interp.name), rPath, importPath)
+	} else if sandboxPath, ok := findSandboxPath(interp.sandboxes, importPath); ok {
+		dir = sandboxPath
 	} else if dir, rPath, err = interp.pkgDir(interp.context.GOPATH, rPath, importPath); err != nil {
 		// Try again, assuming a root dir at the source location.
 		if rPath, err = interp.rootFromSourceLocation(); err != nil {
@@ -306,4 +308,14 @@ func effectivePkg(root, path string) string {
 func isPathRelative(s string) bool {
 	p := "." + string(filepath.Separator)
 	return strings.HasPrefix(s, p) || strings.HasPrefix(s, "."+p)
+}
+
+// findSandboxPath checks if given import path belongs to some sandbox.
+func findSandboxPath(sandboxes map[string]string, importPath string) (string, bool) {
+	for k, v := range sandboxes {
+		if strings.HasPrefix(importPath, k+"/") {
+			return filepath.Join(v, strings.TrimPrefix(importPath, k+"/")), true
+		}
+	}
+	return "", false
 }

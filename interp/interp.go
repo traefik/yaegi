@@ -156,6 +156,8 @@ type Interpreter struct {
 	pkgNames map[string]string // package names, indexed by import path
 	done     chan struct{}     // for cancellation of channel operations
 
+	sandboxes map[string]string // mapping of package prefix to source dir
+
 	hooks *hooks // symbol hooks
 }
 
@@ -234,6 +236,9 @@ type Options struct {
 	// BuildTags sets build constraints for the interpreter.
 	BuildTags []string
 
+	// Sandboxes sets mapping of base package name to directory path that contains source code
+	Sandboxes map[string]string
+
 	// Standard input, output and error streams.
 	// They default to os.Stding, os.Stdout and os.Stderr respectively.
 	Stdin          io.Reader
@@ -243,16 +248,17 @@ type Options struct {
 // New returns a new interpreter.
 func New(options Options) *Interpreter {
 	i := Interpreter{
-		opt:      opt{context: build.Default},
-		frame:    newFrame(nil, 0, 0),
-		fset:     token.NewFileSet(),
-		universe: initUniverse(),
-		scopes:   map[string]*scope{},
-		binPkg:   Exports{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
-		srcPkg:   imports{},
-		pkgNames: map[string]string{},
-		rdir:     map[string]bool{},
-		hooks:    &hooks{},
+		opt:       opt{context: build.Default},
+		frame:     newFrame(nil, 0, 0),
+		fset:      token.NewFileSet(),
+		universe:  initUniverse(),
+		scopes:    map[string]*scope{},
+		binPkg:    Exports{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
+		srcPkg:    imports{},
+		pkgNames:  map[string]string{},
+		rdir:      map[string]bool{},
+		hooks:     &hooks{},
+		sandboxes: options.Sandboxes,
 	}
 
 	if i.opt.stdin = options.Stdin; i.opt.stdin == nil {
