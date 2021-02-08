@@ -193,31 +193,31 @@ func {{$name}}(n *node) {
 	case reflect.Complex64, reflect.Complex128:
 		switch {
 		case isInterface:
-			v0 := genValue(c0)
-			v1 := genValue(c1)
+			v0 := genComplex(c0)
+			v1 := genComplex(c1)
 			n.exec = func(f *frame) bltn {
-				dest(f).Set(reflect.ValueOf(v0(f).Complex() {{$op.Name}} v1(f).Complex()).Convert(typ))
+				dest(f).Set(reflect.ValueOf(v0(f) {{$op.Name}} v1(f)).Convert(typ))
 				return next
 			}
 		case c0.rval.IsValid():
 			r0 := vComplex(c0.rval)
-			v1 := genValue(c1)
+			v1 := genComplex(c1)
 			n.exec = func(f *frame) bltn {
-				dest(f).SetComplex(r0 {{$op.Name}} v1(f).Complex())
+				dest(f).SetComplex(r0 {{$op.Name}} v1(f))
 				return next
 			}
 		case c1.rval.IsValid():
 			r1 := vComplex(c1.rval)
-			v0 := genValue(c0)
+			v0 := genComplex(c0)
 			n.exec = func(f *frame) bltn {
-				dest(f).SetComplex(v0(f).Complex() {{$op.Name}} r1)
+				dest(f).SetComplex(v0(f) {{$op.Name}} r1)
 				return next
 			}
 		default:
-			v0 := genValue(c0)
-			v1 := genValue(c1)
+			v0 := genComplex(c0)
+			v1 := genComplex(c1)
 			n.exec = func(f *frame) bltn {
-				dest(f).SetComplex(v0(f).Complex() {{$op.Name}} v1(f).Complex())
+				dest(f).SetComplex(v0(f) {{$op.Name}} v1(f))
 				return next
 			}
 		}
