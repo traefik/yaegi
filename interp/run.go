@@ -2008,11 +2008,11 @@ func neg(n *node) {
 				dest(f).Set(reflect.ValueOf(-value(f).Int()).Convert(typ))
 				return next
 			}
-		} else {
-			n.exec = func(f *frame) bltn {
-				dest(f).SetInt(-value(f).Int())
-				return next
-			}
+			return
+		}
+		n.exec = func(f *frame) bltn {
+			dest(f).SetInt(-value(f).Int())
+			return next
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		if isInterface {
@@ -2020,11 +2020,11 @@ func neg(n *node) {
 				dest(f).Set(reflect.ValueOf(-value(f).Uint()).Convert(typ))
 				return next
 			}
-		} else {
-			n.exec = func(f *frame) bltn {
-				dest(f).SetUint(-value(f).Uint())
-				return next
-			}
+			return
+		}
+		n.exec = func(f *frame) bltn {
+			dest(f).SetUint(-value(f).Uint())
+			return next
 		}
 	case reflect.Float32, reflect.Float64:
 		if isInterface {
@@ -2032,11 +2032,11 @@ func neg(n *node) {
 				dest(f).Set(reflect.ValueOf(-value(f).Float()).Convert(typ))
 				return next
 			}
-		} else {
-			n.exec = func(f *frame) bltn {
-				dest(f).SetFloat(-value(f).Float())
-				return next
-			}
+			return
+		}
+		n.exec = func(f *frame) bltn {
+			dest(f).SetFloat(-value(f).Float())
+			return next
 		}
 	case reflect.Complex64, reflect.Complex128:
 		if isInterface {
@@ -2044,11 +2044,11 @@ func neg(n *node) {
 				dest(f).Set(reflect.ValueOf(-value(f).Complex()).Convert(typ))
 				return next
 			}
-		} else {
-			n.exec = func(f *frame) bltn {
-				dest(f).SetComplex(-value(f).Complex())
-				return next
-			}
+			return
+		}
+		n.exec = func(f *frame) bltn {
+			dest(f).SetComplex(-value(f).Complex())
+			return next
 		}
 	}
 }
@@ -2078,11 +2078,11 @@ func bitNot(n *node) {
 				dest(f).Set(reflect.ValueOf(^value(f).Int()).Convert(typ))
 				return next
 			}
-		} else {
-			n.exec = func(f *frame) bltn {
-				dest(f).SetInt(^value(f).Int())
-				return next
-			}
+			return
+		}
+		n.exec = func(f *frame) bltn {
+			dest(f).SetInt(^value(f).Int())
+			return next
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		if isInterface {
@@ -2090,11 +2090,11 @@ func bitNot(n *node) {
 				dest(f).Set(reflect.ValueOf(^value(f).Uint()).Convert(typ))
 				return next
 			}
-		} else {
-			n.exec = func(f *frame) bltn {
-				dest(f).SetUint(^value(f).Uint())
-				return next
-			}
+			return
+		}
+		n.exec = func(f *frame) bltn {
+			dest(f).SetUint(^value(f).Uint())
+			return next
 		}
 	}
 }
@@ -2124,11 +2124,11 @@ func land(n *node) {
 			dest(f).Set(reflect.ValueOf(value0(f).Bool() && value1(f).Bool()).Convert(typ))
 			return tnext
 		}
-	} else {
-		n.exec = func(f *frame) bltn {
-			dest(f).SetBool(value0(f).Bool() && value1(f).Bool())
-			return tnext
-		}
+		return
+	}
+	n.exec = func(f *frame) bltn {
+		dest(f).SetBool(value0(f).Bool() && value1(f).Bool())
+		return tnext
 	}
 }
 
@@ -2157,11 +2157,11 @@ func lor(n *node) {
 			dest(f).Set(reflect.ValueOf(value0(f).Bool() || value1(f).Bool()).Convert(typ))
 			return tnext
 		}
-	} else {
-		n.exec = func(f *frame) bltn {
-			dest(f).SetBool(value0(f).Bool() || value1(f).Bool())
-			return tnext
-		}
+		return
+	}
+	n.exec = func(f *frame) bltn {
+		dest(f).SetBool(value0(f).Bool() || value1(f).Bool())
+		return tnext
 	}
 }
 
@@ -3631,11 +3631,11 @@ func isNil(n *node) {
 					dest(f).Set(reflect.ValueOf(value(f).IsNil()).Convert(typ))
 					return tnext
 				}
-			} else {
-				n.exec = func(f *frame) bltn {
-					dest(f).SetBool(value(f).IsNil())
-					return tnext
-				}
+				return
+			}
+			n.exec = func(f *frame) bltn {
+				dest(f).SetBool(value(f).IsNil())
+				return tnext
 			}
 			return
 		}
@@ -3651,18 +3651,18 @@ func isNil(n *node) {
 				dest(f).Set(reflect.ValueOf(r).Convert(typ))
 				return tnext
 			}
-		} else {
-			n.exec = func(f *frame) bltn {
-				v := value(f)
-				var r bool
-				if vi, ok := v.Interface().(valueInterface); ok {
-					r = (vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT)
-				} else {
-					r = v.IsNil()
-				}
-				dest(f).SetBool(r)
-				return tnext
+			return
+		}
+		n.exec = func(f *frame) bltn {
+			v := value(f)
+			var r bool
+			if vi, ok := v.Interface().(valueInterface); ok {
+				r = (vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT)
+			} else {
+				r = v.IsNil()
 			}
+			dest(f).SetBool(r)
+			return tnext
 		}
 		return
 	}
@@ -3720,11 +3720,11 @@ func isNotNil(n *node) {
 					dest(f).Set(reflect.ValueOf(!value(f).IsNil()).Convert(typ))
 					return tnext
 				}
-			} else {
-				n.exec = func(f *frame) bltn {
-					dest(f).SetBool(!value(f).IsNil())
-					return tnext
-				}
+				return
+			}
+			n.exec = func(f *frame) bltn {
+				dest(f).SetBool(!value(f).IsNil())
+				return tnext
 			}
 			return
 		}
@@ -3741,18 +3741,18 @@ func isNotNil(n *node) {
 				dest(f).Set(reflect.ValueOf(!r).Convert(typ))
 				return tnext
 			}
-		} else {
-			n.exec = func(f *frame) bltn {
-				v := value(f)
-				var r bool
-				if vi, ok := v.Interface().(valueInterface); ok {
-					r = (vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT)
-				} else {
-					r = v.IsNil()
-				}
-				dest(f).SetBool(!r)
-				return tnext
+			return
+		}
+		n.exec = func(f *frame) bltn {
+			v := value(f)
+			var r bool
+			if vi, ok := v.Interface().(valueInterface); ok {
+				r = (vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT)
+			} else {
+				r = v.IsNil()
 			}
+			dest(f).SetBool(!r)
+			return tnext
 		}
 		return
 	}
