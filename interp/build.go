@@ -163,9 +163,9 @@ var knownOs = map[string]bool{
 	"dragonfly": true,
 	"freebsd":   true,
 	"illumos":   true,
+	"ios":       true,
 	"js":        true,
 	"linux":     true,
-	"nacl":      true,
 	"netbsd":    true,
 	"openbsd":   true,
 	"plan9":     true,
@@ -176,7 +176,6 @@ var knownOs = map[string]bool{
 var knownArch = map[string]bool{
 	"386":      true,
 	"amd64":    true,
-	"amd64p32": true,
 	"arm":      true,
 	"arm64":    true,
 	"mips":     true,
