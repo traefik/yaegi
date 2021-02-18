@@ -208,7 +208,7 @@ type Panic struct {
 }
 
 // TODO: Capture interpreter stack frames also and remove
-// fmt.Println(n.cfgErrorf("panic")) in runCfg.
+// fmt.Fprintln(n.interp.stderr, oNode.cfgErrorf("panic")) in runCfg.
 
 func (e Panic) Error() string { return fmt.Sprint(e.Value) }
 
