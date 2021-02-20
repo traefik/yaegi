@@ -180,7 +180,7 @@ func runCfg(n *node, f *frame) {
 			if oNode == nil {
 				oNode = n
 			}
-			fmt.Println(oNode.cfgErrorf("panic"))
+			fmt.Fprintln(n.interp.stderr, oNode.cfgErrorf("panic"))
 			f.mutex.Unlock()
 			panic(f.recovered)
 		}
