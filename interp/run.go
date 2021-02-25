@@ -642,6 +642,15 @@ func assign(n *node) {
 				d(f).SetMapIndex(i(f), s(f))
 				return next
 			}
+		case n.kind == defineStmt:
+			l := n.level
+			ind := n.findex
+			n.exec = func(f *frame) bltn {
+				data := getFrame(f, l).data
+				data[ind] = reflect.New(data[ind].Type()).Elem()
+				data[ind].Set(s(f))
+				return next
+			}
 		default:
 			n.exec = func(f *frame) bltn {
 				d(f).Set(s(f))

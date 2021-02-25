@@ -95,15 +95,17 @@ func (f *frame) setrunid(id uint64) { atomic.StoreUint64(&f.id, id) }
 func (f *frame) clone() *frame {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
-	return &frame{
+	nf := &frame{
 		anc:       f.anc,
 		root:      f.root,
-		data:      f.data,
+		data:      make([]reflect.Value, len(f.data)),
 		deferred:  f.deferred,
 		recovered: f.recovered,
 		id:        f.runid(),
 		done:      f.done,
 	}
+	copy(nf.data, f.data)
+	return nf
 }
 
 // Exports stores the map of binary packages per package path.
