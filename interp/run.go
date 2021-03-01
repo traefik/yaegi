@@ -679,7 +679,6 @@ func assign(n *node) {
 		types[i] = t
 		index[i] = n.child[i].findex
 		level[i] = n.child[i].level
-
 	}
 
 	if n.kind == defineStmt {
