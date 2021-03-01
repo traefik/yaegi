@@ -632,6 +632,7 @@ func assign(n *node) {
 	}
 
 	if n.nleft == 1 {
+		// Single assign operation.
 		switch s, d, i := svalue[0], dvalue[0], ivalue[0]; {
 		case n.child[0].ident == "_":
 			n.exec = func(f *frame) bltn {
@@ -657,45 +658,70 @@ func assign(n *node) {
 				return next
 			}
 		}
-	} else {
-		types := make([]reflect.Type, n.nright)
-		for i := range types {
-			var t reflect.Type
-			switch typ := n.child[sbase+i].typ; typ.cat {
-			case funcT:
-				t = reflect.TypeOf((*node)(nil))
-			case interfaceT:
-				t = reflect.TypeOf((*valueInterface)(nil)).Elem()
-			default:
-				t = typ.TypeOf()
-			}
-			types[i] = t
-		}
+		return
+	}
 
-		// To handle swap in multi-assign:
-		// evaluate and copy all values in assign right hand side into temporary
-		// then evaluate assign left hand side and copy temporary into it
+	// Multi assign operation.
+	types := make([]reflect.Type, n.nright)
+	index := make([]int, n.nright)
+	level := make([]int, n.nright)
+
+	for i := range types {
+		var t reflect.Type
+		switch typ := n.child[sbase+i].typ; typ.cat {
+		case funcT:
+			t = reflect.TypeOf((*node)(nil))
+		case interfaceT:
+			t = reflect.TypeOf((*valueInterface)(nil)).Elem()
+		default:
+			t = typ.TypeOf()
+		}
+		types[i] = t
+		index[i] = n.child[i].findex
+		level[i] = n.child[i].level
+
+	}
+
+	if n.kind == defineStmt {
+		// Handle a multiple var declararation / assgin. It cannot be a swap.
 		n.exec = func(f *frame) bltn {
-			t := make([]reflect.Value, len(svalue))
 			for i, s := range svalue {
 				if n.child[i].ident == "_" {
 					continue
 				}
-				t[i] = reflect.New(types[i]).Elem()
-				t[i].Set(s(f))
-			}
-			for i, d := range dvalue {
-				if n.child[i].ident == "_" {
-					continue
-				}
-				if j := ivalue[i]; j != nil {
-					d(f).SetMapIndex(j(f), t[i]) // Assign a map entry
-				} else {
-					d(f).Set(t[i]) // Assign a var or array/slice entry
-				}
+				data := getFrame(f, level[i]).data
+				j := index[i]
+				data[j] = reflect.New(data[j].Type()).Elem()
+				data[j].Set(s(f))
 			}
 			return next
 		}
+		return
+	}
+
+	// To handle possible swap in multi-assign:
+	// evaluate and copy all values in assign right hand side into temporary
+	// then evaluate assign left hand side and copy temporary into it
+	n.exec = func(f *frame) bltn {
+		t := make([]reflect.Value, len(svalue))
+		for i, s := range svalue {
+			if n.child[i].ident == "_" {
+				continue
+			}
+			t[i] = reflect.New(types[i]).Elem()
+			t[i].Set(s(f))
+		}
+		for i, d := range dvalue {
+			if n.child[i].ident == "_" {
+				continue
+			}
+			if j := ivalue[i]; j != nil {
+				d(f).SetMapIndex(j(f), t[i]) // Assign a map entry
+			} else {
+				d(f).Set(t[i]) // Assign a var or array/slice entry
+			}
+		}
+		return next
 	}
 }
 
@@ -899,9 +925,20 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 		}
 	}
 	funcType := n.typ.TypeOf()
+	notInDefer := n.anc != nil && n.anc.anc != nil && n.anc.anc.kind != deferStmt
 
 	return func(f *frame) reflect.Value {
-		if n.frame != nil { // Use closure context if defined
+		if n.findex >= 0 && notInDefer {
+			// Generate a function wrapper on the node value in the frame
+			// obtained by getFunc, rather than the static node value,
+			// to preserve the right closuse context.
+			if v := getFrame(f, n.level).data[n.findex]; v.IsValid() {
+				if nod, ok := v.Interface().(*node); ok {
+					n = nod
+				}
+			}
+		}
+		if n.frame != nil { // Use closure context if defined.
 			f = n.frame
 		}
 		return reflect.MakeFunc(funcType, func(in []reflect.Value) []reflect.Value {
@@ -912,7 +949,7 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 				d[i] = reflect.New(t).Elem()
 			}
 
-			// Copy method receiver as first argument, if defined
+			// Copy method receiver as first argument, if defined.
 			if rcvr != nil {
 				src, dest := rcvr(f), d[numRet]
 				if src.Type().Kind() != dest.Type().Kind() {
@@ -928,7 +965,7 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 				d = d[numRet:]
 			}
 
-			// Copy function input arguments in local frame
+			// Copy function input arguments in local frame.
 			for i, arg := range in {
 				typ := def.typ.arg[i]
 				switch {
@@ -945,7 +982,7 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 				}
 			}
 
-			// Interpreter code execution
+			// Interpreter code execution.
 			runCfg(start, fr)
 
 			result := fr.data[:numRet]
@@ -1768,12 +1805,17 @@ func getIndexMap2(n *node) {
 	}
 }
 
+const (
+	nofork = false // Do not duplicate frame in frame.clone().
+	fork   = true  // Duplicate frame in frame.clone().
+)
+
 func getFunc(n *node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		fr := f.clone()
+		fr := f.clone(fork)
 		nod := *n
 		nod.val = &nod
 		nod.frame = fr
@@ -1788,7 +1830,7 @@ func getMethod(n *node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		fr := f.clone()
+		fr := f.clone(nofork)
 		nod := *(n.val.(*node))
 		nod.val = &nod
 		nod.recv = n.recv
@@ -1824,7 +1866,7 @@ func getMethodByName(n *node) {
 			return next
 		}
 		m, li := val.node.typ.lookupMethod(name)
-		fr := f.clone()
+		fr := f.clone(nofork)
 		nod := *m
 		nod.val = &nod
 		nod.recv = &receiver{nil, val.value, li}
