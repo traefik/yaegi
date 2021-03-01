@@ -924,19 +924,8 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 		}
 	}
 	funcType := n.typ.TypeOf()
-	notInDefer := n.anc != nil && n.anc.anc != nil && n.anc.anc.kind != deferStmt
 
 	return func(f *frame) reflect.Value {
-		if n.findex >= 0 && notInDefer {
-			// Generate a function wrapper on the node value in the frame
-			// obtained by getFunc, rather than the static node value,
-			// to preserve the right closuse context.
-			if v := getFrame(f, n.level).data[n.findex]; v.IsValid() {
-				if nod, ok := v.Interface().(*node); ok {
-					n = nod
-				}
-			}
-		}
 		if n.frame != nil { // Use closure context if defined.
 			f = n.frame
 		}
@@ -2572,7 +2561,7 @@ func doComposite(n *node, hasType bool, keyed bool) {
 		case val.typ.cat == nilT:
 			values[fieldIndex] = func(*frame) reflect.Value { return reflect.New(rft).Elem() }
 		case val.typ.cat == funcT:
-			values[fieldIndex] = genFunctionWrapper(val)
+			values[fieldIndex] = genValueAsFunctionWrapper(val)
 		case isArray(val.typ) && val.typ.val != nil && val.typ.val.cat == interfaceT:
 			values[fieldIndex] = genValueInterfaceArray(val)
 		case isRecursiveType(ft, rft):
