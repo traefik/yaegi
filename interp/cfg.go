@@ -565,15 +565,13 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				switch {
 				case n.action != aAssign:
 					// Do not skip assign operation if it is combined with another operator.
-				case n.kind == defineStmt:
-					// Do not skip assign operation if it is also a definition, requiring frame allocation.
 				case src.rval.IsValid():
 					// Do not skip assign operation if setting from a constant value.
 				case isMapEntry(dest):
 					// Setting a map entry requires an additional step, do not optimize.
 					// As we only write, skip the default useless getIndexMap dest action.
 					dest.gen = nop
-				case isCall(src) && dest.typ.cat != interfaceT && !isRecursiveField(dest):
+				case isCall(src) && dest.typ.cat != interfaceT && !isRecursiveField(dest) && n.kind != defineStmt:
 					// Call action may perform the assignment directly.
 					n.gen = nop
 					src.level = level

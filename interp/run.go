@@ -682,7 +682,7 @@ func assign(n *node) {
 	}
 
 	if n.kind == defineStmt {
-		// Handle a multiple var declararation / assgin. It cannot be a swap.
+		// Handle a multiple var declararation / assign. It cannot be a swap.
 		n.exec = func(f *frame) bltn {
 			for i, s := range svalue {
 				if n.child[i].ident == "_" {
