@@ -5,8 +5,7 @@ func main() {
 
 	for i := 0; i < 3; i++ {
 		a, b := i, i
-		_ = b
-		foos = append(foos, func() { println(i, a) })
+		foos = append(foos, func() { println(i, a, b) })
 	}
 	foos[0]()
 	foos[1]()
@@ -14,6 +13,6 @@ func main() {
 }
 
 // Output:
-// 3 0
-// 3 1
-// 3 2
+// 3 0 0
+// 3 1 1
+// 3 2 2
