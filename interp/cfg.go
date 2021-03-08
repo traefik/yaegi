@@ -565,6 +565,8 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				switch {
 				case n.action != aAssign:
 					// Do not skip assign operation if it is combined with another operator.
+				case n.kind == defineStmt:
+					// Do not skip assign operation if it is also a definition, requiring frame allocation.
 				case src.rval.IsValid():
 					// Do not skip assign operation if setting from a constant value.
 				case isMapEntry(dest):
