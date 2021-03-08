@@ -82,8 +82,15 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					i--
 				}
 				dest := a.child[i]
-				if dest.typ != nil && !isInterface(dest.typ) {
-					// Interface type are not propagated, and will be resolved at post-order.
+				if dest.typ == nil {
+					break
+				}
+				if dest.typ.incomplete {
+					err = n.cfgErrorf("invalid type declaration")
+					return false
+				}
+				if !isInterface(dest.typ) {
+					// Interface types are not propagated, and will be resolved at post-order.
 					n.typ = dest.typ
 				}
 			case binaryExpr, unaryExpr, parenExpr:
