@@ -590,14 +590,14 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					t.rtype = t.rtype.Elem()
 				}
 			} else {
-				err = n.cfgErrorf("undefined selector %s.%s", lt.path, name)
+				err = n.cfgErrorf("undefined selector FOUR %s.%s", lt.path, name)
 			}
 		case srcPkgT:
 			pkg := interp.srcPkg[lt.path]
 			if s, ok := pkg[name]; ok {
 				t = s.typ
 			} else {
-				err = n.cfgErrorf("undefined selector %s.%s", lt.path, name)
+				err = n.cfgErrorf("undefined selector FIVE %s.%s", lt.path, name)
 			}
 		default:
 			if m, _ := lt.lookupMethod(name); m != nil {
@@ -609,7 +609,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			} else if bs, _, ok := lt.lookupBinField(name); ok {
 				t = &itype{cat: valueT, rtype: bs.Type, scope: sc}
 			} else {
-				err = lt.node.cfgErrorf("undefined selector %s", name)
+				err = lt.node.cfgErrorf("undefined selector SIX %s", name)
 			}
 		}
 

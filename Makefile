@@ -20,8 +20,8 @@ install:
 	GOFLAGS=-ldflags=-X=main.version=$$(git describe --tags) go install ./...
 
 tests:
-	go test -v ./...
-	go test -race ./interp
+	# go test -v ./...
+	go test -race -run TestMultiEval ./interp
 
 # https://github.com/goreleaser/godownloader
 install.sh: .goreleaser.yml

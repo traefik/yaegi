@@ -1511,7 +1511,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					n.val = field.Index
 					n.gen = getPtrIndexSeq
 				} else {
-					err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
+					err = n.cfgErrorf("undefined selector ONE: %s", n.child[1].ident)
 				}
 			} else if n.typ.cat == binPkgT {
 				// Resolve binary package symbol: a type or a value
@@ -1544,7 +1544,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					n.sym = sym
 					n.rval = sym.rval
 				} else {
-					err = n.cfgErrorf("undefined selector: %s.%s", pkg, name)
+					err = n.cfgErrorf("undefined selector TWO: %s.%s", pkg, name)
 				}
 			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
 				n.action = aGetMethod
@@ -1605,7 +1605,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				n.val = lind
 				n.typ = &itype{cat: valueT, rtype: s.Type}
 			} else {
-				err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
+				err = n.cfgErrorf("undefined selector THREE: %s", n.child[1].ident)
 			}
 			if err == nil && n.findex != -1 {
 				n.findex = sc.add(n.typ)

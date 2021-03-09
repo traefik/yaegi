@@ -816,7 +816,6 @@ func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expecte
 }
 
 func TestMultiEval(t *testing.T) {
-	t.Skip("fail in CI only ?")
 	// catch stdout
 	backupStdout := os.Stdout
 	defer func() {
@@ -863,7 +862,6 @@ func TestMultiEval(t *testing.T) {
 }
 
 func TestMultiEvalNoName(t *testing.T) {
-	t.Skip("fail in CI only ?")
 	i := interp.New(interp.Options{})
 	i.Use(stdlib.Symbols)
 	var err error
