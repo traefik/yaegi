@@ -1793,10 +1793,7 @@ func getIndexMap2(n *node) {
 	}
 }
 
-const (
-	nofork = false // Do not duplicate frame in frame.clone().
-	fork   = true  // Duplicate frame in frame.clone().
-)
+const fork = true // Duplicate frame in frame.clone().
 
 func getFunc(n *node) {
 	dest := genValue(n)
@@ -1818,7 +1815,7 @@ func getMethod(n *node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		fr := f.clone(nofork)
+		fr := f.clone(!fork)
 		nod := *(n.val.(*node))
 		nod.val = &nod
 		nod.recv = n.recv
@@ -1854,7 +1851,7 @@ func getMethodByName(n *node) {
 			return next
 		}
 		m, li := val.node.typ.lookupMethod(name)
-		fr := f.clone(nofork)
+		fr := f.clone(!fork)
 		nod := *m
 		nod.val = &nod
 		nod.recv = &receiver{nil, val.value, li}
