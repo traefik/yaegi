@@ -571,7 +571,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					// Setting a map entry requires an additional step, do not optimize.
 					// As we only write, skip the default useless getIndexMap dest action.
 					dest.gen = nop
-				case isCall(src) && dest.typ.cat != interfaceT && !isRecursiveField(dest):
+				case isCall(src) && dest.typ.cat != interfaceT && !isRecursiveField(dest) && n.kind != defineStmt:
 					// Call action may perform the assignment directly.
 					n.gen = nop
 					src.level = level
