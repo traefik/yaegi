@@ -1631,6 +1631,13 @@ func defRecvType(n *node) *itype {
 	return nil
 }
 
+func wrappedType(n *node) *itype {
+	if n.typ.cat != valueT {
+		return nil
+	}
+	return n.typ.val
+}
+
 func isShiftNode(n *node) bool {
 	switch n.action {
 	case aShl, aShr, aShlAssign, aShrAssign:
