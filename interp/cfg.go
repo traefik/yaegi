@@ -82,7 +82,13 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					i--
 				}
 				dest := a.child[i]
-				if dest.typ != nil && !isInterface(dest.typ) {
+				if dest.typ == nil {
+					break
+				}
+				if dest.typ.incomplete {
+					err = n.cfgErrorf("invalid type declaration")
+				}
+				if !isInterface(dest.typ) {
 					// Interface type are not propagated, and will be resolved at post-order.
 					n.typ = dest.typ
 				}
