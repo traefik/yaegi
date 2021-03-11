@@ -1334,16 +1334,18 @@ func callBin(n *node) {
 	tnext := getExec(n.tnext)
 	fnext := getExec(n.fnext)
 	child := n.child[1:]
-	value := genValue(n.child[0])
+	c0 := n.child[0]
+	value := genValue(c0)
 	var values []func(*frame) reflect.Value
-	funcType := n.child[0].typ.rtype
+	funcType := c0.typ.rtype
+	wt := wrappedType(c0)
 	variadic := -1
 	if funcType.IsVariadic() {
 		variadic = funcType.NumIn() - 1
 	}
 	// A method signature obtained from reflect.Type includes receiver as 1st arg, except for interface types.
 	rcvrOffset := 0
-	if recv := n.child[0].recv; recv != nil && !isInterface(recv.node.typ) {
+	if recv := c0.recv; recv != nil && !isInterface(recv.node.typ) {
 		if variadic > 0 || funcType.NumIn() > len(child) {
 			rcvrOffset = 1
 		}
@@ -1390,6 +1392,11 @@ func callBin(n *node) {
 				if !reflect.ValueOf(c.val).IsValid() { //  Handle "nil"
 					c.val = reflect.Zero(argType)
 				}
+			}
+
+			if wt != nil && wt.arg[i].cat == interfaceT {
+				values = append(values, genValueInterface(c))
+				break
 			}
 
 			switch c.typ.cat {

@@ -90,7 +90,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					return false
 				}
 				if !isInterface(dest.typ) {
-					// Interface types are not propagated, and will be resolved at post-order.
+					// Interface type are not propagated, and will be resolved at post-order.
 					n.typ = dest.typ
 				}
 			case binaryExpr, unaryExpr, parenExpr:
@@ -578,6 +578,8 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					// Setting a map entry requires an additional step, do not optimize.
 					// As we only write, skip the default useless getIndexMap dest action.
 					dest.gen = nop
+				case isFuncField(dest):
+					// Setting a struct field of function type requires an extra step. Do not optimize.
 				case isCall(src) && dest.typ.cat != interfaceT && !isRecursiveField(dest) && n.kind != defineStmt:
 					// Call action may perform the assignment directly.
 					n.gen = nop
@@ -2393,6 +2395,10 @@ func isNewDefine(n *node, sc *scope) bool {
 
 func isMethod(n *node) bool {
 	return len(n.child[0].child) > 0 // receiver defined
+}
+
+func isFuncField(n *node) bool {
+	return isField(n) && isFunc(n.typ)
 }
 
 func isMapEntry(n *node) bool {

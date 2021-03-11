@@ -45,21 +45,35 @@ func genValueBinMethodOnInterface(n *node, defaultGen func(*frame) reflect.Value
 		n.child[0].child == nil || n.child[0].child[0] == nil {
 		return defaultGen
 	}
-	if n.child[0].child[1] == nil || n.child[0].child[1].ident == "" {
+	c0 := n.child[0]
+	if c0.child[1] == nil || c0.child[1].ident == "" {
 		return defaultGen
 	}
-	value0 := genValue(n.child[0].child[0])
+	value0 := genValue(c0.child[0])
 
 	return func(f *frame) reflect.Value {
-		val, ok := value0(f).Interface().(valueInterface)
-		if !ok {
+		v := value0(f)
+		var nod *node
+
+		for v.IsValid() {
+			// Traverse interface indirections to find out concrete type.
+			vi, ok := v.Interface().(valueInterface)
+			if !ok {
+				break
+			}
+			v = vi.value
+			nod = vi.node
+		}
+
+		if nod == nil {
 			return defaultGen(f)
 		}
-		typ := val.node.typ
+
+		typ := nod.typ
 		if typ.node != nil || typ.cat != valueT {
 			return defaultGen(f)
 		}
-		meth, _ := typ.rtype.MethodByName(n.child[0].child[1].ident)
+		meth, _ := typ.rtype.MethodByName(c0.child[1].ident)
 		return meth.Func
 	}
 }
