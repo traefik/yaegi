@@ -78,6 +78,13 @@ func TestPackages(t *testing.T) {
 			importPath: "guthib.com/baz",
 			expected:   expectedOutput,
 		},
+		{
+			desc:       "using relative path, package name is not same as import path",
+			wd:         "./testdata/6/src/guthib.com/bar",
+			arg:        "../baz-baz",
+			importPath: "guthib.com/baz",
+			expected:   expectedOutput,
+		},
 	}
 
 	for _, test := range testCases {

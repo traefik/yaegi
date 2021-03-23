@@ -16,7 +16,6 @@ import (
 	"io"
 	"math/big"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -167,8 +166,8 @@ func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, err
 			continue
 		}
 
-		pname := path.Base(importPath) + "." + name
-		if rname := path.Base(importPath) + name; restricted[rname] {
+		pname := p.Name() + "." + name
+		if rname := p.Name() + name; restricted[rname] {
 			// Restricted symbol, locally provided by stdlib wrapper.
 			pname = rname
 		}
