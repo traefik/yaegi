@@ -204,7 +204,8 @@ func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, err
 						}
 						// process interface method variadic parameter
 						if sign.Variadic() && j == len(args)-1 { // check is last arg
-							at := strings.ReplaceAll(types.TypeString(v.Type(), qualify), "[]", "")
+							// only replace the first "[]" to "..."
+							at := types.TypeString(v.Type(), qualify)[2:]
 							params[j] = args[j] + " ..." + at
 							args[j] += "..."
 						} else {
