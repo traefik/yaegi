@@ -124,14 +124,13 @@ type opt struct {
 	cfgDot bool // display CFG graph (debug)
 	// dotCmd is the command to process the dot graph produced when astDot and/or
 	// cfgDot is enabled. It defaults to 'dot -Tdot -o <filename>.dot'.
-	dotCmd      string
-	noRun       bool          // compile, but do not run
-	fastChan    bool          // disable cancellable chan operations
-	context     build.Context // build context: GOPATH, build constraints
-	stdin       io.Reader     // standard input
-	stdout      io.Writer     // standard output
-	stderr      io.Writer     // standard error
-	allowRedecl bool          // allow redeclaration
+	dotCmd   string
+	noRun    bool          // compile, but do not run
+	fastChan bool          // disable cancellable chan operations
+	context  build.Context // build context: GOPATH, build constraints
+	stdin    io.Reader     // standard input
+	stdout   io.Writer     // standard output
+	stderr   io.Writer     // standard error
 }
 
 // Interpreter contains global resources and state.
@@ -245,9 +244,6 @@ type Options struct {
 	// They default to os.Stding, os.Stdout and os.Stderr respectively.
 	Stdin          io.Reader
 	Stdout, Stderr io.Writer
-
-	// AllowRedeclaration sets whether declarations can be overridden
-	AllowRedeclaration bool
 }
 
 // New returns a new interpreter.
@@ -264,8 +260,6 @@ func New(options Options) *Interpreter {
 		rdir:     map[string]bool{},
 		hooks:    &hooks{},
 	}
-
-	i.opt.allowRedecl = options.AllowRedeclaration
 
 	if i.opt.stdin = options.Stdin; i.opt.stdin == nil {
 		i.opt.stdin = os.Stdin
