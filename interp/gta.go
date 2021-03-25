@@ -209,7 +209,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 					// imports in different source files of the same package. Therefore, we suffix
 					// the key with the basename of the source file.
 					name = filepath.Join(name, baseName)
-					if _, exists := sc.sym[name]; !exists {
+					if _, exists := sc.sym[name]; interp.allowRedecl || !exists {
 						sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath, scope: sc}}
 						break
 					}
@@ -233,7 +233,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 						name = pkgName
 					}
 					name = filepath.Join(name, baseName)
-					if _, exists := sc.sym[name]; !exists {
+					if _, exists := sc.sym[name]; interp.allowRedecl || !exists {
 						sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: ipath, scope: sc}}
 						break
 					}
