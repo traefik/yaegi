@@ -202,7 +202,15 @@ func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, err
 						if args[j] = v.Name(); args[j] == "" {
 							args[j] = fmt.Sprintf("a%d", j)
 						}
-						params[j] = args[j] + " " + types.TypeString(v.Type(), qualify)
+						// process interface method variadic parameter
+						if sign.Variadic() && j == len(args)-1 { // check is last arg
+							// only replace the first "[]" to "..."
+							at := types.TypeString(v.Type(), qualify)[2:]
+							params[j] = args[j] + " ..." + at
+							args[j] += "..."
+						} else {
+							params[j] = args[j] + " " + types.TypeString(v.Type(), qualify)
+						}
 					}
 					arg := "(" + strings.Join(args, ", ") + ")"
 					param := "(" + strings.Join(params, ", ") + ")"
