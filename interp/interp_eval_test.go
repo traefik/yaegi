@@ -123,6 +123,8 @@ func TestEvalAssign(t *testing.T) {
 		{src: "h := 1; h >>= 8", res: "0"},
 		{src: "i := 1; j := &i; (*j) = 2", res: "2"},
 		{src: "i64 := testpkg.val; i64 == 11", res: "true"},
+		{src: "k := 1", res: "1"},
+		{src: `k := "Hello world"`, res: "Hello world"}, // allow reassignment in subsequent evaluations
 	})
 }
 
