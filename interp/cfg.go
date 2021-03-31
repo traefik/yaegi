@@ -614,6 +614,8 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				case src.kind == basicLit:
 					// Assign to nil.
 					src.rval = reflect.New(dest.typ.TypeOf()).Elem()
+				case n.nright == 0:
+					n.gen = reset
 				}
 
 				n.typ = dest.typ
