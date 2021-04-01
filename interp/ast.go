@@ -716,7 +716,7 @@ func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error
 			n := addChild(&root, anc, pos, identExpr, aNop)
 			n.ident = a.Name
 			st.push(n, nod)
-			if n.anc.kind == defineStmt && n.anc.nright == 0 {
+			if n.anc.kind == defineStmt && n.anc.anc.kind == constDecl && n.anc.nright == 0 {
 				// Implicit assign expression (in a ConstDecl block).
 				// Clone assign source and type from previous
 				a := n.anc
@@ -858,7 +858,8 @@ func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error
 		case *ast.ValueSpec:
 			kind := valueSpec
 			act := aNop
-			if a.Values != nil {
+			switch {
+			case a.Values != nil:
 				if len(a.Names) > 1 && len(a.Values) == 1 {
 					if anc.node.kind == constDecl || anc.node.kind == varDecl {
 						kind = defineXStmt
@@ -874,7 +875,9 @@ func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error
 					}
 					act = aAssign
 				}
-			} else if anc.node.kind == constDecl {
+			case anc.node.kind == constDecl:
+				kind, act = defineStmt, aAssign
+			case anc.node.kind == varDecl && anc.node.anc.kind != fileStmt:
 				kind, act = defineStmt, aAssign
 			}
 			n := addChild(&root, anc, pos, kind, act)
