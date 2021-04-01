@@ -134,6 +134,10 @@ func untypedInt() *itype     { return &itype{cat: intT, name: "int", untyped: tr
 func untypedFloat() *itype   { return &itype{cat: float64T, name: "float64", untyped: true} }
 func untypedComplex() *itype { return &itype{cat: complex128T, name: "complex128", untyped: true} }
 
+func errorMethodType(sc *scope) *itype {
+	return &itype{cat: funcT, ret: []*itype{sc.getType("string")}}
+}
+
 // nodeType returns a type definition for the corresponding AST subtree.
 func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	if n.typ != nil && !n.typ.incomplete {
@@ -512,21 +516,28 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			}
 		}
 		for _, field := range n.child[0].child {
+			f0 := field.child[0]
 			if len(field.child) == 1 {
-				typ, err := nodeType(interp, sc, field.child[0])
+				if f0.ident == "error" {
+					// Unwrap error interface inplace rather than embedding it, because
+					// "error" is lower case which may cause problems with reflect for method lookup.
+					t.field = append(t.field, structField{name: "Error", typ: errorMethodType(sc)})
+					continue
+				}
+				typ, err := nodeType(interp, sc, f0)
 				if err != nil {
 					return nil, err
 				}
-				t.field = append(t.field, structField{name: fieldName(field.child[0]), embed: true, typ: typ})
+				t.field = append(t.field, structField{name: fieldName(f0), embed: true, typ: typ})
 				incomplete = incomplete || typ.incomplete
-			} else {
-				typ, err := nodeType(interp, sc, field.child[1])
-				if err != nil {
-					return nil, err
-				}
-				t.field = append(t.field, structField{name: field.child[0].ident, typ: typ})
-				incomplete = incomplete || typ.incomplete
+				continue
 			}
+			typ, err := nodeType(interp, sc, field.child[1])
+			if err != nil {
+				return nil, err
+			}
+			t.field = append(t.field, structField{name: f0.ident, typ: typ})
+			incomplete = incomplete || typ.incomplete
 		}
 		t.incomplete = incomplete
 
@@ -968,6 +979,10 @@ func (t *itype) assignableTo(o *itype) bool {
 		return true
 	}
 
+	if isInterface(o) && t.implements(o) {
+		return true
+	}
+
 	n := t.node
 	if n == nil || !n.rval.IsValid() {
 		return false
@@ -1066,7 +1081,7 @@ func (t *itype) methods() methodSet {
 			}
 		case valueT, errorT:
 			// Get method from corresponding reflect.Type.
-			for i := typ.rtype.NumMethod() - 1; i >= 0; i-- {
+			for i := typ.TypeOf().NumMethod() - 1; i >= 0; i-- {
 				m := typ.rtype.Method(i)
 				res[m.Name] = m.Type.String()
 			}
