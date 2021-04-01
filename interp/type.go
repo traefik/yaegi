@@ -979,7 +979,7 @@ func (t *itype) assignableTo(o *itype) bool {
 		return true
 	}
 
-	if isInterface(t) && isInterface(o) && t.implements(o) {
+	if isInterface(o) && t.implements(o) {
 		return true
 	}
 
