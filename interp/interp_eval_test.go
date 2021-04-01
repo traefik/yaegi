@@ -187,7 +187,7 @@ func TestEvalDeclWithExpr(t *testing.T) {
 	runTests(t, i, []testCase{
 		{src: `a1 := ""; var a2 int; a2 = 2`, res: "2"},
 		{src: `b1 := ""; const b2 = 2; b2`, res: "2"},
-		{src: `c1 := ""; var c2, c3 [32]byte; c3[3]`, res: "0"},
+		{src: `c1 := ""; var c2, c3 [8]byte; c3[3]`, res: "0"},
 	})
 }
 
