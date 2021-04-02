@@ -123,6 +123,7 @@ func TestEvalAssign(t *testing.T) {
 		{src: "h := 1; h >>= 8", res: "0"},
 		{src: "i := 1; j := &i; (*j) = 2", res: "2"},
 		{src: "i64 := testpkg.val; i64 == 11", res: "true"},
+		{pre: func() { eval(t, i, "k := 1") }, src: `k := "Hello world"`, res: "Hello world"}, // allow reassignment in subsequent evaluations
 	})
 }
 
@@ -139,8 +140,8 @@ func TestEvalBuiltin(t *testing.T) {
 		{src: `g := cap(a)`, res: "1"},
 		{src: `g := len("test")`, res: "4"},
 		{src: `g := len(map[string]string{"a": "b"})`, res: "1"},
-		{src: `a := len()`, err: "not enough arguments in call to len"},
-		{src: `a := len([]int, 0)`, err: "too many arguments for len"},
+		{src: `n := len()`, err: "not enough arguments in call to len"},
+		{src: `n := len([]int, 0)`, err: "too many arguments for len"},
 		{src: `g := cap("test")`, err: "1:37: invalid argument for cap"},
 		{src: `g := cap(map[string]string{"a": "b"})`, err: "1:37: invalid argument for cap"},
 		{src: `h := make(chan int, 1); close(h); len(h)`, res: "0"},

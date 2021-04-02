@@ -80,9 +80,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 				if typ.isBinMethod {
 					typ = &itype{cat: valueT, rtype: typ.methodCallType(), isBinMethod: true, scope: sc}
 				}
-				if sc.sym[dest.ident] == nil || sc.sym[dest.ident].typ.incomplete {
-					sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val, node: n}
-				}
+				sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val, node: n}
 				if n.anc.kind == constDecl {
 					sc.sym[dest.ident].kind = constSym
 					if childPos(n) == len(n.anc.child)-1 {
