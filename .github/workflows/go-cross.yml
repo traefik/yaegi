@@ -18,14 +18,13 @@ jobs:
     strategy:
       matrix:
         go-version: [ 1.15, 1.16 ]
-#        os: [ubuntu-latest, macos-latest, windows-latest]
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
         include:
           - os: ubuntu-latest
             go-path-suffix: /go
-#          - os: macos-latest
-#            go-path-suffix: /go
+          - os: macos-latest
+            go-path-suffix: /go
           - os: windows-latest
             go-path-suffix: \go
 
