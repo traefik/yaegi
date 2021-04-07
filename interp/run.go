@@ -1387,7 +1387,6 @@ func callBin(n *node) {
 				break
 			}
 
-			//switch c.typ.cat {
 			switch {
 			case isFuncSrc(c.typ):
 				values = append(values, genFunctionWrapper(c))
