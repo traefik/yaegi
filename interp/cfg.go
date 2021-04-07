@@ -179,7 +179,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						sc.add(sc.getType("int")) // Add a dummy type to store array shallow copy for range
 						ktyp = sc.getType("int")
 						vtyp = sc.getType("rune")
-					case arrayT, variadicT:
+					case arrayT, sliceT, variadicT:
 						sc.add(sc.getType("int")) // Add a dummy type to store array shallow copy for range
 						ktyp = sc.getType("int")
 						vtyp = o.typ.val
@@ -524,10 +524,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					}
 					if dest.typ.incomplete {
 						return
-					}
-					if dest.typ.sizedef {
-						dest.typ.size = arrayTypeLen(src)
-						dest.typ.rtype = nil
 					}
 					if sc.global {
 						// Do not overload existing symbols (defined in GTA) in global scope
@@ -1054,8 +1050,8 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			}
 
 			switch n.typ.cat {
-			case arrayT:
-				err = check.arrayLitExpr(child, n.typ.val, n.typ.size)
+			case arrayT, sliceT:
+				err = check.arrayLitExpr(child, n.typ)
 			case mapT:
 				err = check.mapLitExpr(child, n.typ.key, n.typ.val)
 			case structT:
@@ -2513,7 +2509,7 @@ func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerat
 	switch typ.cat {
 	case aliasT, ptrT:
 		gen = compositeGenerator(n, n.typ.val, rtyp)
-	case arrayT:
+	case arrayT, sliceT:
 		gen = arrayLit
 	case mapT:
 		gen = mapLit
@@ -2567,8 +2563,8 @@ func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerat
 // array variable it is determined from the value's type, otherwise it is
 // computed from the source definition.
 func arrayTypeLen(n *node) int {
-	if n.typ != nil && n.typ.sizedef {
-		return n.typ.size
+	if n.typ != nil && n.typ.cat == arrayT {
+		return n.typ.length
 	}
 	max := -1
 	for i, c := range n.child[1:] {
