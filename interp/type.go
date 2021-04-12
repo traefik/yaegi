@@ -1065,6 +1065,10 @@ func (t *itype) methods() methodSet {
 		seen[typ] = true
 
 		switch typ.cat {
+		case aliasT:
+			for k, v := range getMethods(typ.val) {
+				res[k] = v
+			}
 		case interfaceT:
 			// Get methods from recursive analysis of interface fields.
 			for _, f := range typ.field {
