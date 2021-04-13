@@ -38,6 +38,7 @@ const (
 	int64T
 	mapT
 	ptrT
+	sliceT
 	srcPkgT
 	stringT
 	structT
@@ -75,6 +76,7 @@ var cats = [...]string{
 	int64T:      "int64T",
 	mapT:        "mapT",
 	ptrT:        "ptrT",
+	sliceT:      "sliceT",
 	srcPkgT:     "srcPkgT",
 	stringT:     "stringT",
 	structT:     "structT",
@@ -109,19 +111,18 @@ type itype struct {
 	cat         tcat          // Type category
 	field       []structField // Array of struct fields if structT or interfaceT
 	key         *itype        // Type of key element if MapT or nil
-	val         *itype        // Type of value element if chanT, chanSendT, chanRecvT, mapT, ptrT, aliasT, arrayT or variadicT
+	val         *itype        // Type of value element if chanT, chanSendT, chanRecvT, mapT, ptrT, aliasT, arrayT, sliceT or variadicT
 	recv        *itype        // Receiver type for funcT or nil
 	arg         []*itype      // Argument types if funcT or nil
 	ret         []*itype      // Return types if funcT or nil
 	method      []*node       // Associated methods or nil
 	name        string        // name of type within its package for a defined type
 	path        string        // for a defined type, the package import path
-	size        int           // Size of array if ArrayT
+	length      int           // length of array if ArrayT
 	rtype       reflect.Type  // Reflection type if ValueT, or nil
 	incomplete  bool          // true if type must be parsed again (out of order declarations)
 	recursive   bool          // true if the type has an element which refer to itself
 	untyped     bool          // true for a literal value (string or number)
-	sizedef     bool          // true if array size is computed from type definition
 	isBinMethod bool          // true if the type refers to a bin method function
 	node        *node         // root AST node of type definition
 	scope       *scope        // type declaration scope (in case of re-parse incomplete type)
@@ -141,9 +142,6 @@ func errorMethodType(sc *scope) *itype {
 // nodeType returns a type definition for the corresponding AST subtree.
 func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	if n.typ != nil && !n.typ.incomplete {
-		if n.kind == sliceExpr {
-			n.typ.sizedef = false
-		}
 		return n.typ, nil
 	}
 
@@ -169,10 +167,10 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		t.incomplete = t.val.incomplete
 
 	case arrayType:
-		t.cat = arrayT
 		c0 := n.child[0]
 		if len(n.child) == 1 {
 			// Array size is not defined.
+			t.cat = sliceT
 			if t.val, err = nodeType(interp, sc, c0); err != nil {
 				return nil, err
 			}
@@ -180,18 +178,19 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			break
 		}
 		// Array size is defined.
+		t.cat = arrayT
 		switch v := c0.rval; {
 		case v.IsValid():
 			// Size if defined by a constant litteral value.
 			if isConstantValue(v.Type()) {
 				c := v.Interface().(constant.Value)
-				t.size = constToInt(c)
+				t.length = constToInt(c)
 			} else {
-				t.size = int(v.Int())
+				t.length = int(v.Int())
 			}
 		case c0.kind == ellipsisExpr:
 			// [...]T expression, get size from the length of composite array.
-			t.size = arrayTypeLen(n.anc)
+			t.length = arrayTypeLen(n.anc)
 		case c0.kind == identExpr:
 			sym, _, ok := sc.lookup(c0.ident)
 			if !ok {
@@ -207,11 +206,11 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				break
 			}
 			if v, ok := sym.rval.Interface().(int); ok {
-				t.size = v
+				t.length = v
 				break
 			}
 			if c, ok := sym.rval.Interface().(constant.Value); ok {
-				t.size = constToInt(c)
+				t.length = constToInt(c)
 				break
 			}
 			t.incomplete = true
@@ -225,12 +224,11 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				t.incomplete = true
 				break
 			}
-			t.size = constToInt(v)
+			t.length = constToInt(v)
 		}
 		if t.val, err = nodeType(interp, sc, n.child[1]); err != nil {
 			return nil, err
 		}
-		t.sizedef = true
 		t.incomplete = t.incomplete || t.val.incomplete
 
 	case basicLit:
@@ -503,7 +501,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			break
 		}
 		switch lt.cat {
-		case arrayT, mapT:
+		case arrayT, mapT, sliceT, variadicT:
 			t = lt.val
 		}
 
@@ -626,15 +624,14 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 
 	case sliceExpr:
 		t, err = nodeType(interp, sc, n.child[0])
+		if err != nil {
+			return nil, err
+		}
 		if t.cat == ptrT {
 			t = t.val
 		}
-		if err == nil && t.size != 0 {
-			t1 := *t
-			t1.size = 0
-			t1.sizedef = false
-			t1.rtype = nil
-			t = &t1
+		if t.cat == arrayT {
+			t = &itype{cat: sliceT, val: t.val, incomplete: t.incomplete, node: n, scope: sc}
 		}
 
 	case structType:
@@ -786,7 +783,7 @@ func (t *itype) referTo(name string, seen map[*itype]bool) bool {
 	}
 	seen[t] = true
 	switch t.cat {
-	case aliasT, arrayT, chanT, chanRecvT, chanSendT, ptrT:
+	case aliasT, arrayT, chanT, chanRecvT, chanSendT, ptrT, sliceT, variadicT:
 		return t.val.referTo(name, seen)
 	case funcT:
 		for _, a := range t.arg {
@@ -930,7 +927,7 @@ func isComplete(t *itype, visited map[string]bool) bool {
 			return true
 		}
 		fallthrough
-	case arrayT, chanT, chanRecvT, chanSendT, ptrT:
+	case arrayT, chanT, chanRecvT, chanSendT, ptrT, sliceT, variadicT:
 		return isComplete(t.val, visited)
 	case funcT:
 		complete := true
@@ -1129,11 +1126,7 @@ func (t *itype) id() (res string) {
 	case nilT:
 		res = "nil"
 	case arrayT:
-		if t.size == 0 {
-			res = "[]" + t.val.id()
-		} else {
-			res = "[" + strconv.Itoa(t.size) + "]" + t.val.id()
-		}
+		res = "[" + strconv.Itoa(t.length) + "]" + t.val.id()
 	case chanT:
 		res = "chan " + t.val.id()
 	case chanSendT:
@@ -1166,6 +1159,8 @@ func (t *itype) id() (res string) {
 		res = "map[" + t.key.id() + "]" + t.val.id()
 	case ptrT:
 		res = "*" + t.val.id()
+	case sliceT:
+		res = "[]" + t.val.id()
 	case structT:
 		res = "struct{"
 		for _, t := range t.field {
@@ -1178,6 +1173,8 @@ func (t *itype) id() (res string) {
 			res += t.rtype.PkgPath() + "."
 		}
 		res += t.rtype.Name()
+	case variadicT:
+		res = "..." + t.val.id()
 	}
 	return res
 }
@@ -1191,7 +1188,7 @@ func (t *itype) zero() (v reflect.Value, err error) {
 	case aliasT:
 		v, err = t.val.zero()
 
-	case arrayT, ptrT, structT:
+	case arrayT, ptrT, structT, sliceT:
 		v = reflect.New(t.frameType()).Elem()
 
 	case valueT:
@@ -1438,12 +1435,10 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 	switch t.cat {
 	case aliasT:
 		t.rtype = t.val.refType(defined, wrapRecursive)
-	case arrayT, variadicT:
-		if t.sizedef {
-			t.rtype = reflect.ArrayOf(t.size, t.val.refType(defined, wrapRecursive))
-		} else {
-			t.rtype = reflect.SliceOf(t.val.refType(defined, wrapRecursive))
-		}
+	case arrayT:
+		t.rtype = reflect.ArrayOf(t.length, t.val.refType(defined, wrapRecursive))
+	case sliceT, variadicT:
+		t.rtype = reflect.SliceOf(t.val.refType(defined, wrapRecursive))
 	case chanT:
 		t.rtype = reflect.ChanOf(reflect.BothDir, t.val.refType(defined, wrapRecursive))
 	case chanRecvT:
@@ -1518,12 +1513,10 @@ func (t *itype) frameType() (r reflect.Type) {
 	switch t.cat {
 	case aliasT:
 		r = t.val.frameType()
-	case arrayT, variadicT:
-		if t.sizedef {
-			r = reflect.ArrayOf(t.size, t.val.frameType())
-		} else {
-			r = reflect.SliceOf(t.val.frameType())
-		}
+	case arrayT:
+		r = reflect.ArrayOf(t.length, t.val.frameType())
+	case sliceT, variadicT:
+		r = reflect.SliceOf(t.val.frameType())
 	case funcT:
 		r = reflect.TypeOf((*node)(nil))
 	case interfaceT:

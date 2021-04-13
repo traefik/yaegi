@@ -571,7 +571,7 @@ func isRecursiveType(t *itype, rtype reflect.Type) bool {
 		return true
 	}
 	switch t.cat {
-	case ptrT, arrayT, mapT:
+	case arrayT, mapT, ptrT, sliceT:
 		return isRecursiveType(t.val, t.val.rtype)
 	default:
 		return false
@@ -1409,7 +1409,7 @@ func callBin(n *node) {
 				}
 				// empty interface, do not wrap it.
 				values = append(values, genValue(c))
-			case arrayT, variadicT:
+			case arrayT, sliceT, variadicT:
 				switch c.typ.val.cat {
 				case interfaceT:
 					if len(c.typ.val.field) > 0 {
@@ -2340,12 +2340,13 @@ func arrayLit(n *node) {
 	}
 
 	typ := n.typ.frameType()
+	kind := typ.Kind()
 	n.exec = func(f *frame) bltn {
 		var a reflect.Value
-		if n.typ.sizedef {
-			a, _ = n.typ.zero()
-		} else {
+		if kind == reflect.Slice {
 			a = reflect.MakeSlice(typ, max, max)
+		} else {
+			a, _ = n.typ.zero()
 		}
 		for i, v := range values {
 			a.Index(index[i]).Set(v(f))
@@ -2452,12 +2453,13 @@ func compositeBinSlice(n *node) {
 	}
 
 	typ := n.typ.frameType()
+	kind := typ.Kind()
 	n.exec = func(f *frame) bltn {
 		var a reflect.Value
-		if n.typ.sizedef {
-			a, _ = n.typ.zero()
-		} else {
+		if kind == reflect.Slice {
 			a = reflect.MakeSlice(typ, max, max)
+		} else {
+			a, _ = n.typ.zero()
 		}
 		for i, v := range values {
 			a.Index(index[i]).Set(v(f))
@@ -2947,7 +2949,7 @@ func _append(n *node) {
 	if len(n.child) == 3 {
 		c1, c2 := n.child[1], n.child[2]
 		if (c1.typ.cat == valueT || c2.typ.cat == valueT) && c1.typ.rtype == c2.typ.rtype ||
-			(c2.typ.cat == arrayT || c2.typ.cat == variadicT) && c2.typ.val.id() == n.typ.val.id() ||
+			(c2.typ.cat == arrayT || c2.typ.cat == sliceT || c2.typ.cat == variadicT) && c2.typ.val.id() == n.typ.val.id() ||
 			isByteArray(c1.typ.TypeOf()) && isString(c2.typ.TypeOf()) {
 			appendSlice(n)
 			return
