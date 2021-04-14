@@ -1677,6 +1677,18 @@ func isFunc(t *itype) bool { return t.TypeOf().Kind() == reflect.Func }
 func isMap(t *itype) bool  { return t.TypeOf().Kind() == reflect.Map }
 func isPtr(t *itype) bool  { return t.TypeOf().Kind() == reflect.Ptr }
 
+func isEmptyInterface(t *itype) bool {
+	return t.cat == interfaceT && len(t.field) == 0
+}
+
+func isFuncSrc(t *itype) bool {
+	return t.cat == funcT || (t.cat == aliasT && isFuncSrc(t.val))
+}
+
+func isPtrSrc(t *itype) bool {
+	return t.cat == ptrT || (t.cat == aliasT && isPtrSrc(t.val))
+}
+
 func isSendChan(t *itype) bool {
 	rt := t.TypeOf()
 	return rt.Kind() == reflect.Chan && rt.ChanDir() == reflect.SendDir

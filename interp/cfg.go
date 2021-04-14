@@ -576,7 +576,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					dest.gen = nop
 				case isFuncField(dest):
 					// Setting a struct field of function type requires an extra step. Do not optimize.
-				case isCall(src) && dest.typ.cat != interfaceT && !isRecursiveField(dest) && n.kind != defineStmt:
+				case isCall(src) && !isInterfaceSrc(dest.typ) && !isRecursiveField(dest) && n.kind != defineStmt:
 					// Call action may perform the assignment directly.
 					n.gen = nop
 					src.level = level
