@@ -981,6 +981,20 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						}
 					}
 				}
+			case isOffsetof(n):
+				if len(n.child) != 2 || n.child[1].kind != selectorExpr || !isStruct(n.child[1].child[0].typ) {
+					err = n.cfgErrorf("Offsetof argument: invalid expression")
+					break
+				}
+				c1 := n.child[1]
+				field, ok := c1.child[0].typ.rtype.FieldByName(c1.child[1].ident)
+				if !ok {
+					err = n.cfgErrorf("struct does not contain field: %s", c1.child[1].ident)
+					break
+				}
+				n.typ = &itype{cat: valueT, rtype: reflect.TypeOf(field.Offset)}
+				n.rval = reflect.ValueOf(field.Offset)
+				n.gen = nop
 			default:
 				err = check.arguments(n, n.child[1:], n.child[0], n.action == aCallSlice)
 				if err != nil {
@@ -2409,6 +2423,10 @@ func isCall(n *node) bool {
 
 func isBinCall(n *node) bool {
 	return isCall(n) && n.child[0].typ.cat == valueT && n.child[0].typ.rtype.Kind() == reflect.Func
+}
+
+func isOffsetof(n *node) bool {
+	return isCall(n) && n.child[0].typ.cat == valueT && n.child[0].rval.String() == "Offsetof"
 }
 
 func mustReturnValue(n *node) bool {

@@ -12,11 +12,13 @@ type S struct {
 }
 
 func main() {
-	size := unsafe.Sizeof(S{})
-	align := unsafe.Alignof(S{})
+	x := S{}
+	size := unsafe.Sizeof(x)
+	align := unsafe.Alignof(x.Y)
+	offset := unsafe.Offsetof(x.Z)
 
-	fmt.Println(size, align)
+	fmt.Println(size, align, offset)
 }
 
 // Output:
-// 24 8
+// 24 8 16

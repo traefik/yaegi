@@ -22,6 +22,7 @@ func init() {
 	// Add builtin functions to unsafe.
 	Symbols["unsafe"]["Sizeof"] = reflect.ValueOf(sizeof)
 	Symbols["unsafe"]["Alignof"] = reflect.ValueOf(alignof)
+	Symbols["unsafe"]["Offsetof"] = reflect.ValueOf("Offsetof") // This symbol is handled directly in interpreter.
 }
 
 func convert(from, to reflect.Type) func(src, dest reflect.Value) {
