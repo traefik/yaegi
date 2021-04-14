@@ -500,6 +500,14 @@ func isFile(filesystem fs.FS, path string) bool {
 	return err == nil && fi.Mode().IsRegular()
 }
 
+// EmptyResult is the result of statements that have no result. EmptyResult is
+// typed so that it is not equal to struct{}.
+var EmptyResult emptyResult
+
+type emptyResult struct{}
+
+func (emptyResult) String() string { return "()" }
+
 func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, err error) {
 	if name != "" {
 		interp.name = name
@@ -607,6 +615,7 @@ func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, 
 	for _, n := range initNodes {
 		interp.run(n, interp.frame)
 	}
+
 	v := genValue(root)
 	res = v(interp.frame)
 

@@ -75,9 +75,9 @@ func TestEvalArithmetic(t *testing.T) {
 func TestEvalShift(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
-		{src: "a, b, m := uint32(1), uint32(2), uint32(0); m = a + (1 << b)", res: "5"},
-		{src: "c := uint(1); d := uint(+(-(1 << c)))", res: "18446744073709551614"},
-		{src: "e, f := uint32(0), uint32(0); f = 1 << -(e * 2)", res: "1"},
+		{src: "a, b, m := uint32(1), uint32(2), uint32(0); m = a + (1 << b); m", res: "5"},
+		{src: "c := uint(1); d := uint(+(-(1 << c))); d", res: "18446744073709551614"},
+		{src: "e, f := uint32(0), uint32(0); f = 1 << -(e * 2); f", res: "1"},
 		{src: "p := uint(0xdead); byte((1 << (p & 7)) - 1)", res: "31"},
 		{pre: func() { eval(t, i, "const k uint = 1 << 17") }, src: "int(k)", res: "131072"},
 	})
@@ -97,7 +97,7 @@ func TestOpVarConst(t *testing.T) {
 func TestEvalStar(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
-		{src: `a := &struct{A int}{1}; b := *a`, res: "{1}"},
+		{src: `a := &struct{A int}{1}; b := *a; b`, res: "{1}"},
 		{src: `a := struct{A int}{1}; b := *a`, err: "1:57: invalid operation: cannot indirect \"a\""},
 	})
 }
@@ -118,16 +118,16 @@ func TestEvalAssign(t *testing.T) {
 	}
 
 	runTests(t, i, []testCase{
-		{src: `a := "Hello"; a += " world"`, res: "Hello world"},
+		{src: `a := "Hello"; a += " world"; a`, res: "Hello world"},
 		{src: `b := "Hello"; b += 1`, err: "1:42: invalid operation: mismatched types string and int"},
 		{src: `c := "Hello"; c -= " world"`, err: "1:42: invalid operation: operator -= not defined on string"},
 		{src: "e := 64.4; e %= 64", err: "1:39: invalid operation: operator %= not defined on float64"},
 		{src: "f := int64(3.2)", err: "1:39: cannot convert expression of type float64 to type int64"},
-		{src: "g := 1; g <<= 8", res: "256"},
-		{src: "h := 1; h >>= 8", res: "0"},
-		{src: "i := 1; j := &i; (*j) = 2", res: "2"},
+		{src: "g := 1; g <<= 8; g", res: "256"},
+		{src: "h := 1; h >>= 8; h", res: "0"},
+		{src: "i := 1; j := &i; (*j) = 2; *j", res: "2"},
 		{src: "i64 := testpkg.val; i64 == 11", res: "true"},
-		{pre: func() { eval(t, i, "k := 1") }, src: `k := "Hello world"`, res: "Hello world"}, // allow reassignment in subsequent evaluations
+		{pre: func() { eval(t, i, "k := 1") }, src: `k := "Hello world"; k`, res: "Hello world"}, // allow reassignment in subsequent evaluations
 	})
 }
 
@@ -140,10 +140,10 @@ func TestEvalBuiltin(t *testing.T) {
 		{src: `string(append([]byte("hello "), "world"...))`, res: "hello world"},
 		{src: `e := "world"; string(append([]byte("hello "), e...))`, res: "hello world"},
 		{src: `b := []int{1}; b = append(1, 2, 3); b`, err: "1:54: first argument to append must be slice; have int"},
-		{src: `g := len(a)`, res: "1"},
-		{src: `g := cap(a)`, res: "1"},
-		{src: `g := len("test")`, res: "4"},
-		{src: `g := len(map[string]string{"a": "b"})`, res: "1"},
+		{src: `g := len(a); g`, res: "1"},
+		{src: `g := cap(a); g`, res: "1"},
+		{src: `g := len("test"); g`, res: "4"},
+		{src: `g := len(map[string]string{"a": "b"}); g`, res: "1"},
 		{src: `n := len()`, err: "not enough arguments in call to len"},
 		{src: `n := len([]int, 0)`, err: "too many arguments for len"},
 		{src: `g := cap("test")`, err: "1:37: invalid argument for cap"},
@@ -151,8 +151,8 @@ func TestEvalBuiltin(t *testing.T) {
 		{src: `h := make(chan int, 1); close(h); len(h)`, res: "0"},
 		{src: `close(a)`, err: "1:34: invalid operation: non-chan type []int"},
 		{src: `h := make(chan int, 1); var i <-chan int = h; close(i)`, err: "1:80: invalid operation: cannot close receive-only channel"},
-		{src: `j := make([]int, 2)`, res: "[0 0]"},
-		{src: `j := make([]int, 2, 3)`, res: "[0 0]"},
+		{src: `j := make([]int, 2); j`, res: "[0 0]"},
+		{src: `j := make([]int, 2, 3); j`, res: "[0 0]"},
 		{src: `j := make(int)`, err: "1:38: cannot make int; type must be slice, map, or channel"},
 		{src: `j := make([]int)`, err: "1:33: not enough arguments in call to make"},
 		{src: `j := make([]int, 0, 1, 2)`, err: "1:33: too many arguments for make"},
@@ -194,7 +194,7 @@ func TestEvalDecl(t *testing.T) {
 func TestEvalDeclWithExpr(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
-		{src: `a1 := ""; var a2 int; a2 = 2`, res: "2"},
+		{src: `a1 := ""; var a2 int; a2 = 2; a2`, res: "2"},
 		{src: `b1 := ""; const b2 = 2; b2`, res: "2"},
 		{src: `c1 := ""; var c2, c3 [8]byte; c3[3]`, res: "0"},
 	})
@@ -435,13 +435,13 @@ func TestEvalCompositeArray(t *testing.T) {
 	i := interp.New(interp.Options{})
 	eval(t, i, `const l = 10`)
 	runTests(t, i, []testCase{
-		{src: "a := []int{1, 2, 7: 20, 30}", res: "[1 2 0 0 0 0 0 20 30]"},
+		{src: "a := []int{1, 2, 7: 20, 30}; a", res: "[1 2 0 0 0 0 0 20 30]"},
 		{src: `a := []int{1, 1.2}`, err: "1:42: 6/5 truncated to int"},
 		{src: `a := []int{0:1, 0:1}`, err: "1:46: duplicate index 0 in array or slice literal"},
 		{src: `a := []int{1.1:1, 1.2:"test"}`, err: "1:39: index float64 must be integer constant"},
 		{src: `a := [2]int{1, 1.2}`, err: "1:43: 6/5 truncated to int"},
 		{src: `a := [1]int{1, 2}`, err: "1:43: index 1 is out of bounds (>= 1)"},
-		{src: `b := [l]int{1, 2}`, res: "[1 2 0 0 0 0 0 0 0 0]"},
+		{src: `b := [l]int{1, 2}; b`, res: "[1 2 0 0 0 0 0 0 0 0]"},
 		{src: `i := 10; a := [i]int{1, 2}`, err: "1:43: non-constant array bound \"i\""},
 	})
 }
@@ -449,7 +449,7 @@ func TestEvalCompositeArray(t *testing.T) {
 func TestEvalCompositeMap(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
-		{src: `a := map[string]int{"one":1, "two":2}`, res: "map[one:1 two:2]"},
+		{src: `a := map[string]int{"one":1, "two":2}; a`, res: "map[one:1 two:2]"},
 		{src: `a := map[string]int{1:1, 2:2}`, err: "1:48: cannot convert 1 to string"},
 		{src: `a := map[string]int{"one":1, "two":2.2}`, err: "1:63: 11/5 truncated to int"},
 		{src: `a := map[string]int{1, "two":2}`, err: "1:48: missing key in map literal"},
@@ -460,14 +460,14 @@ func TestEvalCompositeMap(t *testing.T) {
 func TestEvalCompositeStruct(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
-		{src: `a := struct{A,B,C int}{}`, res: "{0 0 0}"},
-		{src: `a := struct{A,B,C int}{1,2,3}`, res: "{1 2 3}"},
+		{src: `a := struct{A,B,C int}{}; a`, res: "{0 0 0}"},
+		{src: `a := struct{A,B,C int}{1,2,3}; a`, res: "{1 2 3}"},
 		{src: `a := struct{A,B,C int}{1,2.2,3}`, err: "1:53: 11/5 truncated to int"},
 		{src: `a := struct{A,B,C int}{1,2}`, err: "1:53: too few values in struct literal"},
 		{src: `a := struct{A,B,C int}{1,2,3,4}`, err: "1:57: too many values in struct literal"},
 		{src: `a := struct{A,B,C int}{1,B:2,3}`, err: "1:53: mixture of field:value and value elements in struct literal"},
-		{src: `a := struct{A,B,C int}{A:1,B:2,C:3}`, res: "{1 2 3}"},
-		{src: `a := struct{A,B,C int}{B:2}`, res: "{0 2 0}"},
+		{src: `a := struct{A,B,C int}{A:1,B:2,C:3}; a`, res: "{1 2 3}"},
+		{src: `a := struct{A,B,C int}{B:2}; a`, res: "{0 2 0}"},
 		{src: `a := struct{A,B,C int}{A:1,D:2,C:3}`, err: "1:55: unknown field D in struct literal"},
 		{src: `a := struct{A,B,C int}{A:1,A:2,C:3}`, err: "1:55: duplicate field name A in struct literal"},
 		{src: `a := struct{A,B,C int}{A:1,B:2.2,C:3}`, err: "1:57: 11/5 truncated to int"},
@@ -478,16 +478,16 @@ func TestEvalCompositeStruct(t *testing.T) {
 func TestEvalSliceExpression(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
-		{src: `a := []int{0,1,2}[1:3]`, res: "[1 2]"},
-		{src: `a := []int{0,1,2}[:3]`, res: "[0 1 2]"},
-		{src: `a := []int{0,1,2}[:]`, res: "[0 1 2]"},
-		{src: `a := []int{0,1,2,3}[1:3:4]`, res: "[1 2]"},
-		{src: `a := []int{0,1,2,3}[:3:4]`, res: "[0 1 2]"},
-		{src: `ar := [3]int{0,1,2}; a := ar[1:3]`, res: "[1 2]"},
-		{src: `a := (&[3]int{0,1,2})[1:3]`, res: "[1 2]"},
-		{src: `a := (&[3]int{0,1,2})[1:3]`, res: "[1 2]"},
-		{src: `s := "hello"[1:3]`, res: "el"},
-		{src: `str := "hello"; s := str[1:3]`, res: "el"},
+		{src: `a := []int{0,1,2}[1:3]; a`, res: "[1 2]"},
+		{src: `a := []int{0,1,2}[:3]; a`, res: "[0 1 2]"},
+		{src: `a := []int{0,1,2}[:]; a`, res: "[0 1 2]"},
+		{src: `a := []int{0,1,2,3}[1:3:4]; a`, res: "[1 2]"},
+		{src: `a := []int{0,1,2,3}[:3:4]; a`, res: "[0 1 2]"},
+		{src: `ar := [3]int{0,1,2}; a := ar[1:3]; a`, res: "[1 2]"},
+		{src: `a := (&[3]int{0,1,2})[1:3]; a`, res: "[1 2]"},
+		{src: `a := (&[3]int{0,1,2})[1:3]; a`, res: "[1 2]"},
+		{src: `s := "hello"[1:3]; s`, res: "el"},
+		{src: `str := "hello"; s := str[1:3]; s`, res: "el"},
 		{src: `a := int(1)[0:1]`, err: "1:33: cannot slice type int"},
 		{src: `a := (&[]int{0,1,2,3})[1:3]`, err: "1:33: cannot slice type *[]int"},
 		{src: `a := "hello"[1:3:4]`, err: "1:45: invalid operation: 3-index slice of string"},
@@ -502,9 +502,9 @@ func TestEvalSliceExpression(t *testing.T) {
 func TestEvalConversion(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
-		{src: `a := uint64(1)`, res: "1"},
-		{src: `i := 1.1; a := uint64(i)`, res: "1"},
-		{src: `b := string(49)`, res: "1"},
+		{src: `a := uint64(1); a`, res: "1"},
+		{src: `i := 1.1; a := uint64(i); a`, res: "1"},
+		{src: `b := string(49); b`, res: "1"},
 		{src: `c := uint64(1.1)`, err: "1:40: cannot convert expression of type float64 to type uint64"},
 	})
 }
@@ -512,9 +512,9 @@ func TestEvalConversion(t *testing.T) {
 func TestEvalUnary(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
-		{src: "a := -1", res: "-1"},
-		{src: "b := +1", res: "1", skip: "BUG"},
-		{src: "c := !false", res: "true"},
+		{src: "a := -1; a", res: "-1"},
+		{src: "b := +1; b", res: "1"},
+		{src: "c := !false; c", res: "true"},
 	})
 }
 
@@ -612,19 +612,19 @@ func TestEvalCall(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{src: ` test := func(a int, b float64) int { return a }
-				a := test(1, 2.3)`, res: "1"},
+				a := test(1, 2.3); a`, res: "1"},
 		{src: ` test := func(a int, b float64) int { return a }
 				a := test(1)`, err: "2:10: not enough arguments in call to test"},
 		{src: ` test := func(a int, b float64) int { return a }
 				s := "test"
 				a := test(1, s)`, err: "3:18: cannot use type string as type float64"},
 		{src: ` test := func(a ...int) int { return 1 }
-				a := test([]int{1}...)`, res: "1"},
+				a := test([]int{1}...); a`, res: "1"},
 		{src: ` test := func(a ...int) int { return 1 }
-				a := test()`, res: "1"},
+				a := test(); a`, res: "1"},
 		{src: ` test := func(a ...int) int { return 1 }
 				blah := func() []int { return []int{1,1} }
-				a := test(blah()...)`, res: "1"},
+				a := test(blah()...); a`, res: "1"},
 		{src: ` test := func(a ...int) int { return 1 }
 				a := test([]string{"1"}...)`, err: "2:15: cannot use []string as type []int"},
 		{src: ` test := func(a ...int) int { return 1 }
@@ -637,10 +637,10 @@ func TestEvalCall(t *testing.T) {
 				a := test(blah()...)`, err: "3:15: cannot use ... with 2-valued func()(int,int)"},
 		{src: ` test := func(a, b int) int { return a }
 				blah := func() (int, int) { return 1, 1 }
-				a := test(blah())`, res: "1"},
+				a := test(blah()); a`, res: "1"},
 		{src: ` test := func(a, b int) int { return a }
 				blah := func() int { return 1 }
-				a := test(blah(), blah())`, res: "1"},
+				a := test(blah(), blah()); a`, res: "1"},
 		{src: ` test := func(a, b, c, d int) int { return a }
 				blah := func() (int, int) { return 1, 1 }
 				a := test(blah(), blah())`, err: "3:15: cannot use func()(int,int) as type int"},
@@ -659,11 +659,11 @@ func TestEvalBinCall(t *testing.T) {
 		t.Fatal(err)
 	}
 	runTests(t, i, []testCase{
-		{src: `a := fmt.Sprint(1, 2.3)`, res: "1 2.3"},
+		{src: `a := fmt.Sprint(1, 2.3); a`, res: "1 2.3"},
 		{src: `a := fmt.Sprintf()`, err: "1:33: not enough arguments in call to fmt.Sprintf"},
 		{src: `i := 1
 			   a := fmt.Sprintf(i)`, err: "2:24: cannot use type int as type string"},
-		{src: `a := fmt.Sprint()`, res: ""},
+		{src: `a := fmt.Sprint(); a`, res: ""},
 	})
 }
 
@@ -1624,7 +1624,7 @@ func TestStdio(t *testing.T) {
 func TestIssue1142(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
-		{src: "a := 1; // foo bar", res: "1"},
+		{src: "a := 1; // foo bar", res: "()"},
 	})
 }
 
@@ -1706,7 +1706,19 @@ func TestIssue1151(t *testing.T) {
 	i.ImportUsed()
 
 	runTests(t, i, []testCase{
-		{src: "x := pkg.Struct{1}", res: "{1}"},
-		{src: "x := pkg.Array{1}", res: "[1]"},
+		{src: "x := pkg.Struct{1}", res: "()"},
+		{src: "x := pkg.Array{1}", res: "()"},
+	})
+}
+
+func TestEvalAssignmentEmptyResult(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{desc: "define", src: "a := 1", res: "()"},
+		{desc: "define multiple", src: "a, b := 1, 2", res: "()"},
+		{desc: "assign", src: "a = 2", res: "()"},
+		{desc: "assign multiple", src: "a, b = 2, 3", res: "()"},
+		{desc: "declare", src: `var c = 1.2`, res: "()"},
+		{desc: "declare after code", src: `_ = ""; var d = 1.2`, res: "()"},
 	})
 }

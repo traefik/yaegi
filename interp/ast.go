@@ -422,9 +422,8 @@ func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error
 	var pkgName string
 
 	addChild := func(root **node, anc astNode, pos token.Pos, kind nkind, act action) *node {
-		var i interface{}
 		nindex := atomic.AddInt64(&interp.nindex, 1)
-		n := &node{anc: anc.node, interp: interp, index: nindex, pos: pos, kind: kind, action: act, val: &i, gen: builtin[act]}
+		n := &node{anc: anc.node, interp: interp, index: nindex, pos: pos, kind: kind, action: act, val: EmptyResult, gen: builtin[act]}
 		n.start = n
 		if anc.node == nil {
 			*root = n
@@ -436,14 +435,14 @@ func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error
 					// All case clause children are collected.
 					// Split children in condition and body nodes to desambiguify the AST.
 					nindex = atomic.AddInt64(&interp.nindex, 1)
-					body := &node{anc: anc.node, interp: interp, index: nindex, pos: pos, kind: caseBody, action: aNop, val: &i, gen: nop}
+					body := &node{anc: anc.node, interp: interp, index: nindex, pos: pos, kind: caseBody, action: aNop, val: EmptyResult, gen: nop}
 
 					if ts := anc.node.anc.anc; ts.kind == typeSwitch && ts.child[1].action == aAssign {
 						// In type switch clause, if a switch guard is assigned, duplicate the switch guard symbol
 						// in each clause body, so a different guard type can be set in each clause
 						name := ts.child[1].child[0].ident
 						nindex = atomic.AddInt64(&interp.nindex, 1)
-						gn := &node{anc: body, interp: interp, ident: name, index: nindex, pos: pos, kind: identExpr, action: aNop, val: &i, gen: nop}
+						gn := &node{anc: body, interp: interp, ident: name, index: nindex, pos: pos, kind: identExpr, action: aNop, val: EmptyResult, gen: nop}
 						body.child = append(body.child, gn)
 					}
 
