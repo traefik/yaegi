@@ -179,7 +179,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						sc.add(sc.getType("int")) // Add a dummy type to store array shallow copy for range
 						ktyp = sc.getType("int")
 						vtyp = sc.getType("rune")
-					case arrayT, variadicT:
+					case arrayT, sliceT, variadicT:
 						sc.add(sc.getType("int")) // Add a dummy type to store array shallow copy for range
 						ktyp = sc.getType("int")
 						vtyp = o.typ.val
@@ -524,10 +524,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					}
 					if dest.typ.incomplete {
 						return
-					}
-					if dest.typ.sizedef {
-						dest.typ.size = arrayTypeLen(src)
-						dest.typ.rtype = nil
 					}
 					if sc.global {
 						// Do not overload existing symbols (defined in GTA) in global scope
@@ -985,6 +981,20 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						}
 					}
 				}
+			case isOffsetof(n):
+				if len(n.child) != 2 || n.child[1].kind != selectorExpr || !isStruct(n.child[1].child[0].typ) {
+					err = n.cfgErrorf("Offsetof argument: invalid expression")
+					break
+				}
+				c1 := n.child[1]
+				field, ok := c1.child[0].typ.rtype.FieldByName(c1.child[1].ident)
+				if !ok {
+					err = n.cfgErrorf("struct does not contain field: %s", c1.child[1].ident)
+					break
+				}
+				n.typ = &itype{cat: valueT, rtype: reflect.TypeOf(field.Offset)}
+				n.rval = reflect.ValueOf(field.Offset)
+				n.gen = nop
 			default:
 				err = check.arguments(n, n.child[1:], n.child[0], n.action == aCallSlice)
 				if err != nil {
@@ -1054,8 +1064,8 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			}
 
 			switch n.typ.cat {
-			case arrayT:
-				err = check.arrayLitExpr(child, n.typ.val, n.typ.size)
+			case arrayT, sliceT:
+				err = check.arrayLitExpr(child, n.typ)
 			case mapT:
 				err = check.mapLitExpr(child, n.typ.key, n.typ.val)
 			case structT:
@@ -1437,7 +1447,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				// TODO(mpl): move any of that code to typecheck?
 				c.typ.node = c
 				if !c.typ.assignableTo(typ) {
-					err = fmt.Errorf("cannot use %v (type %v) as type %v in return argument", c.ident, c.typ.cat, typ.cat)
+					err = c.cfgErrorf("cannot use %v (type %v) as type %v in return argument", c.ident, c.typ.cat, typ.cat)
 					return
 				}
 				if c.typ.cat == nilT {
@@ -2415,6 +2425,10 @@ func isBinCall(n *node) bool {
 	return isCall(n) && n.child[0].typ.cat == valueT && n.child[0].typ.rtype.Kind() == reflect.Func
 }
 
+func isOffsetof(n *node) bool {
+	return isCall(n) && n.child[0].typ.cat == valueT && n.child[0].rval.String() == "Offsetof"
+}
+
 func mustReturnValue(n *node) bool {
 	if len(n.child) < 2 {
 		return false
@@ -2513,7 +2527,7 @@ func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerat
 	switch typ.cat {
 	case aliasT, ptrT:
 		gen = compositeGenerator(n, n.typ.val, rtyp)
-	case arrayT:
+	case arrayT, sliceT:
 		gen = arrayLit
 	case mapT:
 		gen = mapLit
@@ -2567,8 +2581,8 @@ func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerat
 // array variable it is determined from the value's type, otherwise it is
 // computed from the source definition.
 func arrayTypeLen(n *node) int {
-	if n.typ != nil && n.typ.sizedef {
-		return n.typ.size
+	if n.typ != nil && n.typ.cat == arrayT {
+		return n.typ.length
 	}
 	max := -1
 	for i, c := range n.child[1:] {
