@@ -1490,3 +1490,12 @@ func TestREPLDivision(t *testing.T) {
 		t.Fatal("timeout")
 	}
 }
+
+func TestEvalBlockAsArray(t *testing.T) {
+	i := interp.New(interp.Options{BlockStatementAsArray: true})
+	runTests(t, i, []testCase{
+		{src: "a := 5", res: "[5]"},
+		{src: "a = 1; b := 2", res: "[1 2]"},
+		{src: "a = 3; {b = 4}", res: "[3 [4]]"},
+	})
+}
