@@ -1104,7 +1104,9 @@ func call(n *node) {
 				convertLiteralValue(c, argType)
 			}
 			switch {
-			case isInterfaceSrc(arg) && !isEmptyInterface(arg):
+			case isEmptyInterface(arg):
+				values = append(values, genValue(c))
+			case isInterfaceSrc(arg):
 				values = append(values, genValueInterface(c))
 			case isRecursiveType(c.typ, c.typ.rtype):
 				values = append(values, genValueRecursiveInterfacePtrValue(c))
@@ -1136,7 +1138,8 @@ func call(n *node) {
 			j := n.findex + i
 			ret := n.child[0].typ.ret[i]
 			callret := n.anc.val.(*node).typ.ret[i]
-			if isInterfaceSrc(callret) && !isEmptyInterface(callret) {
+
+			if isInterfaceSrc(callret) && !isEmptyInterface(callret) && !isInterfaceSrc(ret) {
 				// Wrap the returned value in a valueInterface in caller frame.
 				rvalues[i] = func(f *frame) reflect.Value {
 					v := reflect.New(ret.rtype).Elem()
