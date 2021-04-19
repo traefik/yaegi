@@ -180,6 +180,9 @@ const (
 	NoTest = true
 )
 
+// Self points to the current interpreter if accessed from within itself, or is nil.
+var Self *Interpreter
+
 // Symbols exposes interpreter values.
 var Symbols = Exports{
 	selfPath: map[string]reflect.Value{
@@ -654,6 +657,9 @@ func (interp *Interpreter) Use(values Exports) {
 
 		for s, sym := range v {
 			interp.binPkg[k][s] = sym
+		}
+		if k == selfPath {
+			interp.binPkg[k]["Self"] = reflect.ValueOf(interp)
 		}
 	}
 
