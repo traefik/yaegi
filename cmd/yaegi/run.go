@@ -6,6 +6,7 @@ import (
 	"go/build"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -69,18 +70,24 @@ func run(arg []string) error {
 	}
 
 	if cmd != "" {
-		_, err = i.Eval(cmd)
+		i.ImportUsed()
+		var v reflect.Value
+		v, err = i.Eval(cmd)
+		if len(args) == 0 && v.IsValid() {
+			fmt.Println(v)
+		}
 	}
 
 	if len(args) == 0 {
-		if interactive || cmd == "" {
+		if cmd == "" || interactive {
 			showError(err)
+			i.ImportUsed()
 			_, err = i.REPL()
 		}
 		return err
 	}
 
-	// Skip first os arg to set command line as expected by interpreted main
+	// Skip first os arg to set command line as expected by interpreted main.
 	path := args[0]
 	os.Args = arg
 	flag.CommandLine = flag.NewFlagSet(path, flag.ExitOnError)
@@ -96,6 +103,7 @@ func run(arg []string) error {
 	}
 
 	if interactive {
+		i.ImportUsed()
 		_, err = i.REPL()
 	}
 	return err
@@ -115,6 +123,7 @@ func runFile(i *interp.Interpreter, path string) error {
 	if s := string(b); strings.HasPrefix(s, "#!") {
 		// Allow executable go scripts, Have the same behavior as in interactive mode.
 		s = strings.Replace(s, "#!", "//", 1)
+		i.ImportUsed()
 		_, err = i.Eval(s)
 		return err
 	}
