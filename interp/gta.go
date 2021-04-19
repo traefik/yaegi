@@ -202,7 +202,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 					if name == "" {
 						name = identifier.FindString(ipath)
 					}
-					// imports of a same package are all mapped in the same scope, so we cannot just
+					// Imports of a same package are all mapped in the same scope, so we cannot just
 					// map them by their names, otherwise we could have collisions from same-name
 					// imports in different source files of the same package. Therefore, we suffix
 					// the key with the basename of the source file.
@@ -210,7 +210,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 					if sym, exists := sc.sym[name]; !exists {
 						sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath, scope: sc}}
 						break
-					} else if sym.kind == pkgSym && sym.typ.cat == binPkgT && sym.typ.path == ipath {
+					} else if sym.kind == pkgSym && sym.typ.cat == srcPkgT && sym.typ.path == ipath {
 						// ignore re-import of identical package
 						break
 					}
