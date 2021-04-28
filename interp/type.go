@@ -1172,6 +1172,10 @@ func (t *itype) id() (res string) {
 		}
 		res += "}"
 	case valueT:
+		if isConstantValue(t.rtype) {
+			res = constTypeString(t.rtype)
+			break
+		}
 		res = ""
 		if t.rtype.PkgPath() != "" {
 			res += t.rtype.PkgPath() + "."
@@ -1181,6 +1185,27 @@ func (t *itype) id() (res string) {
 		res = "..." + t.val.id()
 	}
 	return res
+}
+
+func constTypeString(t reflect.Type) (s string) {
+	e := reflect.New(t).Elem()
+	cv, ok := e.Interface().(constant.Value)
+	if !ok {
+		return
+	}
+	switch cv.Kind() {
+	case constant.Bool:
+		s = "bool"
+	case constant.Int:
+		s = "int"
+	case constant.String:
+		s = "string"
+	case constant.Float:
+		s = "float64"
+	case constant.Complex:
+		s = "complex128"
+	}
+	return
 }
 
 // zero instantiates and return a zero value object for the given type during execution.
