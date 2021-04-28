@@ -1188,8 +1188,7 @@ func (t *itype) id() (res string) {
 }
 
 func constTypeString(t reflect.Type) (s string) {
-	e := reflect.New(t).Elem()
-	cv, ok := e.Interface().(constant.Value)
+	cv, ok := reflect.New(t).Elem().Interface().(constant.Value)
 	if !ok {
 		return
 	}
