@@ -743,10 +743,12 @@ func ignoreScannerError(e *scanner.Error, s string) bool {
 	return false
 }
 
-// ImportUsed pre-imports used binary packages, as the packages are already loaded anyway.
+// ImportUsed automatically imports pre-compiled packages included by Use().
 // This is mainly useful for REPLs, or single command lines. In case of an ambiguous default
 // package name, for example "rand" for crypto/rand and math/rand, the package name is
 // constructed by replacing the last "/" by a "_", producing crypto_rand and math_rand.
+// ImportUsed should not be called more than once, and not after a first Eval, as it may
+// rename packages.
 func (interp *Interpreter) ImportUsed() {
 	sc := interp.universe
 	for k := range interp.binPkg {
@@ -771,7 +773,7 @@ func key2name(k string) string {
 
 func fixKey(k string) string {
 	i := strings.LastIndex(k, "/")
-	if i >= 0 && i < len(k)-1 {
+	if i >= 0 {
 		k = k[:i] + "_" + k[i+1:]
 	}
 	return k

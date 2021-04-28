@@ -19,6 +19,7 @@ import (
 
 func run(arg []string) error {
 	var interactive bool
+	var noAutoImport bool
 	var tags string
 	var cmd string
 	var err error
@@ -34,6 +35,7 @@ func run(arg []string) error {
 	rflag.BoolVar(&useUnrestricted, "unrestricted", useUnrestricted, "include unrestricted symbols")
 	rflag.StringVar(&tags, "tags", "", "set a list of build tags")
 	rflag.BoolVar(&useUnsafe, "unsafe", useUnsafe, "include unsafe symbols")
+	rflag.BoolVar(&noAutoImport, "noautoimport", false, "do not auto import pre-compiled packages")
 	rflag.StringVar(&cmd, "e", "", "set the command to be executed (instead of script or/and shell)")
 	rflag.Usage = func() {
 		fmt.Println("Usage: yaegi run [options] [path] [args]")
@@ -70,7 +72,9 @@ func run(arg []string) error {
 	}
 
 	if cmd != "" {
-		i.ImportUsed()
+		if !noAutoImport {
+			i.ImportUsed()
+		}
 		var v reflect.Value
 		v, err = i.Eval(cmd)
 		if len(args) == 0 && v.IsValid() {
@@ -81,7 +85,9 @@ func run(arg []string) error {
 	if len(args) == 0 {
 		if cmd == "" || interactive {
 			showError(err)
-			i.ImportUsed()
+			if !noAutoImport {
+				i.ImportUsed()
+			}
 			_, err = i.REPL()
 		}
 		return err
@@ -93,7 +99,7 @@ func run(arg []string) error {
 	flag.CommandLine = flag.NewFlagSet(path, flag.ExitOnError)
 
 	if isFile(path) {
-		err = runFile(i, path)
+		err = runFile(i, path, noAutoImport)
 	} else {
 		_, err = i.EvalPath(path)
 	}
@@ -103,7 +109,6 @@ func run(arg []string) error {
 	}
 
 	if interactive {
-		i.ImportUsed()
 		_, err = i.REPL()
 	}
 	return err
@@ -114,7 +119,7 @@ func isFile(path string) bool {
 	return err == nil && fi.Mode().IsRegular()
 }
 
-func runFile(i *interp.Interpreter, path string) error {
+func runFile(i *interp.Interpreter, path string, noAutoImport bool) error {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
@@ -123,7 +128,9 @@ func runFile(i *interp.Interpreter, path string) error {
 	if s := string(b); strings.HasPrefix(s, "#!") {
 		// Allow executable go scripts, Have the same behavior as in interactive mode.
 		s = strings.Replace(s, "#!", "//", 1)
-		i.ImportUsed()
+		if !noAutoImport {
+			i.ImportUsed()
+		}
 		_, err = i.Eval(s)
 		return err
 	}
