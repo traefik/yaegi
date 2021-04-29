@@ -35,7 +35,7 @@ func run(arg []string) error {
 	rflag.BoolVar(&useUnrestricted, "unrestricted", useUnrestricted, "include unrestricted symbols")
 	rflag.StringVar(&tags, "tags", "", "set a list of build tags")
 	rflag.BoolVar(&useUnsafe, "unsafe", useUnsafe, "include unsafe symbols")
-	rflag.BoolVar(&noAutoImport, "noautoimport", false, "do not auto import pre-compiled packages")
+	rflag.BoolVar(&noAutoImport, "noautoimport", false, "do not auto import pre-compiled packages. Import names that would result in collisions (e.g. rand from crypto/rand and rand from math/rand) are automatically renamed (crypto_rand and math_rand)"
 	rflag.StringVar(&cmd, "e", "", "set the command to be executed (instead of script or/and shell)")
 	rflag.Usage = func() {
 		fmt.Println("Usage: yaegi run [options] [path] [args]")
