@@ -6,6 +6,7 @@ import (
 	"go/build"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -18,6 +19,7 @@ import (
 
 func run(arg []string) error {
 	var interactive bool
+	var noAutoImport bool
 	var tags string
 	var cmd string
 	var err error
@@ -33,6 +35,7 @@ func run(arg []string) error {
 	rflag.BoolVar(&useUnrestricted, "unrestricted", useUnrestricted, "include unrestricted symbols")
 	rflag.StringVar(&tags, "tags", "", "set a list of build tags")
 	rflag.BoolVar(&useUnsafe, "unsafe", useUnsafe, "include unsafe symbols")
+	rflag.BoolVar(&noAutoImport, "noautoimport", false, "do not auto import pre-compiled packages. Import names that would result in collisions (e.g. rand from crypto/rand and rand from math/rand) are automatically renamed (crypto_rand and math_rand)")
 	rflag.StringVar(&cmd, "e", "", "set the command to be executed (instead of script or/and shell)")
 	rflag.Usage = func() {
 		fmt.Println("Usage: yaegi run [options] [path] [args]")
@@ -69,24 +72,34 @@ func run(arg []string) error {
 	}
 
 	if cmd != "" {
-		_, err = i.Eval(cmd)
+		if !noAutoImport {
+			i.ImportUsed()
+		}
+		var v reflect.Value
+		v, err = i.Eval(cmd)
+		if len(args) == 0 && v.IsValid() {
+			fmt.Println(v)
+		}
 	}
 
 	if len(args) == 0 {
-		if interactive || cmd == "" {
+		if cmd == "" || interactive {
 			showError(err)
+			if !noAutoImport {
+				i.ImportUsed()
+			}
 			_, err = i.REPL()
 		}
 		return err
 	}
 
-	// Skip first os arg to set command line as expected by interpreted main
+	// Skip first os arg to set command line as expected by interpreted main.
 	path := args[0]
 	os.Args = arg
 	flag.CommandLine = flag.NewFlagSet(path, flag.ExitOnError)
 
 	if isFile(path) {
-		err = runFile(i, path)
+		err = runFile(i, path, noAutoImport)
 	} else {
 		_, err = i.EvalPath(path)
 	}
@@ -106,7 +119,7 @@ func isFile(path string) bool {
 	return err == nil && fi.Mode().IsRegular()
 }
 
-func runFile(i *interp.Interpreter, path string) error {
+func runFile(i *interp.Interpreter, path string, noAutoImport bool) error {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
@@ -115,6 +128,9 @@ func runFile(i *interp.Interpreter, path string) error {
 	if s := string(b); strings.HasPrefix(s, "#!") {
 		// Allow executable go scripts, Have the same behavior as in interactive mode.
 		s = strings.Replace(s, "#!", "//", 1)
+		if !noAutoImport {
+			i.ImportUsed()
+		}
 		_, err = i.Eval(s)
 		return err
 	}

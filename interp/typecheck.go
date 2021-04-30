@@ -32,6 +32,9 @@ func (check typecheck) op(p opPredicates, a action, n, c *node, t reflect.Type) 
 //
 // Use typ == nil to indicate assignment to an untyped blank identifier.
 func (check typecheck) assignment(n *node, typ *itype, context string) error {
+	if n.typ == nil {
+		return n.cfgErrorf("invalid type in %s", context)
+	}
 	if n.typ.untyped {
 		if typ == nil || isInterface(typ) {
 			if typ == nil && n.typ.cat == nilT {

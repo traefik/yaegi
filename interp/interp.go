@@ -14,6 +14,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"runtime/debug"
@@ -742,24 +743,47 @@ func ignoreScannerError(e *scanner.Error, s string) bool {
 	return false
 }
 
+// ImportUsed automatically imports pre-compiled packages included by Use().
+// This is mainly useful for REPLs, or single command lines. In case of an ambiguous default
+// package name, for example "rand" for crypto/rand and math/rand, the package name is
+// constructed by replacing the last "/" by a "_", producing crypto_rand and math_rand.
+// ImportUsed should not be called more than once, and not after a first Eval, as it may
+// rename packages.
+func (interp *Interpreter) ImportUsed() {
+	sc := interp.universe
+	for k := range interp.binPkg {
+		name := key2name(k)
+		if sym, ok := sc.sym[name]; ok {
+			// Handle collision by renaming old and new entries.
+			name2 := key2name(fixKey(sym.typ.path))
+			sc.sym[name2] = sym
+			if name2 != name {
+				delete(sc.sym, name)
+			}
+			name = key2name(fixKey(k))
+		}
+		sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: k, scope: sc}}
+	}
+}
+
+func key2name(k string) string {
+	name := identifier.FindString(k)
+	return filepath.Join(name, DefaultSourceName)
+}
+
+func fixKey(k string) string {
+	i := strings.LastIndex(k, "/")
+	if i >= 0 {
+		k = k[:i] + "_" + k[i+1:]
+	}
+	return k
+}
+
 // REPL performs a Read-Eval-Print-Loop on input reader.
 // Results are printed to the output writer of the Interpreter, provided as option
 // at creation time. Errors are printed to the similarly defined errors writer.
 // The last interpreter result value and error are returned.
 func (interp *Interpreter) REPL() (reflect.Value, error) {
-	// Preimport used bin packages, to avoid having to import these packages manually
-	// in REPL mode. These packages are already loaded anyway.
-	sc := interp.universe
-	for k := range interp.binPkg {
-		name := identifier.FindString(k)
-		if name == "" || name == "rand" || name == "scanner" || name == "template" || name == "pprof" {
-			// Skip any package with an ambiguous name (i.e crypto/rand vs math/rand).
-			// Those will have to be imported explicitly.
-			continue
-		}
-		sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: k, scope: sc}}
-	}
-
 	in, out, errs := interp.stdin, interp.stdout, interp.stderr
 	ctx, cancel := context.WithCancel(context.Background())
 	end := make(chan struct{})     // channel to terminate the REPL
