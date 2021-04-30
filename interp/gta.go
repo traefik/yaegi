@@ -391,8 +391,10 @@ func equalNodes(a, b []*node) bool {
 // according to ImportPath constraints as in https://golang.org/ref/spec#Import_declarations
 // and https://golang.org/ref/mod#module-path.
 
-var vMatcher = regexp.MustCompile(`^v[0-9]+$`)
-var nMatcher = regexp.MustCompile(`\w+`)
+var (
+	vMatcher = regexp.MustCompile(`^v[0-9]+$`)
+	nMatcher = regexp.MustCompile(`\w+`)
+)
 
 func packageName(path string) string {
 	dir := strings.Split(path, "/")
