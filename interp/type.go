@@ -1172,6 +1172,10 @@ func (t *itype) id() (res string) {
 		}
 		res += "}"
 	case valueT:
+		if isConstantValue(t.rtype) {
+			res = constTypeString(t.rtype)
+			break
+		}
 		res = ""
 		if t.rtype.PkgPath() != "" {
 			res += t.rtype.PkgPath() + "."
@@ -1181,6 +1185,26 @@ func (t *itype) id() (res string) {
 		res = "..." + t.val.id()
 	}
 	return res
+}
+
+func constTypeString(t reflect.Type) (s string) {
+	cv, ok := reflect.New(t).Elem().Interface().(constant.Value)
+	if !ok {
+		return
+	}
+	switch cv.Kind() {
+	case constant.Bool:
+		s = "bool"
+	case constant.Int:
+		s = "int"
+	case constant.String:
+		s = "string"
+	case constant.Float:
+		s = "float64"
+	case constant.Complex:
+		s = "complex128"
+	}
+	return
 }
 
 // zero instantiates and return a zero value object for the given type during execution.
@@ -1530,6 +1554,8 @@ func (t *itype) frameType() (r reflect.Type) {
 			break
 		}
 		r = reflect.TypeOf((*valueInterface)(nil)).Elem()
+	case mapT:
+		r = reflect.MapOf(t.key.frameType(), t.val.frameType())
 	case ptrT:
 		r = reflect.PtrTo(t.val.frameType())
 	default:
