@@ -1554,6 +1554,8 @@ func (t *itype) frameType() (r reflect.Type) {
 			break
 		}
 		r = reflect.TypeOf((*valueInterface)(nil)).Elem()
+	case mapT:
+		r = reflect.MapOf(t.key.frameType(), t.val.frameType())
 	case ptrT:
 		r = reflect.PtrTo(t.val.frameType())
 	default:
