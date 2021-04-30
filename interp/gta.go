@@ -3,6 +3,8 @@ package interp
 import (
 	"path/filepath"
 	"reflect"
+	"regexp"
+	"strings"
 )
 
 // gta performs a global types analysis on the AST, registering types,
@@ -200,7 +202,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 					}
 				default: // import symbols in package namespace
 					if name == "" {
-						name = identifier.FindString(ipath)
+						name = packageName(ipath)
 					}
 					// imports of a same package are all mapped in the same scope, so we cannot just
 					// map them by their names, otherwise we could have collisions from same-name
@@ -383,4 +385,22 @@ func equalNodes(a, b []*node) bool {
 		}
 	}
 	return true
+}
+
+// packageName returns a default package name identifier from a given package path
+// according to ImportPath constraints as in https://golang.org/ref/spec#Import_declarations
+// and https://golang.org/ref/mod#module-path.
+
+var vMatcher = regexp.MustCompile(`^v[0-9]+$`)
+var nMatcher = regexp.MustCompile(`\w+`)
+
+func packageName(path string) string {
+	dir := strings.Split(path, "/")
+	name := dir[len(dir)-1]
+	if len(dir) > 1 && vMatcher.MatchString(name) {
+		// Skip last element if it is a major version (e.g. xxx/foo-bar/v3 => foo-bar).
+		name = dir[len(dir)-2]
+	}
+	// Retain the left-most qualified identifier part of name (e.g foo-bar => foo).
+	return nMatcher.FindString(name)
 }

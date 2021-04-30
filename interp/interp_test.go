@@ -188,3 +188,18 @@ func TestIsNatural(t *testing.T) {
 		}
 	}
 }
+
+func TestPackageName(t *testing.T) {
+	tests := []struct{ input, wanted string }{
+		{"xxx", "xxx"},
+		{"xxx/foo/bar", "bar"},
+		{"xxx/foo/bar/v3", "bar"},
+		{"xxx/foo-bar", "foo"},
+		{"xxx/foo-bar/v3", "foo"},
+	}
+	for _, test := range tests {
+		if got := packageName(test.input); got != test.wanted {
+			t.Fatalf("%v: got %v, wanted %v", test.input, got, test.wanted)
+		}
+	}
+}

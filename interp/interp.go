@@ -751,7 +751,7 @@ func (interp *Interpreter) REPL() (reflect.Value, error) {
 	// in REPL mode. These packages are already loaded anyway.
 	sc := interp.universe
 	for k := range interp.binPkg {
-		name := identifier.FindString(k)
+		name := packageName(k)
 		if name == "" || name == "rand" || name == "scanner" || name == "template" || name == "pprof" {
 			// Skip any package with an ambiguous name (i.e crypto/rand vs math/rand).
 			// Those will have to be imported explicitly.
