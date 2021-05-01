@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["math"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("math"),
+
 		// function, constant and variable definitions
 		"Abs":                    reflect.ValueOf(math.Abs),
 		"Acos":                   reflect.ValueOf(math.Acos),

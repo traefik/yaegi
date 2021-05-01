@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["unicode/utf16"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("utf16"),
+
 		// function, constant and variable definitions
 		"Decode":      reflect.ValueOf(utf16.Decode),
 		"DecodeRune":  reflect.ValueOf(utf16.DecodeRune),

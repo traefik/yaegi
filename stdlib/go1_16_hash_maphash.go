@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["hash/maphash"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("maphash"),
+
 		// function, constant and variable definitions
 		"MakeSeed": reflect.ValueOf(maphash.MakeSeed),
 

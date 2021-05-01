@@ -14,6 +14,9 @@ import (
 
 func init() {
 	Symbols["compress/zlib"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("zlib"),
+
 		// function, constant and variable definitions
 		"BestCompression":    reflect.ValueOf(constant.MakeFromLiteral("9", token.INT, 0)),
 		"BestSpeed":          reflect.ValueOf(constant.MakeFromLiteral("1", token.INT, 0)),

@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["html/template"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("template"),
+
 		// function, constant and variable definitions
 		"ErrAmbigContext":      reflect.ValueOf(template.ErrAmbigContext),
 		"ErrBadHTML":           reflect.ValueOf(template.ErrBadHTML),

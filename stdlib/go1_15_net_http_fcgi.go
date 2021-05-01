@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["net/http/fcgi"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("fcgi"),
+
 		// function, constant and variable definitions
 		"ErrConnClosed":     reflect.ValueOf(&fcgi.ErrConnClosed).Elem(),
 		"ErrRequestAborted": reflect.ValueOf(&fcgi.ErrRequestAborted).Elem(),

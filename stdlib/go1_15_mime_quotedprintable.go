@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["mime/quotedprintable"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("quotedprintable"),
+
 		// function, constant and variable definitions
 		"NewReader": reflect.ValueOf(quotedprintable.NewReader),
 		"NewWriter": reflect.ValueOf(quotedprintable.NewWriter),

@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["net/textproto"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("textproto"),
+
 		// function, constant and variable definitions
 		"CanonicalMIMEHeaderKey": reflect.ValueOf(textproto.CanonicalMIMEHeaderKey),
 		"Dial":                   reflect.ValueOf(textproto.Dial),

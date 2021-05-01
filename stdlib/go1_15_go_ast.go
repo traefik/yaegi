@@ -12,6 +12,9 @@ import (
 
 func init() {
 	Symbols["go/ast"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("ast"),
+
 		// function, constant and variable definitions
 		"Bad":                        reflect.ValueOf(ast.Bad),
 		"Con":                        reflect.ValueOf(ast.Con),

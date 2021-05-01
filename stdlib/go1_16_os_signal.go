@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["os/signal"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("signal"),
+
 		// function, constant and variable definitions
 		"Ignore":        reflect.ValueOf(signal.Ignore),
 		"Ignored":       reflect.ValueOf(signal.Ignored),

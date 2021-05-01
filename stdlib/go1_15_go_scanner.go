@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["go/scanner"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("scanner"),
+
 		// function, constant and variable definitions
 		"PrintError":   reflect.ValueOf(scanner.PrintError),
 		"ScanComments": reflect.ValueOf(scanner.ScanComments),

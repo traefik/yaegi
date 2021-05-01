@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["crypto/ecdsa"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("ecdsa"),
+
 		// function, constant and variable definitions
 		"GenerateKey": reflect.ValueOf(ecdsa.GenerateKey),
 		"Sign":        reflect.ValueOf(ecdsa.Sign),

@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["testing/fstest"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("fstest"),
+
 		// function, constant and variable definitions
 		"TestFS": reflect.ValueOf(fstest.TestFS),
 

@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["crypto/x509/pkix"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("pkix"),
+
 		// type definitions
 		"AlgorithmIdentifier":          reflect.ValueOf((*pkix.AlgorithmIdentifier)(nil)),
 		"AttributeTypeAndValue":        reflect.ValueOf((*pkix.AttributeTypeAndValue)(nil)),

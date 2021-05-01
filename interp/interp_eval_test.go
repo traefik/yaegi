@@ -105,7 +105,8 @@ func TestEvalAssign(t *testing.T) {
 	i := interp.New(interp.Options{})
 	i.Use(interp.Exports{
 		"testpkg": {
-			"val": reflect.ValueOf(int64(11)),
+			".name": reflect.ValueOf("testpkg"),
+			"val":   reflect.ValueOf(int64(11)),
 		},
 	})
 	_, e := i.Eval(`import "testpkg"`)
@@ -663,7 +664,8 @@ func TestEvalMissingSymbol(t *testing.T) {
 	}
 	i := interp.New(interp.Options{})
 	i.Use(interp.Exports{"p": map[string]reflect.Value{
-		"S1": reflect.Zero(reflect.TypeOf(&S1{})),
+		".name": reflect.ValueOf("p"),
+		"S1":    reflect.Zero(reflect.TypeOf(&S1{})),
 	}})
 	_, err := i.Eval(`import "p"`)
 	if err != nil {

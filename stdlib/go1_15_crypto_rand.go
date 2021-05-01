@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["crypto/rand"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("rand"),
+
 		// function, constant and variable definitions
 		"Int":    reflect.ValueOf(rand.Int),
 		"Prime":  reflect.ValueOf(rand.Prime),

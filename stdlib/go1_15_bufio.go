@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["bufio"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("bufio"),
+
 		// function, constant and variable definitions
 		"ErrAdvanceTooFar":     reflect.ValueOf(&bufio.ErrAdvanceTooFar).Elem(),
 		"ErrBadReadCount":      reflect.ValueOf(&bufio.ErrBadReadCount).Elem(),

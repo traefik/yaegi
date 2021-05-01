@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["encoding/json"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("json"),
+
 		// function, constant and variable definitions
 		"Compact":       reflect.ValueOf(json.Compact),
 		"HTMLEscape":    reflect.ValueOf(json.HTMLEscape),

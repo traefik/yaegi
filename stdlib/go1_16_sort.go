@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["sort"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("sort"),
+
 		// function, constant and variable definitions
 		"Float64s":          reflect.ValueOf(sort.Float64s),
 		"Float64sAreSorted": reflect.ValueOf(sort.Float64sAreSorted),

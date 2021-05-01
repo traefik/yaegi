@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["crypto/subtle"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("subtle"),
+
 		// function, constant and variable definitions
 		"ConstantTimeByteEq":   reflect.ValueOf(subtle.ConstantTimeByteEq),
 		"ConstantTimeCompare":  reflect.ValueOf(subtle.ConstantTimeCompare),

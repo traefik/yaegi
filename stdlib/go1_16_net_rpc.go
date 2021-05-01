@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["net/rpc"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("rpc"),
+
 		// function, constant and variable definitions
 		"Accept":             reflect.ValueOf(rpc.Accept),
 		"DefaultDebugPath":   reflect.ValueOf(constant.MakeFromLiteral("\"/debug/rpc\"", token.STRING, 0)),

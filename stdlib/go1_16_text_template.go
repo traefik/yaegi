@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["text/template"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("template"),
+
 		// function, constant and variable definitions
 		"HTMLEscape":       reflect.ValueOf(template.HTMLEscape),
 		"HTMLEscapeString": reflect.ValueOf(template.HTMLEscapeString),

@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["text/tabwriter"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("tabwriter"),
+
 		// function, constant and variable definitions
 		"AlignRight":          reflect.ValueOf(tabwriter.AlignRight),
 		"Debug":               reflect.ValueOf(tabwriter.Debug),

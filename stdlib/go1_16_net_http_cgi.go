@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["net/http/cgi"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("cgi"),
+
 		// function, constant and variable definitions
 		"Request":        reflect.ValueOf(cgi.Request),
 		"RequestFromMap": reflect.ValueOf(cgi.RequestFromMap),

@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["crypto/sha1"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("sha1"),
+
 		// function, constant and variable definitions
 		"BlockSize": reflect.ValueOf(constant.MakeFromLiteral("64", token.INT, 0)),
 		"New":       reflect.ValueOf(sha1.New),

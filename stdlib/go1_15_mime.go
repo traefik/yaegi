@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["mime"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("mime"),
+
 		// function, constant and variable definitions
 		"AddExtensionType":         reflect.ValueOf(mime.AddExtensionType),
 		"BEncoding":                reflect.ValueOf(mime.BEncoding),

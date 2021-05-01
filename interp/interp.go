@@ -187,6 +187,8 @@ var Self *Interpreter
 // Symbols exposes interpreter values.
 var Symbols = Exports{
 	selfPath: map[string]reflect.Value{
+		".name": reflect.ValueOf("interp"),
+
 		"New": reflect.ValueOf(New),
 
 		"Interpreter": reflect.ValueOf((*Interpreter)(nil)),
@@ -751,8 +753,8 @@ func ignoreScannerError(e *scanner.Error, s string) bool {
 // rename packages.
 func (interp *Interpreter) ImportUsed() {
 	sc := interp.universe
-	for k := range interp.binPkg {
-		name := key2name(k)
+	for k, pkg := range interp.binPkg {
+		name := key2name(pkg[".name"].String())
 		if sym, ok := sc.sym[name]; ok {
 			// Handle collision by renaming old and new entries.
 			name2 := key2name(fixKey(sym.typ.path))
@@ -766,8 +768,7 @@ func (interp *Interpreter) ImportUsed() {
 	}
 }
 
-func key2name(k string) string {
-	name := packageName(k)
+func key2name(name string) string {
 	return filepath.Join(name, DefaultSourceName)
 }
 

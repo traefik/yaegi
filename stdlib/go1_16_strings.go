@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["strings"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("strings"),
+
 		// function, constant and variable definitions
 		"Compare":        reflect.ValueOf(strings.Compare),
 		"Contains":       reflect.ValueOf(strings.Contains),

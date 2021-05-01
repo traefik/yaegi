@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["net/mail"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("mail"),
+
 		// function, constant and variable definitions
 		"ErrHeaderNotPresent": reflect.ValueOf(&mail.ErrHeaderNotPresent).Elem(),
 		"ParseAddress":        reflect.ValueOf(mail.ParseAddress),

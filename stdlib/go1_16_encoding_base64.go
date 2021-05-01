@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["encoding/base64"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("base64"),
+
 		// function, constant and variable definitions
 		"NewDecoder":     reflect.ValueOf(base64.NewDecoder),
 		"NewEncoder":     reflect.ValueOf(base64.NewEncoder),

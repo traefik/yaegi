@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["expvar"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("expvar"),
+
 		// function, constant and variable definitions
 		"Do":        reflect.ValueOf(expvar.Do),
 		"Get":       reflect.ValueOf(expvar.Get),

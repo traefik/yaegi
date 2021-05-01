@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["hash/adler32"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("adler32"),
+
 		// function, constant and variable definitions
 		"Checksum": reflect.ValueOf(adler32.Checksum),
 		"New":      reflect.ValueOf(adler32.New),

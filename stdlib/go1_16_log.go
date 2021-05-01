@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["log"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("log"),
+
 		// function, constant and variable definitions
 		"Default":       reflect.ValueOf(log.Default),
 		"Fatal":         reflect.ValueOf(logFatal),

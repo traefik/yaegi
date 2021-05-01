@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["unsafe"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("unsafe"),
+
 		// type definitions
 		"Pointer": reflect.ValueOf((*unsafe.Pointer)(nil)),
 	}

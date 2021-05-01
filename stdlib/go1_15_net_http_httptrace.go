@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["net/http/httptrace"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("httptrace"),
+
 		// function, constant and variable definitions
 		"ContextClientTrace": reflect.ValueOf(httptrace.ContextClientTrace),
 		"WithClientTrace":    reflect.ValueOf(httptrace.WithClientTrace),

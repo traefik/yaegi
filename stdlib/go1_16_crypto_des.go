@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["crypto/des"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("des"),
+
 		// function, constant and variable definitions
 		"BlockSize":          reflect.ValueOf(constant.MakeFromLiteral("8", token.INT, 0)),
 		"NewCipher":          reflect.ValueOf(des.NewCipher),

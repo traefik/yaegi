@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["image/gif"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("gif"),
+
 		// function, constant and variable definitions
 		"Decode":             reflect.ValueOf(gif.Decode),
 		"DecodeAll":          reflect.ValueOf(gif.DecodeAll),

@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["io/ioutil"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("ioutil"),
+
 		// function, constant and variable definitions
 		"Discard":   reflect.ValueOf(&ioutil.Discard).Elem(),
 		"NopCloser": reflect.ValueOf(ioutil.NopCloser),

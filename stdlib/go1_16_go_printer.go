@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["go/printer"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("printer"),
+
 		// function, constant and variable definitions
 		"Fprint":    reflect.ValueOf(printer.Fprint),
 		"RawFormat": reflect.ValueOf(printer.RawFormat),

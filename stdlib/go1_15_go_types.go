@@ -12,6 +12,9 @@ import (
 
 func init() {
 	Symbols["go/types"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("types"),
+
 		// function, constant and variable definitions
 		"AssertableTo":            reflect.ValueOf(types.AssertableTo),
 		"AssignableTo":            reflect.ValueOf(types.AssignableTo),

@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["crypto/dsa"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("dsa"),
+
 		// function, constant and variable definitions
 		"ErrInvalidPublicKey": reflect.ValueOf(&dsa.ErrInvalidPublicKey).Elem(),
 		"GenerateKey":         reflect.ValueOf(dsa.GenerateKey),

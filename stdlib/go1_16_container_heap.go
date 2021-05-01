@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["container/heap"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("heap"),
+
 		// function, constant and variable definitions
 		"Fix":    reflect.ValueOf(heap.Fix),
 		"Init":   reflect.ValueOf(heap.Init),

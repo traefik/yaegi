@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["net/http/cookiejar"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("cookiejar"),
+
 		// function, constant and variable definitions
 		"New": reflect.ValueOf(cookiejar.New),
 

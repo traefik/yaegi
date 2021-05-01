@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["path/filepath"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("filepath"),
+
 		// function, constant and variable definitions
 		"Abs":           reflect.ValueOf(filepath.Abs),
 		"Base":          reflect.ValueOf(filepath.Base),

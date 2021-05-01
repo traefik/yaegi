@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["regexp/syntax"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("syntax"),
+
 		// function, constant and variable definitions
 		"ClassNL":                  reflect.ValueOf(syntax.ClassNL),
 		"Compile":                  reflect.ValueOf(syntax.Compile),

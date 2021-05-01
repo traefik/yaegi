@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["unicode/utf8"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("utf8"),
+
 		// function, constant and variable definitions
 		"DecodeLastRune":         reflect.ValueOf(utf8.DecodeLastRune),
 		"DecodeLastRuneInString": reflect.ValueOf(utf8.DecodeLastRuneInString),

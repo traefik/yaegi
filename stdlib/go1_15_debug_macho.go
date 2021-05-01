@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["debug/macho"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("macho"),
+
 		// function, constant and variable definitions
 		"ARM64_RELOC_ADDEND":              reflect.ValueOf(macho.ARM64_RELOC_ADDEND),
 		"ARM64_RELOC_BRANCH26":            reflect.ValueOf(macho.ARM64_RELOC_BRANCH26),

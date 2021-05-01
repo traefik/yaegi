@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["encoding/xml"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("xml"),
+
 		// function, constant and variable definitions
 		"CopyToken":       reflect.ValueOf(xml.CopyToken),
 		"Escape":          reflect.ValueOf(xml.Escape),

@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["crypto/hmac"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("hmac"),
+
 		// function, constant and variable definitions
 		"Equal": reflect.ValueOf(hmac.Equal),
 		"New":   reflect.ValueOf(hmac.New),

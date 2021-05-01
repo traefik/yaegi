@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["runtime/pprof"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("pprof"),
+
 		// function, constant and variable definitions
 		"Do":                 reflect.ValueOf(pprof.Do),
 		"ForLabels":          reflect.ValueOf(pprof.ForLabels),

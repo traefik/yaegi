@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["debug/gosym"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("gosym"),
+
 		// function, constant and variable definitions
 		"NewLineTable": reflect.ValueOf(gosym.NewLineTable),
 		"NewTable":     reflect.ValueOf(gosym.NewTable),

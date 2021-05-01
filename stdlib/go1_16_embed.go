@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["embed"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("embed"),
+
 		// type definitions
 		"FS": reflect.ValueOf((*embed.FS)(nil)),
 	}

@@ -12,6 +12,9 @@ import (
 
 func init() {
 	Symbols["context"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("context"),
+
 		// function, constant and variable definitions
 		"Background":       reflect.ValueOf(context.Background),
 		"Canceled":         reflect.ValueOf(&context.Canceled).Elem(),

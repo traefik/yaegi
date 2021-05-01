@@ -15,6 +15,9 @@ import (
 
 func init() {
 	Symbols["os"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("os"),
+
 		// function, constant and variable definitions
 		"Args":                reflect.ValueOf(&os.Args).Elem(),
 		"Chdir":               reflect.ValueOf(os.Chdir),

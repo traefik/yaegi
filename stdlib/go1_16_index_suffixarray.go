@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["index/suffixarray"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("suffixarray"),
+
 		// function, constant and variable definitions
 		"New": reflect.ValueOf(suffixarray.New),
 

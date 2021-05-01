@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["testing/iotest"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("iotest"),
+
 		// function, constant and variable definitions
 		"DataErrReader":  reflect.ValueOf(iotest.DataErrReader),
 		"ErrReader":      reflect.ValueOf(iotest.ErrReader),

@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["net/smtp"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("smtp"),
+
 		// function, constant and variable definitions
 		"CRAMMD5Auth": reflect.ValueOf(smtp.CRAMMD5Auth),
 		"Dial":        reflect.ValueOf(smtp.Dial),

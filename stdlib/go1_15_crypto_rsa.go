@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["crypto/rsa"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("rsa"),
+
 		// function, constant and variable definitions
 		"DecryptOAEP":               reflect.ValueOf(rsa.DecryptOAEP),
 		"DecryptPKCS1v15":           reflect.ValueOf(rsa.DecryptPKCS1v15),

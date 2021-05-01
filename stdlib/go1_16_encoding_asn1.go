@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["encoding/asn1"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("asn1"),
+
 		// function, constant and variable definitions
 		"ClassApplication":     reflect.ValueOf(constant.MakeFromLiteral("1", token.INT, 0)),
 		"ClassContextSpecific": reflect.ValueOf(constant.MakeFromLiteral("2", token.INT, 0)),

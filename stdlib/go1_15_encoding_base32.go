@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["encoding/base32"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("base32"),
+
 		// function, constant and variable definitions
 		"HexEncoding": reflect.ValueOf(&base32.HexEncoding).Elem(),
 		"NewDecoder":  reflect.ValueOf(base32.NewDecoder),

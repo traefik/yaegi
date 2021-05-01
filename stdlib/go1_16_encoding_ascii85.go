@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["encoding/ascii85"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("ascii85"),
+
 		// function, constant and variable definitions
 		"Decode":        reflect.ValueOf(ascii85.Decode),
 		"Encode":        reflect.ValueOf(ascii85.Encode),

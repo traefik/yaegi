@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["archive/tar"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("tar"),
+
 		// function, constant and variable definitions
 		"ErrFieldTooLong":    reflect.ValueOf(&tar.ErrFieldTooLong).Elem(),
 		"ErrHeader":          reflect.ValueOf(&tar.ErrHeader).Elem(),

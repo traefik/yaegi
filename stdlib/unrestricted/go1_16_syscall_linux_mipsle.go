@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["syscall"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("syscall"),
+
 		// function, constant and variable definitions
 		"AllThreadsSyscall":  reflect.ValueOf(syscall.AllThreadsSyscall),
 		"AllThreadsSyscall6": reflect.ValueOf(syscall.AllThreadsSyscall6),

@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["compress/bzip2"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("bzip2"),
+
 		// function, constant and variable definitions
 		"NewReader": reflect.ValueOf(bzip2.NewReader),
 

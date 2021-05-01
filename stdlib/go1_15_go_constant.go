@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["go/constant"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("constant"),
+
 		// function, constant and variable definitions
 		"BinaryOp":        reflect.ValueOf(constant.BinaryOp),
 		"BitLen":          reflect.ValueOf(constant.BitLen),

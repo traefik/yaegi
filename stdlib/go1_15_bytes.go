@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["bytes"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("bytes"),
+
 		// function, constant and variable definitions
 		"Compare":         reflect.ValueOf(bytes.Compare),
 		"Contains":        reflect.ValueOf(bytes.Contains),

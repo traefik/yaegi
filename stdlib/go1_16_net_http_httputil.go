@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["net/http/httputil"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("httputil"),
+
 		// function, constant and variable definitions
 		"DumpRequest":               reflect.ValueOf(httputil.DumpRequest),
 		"DumpRequestOut":            reflect.ValueOf(httputil.DumpRequestOut),

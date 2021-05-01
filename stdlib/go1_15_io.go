@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["io"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("io"),
+
 		// function, constant and variable definitions
 		"Copy":             reflect.ValueOf(io.Copy),
 		"CopyBuffer":       reflect.ValueOf(io.CopyBuffer),

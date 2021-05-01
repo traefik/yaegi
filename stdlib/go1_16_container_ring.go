@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["container/ring"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("ring"),
+
 		// function, constant and variable definitions
 		"New": reflect.ValueOf(ring.New),
 

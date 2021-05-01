@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["database/sql"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("sql"),
+
 		// function, constant and variable definitions
 		"Drivers":              reflect.ValueOf(sql.Drivers),
 		"ErrConnDone":          reflect.ValueOf(&sql.ErrConnDone).Elem(),

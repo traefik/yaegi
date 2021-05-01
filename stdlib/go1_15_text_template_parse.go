@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["text/template/parse"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("parse"),
+
 		// function, constant and variable definitions
 		"IsEmptyTree":    reflect.ValueOf(parse.IsEmptyTree),
 		"New":            reflect.ValueOf(parse.New),

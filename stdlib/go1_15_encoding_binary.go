@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["encoding/binary"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("binary"),
+
 		// function, constant and variable definitions
 		"BigEndian":      reflect.ValueOf(&binary.BigEndian).Elem(),
 		"LittleEndian":   reflect.ValueOf(&binary.LittleEndian).Elem(),

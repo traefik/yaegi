@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["sync"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("sync"),
+
 		// function, constant and variable definitions
 		"NewCond": reflect.ValueOf(sync.NewCond),
 

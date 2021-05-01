@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["syscall"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("syscall"),
+
 		// function, constant and variable definitions
 		"Exec":               reflect.ValueOf(syscall.Exec),
 		"Exit":               reflect.ValueOf(syscall.Exit),

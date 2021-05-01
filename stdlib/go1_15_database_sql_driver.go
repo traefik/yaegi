@@ -12,6 +12,9 @@ import (
 
 func init() {
 	Symbols["database/sql/driver"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("driver"),
+
 		// function, constant and variable definitions
 		"Bool":                      reflect.ValueOf(&driver.Bool).Elem(),
 		"DefaultParameterConverter": reflect.ValueOf(&driver.DefaultParameterConverter).Elem(),

@@ -19,6 +19,9 @@ import (
 
 func init() {
 	Symbols["guthib.com/baz"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("baz"),
+
 		// function, constant and variable definitions
 		"Hello": reflect.ValueOf(baz.Hello),
 	}
@@ -102,6 +105,9 @@ import (
 
 func init() {
 	Symbols["guthib.com/variadic"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("variadic"),
+
 		// type definitions
 		"Variadic": reflect.ValueOf((*variadic.Variadic)(nil)),
 

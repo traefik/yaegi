@@ -17,6 +17,9 @@ import (
 
 func init() {
 	Symbols["net/http"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("http"),
+
 		// function, constant and variable definitions
 		"CanonicalHeaderKey":                  reflect.ValueOf(http.CanonicalHeaderKey),
 		"DefaultClient":                       reflect.ValueOf(&http.DefaultClient).Elem(),

@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["os/user"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("user"),
+
 		// function, constant and variable definitions
 		"Current":       reflect.ValueOf(user.Current),
 		"Lookup":        reflect.ValueOf(user.Lookup),

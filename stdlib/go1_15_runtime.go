@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["runtime"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("runtime"),
+
 		// function, constant and variable definitions
 		"BlockProfile":            reflect.ValueOf(runtime.BlockProfile),
 		"Breakpoint":              reflect.ValueOf(runtime.Breakpoint),

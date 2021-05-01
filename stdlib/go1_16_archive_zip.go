@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["archive/zip"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("zip"),
+
 		// function, constant and variable definitions
 		"Deflate":              reflect.ValueOf(zip.Deflate),
 		"ErrAlgorithm":         reflect.ValueOf(&zip.ErrAlgorithm).Elem(),

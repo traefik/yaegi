@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["log/syslog"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("syslog"),
+
 		// function, constant and variable definitions
 		"Dial":         reflect.ValueOf(syslog.Dial),
 		"LOG_ALERT":    reflect.ValueOf(syslog.LOG_ALERT),

@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["image/png"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("png"),
+
 		// function, constant and variable definitions
 		"BestCompression":    reflect.ValueOf(png.BestCompression),
 		"BestSpeed":          reflect.ValueOf(png.BestSpeed),

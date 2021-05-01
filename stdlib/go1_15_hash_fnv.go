@@ -11,6 +11,9 @@ import (
 
 func init() {
 	Symbols["hash/fnv"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("fnv"),
+
 		// function, constant and variable definitions
 		"New128":  reflect.ValueOf(fnv.New128),
 		"New128a": reflect.ValueOf(fnv.New128a),

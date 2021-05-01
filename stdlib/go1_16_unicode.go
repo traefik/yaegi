@@ -13,6 +13,9 @@ import (
 
 func init() {
 	Symbols["unicode"] = map[string]reflect.Value{
+		// default package name identifier
+		".name": reflect.ValueOf("unicode"),
+
 		// function, constant and variable definitions
 		"ASCII_Hex_Digit":                    reflect.ValueOf(&unicode.ASCII_Hex_Digit).Elem(),
 		"Adlam":                              reflect.ValueOf(&unicode.Adlam).Elem(),
