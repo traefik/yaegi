@@ -20,6 +20,11 @@ func TestFile(t *testing.T) {
 	filePath := "../_test/str.go"
 	runCheck(t, filePath)
 
+	defer func() {
+		_ = os.Setenv("YAEGI_SPECIAL_STDIO", "0")
+	}()
+	os.Setenv("YAEGI_SPECIAL_STDIO", "1")
+
 	baseDir := filepath.Join("..", "_test")
 	files, err := ioutil.ReadDir(baseDir)
 	if err != nil {

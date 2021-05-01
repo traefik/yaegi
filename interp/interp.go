@@ -128,13 +128,14 @@ type opt struct {
 	cfgDot bool // display CFG graph (debug)
 	// dotCmd is the command to process the dot graph produced when astDot and/or
 	// cfgDot is enabled. It defaults to 'dot -Tdot -o <filename>.dot'.
-	dotCmd   string
-	noRun    bool          // compile, but do not run
-	fastChan bool          // disable cancellable chan operations
-	context  build.Context // build context: GOPATH, build constraints
-	stdin    io.Reader     // standard input
-	stdout   io.Writer     // standard output
-	stderr   io.Writer     // standard error
+	dotCmd       string
+	noRun        bool          // compile, but do not run
+	fastChan     bool          // disable cancellable chan operations
+	context      build.Context // build context: GOPATH, build constraints
+	specialStdio bool          // Allows os.Stdin, os.Stdout, os.Stderr to not be file descriptors
+	stdin        io.Reader     // standard input
+	stdout       io.Writer     // standard output
+	stderr       io.Writer     // standard error
 }
 
 // Interpreter contains global resources and state.
@@ -248,7 +249,7 @@ type Options struct {
 	BuildTags []string
 
 	// Standard input, output and error streams.
-	// They default to os.Stding, os.Stdout and os.Stderr respectively.
+	// They default to os.Stdin, os.Stdout and os.Stderr respectively.
 	Stdin          io.Reader
 	Stdout, Stderr io.Writer
 }
@@ -301,6 +302,10 @@ func New(options Options) *Interpreter {
 
 	// fastChan disables the cancellable version of channel operations in evalWithContext
 	i.opt.fastChan, _ = strconv.ParseBool(os.Getenv("YAEGI_FAST_CHAN"))
+
+	// specialStdio allows to assign directly io.Writer and io.Reader to os.Stdxxx, even if they are not file descriptors.
+	i.opt.specialStdio, _ = strconv.ParseBool(os.Getenv("YAEGI_SPECIAL_STDIO"))
+
 	return &i
 }
 
@@ -680,8 +685,8 @@ func (interp *Interpreter) Use(values Exports) {
 
 // fixStdio redefines interpreter stdlib symbols to use the standard input,
 // output and errror assigned to the interpreter. The changes are limited to
-// the interpreter only. Global values os.Stdin, os.Stdout and os.Stderr are
-// not changed. Note that it is possible to escape the virtualized stdio by
+// the interpreter only.
+// Note that it is possible to escape the virtualized stdio by
 // read/write directly to file descriptors 0, 1, 2.
 func fixStdio(interp *Interpreter) {
 	p := interp.binPkg["fmt"]
@@ -728,9 +733,23 @@ func fixStdio(interp *Interpreter) {
 	}
 
 	if p = interp.binPkg["os"]; p != nil {
-		p["Stdin"] = reflect.ValueOf(&stdin).Elem()
-		p["Stdout"] = reflect.ValueOf(&stdout).Elem()
-		p["Stderr"] = reflect.ValueOf(&stderr).Elem()
+		if interp.specialStdio {
+			// Inherit streams from interpreter even if they do not have a file descriptor.
+			p["Stdin"] = reflect.ValueOf(&stdin).Elem()
+			p["Stdout"] = reflect.ValueOf(&stdout).Elem()
+			p["Stderr"] = reflect.ValueOf(&stderr).Elem()
+		} else {
+			// Inherits streams from interpreter only if they have a file descriptor and preserve original type.
+			if s, ok := stdin.(*os.File); ok {
+				p["Stdin"] = reflect.ValueOf(&s).Elem()
+			}
+			if s, ok := stdout.(*os.File); ok {
+				p["Stdout"] = reflect.ValueOf(&s).Elem()
+			}
+			if s, ok := stderr.(*os.File); ok {
+				p["Stderr"] = reflect.ValueOf(&s).Elem()
+			}
+		}
 	}
 }
 
