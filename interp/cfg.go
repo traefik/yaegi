@@ -1543,7 +1543,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					if isBinType(s) {
 						n.typ = &itype{cat: valueT, rtype: s.Type().Elem()}
 					} else {
-						n.typ = &itype{cat: valueT, rtype: s.Type(), untyped: isValueUntyped(s)}
+						n.typ = &itype{cat: valueT, rtype: constType(s.Type()), untyped: isValueUntyped(s)}
 						n.rval = s
 					}
 					n.action = aGetSym
