@@ -281,7 +281,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		dt := t
 
 		switch a := n.anc; {
-		case a.kind == assignStmt && isInterface(a.child[0].typ) && len(a.child[0].typ.field) == 0:
+		case a.kind == assignStmt && isEmptyInterface(a.child[0].typ):
 			// Because an empty interface concrete type "mutates" as different values are
 			// assigned to it, we need to make a new itype from scratch everytime a new
 			// assignment is made, and not let different nodes (of the same variable) share the
