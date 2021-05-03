@@ -286,7 +286,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			// assigned to it, we need to make a new itype from scratch everytime a new
 			// assignment is made, and not let different nodes (of the same variable) share the
 			// same itype. Otherwise they would overwrite each other.
-			a.child[childPos(n)-a.nright].typ = &itype{cat: interfaceT, val: dt}
+			a.child[0].typ = &itype{cat: interfaceT, val: dt}
 
 		case a.kind == defineStmt && len(a.child) > a.nleft+a.nright:
 			if dt, err = nodeType(interp, sc, a.child[a.nleft]); err != nil {
