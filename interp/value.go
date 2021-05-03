@@ -214,6 +214,31 @@ func genValue(n *node) func(*frame) reflect.Value {
 	}
 }
 
+func genDestValue(typ *itype, n *node) func(*frame) reflect.Value {
+	convertLiteralValue(n, typ.TypeOf())
+	switch {
+	case isInterfaceSrc(typ) && !isEmptyInterface(typ):
+		return genValueInterface(n)
+	case isFuncSrc(typ) && n.typ.cat == valueT:
+		return genValueNode(n)
+	case typ.cat == valueT && isFuncSrc(n.typ):
+		return genFunctionWrapper(n)
+	case isInterfaceBin(typ):
+		return genInterfaceWrapper(n, typ.rtype)
+	case n.kind == basicLit && n.val == nil:
+		return func(*frame) reflect.Value { return reflect.New(typ.rtype).Elem() }
+	case isRecursiveType(typ, typ.rtype):
+		return genValueRecursiveInterface(n, typ.rtype)
+	case isRecursiveType(n.typ, n.typ.rtype):
+		return genValueRecursiveInterfacePtrValue(n)
+	case n.typ.untyped && isComplex(typ.TypeOf()):
+		return genValueComplex(n)
+	case n.typ.untyped && !typ.untyped:
+		return genValueAs(n, typ.TypeOf())
+	}
+	return genValue(n)
+}
+
 func genValueArray(n *node) func(*frame) reflect.Value {
 	value := genValue(n)
 	// dereference array pointer, to support array operations on array pointer
@@ -310,7 +335,7 @@ func zeroInterfaceValue() reflect.Value {
 }
 
 func wantEmptyInterface(n *node) bool {
-	return n.typ.cat == interfaceT && len(n.typ.field) == 0 ||
+	return isEmptyInterface(n.typ) ||
 		n.anc.action == aAssign && n.anc.typ.cat == interfaceT && len(n.anc.typ.field) == 0 ||
 		n.anc.kind == returnStmt && n.anc.val.(*node).typ.ret[0].cat == interfaceT && len(n.anc.val.(*node).typ.ret[0].field) == 0
 }
