@@ -13,10 +13,7 @@ import (
 )
 
 func init() {
-	Symbols["compress/flate"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("flate"),
-
+	Symbols["compress/flate/flate"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"BestCompression":    reflect.ValueOf(constant.MakeFromLiteral("9", token.INT, 0)),
 		"BestSpeed":          reflect.ValueOf(constant.MakeFromLiteral("1", token.INT, 0)),

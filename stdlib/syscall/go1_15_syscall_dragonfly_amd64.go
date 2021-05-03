@@ -12,10 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["syscall"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("syscall"),
-
+	Symbols["syscall/syscall"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"AF_APPLETALK":                      reflect.ValueOf(constant.MakeFromLiteral("16", token.INT, 0)),
 		"AF_ATM":                            reflect.ValueOf(constant.MakeFromLiteral("30", token.INT, 0)),

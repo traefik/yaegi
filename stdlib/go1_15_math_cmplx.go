@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["math/cmplx"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("cmplx"),
-
+	Symbols["math/cmplx/cmplx"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Abs":   reflect.ValueOf(cmplx.Abs),
 		"Acos":  reflect.ValueOf(cmplx.Acos),

@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["unsafe"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("unsafe"),
-
+	Symbols["unsafe/unsafe"] = map[string]reflect.Value{
 		// type definitions
 		"Pointer": reflect.ValueOf((*unsafe.Pointer)(nil)),
 	}

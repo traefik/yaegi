@@ -45,9 +45,8 @@ func TestInterface(t *testing.T) {
 	i := interp.New(interp.Options{})
 	// export the Wrap type to the interpreter under virtual "wrap" package
 	i.Use(interp.Exports{
-		"wrap": {
-			".name": reflect.ValueOf("wrap"),
-			"Wrap":  reflect.ValueOf((*Wrap)(nil)),
+		"wrap/wrap": {
+			"Wrap": reflect.ValueOf((*Wrap)(nil)),
 		},
 	})
 

@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["go/doc"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("doc"),
-
+	Symbols["go/doc/doc"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"AllDecls":        reflect.ValueOf(doc.AllDecls),
 		"AllMethods":      reflect.ValueOf(doc.AllMethods),

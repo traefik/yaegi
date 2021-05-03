@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["encoding/csv"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("csv"),
-
+	Symbols["encoding/csv/csv"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ErrBareQuote":     reflect.ValueOf(&csv.ErrBareQuote).Elem(),
 		"ErrFieldCount":    reflect.ValueOf(&csv.ErrFieldCount).Elem(),

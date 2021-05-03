@@ -9,10 +9,7 @@ import (
 )
 
 func init() {
-	Symbols["reflect"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("reflect"),
-
+	Symbols["reflect/reflect"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Append":          reflect.ValueOf(reflect.Append),
 		"AppendSlice":     reflect.ValueOf(reflect.AppendSlice),

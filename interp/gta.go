@@ -203,7 +203,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 					}
 				default: // import symbols in package namespace
 					if name == "" {
-						name = pkg[".name"].String()
+						name = interp.pkgNames[ipath]
 					}
 					// Imports of a same package are all mapped in the same scope, so we cannot just
 					// map them by their names, otherwise we could have collisions from same-name

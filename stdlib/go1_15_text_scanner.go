@@ -12,10 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["text/scanner"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("scanner"),
-
+	Symbols["text/scanner/scanner"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Char":           reflect.ValueOf(constant.MakeFromLiteral("-5", token.INT, 0)),
 		"Comment":        reflect.ValueOf(constant.MakeFromLiteral("-8", token.INT, 0)),

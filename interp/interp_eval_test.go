@@ -104,9 +104,8 @@ func TestEvalStar(t *testing.T) {
 func TestEvalAssign(t *testing.T) {
 	i := interp.New(interp.Options{})
 	i.Use(interp.Exports{
-		"testpkg": {
-			".name": reflect.ValueOf("testpkg"),
-			"val":   reflect.ValueOf(int64(11)),
+		"testpkg/testpkg": {
+			"val": reflect.ValueOf(int64(11)),
 		},
 	})
 	_, e := i.Eval(`import "testpkg"`)
@@ -663,9 +662,8 @@ func TestEvalMissingSymbol(t *testing.T) {
 		F S2
 	}
 	i := interp.New(interp.Options{})
-	i.Use(interp.Exports{"p": map[string]reflect.Value{
-		".name": reflect.ValueOf("p"),
-		"S1":    reflect.Zero(reflect.TypeOf(&S1{})),
+	i.Use(interp.Exports{"p/p": map[string]reflect.Value{
+		"S1": reflect.Zero(reflect.TypeOf(&S1{})),
 	}})
 	_, err := i.Eval(`import "p"`)
 	if err != nil {
@@ -963,9 +961,6 @@ func TestImportPathIsKey(t *testing.T) {
 	}
 
 	packages := i.Packages()
-	if len(packages) != len(wantPackages) {
-		t.Fatalf("want %d, got %d", len(wantPackages), len(packages))
-	}
 	for k, v := range wantPackages {
 		pkg := packages[k]
 		if pkg != v {

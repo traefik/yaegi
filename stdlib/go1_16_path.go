@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["path"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("path"),
-
+	Symbols["path/path"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Base":          reflect.ValueOf(path.Base),
 		"Clean":         reflect.ValueOf(path.Clean),

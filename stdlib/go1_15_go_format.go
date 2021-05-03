@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["go/format"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("format"),
-
+	Symbols["go/format/format"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Node":   reflect.ValueOf(format.Node),
 		"Source": reflect.ValueOf(format.Source),

@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["net/http/pprof"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("pprof"),
-
+	Symbols["net/http/pprof/pprof"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Cmdline": reflect.ValueOf(pprof.Cmdline),
 		"Handler": reflect.ValueOf(pprof.Handler),

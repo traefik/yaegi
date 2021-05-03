@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["image/color/palette"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("palette"),
-
+	Symbols["image/color/palette/palette"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Plan9":   reflect.ValueOf(&palette.Plan9).Elem(),
 		"WebSafe": reflect.ValueOf(&palette.WebSafe).Elem(),

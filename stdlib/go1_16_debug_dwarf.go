@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["debug/dwarf"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("dwarf"),
-
+	Symbols["debug/dwarf/dwarf"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"AttrAbstractOrigin":        reflect.ValueOf(dwarf.AttrAbstractOrigin),
 		"AttrAccessibility":         reflect.ValueOf(dwarf.AttrAccessibility),

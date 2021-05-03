@@ -12,10 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["crypto/sha512"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("sha512"),
-
+	Symbols["crypto/sha512/sha512"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"BlockSize":  reflect.ValueOf(constant.MakeFromLiteral("128", token.INT, 0)),
 		"New":        reflect.ValueOf(sha512.New),

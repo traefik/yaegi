@@ -12,10 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["time"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("time"),
-
+	Symbols["time/time"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ANSIC":                  reflect.ValueOf(constant.MakeFromLiteral("\"Mon Jan _2 15:04:05 2006\"", token.STRING, 0)),
 		"After":                  reflect.ValueOf(time.After),

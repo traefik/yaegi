@@ -12,10 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["crypto/tls"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("tls"),
-
+	Symbols["crypto/tls/tls"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"CipherSuiteName":                         reflect.ValueOf(tls.CipherSuiteName),
 		"CipherSuites":                            reflect.ValueOf(tls.CipherSuites),

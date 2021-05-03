@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["crypto/cipher"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("cipher"),
-
+	Symbols["crypto/cipher/cipher"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"NewCBCDecrypter":     reflect.ValueOf(cipher.NewCBCDecrypter),
 		"NewCBCEncrypter":     reflect.ValueOf(cipher.NewCBCEncrypter),

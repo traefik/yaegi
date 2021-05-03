@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["fmt"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("fmt"),
-
+	Symbols["fmt/fmt"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Errorf":   reflect.ValueOf(fmt.Errorf),
 		"Fprint":   reflect.ValueOf(fmt.Fprint),

@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["go/build"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("build"),
-
+	Symbols["go/build/build"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"AllowBinary":   reflect.ValueOf(build.AllowBinary),
 		"ArchChar":      reflect.ValueOf(build.ArchChar),

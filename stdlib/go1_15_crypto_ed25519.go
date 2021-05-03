@@ -12,10 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["crypto/ed25519"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("ed25519"),
-
+	Symbols["crypto/ed25519/ed25519"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"GenerateKey":    reflect.ValueOf(ed25519.GenerateKey),
 		"NewKeyFromSeed": reflect.ValueOf(ed25519.NewKeyFromSeed),

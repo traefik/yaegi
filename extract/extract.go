@@ -16,6 +16,7 @@ import (
 	"io"
 	"math/big"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -43,10 +44,8 @@ import (
 )
 
 func init() {
-	Symbols["{{.ImportPath}}"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("{{.PkgName}}"),
-		{{if .Val}}
+	Symbols["{{.PkgName}}"] = map[string]reflect.Value{
+		{{- if .Val}}
 		// function, constant and variable definitions
 		{{range $key, $value := .Val -}}
 			{{- if $value.Addr -}}
@@ -275,7 +274,7 @@ func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, err
 		"Dest":       e.Dest,
 		"Imports":    imports,
 		"ImportPath": importPath,
-		"PkgName":    p.Name(),
+		"PkgName":    path.Join(importPath, p.Name()),
 		"Val":        val,
 		"Typ":        typ,
 		"Wrap":       wrap,

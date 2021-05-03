@@ -12,10 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["image/draw"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("draw"),
-
+	Symbols["image/draw/draw"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Draw":           reflect.ValueOf(draw.Draw),
 		"DrawMask":       reflect.ValueOf(draw.DrawMask),

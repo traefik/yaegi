@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["encoding"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("encoding"),
-
+	Symbols["encoding/encoding"] = map[string]reflect.Value{
 		// type definitions
 		"BinaryMarshaler":   reflect.ValueOf((*encoding.BinaryMarshaler)(nil)),
 		"BinaryUnmarshaler": reflect.ValueOf((*encoding.BinaryUnmarshaler)(nil)),

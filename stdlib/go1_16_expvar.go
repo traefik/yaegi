@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["expvar"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("expvar"),
-
+	Symbols["expvar/expvar"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Do":        reflect.ValueOf(expvar.Do),
 		"Get":       reflect.ValueOf(expvar.Get),

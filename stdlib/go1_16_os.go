@@ -14,10 +14,7 @@ import (
 )
 
 func init() {
-	Symbols["os"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("os"),
-
+	Symbols["os/os"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Args":                reflect.ValueOf(&os.Args).Elem(),
 		"Chdir":               reflect.ValueOf(os.Chdir),

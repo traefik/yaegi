@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["compress/lzw"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("lzw"),
-
+	Symbols["compress/lzw/lzw"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"LSB":       reflect.ValueOf(lzw.LSB),
 		"MSB":       reflect.ValueOf(lzw.MSB),

@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["go/parser"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("parser"),
-
+	Symbols["go/parser/parser"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"AllErrors":         reflect.ValueOf(parser.AllErrors),
 		"DeclarationErrors": reflect.ValueOf(parser.DeclarationErrors),

@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["encoding/pem"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("pem"),
-
+	Symbols["encoding/pem/pem"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Decode":         reflect.ValueOf(pem.Decode),
 		"Encode":         reflect.ValueOf(pem.Encode),

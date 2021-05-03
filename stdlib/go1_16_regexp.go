@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["regexp"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("regexp"),
-
+	Symbols["regexp/regexp"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Compile":          reflect.ValueOf(regexp.Compile),
 		"CompilePOSIX":     reflect.ValueOf(regexp.CompilePOSIX),

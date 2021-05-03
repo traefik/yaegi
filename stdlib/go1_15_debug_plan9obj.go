@@ -12,10 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["debug/plan9obj"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("plan9obj"),
-
+	Symbols["debug/plan9obj/plan9obj"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Magic386":   reflect.ValueOf(constant.MakeFromLiteral("491", token.INT, 0)),
 		"Magic64":    reflect.ValueOf(constant.MakeFromLiteral("32768", token.INT, 0)),

@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["hash/maphash"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("maphash"),
-
+	Symbols["hash/maphash/maphash"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"MakeSeed": reflect.ValueOf(maphash.MakeSeed),
 

@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["testing"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("testing"),
-
+	Symbols["testing/testing"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"AllocsPerRun":  reflect.ValueOf(testing.AllocsPerRun),
 		"Benchmark":     reflect.ValueOf(testing.Benchmark),

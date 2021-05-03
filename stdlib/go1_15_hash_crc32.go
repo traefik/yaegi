@@ -12,10 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["hash/crc32"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("crc32"),
-
+	Symbols["hash/crc32/crc32"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Castagnoli":   reflect.ValueOf(constant.MakeFromLiteral("2197175160", token.INT, 0)),
 		"Checksum":     reflect.ValueOf(crc32.Checksum),

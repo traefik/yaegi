@@ -14,6 +14,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -114,6 +115,8 @@ func (f *frame) clone(fork bool) *frame {
 }
 
 // Exports stores the map of binary packages per package path.
+// The package path is the path joined from the import path and the package name
+// as specified in source files by the "package" statement.
 type Exports map[string]map[string]reflect.Value
 
 // imports stores the map of source packages per package path.
@@ -169,7 +172,7 @@ type Interpreter struct {
 const (
 	mainID     = "main"
 	selfPrefix = "github.com/traefik/yaegi"
-	selfPath   = selfPrefix + "/interp"
+	selfPath   = selfPrefix + "/interp/interp"
 	// DefaultSourceName is the name used by default when the name of the input
 	// source file has not been specified for an Eval.
 	// TODO(mpl): something even more special as a name?
@@ -187,8 +190,6 @@ var Self *Interpreter
 // Symbols exposes interpreter values.
 var Symbols = Exports{
 	selfPath: map[string]reflect.Value{
-		".name": reflect.ValueOf("interp"),
-
 		"New": reflect.ValueOf(New),
 
 		"Interpreter": reflect.ValueOf((*Interpreter)(nil)),
@@ -649,26 +650,30 @@ func (interp *Interpreter) getWrapper(t reflect.Type) reflect.Type {
 // they can be used in interpreted code.
 func (interp *Interpreter) Use(values Exports) {
 	for k, v := range values {
-		if k == selfPrefix {
+		importPath := path.Dir(k)
+		packageName := path.Base(k)
+
+		if importPath == selfPrefix {
 			interp.hooks.Parse(v)
 			continue
 		}
 
-		if interp.binPkg[k] == nil {
-			interp.binPkg[k] = make(map[string]reflect.Value)
+		if interp.binPkg[importPath] == nil {
+			interp.binPkg[importPath] = make(map[string]reflect.Value)
+			interp.pkgNames[importPath] = packageName
 		}
 
 		for s, sym := range v {
-			interp.binPkg[k][s] = sym
+			interp.binPkg[importPath][s] = sym
 		}
 		if k == selfPath {
-			interp.binPkg[k]["Self"] = reflect.ValueOf(interp)
+			interp.binPkg[importPath]["Self"] = reflect.ValueOf(interp)
 		}
 	}
 
 	// Checks if input values correspond to stdlib packages by looking for one
 	// well known stdlib package path.
-	if _, ok := values["fmt"]; ok {
+	if _, ok := values["fmt/fmt"]; ok {
 		fixStdio(interp)
 	}
 }

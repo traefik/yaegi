@@ -13,10 +13,7 @@ import (
 )
 
 func init() {
-	Symbols["net"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("net"),
-
+	Symbols["net/net"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"CIDRMask":                   reflect.ValueOf(net.CIDRMask),
 		"DefaultResolver":            reflect.ValueOf(&net.DefaultResolver).Elem(),

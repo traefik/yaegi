@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["encoding/gob"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("gob"),
-
+	Symbols["encoding/gob/gob"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"NewDecoder":   reflect.ValueOf(gob.NewDecoder),
 		"NewEncoder":   reflect.ValueOf(gob.NewEncoder),

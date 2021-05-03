@@ -10,10 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["math/rand"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("rand"),
-
+	Symbols["math/rand/rand"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ExpFloat64":  reflect.ValueOf(rand.ExpFloat64),
 		"Float32":     reflect.ValueOf(rand.Float32),

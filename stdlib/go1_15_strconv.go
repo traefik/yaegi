@@ -12,10 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["strconv"] = map[string]reflect.Value{
-		// default package name identifier
-		".name": reflect.ValueOf("strconv"),
-
+	Symbols["strconv/strconv"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"AppendBool":               reflect.ValueOf(strconv.AppendBool),
 		"AppendFloat":              reflect.ValueOf(strconv.AppendFloat),
