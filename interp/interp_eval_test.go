@@ -1397,11 +1397,11 @@ func applyCIMultiplier(timeout time.Duration) time.Duration {
 	return time.Duration(float64(timeout) * CITimeoutMultiplier)
 }
 
-func TestREPLDivision(t *testing.T) {
+func TestREPLCommands(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	_ = os.Setenv("YAEGI_PROMPT", "1")
+	_ = os.Setenv("YAEGI_PROMPT", "1") // To force prompts over non-tty streams
 	defer func() {
 		_ = os.Setenv("YAEGI_PROMPT", "0")
 	}()
@@ -1430,12 +1430,16 @@ func TestREPLDivision(t *testing.T) {
 			`7/3`,
 			`16/5`,
 			`3./2`, // float
+			`reflect.TypeOf(math_rand.Int)`,
+			`reflect.TypeOf(crypto_rand.Int)`,
 		}
 		output := []string{
 			`1`,
 			`2`,
 			`3`,
 			`1.5`,
+			`func() int`,
+			`func(io.Reader, *big.Int) (*big.Int, error)`,
 		}
 
 		go func() {

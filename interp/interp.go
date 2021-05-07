@@ -758,8 +758,9 @@ func ignoreScannerError(e *scanner.Error, s string) bool {
 // rename packages.
 func (interp *Interpreter) ImportUsed() {
 	sc := interp.universe
-	for k, pkg := range interp.binPkg {
-		name := key2name(pkg[".name"].String())
+	for k := range interp.binPkg {
+		// By construction, the package name is the last path element of the key.
+		name := path.Base(k)
 		if sym, ok := sc.sym[name]; ok {
 			// Handle collision by renaming old and new entries.
 			name2 := key2name(fixKey(sym.typ.path))
@@ -769,7 +770,7 @@ func (interp *Interpreter) ImportUsed() {
 			}
 			name = key2name(fixKey(k))
 		}
-		sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: k, scope: sc}}
+		sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: path.Dir(k), scope: sc}}
 	}
 }
 

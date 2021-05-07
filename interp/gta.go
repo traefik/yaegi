@@ -192,9 +192,6 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 				case "_": // no import of symbols
 				case ".": // import symbols in current scope
 					for n, v := range pkg {
-						if n[0] == '.' {
-							continue
-						}
 						typ := v.Type()
 						if isBinType(v) {
 							typ = typ.Elem()
