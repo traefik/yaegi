@@ -202,7 +202,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 					if name == "" {
 						name = identifier.FindString(ipath)
 					}
-					// imports of a same package are all mapped in the same scope, so we cannot just
+					// Imports of a same package are all mapped in the same scope, so we cannot just
 					// map them by their names, otherwise we could have collisions from same-name
 					// imports in different source files of the same package. Therefore, we suffix
 					// the key with the basename of the source file.

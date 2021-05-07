@@ -2349,7 +2349,7 @@ func mapLit(n *node) {
 	if n.nleft == 1 {
 		child = n.child[1:]
 	}
-	typ := n.typ.TypeOf()
+	typ := n.typ.frameType()
 	keys := make([]func(*frame) reflect.Value, len(child))
 	values := make([]func(*frame) reflect.Value, len(child))
 	for i, c := range child {
@@ -2384,7 +2384,7 @@ func compositeBinMap(n *node) {
 	if n.nleft == 1 {
 		child = n.child[1:]
 	}
-	typ := n.typ.TypeOf()
+	typ := n.typ.frameType()
 	keys := make([]func(*frame) reflect.Value, len(child))
 	values := make([]func(*frame) reflect.Value, len(child))
 	for i, c := range child {
