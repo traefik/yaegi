@@ -303,7 +303,7 @@ func effectivePkg(root, path string) string {
 }
 
 // isPathRelative returns true if path starts with "./" or "../".
+// It is intended for use on import paths, where "/" is always the directory separator.
 func isPathRelative(s string) bool {
-	p := "." + string(filepath.Separator)
-	return strings.HasPrefix(s, p) || strings.HasPrefix(s, "."+p)
+	return strings.HasPrefix(s, "./") || strings.HasPrefix(s, "../")
 }
