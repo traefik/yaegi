@@ -22,6 +22,12 @@ func main() {
 	var g int = 2
 	a = 10 + g
 	println(a.(int))
+
+	// multiple assignment
+	var foo interface{}
+	foo, a = "hello", 11 + g
+	println(a.(int))
+	println(foo.(string))
 }
 
 // Output:
@@ -31,3 +37,5 @@ func main() {
 // 10
 // 11
 // 12
+// 13
+// hello
