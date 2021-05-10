@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["encoding/ascii85"] = map[string]reflect.Value{
+	Symbols["encoding/ascii85/ascii85"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Decode":        reflect.ValueOf(ascii85.Decode),
 		"Encode":        reflect.ValueOf(ascii85.Encode),

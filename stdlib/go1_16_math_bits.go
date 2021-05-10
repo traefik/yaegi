@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["math/bits"] = map[string]reflect.Value{
+	Symbols["math/bits/bits"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Add":             reflect.ValueOf(bits.Add),
 		"Add32":           reflect.ValueOf(bits.Add32),

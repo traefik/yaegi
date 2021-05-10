@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["go/constant"] = map[string]reflect.Value{
+	Symbols["go/constant/constant"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"BinaryOp":        reflect.ValueOf(constant.BinaryOp),
 		"BitLen":          reflect.ValueOf(constant.BitLen),

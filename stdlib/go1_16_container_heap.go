@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["container/heap"] = map[string]reflect.Value{
+	Symbols["container/heap/heap"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Fix":    reflect.ValueOf(heap.Fix),
 		"Init":   reflect.ValueOf(heap.Init),

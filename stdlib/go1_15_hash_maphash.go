@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["hash/maphash"] = map[string]reflect.Value{
+	Symbols["hash/maphash/maphash"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"MakeSeed": reflect.ValueOf(maphash.MakeSeed),
 

@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["syscall"] = map[string]reflect.Value{
+	Symbols["syscall/syscall"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"AF_INET":                             reflect.ValueOf(constant.MakeFromLiteral("2", token.INT, 0)),
 		"AF_INET6":                            reflect.ValueOf(constant.MakeFromLiteral("23", token.INT, 0)),

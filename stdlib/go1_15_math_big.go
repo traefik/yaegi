@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["math/big"] = map[string]reflect.Value{
+	Symbols["math/big/big"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Above":         reflect.ValueOf(big.Above),
 		"AwayFromZero":  reflect.ValueOf(big.AwayFromZero),

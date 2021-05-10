@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Symbols["crypto"] = map[string]reflect.Value{
+	Symbols["crypto/crypto"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"BLAKE2b_256":  reflect.ValueOf(crypto.BLAKE2b_256),
 		"BLAKE2b_384":  reflect.ValueOf(crypto.BLAKE2b_384),

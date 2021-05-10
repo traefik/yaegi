@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["net/http/httptrace"] = map[string]reflect.Value{
+	Symbols["net/http/httptrace/httptrace"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ContextClientTrace": reflect.ValueOf(httptrace.ContextClientTrace),
 		"WithClientTrace":    reflect.ValueOf(httptrace.WithClientTrace),

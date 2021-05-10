@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["net/rpc/jsonrpc"] = map[string]reflect.Value{
+	Symbols["net/rpc/jsonrpc/jsonrpc"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Dial":           reflect.ValueOf(jsonrpc.Dial),
 		"NewClient":      reflect.ValueOf(jsonrpc.NewClient),

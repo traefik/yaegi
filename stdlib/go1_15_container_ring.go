@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["container/ring"] = map[string]reflect.Value{
+	Symbols["container/ring/ring"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"New": reflect.ValueOf(ring.New),
 

@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["archive/tar"] = map[string]reflect.Value{
+	Symbols["archive/tar/tar"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ErrFieldTooLong":    reflect.ValueOf(&tar.ErrFieldTooLong).Elem(),
 		"ErrHeader":          reflect.ValueOf(&tar.ErrHeader).Elem(),

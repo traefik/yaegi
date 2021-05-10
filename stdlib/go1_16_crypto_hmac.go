@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["crypto/hmac"] = map[string]reflect.Value{
+	Symbols["crypto/hmac/hmac"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Equal": reflect.ValueOf(hmac.Equal),
 		"New":   reflect.ValueOf(hmac.New),

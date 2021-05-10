@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["crypto/subtle"] = map[string]reflect.Value{
+	Symbols["crypto/subtle/subtle"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ConstantTimeByteEq":   reflect.ValueOf(subtle.ConstantTimeByteEq),
 		"ConstantTimeCompare":  reflect.ValueOf(subtle.ConstantTimeCompare),

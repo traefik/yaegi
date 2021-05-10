@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["net/rpc"] = map[string]reflect.Value{
+	Symbols["net/rpc/rpc"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Accept":             reflect.ValueOf(rpc.Accept),
 		"DefaultDebugPath":   reflect.ValueOf(constant.MakeFromLiteral("\"/debug/rpc\"", token.STRING, 0)),

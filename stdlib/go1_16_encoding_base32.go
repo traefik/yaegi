@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["encoding/base32"] = map[string]reflect.Value{
+	Symbols["encoding/base32/base32"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"HexEncoding": reflect.ValueOf(&base32.HexEncoding).Elem(),
 		"NewDecoder":  reflect.ValueOf(base32.NewDecoder),

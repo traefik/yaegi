@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["runtime/pprof"] = map[string]reflect.Value{
+	Symbols["runtime/pprof/pprof"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Do":                 reflect.ValueOf(pprof.Do),
 		"ForLabels":          reflect.ValueOf(pprof.ForLabels),

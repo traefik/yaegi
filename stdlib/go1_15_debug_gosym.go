@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["debug/gosym"] = map[string]reflect.Value{
+	Symbols["debug/gosym/gosym"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"NewLineTable": reflect.ValueOf(gosym.NewLineTable),
 		"NewTable":     reflect.ValueOf(gosym.NewTable),

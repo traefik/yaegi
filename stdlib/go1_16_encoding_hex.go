@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["encoding/hex"] = map[string]reflect.Value{
+	Symbols["encoding/hex/hex"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Decode":         reflect.ValueOf(hex.Decode),
 		"DecodeString":   reflect.ValueOf(hex.DecodeString),

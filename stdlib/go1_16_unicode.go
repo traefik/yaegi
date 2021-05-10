@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["unicode"] = map[string]reflect.Value{
+	Symbols["unicode/unicode"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ASCII_Hex_Digit":                    reflect.ValueOf(&unicode.ASCII_Hex_Digit).Elem(),
 		"Adlam":                              reflect.ValueOf(&unicode.Adlam).Elem(),

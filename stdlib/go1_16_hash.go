@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["hash"] = map[string]reflect.Value{
+	Symbols["hash/hash"] = map[string]reflect.Value{
 		// type definitions
 		"Hash":   reflect.ValueOf((*hash.Hash)(nil)),
 		"Hash32": reflect.ValueOf((*hash.Hash32)(nil)),

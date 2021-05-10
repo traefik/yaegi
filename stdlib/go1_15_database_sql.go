@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["database/sql"] = map[string]reflect.Value{
+	Symbols["database/sql/sql"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Drivers":              reflect.ValueOf(sql.Drivers),
 		"ErrConnDone":          reflect.ValueOf(&sql.ErrConnDone).Elem(),

@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["net/http/fcgi"] = map[string]reflect.Value{
+	Symbols["net/http/fcgi/fcgi"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ErrConnClosed":     reflect.ValueOf(&fcgi.ErrConnClosed).Elem(),
 		"ErrRequestAborted": reflect.ValueOf(&fcgi.ErrRequestAborted).Elem(),

@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["archive/zip"] = map[string]reflect.Value{
+	Symbols["archive/zip/zip"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Deflate":              reflect.ValueOf(zip.Deflate),
 		"ErrAlgorithm":         reflect.ValueOf(&zip.ErrAlgorithm).Elem(),

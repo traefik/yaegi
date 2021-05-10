@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["embed"] = map[string]reflect.Value{
+	Symbols["embed/embed"] = map[string]reflect.Value{
 		// type definitions
 		"FS": reflect.ValueOf((*embed.FS)(nil)),
 	}

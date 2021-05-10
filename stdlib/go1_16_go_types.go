@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Symbols["go/types"] = map[string]reflect.Value{
+	Symbols["go/types/types"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"AssertableTo":            reflect.ValueOf(types.AssertableTo),
 		"AssignableTo":            reflect.ValueOf(types.AssignableTo),

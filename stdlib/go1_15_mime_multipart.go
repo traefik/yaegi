@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["mime/multipart"] = map[string]reflect.Value{
+	Symbols["mime/multipart/multipart"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ErrMessageTooLarge": reflect.ValueOf(&multipart.ErrMessageTooLarge).Elem(),
 		"NewReader":          reflect.ValueOf(multipart.NewReader),

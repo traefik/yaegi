@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["net/http/httputil"] = map[string]reflect.Value{
+	Symbols["net/http/httputil/httputil"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"DumpRequest":               reflect.ValueOf(httputil.DumpRequest),
 		"DumpRequestOut":            reflect.ValueOf(httputil.DumpRequestOut),

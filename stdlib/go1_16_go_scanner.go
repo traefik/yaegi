@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["go/scanner"] = map[string]reflect.Value{
+	Symbols["go/scanner/scanner"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"PrintError":   reflect.ValueOf(scanner.PrintError),
 		"ScanComments": reflect.ValueOf(scanner.ScanComments),

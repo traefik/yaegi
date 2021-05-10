@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["debug/pe"] = map[string]reflect.Value{
+	Symbols["debug/pe/pe"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"COFFSymbolSize":                                 reflect.ValueOf(constant.MakeFromLiteral("18", token.INT, 0)),
 		"IMAGE_DIRECTORY_ENTRY_ARCHITECTURE":             reflect.ValueOf(constant.MakeFromLiteral("7", token.INT, 0)),

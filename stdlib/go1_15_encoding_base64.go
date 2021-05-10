@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["encoding/base64"] = map[string]reflect.Value{
+	Symbols["encoding/base64/base64"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"NewDecoder":     reflect.ValueOf(base64.NewDecoder),
 		"NewEncoder":     reflect.ValueOf(base64.NewEncoder),

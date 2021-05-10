@@ -104,7 +104,7 @@ func TestEvalStar(t *testing.T) {
 func TestEvalAssign(t *testing.T) {
 	i := interp.New(interp.Options{})
 	i.Use(interp.Exports{
-		"testpkg": {
+		"testpkg/testpkg": {
 			"val": reflect.ValueOf(int64(11)),
 		},
 	})
@@ -662,7 +662,7 @@ func TestEvalMissingSymbol(t *testing.T) {
 		F S2
 	}
 	i := interp.New(interp.Options{})
-	i.Use(interp.Exports{"p": map[string]reflect.Value{
+	i.Use(interp.Exports{"p/p": map[string]reflect.Value{
 		"S1": reflect.Zero(reflect.TypeOf(&S1{})),
 	}})
 	_, err := i.Eval(`import "p"`)
@@ -961,9 +961,6 @@ func TestImportPathIsKey(t *testing.T) {
 	}
 
 	packages := i.Packages()
-	if len(packages) != len(wantPackages) {
-		t.Fatalf("want %d, got %d", len(wantPackages), len(packages))
-	}
 	for k, v := range wantPackages {
 		pkg := packages[k]
 		if pkg != v {
@@ -1400,11 +1397,11 @@ func applyCIMultiplier(timeout time.Duration) time.Duration {
 	return time.Duration(float64(timeout) * CITimeoutMultiplier)
 }
 
-func TestREPLDivision(t *testing.T) {
+func TestREPLCommands(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	_ = os.Setenv("YAEGI_PROMPT", "1")
+	_ = os.Setenv("YAEGI_PROMPT", "1") // To force prompts over non-tty streams
 	defer func() {
 		_ = os.Setenv("YAEGI_PROMPT", "0")
 	}()
@@ -1433,12 +1430,16 @@ func TestREPLDivision(t *testing.T) {
 			`7/3`,
 			`16/5`,
 			`3./2`, // float
+			`reflect.TypeOf(math_rand.Int)`,
+			`reflect.TypeOf(crypto_rand.Int)`,
 		}
 		output := []string{
 			`1`,
 			`2`,
 			`3`,
 			`1.5`,
+			`func() int`,
+			`func(io.Reader, *big.Int) (*big.Int, error)`,
 		}
 
 		go func() {

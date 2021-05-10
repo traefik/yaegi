@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["net/mail"] = map[string]reflect.Value{
+	Symbols["net/mail/mail"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ErrHeaderNotPresent": reflect.ValueOf(&mail.ErrHeaderNotPresent).Elem(),
 		"ParseAddress":        reflect.ValueOf(mail.ParseAddress),

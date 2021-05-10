@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["testing/fstest"] = map[string]reflect.Value{
+	Symbols["testing/fstest/fstest"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"TestFS": reflect.ValueOf(fstest.TestFS),
 

@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["crypto/tls"] = map[string]reflect.Value{
+	Symbols["crypto/tls/tls"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"CipherSuiteName":                         reflect.ValueOf(tls.CipherSuiteName),
 		"CipherSuites":                            reflect.ValueOf(tls.CipherSuites),

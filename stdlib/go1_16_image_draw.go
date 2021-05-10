@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["image/draw"] = map[string]reflect.Value{
+	Symbols["image/draw/draw"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Draw":           reflect.ValueOf(draw.Draw),
 		"DrawMask":       reflect.ValueOf(draw.DrawMask),

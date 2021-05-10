@@ -12,17 +12,17 @@ import (
 var Symbols = map[string]map[string]reflect.Value{}
 
 func init() {
-	Symbols["github.com/traefik/yaegi/stdlib/unsafe"] = map[string]reflect.Value{
+	Symbols["github.com/traefik/yaegi/stdlib/unsafe/unsafe"] = map[string]reflect.Value{
 		"Symbols": reflect.ValueOf(Symbols),
 	}
-	Symbols["github.com/traefik/yaegi"] = map[string]reflect.Value{
+	Symbols["github.com/traefik/yaegi/yaegi"] = map[string]reflect.Value{
 		"convert": reflect.ValueOf(convert),
 	}
 
 	// Add builtin functions to unsafe.
-	Symbols["unsafe"]["Sizeof"] = reflect.ValueOf(sizeof)
-	Symbols["unsafe"]["Alignof"] = reflect.ValueOf(alignof)
-	Symbols["unsafe"]["Offsetof"] = reflect.ValueOf("Offsetof") // This symbol is handled directly in interpreter.
+	Symbols["unsafe/unsafe"]["Sizeof"] = reflect.ValueOf(sizeof)
+	Symbols["unsafe/unsafe"]["Alignof"] = reflect.ValueOf(alignof)
+	Symbols["unsafe/unsafe"]["Offsetof"] = reflect.ValueOf("Offsetof") // This symbol is handled directly in interpreter.
 }
 
 func convert(from, to reflect.Type) func(src, dest reflect.Value) {

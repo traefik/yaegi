@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["hash/crc64"] = map[string]reflect.Value{
+	Symbols["hash/crc64/crc64"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Checksum":  reflect.ValueOf(crc64.Checksum),
 		"ECMA":      reflect.ValueOf(constant.MakeFromLiteral("14514072000185962306", token.INT, 0)),

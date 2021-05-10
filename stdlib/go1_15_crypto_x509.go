@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["crypto/x509"] = map[string]reflect.Value{
+	Symbols["crypto/x509/x509"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"CANotAuthorizedForExtKeyUsage":             reflect.ValueOf(x509.CANotAuthorizedForExtKeyUsage),
 		"CANotAuthorizedForThisName":                reflect.ValueOf(x509.CANotAuthorizedForThisName),

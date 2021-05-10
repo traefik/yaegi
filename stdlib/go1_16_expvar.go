@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["expvar"] = map[string]reflect.Value{
+	Symbols["expvar/expvar"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Do":        reflect.ValueOf(expvar.Do),
 		"Get":       reflect.ValueOf(expvar.Get),

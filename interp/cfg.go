@@ -7,7 +7,6 @@ import (
 	"math"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"strings"
 	"unicode"
 )
@@ -43,8 +42,6 @@ var constBltn = map[string]func(*node){
 	bltnImag:    imagConst,
 	bltnReal:    realConst,
 }
-
-var identifier = regexp.MustCompile(`([\pL_][\pL_\d]*)$`)
 
 const nilIdent = "nil"
 

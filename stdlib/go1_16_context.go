@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Symbols["context"] = map[string]reflect.Value{
+	Symbols["context/context"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Background":       reflect.ValueOf(context.Background),
 		"Canceled":         reflect.ValueOf(&context.Canceled).Elem(),

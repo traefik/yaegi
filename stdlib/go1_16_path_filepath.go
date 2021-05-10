@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["path/filepath"] = map[string]reflect.Value{
+	Symbols["path/filepath/filepath"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Abs":           reflect.ValueOf(filepath.Abs),
 		"Base":          reflect.ValueOf(filepath.Base),

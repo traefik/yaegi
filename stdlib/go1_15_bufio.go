@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["bufio"] = map[string]reflect.Value{
+	Symbols["bufio/bufio"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ErrAdvanceTooFar":     reflect.ValueOf(&bufio.ErrAdvanceTooFar).Elem(),
 		"ErrBadReadCount":      reflect.ValueOf(&bufio.ErrBadReadCount).Elem(),

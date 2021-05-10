@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["encoding/json"] = map[string]reflect.Value{
+	Symbols["encoding/json/json"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Compact":       reflect.ValueOf(json.Compact),
 		"HTMLEscape":    reflect.ValueOf(json.HTMLEscape),

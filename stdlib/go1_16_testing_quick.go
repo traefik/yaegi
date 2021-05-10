@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Symbols["testing/quick"] = map[string]reflect.Value{
+	Symbols["testing/quick/quick"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Check":      reflect.ValueOf(quick.Check),
 		"CheckEqual": reflect.ValueOf(quick.CheckEqual),

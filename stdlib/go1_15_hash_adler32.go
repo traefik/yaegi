@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["hash/adler32"] = map[string]reflect.Value{
+	Symbols["hash/adler32/adler32"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Checksum": reflect.ValueOf(adler32.Checksum),
 		"New":      reflect.ValueOf(adler32.New),

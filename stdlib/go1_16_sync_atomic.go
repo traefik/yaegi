@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["sync/atomic"] = map[string]reflect.Value{
+	Symbols["sync/atomic/atomic"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"AddInt32":              reflect.ValueOf(atomic.AddInt32),
 		"AddInt64":              reflect.ValueOf(atomic.AddInt64),

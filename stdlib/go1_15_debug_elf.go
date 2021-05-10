@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["debug/elf"] = map[string]reflect.Value{
+	Symbols["debug/elf/elf"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"ARM_MAGIC_TRAMP_NUMBER":             reflect.ValueOf(constant.MakeFromLiteral("1543503875", token.INT, 0)),
 		"COMPRESS_HIOS":                      reflect.ValueOf(elf.COMPRESS_HIOS),

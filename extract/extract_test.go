@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	Symbols["guthib.com/baz"] = map[string]reflect.Value{
+	Symbols["guthib.com/baz/baz"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Hello": reflect.ValueOf(baz.Hello),
 	}
@@ -101,7 +101,7 @@ import (
 )
 
 func init() {
-	Symbols["guthib.com/variadic"] = map[string]reflect.Value{
+	Symbols["guthib.com/variadic/variadic"] = map[string]reflect.Value{
 		// type definitions
 		"Variadic": reflect.ValueOf((*variadic.Variadic)(nil)),
 

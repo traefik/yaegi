@@ -35,7 +35,7 @@ func init() {
 		"Logger":  reflect.ValueOf((*log.Logger)(nil)),
 	}
 
-	Symbols["github.com/traefik/yaegi/stdlib/unrestricted"] = map[string]reflect.Value{
+	Symbols["github.com/traefik/yaegi/stdlib/unrestricted/unrestricted"] = map[string]reflect.Value{
 		"Symbols": reflect.ValueOf(Symbols),
 	}
 }

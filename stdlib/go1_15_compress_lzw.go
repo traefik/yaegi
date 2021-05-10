@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["compress/lzw"] = map[string]reflect.Value{
+	Symbols["compress/lzw/lzw"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"LSB":       reflect.ValueOf(lzw.LSB),
 		"MSB":       reflect.ValueOf(lzw.MSB),

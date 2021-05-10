@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["encoding"] = map[string]reflect.Value{
+	Symbols["encoding/encoding"] = map[string]reflect.Value{
 		// type definitions
 		"BinaryMarshaler":   reflect.ValueOf((*encoding.BinaryMarshaler)(nil)),
 		"BinaryUnmarshaler": reflect.ValueOf((*encoding.BinaryUnmarshaler)(nil)),

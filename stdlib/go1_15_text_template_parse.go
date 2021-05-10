@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["text/template/parse"] = map[string]reflect.Value{
+	Symbols["text/template/parse/parse"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"IsEmptyTree":    reflect.ValueOf(parse.IsEmptyTree),
 		"New":            reflect.ValueOf(parse.New),

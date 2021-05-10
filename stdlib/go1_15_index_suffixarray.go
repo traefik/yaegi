@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["index/suffixarray"] = map[string]reflect.Value{
+	Symbols["index/suffixarray/suffixarray"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"New": reflect.ValueOf(suffixarray.New),
 

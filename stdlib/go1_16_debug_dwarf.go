@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["debug/dwarf"] = map[string]reflect.Value{
+	Symbols["debug/dwarf/dwarf"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"AttrAbstractOrigin":        reflect.ValueOf(dwarf.AttrAbstractOrigin),
 		"AttrAccessibility":         reflect.ValueOf(dwarf.AttrAccessibility),

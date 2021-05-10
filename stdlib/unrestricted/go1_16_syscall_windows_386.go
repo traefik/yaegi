@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["syscall"] = map[string]reflect.Value{
+	Symbols["syscall/syscall"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Exec":               reflect.ValueOf(syscall.Exec),
 		"Exit":               reflect.ValueOf(syscall.Exit),

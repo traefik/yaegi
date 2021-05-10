@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["go/importer"] = map[string]reflect.Value{
+	Symbols["go/importer/importer"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Default":     reflect.ValueOf(importer.Default),
 		"For":         reflect.ValueOf(importer.For),

@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["text/tabwriter"] = map[string]reflect.Value{
+	Symbols["text/tabwriter/tabwriter"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"AlignRight":          reflect.ValueOf(tabwriter.AlignRight),
 		"Debug":               reflect.ValueOf(tabwriter.Debug),

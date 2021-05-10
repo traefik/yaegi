@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["html"] = map[string]reflect.Value{
+	Symbols["html/html"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"EscapeString":   reflect.ValueOf(html.EscapeString),
 		"UnescapeString": reflect.ValueOf(html.UnescapeString),

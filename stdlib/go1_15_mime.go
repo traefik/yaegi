@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["mime"] = map[string]reflect.Value{
+	Symbols["mime/mime"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"AddExtensionType":         reflect.ValueOf(mime.AddExtensionType),
 		"BEncoding":                reflect.ValueOf(mime.BEncoding),

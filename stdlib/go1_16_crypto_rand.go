@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["crypto/rand"] = map[string]reflect.Value{
+	Symbols["crypto/rand/rand"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Int":    reflect.ValueOf(rand.Int),
 		"Prime":  reflect.ValueOf(rand.Prime),

@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["runtime/trace"] = map[string]reflect.Value{
+	Symbols["runtime/trace/trace"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"IsEnabled":   reflect.ValueOf(trace.IsEnabled),
 		"Log":         reflect.ValueOf(trace.Log),

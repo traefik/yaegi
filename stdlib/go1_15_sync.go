@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["sync"] = map[string]reflect.Value{
+	Symbols["sync/sync"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"NewCond": reflect.ValueOf(sync.NewCond),
 

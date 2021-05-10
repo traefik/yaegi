@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["unsafe"] = map[string]reflect.Value{
+	Symbols["unsafe/unsafe"] = map[string]reflect.Value{
 		// type definitions
 		"Pointer": reflect.ValueOf((*unsafe.Pointer)(nil)),
 	}

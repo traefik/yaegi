@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["image/png"] = map[string]reflect.Value{
+	Symbols["image/png/png"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"BestCompression":    reflect.ValueOf(png.BestCompression),
 		"BestSpeed":          reflect.ValueOf(png.BestSpeed),

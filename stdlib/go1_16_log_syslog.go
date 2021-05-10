@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["log/syslog"] = map[string]reflect.Value{
+	Symbols["log/syslog/syslog"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Dial":         reflect.ValueOf(syslog.Dial),
 		"LOG_ALERT":    reflect.ValueOf(syslog.LOG_ALERT),

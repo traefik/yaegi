@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Symbols["log"] = map[string]reflect.Value{
+	Symbols["log/log"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Fatal":         reflect.ValueOf(logFatal),
 		"Fatalf":        reflect.ValueOf(logFatalf),

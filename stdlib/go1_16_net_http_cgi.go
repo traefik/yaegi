@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Symbols["net/http/cgi"] = map[string]reflect.Value{
+	Symbols["net/http/cgi/cgi"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"Request":        reflect.ValueOf(cgi.Request),
 		"RequestFromMap": reflect.ValueOf(cgi.RequestFromMap),
