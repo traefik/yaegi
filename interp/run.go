@@ -2259,12 +2259,16 @@ func _return(n *node) {
 	case 0:
 		n.exec = nil
 	case 1:
-		// This is an optimisation that is applied for binary expressions or function
-		// calls, but not for (binary) expressions involving const, as the values are not
-		// stored in the frame in that case.
-		if !child[0].rval.IsValid() && child[0].kind == binaryExpr || isCall(child[0]) {
+		switch {
+		case !child[0].rval.IsValid() && child[0].kind == binaryExpr:
+			// No additional runtime operation is necessary for constants (not in frame) or
+			// binary expressions (stored directly at the right location in frame).
 			n.exec = nil
-		} else {
+		case isCall(child[0]) && n.child[0].typ.id() == def.typ.ret[0].id():
+			// Calls are optmized as long as no type conversion is involved.
+			n.exec = nil
+		default:
+			// Regular return: store the value to return at to start of the frame.
 			v := values[0]
 			n.exec = func(f *frame) bltn {
 				f.data[0].Set(v(f))
