@@ -1350,7 +1350,7 @@ func callBin(n *node) {
 
 	for i, c := range child {
 		var defType reflect.Type
-		if variadic >= 0 && i >= variadic {
+		if variadic >= 0 && i+rcvrOffset >= variadic {
 			defType = funcType.In(variadic)
 		} else {
 			defType = funcType.In(rcvrOffset + i)
@@ -1374,7 +1374,7 @@ func callBin(n *node) {
 			if c.kind == basicLit || c.rval.IsValid() {
 				// Convert literal value (untyped) to function argument type (if not an interface{})
 				var argType reflect.Type
-				if variadic >= 0 && i >= variadic {
+				if variadic >= 0 && i+rcvrOffset >= variadic {
 					argType = funcType.In(variadic).Elem()
 				} else {
 					argType = funcType.In(i + rcvrOffset)
