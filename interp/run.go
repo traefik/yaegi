@@ -2629,6 +2629,8 @@ func _range(n *node) {
 		an = n.child[2]
 		index1 := n.child[1].findex // array value location in frame
 		if isString(an.typ.TypeOf()) {
+			// Special variant of "range" for string, where the index indicates the byte position
+			// of the rune in the string, rather than the index of the rune in array.
 			stringType := reflect.TypeOf("")
 			value = genValueAs(an, rat) // range on string iterates over runes
 			n.exec = func(f *frame) bltn {
@@ -2639,6 +2641,7 @@ func _range(n *node) {
 				if i >= a.Len() {
 					return fnext
 				}
+				// Compute byte position of the rune in string
 				pos := a.Slice(0, i).Convert(stringType).Len()
 				f.data[index0].SetInt(int64(pos))
 				f.data[index1].Set(a.Index(i))
@@ -2677,17 +2680,13 @@ func _range(n *node) {
 
 	// Init sequence
 	next := n.exec
+	index := index0
 	if isString(an.typ.TypeOf()) && len(n.child) == 4 {
-		n.child[0].exec = func(f *frame) bltn {
-			f.data[index2] = value(f) // set array shallow copy for range
-			f.data[index3].SetInt(-1) // assing index value
-			return next
-		}
-		return
+		index = index3
 	}
 	n.child[0].exec = func(f *frame) bltn {
 		f.data[index2] = value(f) // set array shallow copy for range
-		f.data[index0].SetInt(-1) // assing index value
+		f.data[index].SetInt(-1)  // assing index value
 		return next
 	}
 }
