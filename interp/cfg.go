@@ -1004,7 +1004,9 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				}
 				if typ := n.child[0].typ; len(typ.ret) > 0 {
 					n.typ = typ.ret[0]
-					if n.anc.kind == returnStmt {
+					if n.anc.kind == returnStmt && n.typ.id() == sc.def.typ.ret[0].id() {
+						// Store the result directly to the return value area of frame.
+						// It can be done only if no type conversion at return is involved.
 						n.findex = childPos(n)
 					} else {
 						n.findex = sc.add(n.typ)
