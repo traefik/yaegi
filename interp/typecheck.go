@@ -235,6 +235,15 @@ func (check typecheck) binaryExpr(n *node) error {
 	}
 
 	switch n.action {
+	case aAdd:
+		if n.typ == nil {
+			break
+		}
+		// Catch mixing string and number for "+" operator use.
+		k, k0, k1 := isNumber(n.typ.TypeOf()), isNumber(c0.typ.TypeOf()), isNumber(c1.typ.TypeOf())
+		if k != k0 || k != k1 {
+			return n.cfgErrorf("cannot use type %s as type %s in assignment", c0.typ.id(), n.typ.id())
+		}
 	case aRem:
 		if zeroConst(c1) {
 			return n.cfgErrorf("invalid operation: division by zero")
