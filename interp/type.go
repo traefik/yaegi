@@ -877,6 +877,10 @@ func (t *itype) isRecursive() bool {
 	return false
 }
 
+func (t *itype) isIndirectRecursive() bool {
+	return t.isRecursive() || t.val != nil && t.val.isIndirectRecursive()
+}
+
 // isVariadic returns true if the function type is variadic.
 // If the type is not a function or is not variadic, it will
 // return false.

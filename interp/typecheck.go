@@ -51,7 +51,7 @@ func (check typecheck) assignment(n *node, typ *itype, context string) error {
 		return nil
 	}
 
-	if typ.isRecursive() || typ.val != nil && typ.val.isRecursive() {
+	if typ.isIndirectRecursive() || n.typ.isIndirectRecursive() {
 		return nil
 	}
 
@@ -997,6 +997,8 @@ func getArg(ftyp *itype, i int) *itype {
 		return arg
 	case i < l:
 		return ftyp.in(i)
+	case ftyp.cat == valueT && i < ftyp.rtype.NumIn():
+		return &itype{cat: valueT, rtype: ftyp.rtype.In(i)}
 	default:
 		return nil
 	}

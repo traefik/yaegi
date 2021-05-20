@@ -770,7 +770,7 @@ func (interp *Interpreter) ImportUsed() {
 			}
 			name = key2name(fixKey(k))
 		}
-		sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: path.Dir(k), scope: sc}}
+		sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: k, scope: sc}}
 	}
 }
 
