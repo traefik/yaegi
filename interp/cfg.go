@@ -2518,7 +2518,9 @@ func gotoLabel(s *symbol) {
 		return
 	}
 	for _, c := range s.from {
-		c.tnext = s.node.start
+		if c.tnext == nil {
+			c.tnext = s.node.start
+		}
 	}
 }
 
