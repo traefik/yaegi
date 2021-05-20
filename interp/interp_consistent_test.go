@@ -50,6 +50,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "import6.go" || // expect error
 			file.Name() == "init1.go" || // expect error
 			file.Name() == "io0.go" || // use random number
+			file.Name() == "issue-1093.go" || // expect error
 			file.Name() == "op1.go" || // expect error
 			file.Name() == "op7.go" || // expect error
 			file.Name() == "op9.go" || // expect error
@@ -208,6 +209,11 @@ func TestInterpErrorConsistency(t *testing.T) {
 			fileName:       "fun23.go",
 			expectedInterp: "3:17: too many arguments to return",
 			expectedExec:   "3:17: too many arguments to return",
+		},
+		{
+			fileName:       "issue-1093.go",
+			expectedInterp: "9:6: cannot use type string as type int in assignment",
+			expectedExec:   `9:4: cannot use "a" + b() (type string) as type int in assignment`,
 		},
 		{
 			fileName:       "op1.go",
