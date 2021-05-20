@@ -2619,7 +2619,7 @@ var rat = reflect.ValueOf((*[]rune)(nil)).Type().Elem() // runes array type
 func _range(n *node) {
 	index0 := n.child[0].findex // array index location in frame
 	index2 := index0 - 1        // shallow array for range, always just behind index0
-	index3 := index2 - 1        // additional location to stop string char position
+	index3 := index2 - 1        // additional location to store string char position
 	fnext := getExec(n.fnext)
 	tnext := getExec(n.tnext)
 
