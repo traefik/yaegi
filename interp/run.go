@@ -2619,31 +2619,50 @@ var rat = reflect.ValueOf((*[]rune)(nil)).Type().Elem() // runes array type
 func _range(n *node) {
 	index0 := n.child[0].findex // array index location in frame
 	index2 := index0 - 1        // shallow array for range, always just behind index0
+	index3 := index2 - 1        // additional location to store string char position
 	fnext := getExec(n.fnext)
 	tnext := getExec(n.tnext)
 
 	var value func(*frame) reflect.Value
+	var an *node
 	if len(n.child) == 4 {
-		an := n.child[2]
+		an = n.child[2]
 		index1 := n.child[1].findex // array value location in frame
 		if isString(an.typ.TypeOf()) {
+			// Special variant of "range" for string, where the index indicates the byte position
+			// of the rune in the string, rather than the index of the rune in array.
+			stringType := reflect.TypeOf("")
 			value = genValueAs(an, rat) // range on string iterates over runes
+			n.exec = func(f *frame) bltn {
+				a := f.data[index2]
+				v0 := f.data[index3]
+				v0.SetInt(v0.Int() + 1)
+				i := int(v0.Int())
+				if i >= a.Len() {
+					return fnext
+				}
+				// Compute byte position of the rune in string
+				pos := a.Slice(0, i).Convert(stringType).Len()
+				f.data[index0].SetInt(int64(pos))
+				f.data[index1].Set(a.Index(i))
+				return tnext
+			}
 		} else {
 			value = genValueRangeArray(an)
-		}
-		n.exec = func(f *frame) bltn {
-			a := f.data[index2]
-			v0 := f.data[index0]
-			v0.SetInt(v0.Int() + 1)
-			i := int(v0.Int())
-			if i >= a.Len() {
-				return fnext
+			n.exec = func(f *frame) bltn {
+				a := f.data[index2]
+				v0 := f.data[index0]
+				v0.SetInt(v0.Int() + 1)
+				i := int(v0.Int())
+				if i >= a.Len() {
+					return fnext
+				}
+				f.data[index1].Set(a.Index(i))
+				return tnext
 			}
-			f.data[index1].Set(a.Index(i))
-			return tnext
 		}
 	} else {
-		an := n.child[1]
+		an = n.child[1]
 		if isString(an.typ.TypeOf()) {
 			value = genValueAs(an, rat) // range on string iterates over runes
 		} else {
@@ -2661,9 +2680,13 @@ func _range(n *node) {
 
 	// Init sequence
 	next := n.exec
+	index := index0
+	if isString(an.typ.TypeOf()) && len(n.child) == 4 {
+		index = index3
+	}
 	n.child[0].exec = func(f *frame) bltn {
 		f.data[index2] = value(f) // set array shallow copy for range
-		f.data[index0].SetInt(-1) // assing index value
+		f.data[index].SetInt(-1)  // assing index value
 		return next
 	}
 }

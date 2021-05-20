@@ -151,6 +151,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 							vtyp = &itype{cat: valueT, rtype: typ.Elem()}
 						case reflect.String:
 							sc.add(sc.getType("int")) // Add a dummy type to store array shallow copy for range
+							sc.add(sc.getType("int")) // Add a dummy type to store index for range
 							ktyp = sc.getType("int")
 							vtyp = sc.getType("rune")
 						case reflect.Array, reflect.Slice:
@@ -174,6 +175,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						}
 					case stringT:
 						sc.add(sc.getType("int")) // Add a dummy type to store array shallow copy for range
+						sc.add(sc.getType("int")) // Add a dummy type to store index for range
 						ktyp = sc.getType("int")
 						vtyp = sc.getType("rune")
 					case arrayT, sliceT, variadicT:
