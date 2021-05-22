@@ -135,6 +135,8 @@ type opt struct {
 	stdin    io.Reader     // standard input
 	stdout   io.Writer     // standard output
 	stderr   io.Writer     // standard error
+
+	blockStmtAsArray bool
 }
 
 // Interpreter contains global resources and state.
@@ -251,6 +253,8 @@ type Options struct {
 	// They default to os.Stding, os.Stdout and os.Stderr respectively.
 	Stdin          io.Reader
 	Stdout, Stderr io.Writer
+
+	BlockStatementAsArray bool
 }
 
 // New returns a new interpreter.
@@ -301,6 +305,8 @@ func New(options Options) *Interpreter {
 
 	// fastChan disables the cancellable version of channel operations in evalWithContext
 	i.opt.fastChan, _ = strconv.ParseBool(os.Getenv("YAEGI_FAST_CHAN"))
+
+	i.opt.blockStmtAsArray = options.BlockStatementAsArray
 	return &i
 }
 
@@ -589,6 +595,12 @@ func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, 
 	for _, n := range initNodes {
 		interp.run(n, interp.frame)
 	}
+
+	if interp.blockStmtAsArray && root.kind == blockStmt {
+		v := blockStmtAsArray(root, interp.frame)
+		return reflect.ValueOf(v), err
+	}
+
 	v := genValue(root)
 	res = v(interp.frame)
 
@@ -600,6 +612,31 @@ func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, 
 	}
 
 	return res, err
+}
+
+// BlockResult is the result of a block statement.
+type BlockResult []interface{}
+
+func blockStmtAsArray(n *node, f *frame) BlockResult {
+	res := make(BlockResult, len(n.child))
+	for i, child := range n.child {
+		if child.kind == blockStmt {
+			res[i] = blockStmtAsArray(child, f)
+			continue
+		}
+
+		v := genValue(child)
+		rv := v(f)
+		if !rv.IsValid() {
+			continue
+		}
+
+		res[i] = rv.Interface()
+		if n, ok := res[i].(*node); ok {
+			res[i] = genFunctionWrapper(n)(f)
+		}
+	}
+	return res
 }
 
 // EvalWithContext evaluates Go code represented as a string. It returns
