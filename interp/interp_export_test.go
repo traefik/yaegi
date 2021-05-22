@@ -66,3 +66,26 @@ func NewMyInt(i int) wrap.Wrap {
 	w := NewMyInt(4)
 	Hi(w)
 }
+
+type T struct{}
+
+func (t T) Bar(s ...string) {}
+
+func TestCallBinVariadicMethod(t *testing.T) {
+	i := interp.New(interp.Options{})
+	i.Use(interp.Exports{
+		"mypkg/mypkg": {
+			"T": reflect.ValueOf((*T)(nil)),
+		},
+	})
+	eval(t, i, `
+package p
+
+import "mypkg"
+
+func Foo(x mypkg.T) { x.Bar("s") }
+`)
+	v := eval(t, i, "p.Foo")
+	bar := v.Interface().(func(t T))
+	bar(T{})
+}
