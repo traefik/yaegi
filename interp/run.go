@@ -2278,7 +2278,6 @@ func arrayLit(n *node) {
 
 	values := make([]func(*frame) reflect.Value, len(child))
 	index := make([]int, len(child))
-	// rtype := n.typ.val.TypeOf()
 	var max, prev int
 
 	for i, c := range child {
