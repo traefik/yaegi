@@ -18,7 +18,11 @@ func fail() (err error) {
 
 func main() {
 	fmt.Println(fail())
+	var myError error
+	myError = NewCustomError("ok")
+	fmt.Println(myError)
 }
 
 // Output:
 // Everything is going wrong!
+// ok
