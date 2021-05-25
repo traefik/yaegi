@@ -1491,3 +1491,16 @@ func TestREPLCommands(t *testing.T) {
 		t.Fatal("timeout")
 	}
 }
+
+func TestStdio(t *testing.T) {
+	i := interp.New(interp.Options{})
+	i.Use(stdlib.Symbols)
+	i.ImportUsed()
+	if _, err := i.Eval(`var x = os.Stdout`); err != nil {
+		t.Fatal(err)
+	}
+	v, _ := i.Eval(`x`)
+	if _, ok := v.Interface().(*os.File); !ok {
+		t.Fatalf("%v not *os.file", v.Interface())
+	}
+}
