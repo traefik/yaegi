@@ -1163,7 +1163,7 @@ func (t *itype) id() (res string) {
 		res += "}"
 	case valueT:
 		if isConstantValue(t.rtype) {
-			res = constType(t.rtype).String()
+			res = fixPossibleConstType(t.rtype).String()
 			break
 		}
 		res = ""
@@ -1177,7 +1177,10 @@ func (t *itype) id() (res string) {
 	return res
 }
 
-func constType(t reflect.Type) (r reflect.Type) {
+// fixPossibleConstType returns the input type if it not a constant value,
+// otherwise, it returns the default Go type corresponding to the
+// constant.Value.
+func fixPossibleConstType(t reflect.Type) (r reflect.Type) {
 	cv, ok := reflect.New(t).Elem().Interface().(constant.Value)
 	if !ok {
 		return t
