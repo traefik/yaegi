@@ -557,9 +557,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				n.findex = dest.findex
 				n.level = dest.level
 
-				// Propagate type.
-				// TODO: Check that existing destination type matches source type.
-
 				// In the following, we attempt to optimize by skipping the assign
 				// operation and setting the source location directly to the destination
 				// location in the frame.
