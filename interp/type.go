@@ -1163,7 +1163,7 @@ func (t *itype) id() (res string) {
 		res += "}"
 	case valueT:
 		if isConstantValue(t.rtype) {
-			res = constTypeString(t.rtype)
+			res = fixPossibleConstType(t.rtype).String()
 			break
 		}
 		res = ""
@@ -1177,24 +1177,27 @@ func (t *itype) id() (res string) {
 	return res
 }
 
-func constTypeString(t reflect.Type) (s string) {
+// fixPossibleConstType returns the input type if it not a constant value,
+// otherwise, it returns the default Go type corresponding to the
+// constant.Value.
+func fixPossibleConstType(t reflect.Type) (r reflect.Type) {
 	cv, ok := reflect.New(t).Elem().Interface().(constant.Value)
 	if !ok {
-		return
+		return t
 	}
 	switch cv.Kind() {
 	case constant.Bool:
-		s = "bool"
+		r = reflect.TypeOf(true)
 	case constant.Int:
-		s = "int"
+		r = reflect.TypeOf(0)
 	case constant.String:
-		s = "string"
+		r = reflect.TypeOf("")
 	case constant.Float:
-		s = "float64"
+		r = reflect.TypeOf(float64(0))
 	case constant.Complex:
-		s = "complex128"
+		r = reflect.TypeOf(complex128(0))
 	}
-	return
+	return r
 }
 
 // zero instantiates and return a zero value object for the given type during execution.
