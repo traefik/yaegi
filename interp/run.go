@@ -570,7 +570,7 @@ func isRecursiveType(t *itype, rtype reflect.Type) bool {
 		return true
 	}
 	switch t.cat {
-	case arrayT, mapT, ptrT, sliceT:
+	case aliasT, arrayT, mapT, ptrT, sliceT:
 		return isRecursiveType(t.val, t.val.rtype)
 	default:
 		return false
@@ -589,34 +589,10 @@ func assign(n *node) {
 
 	for i := 0; i < n.nleft; i++ {
 		dest, src := n.child[i], n.child[sbase+i]
-		switch {
-		case isInterfaceSrc(dest.typ):
-			if len(dest.typ.field) > 0 {
-				svalue[i] = genValueInterface(src)
-				break
-			}
-			svalue[i] = genValue(src)
-		case (dest.typ.cat == valueT || dest.typ.cat == errorT) && dest.typ.rtype.Kind() == reflect.Interface:
-			svalue[i] = genInterfaceWrapper(src, dest.typ.rtype)
-		case isFuncSrc(src.typ) && dest.typ.cat == valueT:
+		if isFuncSrc(src.typ) && isField(dest) {
 			svalue[i] = genFunctionWrapper(src)
-		case isFuncSrc(src.typ) && isField(dest):
-			svalue[i] = genFunctionWrapper(src)
-		case isFuncSrc(dest.typ) && src.typ.cat == valueT:
-			svalue[i] = genValueNode(src)
-		case src.kind == basicLit && src.val == nil:
-			t := dest.typ.TypeOf()
-			svalue[i] = func(*frame) reflect.Value { return reflect.New(t).Elem() }
-		case isRecursiveType(dest.typ, dest.typ.rtype):
-			svalue[i] = genValueRecursiveInterface(src, dest.typ.rtype)
-		case isRecursiveType(src.typ, src.typ.rtype):
-			svalue[i] = genValueRecursiveInterfacePtrValue(src)
-		case src.typ.untyped && isComplex(dest.typ.TypeOf()):
-			svalue[i] = genValueComplex(src)
-		case src.typ.untyped && !dest.typ.untyped:
-			svalue[i] = genValueAs(src, dest.typ.TypeOf())
-		default:
-			svalue[i] = genValue(src)
+		} else {
+			svalue[i] = genDestValue(dest.typ, src)
 		}
 		if isMapEntry(dest) {
 			if isInterfaceSrc(dest.child[1].typ) { // key
@@ -2302,25 +2278,14 @@ func arrayLit(n *node) {
 
 	values := make([]func(*frame) reflect.Value, len(child))
 	index := make([]int, len(child))
-	rtype := n.typ.val.TypeOf()
 	var max, prev int
 
 	for i, c := range child {
 		if c.kind == keyValueExpr {
-			convertLiteralValue(c.child[1], rtype)
-			if isInterfaceSrc(n.typ.val) && !isEmptyInterface(n.typ.val) {
-				values[i] = genValueInterface(c.child[1])
-			} else {
-				values[i] = genValue(c.child[1])
-			}
+			values[i] = genDestValue(n.typ.val, c.child[1])
 			index[i] = int(vInt(c.child[0].rval))
 		} else {
-			convertLiteralValue(c, rtype)
-			if isInterfaceSrc(n.typ.val) && !isEmptyInterface(n.typ.val) {
-				values[i] = genValueInterface(c)
-			} else {
-				values[i] = genValue(c)
-			}
+			values[i] = genDestValue(n.typ.val, c)
 			index[i] = prev
 		}
 		prev = index[i] + 1
@@ -2357,18 +2322,8 @@ func mapLit(n *node) {
 	keys := make([]func(*frame) reflect.Value, len(child))
 	values := make([]func(*frame) reflect.Value, len(child))
 	for i, c := range child {
-		convertLiteralValue(c.child[0], n.typ.key.TypeOf())
-		convertLiteralValue(c.child[1], n.typ.val.TypeOf())
-		if isInterfaceSrc(n.typ.key) {
-			keys[i] = genValueInterface(c.child[0])
-		} else {
-			keys[i] = genValue(c.child[0])
-		}
-		if isInterfaceSrc(n.typ.val) && !isEmptyInterface(n.typ.val) {
-			values[i] = genValueInterface(c.child[1])
-		} else {
-			values[i] = genValue(c.child[1])
-		}
+		keys[i] = genDestValue(n.typ.key, c.child[0])
+		values[i] = genDestValue(n.typ.val, c.child[1])
 	}
 
 	n.exec = func(f *frame) bltn {
@@ -3450,15 +3405,7 @@ func send(n *node) {
 	next := getExec(n.tnext)
 	c0, c1 := n.child[0], n.child[1]
 	value0 := genValue(c0) // Send channel.
-	convertLiteralValue(c1, c0.typ.val.TypeOf())
-
-	var value1 func(*frame) reflect.Value // Value to send.
-	switch {
-	case isInterfaceBin(c0.typ.val):
-		value1 = genInterfaceWrapper(c1, c0.typ.val.rtype)
-	default:
-		value1 = genValue(c1)
-	}
+	value1 := genDestValue(c0.typ.val, c1)
 
 	if !n.interp.cancelChan {
 		// Send is non-cancellable, has the least overhead.

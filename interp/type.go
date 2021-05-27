@@ -1723,7 +1723,7 @@ func isInterfaceSrc(t *itype) bool {
 }
 
 func isInterfaceBin(t *itype) bool {
-	return t.cat == valueT && t.rtype.Kind() == reflect.Interface
+	return t.cat == valueT && t.rtype.Kind() == reflect.Interface || t.cat == errorT
 }
 
 func isInterface(t *itype) bool {
