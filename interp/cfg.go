@@ -1490,28 +1490,28 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						n.typ = &itype{cat: valueT, rtype: field.Type}
 						n.val = field.Index
 						n.gen = getPtrIndexSeq
-					} else {
-						err = n.cfgErrorf("undefined field or method: %s", n.child[1].ident)
+						break
 					}
+					err = n.cfgErrorf("undefined field or method: %s", n.child[1].ident)
 				case n.typ.rtype.Kind() == reflect.Struct:
 					if field, ok := n.typ.rtype.FieldByName(n.child[1].ident); ok {
 						n.typ = &itype{cat: valueT, rtype: field.Type}
 						n.val = field.Index
 						n.gen = getIndexSeq
-					} else {
-						// method lookup failed on type, now lookup on pointer to type
-						pt := reflect.PtrTo(n.typ.rtype)
-						if m2, ok2 := pt.MethodByName(n.child[1].ident); ok2 {
-							n.val = m2.Index
-							n.gen = getIndexBinPtrMethod
-							n.typ = &itype{cat: valueT, rtype: m2.Type, recv: &itype{cat: valueT, rtype: pt}}
-							n.recv = &receiver{node: n.child[0]}
-							n.action = aGetMethod
-						} else {
-							err = n.cfgErrorf("undefined field or method: %s", n.child[1].ident)
-						}
+						break
 					}
+					fallthrough
 				default:
+					// method lookup failed on type, now lookup on pointer to type
+					pt := reflect.PtrTo(n.typ.rtype)
+					if m2, ok2 := pt.MethodByName(n.child[1].ident); ok2 {
+						n.val = m2.Index
+						n.gen = getIndexBinPtrMethod
+						n.typ = &itype{cat: valueT, rtype: m2.Type, recv: &itype{cat: valueT, rtype: pt}}
+						n.recv = &receiver{node: n.child[0]}
+						n.action = aGetMethod
+						break
+					}
 					err = n.cfgErrorf("undefined field or method: %s", n.child[1].ident)
 				}
 			} else if n.typ.cat == ptrT && (n.typ.val.cat == valueT || n.typ.val.cat == errorT) {
