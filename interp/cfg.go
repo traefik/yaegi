@@ -1737,15 +1737,18 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				break
 			}
 			// Chain case clauses.
-			for i, c := range clauses[:l-1] {
-				// Chain to next clause.
-				setFNext(c, clauses[i+1])
+			for i := l - 1; i >= 0; i-- {
+				c := clauses[i]
 				if len(c.child) == 0 {
 					c.tnext = n // Clause body is empty, exit.
 				} else {
 					body := c.lastChild()
 					c.tnext = body.start
-					if len(body.child) > 0 && body.lastChild().kind == fallthroughtStmt {
+
+					c.child[0].tnext = c
+					c.start = c.child[0].start
+
+					if i < l-1 && len(body.child) > 0 && body.lastChild().kind == fallthroughtStmt {
 						if n.kind == typeSwitch {
 							err = body.lastChild().cfgErrorf("cannot fallthrough in type switch")
 						}
@@ -1758,16 +1761,18 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						body.tnext = n // Exit switch at end of clause body.
 					}
 				}
+
+				if i == l-1 {
+					continue
+				}
+				if len(clauses[i+1].child) > 1 {
+					setFNext(c, clauses[i+1].start)
+				} else {
+					setFNext(c, clauses[i+1])
+				}
+
 			}
-			c := clauses[l-1] // Last clause.
-			c.fnext = n
-			if len(c.child) == 0 {
-				c.tnext = n // Clause body is empty, exit.
-			} else {
-				body := c.lastChild()
-				c.tnext = body.start
-				body.tnext = n
-			}
+			setFNext(clauses[l-1], n)
 			n.start = n.child[0].start
 			n.child[0].tnext = sbn.start
 
