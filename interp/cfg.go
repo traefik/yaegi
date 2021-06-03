@@ -1744,7 +1744,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				} else {
 					body := c.lastChild()
 					c.tnext = body.start
-
 					c.child[0].tnext = c
 					c.start = c.child[0].start
 
@@ -1770,7 +1769,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				} else {
 					setFNext(c, clauses[i+1])
 				}
-
 			}
 			setFNext(clauses[l-1], n)
 			n.start = n.child[0].start

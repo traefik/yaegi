@@ -8,5 +8,5 @@ func main() {
 	fmt.Printf("%v %T\n", x, x)
 }
 
-// Ouput:
+// Output:
 // ab string
