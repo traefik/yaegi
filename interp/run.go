@@ -2917,7 +2917,7 @@ func _append(n *node) {
 	if len(n.child) == 3 {
 		c1, c2 := n.child[1], n.child[2]
 		if (c1.typ.cat == valueT || c2.typ.cat == valueT) && c1.typ.rtype == c2.typ.rtype ||
-			(c2.typ.cat == arrayT || c2.typ.cat == sliceT || c2.typ.cat == variadicT) && c2.typ.val.id() == n.typ.val.id() ||
+			isArray(c2.typ) && c2.typ.elem().id() == n.typ.elem().id() ||
 			isByteArray(c1.typ.TypeOf()) && isString(c2.typ.TypeOf()) {
 			appendSlice(n)
 			return
@@ -2957,13 +2957,13 @@ func _append(n *node) {
 		}
 	} else {
 		var value0 func(*frame) reflect.Value
-		switch {
-		case isEmptyInterface(n.typ.val):
+		switch elem := n.typ.elem(); {
+		case isEmptyInterface(elem):
 			value0 = genValue(n.child[2])
-		case isInterfaceSrc(n.typ.val):
+		case isInterfaceSrc(elem):
 			value0 = genValueInterface(n.child[2])
-		case isRecursiveType(n.typ.val, n.typ.val.rtype):
-			value0 = genValueRecursiveInterface(n.child[2], n.typ.val.rtype)
+		case isRecursiveType(elem, elem.rtype):
+			value0 = genValueRecursiveInterface(n.child[2], elem.rtype)
 		case n.child[2].typ.untyped:
 			value0 = genValueAs(n.child[2], n.child[1].typ.TypeOf().Elem())
 		default:

@@ -1601,6 +1601,13 @@ func (t *itype) hasNil() bool {
 	return false
 }
 
+func (t *itype) elem() *itype {
+	if t.cat == valueT {
+		return &itype{cat: valueT, rtype: t.rtype.Elem()}
+	}
+	return t.val
+}
+
 func copyDefined(m map[string]*itype) map[string]*itype {
 	n := make(map[string]*itype, len(m))
 	for k, v := range m {
