@@ -350,7 +350,7 @@ func genValueOutput(n *node, t reflect.Type) func(*frame) reflect.Value {
 		}
 		fallthrough
 	case n.anc.kind == returnStmt && n.anc.val.(*node).typ.ret[0].cat == interfaceT:
-		if len(n.anc.val.(*node).typ.ret[0].field) == 0 {
+		if nod, ok := n.anc.val.(*node); !ok || len(nod.typ.ret[0].field) == 0 {
 			// empty interface, do not wrap
 			return value
 		}
