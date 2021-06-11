@@ -1558,7 +1558,7 @@ func (t *itype) frameType() (r reflect.Type) {
 }
 
 func (t *itype) implements(it *itype) bool {
-	if t.cat == valueT {
+	if isBin(t) {
 		return t.TypeOf().Implements(it.TypeOf())
 	}
 	return t.methods().contains(it.methods())
@@ -1728,6 +1728,17 @@ func isInterfaceBin(t *itype) bool {
 
 func isInterface(t *itype) bool {
 	return isInterfaceSrc(t) || t.TypeOf() != nil && t.TypeOf().Kind() == reflect.Interface
+}
+
+func isBin(t *itype) bool {
+	switch t.cat {
+	case valueT:
+		return true
+	case aliasT, ptrT:
+		return isBin(t.val)
+	default:
+		return false
+	}
 }
 
 func isStruct(t *itype) bool {
