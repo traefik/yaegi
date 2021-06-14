@@ -103,7 +103,7 @@ func main() {
 	intoMap()
 }
 
-// Ouput:
+// Output:
 // 0 : foo
 // 1 : bar
 // 0 : foo

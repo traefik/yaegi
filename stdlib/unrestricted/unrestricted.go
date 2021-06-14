@@ -12,12 +12,12 @@ import (
 var Symbols = map[string]map[string]reflect.Value{}
 
 func init() {
-	Symbols["os"] = map[string]reflect.Value{
+	Symbols["os/os"] = map[string]reflect.Value{
 		"Exit":        reflect.ValueOf(os.Exit),
 		"FindProcess": reflect.ValueOf(os.FindProcess),
 	}
 
-	Symbols["os/exec"] = map[string]reflect.Value{
+	Symbols["os/exec/exec"] = map[string]reflect.Value{
 		"Command":        reflect.ValueOf(exec.Command),
 		"CommandContext": reflect.ValueOf(exec.CommandContext),
 		"ErrNotFound":    reflect.ValueOf(&exec.ErrNotFound).Elem(),
@@ -27,7 +27,7 @@ func init() {
 		"ExitError":      reflect.ValueOf((*exec.ExitError)(nil)),
 	}
 
-	Symbols["log"] = map[string]reflect.Value{
+	Symbols["log/log"] = map[string]reflect.Value{
 		"Fatal":   reflect.ValueOf(log.Fatal),
 		"Fatalf":  reflect.ValueOf(log.Fatalf),
 		"Fatalln": reflect.ValueOf(log.Fatalln),
