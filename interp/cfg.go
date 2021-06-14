@@ -1762,6 +1762,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				}
 
 				if i == l-1 {
+					setFNext(clauses[i], n)
 					continue
 				}
 				if len(clauses[i+1].child) > 1 {
@@ -1770,7 +1771,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					setFNext(c, clauses[i+1])
 				}
 			}
-			setFNext(clauses[l-1], n)
 			n.start = n.child[0].start
 			n.child[0].tnext = sbn.start
 
