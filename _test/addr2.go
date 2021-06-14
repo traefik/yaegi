@@ -57,7 +57,7 @@ func main() {
 	fmt.Println(err, vvv)
 }
 
-// Ouput:
+// Output:
 // <nil> {work bob@work.com}
 // <nil> {work bob@work.com}
 // <nil> {work bob@work.com}
