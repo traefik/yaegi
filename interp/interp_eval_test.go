@@ -1504,3 +1504,10 @@ func TestStdio(t *testing.T) {
 		t.Fatalf("%v not *os.file", v.Interface())
 	}
 }
+
+func TestIssue1142(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: "a := 1; // foo bar", res: "1"},
+	})
+}
