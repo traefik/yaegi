@@ -167,7 +167,7 @@ func genValueAs(n *node, t reflect.Type) func(*frame) reflect.Value {
 	return func(f *frame) reflect.Value {
 		v := value(f)
 		switch v.Type().Kind() {
-		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Ptr, reflect.Map, reflect.Slice:
+		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Ptr, reflect.Map, reflect.Slice, reflect.UnsafePointer:
 			if v.IsNil() {
 				return reflect.New(t).Elem()
 			}
