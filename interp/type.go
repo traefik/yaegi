@@ -1335,7 +1335,7 @@ func (t *itype) lookupMethod(name string) (*node, []int) {
 		return t.val.lookupMethod(name)
 	}
 	var index []int
-	m := t.resolveAlias().getMethod(name)
+	m := t.getMethod(name)
 	if m == nil {
 		for i, f := range t.field {
 			if f.embed {
@@ -1344,6 +1344,9 @@ func (t *itype) lookupMethod(name string) (*node, []int) {
 					return n, index
 				}
 			}
+		}
+		if t.cat == aliasT {
+			return t.val.lookupMethod(name)
 		}
 	}
 	return m, index
