@@ -162,9 +162,17 @@ func genValueAsFunctionWrapper(n *node) func(*frame) reflect.Value {
 }
 
 func genValueAs(n *node, t reflect.Type) func(*frame) reflect.Value {
-	v := genValue(n)
+	value := genValue(n)
+
 	return func(f *frame) reflect.Value {
-		return v(f).Convert(t)
+		v := value(f)
+		switch v.Type().Kind() {
+		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Ptr, reflect.Map, reflect.Slice:
+			if v.IsNil() {
+				return reflect.New(t).Elem()
+			}
+		}
+		return v.Convert(t)
 	}
 }
 
