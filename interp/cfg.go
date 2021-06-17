@@ -2186,7 +2186,10 @@ func (n *node) isType(sc *scope) bool {
 		suffixedPkg := filepath.Join(pkg, baseName)
 		sym, _, ok := sc.lookup(suffixedPkg)
 		if !ok {
-			return false
+			sym, _, ok = sc.lookup(pkg)
+			if !ok {
+				return false
+			}
 		}
 		if sym.kind != pkgSym {
 			return false
