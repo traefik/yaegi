@@ -1512,16 +1512,16 @@ func TestIssue1142(t *testing.T) {
 	})
 }
 
-type Issue1149_Array [3]float32
+type Issue1149Array [3]float32
 
-func (v Issue1149_Array) Foo() string  { return "foo" }
-func (v *Issue1149_Array) Bar() string { return "foo" }
+func (v Issue1149Array) Foo() string  { return "foo" }
+func (v *Issue1149Array) Bar() string { return "foo" }
 
 func TestIssue1149(t *testing.T) {
 	i := interp.New(interp.Options{})
 	i.Use(interp.Exports{
 		"pkg/pkg": map[string]reflect.Value{
-			"Type": reflect.ValueOf((*Issue1149_Array)(nil)),
+			"Type": reflect.ValueOf((*Issue1149Array)(nil)),
 		},
 	})
 	i.ImportUsed()
