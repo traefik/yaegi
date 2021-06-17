@@ -1311,6 +1311,13 @@ func (t *itype) methodCallType() reflect.Type {
 	return reflect.FuncOf(it, ot, t.rtype.IsVariadic())
 }
 
+func (t *itype) resolveAlias() *itype {
+	for t.cat == aliasT {
+		t = t.val
+	}
+	return t
+}
+
 // GetMethod returns a pointer to the method definition.
 func (t *itype) getMethod(name string) *node {
 	for _, m := range t.method {
@@ -1328,7 +1335,7 @@ func (t *itype) lookupMethod(name string) (*node, []int) {
 		return t.val.lookupMethod(name)
 	}
 	var index []int
-	m := t.getMethod(name)
+	m := t.resolveAlias().getMethod(name)
 	if m == nil {
 		for i, f := range t.field {
 			if f.embed {
