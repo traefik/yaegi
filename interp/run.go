@@ -2308,12 +2308,13 @@ func arrayLit(n *node) {
 	index := make([]int, len(child))
 	var max, prev int
 
+	ntyp := n.typ.resolveAlias()
 	for i, c := range child {
 		if c.kind == keyValueExpr {
-			values[i] = genDestValue(n.typ.val, c.child[1])
+			values[i] = genDestValue(ntyp.val, c.child[1])
 			index[i] = int(vInt(c.child[0].rval))
 		} else {
-			values[i] = genDestValue(n.typ.val, c)
+			values[i] = genDestValue(ntyp.val, c)
 			index[i] = prev
 		}
 		prev = index[i] + 1
