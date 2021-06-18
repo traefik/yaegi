@@ -1511,3 +1511,30 @@ func TestIssue1142(t *testing.T) {
 		{src: "a := 1; // foo bar", res: "1"},
 	})
 }
+
+type Issue1149Array [3]float32
+
+func (v Issue1149Array) Foo() string  { return "foo" }
+func (v *Issue1149Array) Bar() string { return "foo" }
+
+func TestIssue1149(t *testing.T) {
+	i := interp.New(interp.Options{})
+	i.Use(interp.Exports{
+		"pkg/pkg": map[string]reflect.Value{
+			"Type": reflect.ValueOf((*Issue1149Array)(nil)),
+		},
+	})
+	i.ImportUsed()
+
+	_, err := i.Eval(`
+		type Type = pkg.Type
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runTests(t, i, []testCase{
+		{src: "Type{1, 2, 3}.Foo()", res: "foo"},
+		{src: "Type{1, 2, 3}.Bar()", res: "foo"},
+	})
+}
