@@ -157,7 +157,12 @@ func genValueAsFunctionWrapper(n *node) func(*frame) reflect.Value {
 		if v.IsNil() {
 			return reflect.New(typ).Elem()
 		}
-		return genFunctionWrapper(v.Interface().(*node))(f)
+		vn, ok := v.Interface().(*node)
+		if ok && vn.rval.IsValid() && vn.rval.Type().Kind() == reflect.Func {
+			// The node value is already a callable func, no need to wrap it.
+			return vn.rval
+		}
+		return genFunctionWrapper(vn)(f)
 	}
 }
 
