@@ -1731,6 +1731,9 @@ func isSendChan(t *itype) bool {
 }
 
 func isArray(t *itype) bool {
+	if t.cat == nilT {
+		return false
+	}
 	k := t.TypeOf().Kind()
 	return k == reflect.Array || k == reflect.Slice
 }
