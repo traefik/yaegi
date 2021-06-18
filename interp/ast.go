@@ -357,7 +357,7 @@ func ignoreError(err error, src string) bool {
 }
 
 func wrapInMain(src string) string {
-	return fmt.Sprintf("package main; func main() {%s}", src)
+	return fmt.Sprintf("package main; func main() {%s\n}", src)
 }
 
 // Note: no type analysis is performed at this stage, it is done in pre-order

@@ -1504,3 +1504,70 @@ func TestStdio(t *testing.T) {
 		t.Fatalf("%v not *os.file", v.Interface())
 	}
 }
+
+func TestIssue1142(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: "a := 1; // foo bar", res: "1"},
+	})
+}
+
+type Issue1149Array [3]float32
+
+func (v Issue1149Array) Foo() string  { return "foo" }
+func (v *Issue1149Array) Bar() string { return "foo" }
+
+func TestIssue1149(t *testing.T) {
+	i := interp.New(interp.Options{})
+	i.Use(interp.Exports{
+		"pkg/pkg": map[string]reflect.Value{
+			"Type": reflect.ValueOf((*Issue1149Array)(nil)),
+		},
+	})
+	i.ImportUsed()
+
+	_, err := i.Eval(`
+		type Type = pkg.Type
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runTests(t, i, []testCase{
+		{src: "Type{1, 2, 3}.Foo()", res: "foo"},
+		{src: "Type{1, 2, 3}.Bar()", res: "foo"},
+	})
+}
+
+func TestIssue1150(t *testing.T) {
+	i := interp.New(interp.Options{})
+	_, err := i.Eval(`
+		type ArrayT [3]float32
+		type SliceT []float32
+		type StructT struct { A, B, C float32 }
+		type StructT2 struct { A, B, C float32 }
+		type FooerT interface { Foo() string }
+
+		func (v ArrayT) Foo() string { return "foo" }
+		func (v SliceT) Foo() string { return "foo" }
+		func (v StructT) Foo() string { return "foo" }
+		func (v *StructT2) Foo() string { return "foo" }
+
+		type Array = ArrayT
+		type Slice = SliceT
+		type Struct = StructT
+		type Struct2 = StructT2
+		type Fooer = FooerT
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runTests(t, i, []testCase{
+		{desc: "array", src: "Array{1, 2, 3}.Foo()", res: "foo"},
+		{desc: "slice", src: "Slice{1, 2, 3}.Foo()", res: "foo"},
+		{desc: "struct", src: "Struct{1, 2, 3}.Foo()", res: "foo"},
+		{desc: "*struct", src: "Struct2{1, 2, 3}.Foo()", res: "foo"},
+		{desc: "interface", src: "v := Fooer(Array{1, 2, 3}); v.Foo()", res: "foo"},
+	})
+}

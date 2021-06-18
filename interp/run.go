@@ -1965,14 +1965,28 @@ func getIndexSeqPtrMethod(n *node) {
 	next := getExec(n.tnext)
 
 	if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
-		n.exec = func(f *frame) bltn {
-			getFrame(f, l).data[i] = value(f).Elem().FieldByIndex(fi).Addr().Method(mi)
-			return next
+		if len(fi) == 0 {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).Method(mi)
+				return next
+			}
+		} else {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).Elem().FieldByIndex(fi).Addr().Method(mi)
+				return next
+			}
 		}
 	} else {
-		n.exec = func(f *frame) bltn {
-			getFrame(f, l).data[i] = value(f).FieldByIndex(fi).Addr().Method(mi)
-			return next
+		if len(fi) == 0 {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).Addr().Method(mi)
+				return next
+			}
+		} else {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).FieldByIndex(fi).Addr().Method(mi)
+				return next
+			}
 		}
 	}
 }
@@ -1987,14 +2001,28 @@ func getIndexSeqMethod(n *node) {
 	next := getExec(n.tnext)
 
 	if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
-		n.exec = func(f *frame) bltn {
-			getFrame(f, l).data[i] = value(f).Elem().FieldByIndex(fi).Method(mi)
-			return next
+		if len(fi) == 0 {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).Elem().Method(mi)
+				return next
+			}
+		} else {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).Elem().FieldByIndex(fi).Method(mi)
+				return next
+			}
 		}
 	} else {
-		n.exec = func(f *frame) bltn {
-			getFrame(f, l).data[i] = value(f).FieldByIndex(fi).Method(mi)
-			return next
+		if len(fi) == 0 {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).Method(mi)
+				return next
+			}
+		} else {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).FieldByIndex(fi).Method(mi)
+				return next
+			}
 		}
 	}
 }
@@ -2280,12 +2308,13 @@ func arrayLit(n *node) {
 	index := make([]int, len(child))
 	var max, prev int
 
+	ntyp := n.typ.resolveAlias()
 	for i, c := range child {
 		if c.kind == keyValueExpr {
-			values[i] = genDestValue(n.typ.val, c.child[1])
+			values[i] = genDestValue(ntyp.val, c.child[1])
 			index[i] = int(vInt(c.child[0].rval))
 		} else {
-			values[i] = genDestValue(n.typ.val, c)
+			values[i] = genDestValue(ntyp.val, c)
 			index[i] = prev
 		}
 		prev = index[i] + 1
@@ -2917,7 +2946,7 @@ func _append(n *node) {
 	if len(n.child) == 3 {
 		c1, c2 := n.child[1], n.child[2]
 		if (c1.typ.cat == valueT || c2.typ.cat == valueT) && c1.typ.rtype == c2.typ.rtype ||
-			(c2.typ.cat == arrayT || c2.typ.cat == sliceT || c2.typ.cat == variadicT) && c2.typ.val.id() == n.typ.val.id() ||
+			isArray(c2.typ) && c2.typ.elem().id() == n.typ.elem().id() ||
 			isByteArray(c1.typ.TypeOf()) && isString(c2.typ.TypeOf()) {
 			appendSlice(n)
 			return
@@ -2957,13 +2986,13 @@ func _append(n *node) {
 		}
 	} else {
 		var value0 func(*frame) reflect.Value
-		switch {
-		case isEmptyInterface(n.typ.val):
+		switch elem := n.typ.elem(); {
+		case isEmptyInterface(elem):
 			value0 = genValue(n.child[2])
-		case isInterfaceSrc(n.typ.val):
+		case isInterfaceSrc(elem):
 			value0 = genValueInterface(n.child[2])
-		case isRecursiveType(n.typ.val, n.typ.val.rtype):
-			value0 = genValueRecursiveInterface(n.child[2], n.typ.val.rtype)
+		case isRecursiveType(elem, elem.rtype):
+			value0 = genValueRecursiveInterface(n.child[2], elem.rtype)
 		case n.child[2].typ.untyped:
 			value0 = genValueAs(n.child[2], n.child[1].typ.TypeOf().Elem())
 		default:
