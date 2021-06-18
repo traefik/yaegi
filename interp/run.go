@@ -1965,14 +1965,28 @@ func getIndexSeqPtrMethod(n *node) {
 	next := getExec(n.tnext)
 
 	if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
-		n.exec = func(f *frame) bltn {
-			getFrame(f, l).data[i] = value(f).Elem().FieldByIndex(fi).Addr().Method(mi)
-			return next
+		if len(fi) == 0 {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).Method(mi)
+				return next
+			}
+		} else {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).Elem().FieldByIndex(fi).Addr().Method(mi)
+				return next
+			}
 		}
 	} else {
-		n.exec = func(f *frame) bltn {
-			getFrame(f, l).data[i] = value(f).FieldByIndex(fi).Addr().Method(mi)
-			return next
+		if len(fi) == 0 {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).Addr().Method(mi)
+				return next
+			}
+		} else {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).FieldByIndex(fi).Addr().Method(mi)
+				return next
+			}
 		}
 	}
 }
@@ -1987,14 +2001,28 @@ func getIndexSeqMethod(n *node) {
 	next := getExec(n.tnext)
 
 	if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
-		n.exec = func(f *frame) bltn {
-			getFrame(f, l).data[i] = value(f).Elem().FieldByIndex(fi).Method(mi)
-			return next
+		if len(fi) == 0 {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).Elem().Method(mi)
+				return next
+			}
+		} else {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).Elem().FieldByIndex(fi).Method(mi)
+				return next
+			}
 		}
 	} else {
-		n.exec = func(f *frame) bltn {
-			getFrame(f, l).data[i] = value(f).FieldByIndex(fi).Method(mi)
-			return next
+		if len(fi) == 0 {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).Method(mi)
+				return next
+			}
+		} else {
+			n.exec = func(f *frame) bltn {
+				getFrame(f, l).data[i] = value(f).FieldByIndex(fi).Method(mi)
+				return next
+			}
 		}
 	}
 }
