@@ -930,9 +930,12 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					if !c1.typ.implements(c0.typ) {
 						err = n.cfgErrorf("type %v does not implement interface %v", c1.typ.id(), c0.typ.id())
 					}
-					// Pass value as is
+					// Convert type to interface while keeping a reference to the original concrete type.
+					// besides type, the node value remains preserved.
 					n.gen = nop
-					n.typ = c1.typ
+					t := *c0.typ
+					n.typ = &t
+					n.typ.val = c1.typ
 					n.findex = c1.findex
 					n.level = c1.level
 					n.val = c1.val
