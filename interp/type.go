@@ -955,7 +955,7 @@ func (t *itype) assignableTo(o *itype) bool {
 		return true
 	}
 	if t.cat == aliasT && o.cat == aliasT {
-		// if alias types are not identical, it is not assignable.
+		// If alias types are not identical, it is not assignable.
 		return false
 	}
 	if t.isNil() && o.hasNil() || o.isNil() && t.hasNil() {
@@ -967,6 +967,11 @@ func (t *itype) assignableTo(o *itype) bool {
 	}
 
 	if isInterface(o) && t.implements(o) {
+		return true
+	}
+
+	if t.isBinMethod && isFunc(o) {
+		// TODO (marc): check that t without receiver as first parameter is equivalent to o.
 		return true
 	}
 
@@ -1311,6 +1316,13 @@ func (t *itype) methodCallType() reflect.Type {
 	return reflect.FuncOf(it, ot, t.rtype.IsVariadic())
 }
 
+func (t *itype) resolveAlias() *itype {
+	for t.cat == aliasT {
+		t = t.val
+	}
+	return t
+}
+
 // GetMethod returns a pointer to the method definition.
 func (t *itype) getMethod(name string) *node {
 	for _, m := range t.method {
@@ -1337,6 +1349,9 @@ func (t *itype) lookupMethod(name string) (*node, []int) {
 					return n, index
 				}
 			}
+		}
+		if t.cat == aliasT {
+			return t.val.lookupMethod(name)
 		}
 	}
 	return m, index
@@ -1721,6 +1736,9 @@ func isSendChan(t *itype) bool {
 }
 
 func isArray(t *itype) bool {
+	if t.cat == nilT {
+		return false
+	}
 	k := t.TypeOf().Kind()
 	return k == reflect.Array || k == reflect.Slice
 }
