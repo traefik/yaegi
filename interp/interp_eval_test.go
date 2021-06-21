@@ -1571,3 +1571,22 @@ func TestIssue1150(t *testing.T) {
 		{desc: "interface", src: "v := Fooer(Array{1, 2, 3}); v.Foo()", res: "foo"},
 	})
 }
+
+func TestIssue1151(t *testing.T) {
+	type pkgStruct struct{ X int }
+	type pkgArray [1]int
+
+	i := interp.New(interp.Options{})
+	i.Use(interp.Exports{
+		"pkg/pkg": map[string]reflect.Value{
+			"Struct": reflect.ValueOf((*pkgStruct)(nil)),
+			"Array":  reflect.ValueOf((*pkgArray)(nil)),
+		},
+	})
+	i.ImportUsed()
+
+	runTests(t, i, []testCase{
+		{src: "x := pkg.Struct{1}", res: "{1}"},
+		{src: "x := pkg.Array{1}", res: "[1]"},
+	})
+}
