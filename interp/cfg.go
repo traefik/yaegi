@@ -1474,72 +1474,8 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				err = n.cfgErrorf("undefined type")
 				break
 			}
-			if n.typ.cat == valueT || n.typ.cat == errorT {
-				// Handle object defined in runtime, try to find field or method
-				// Search for method first, as it applies both to types T and *T
-				// Search for field must then be performed on type T only (not *T)
-				switch method, ok := n.typ.rtype.MethodByName(n.child[1].ident); {
-				case ok:
-					hasRecvType := n.typ.rtype.Kind() != reflect.Interface
-					n.val = method.Index
-					n.gen = getIndexBinMethod
-					n.action = aGetMethod
-					n.recv = &receiver{node: n.child[0]}
-					n.typ = &itype{cat: valueT, rtype: method.Type, isBinMethod: true}
-					if hasRecvType {
-						n.typ.recv = n.typ
-					}
-				case n.typ.rtype.Kind() == reflect.Ptr:
-					if field, ok := n.typ.rtype.Elem().FieldByName(n.child[1].ident); ok {
-						n.typ = &itype{cat: valueT, rtype: field.Type}
-						n.val = field.Index
-						n.gen = getPtrIndexSeq
-						break
-					}
-					err = n.cfgErrorf("undefined field or method: %s", n.child[1].ident)
-				case n.typ.rtype.Kind() == reflect.Struct:
-					if field, ok := n.typ.rtype.FieldByName(n.child[1].ident); ok {
-						n.typ = &itype{cat: valueT, rtype: field.Type}
-						n.val = field.Index
-						n.gen = getIndexSeq
-						break
-					}
-					fallthrough
-				default:
-					// method lookup failed on type, now lookup on pointer to type
-					pt := reflect.PtrTo(n.typ.rtype)
-					if m2, ok2 := pt.MethodByName(n.child[1].ident); ok2 {
-						n.val = m2.Index
-						n.gen = getIndexBinPtrMethod
-						n.typ = &itype{cat: valueT, rtype: m2.Type, recv: &itype{cat: valueT, rtype: pt}, isBinMethod: true}
-						n.recv = &receiver{node: n.child[0]}
-						n.action = aGetMethod
-						break
-					}
-					err = n.cfgErrorf("undefined field or method: %s", n.child[1].ident)
-				}
-			} else if n.typ.cat == ptrT && (n.typ.val.cat == valueT || n.typ.val.cat == errorT) {
-				// Handle pointer on object defined in runtime
-				if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
-					n.val = method.Index
-					n.typ = &itype{cat: valueT, rtype: method.Type, recv: n.typ, isBinMethod: true}
-					n.recv = &receiver{node: n.child[0]}
-					n.gen = getIndexBinMethod
-					n.action = aGetMethod
-				} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
-					n.val = method.Index
-					n.gen = getIndexBinMethod
-					n.typ = &itype{cat: valueT, rtype: method.Type, recv: &itype{cat: valueT, rtype: reflect.PtrTo(n.typ.val.rtype)}, isBinMethod: true}
-					n.recv = &receiver{node: n.child[0]}
-					n.action = aGetMethod
-				} else if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
-					n.typ = &itype{cat: valueT, rtype: field.Type}
-					n.val = field.Index
-					n.gen = getPtrIndexSeq
-				} else {
-					err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
-				}
-			} else if n.typ.cat == binPkgT {
+			switch {
+			case n.typ.cat == binPkgT:
 				// Resolve binary package symbol: a type or a value
 				name := n.child[1].ident
 				pkg := n.child[0].sym.typ.path
@@ -1555,7 +1491,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				} else {
 					err = n.cfgErrorf("package %s \"%s\" has no symbol %s", n.child[0].ident, pkg, name)
 				}
-			} else if n.typ.cat == srcPkgT {
+			case n.typ.cat == srcPkgT:
 				pkg, name := n.child[0].sym.typ.path, n.child[1].ident
 				// Resolve source package symbol
 				if sym, ok := interp.srcPkg[pkg][name]; ok {
@@ -1572,66 +1508,138 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				} else {
 					err = n.cfgErrorf("undefined selector: %s.%s", pkg, name)
 				}
-			} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
-				n.action = aGetMethod
-				if n.child[0].isType(sc) {
-					// Handle method as a function with receiver in 1st argument
-					n.val = m
-					n.findex = notInFrame
-					n.gen = nop
-					n.typ = &itype{}
-					*n.typ = *m.typ
-					n.typ.arg = append([]*itype{n.child[0].typ}, m.typ.arg...)
-				} else {
-					// Handle method with receiver
-					n.gen = getMethod
-					n.val = m
-					n.typ = m.typ
+			case isStruct(n.typ) || isInterfaceSrc(n.typ):
+				// Find a matching field.
+				if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
+					n.val = ti
+					switch {
+					case isInterfaceSrc(n.typ):
+						n.typ = n.typ.fieldSeq(ti)
+						n.gen = getMethodByName
+						n.action = aMethod
+					case n.typ.cat == ptrT:
+						n.typ = n.typ.fieldSeq(ti)
+						n.gen = getPtrIndexSeq
+						if n.typ.cat == funcT {
+							// Function in a struct field is always wrapped in reflect.Value.
+							rtype := n.typ.TypeOf()
+							n.typ = &itype{cat: valueT, rtype: rtype, val: n.typ}
+						}
+					default:
+						n.gen = getIndexSeq
+						n.typ = n.typ.fieldSeq(ti)
+						if n.typ.cat == funcT {
+							// Function in a struct field is always wrapped in reflect.Value.
+							rtype := n.typ.TypeOf()
+							n.typ = &itype{cat: valueT, rtype: rtype, val: n.typ}
+						}
+					}
+					break
+				} else if s, lind, ok := n.typ.lookupBinField(n.child[1].ident); ok {
+					// Handle an embedded binary field into a struct field.
+					n.gen = getIndexSeqField
+					lind = append(lind, s.Index...)
+					n.val = lind
+					n.typ = &itype{cat: valueT, rtype: s.Type}
+					break
+				}
+				// No field (embedded or not) matched. Try to match a method.
+				fallthrough
+			default:
+				// Find a matching method.
+				// TODO (marc): simplify the following if/elseif blocks.
+				if n.typ.cat == valueT || n.typ.cat == errorT {
+					switch method, ok := n.typ.rtype.MethodByName(n.child[1].ident); {
+					case ok:
+						hasRecvType := n.typ.rtype.Kind() != reflect.Interface
+						n.val = method.Index
+						n.gen = getIndexBinMethod
+						n.action = aGetMethod
+						n.recv = &receiver{node: n.child[0]}
+						n.typ = &itype{cat: valueT, rtype: method.Type, isBinMethod: true}
+						if hasRecvType {
+							n.typ.recv = n.typ
+						}
+					case n.typ.rtype.Kind() == reflect.Ptr:
+						if field, ok := n.typ.rtype.Elem().FieldByName(n.child[1].ident); ok {
+							n.typ = &itype{cat: valueT, rtype: field.Type}
+							n.val = field.Index
+							n.gen = getPtrIndexSeq
+							break
+						}
+						err = n.cfgErrorf("undefined field or method: %s", n.child[1].ident)
+					case n.typ.rtype.Kind() == reflect.Struct:
+						if field, ok := n.typ.rtype.FieldByName(n.child[1].ident); ok {
+							n.typ = &itype{cat: valueT, rtype: field.Type}
+							n.val = field.Index
+							n.gen = getIndexSeq
+							break
+						}
+						fallthrough
+					default:
+						// method lookup failed on type, now lookup on pointer to type
+						pt := reflect.PtrTo(n.typ.rtype)
+						if m2, ok2 := pt.MethodByName(n.child[1].ident); ok2 {
+							n.val = m2.Index
+							n.gen = getIndexBinPtrMethod
+							n.typ = &itype{cat: valueT, rtype: m2.Type, recv: &itype{cat: valueT, rtype: pt}, isBinMethod: true}
+							n.recv = &receiver{node: n.child[0]}
+							n.action = aGetMethod
+							break
+						}
+						err = n.cfgErrorf("undefined field or method: %s", n.child[1].ident)
+					}
+				} else if n.typ.cat == ptrT && (n.typ.val.cat == valueT || n.typ.val.cat == errorT) {
+					// Handle pointer on object defined in runtime
+					if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
+						n.val = method.Index
+						n.typ = &itype{cat: valueT, rtype: method.Type, recv: n.typ, isBinMethod: true}
+						n.recv = &receiver{node: n.child[0]}
+						n.gen = getIndexBinMethod
+						n.action = aGetMethod
+					} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
+						n.val = method.Index
+						n.gen = getIndexBinMethod
+						n.typ = &itype{cat: valueT, rtype: method.Type, recv: &itype{cat: valueT, rtype: reflect.PtrTo(n.typ.val.rtype)}, isBinMethod: true}
+						n.recv = &receiver{node: n.child[0]}
+						n.action = aGetMethod
+					} else if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
+						n.typ = &itype{cat: valueT, rtype: field.Type}
+						n.val = field.Index
+						n.gen = getPtrIndexSeq
+					} else {
+						err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
+					}
+				} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
+					n.action = aGetMethod
+					if n.child[0].isType(sc) {
+						// Handle method as a function with receiver in 1st argument
+						n.val = m
+						n.findex = notInFrame
+						n.gen = nop
+						n.typ = &itype{}
+						*n.typ = *m.typ
+						n.typ.arg = append([]*itype{n.child[0].typ}, m.typ.arg...)
+					} else {
+						// Handle method with receiver
+						n.gen = getMethod
+						n.val = m
+						n.typ = m.typ
+						n.recv = &receiver{node: n.child[0], index: lind}
+					}
+				} else if m, lind, isPtr, ok := n.typ.lookupBinMethod(n.child[1].ident); ok {
+					n.action = aGetMethod
+					if isPtr && n.typ.fieldSeq(lind).cat != ptrT {
+						n.gen = getIndexSeqPtrMethod
+					} else {
+						n.gen = getIndexSeqMethod
+					}
 					n.recv = &receiver{node: n.child[0], index: lind}
-				}
-			} else if m, lind, isPtr, ok := n.typ.lookupBinMethod(n.child[1].ident); ok {
-				n.action = aGetMethod
-				if isPtr && n.typ.fieldSeq(lind).cat != ptrT {
-					n.gen = getIndexSeqPtrMethod
+					n.val = append([]int{m.Index}, lind...)
+					n.typ = &itype{cat: valueT, rtype: m.Type, recv: n.child[0].typ, isBinMethod: true}
 				} else {
-					n.gen = getIndexSeqMethod
+					err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
 				}
-				n.recv = &receiver{node: n.child[0], index: lind}
-				n.val = append([]int{m.Index}, lind...)
-				n.typ = &itype{cat: valueT, rtype: m.Type, recv: n.child[0].typ, isBinMethod: true}
-			} else if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
-				// Handle struct field
-				n.val = ti
-				switch {
-				case isInterfaceSrc(n.typ):
-					n.typ = n.typ.fieldSeq(ti)
-					n.gen = getMethodByName
-					n.action = aMethod
-				case n.typ.cat == ptrT:
-					n.typ = n.typ.fieldSeq(ti)
-					n.gen = getPtrIndexSeq
-					if n.typ.cat == funcT {
-						// function in a struct field is always wrapped in reflect.Value
-						rtype := n.typ.TypeOf()
-						n.typ = &itype{cat: valueT, rtype: rtype, val: n.typ}
-					}
-				default:
-					n.gen = getIndexSeq
-					n.typ = n.typ.fieldSeq(ti)
-					if n.typ.cat == funcT {
-						// function in a struct field is always wrapped in reflect.Value
-						rtype := n.typ.TypeOf()
-						n.typ = &itype{cat: valueT, rtype: rtype, val: n.typ}
-					}
-				}
-			} else if s, lind, ok := n.typ.lookupBinField(n.child[1].ident); ok {
-				// Handle an embedded binary field into a struct field
-				n.gen = getIndexSeqField
-				lind = append(lind, s.Index...)
-				n.val = lind
-				n.typ = &itype{cat: valueT, rtype: s.Type}
-			} else {
-				err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
 			}
 			if err == nil && n.findex != -1 {
 				n.findex = sc.add(n.typ)
