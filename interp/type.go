@@ -1253,25 +1253,25 @@ func (t *itype) fieldSeq(seq []int) *itype {
 }
 
 // lookupField returns a list of indices, i.e. a path to access a field in a struct object.
-func (typ *itype) lookupField(name string) []int {
+func (t *itype) lookupField(name string) []int {
 	seen := map[*itype]bool{}
 	var lookup func(*itype) []int
 
-	lookup = func(t *itype) []int {
-		if seen[t] {
+	lookup = func(typ *itype) []int {
+		if seen[typ] {
 			return nil
 		}
-		seen[t] = true
+		seen[typ] = true
 
-		switch t.cat {
+		switch typ.cat {
 		case aliasT, ptrT:
-			return lookup(t.val)
+			return lookup(typ.val)
 		}
-		if fi := t.fieldIndex(name); fi >= 0 {
+		if fi := typ.fieldIndex(name); fi >= 0 {
 			return []int{fi}
 		}
 
-		for i, f := range t.field {
+		for i, f := range typ.field {
 			switch f.typ.cat {
 			case ptrT, structT, interfaceT, aliasT:
 				if index2 := lookup(f.typ); len(index2) > 0 {
@@ -1283,7 +1283,7 @@ func (typ *itype) lookupField(name string) []int {
 		return nil
 	}
 
-	return lookup(typ)
+	return lookup(t)
 }
 
 // lookupBinField returns a structfield and a path to access an embedded binary field in a struct object.
