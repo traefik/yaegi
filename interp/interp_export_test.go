@@ -41,6 +41,42 @@ type Wrap struct {
 
 func (w Wrap) Hello() { w.DoHello() }
 
+func TestExportsSemantics(t *testing.T) {
+	var Foo = &struct{}{}
+
+	t.Run("Correct", func(t *testing.T) {
+		t.Skip()
+		i := interp.New(interp.Options{})
+
+		err := i.Use(interp.Exports{
+			"foo/foo": {"Foo": reflect.ValueOf(Foo)},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		i.ImportUsed()
+
+		res, err := i.Eval("foo.Foo")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.Interface() != Foo {
+			t.Fatalf("expected foo.Foo to equal local Foo")
+		}
+	})
+
+	t.Run("Incorrect", func(t *testing.T) {
+		i := interp.New(interp.Options{})
+
+		err := i.Use(interp.Exports{
+			"foo": {"Foo": reflect.ValueOf(Foo)},
+		})
+		if err == nil {
+			t.Fatal("expected error for incorrect Use semantics")
+		}
+	})
+}
+
 func TestInterface(t *testing.T) {
 	i := interp.New(interp.Options{})
 	// export the Wrap type to the interpreter under virtual "wrap" package

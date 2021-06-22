@@ -653,10 +653,14 @@ func (interp *Interpreter) getWrapper(t reflect.Type) reflect.Type {
 
 // Use loads binary runtime symbols in the interpreter context so
 // they can be used in interpreted code.
-func (interp *Interpreter) Use(values Exports) {
+func (interp *Interpreter) Use(values Exports) error {
 	for k, v := range values {
 		importPath := path.Dir(k)
 		packageName := path.Base(k)
+
+		if importPath == "." {
+			return fmt.Errorf("export path %[1]q is missing a package name; did you mean '%[1]s/%[1]s'?", k)
+		}
 
 		if importPath == selfPrefix {
 			interp.hooks.Parse(v)
@@ -681,6 +685,7 @@ func (interp *Interpreter) Use(values Exports) {
 	if _, ok := values["fmt/fmt"]; ok {
 		fixStdio(interp)
 	}
+	return nil
 }
 
 // fixStdio redefines interpreter stdlib symbols to use the standard input,
