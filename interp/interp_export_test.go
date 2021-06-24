@@ -42,7 +42,7 @@ type Wrap struct {
 func (w Wrap) Hello() { w.DoHello() }
 
 func TestExportsSemantics(t *testing.T) {
-	var Foo = &struct{}{}
+	Foo := &struct{}{}
 
 	t.Run("Correct", func(t *testing.T) {
 		t.Skip()
@@ -80,11 +80,14 @@ func TestExportsSemantics(t *testing.T) {
 func TestInterface(t *testing.T) {
 	i := interp.New(interp.Options{})
 	// export the Wrap type to the interpreter under virtual "wrap" package
-	i.Use(interp.Exports{
+	err := i.Use(interp.Exports{
 		"wrap/wrap": {
 			"Wrap": reflect.ValueOf((*Wrap)(nil)),
 		},
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	eval(t, i, `
 import "wrap"
@@ -109,11 +112,14 @@ func (t T) Bar(s ...string) {}
 
 func TestCallBinVariadicMethod(t *testing.T) {
 	i := interp.New(interp.Options{})
-	i.Use(interp.Exports{
+	err := i.Use(interp.Exports{
 		"mypkg/mypkg": {
 			"T": reflect.ValueOf((*T)(nil)),
 		},
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	eval(t, i, `
 package p
 

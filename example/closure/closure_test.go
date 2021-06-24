@@ -9,7 +9,9 @@ import (
 
 func TestFunctionCall(t *testing.T) {
 	i := interp.New(interp.Options{GoPath: "./_pkg"})
-	i.Use(stdlib.Symbols)
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
 
 	_, err := i.Eval(`import "foo/bar"`)
 	if err != nil {

@@ -117,23 +117,33 @@ func test(arg []string) (err error) {
 	}
 
 	i := interp.New(interp.Options{GoPath: build.Default.GOPATH, BuildTags: strings.Split(tags, ",")})
-	i.Use(stdlib.Symbols)
-	i.Use(interp.Symbols)
+	if err := i.Use(stdlib.Symbols); err != nil {
+		return err
+	}
+	if err := i.Use(interp.Symbols); err != nil {
+		return err
+	}
 	if useSyscall {
-		i.Use(syscall.Symbols)
+		if err := i.Use(syscall.Symbols); err != nil {
+			return err
+		}
 		// Using a environment var allows a nested interpreter to import the syscall package.
 		if err := os.Setenv("YAEGI_SYSCALL", "1"); err != nil {
 			return err
 		}
 	}
 	if useUnrestricted {
-		i.Use(unrestricted.Symbols)
+		if err := i.Use(unrestricted.Symbols); err != nil {
+			return err
+		}
 		if err := os.Setenv("YAEGI_UNRESTRICTED", "1"); err != nil {
 			return err
 		}
 	}
 	if useUnsafe {
-		i.Use(unsafe.Symbols)
+		if err := i.Use(unsafe.Symbols); err != nil {
+			return err
+		}
 		if err := os.Setenv("YAEGI_UNSAFE", "1"); err != nil {
 			return err
 		}
