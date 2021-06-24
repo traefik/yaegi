@@ -1535,7 +1535,8 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						}
 					}
 					break
-				} else if s, lind, ok := n.typ.lookupBinField(n.child[1].ident); ok {
+				}
+				if s, lind, ok := n.typ.lookupBinField(n.child[1].ident); ok {
 					// Handle an embedded binary field into a struct field.
 					n.gen = getIndexSeqField
 					lind = append(lind, s.Index...)

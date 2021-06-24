@@ -1295,7 +1295,7 @@ func (t *itype) lookupBinField(name string) (s reflect.StructField, index []int,
 		return
 	}
 	rt := t.TypeOf()
-	if t.cat == valueT && rt.Kind() == reflect.Ptr {
+	for t.cat == valueT && rt.Kind() == reflect.Ptr {
 		rt = rt.Elem()
 	}
 	if rt.Kind() != reflect.Struct {
