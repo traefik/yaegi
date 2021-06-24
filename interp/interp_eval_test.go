@@ -103,11 +103,14 @@ func TestEvalStar(t *testing.T) {
 
 func TestEvalAssign(t *testing.T) {
 	i := interp.New(interp.Options{})
-	i.Use(interp.Exports{
+	if err := i.Use(interp.Exports{
 		"testpkg/testpkg": {
 			"val": reflect.ValueOf(int64(11)),
 		},
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
+
 	_, e := i.Eval(`import "testpkg"`)
 	if e != nil {
 		t.Fatal(e)
@@ -205,7 +208,9 @@ func TestEvalFunc(t *testing.T) {
 
 func TestEvalImport(t *testing.T) {
 	i := interp.New(interp.Options{})
-	i.Use(stdlib.Symbols)
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
 	runTests(t, i, []testCase{
 		{pre: func() { eval(t, i, `import "time"`) }, src: "2 * time.Second", res: "2s"},
 	})
@@ -214,7 +219,9 @@ func TestEvalImport(t *testing.T) {
 func TestEvalStdout(t *testing.T) {
 	var out, err bytes.Buffer
 	i := interp.New(interp.Options{Stdout: &out, Stderr: &err})
-	i.Use(stdlib.Symbols)
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
 	_, e := i.Eval(`import "fmt"; func main() { fmt.Println("hello") }`)
 	if e != nil {
 		t.Fatal(e)
@@ -227,7 +234,9 @@ func TestEvalStdout(t *testing.T) {
 
 func TestEvalNil(t *testing.T) {
 	i := interp.New(interp.Options{})
-	i.Use(stdlib.Symbols)
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
 	runTests(t, i, []testCase{
 		{desc: "assign nil", src: "a := nil", err: "1:33: use of untyped nil"},
 		{desc: "return nil", pre: func() { eval(t, i, "func getNil() error {return nil}") }, src: "getNil()", res: "<nil>"},
@@ -375,7 +384,9 @@ var a = T{
 
 func TestEvalCompositeBin0(t *testing.T) {
 	i := interp.New(interp.Options{})
-	i.Use(stdlib.Symbols)
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
 	eval(t, i, `
 import (
 	"fmt"
@@ -636,7 +647,9 @@ func TestEvalCall(t *testing.T) {
 
 func TestEvalBinCall(t *testing.T) {
 	i := interp.New(interp.Options{})
-	i.Use(stdlib.Symbols)
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := i.Eval(`import "fmt"`); err != nil {
 		t.Fatal(err)
 	}
@@ -662,9 +675,11 @@ func TestEvalMissingSymbol(t *testing.T) {
 		F S2
 	}
 	i := interp.New(interp.Options{})
-	i.Use(interp.Exports{"p/p": map[string]reflect.Value{
+	if err := i.Use(interp.Exports{"p/p": map[string]reflect.Value{
 		"S1": reflect.Zero(reflect.TypeOf(&S1{})),
-	}})
+	}}); err != nil {
+		t.Fatal(err)
+	}
 	_, err := i.Eval(`import "p"`)
 	if err != nil {
 		t.Fatalf("failed to import package: %v", err)
@@ -733,7 +748,9 @@ func TestEvalWithContext(t *testing.T) {
 		go func() {
 			defer close(done)
 			i := interp.New(interp.Options{})
-			i.Use(stdlib.Symbols)
+			if err := i.Use(stdlib.Symbols); err != nil {
+				t.Error(err)
+			}
 			_, err := i.Eval(`import "sync"`)
 			if err != nil {
 				t.Errorf(`failed to import "sync": %v`, err)
@@ -836,8 +853,9 @@ func TestMultiEval(t *testing.T) {
 	os.Stdout = w
 
 	i := interp.New(interp.Options{})
-	i.Use(stdlib.Symbols)
-	var err error
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
 
 	f, err := os.Open(filepath.Join("testdata", "multi", "731"))
 	if err != nil {
@@ -875,8 +893,9 @@ func TestMultiEval(t *testing.T) {
 func TestMultiEvalNoName(t *testing.T) {
 	t.Skip("fail in CI only ?")
 	i := interp.New(interp.Options{})
-	i.Use(stdlib.Symbols)
-	var err error
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
 
 	f, err := os.Open(filepath.Join("testdata", "multi", "731"))
 	if err != nil {
@@ -908,7 +927,9 @@ func TestMultiEvalNoName(t *testing.T) {
 func TestImportPathIsKey(t *testing.T) {
 	// No need to check the results of Eval, as TestFile already does it.
 	i := interp.New(interp.Options{GoPath: filepath.FromSlash("../_test/testdata/redeclaration-global7")})
-	i.Use(stdlib.Symbols)
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
 
 	filePath := filepath.Join("..", "_test", "ipp_as_key.go")
 	if _, err := i.EvalPath(filePath); err != nil {
@@ -987,7 +1008,9 @@ func TestConcurrentEvals(t *testing.T) {
 		_ = pout.Close()
 	}()
 	interpr := interp.New(interp.Options{Stdout: pout})
-	interpr.Use(stdlib.Symbols)
+	if err := interpr.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
 
 	if _, err := interpr.EvalPath("testdata/concurrent/hello1.go"); err != nil {
 		t.Fatal(err)
@@ -1046,7 +1069,9 @@ func TestConcurrentEvals2(t *testing.T) {
 		_ = pout.Close()
 	}()
 	interpr := interp.New(interp.Options{Stdout: pout})
-	interpr.Use(stdlib.Symbols)
+	if err := interpr.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
 
 	done := make(chan error)
 	go func() {
@@ -1108,7 +1133,9 @@ func TestConcurrentEvals3(t *testing.T) {
 		pinin, poutin := io.Pipe()
 		pinout, poutout := io.Pipe()
 		i := interp.New(interp.Options{Stdin: pinin, Stdout: poutout})
-		i.Use(stdlib.Symbols)
+		if err := i.Use(stdlib.Symbols); err != nil {
+			t.Fatal(err)
+		}
 
 		go func() {
 			_, _ = i.REPL()
@@ -1187,7 +1214,9 @@ func testConcurrentComposite(t *testing.T, filePath string) {
 	}
 	pin, pout := io.Pipe()
 	i := interp.New(interp.Options{Stdout: pout})
-	i.Use(stdlib.Symbols)
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
 
 	errc := make(chan error)
 	var output string
@@ -1411,7 +1440,9 @@ func TestREPLCommands(t *testing.T) {
 		pinin, poutin := io.Pipe()
 		pinout, poutout := io.Pipe()
 		i := interp.New(interp.Options{Stdin: pinin, Stdout: poutout})
-		i.Use(stdlib.Symbols)
+		if err := i.Use(stdlib.Symbols); err != nil {
+			t.Fatal(err)
+		}
 
 		go func() {
 			_, _ = i.REPL()
@@ -1494,7 +1525,9 @@ func TestREPLCommands(t *testing.T) {
 
 func TestStdio(t *testing.T) {
 	i := interp.New(interp.Options{})
-	i.Use(stdlib.Symbols)
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
 	i.ImportUsed()
 	if _, err := i.Eval(`var x = os.Stdout`); err != nil {
 		t.Fatal(err)
@@ -1519,11 +1552,13 @@ func (v *Issue1149Array) Bar() string { return "foo" }
 
 func TestIssue1149(t *testing.T) {
 	i := interp.New(interp.Options{})
-	i.Use(interp.Exports{
+	if err := i.Use(interp.Exports{
 		"pkg/pkg": map[string]reflect.Value{
 			"Type": reflect.ValueOf((*Issue1149Array)(nil)),
 		},
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	i.ImportUsed()
 
 	_, err := i.Eval(`
@@ -1577,12 +1612,14 @@ func TestIssue1151(t *testing.T) {
 	type pkgArray [1]int
 
 	i := interp.New(interp.Options{})
-	i.Use(interp.Exports{
+	if err := i.Use(interp.Exports{
 		"pkg/pkg": map[string]reflect.Value{
 			"Struct": reflect.ValueOf((*pkgStruct)(nil)),
 			"Array":  reflect.ValueOf((*pkgArray)(nil)),
 		},
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	i.ImportUsed()
 
 	runTests(t, i, []testCase{

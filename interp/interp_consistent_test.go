@@ -115,9 +115,15 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			os.Stdout = w
 
 			i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
-			i.Use(stdlib.Symbols)
-			i.Use(interp.Symbols)
-			i.Use(unsafe.Symbols)
+			if err := i.Use(stdlib.Symbols); err != nil {
+				t.Fatal(err)
+			}
+			if err := i.Use(interp.Symbols); err != nil {
+				t.Fatal(err)
+			}
+			if err := i.Use(unsafe.Symbols); err != nil {
+				t.Fatal(err)
+			}
 
 			_, err = i.EvalPath(filePath)
 			if err != nil {
@@ -260,7 +266,9 @@ func TestInterpErrorConsistency(t *testing.T) {
 			filePath := filepath.Join("..", "_test", test.fileName)
 
 			i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
-			i.Use(stdlib.Symbols)
+			if err := i.Use(stdlib.Symbols); err != nil {
+				t.Fatal(err)
+			}
 
 			_, errEval := i.EvalPath(filePath)
 			if errEval == nil {

@@ -10,8 +10,12 @@ import (
 func ExampleInterpreter_self() {
 	i := interp.New(interp.Options{})
 
-	i.Use(stdlib.Symbols)
-	i.Use(interp.Symbols)
+	if err := i.Use(stdlib.Symbols); err != nil {
+		log.Fatal(err)
+	}
+	if err := i.Use(interp.Symbols); err != nil {
+		log.Fatal(err)
+	}
 
 	_, err := i.Eval(`import (
 	"fmt"

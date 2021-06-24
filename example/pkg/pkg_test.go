@@ -111,7 +111,10 @@ func TestPackages(t *testing.T) {
 
 			var stdout, stderr bytes.Buffer
 			i := interp.New(interp.Options{GoPath: goPath, Stdout: &stdout, Stderr: &stderr})
-			i.Use(stdlib.Symbols) // Use binary standard library
+			// Use binary standard library
+			if err := i.Use(stdlib.Symbols); err != nil {
+				t.Fatal(err)
+			}
 
 			var msg string
 			if test.evalFile != "" {
@@ -170,7 +173,10 @@ func TestPackagesError(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			// Init go interpreter
 			i := interp.New(interp.Options{GoPath: test.goPath})
-			i.Use(stdlib.Symbols) // Use binary standard library
+			// Use binary standard library
+			if err := i.Use(stdlib.Symbols); err != nil {
+				t.Fatal(err)
+			}
 
 			// Load pkg from sources
 			_, err := i.Eval(`import "github.com/foo/pkg"`)
