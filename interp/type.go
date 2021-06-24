@@ -1254,24 +1254,36 @@ func (t *itype) fieldSeq(seq []int) *itype {
 
 // lookupField returns a list of indices, i.e. a path to access a field in a struct object.
 func (t *itype) lookupField(name string) []int {
-	switch t.cat {
-	case aliasT, ptrT:
-		return t.val.lookupField(name)
-	}
-	if fi := t.fieldIndex(name); fi >= 0 {
-		return []int{fi}
-	}
+	seen := map[*itype]bool{}
+	var lookup func(*itype) []int
 
-	for i, f := range t.field {
-		switch f.typ.cat {
-		case ptrT, structT, interfaceT, aliasT:
-			if index2 := f.typ.lookupField(name); len(index2) > 0 {
-				return append([]int{i}, index2...)
+	lookup = func(typ *itype) []int {
+		if seen[typ] {
+			return nil
+		}
+		seen[typ] = true
+
+		switch typ.cat {
+		case aliasT, ptrT:
+			return lookup(typ.val)
+		}
+		if fi := typ.fieldIndex(name); fi >= 0 {
+			return []int{fi}
+		}
+
+		for i, f := range typ.field {
+			switch f.typ.cat {
+			case ptrT, structT, interfaceT, aliasT:
+				if index2 := lookup(f.typ); len(index2) > 0 {
+					return append([]int{i}, index2...)
+				}
 			}
 		}
+
+		return nil
 	}
 
-	return nil
+	return lookup(t)
 }
 
 // lookupBinField returns a structfield and a path to access an embedded binary field in a struct object.
@@ -1282,9 +1294,12 @@ func (t *itype) lookupBinField(name string) (s reflect.StructField, index []int,
 	if !isStruct(t) {
 		return
 	}
-	rt := t.rtype
-	if t.cat == valueT && rt.Kind() == reflect.Ptr {
+	rt := t.TypeOf()
+	for t.cat == valueT && rt.Kind() == reflect.Ptr {
 		rt = rt.Elem()
+	}
+	if rt.Kind() != reflect.Struct {
+		return
 	}
 	s, ok = rt.FieldByName(name)
 	if !ok {
@@ -1350,7 +1365,7 @@ func (t *itype) lookupMethod(name string) (*node, []int) {
 				}
 			}
 		}
-		if t.cat == aliasT {
+		if t.cat == aliasT || isInterfaceSrc(t) && t.val != nil {
 			return t.val.lookupMethod(name)
 		}
 	}

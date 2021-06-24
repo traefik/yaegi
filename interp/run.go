@@ -1230,6 +1230,14 @@ func call(n *node) {
 						src = def.recv.val
 					} else {
 						src = v(f)
+						for src.IsValid() {
+							// traverse interface indirections to find out concrete type
+							vi, ok := src.Interface().(valueInterface)
+							if !ok {
+								break
+							}
+							src = vi.value
+						}
 					}
 					if recvIndexLater && def.recv != nil && len(def.recv.index) > 0 {
 						if src.Kind() == reflect.Ptr {
