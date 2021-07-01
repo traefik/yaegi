@@ -1372,6 +1372,17 @@ func (t *itype) lookupMethod(name string) (*node, []int) {
 	return m, index
 }
 
+// methodDepth returns a depth greater or equal to 0, or -1 if no match.
+func (t *itype) methodDepth(name string) int {
+	if m, lint := t.lookupMethod(name); m != nil {
+		return len(lint)
+	}
+	if _, lint, _, ok := t.lookupBinMethod(name); ok {
+		return len(lint)
+	}
+	return -1
+}
+
 // LookupBinMethod returns a method and a path to access a field in a struct object (the receiver).
 func (t *itype) lookupBinMethod(name string) (m reflect.Method, index []int, isPtr, ok bool) {
 	if t.cat == ptrT {

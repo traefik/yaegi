@@ -1525,6 +1525,18 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 							rtype := n.typ.TypeOf()
 							n.typ = &itype{cat: valueT, rtype: rtype, val: n.typ}
 						}
+					case isStruct(n.typ):
+						// If a method of the same name exists, use it if it is less shallowed.
+						// if method's depth is the same as field's, this is an error.
+						d := n.typ.methodDepth(n.child[1].ident)
+						if d >= 0 && d < len(ti) {
+							goto tryMethods
+						}
+						if d == len(ti) {
+							err = n.cfgErrorf("ambiguous selector: %s", n.child[1].ident)
+							break
+						}
+						fallthrough
 					default:
 						n.gen = getIndexSeq
 						n.typ = n.typ.fieldSeq(ti)
@@ -1540,11 +1552,24 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					// Handle an embedded binary field into a struct field.
 					n.gen = getIndexSeqField
 					lind = append(lind, s.Index...)
+					if isStruct(n.typ) {
+						// If a method of the same name exists, use it if it is less shallowed.
+						// if method's depth is the same as field's, this is an error.
+						d := n.typ.methodDepth(n.child[1].ident)
+						if d >= 0 && d < len(lind) {
+							goto tryMethods
+						}
+						if d == len(lind) {
+							err = n.cfgErrorf("ambiguous selector: %s", n.child[1].ident)
+							break
+						}
+					}
 					n.val = lind
 					n.typ = &itype{cat: valueT, rtype: s.Type}
 					break
 				}
 				// No field (embedded or not) matched. Try to match a method.
+			tryMethods:
 				fallthrough
 			default:
 				// Find a matching method.
