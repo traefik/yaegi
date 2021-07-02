@@ -49,6 +49,14 @@ body:
     validations:
       required: true
 
+  - type: input
+    id: version
+    attributes:
+      label: Yaegi Version
+      description: Can be a tag or a hash.
+    validations:
+      required: true
+
   - type: textarea
     id: additional
     attributes:
