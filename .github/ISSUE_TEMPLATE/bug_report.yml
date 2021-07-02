@@ -1,0 +1,66 @@
+name: Bug Report
+description: Create a report to help us improve
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ Make sure to browse the opened and closed issues before submit your issue.
+
+  - type: textarea
+    id: sample
+    attributes:
+      label: "The following program `sample.go` triggers an unexpected result"
+      value: |
+        package main
+
+        func main() {
+          // add a sample
+        }
+      render: go
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: |-
+        ```console
+        $ go run ./sample.go
+        // output
+        ```
+      placeholder: $ go run ./sample.go
+      render: console
+    validations:
+      required: true
+
+  - type: textarea
+    id: got
+    attributes:
+      label: Got
+      description: |-
+        ```console
+        $ yaegi ./sample.go
+        // output
+        ```
+      placeholder: $ yaegi ./sample.go
+      render: console
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Yaegi Version
+      description: Can be a tag or a hash.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Notes
+      description: Use [Markdown syntax](https://help.github.com/articles/github-flavored-markdown) if needed.
+    validations:
+      required: false

@@ -3,9 +3,9 @@
 </p>
 
 [![release](https://img.shields.io/github/tag-date/traefik/yaegi.svg?label=alpha)](https://github.com/traefik/yaegi/releases)
-[![Build Status](https://travis-ci.com/traefik/yaegi.svg?branch=master)](https://travis-ci.com/traefik/yaegi)
-[![GoDoc](https://godoc.org/github.com/traefik/yaegi?status.svg)](https://godoc.org/github.com/traefik/yaegi)
-[![Discourse status](https://img.shields.io/discourse/https/community.containo.us/status?label=Community&style=social)](https://community.containo.us/c/yaegi)
+[![Build Status](https://github.com/traefik/yaegi/actions/workflows/main.yml/badge.svg)](https://github.com/traefik/yaegi/actions/workflows/main.yml)
+[![GoDoc](https://godoc.org/github.com/traefik/yaegi?status.svg)](https://pkg.go.dev/mod/github.com/traefik/yaegi)
+[![Discourse status](https://img.shields.io/discourse/https/community.traefik.io/status?label=Community&style=social)](https://community.traefik.io/c/yaegi)
 
 Yaegi is Another Elegant Go Interpreter.
 It powers executable Go scripts and plugins, in embedded interpreters or interactive shells, on top of the Go runtime.
@@ -186,7 +186,7 @@ Beside the known [bugs] which are supposed to be fixed in the short term, there 
 [Apache 2.0][License].
 
 [specs]: https://golang.org/ref/spec
-[docs]: https://godoc.org/github.com/traefik/yaegi
+[docs]: https://pkg.go.dev/github.com/traefik/yaegi
 [license]: https://github.com/traefik/yaegi/blob/master/LICENSE
 [github]: https://github.com/traefik/yaegi
 [bugs]: https://github.com/traefik/yaegi/issues?q=is%3Aissue+is%3Aopen+label%3Abug

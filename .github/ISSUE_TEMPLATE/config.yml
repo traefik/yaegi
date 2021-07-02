@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions
+    url: https://community.traefik.io/c/yaegi
+    about: If you have a question, or are looking for advice, please post on our discussions forum!
+  - name: Documentation
+    url: https://pkg.go.dev/github.com/traefik/yaegi
+    about: Please take a look to our documenation.
