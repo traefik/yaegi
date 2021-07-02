@@ -11,7 +11,7 @@ body:
   - type: textarea
     id: sample
     attributes:
-      label: "The following program `sample.go` triggers a panic"
+      label: "The following program `sample.go` triggers an unexpected result"
       value: |
         package main
 
