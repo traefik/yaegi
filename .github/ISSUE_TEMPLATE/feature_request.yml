@@ -5,7 +5,6 @@ body:
   - type: markdown
     attributes:
       value: |
-        ⚠️ If you do not respect this template your issue will be closed.
         ⚠️ Make sure to browse the opened and closed issues before submit your issue.
 
   - type: textarea
