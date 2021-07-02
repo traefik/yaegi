@@ -1511,6 +1511,18 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			case isStruct(n.typ) || isInterfaceSrc(n.typ):
 				// Find a matching field.
 				if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
+					if isStruct(n.typ) {
+						// If a method of the same name exists, use it if it is less shallowed.
+						// if method's depth is the same as field's, this is an error.
+						d := n.typ.methodDepth(n.child[1].ident)
+						if d >= 0 && d < len(ti) {
+							goto tryMethods
+						}
+						if d == len(ti) {
+							err = n.cfgErrorf("ambiguous selector: %s", n.child[1].ident)
+							break
+						}
+					}
 					n.val = ti
 					switch {
 					case isInterfaceSrc(n.typ):
@@ -1525,18 +1537,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 							rtype := n.typ.TypeOf()
 							n.typ = &itype{cat: valueT, rtype: rtype, val: n.typ}
 						}
-					case isStruct(n.typ):
-						// If a method of the same name exists, use it if it is less shallowed.
-						// if method's depth is the same as field's, this is an error.
-						d := n.typ.methodDepth(n.child[1].ident)
-						if d >= 0 && d < len(ti) {
-							goto tryMethods
-						}
-						if d == len(ti) {
-							err = n.cfgErrorf("ambiguous selector: %s", n.child[1].ident)
-							break
-						}
-						fallthrough
 					default:
 						n.gen = getIndexSeq
 						n.typ = n.typ.fieldSeq(ti)

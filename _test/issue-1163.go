@@ -27,7 +27,7 @@ func (w *Window) HandleEvent(e *WindowEvent) {
 }
 
 func main() {
-	window := Window{
+	window := &Window{
 		Widget: &Button{},
 	}
 	windowevent := &WindowEvent{}
