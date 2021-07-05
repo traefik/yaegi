@@ -17,6 +17,3 @@ func main() {
 
 // Output:
 // P-256
-
-// Output:
-// P-256
