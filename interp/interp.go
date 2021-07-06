@@ -203,6 +203,7 @@ func init() { Symbols[selfPath]["Symbols"] = reflect.ValueOf(Symbols) }
 
 // _error is a wrapper of error interface type.
 type _error struct {
+	IValue interface{}
 	WError func() string
 }
 

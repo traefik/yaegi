@@ -421,6 +421,10 @@ func typeAssert(n *node, withResult, withOk bool) {
 				return next
 			}
 			v = valueInterfaceValue(v)
+			if vt := v.Type(); vt.Kind() == reflect.Struct && vt.Field(0).Name == "IValue" {
+				// Value is retrieved from an interface wrapper.
+				v = v.Field(0).Elem()
+			}
 			ok = canAssertTypes(v.Type(), rtype)
 			if !ok {
 				if !withOk {
@@ -997,15 +1001,16 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 			}
 		}
 		w := reflect.New(wrap).Elem()
+		w.Field(0).Set(v)
 		for i, m := range methods {
 			if m == nil {
 				if r := v.MethodByName(names[i]); r.IsValid() {
-					w.Field(i).Set(r)
+					w.Field(i + 1).Set(r)
 					continue
 				}
 				o := vv.FieldByIndex(indexes[i])
 				if r := o.MethodByName(names[i]); r.IsValid() {
-					w.Field(i).Set(r)
+					w.Field(i + 1).Set(r)
 				} else {
 					log.Println(n.cfgErrorf("genInterfaceWrapper error, no method %s", names[i]))
 				}
@@ -1013,7 +1018,7 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 			}
 			nod := *m
 			nod.recv = &receiver{n, v, indexes[i]}
-			w.Field(i).Set(genFunctionWrapper(&nod)(f))
+			w.Field(i + 1).Set(genFunctionWrapper(&nod)(f))
 		}
 		return w
 	}
@@ -1084,6 +1089,8 @@ func call(n *node) {
 				values = append(values, genValue(c))
 			case isInterfaceSrc(arg):
 				values = append(values, genValueInterface(c))
+			case isInterfaceBin(arg):
+				values = append(values, genInterfaceWrapper(c, arg.rtype))
 			case isRecursiveType(c.typ, c.typ.rtype):
 				values = append(values, genValueRecursiveInterfacePtrValue(c))
 			default:

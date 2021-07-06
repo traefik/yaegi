@@ -1179,6 +1179,9 @@ func (t *itype) id() (res string) {
 	case variadicT:
 		res = "..." + t.val.id()
 	}
+	if res == "" {
+		res = t.TypeOf().String()
+	}
 	return res
 }
 

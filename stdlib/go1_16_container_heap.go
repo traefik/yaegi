@@ -28,11 +28,12 @@ func init() {
 
 // _container_heap_Interface is an interface wrapper for Interface type
 type _container_heap_Interface struct {
-	WLen  func() int
-	WLess func(i int, j int) bool
-	WPop  func() interface{}
-	WPush func(x interface{})
-	WSwap func(i int, j int)
+	IValue interface{}
+	WLen   func() int
+	WLess  func(i int, j int) bool
+	WPop   func() interface{}
+	WPush  func(x interface{})
+	WSwap  func(i int, j int)
 }
 
 func (W _container_heap_Interface) Len() int               { return W.WLen() }

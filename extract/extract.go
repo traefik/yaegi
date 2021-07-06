@@ -74,6 +74,7 @@ func init() {
 {{range $key, $value := .Wrap -}}
 	// {{$value.Name}} is an interface wrapper for {{$key}} type
 	type {{$value.Name}} struct {
+		IValue interface{}
 		{{range $m := $value.Method -}}
 		W{{$m.Name}} func{{$m.Param}} {{$m.Result}}
 		{{end}}

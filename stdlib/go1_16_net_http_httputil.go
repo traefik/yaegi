@@ -39,8 +39,9 @@ func init() {
 
 // _net_http_httputil_BufferPool is an interface wrapper for BufferPool type
 type _net_http_httputil_BufferPool struct {
-	WGet func() []byte
-	WPut func(a0 []byte)
+	IValue interface{}
+	WGet   func() []byte
+	WPut   func(a0 []byte)
 }
 
 func (W _net_http_httputil_BufferPool) Get() []byte   { return W.WGet() }
