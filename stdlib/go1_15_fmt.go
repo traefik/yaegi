@@ -52,6 +52,7 @@ func init() {
 
 // _fmt_Formatter is an interface wrapper for Formatter type
 type _fmt_Formatter struct {
+	IValue  interface{}
 	WFormat func(f fmt.State, c rune)
 }
 
@@ -59,6 +60,7 @@ func (W _fmt_Formatter) Format(f fmt.State, c rune) { W.WFormat(f, c) }
 
 // _fmt_GoStringer is an interface wrapper for GoStringer type
 type _fmt_GoStringer struct {
+	IValue    interface{}
 	WGoString func() string
 }
 
@@ -66,6 +68,7 @@ func (W _fmt_GoStringer) GoString() string { return W.WGoString() }
 
 // _fmt_ScanState is an interface wrapper for ScanState type
 type _fmt_ScanState struct {
+	IValue      interface{}
 	WRead       func(buf []byte) (n int, err error)
 	WReadRune   func() (r rune, size int, err error)
 	WSkipSpace  func()
@@ -85,13 +88,15 @@ func (W _fmt_ScanState) Width() (wid int, ok bool) { return W.WWidth() }
 
 // _fmt_Scanner is an interface wrapper for Scanner type
 type _fmt_Scanner struct {
-	WScan func(state fmt.ScanState, verb rune) error
+	IValue interface{}
+	WScan  func(state fmt.ScanState, verb rune) error
 }
 
 func (W _fmt_Scanner) Scan(state fmt.ScanState, verb rune) error { return W.WScan(state, verb) }
 
 // _fmt_State is an interface wrapper for State type
 type _fmt_State struct {
+	IValue     interface{}
 	WFlag      func(c int) bool
 	WPrecision func() (prec int, ok bool)
 	WWidth     func() (wid int, ok bool)
@@ -105,6 +110,7 @@ func (W _fmt_State) Write(b []byte) (n int, err error) { return W.WWrite(b) }
 
 // _fmt_Stringer is an interface wrapper for Stringer type
 type _fmt_Stringer struct {
+	IValue  interface{}
 	WString func() string
 }
 

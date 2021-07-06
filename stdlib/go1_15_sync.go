@@ -31,6 +31,7 @@ func init() {
 
 // _sync_Locker is an interface wrapper for Locker type
 type _sync_Locker struct {
+	IValue  interface{}
 	WLock   func()
 	WUnlock func()
 }
