@@ -128,8 +128,9 @@ func init() {
 
 // _go_ast_Decl is an interface wrapper for Decl type
 type _go_ast_Decl struct {
-	WEnd func() token.Pos
-	WPos func() token.Pos
+	IValue interface{}
+	WEnd   func() token.Pos
+	WPos   func() token.Pos
 }
 
 func (W _go_ast_Decl) End() token.Pos { return W.WEnd() }
@@ -137,8 +138,9 @@ func (W _go_ast_Decl) Pos() token.Pos { return W.WPos() }
 
 // _go_ast_Expr is an interface wrapper for Expr type
 type _go_ast_Expr struct {
-	WEnd func() token.Pos
-	WPos func() token.Pos
+	IValue interface{}
+	WEnd   func() token.Pos
+	WPos   func() token.Pos
 }
 
 func (W _go_ast_Expr) End() token.Pos { return W.WEnd() }
@@ -146,8 +148,9 @@ func (W _go_ast_Expr) Pos() token.Pos { return W.WPos() }
 
 // _go_ast_Node is an interface wrapper for Node type
 type _go_ast_Node struct {
-	WEnd func() token.Pos
-	WPos func() token.Pos
+	IValue interface{}
+	WEnd   func() token.Pos
+	WPos   func() token.Pos
 }
 
 func (W _go_ast_Node) End() token.Pos { return W.WEnd() }
@@ -155,8 +158,9 @@ func (W _go_ast_Node) Pos() token.Pos { return W.WPos() }
 
 // _go_ast_Spec is an interface wrapper for Spec type
 type _go_ast_Spec struct {
-	WEnd func() token.Pos
-	WPos func() token.Pos
+	IValue interface{}
+	WEnd   func() token.Pos
+	WPos   func() token.Pos
 }
 
 func (W _go_ast_Spec) End() token.Pos { return W.WEnd() }
@@ -164,8 +168,9 @@ func (W _go_ast_Spec) Pos() token.Pos { return W.WPos() }
 
 // _go_ast_Stmt is an interface wrapper for Stmt type
 type _go_ast_Stmt struct {
-	WEnd func() token.Pos
-	WPos func() token.Pos
+	IValue interface{}
+	WEnd   func() token.Pos
+	WPos   func() token.Pos
 }
 
 func (W _go_ast_Stmt) End() token.Pos { return W.WEnd() }
@@ -173,6 +178,7 @@ func (W _go_ast_Stmt) Pos() token.Pos { return W.WPos() }
 
 // _go_ast_Visitor is an interface wrapper for Visitor type
 type _go_ast_Visitor struct {
+	IValue interface{}
 	WVisit func(node ast.Node) (w ast.Visitor)
 }
 

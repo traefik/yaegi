@@ -70,6 +70,7 @@ func init() {
 
 // _runtime_Error is an interface wrapper for Error type
 type _runtime_Error struct {
+	IValue        interface{}
 	WError        func() string
 	WRuntimeError func()
 }
