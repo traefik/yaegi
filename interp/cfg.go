@@ -1512,7 +1512,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				// Find a matching field.
 				if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
 					if isStruct(n.typ) {
-						// If a method of the same name exists, use it if it is less shallowed.
+						// If a method of the same name exists, use it if it is shallower than the struct field.
 						// if method's depth is the same as field's, this is an error.
 						d := n.typ.methodDepth(n.child[1].ident)
 						if d >= 0 && d < len(ti) {
