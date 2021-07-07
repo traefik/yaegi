@@ -201,7 +201,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			if sym.kind != constSym {
 				return nil, c0.cfgErrorf("non-constant array bound %q", c0.ident)
 			}
-			if sym.typ == nil || sym.typ.cat != intT || !sym.rval.IsValid() {
+			if sym.typ == nil || !isInt(sym.typ.TypeOf()) || !sym.rval.IsValid() {
 				t.incomplete = true
 				break
 			}
