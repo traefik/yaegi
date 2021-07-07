@@ -1,6 +1,6 @@
 package main
 
-type Level int
+type Level int8
 
 const (
 	a Level = -1
