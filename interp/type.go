@@ -303,7 +303,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		t = dt
 
 	case callExpr:
-		if interp.isBuiltinCall(n) {
+		if isBuiltinCall(n, sc) {
 			// Builtin types are special and may depend from their input arguments.
 			t.cat = builtinT
 			switch n.child[0].ident {
@@ -675,11 +675,16 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	return t, err
 }
 
-func (interp *Interpreter) isBuiltinCall(n *node) bool {
+func isBuiltinCall(n *node, sc *scope) bool {
 	if n.kind != callExpr {
 		return false
 	}
-	s := interp.universe.sym[n.child[0].ident]
+	s := n.child[0].sym
+	if s == nil {
+		if sym, _, found := sc.lookup(n.child[0].ident); found {
+			s = sym
+		}
+	}
 	return s != nil && s.kind == bltnSym
 }
 

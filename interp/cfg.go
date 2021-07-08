@@ -864,7 +864,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 		case callExpr:
 			wireChild(n)
 			switch {
-			case interp.isBuiltinCall(n):
+			case isBuiltinCall(n, sc):
 				c0 := n.child[0]
 				bname := c0.ident
 				err = check.builtin(bname, n, n.child[1:], n.action == aCallSlice)
@@ -1260,11 +1260,10 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				}
 			}
 			// Found symbol, populate node info
-			n.typ, n.findex, n.level = sym.typ, sym.index, level
+			n.sym, n.typ, n.findex, n.level = sym, sym.typ, sym.index, level
 			if n.findex < 0 {
 				n.val = sym.node
 			} else {
-				n.sym = sym
 				switch {
 				case sym.kind == constSym && sym.rval.IsValid():
 					n.rval = sym.rval
