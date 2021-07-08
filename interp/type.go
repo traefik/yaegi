@@ -201,19 +201,11 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			if sym.kind != constSym {
 				return nil, c0.cfgErrorf("non-constant array bound %q", c0.ident)
 			}
-			if sym.typ == nil || sym.typ.cat != intT || !sym.rval.IsValid() {
+			if sym.typ == nil || !isInt(sym.typ.TypeOf()) || !sym.rval.IsValid() {
 				t.incomplete = true
 				break
 			}
-			if v, ok := sym.rval.Interface().(int); ok {
-				t.length = v
-				break
-			}
-			if c, ok := sym.rval.Interface().(constant.Value); ok {
-				t.length = constToInt(c)
-				break
-			}
-			t.incomplete = true
+			t.length = int(vInt(sym.rval))
 		default:
 			// Size is defined by a numeric constant expression.
 			if _, err = interp.cfg(c0, sc.pkgID); err != nil {
