@@ -1620,7 +1620,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						n.val = method.Index
 						n.typ = &itype{cat: valueT, rtype: method.Type, recv: n.typ, isBinMethod: true}
 						n.recv = &receiver{node: n.child[0]}
-						n.gen = getIndexBinMethod
+						n.gen = getIndexBinElemMethod
 						n.action = aGetMethod
 					} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
 						n.val = method.Index

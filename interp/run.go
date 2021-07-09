@@ -1510,6 +1510,20 @@ func getIndexBinMethod(n *node) {
 	}
 }
 
+func getIndexBinElemMethod(n *node) {
+	i := n.findex
+	l := n.level
+	m := n.val.(int)
+	value := genValue(n.child[0])
+	next := getExec(n.tnext)
+
+	n.exec = func(f *frame) bltn {
+		// Can not use .Set() because dest type contains the receiver and source not
+		getFrame(f, l).data[i] = value(f).Elem().Method(m)
+		return next
+	}
+}
+
 func getIndexBinPtrMethod(n *node) {
 	i := n.findex
 	l := n.level
