@@ -126,6 +126,7 @@ func init() {
 
 // _net_Addr is an interface wrapper for Addr type
 type _net_Addr struct {
+	IValue   interface{}
 	WNetwork func() string
 	WString  func() string
 }
@@ -135,6 +136,7 @@ func (W _net_Addr) String() string  { return W.WString() }
 
 // _net_Conn is an interface wrapper for Conn type
 type _net_Conn struct {
+	IValue            interface{}
 	WClose            func() error
 	WLocalAddr        func() net.Addr
 	WRead             func(b []byte) (n int, err error)
@@ -156,6 +158,7 @@ func (W _net_Conn) Write(b []byte) (n int, err error)  { return W.WWrite(b) }
 
 // _net_Error is an interface wrapper for Error type
 type _net_Error struct {
+	IValue     interface{}
 	WError     func() string
 	WTemporary func() bool
 	WTimeout   func() bool
@@ -167,6 +170,7 @@ func (W _net_Error) Timeout() bool   { return W.WTimeout() }
 
 // _net_Listener is an interface wrapper for Listener type
 type _net_Listener struct {
+	IValue  interface{}
 	WAccept func() (net.Conn, error)
 	WAddr   func() net.Addr
 	WClose  func() error
@@ -178,6 +182,7 @@ func (W _net_Listener) Close() error              { return W.WClose() }
 
 // _net_PacketConn is an interface wrapper for PacketConn type
 type _net_PacketConn struct {
+	IValue            interface{}
 	WClose            func() error
 	WLocalAddr        func() net.Addr
 	WReadFrom         func(p []byte) (n int, addr net.Addr, err error)

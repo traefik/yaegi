@@ -32,6 +32,7 @@ func init() {
 
 // _image_jpeg_Reader is an interface wrapper for Reader type
 type _image_jpeg_Reader struct {
+	IValue    interface{}
 	WRead     func(p []byte) (n int, err error)
 	WReadByte func() (byte, error)
 }

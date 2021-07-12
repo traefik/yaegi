@@ -34,6 +34,7 @@ func init() {
 
 // _crypto_elliptic_Curve is an interface wrapper for Curve type
 type _crypto_elliptic_Curve struct {
+	IValue          interface{}
 	WAdd            func(x1 *big.Int, y1 *big.Int, x2 *big.Int, y2 *big.Int) (x *big.Int, y *big.Int)
 	WDouble         func(x1 *big.Int, y1 *big.Int) (x *big.Int, y *big.Int)
 	WIsOnCurve      func(x *big.Int, y *big.Int) bool

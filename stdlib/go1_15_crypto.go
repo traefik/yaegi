@@ -55,6 +55,7 @@ func init() {
 
 // _crypto_Decrypter is an interface wrapper for Decrypter type
 type _crypto_Decrypter struct {
+	IValue   interface{}
 	WDecrypt func(rand io.Reader, msg []byte, opts crypto.DecrypterOpts) (plaintext []byte, err error)
 	WPublic  func() crypto.PublicKey
 }
@@ -66,18 +67,22 @@ func (W _crypto_Decrypter) Public() crypto.PublicKey { return W.WPublic() }
 
 // _crypto_DecrypterOpts is an interface wrapper for DecrypterOpts type
 type _crypto_DecrypterOpts struct {
+	IValue interface{}
 }
 
 // _crypto_PrivateKey is an interface wrapper for PrivateKey type
 type _crypto_PrivateKey struct {
+	IValue interface{}
 }
 
 // _crypto_PublicKey is an interface wrapper for PublicKey type
 type _crypto_PublicKey struct {
+	IValue interface{}
 }
 
 // _crypto_Signer is an interface wrapper for Signer type
 type _crypto_Signer struct {
+	IValue  interface{}
 	WPublic func() crypto.PublicKey
 	WSign   func(rand io.Reader, digest []byte, opts crypto.SignerOpts) (signature []byte, err error)
 }
@@ -89,6 +94,7 @@ func (W _crypto_Signer) Sign(rand io.Reader, digest []byte, opts crypto.SignerOp
 
 // _crypto_SignerOpts is an interface wrapper for SignerOpts type
 type _crypto_SignerOpts struct {
+	IValue    interface{}
 	WHashFunc func() crypto.Hash
 }
 

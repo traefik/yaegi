@@ -42,6 +42,7 @@ func init() {
 
 // _compress_flate_Reader is an interface wrapper for Reader type
 type _compress_flate_Reader struct {
+	IValue    interface{}
 	WRead     func(p []byte) (n int, err error)
 	WReadByte func() (byte, error)
 }
@@ -51,6 +52,7 @@ func (W _compress_flate_Reader) ReadByte() (byte, error)          { return W.WRe
 
 // _compress_flate_Resetter is an interface wrapper for Resetter type
 type _compress_flate_Resetter struct {
+	IValue interface{}
 	WReset func(r io.Reader, dict []byte) error
 }
 

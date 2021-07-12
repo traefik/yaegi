@@ -112,7 +112,8 @@ func init() {
 
 // _guthib_com_variadic_Variadic is an interface wrapper for Variadic type
 type _guthib_com_variadic_Variadic struct {
-	WCall func(method string, args ...[]interface{}) (interface{}, error)
+	IValue interface{}
+	WCall  func(method string, args ...[]interface{}) (interface{}, error)
 }
 
 func (W _guthib_com_variadic_Variadic) Call(method string, args ...[]interface{}) (interface{}, error) {

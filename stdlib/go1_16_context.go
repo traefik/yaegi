@@ -33,6 +33,7 @@ func init() {
 
 // _context_Context is an interface wrapper for Context type
 type _context_Context struct {
+	IValue    interface{}
 	WDeadline func() (deadline time.Time, ok bool)
 	WDone     func() <-chan struct{}
 	WErr      func() error

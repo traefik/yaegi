@@ -95,6 +95,7 @@ func init() {
 
 // _io_ByteReader is an interface wrapper for ByteReader type
 type _io_ByteReader struct {
+	IValue    interface{}
 	WReadByte func() (byte, error)
 }
 
@@ -102,6 +103,7 @@ func (W _io_ByteReader) ReadByte() (byte, error) { return W.WReadByte() }
 
 // _io_ByteScanner is an interface wrapper for ByteScanner type
 type _io_ByteScanner struct {
+	IValue      interface{}
 	WReadByte   func() (byte, error)
 	WUnreadByte func() error
 }
@@ -111,6 +113,7 @@ func (W _io_ByteScanner) UnreadByte() error       { return W.WUnreadByte() }
 
 // _io_ByteWriter is an interface wrapper for ByteWriter type
 type _io_ByteWriter struct {
+	IValue     interface{}
 	WWriteByte func(c byte) error
 }
 
@@ -118,6 +121,7 @@ func (W _io_ByteWriter) WriteByte(c byte) error { return W.WWriteByte(c) }
 
 // _io_Closer is an interface wrapper for Closer type
 type _io_Closer struct {
+	IValue interface{}
 	WClose func() error
 }
 
@@ -125,6 +129,7 @@ func (W _io_Closer) Close() error { return W.WClose() }
 
 // _io_ReadCloser is an interface wrapper for ReadCloser type
 type _io_ReadCloser struct {
+	IValue interface{}
 	WClose func() error
 	WRead  func(p []byte) (n int, err error)
 }
@@ -134,6 +139,7 @@ func (W _io_ReadCloser) Read(p []byte) (n int, err error) { return W.WRead(p) }
 
 // _io_ReadSeekCloser is an interface wrapper for ReadSeekCloser type
 type _io_ReadSeekCloser struct {
+	IValue interface{}
 	WClose func() error
 	WRead  func(p []byte) (n int, err error)
 	WSeek  func(offset int64, whence int) (int64, error)
@@ -147,8 +153,9 @@ func (W _io_ReadSeekCloser) Seek(offset int64, whence int) (int64, error) {
 
 // _io_ReadSeeker is an interface wrapper for ReadSeeker type
 type _io_ReadSeeker struct {
-	WRead func(p []byte) (n int, err error)
-	WSeek func(offset int64, whence int) (int64, error)
+	IValue interface{}
+	WRead  func(p []byte) (n int, err error)
+	WSeek  func(offset int64, whence int) (int64, error)
 }
 
 func (W _io_ReadSeeker) Read(p []byte) (n int, err error)             { return W.WRead(p) }
@@ -156,6 +163,7 @@ func (W _io_ReadSeeker) Seek(offset int64, whence int) (int64, error) { return W
 
 // _io_ReadWriteCloser is an interface wrapper for ReadWriteCloser type
 type _io_ReadWriteCloser struct {
+	IValue interface{}
 	WClose func() error
 	WRead  func(p []byte) (n int, err error)
 	WWrite func(p []byte) (n int, err error)
@@ -167,6 +175,7 @@ func (W _io_ReadWriteCloser) Write(p []byte) (n int, err error) { return W.WWrit
 
 // _io_ReadWriteSeeker is an interface wrapper for ReadWriteSeeker type
 type _io_ReadWriteSeeker struct {
+	IValue interface{}
 	WRead  func(p []byte) (n int, err error)
 	WSeek  func(offset int64, whence int) (int64, error)
 	WWrite func(p []byte) (n int, err error)
@@ -180,6 +189,7 @@ func (W _io_ReadWriteSeeker) Write(p []byte) (n int, err error) { return W.WWrit
 
 // _io_ReadWriter is an interface wrapper for ReadWriter type
 type _io_ReadWriter struct {
+	IValue interface{}
 	WRead  func(p []byte) (n int, err error)
 	WWrite func(p []byte) (n int, err error)
 }
@@ -189,13 +199,15 @@ func (W _io_ReadWriter) Write(p []byte) (n int, err error) { return W.WWrite(p) 
 
 // _io_Reader is an interface wrapper for Reader type
 type _io_Reader struct {
-	WRead func(p []byte) (n int, err error)
+	IValue interface{}
+	WRead  func(p []byte) (n int, err error)
 }
 
 func (W _io_Reader) Read(p []byte) (n int, err error) { return W.WRead(p) }
 
 // _io_ReaderAt is an interface wrapper for ReaderAt type
 type _io_ReaderAt struct {
+	IValue  interface{}
 	WReadAt func(p []byte, off int64) (n int, err error)
 }
 
@@ -203,6 +215,7 @@ func (W _io_ReaderAt) ReadAt(p []byte, off int64) (n int, err error) { return W.
 
 // _io_ReaderFrom is an interface wrapper for ReaderFrom type
 type _io_ReaderFrom struct {
+	IValue    interface{}
 	WReadFrom func(r io.Reader) (n int64, err error)
 }
 
@@ -210,6 +223,7 @@ func (W _io_ReaderFrom) ReadFrom(r io.Reader) (n int64, err error) { return W.WR
 
 // _io_RuneReader is an interface wrapper for RuneReader type
 type _io_RuneReader struct {
+	IValue    interface{}
 	WReadRune func() (r rune, size int, err error)
 }
 
@@ -217,6 +231,7 @@ func (W _io_RuneReader) ReadRune() (r rune, size int, err error) { return W.WRea
 
 // _io_RuneScanner is an interface wrapper for RuneScanner type
 type _io_RuneScanner struct {
+	IValue      interface{}
 	WReadRune   func() (r rune, size int, err error)
 	WUnreadRune func() error
 }
@@ -226,13 +241,15 @@ func (W _io_RuneScanner) UnreadRune() error                       { return W.WUn
 
 // _io_Seeker is an interface wrapper for Seeker type
 type _io_Seeker struct {
-	WSeek func(offset int64, whence int) (int64, error)
+	IValue interface{}
+	WSeek  func(offset int64, whence int) (int64, error)
 }
 
 func (W _io_Seeker) Seek(offset int64, whence int) (int64, error) { return W.WSeek(offset, whence) }
 
 // _io_StringWriter is an interface wrapper for StringWriter type
 type _io_StringWriter struct {
+	IValue       interface{}
 	WWriteString func(s string) (n int, err error)
 }
 
@@ -240,6 +257,7 @@ func (W _io_StringWriter) WriteString(s string) (n int, err error) { return W.WW
 
 // _io_WriteCloser is an interface wrapper for WriteCloser type
 type _io_WriteCloser struct {
+	IValue interface{}
 	WClose func() error
 	WWrite func(p []byte) (n int, err error)
 }
@@ -249,6 +267,7 @@ func (W _io_WriteCloser) Write(p []byte) (n int, err error) { return W.WWrite(p)
 
 // _io_WriteSeeker is an interface wrapper for WriteSeeker type
 type _io_WriteSeeker struct {
+	IValue interface{}
 	WSeek  func(offset int64, whence int) (int64, error)
 	WWrite func(p []byte) (n int, err error)
 }
@@ -260,6 +279,7 @@ func (W _io_WriteSeeker) Write(p []byte) (n int, err error) { return W.WWrite(p)
 
 // _io_Writer is an interface wrapper for Writer type
 type _io_Writer struct {
+	IValue interface{}
 	WWrite func(p []byte) (n int, err error)
 }
 
@@ -267,6 +287,7 @@ func (W _io_Writer) Write(p []byte) (n int, err error) { return W.WWrite(p) }
 
 // _io_WriterAt is an interface wrapper for WriterAt type
 type _io_WriterAt struct {
+	IValue   interface{}
 	WWriteAt func(p []byte, off int64) (n int, err error)
 }
 
@@ -274,6 +295,7 @@ func (W _io_WriterAt) WriteAt(p []byte, off int64) (n int, err error) { return W
 
 // _io_WriterTo is an interface wrapper for WriterTo type
 type _io_WriterTo struct {
+	IValue   interface{}
 	WWriteTo func(w io.Writer) (n int64, err error)
 }
 

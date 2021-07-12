@@ -132,6 +132,7 @@ func init() {
 
 // _os_FileInfo is an interface wrapper for FileInfo type
 type _os_FileInfo struct {
+	IValue   interface{}
 	WIsDir   func() bool
 	WModTime func() time.Time
 	WMode    func() os.FileMode
@@ -149,6 +150,7 @@ func (W _os_FileInfo) Sys() interface{}   { return W.WSys() }
 
 // _os_Signal is an interface wrapper for Signal type
 type _os_Signal struct {
+	IValue  interface{}
 	WSignal func()
 	WString func() string
 }
