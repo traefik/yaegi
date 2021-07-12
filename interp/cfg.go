@@ -1927,7 +1927,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			case n.rval.IsValid():
 				n.gen = nop
 				n.findex = notInFrame
-			case n.anc.kind == assignStmt && n.anc.action == aAssign:
+			case n.anc.kind == assignStmt && n.anc.action == aAssign && n.anc.nright == 1:
 				dest := n.anc.child[childPos(n)-n.anc.nright]
 				n.typ = dest.typ
 				n.findex = dest.findex
