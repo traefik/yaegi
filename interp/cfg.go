@@ -1503,6 +1503,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					n.action = aGetSym
 					n.typ = sym.typ
 					n.sym = sym
+					n.recv = sym.recv
 					n.rval = sym.rval
 				} else {
 					err = n.cfgErrorf("undefined selector: %s.%s", pkg, name)
