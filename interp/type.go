@@ -201,19 +201,11 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			if sym.kind != constSym {
 				return nil, c0.cfgErrorf("non-constant array bound %q", c0.ident)
 			}
-			if sym.typ == nil || sym.typ.cat != intT || !sym.rval.IsValid() {
+			if sym.typ == nil || !isInt(sym.typ.TypeOf()) || !sym.rval.IsValid() {
 				t.incomplete = true
 				break
 			}
-			if v, ok := sym.rval.Interface().(int); ok {
-				t.length = v
-				break
-			}
-			if c, ok := sym.rval.Interface().(constant.Value); ok {
-				t.length = constToInt(c)
-				break
-			}
-			t.incomplete = true
+			t.length = int(vInt(sym.rval))
 		default:
 			// Size is defined by a numeric constant expression.
 			if _, err = interp.cfg(c0, sc.pkgID); err != nil {
@@ -303,7 +295,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		t = dt
 
 	case callExpr:
-		if interp.isBuiltinCall(n) {
+		if isBuiltinCall(n, sc) {
 			// Builtin types are special and may depend from their input arguments.
 			t.cat = builtinT
 			switch n.child[0].ident {
@@ -675,11 +667,16 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	return t, err
 }
 
-func (interp *Interpreter) isBuiltinCall(n *node) bool {
+func isBuiltinCall(n *node, sc *scope) bool {
 	if n.kind != callExpr {
 		return false
 	}
-	s := interp.universe.sym[n.child[0].ident]
+	s := n.child[0].sym
+	if s == nil {
+		if sym, _, found := sc.lookup(n.child[0].ident); found {
+			s = sym
+		}
+	}
 	return s != nil && s.kind == bltnSym
 }
 
@@ -1373,6 +1370,17 @@ func (t *itype) lookupMethod(name string) (*node, []int) {
 		}
 	}
 	return m, index
+}
+
+// methodDepth returns a depth greater or equal to 0, or -1 if no match.
+func (t *itype) methodDepth(name string) int {
+	if m, lint := t.lookupMethod(name); m != nil {
+		return len(lint)
+	}
+	if _, lint, _, ok := t.lookupBinMethod(name); ok {
+		return len(lint)
+	}
+	return -1
 }
 
 // LookupBinMethod returns a method and a path to access a field in a struct object (the receiver).

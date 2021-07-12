@@ -864,7 +864,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 		case callExpr:
 			wireChild(n)
 			switch {
-			case interp.isBuiltinCall(n):
+			case isBuiltinCall(n, sc):
 				c0 := n.child[0]
 				bname := c0.ident
 				err = check.builtin(bname, n, n.child[1:], n.action == aCallSlice)
@@ -1260,11 +1260,10 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				}
 			}
 			// Found symbol, populate node info
-			n.typ, n.findex, n.level = sym.typ, sym.index, level
+			n.sym, n.typ, n.findex, n.level = sym, sym.typ, sym.index, level
 			if n.findex < 0 {
 				n.val = sym.node
 			} else {
-				n.sym = sym
 				switch {
 				case sym.kind == constSym && sym.rval.IsValid():
 					n.rval = sym.rval
@@ -1511,6 +1510,18 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			case isStruct(n.typ) || isInterfaceSrc(n.typ):
 				// Find a matching field.
 				if ti := n.typ.lookupField(n.child[1].ident); len(ti) > 0 {
+					if isStruct(n.typ) {
+						// If a method of the same name exists, use it if it is shallower than the struct field.
+						// if method's depth is the same as field's, this is an error.
+						d := n.typ.methodDepth(n.child[1].ident)
+						if d >= 0 && d < len(ti) {
+							goto tryMethods
+						}
+						if d == len(ti) {
+							err = n.cfgErrorf("ambiguous selector: %s", n.child[1].ident)
+							break
+						}
+					}
 					n.val = ti
 					switch {
 					case isInterfaceSrc(n.typ):
@@ -1540,11 +1551,24 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					// Handle an embedded binary field into a struct field.
 					n.gen = getIndexSeqField
 					lind = append(lind, s.Index...)
+					if isStruct(n.typ) {
+						// If a method of the same name exists, use it if it is shallower than the struct field.
+						// if method's depth is the same as field's, this is an error.
+						d := n.typ.methodDepth(n.child[1].ident)
+						if d >= 0 && d < len(lind) {
+							goto tryMethods
+						}
+						if d == len(lind) {
+							err = n.cfgErrorf("ambiguous selector: %s", n.child[1].ident)
+							break
+						}
+					}
 					n.val = lind
 					n.typ = &itype{cat: valueT, rtype: s.Type}
 					break
 				}
 				// No field (embedded or not) matched. Try to match a method.
+			tryMethods:
 				fallthrough
 			default:
 				// Find a matching method.
@@ -1596,7 +1620,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						n.val = method.Index
 						n.typ = &itype{cat: valueT, rtype: method.Type, recv: n.typ, isBinMethod: true}
 						n.recv = &receiver{node: n.child[0]}
-						n.gen = getIndexBinMethod
+						n.gen = getIndexBinElemMethod
 						n.action = aGetMethod
 					} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
 						n.val = method.Index

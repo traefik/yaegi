@@ -1119,20 +1119,8 @@ func call(n *node) {
 		// Function call from a return statement: forward return values (always at frame start).
 		for i := range rtypes {
 			j := n.findex + i
-			ret := n.child[0].typ.ret[i]
-			callret := n.anc.val.(*node).typ.ret[i]
-
-			if isInterfaceSrc(callret) && !isEmptyInterface(callret) && !isInterfaceSrc(ret) {
-				// Wrap the returned value in a valueInterface in caller frame.
-				rvalues[i] = func(f *frame) reflect.Value {
-					v := reflect.New(ret.rtype).Elem()
-					f.data[j].Set(reflect.ValueOf(valueInterface{n, v}))
-					return v
-				}
-			} else {
-				// Set the return value location in return value of caller frame.
-				rvalues[i] = func(f *frame) reflect.Value { return f.data[j] }
-			}
+			// Set the return value location in return value of caller frame.
+			rvalues[i] = func(f *frame) reflect.Value { return f.data[j] }
 		}
 	default:
 		// Multiple return values frame index are indexed from the node frame index.
@@ -1525,6 +1513,20 @@ func getIndexBinMethod(n *node) {
 		// Can not use .Set() because dest type contains the receiver and source not
 		// dest(f).Set(value(f).Method(m))
 		getFrame(f, l).data[i] = value(f).Method(m)
+		return next
+	}
+}
+
+func getIndexBinElemMethod(n *node) {
+	i := n.findex
+	l := n.level
+	m := n.val.(int)
+	value := genValue(n.child[0])
+	next := getExec(n.tnext)
+
+	n.exec = func(f *frame) bltn {
+		// Can not use .Set() because dest type contains the receiver and source not
+		getFrame(f, l).data[i] = value(f).Elem().Method(m)
 		return next
 	}
 }

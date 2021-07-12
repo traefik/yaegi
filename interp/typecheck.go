@@ -105,6 +105,7 @@ func (check typecheck) addressExpr(n *node) error {
 			c := c0.child[0]
 			if isArray(c.typ) || isMap(c.typ) {
 				c0 = c
+				found = true
 				continue
 			}
 		case compositeLitExpr, identExpr:
