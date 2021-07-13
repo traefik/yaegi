@@ -40,6 +40,7 @@ func init() {
 
 // _compress_zlib_Resetter is an interface wrapper for Resetter type
 type _compress_zlib_Resetter struct {
+	IValue interface{}
 	WReset func(r io.Reader, dict []byte) error
 }
 

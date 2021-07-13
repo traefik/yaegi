@@ -31,6 +31,7 @@ func init() {
 
 // _mime_multipart_File is an interface wrapper for File type
 type _mime_multipart_File struct {
+	IValue  interface{}
 	WClose  func() error
 	WRead   func(p []byte) (n int, err error)
 	WReadAt func(p []byte, off int64) (n int, err error)

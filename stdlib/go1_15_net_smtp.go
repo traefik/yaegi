@@ -30,6 +30,7 @@ func init() {
 
 // _net_smtp_Auth is an interface wrapper for Auth type
 type _net_smtp_Auth struct {
+	IValue interface{}
 	WNext  func(fromServer []byte, more bool) (toServer []byte, err error)
 	WStart func(server *smtp.ServerInfo) (proto string, toServer []byte, err error)
 }

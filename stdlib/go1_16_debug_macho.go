@@ -150,7 +150,8 @@ func init() {
 
 // _debug_macho_Load is an interface wrapper for Load type
 type _debug_macho_Load struct {
-	WRaw func() []byte
+	IValue interface{}
+	WRaw   func() []byte
 }
 
 func (W _debug_macho_Load) Raw() []byte { return W.WRaw() }

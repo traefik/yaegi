@@ -2456,6 +2456,7 @@ func init() {
 
 // _syscall_Conn is an interface wrapper for Conn type
 type _syscall_Conn struct {
+	IValue       interface{}
 	WSyscallConn func() (syscall.RawConn, error)
 }
 
@@ -2463,6 +2464,7 @@ func (W _syscall_Conn) SyscallConn() (syscall.RawConn, error) { return W.WSyscal
 
 // _syscall_RawConn is an interface wrapper for RawConn type
 type _syscall_RawConn struct {
+	IValue   interface{}
 	WControl func(f func(fd uintptr)) error
 	WRead    func(f func(fd uintptr) (done bool)) error
 	WWrite   func(f func(fd uintptr) (done bool)) error
@@ -2474,4 +2476,5 @@ func (W _syscall_RawConn) Write(f func(fd uintptr) (done bool)) error { return W
 
 // _syscall_Sockaddr is an interface wrapper for Sockaddr type
 type _syscall_Sockaddr struct {
+	IValue interface{}
 }

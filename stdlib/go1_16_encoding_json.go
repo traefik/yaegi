@@ -49,6 +49,7 @@ func init() {
 
 // _encoding_json_Marshaler is an interface wrapper for Marshaler type
 type _encoding_json_Marshaler struct {
+	IValue       interface{}
 	WMarshalJSON func() ([]byte, error)
 }
 
@@ -56,10 +57,12 @@ func (W _encoding_json_Marshaler) MarshalJSON() ([]byte, error) { return W.WMars
 
 // _encoding_json_Token is an interface wrapper for Token type
 type _encoding_json_Token struct {
+	IValue interface{}
 }
 
 // _encoding_json_Unmarshaler is an interface wrapper for Unmarshaler type
 type _encoding_json_Unmarshaler struct {
+	IValue         interface{}
 	WUnmarshalJSON func(a0 []byte) error
 }
 

@@ -40,6 +40,7 @@ func init() {
 
 // _crypto_cipher_AEAD is an interface wrapper for AEAD type
 type _crypto_cipher_AEAD struct {
+	IValue     interface{}
 	WNonceSize func() int
 	WOpen      func(dst []byte, nonce []byte, ciphertext []byte, additionalData []byte) ([]byte, error)
 	WOverhead  func() int
@@ -57,6 +58,7 @@ func (W _crypto_cipher_AEAD) Seal(dst []byte, nonce []byte, plaintext []byte, ad
 
 // _crypto_cipher_Block is an interface wrapper for Block type
 type _crypto_cipher_Block struct {
+	IValue     interface{}
 	WBlockSize func() int
 	WDecrypt   func(dst []byte, src []byte)
 	WEncrypt   func(dst []byte, src []byte)
@@ -68,6 +70,7 @@ func (W _crypto_cipher_Block) Encrypt(dst []byte, src []byte) { W.WEncrypt(dst, 
 
 // _crypto_cipher_BlockMode is an interface wrapper for BlockMode type
 type _crypto_cipher_BlockMode struct {
+	IValue       interface{}
 	WBlockSize   func() int
 	WCryptBlocks func(dst []byte, src []byte)
 }
@@ -77,6 +80,7 @@ func (W _crypto_cipher_BlockMode) CryptBlocks(dst []byte, src []byte) { W.WCrypt
 
 // _crypto_cipher_Stream is an interface wrapper for Stream type
 type _crypto_cipher_Stream struct {
+	IValue        interface{}
 	WXORKeyStream func(dst []byte, src []byte)
 }
 

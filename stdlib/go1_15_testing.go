@@ -46,6 +46,7 @@ func init() {
 
 // _testing_TB is an interface wrapper for TB type
 type _testing_TB struct {
+	IValue   interface{}
 	WCleanup func(a0 func())
 	WError   func(args ...interface{})
 	WErrorf  func(format string, args ...interface{})

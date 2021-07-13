@@ -207,6 +207,7 @@ func init() {
 
 // _net_http_CloseNotifier is an interface wrapper for CloseNotifier type
 type _net_http_CloseNotifier struct {
+	IValue       interface{}
 	WCloseNotify func() <-chan bool
 }
 
@@ -214,6 +215,7 @@ func (W _net_http_CloseNotifier) CloseNotify() <-chan bool { return W.WCloseNoti
 
 // _net_http_CookieJar is an interface wrapper for CookieJar type
 type _net_http_CookieJar struct {
+	IValue      interface{}
 	WCookies    func(u *url.URL) []*http.Cookie
 	WSetCookies func(u *url.URL, cookies []*http.Cookie)
 }
@@ -225,6 +227,7 @@ func (W _net_http_CookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
 
 // _net_http_File is an interface wrapper for File type
 type _net_http_File struct {
+	IValue   interface{}
 	WClose   func() error
 	WRead    func(p []byte) (n int, err error)
 	WReaddir func(count int) ([]os.FileInfo, error)
@@ -240,13 +243,15 @@ func (W _net_http_File) Stat() (os.FileInfo, error)                   { return W
 
 // _net_http_FileSystem is an interface wrapper for FileSystem type
 type _net_http_FileSystem struct {
-	WOpen func(name string) (http.File, error)
+	IValue interface{}
+	WOpen  func(name string) (http.File, error)
 }
 
 func (W _net_http_FileSystem) Open(name string) (http.File, error) { return W.WOpen(name) }
 
 // _net_http_Flusher is an interface wrapper for Flusher type
 type _net_http_Flusher struct {
+	IValue interface{}
 	WFlush func()
 }
 
@@ -254,6 +259,7 @@ func (W _net_http_Flusher) Flush() { W.WFlush() }
 
 // _net_http_Handler is an interface wrapper for Handler type
 type _net_http_Handler struct {
+	IValue     interface{}
 	WServeHTTP func(a0 http.ResponseWriter, a1 *http.Request)
 }
 
@@ -261,6 +267,7 @@ func (W _net_http_Handler) ServeHTTP(a0 http.ResponseWriter, a1 *http.Request) {
 
 // _net_http_Hijacker is an interface wrapper for Hijacker type
 type _net_http_Hijacker struct {
+	IValue  interface{}
 	WHijack func() (net.Conn, *bufio.ReadWriter, error)
 }
 
@@ -268,7 +275,8 @@ func (W _net_http_Hijacker) Hijack() (net.Conn, *bufio.ReadWriter, error) { retu
 
 // _net_http_Pusher is an interface wrapper for Pusher type
 type _net_http_Pusher struct {
-	WPush func(target string, opts *http.PushOptions) error
+	IValue interface{}
+	WPush  func(target string, opts *http.PushOptions) error
 }
 
 func (W _net_http_Pusher) Push(target string, opts *http.PushOptions) error {
@@ -277,6 +285,7 @@ func (W _net_http_Pusher) Push(target string, opts *http.PushOptions) error {
 
 // _net_http_ResponseWriter is an interface wrapper for ResponseWriter type
 type _net_http_ResponseWriter struct {
+	IValue       interface{}
 	WHeader      func() http.Header
 	WWrite       func(a0 []byte) (int, error)
 	WWriteHeader func(statusCode int)
@@ -288,6 +297,7 @@ func (W _net_http_ResponseWriter) WriteHeader(statusCode int)   { W.WWriteHeader
 
 // _net_http_RoundTripper is an interface wrapper for RoundTripper type
 type _net_http_RoundTripper struct {
+	IValue     interface{}
 	WRoundTrip func(a0 *http.Request) (*http.Response, error)
 }
 

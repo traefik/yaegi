@@ -108,8 +108,9 @@ func init() {
 
 // _crypto_tls_ClientSessionCache is an interface wrapper for ClientSessionCache type
 type _crypto_tls_ClientSessionCache struct {
-	WGet func(sessionKey string) (session *tls.ClientSessionState, ok bool)
-	WPut func(sessionKey string, cs *tls.ClientSessionState)
+	IValue interface{}
+	WGet   func(sessionKey string) (session *tls.ClientSessionState, ok bool)
+	WPut   func(sessionKey string, cs *tls.ClientSessionState)
 }
 
 func (W _crypto_tls_ClientSessionCache) Get(sessionKey string) (session *tls.ClientSessionState, ok bool) {

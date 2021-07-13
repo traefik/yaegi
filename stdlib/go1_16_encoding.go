@@ -27,6 +27,7 @@ func init() {
 
 // _encoding_BinaryMarshaler is an interface wrapper for BinaryMarshaler type
 type _encoding_BinaryMarshaler struct {
+	IValue         interface{}
 	WMarshalBinary func() (data []byte, err error)
 }
 
@@ -36,6 +37,7 @@ func (W _encoding_BinaryMarshaler) MarshalBinary() (data []byte, err error) {
 
 // _encoding_BinaryUnmarshaler is an interface wrapper for BinaryUnmarshaler type
 type _encoding_BinaryUnmarshaler struct {
+	IValue           interface{}
 	WUnmarshalBinary func(data []byte) error
 }
 
@@ -45,6 +47,7 @@ func (W _encoding_BinaryUnmarshaler) UnmarshalBinary(data []byte) error {
 
 // _encoding_TextMarshaler is an interface wrapper for TextMarshaler type
 type _encoding_TextMarshaler struct {
+	IValue       interface{}
 	WMarshalText func() (text []byte, err error)
 }
 
@@ -52,6 +55,7 @@ func (W _encoding_TextMarshaler) MarshalText() (text []byte, err error) { return
 
 // _encoding_TextUnmarshaler is an interface wrapper for TextUnmarshaler type
 type _encoding_TextUnmarshaler struct {
+	IValue         interface{}
 	WUnmarshalText func(text []byte) error
 }
 

@@ -74,6 +74,7 @@ func init() {
 
 // _image_Image is an interface wrapper for Image type
 type _image_Image struct {
+	IValue      interface{}
 	WAt         func(x int, y int) color.Color
 	WBounds     func() image.Rectangle
 	WColorModel func() color.Model
@@ -85,6 +86,7 @@ func (W _image_Image) ColorModel() color.Model     { return W.WColorModel() }
 
 // _image_PalettedImage is an interface wrapper for PalettedImage type
 type _image_PalettedImage struct {
+	IValue        interface{}
 	WAt           func(x int, y int) color.Color
 	WBounds       func() image.Rectangle
 	WColorIndexAt func(x int, y int) uint8
