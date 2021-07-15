@@ -2984,6 +2984,8 @@ func _append(n *node) {
 				values[i] = genValue(arg)
 			case isInterfaceSrc(n.typ.val):
 				values[i] = genValueInterface(arg)
+			case isInterfaceBin(n.typ.val):
+				values[i] = genInterfaceWrapper(arg, n.typ.val.rtype)
 			case isRecursiveType(n.typ.val, n.typ.val.rtype):
 				values[i] = genValueRecursiveInterface(arg, n.typ.val.rtype)
 			case arg.typ.untyped:
@@ -3008,6 +3010,8 @@ func _append(n *node) {
 			value0 = genValue(n.child[2])
 		case isInterfaceSrc(elem):
 			value0 = genValueInterface(n.child[2])
+		case isInterfaceBin(elem):
+			value0 = genInterfaceWrapper(n.child[2], elem.rtype)
 		case isRecursiveType(elem, elem.rtype):
 			value0 = genValueRecursiveInterface(n.child[2], elem.rtype)
 		case n.child[2].typ.untyped:
