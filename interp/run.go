@@ -971,7 +971,8 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 	if typ == nil || typ.Kind() != reflect.Interface || typ.NumMethod() == 0 || n.typ.cat == valueT {
 		return value
 	}
-	if nt := n.typ.TypeOf(); nt != nil && nt.Kind() == reflect.Interface {
+	nt := n.typ.frameType()
+	if nt != nil && nt.Implements(typ) {
 		return value
 	}
 	mn := typ.NumMethod()
@@ -990,6 +991,9 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 
 	return func(f *frame) reflect.Value {
 		v := value(f)
+		if v.Type().Implements(typ) {
+			return v
+		}
 		vv := v
 		switch v.Kind() {
 		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
