@@ -118,7 +118,17 @@ func (interp *Interpreter) run(n *node, cf *frame) {
 	for i, t := range n.types {
 		f.data[i] = reflect.New(t).Elem()
 	}
-	runCfg(n.start, f)
+	runCfg(n.start, f, n, nil)
+}
+
+func isExecNode(n *node, exec bltn) bool {
+	if n == nil || n.exec == nil || exec == nil {
+		return false
+	}
+
+	a1 := reflect.ValueOf(n.exec).Pointer()
+	a2 := reflect.ValueOf(exec).Pointer()
+	return a1 == a2
 }
 
 // originalExecNode looks in the tree of nodes for the node which has exec,
@@ -166,7 +176,7 @@ func originalExecNode(n *node, exec bltn) *node {
 // Functions set to run during execution of CFG.
 
 // runCfg executes a node AST by walking its CFG and running node builtin at each step.
-func runCfg(n *node, f *frame) {
+func runCfg(n *node, f *frame, funcNode, callNode *node) {
 	var exec bltn
 	defer func() {
 		f.mutex.Lock()
@@ -186,8 +196,44 @@ func runCfg(n *node, f *frame) {
 		f.mutex.Unlock()
 	}()
 
-	for exec = n.exec; exec != nil && f.runid() == n.interp.runid(); {
+	dbg := n.interp.debugger
+	if dbg == nil {
+		for exec := n.exec; exec != nil && f.runid() == n.interp.runid(); {
+			exec = exec(f)
+		}
+		return
+	}
+
+	if n.exec == nil {
+		return
+	}
+
+	dbg.enterCall(funcNode, callNode, f)
+	defer dbg.exitCall(funcNode, callNode, f)
+
+	for m, exec := n, n.exec; f.runid() == n.interp.runid(); {
+		if dbg.exec(m, f) {
+			break
+		}
+
 		exec = exec(f)
+		if exec == nil {
+			break
+		}
+
+		if m == nil {
+			m = originalExecNode(n, exec)
+			continue
+		}
+
+		switch {
+		case isExecNode(m.tnext, exec):
+			m = m.tnext
+		case isExecNode(m.fnext, exec):
+			m = m.fnext
+		default:
+			m = originalExecNode(m, exec)
+		}
 	}
 }
 
@@ -948,7 +994,7 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 			}
 
 			// Interpreter code execution.
-			runCfg(start, fr)
+			runCfg(start, fr, def, n)
 
 			result := fr.data[:numRet]
 			for i, r := range result {
@@ -1277,10 +1323,10 @@ func call(n *node) {
 
 		// Execute function body
 		if goroutine {
-			go runCfg(def.child[3].start, nf)
+			go runCfg(def.child[3].start, nf, def, n)
 			return tnext
 		}
-		runCfg(def.child[3].start, nf)
+		runCfg(def.child[3].start, nf, def, n)
 
 		// Handle branching according to boolean result
 		if fnext != nil && !nf.data[0].Bool() {
