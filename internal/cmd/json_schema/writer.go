@@ -5,17 +5,23 @@ import (
 	"io"
 	"os"
 	"sort"
-	"strings"
-	"unicode"
-	"unicode/utf8"
 )
 
 type writer struct {
 	io.Writer
-	schema    *Schema
-	name      string
-	seen      map[*Schema]string
-	seenPlain map[SimpleTypes]string
+	Schema *Schema
+	Name   string
+	Embed  bool
+
+	seen       map[*Schema]string
+	seenPlain  map[SimpleTypes]string
+	properties map[string]map[string]bool
+}
+
+func (w *writer) init() {
+	w.seen = map[*Schema]string{}
+	w.seenPlain = map[SimpleTypes]string{}
+	w.properties = map[string]map[string]bool{}
 }
 
 func (w *writer) writeSchema(name string, s *Schema) (typ string) {
@@ -85,12 +91,12 @@ func (w *writer) writeRef(ref string) string {
 		return ref[1:]
 	}
 
-	name, s := resolveRef(w.schema, ref)
+	name, s := resolveRef(w.Schema, ref)
 	if name == "" {
-		return w.writeSchema(w.name, s)
+		return w.writeSchema(w.Name, s)
 	}
 
-	return w.writeSchema(strings.ToUpper(name[:1])+name[1:], s)
+	return w.writeSchema(camelCase(name), s)
 }
 
 func (w *writer) writeType(name string, s *Schema) string {
@@ -202,48 +208,83 @@ func (w *writer) writeObjectType(name string, s *Schema) string {
 func (w *writer) writeProperties(name string, s *Schema) {
 	type Field struct{ Name, Prop, Type string }
 	fields := []Field{}
+	w.properties[name] = map[string]bool{}
 	for prop, s := range s.Properties {
+		w.properties[name][prop] = true
+
 		var f Field
 		f.Prop = prop
 		if prop[0] == '$' {
 			prop = prop[1:]
 		}
-		if r, size := utf8.DecodeRuneInString(prop); unicode.IsLetter(r) {
-			f.Name = string(unicode.ToUpper(r)) + prop[size:]
-		} else {
-			f.Name = "F" + prop
-		}
+
+		f.Name = camelCase(prop)
 		f.Type = w.writeSchema(name+"_"+f.Name, s)
 		fields = append(fields, f)
 	}
 
-	sort.Slice(fields, func(i, j int) bool { return fields[i].Name < fields[j].Name })
+	for _, typ := range s.Embedded {
+		fields = append(fields, Field{Type: typ})
+	}
+
+	sort.Slice(fields, func(i, j int) bool {
+		switch {
+		case fields[i].Name < fields[j].Name:
+			return true
+		case fields[i].Name > fields[j].Name:
+			return false
+		default:
+			return fields[i].Type < fields[j].Type
+		}
+	})
 
 	fmt.Fprintf(w, "type %s struct {\n", name)
 	for _, f := range fields {
-		fmt.Fprintf(w, "\t%s %s `json:\"%s,omitempty\"`\n", f.Name, f.Type, f.Prop)
+		if f.Name == "" {
+			fmt.Fprintf(w, "\t%s\n", f.Type)
+		} else {
+			fmt.Fprintf(w, "\t%s %s `json:\"%s,omitempty\"`\n", f.Name, f.Type, f.Prop)
+		}
 	}
 	fmt.Fprintf(w, "}\n")
 }
 
 func (w *writer) writeAllOf(name string, allOf []*Schema) string {
 	s := new(Schema)
-	for i, r := range allOf {
-		schemaMerge(mergeOpts{
-			Base:        w.schema,
-			ResolveRefs: true,
-			Recurse:     true,
-		}, fmt.Sprintf("%s[%d]", name, i), s, r)
+
+	opts := mergeOpts{
+		Base:        w.Schema,
+		Recurse:     true,
+		ResolveRefs: !w.Embed,
 	}
+
+	for i, r := range allOf {
+		if opts.ResolveRefs || r.Ref == "" {
+			schemaMerge(opts, fmt.Sprintf("%s[%d]", name, i), s, r)
+		} else {
+			typ := w.writeSchema(resolveRef(w.Schema, r.Ref))
+			if typ[0] == '*' {
+				typ = typ[1:]
+			}
+			s.Embedded = append(s.Embedded, typ)
+		}
+	}
+
+	for _, typ := range s.Embedded {
+		for prop := range w.properties[typ] {
+			delete(s.Properties, prop)
+		}
+	}
+
 	return w.writeSchema(name, s)
 }
 
 func (w *writer) writeEnum(name string, values []string) string {
-	name = strings.ToUpper(name[:1]) + name[1:]
+	name = camelCase(name)
 	fmt.Fprintf(w, "type %s string\n", name)
 	fmt.Fprintf(w, "const(\n")
 	for _, v := range values {
-		fmt.Fprintf(w, "\t%s_%s%s %s = %q\n", name, strings.ToUpper(v[:1]), v[1:], name, v)
+		fmt.Fprintf(w, "\t%s_%s %s = %q\n", name, camelCase(v), name, v)
 	}
 	fmt.Fprintf(w, ")\n")
 	fmt.Fprintf(w, "\n")

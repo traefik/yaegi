@@ -23,6 +23,7 @@ type Schema struct {
 	Definitions          map[string]*Schema  `json:"definitions,omitempty"`
 	Dependencies         map[string][]string `json:"dependencies,omitempty"`
 	Description          string              `json:"description,omitempty"`
+	Embedded             []string            `json:"$embedded,omitempty"`
 	Enum                 []string            `json:"enum,omitempty"`
 	ExclusiveMaximum     bool                `json:"exclusiveMaximum,omitempty"`
 	ExclusiveMinimum     bool                `json:"exclusiveMinimum,omitempty"`

@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"unicode"
 )
 
 //go:generate go run . --name main --path schema.go --choose SimpleTypes --patch patch.json --url http://json-schema.org/draft-04/schema#
@@ -27,6 +28,7 @@ var schemaUrl = flag.String("url", "", "URL of the schema")
 var packageName = flag.String("name", "", "Package name")
 var filePath = flag.String("path", "", "File to write to")
 var jsonPatch = flag.String("patch", "", "JSON file to apply as a patch")
+var useEmbedding = flag.Bool("use-embedding", false, "Generate embedded types for allOf $refs")
 var useInterfaces = flag.Bool("interfaces", false, "Generate interfaces instead of structs")
 var chooseTypes = flag.String("choose", "", "Comma-separated list of types to extract, instead of all types")
 var verbose = flag.Bool("verbose", false, "Print more messages")
@@ -99,12 +101,12 @@ func main() {
 
 	buf := new(bytes.Buffer)
 	w := &writer{
-		Writer:    buf,
-		schema:    &schema,
-		name:      "Schema",
-		seen:      map[*Schema]string{},
-		seenPlain: map[SimpleTypes]string{},
+		Writer: buf,
+		Schema: &schema,
+		Name:   "Schema",
+		Embed:  *useEmbedding,
 	}
+	w.init()
 
 	fmt.Fprintf(w, "package %s\n", *packageName)
 	fmt.Fprintf(w, "\n")
@@ -119,8 +121,8 @@ func main() {
 		}
 	}
 
-	forEachOrdered(w.schema.Definitions, func(name string, s *Schema) {
-		name = strings.ToUpper(name[:1]) + name[1:]
+	forEachOrdered(w.Schema.Definitions, func(name string, s *Schema) {
+		name = camelCase(name)
 		if m == nil || m[name] {
 			w.writeSchema(name, s)
 		} else if *verbose {
@@ -128,8 +130,8 @@ func main() {
 		}
 	})
 
-	if w.schema.Properties != nil {
-		w.writeSchema(w.name, w.schema)
+	if w.Schema.Properties != nil {
+		w.writeSchema(w.Name, w.Schema)
 	}
 
 	fset := token.NewFileSet()
@@ -220,7 +222,6 @@ func unsupported(name string, s *Schema) {
 
 type mergeOpts struct {
 	Base        *Schema
-	Overwrite   bool
 	ResolveRefs bool
 	Recurse     bool
 }
@@ -303,10 +304,29 @@ func schemaReplaceField(opts mergeOpts, name string, s, r *Schema, field string)
 		}
 
 	default:
-		if opts.Overwrite {
-			sf.Set(rf)
-		} else if !reflect.DeepEqual(sv, rv) && field != "Enum" {
+		if !reflect.DeepEqual(sv, rv) && field != "Enum" {
 			fatalf("type %q: unsupported operation: attempting to overwrite field %s\n", name, field)
 		}
 	}
+}
+
+func camelCase(s string) string {
+	sb := new(strings.Builder)
+	sb.Grow(len(s))
+
+	upcase := true
+	for _, r := range s {
+		switch {
+		case r == '$':
+			// ignore
+		case r == '_':
+			upcase = true
+		case upcase:
+			sb.WriteRune(unicode.ToTitle(r))
+			upcase = false
+		default:
+			sb.WriteRune(r)
+		}
+	}
+	return sb.String()
 }
