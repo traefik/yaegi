@@ -23,13 +23,16 @@
 [linters]
   enable-all = true
   disable = [
-    "maligned",
+    "golint", # deprecated
+    "scopelint", # deprecated
+    "interfacer", # deprecated
+    "maligned", # deprecated
     "lll",
     "gas",
     "dupl",
     "prealloc",
-    "scopelint",
     "gocyclo",
+    "cyclop",
     "gochecknoinits",
     "gochecknoglobals",
     "wsl",
@@ -49,6 +52,7 @@
     "exhaustivestruct",
     "forbidigo",
     "ifshort",
+    "forcetypeassert",
     "errorlint", # TODO: must be reactivate before fixes
   ]
 
@@ -61,6 +65,9 @@
   [[issues.exclude-rules]]
     path = "interp/.+_test\\.go"
     linters = ["goconst"]
+  [[issues.exclude-rules]]
+    path = "interp/.+_test\\.go"
+    text = "var-declaration:"
 
   [[issues.exclude-rules]]
     path = "interp/interp.go"

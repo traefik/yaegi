@@ -147,10 +147,7 @@ func (check typecheck) unaryExpr(n *node) error {
 		return nil
 	}
 
-	if err := check.op(unaryOpPredicates, n.action, n, c0, t0); err != nil {
-		return err
-	}
-	return nil
+	return check.op(unaryOpPredicates, n.action, n, c0, t0)
 }
 
 // shift type checks a shift binary expression.
@@ -271,10 +268,8 @@ func (check typecheck) binaryExpr(n *node) error {
 	}
 
 	t0 := c0.typ.TypeOf()
-	if err := check.op(binaryOpPredicates, a, n, c0, t0); err != nil {
-		return err
-	}
-	return nil
+
+	return check.op(binaryOpPredicates, a, n, c0, t0)
 }
 
 func zeroConst(n *node) bool {
