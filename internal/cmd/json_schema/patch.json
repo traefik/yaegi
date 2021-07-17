@@ -1,0 +1,22 @@
+{
+    "properties": {
+        "$ref": { "type": "string" },
+
+        "type": { "$ref": "!Schema_Type" },
+
+        "additionalItems": { "$ref": "#" },
+        "items": { "$ref": "#" },
+
+        "dependencies": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/definitions/stringArray" }
+        },
+
+        "additionalProperties": { "$ref": "#" },
+
+        "enum": {
+            "type": "array",
+            "items": { "type": "string" }
+        }
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "definitions": {
+        "ProtocolMessage": {
+            "properties": {
+                "type": {
+					"enum": [ "request", "response", "event" ]
+                }
+            }
+        }
+    }
+}
