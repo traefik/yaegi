@@ -1,22 +1,9 @@
-{
-    "properties": {
-        "$ref": { "type": "string" },
-
-        "type": { "$ref": "!Schema_Type" },
-
-        "additionalItems": { "$ref": "#" },
-        "items": { "$ref": "#" },
-
-        "dependencies": {
-            "type": "object",
-            "additionalProperties": { "$ref": "#/definitions/stringArray" }
-        },
-
-        "additionalProperties": { "$ref": "#" },
-
-        "enum": {
-            "type": "array",
-            "items": { "type": "string" }
-        }
-    }
-}
+[
+    { "op": "add",     "path": "/properties/$ref",                 "value": { "type": "string" } },
+    { "op": "replace", "path": "/properties/type",                 "value": { "$ref": "!Schema_Type" } },
+    { "op": "replace", "path": "/properties/additionalItems",      "value": { "$ref": "#" } },
+    { "op": "replace", "path": "/properties/items",                "value": { "$ref": "#" } },
+    { "op": "replace", "path": "/properties/additionalProperties", "value": { "$ref": "#" } },
+    { "op": "replace", "path": "/properties/enum",                 "value": { "type": "array", "items": { "type": "string" } } },
+    { "op": "replace", "path": "/properties/dependencies",         "value": { "type": "object", "additionalProperties": { "$ref": "#/definitions/stringArray" } } }
+]
