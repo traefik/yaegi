@@ -72,7 +72,7 @@ func (op *PatchOp) Apply(v *interface{}) error {
 	switch op.Op {
 	case PatchOpAdd:
 		jv, err := jsonDerefAll(jv, path, "")
-		if err != nil && (v == nil || !errors.Is(err, ErrNotFound)) {
+		if err != nil && (jv == nil || !errors.Is(err, ErrNotFound)) {
 			return err
 		}
 		jv.Set(op.Value)
@@ -98,7 +98,7 @@ func (op *PatchOp) Apply(v *interface{}) error {
 			return err
 		}
 		jv, err := jsonDerefAll(jv, path, "")
-		if err != nil && (v == nil || !errors.Is(err, ErrNotFound)) {
+		if err != nil && (jv == nil || !errors.Is(err, ErrNotFound)) {
 			return err
 		}
 		jv.Set(ju.Get())
@@ -109,7 +109,7 @@ func (op *PatchOp) Apply(v *interface{}) error {
 			return err
 		}
 		jv, err := jsonDerefAll(jv, path, "")
-		if err != nil && (v == nil || !errors.Is(err, ErrNotFound)) {
+		if err != nil && (jv == nil || !errors.Is(err, ErrNotFound)) {
 			return err
 		}
 		v := ju.Get()

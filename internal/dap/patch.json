@@ -1,11 +1,47 @@
-{
-    "definitions": {
-        "ProtocolMessage": {
-            "properties": {
-                "type": {
-					"enum": [ "request", "response", "event" ]
-                }
-            }
-        }
-    }
-}
+[
+    { "op": "move",    "from": "/definitions/ProtocolMessage/properties/type/_enum", "path": "/definitions/ProtocolMessage/properties/type/enum" },
+    { "op": "replace", "path": "/definitions/Request/allOf/1/properties/arguments",  "value": { "$ref": "!RequestArguments" } },
+    { "op": "replace", "path": "/definitions/Response/allOf/1/properties/body",      "value": { "$ref": "!ResponseBody" } },
+    { "op": "replace", "path": "/definitions/Event/allOf/1/properties/body",         "value": { "$ref": "!EventBody" } },
+
+    { "op": "move", "from": "/definitions/ErrorResponse/allOf/1/properties/body",                     "path": "/definitions/ErrorResponseBody" },
+    { "op": "move", "from": "/definitions/RunInTerminalResponse/allOf/1/properties/body",             "path": "/definitions/RunInTerminalResponseBody" },
+    { "op": "move", "from": "/definitions/BreakpointLocationsResponse/allOf/1/properties/body",       "path": "/definitions/BreakpointLocationsResponseBody" },
+    { "op": "move", "from": "/definitions/SetBreakpointsResponse/allOf/1/properties/body",            "path": "/definitions/SetBreakpointsResponseBody" },
+    { "op": "move", "from": "/definitions/SetFunctionBreakpointsResponse/allOf/1/properties/body",    "path": "/definitions/SetFunctionBreakpointsResponseBody" },
+    { "op": "move", "from": "/definitions/DataBreakpointInfoResponse/allOf/1/properties/body",        "path": "/definitions/DataBreakpointInfoResponseBody" },
+    { "op": "move", "from": "/definitions/SetDataBreakpointsResponse/allOf/1/properties/body",        "path": "/definitions/SetDataBreakpointsResponseBody" },
+    { "op": "move", "from": "/definitions/SetInstructionBreakpointsResponse/allOf/1/properties/body", "path": "/definitions/SetInstructionBreakpointsResponseBody" },
+    { "op": "move", "from": "/definitions/ContinueResponse/allOf/1/properties/body",                  "path": "/definitions/ContinueResponseBody" },
+    { "op": "move", "from": "/definitions/StackTraceResponse/allOf/1/properties/body",                "path": "/definitions/StackTraceResponseBody" },
+    { "op": "move", "from": "/definitions/ScopesResponse/allOf/1/properties/body",                    "path": "/definitions/ScopesResponseBody" },
+    { "op": "move", "from": "/definitions/VariablesResponse/allOf/1/properties/body",                 "path": "/definitions/VariablesResponseBody" },
+    { "op": "move", "from": "/definitions/SetVariableResponse/allOf/1/properties/body",               "path": "/definitions/SetVariableResponseBody" },
+    { "op": "move", "from": "/definitions/SourceResponse/allOf/1/properties/body",                    "path": "/definitions/SourceResponseBody" },
+    { "op": "move", "from": "/definitions/ThreadsResponse/allOf/1/properties/body",                   "path": "/definitions/ThreadsResponseBody" },
+    { "op": "move", "from": "/definitions/ModulesResponse/allOf/1/properties/body",                   "path": "/definitions/ModulesResponseBody" },
+    { "op": "move", "from": "/definitions/LoadedSourcesResponse/allOf/1/properties/body",             "path": "/definitions/LoadedSourcesResponseBody" },
+    { "op": "move", "from": "/definitions/EvaluateResponse/allOf/1/properties/body",                  "path": "/definitions/EvaluateResponseBody" },
+    { "op": "move", "from": "/definitions/SetExpressionResponse/allOf/1/properties/body",             "path": "/definitions/SetExpressionResponseBody" },
+    { "op": "move", "from": "/definitions/StepInTargetsResponse/allOf/1/properties/body",             "path": "/definitions/StepInTargetsResponseBody" },
+    { "op": "move", "from": "/definitions/GotoTargetsResponse/allOf/1/properties/body",               "path": "/definitions/GotoTargetsResponseBody" },
+    { "op": "move", "from": "/definitions/CompletionsResponse/allOf/1/properties/body",               "path": "/definitions/CompletionsResponseBody" },
+    { "op": "move", "from": "/definitions/ExceptionInfoResponse/allOf/1/properties/body",             "path": "/definitions/ExceptionInfoResponseBody" },
+    { "op": "move", "from": "/definitions/ReadMemoryResponse/allOf/1/properties/body",                "path": "/definitions/ReadMemoryResponseBody" },
+    { "op": "move", "from": "/definitions/DisassembleResponse/allOf/1/properties/body",               "path": "/definitions/DisassembleResponseBody" },
+    { "op": "move", "from": "/definitions/StoppedEvent/allOf/1/properties/body",                      "path": "/definitions/StoppedEventBody" },
+    { "op": "move", "from": "/definitions/ContinuedEvent/allOf/1/properties/body",                    "path": "/definitions/ContinuedEventBody" },
+    { "op": "move", "from": "/definitions/ExitedEvent/allOf/1/properties/body",                       "path": "/definitions/ExitedEventBody" },
+    { "op": "move", "from": "/definitions/TerminatedEvent/allOf/1/properties/body",                   "path": "/definitions/TerminatedEventBody" },
+    { "op": "move", "from": "/definitions/ThreadEvent/allOf/1/properties/body",                       "path": "/definitions/ThreadEventBody" },
+    { "op": "move", "from": "/definitions/OutputEvent/allOf/1/properties/body",                       "path": "/definitions/OutputEventBody" },
+    { "op": "move", "from": "/definitions/BreakpointEvent/allOf/1/properties/body",                   "path": "/definitions/BreakpointEventBody" },
+    { "op": "move", "from": "/definitions/ModuleEvent/allOf/1/properties/body",                       "path": "/definitions/ModuleEventBody" },
+    { "op": "move", "from": "/definitions/LoadedSourceEvent/allOf/1/properties/body",                 "path": "/definitions/LoadedSourceEventBody" },
+    { "op": "move", "from": "/definitions/ProcessEvent/allOf/1/properties/body",                      "path": "/definitions/ProcessEventBody" },
+    { "op": "move", "from": "/definitions/CapabilitiesEvent/allOf/1/properties/body",                 "path": "/definitions/CapabilitiesEventBody" },
+    { "op": "move", "from": "/definitions/ProgressStartEvent/allOf/1/properties/body",                "path": "/definitions/ProgressStartEventBody" },
+    { "op": "move", "from": "/definitions/ProgressUpdateEvent/allOf/1/properties/body",               "path": "/definitions/ProgressUpdateEventBody" },
+    { "op": "move", "from": "/definitions/ProgressEndEvent/allOf/1/properties/body",                  "path": "/definitions/ProgressEndEventBody" },
+    { "op": "move", "from": "/definitions/InvalidatedEvent/allOf/1/properties/body",                  "path": "/definitions/InvalidatedEventBody" }
+]

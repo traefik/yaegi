@@ -9,9 +9,10 @@ import (
 
 type writer struct {
 	io.Writer
-	Schema *Schema
-	Name   string
-	Embed  bool
+	Schema    *Schema
+	Name      string
+	Embed     bool
+	OmitEmpty bool
 
 	seen       map[*Schema]string
 	seenPlain  map[SimpleTypes]string
@@ -208,8 +209,21 @@ func (w *writer) writeObjectType(name string, s *Schema) string {
 func (w *writer) writeProperties(name string, s *Schema) {
 	type Field struct{ Name, Prop, Type string }
 	fields := []Field{}
+	embedded := map[string]bool{}
+	for _, typ := range s.Embedded {
+		fields = append(fields, Field{Type: typ})
+		for prop := range w.properties[typ] {
+			embedded[prop] = true
+		}
+	}
+
 	w.properties[name] = map[string]bool{}
 	for prop, s := range s.Properties {
+		// skip fields that are an override of an embedded field
+		if embedded[prop] {
+			continue
+		}
+
 		w.properties[name][prop] = true
 
 		var f Field
@@ -223,8 +237,8 @@ func (w *writer) writeProperties(name string, s *Schema) {
 		fields = append(fields, f)
 	}
 
-	for _, typ := range s.Embedded {
-		fields = append(fields, Field{Type: typ})
+	if w.OmitEmpty && len(fields) == len(s.Embedded) {
+		return
 	}
 
 	sort.Slice(fields, func(i, j int) bool {
@@ -267,12 +281,6 @@ func (w *writer) writeAllOf(name string, allOf []*Schema) string {
 				typ = typ[1:]
 			}
 			s.Embedded = append(s.Embedded, typ)
-		}
-	}
-
-	for _, typ := range s.Embedded {
-		for prop := range w.properties[typ] {
-			delete(s.Properties, prop)
 		}
 	}
 

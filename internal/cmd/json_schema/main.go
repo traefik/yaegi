@@ -28,10 +28,10 @@ var schemaUrl = flag.String("url", "", "URL of the schema")
 var packageName = flag.String("name", "", "Package name")
 var filePath = flag.String("path", "", "File to write to")
 var jsonPatch = flag.String("patch", "", "JSON file to apply as a patch")
-var useEmbedding = flag.Bool("use-embedding", false, "Generate embedded types for allOf $refs")
-var useInterfaces = flag.Bool("interfaces", false, "Generate interfaces instead of structs")
 var chooseTypes = flag.String("choose", "", "Comma-separated list of types to extract, instead of all types")
 var verbose = flag.Bool("verbose", false, "Print more messages")
+
+var dapMode = flag.Bool("dap-mode", false, "Used for generating Debug Adapter Protocol types")
 
 func main() {
 	flag.Parse()
@@ -101,10 +101,11 @@ func main() {
 
 	buf := new(bytes.Buffer)
 	w := &writer{
-		Writer: buf,
-		Schema: &schema,
-		Name:   "Schema",
-		Embed:  *useEmbedding,
+		Writer:    buf,
+		Schema:    &schema,
+		Name:      "Schema",
+		Embed:     *dapMode,
+		OmitEmpty: *dapMode,
 	}
 	w.init()
 
