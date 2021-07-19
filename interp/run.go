@@ -122,6 +122,16 @@ func (interp *Interpreter) run(n *node, cf *frame) {
 	runCfg(n.start, f)
 }
 
+func isExecNode(n *node, exec bltn) bool {
+	if n == nil || n.exec == nil || exec == nil {
+		return false
+	}
+
+	a1 := reflect.ValueOf(n.exec).Pointer()
+	a2 := reflect.ValueOf(exec).Pointer()
+	return a1 == a2
+}
+
 // originalExecNode looks in the tree of nodes for the node which has exec,
 // aside from n, in order to know where n "inherited" that exec from.
 func originalExecNode(n *node, exec bltn) *node {
@@ -187,20 +197,38 @@ func runCfg(n *node, f *frame) {
 		f.mutex.Unlock()
 	}()
 
-	dbg := func(Statement, Frame) {}
+	var dbg Debugger
 	for f := f; f != nil; f = f.anc {
 		if f.prog != nil && f.prog.dbg != nil {
-			dbg = f.prog.dbg.Exec
+			dbg = f.prog.dbg
 			break
 		}
 	}
 
-	for m, exec := n, n.exec; exec != nil && f.runid() == n.interp.runid(); {
-		if m.pos != token.NoPos {
-			dbg(m, f)
+	if dbg == nil {
+		for exec := n.exec; exec != nil && f.runid() == n.interp.runid(); {
+			exec = exec(f)
 		}
+		return
+	}
+
+	for m, exec := n, n.exec; f.runid() == n.interp.runid(); {
+		if m.pos != token.NoPos {
+			dbg.Exec(m, f)
+		}
+
 		exec = exec(f)
-		m = originalExecNode(m, exec)
+		if exec == nil {
+			break
+		}
+
+		if isExecNode(m.tnext, exec) {
+			m = m.tnext
+		} else if isExecNode(m.fnext, exec) {
+			m = m.fnext
+		} else {
+			m = originalExecNode(m, exec)
+		}
 	}
 }
 
