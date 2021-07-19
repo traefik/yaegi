@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -16,7 +16,7 @@ func main() {
 		println("FAIL")
 		return
 	}
-	log.Println("tmpdir:", tmpdir, "testing tmpdir:", tb.TempDir())
+	fmt.Fprintln(os.Stdout, "tmpdir:", tmpdir, "testing tmpdir:", tb.TempDir())
 	if !strings.HasPrefix(tb.TempDir(), tmpdir) {
 		println("FAIL")
 		return
