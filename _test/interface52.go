@@ -15,6 +15,7 @@ func main() {
 		println("FAIL")
 		return
 	}
+	println("tmpdir:", tmpdir, "testing tmpdir:", tb.TempDir())
 	if !strings.HasPrefix(tb.TempDir(), tmpdir) {
 		println("FAIL")
 		return
