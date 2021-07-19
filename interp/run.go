@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"go/constant"
-	"log"
 	"reflect"
 	"regexp"
 	"strings"
@@ -1004,6 +1003,7 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 				vv = v.Elem()
 			}
 		}
+		v = getConcreteValue(v)
 		w := reflect.New(wrap).Elem()
 		w.Field(0).Set(v)
 		for i, m := range methods {
@@ -1016,7 +1016,7 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 				if r := o.MethodByName(names[i]); r.IsValid() {
 					w.Field(i + 1).Set(r)
 				} else {
-					log.Println(n.cfgErrorf("genInterfaceWrapper error, no method %s", names[i]))
+					panic(n.cfgErrorf("method not found: %s", names[i]))
 				}
 				continue
 			}
@@ -1800,16 +1800,23 @@ func getMethodByName(n *node) {
 			}
 			val = v
 		}
+		if met := val.value.MethodByName(name); met.IsValid() {
+			getFrame(f, l).data[i] = met
+			return next
+		}
 		typ := val.node.typ
 		if typ.node == nil && typ.cat == valueT {
 			// happens with a var of empty interface type, that has value of concrete type
 			// from runtime, being asserted to "user-defined" interface.
 			if _, ok := typ.rtype.MethodByName(name); !ok {
-				panic(fmt.Sprintf("method %s not found", name))
+				panic(n.cfgErrorf("method not found: %s", name))
 			}
 			return next
 		}
 		m, li := val.node.typ.lookupMethod(name)
+		if m == nil {
+			panic(n.cfgErrorf("method not found: %s", name))
+		}
 		fr := f.clone(!fork)
 		nod := *m
 		nod.val = &nod

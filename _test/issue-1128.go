@@ -7,4 +7,5 @@ func main() {
 	println(len(c))
 }
 
-// Output: 1
+// Output:
+// 1

@@ -341,6 +341,34 @@ func genValueInterface(n *node) func(*frame) reflect.Value {
 	}
 }
 
+func getConcreteValue(val reflect.Value) reflect.Value {
+	v := val
+	for {
+		vi, ok := v.Interface().(valueInterface)
+		if !ok {
+			break
+		}
+		v = vi.value
+	}
+	if v.NumMethod() > 0 {
+		return v
+	}
+	if v.Type().Kind() != reflect.Struct {
+		return v
+	}
+	// Search a concrete value in fields of an emulated interface.
+	for i := v.NumField() - 1; i >= 0; i-- {
+		vv := v.Field(i)
+		if vv.Type().Kind() == reflect.Interface {
+			vv = vv.Elem()
+		}
+		if vv.IsValid() {
+			return vv
+		}
+	}
+	return v
+}
+
 func zeroInterfaceValue() reflect.Value {
 	n := &node{kind: basicLit, typ: &itype{cat: nilT, untyped: true}}
 	v := reflect.New(interf).Elem()

@@ -1655,9 +1655,12 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					}
 				} else if m, lind, isPtr, ok := n.typ.lookupBinMethod(n.child[1].ident); ok {
 					n.action = aGetMethod
-					if isPtr && n.typ.fieldSeq(lind).cat != ptrT {
+					switch {
+					case isPtr && n.typ.fieldSeq(lind).cat != ptrT:
 						n.gen = getIndexSeqPtrMethod
-					} else {
+					case isInterfaceSrc(n.typ):
+						n.gen = getMethodByName
+					default:
 						n.gen = getIndexSeqMethod
 					}
 					n.recv = &receiver{node: n.child[0], index: lind}
