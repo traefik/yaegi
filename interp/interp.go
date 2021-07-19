@@ -419,6 +419,30 @@ func (interp *Interpreter) EvalPath(path string) (res reflect.Value, err error) 
 	return interp.eval(string(b), path, false)
 }
 
+// EvalPath evaluates Go code located at path and returns the last result computed
+// by the interpreter, and a non nil error in case of failure.
+// The main function of the main package is executed if present.
+func (interp *Interpreter) EvalPathWithContext(ctx context.Context, path string) (res reflect.Value, err error) {
+	interp.mutex.Lock()
+	interp.done = make(chan struct{})
+	interp.cancelChan = !interp.opt.fastChan
+	interp.mutex.Unlock()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		res, err = interp.EvalPath(path)
+	}()
+
+	select {
+	case <-ctx.Done():
+		interp.stop()
+		return reflect.Value{}, ctx.Err()
+	case <-done:
+	}
+	return res, err
+}
+
 // EvalTest evaluates Go code located at path, including test files with "_test.go" suffix.
 // A non nil error is returned in case of failure.
 // The main function, test functions and benchmark functions are internally compiled but not

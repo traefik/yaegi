@@ -23,7 +23,10 @@ func NewEncoder(w io.Writer) *Encoder {
 }
 
 func (c *Encoder) Encode(msg IProtocolMessage) error {
-	msg.prepareForEncoding()
+	err := msg.prepareForEncoding()
+	if err != nil {
+		return err
+	}
 
 	json, err := json.Marshal(msg)
 	if err != nil {
@@ -141,13 +144,77 @@ func (c *Decoder) Decode() (IProtocolMessage, error) {
 	return m, nil
 }
 
-type IProtocolMessage interface{ prepareForEncoding() }
+type IProtocolMessage interface {
+	prepareForEncoding() error
+	setSeq(int)
+}
 
-func (m *ProtocolMessage) prepareForEncoding() {}
+func (m *ProtocolMessage) setSeq(s int) { m.Seq = s }
 
-func (m *Request) prepareForEncoding()  { m.Type = ProtocolMessageType_Request }
-func (m *Response) prepareForEncoding() { m.Type = ProtocolMessageType_Response }
-func (m *Event) prepareForEncoding()    { m.Type = ProtocolMessageType_Event }
+func (m *ProtocolMessage) prepareForEncoding() error {
+	if m.Seq == 0 {
+		return errors.New("seq unset")
+	}
+	return nil
+}
+
+func (m *Request) prepareForEncoding() error {
+	m.Type = ProtocolMessageType_Request
+
+	hasCmd := m.Command != ""
+	hasArgs := m.Arguments != nil
+	if !hasCmd && !hasArgs {
+		return errors.New("command and arguments unset")
+	} else if !hasCmd {
+		m.Command = m.Arguments.requestType()
+	} else if !hasArgs {
+		// ok
+	} else if m.Command != m.Arguments.requestType() {
+		return fmt.Errorf("command is %q but arguments is %q", m.Command, m.Arguments.requestType())
+	}
+
+	return m.ProtocolMessage.prepareForEncoding()
+}
+
+func (m *Response) prepareForEncoding() error {
+	m.Type = ProtocolMessageType_Response
+
+	hasCmd := m.Command != ""
+	hasBody := m.Body != nil
+	if !hasCmd && !hasBody {
+		return errors.New("command and body unset")
+	} else if !hasCmd {
+		m.Command = m.Body.responseType()
+	} else if !hasBody {
+		// ok
+	} else if m.Command != m.Body.responseType() {
+		return fmt.Errorf("command is %q but body is %q", m.Command, m.Body.responseType())
+	}
+
+	if m.RequestSeq == 0 {
+		return errors.New("request_seq unset")
+	}
+
+	return m.ProtocolMessage.prepareForEncoding()
+}
+
+func (m *Event) prepareForEncoding() error {
+	m.Type = ProtocolMessageType_Event
+
+	hasEvt := m.Event != ""
+	hasBody := m.Body != nil
+	if !hasEvt && !hasBody {
+		return errors.New("event and body unset")
+	} else if !hasEvt {
+		m.Event = m.Body.eventType()
+	} else if !hasBody {
+		// ok
+	} else if m.Event != m.Body.eventType() {
+		return fmt.Errorf("event is %q but body is %q", m.Event, m.Body.eventType())
+	}
+
+	return m.ProtocolMessage.prepareForEncoding()
+}
 
 func (r *Request) UnmarshalJSON(b []byte) error {
 	var x struct{ Command string }
