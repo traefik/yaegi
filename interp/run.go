@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"go/constant"
+	"go/token"
 	"reflect"
 	"regexp"
 	"strings"
@@ -186,8 +187,20 @@ func runCfg(n *node, f *frame) {
 		f.mutex.Unlock()
 	}()
 
-	for exec = n.exec; exec != nil && f.runid() == n.interp.runid(); {
+	dbg := func(Statement, Frame) {}
+	for f := f; f != nil; f = f.anc {
+		if f.prog != nil && f.prog.dbg != nil {
+			dbg = f.prog.dbg.Exec
+			break
+		}
+	}
+
+	for m, exec := n, n.exec; exec != nil && f.runid() == n.interp.runid(); {
+		if m.pos != token.NoPos {
+			dbg(m, f)
+		}
 		exec = exec(f)
+		m = originalExecNode(m, exec)
 	}
 }
 

@@ -17,8 +17,6 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
-	"runtime"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -67,6 +65,7 @@ type frame struct {
 	// Located at start of struct to ensure proper aligment.
 	id uint64
 
+	prog *Program
 	root *frame          // global space
 	anc  *frame          // ancestor frame (caller space)
 	data []reflect.Value // values
@@ -514,123 +513,16 @@ func isFile(path string) bool {
 }
 
 func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, err error) {
-	if name != "" {
-		interp.name = name
-	}
-	if interp.name == "" {
-		interp.name = DefaultSourceName
-	}
-
-	defer func() {
-		r := recover()
-		if r != nil {
-			var pc [64]uintptr // 64 frames should be enough.
-			n := runtime.Callers(1, pc[:])
-			err = Panic{Value: r, Callers: pc[:n], Stack: debug.Stack()}
-		}
-	}()
-
-	// Parse source to AST.
-	pkgName, root, err := interp.ast(src, interp.name, inc)
-	if err != nil || root == nil {
-		return res, err
-	}
-
-	if interp.astDot {
-		dotCmd := interp.dotCmd
-		if dotCmd == "" {
-			dotCmd = defaultDotCmd(interp.name, "yaegi-ast-")
-		}
-		root.astDot(dotWriter(dotCmd), interp.name)
-		if interp.noRun {
-			return res, err
-		}
-	}
-
-	// Perform global types analysis.
-	if err = interp.gtaRetry([]*node{root}, pkgName); err != nil {
-		return res, err
-	}
-
-	// Annotate AST with CFG informations.
-	initNodes, err := interp.cfg(root, pkgName)
+	prog, err := interp.compile(src, name, inc)
 	if err != nil {
-		if interp.cfgDot {
-			dotCmd := interp.dotCmd
-			if dotCmd == "" {
-				dotCmd = defaultDotCmd(interp.name, "yaegi-cfg-")
-			}
-			root.cfgDot(dotWriter(dotCmd))
-		}
 		return res, err
-	}
-
-	if root.kind != fileStmt {
-		// REPL may skip package statement.
-		setExec(root.start)
-	}
-	interp.mutex.Lock()
-	gs := interp.scopes[pkgName]
-	if interp.universe.sym[pkgName] == nil {
-		// Make the package visible under a path identical to its name.
-		interp.srcPkg[pkgName] = gs.sym
-		interp.universe.sym[pkgName] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: pkgName}}
-		interp.pkgNames[pkgName] = pkgName
-	}
-	interp.mutex.Unlock()
-
-	// Add main to list of functions to run, after all inits.
-	if m := gs.sym[mainID]; pkgName == mainID && m != nil {
-		initNodes = append(initNodes, m.node)
-	}
-
-	if interp.cfgDot {
-		dotCmd := interp.dotCmd
-		if dotCmd == "" {
-			dotCmd = defaultDotCmd(interp.name, "yaegi-cfg-")
-		}
-		root.cfgDot(dotWriter(dotCmd))
 	}
 
 	if interp.noRun {
 		return res, err
 	}
 
-	// Generate node exec closures.
-	if err = genRun(root); err != nil {
-		return res, err
-	}
-
-	// Init interpreter execution memory frame.
-	interp.frame.setrunid(interp.runid())
-	interp.frame.mutex.Lock()
-	interp.resizeFrame()
-	interp.frame.mutex.Unlock()
-
-	// Execute node closures.
-	interp.run(root, nil)
-
-	// Wire and execute global vars.
-	n, err := genGlobalVars([]*node{root}, interp.scopes[pkgName])
-	if err != nil {
-		return res, err
-	}
-	interp.run(n, nil)
-
-	for _, n := range initNodes {
-		interp.run(n, interp.frame)
-	}
-	v := genValue(root)
-	res = v(interp.frame)
-
-	// If result is an interpreter node, wrap it in a runtime callable function.
-	if res.IsValid() {
-		if n, ok := res.Interface().(*node); ok {
-			res = genFunctionWrapper(n)(interp.frame)
-		}
-	}
-
-	return res, err
+	return interp.Execute(prog)
 }
 
 // EvalWithContext evaluates Go code represented as a string. It returns

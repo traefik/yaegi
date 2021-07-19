@@ -89,7 +89,7 @@ func (s *Session) recv() (IProtocolMessage, error) {
 	}
 
 	if s.dbg != nil {
-		fmt.Fprintf(s.dbg, "> !%v", err)
+		fmt.Fprintf(s.dbg, "> !%v\n", err)
 	}
 	return nil, err
 }
@@ -108,7 +108,7 @@ func (s *Session) send(msg IProtocolMessage) error {
 	}
 
 	if s.dbg != nil {
-		fmt.Fprintf(s.dbg, "< !%v", err)
+		fmt.Fprintf(s.dbg, "< !%v\n", err)
 	}
 	return err
 }

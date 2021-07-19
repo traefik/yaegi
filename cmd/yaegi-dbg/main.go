@@ -44,6 +44,10 @@ func main() {
 		var addr string
 		if u.Scheme == "unix" {
 			addr = u.Path
+			if _, err := os.Stat(addr); err == nil {
+				os.Remove(addr)
+			}
+			defer os.Remove(addr)
 		} else {
 			addr = u.Host
 		}
@@ -56,13 +60,15 @@ func main() {
 		fatalf("Invalid mode %q", *mode)
 	}
 
-	src, err := os.ReadFile(flag.Arg(0))
+	st, err := os.Stat(flag.Arg(0))
 	if err != nil {
 		fatalf("source: %v", err)
+	} else if st.IsDir() {
+		fatalf("source is dir: %q", flag.Arg(0))
 	}
 
 	opts := dbg.Options{GoPath: *gopath}
-	adp := dbg.NewEvalAdapter(string(src), &opts)
+	adp := dbg.NewEvalPathAdapter(flag.Arg(0), &opts)
 	srv := dap.NewServer(l, adp)
 
 	var lf io.Writer
@@ -77,13 +83,11 @@ func main() {
 		lf = f
 	}
 
-	for {
-		s, err := srv.Accept()
-		if err != nil {
-			fatalf("%v", err)
-		}
-
-		s.Debug(lf)
-		go s.Run()
+	s, err := srv.Accept()
+	if err != nil {
+		fatalf("%v", err)
 	}
+
+	s.Debug(lf)
+	s.Run()
 }
