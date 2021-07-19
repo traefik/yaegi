@@ -197,24 +197,24 @@ func runCfg(n *node, f *frame) {
 		f.mutex.Unlock()
 	}()
 
-	var dbg Debugger
-	for f := f; f != nil; f = f.anc {
-		if f.prog != nil && f.prog.dbg != nil {
-			dbg = f.prog.dbg
-			break
-		}
+	if f.debug == nil && f.anc != nil && f.anc.debug != nil {
+		f.debug = f.anc.debug
 	}
 
-	if dbg == nil {
+	if f.debug == nil {
 		for exec := n.exec; exec != nil && f.runid() == n.interp.runid(); {
 			exec = exec(f)
 		}
 		return
 	}
 
+	if n.exec == nil {
+		return
+	}
+
 	for m, exec := n, n.exec; f.runid() == n.interp.runid(); {
 		if m.pos != token.NoPos {
-			dbg.Exec(m, f)
+			f.debug(m, f)
 		}
 
 		exec = exec(f)

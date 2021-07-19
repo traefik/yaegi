@@ -2,49 +2,16 @@ package interp
 
 import (
 	"context"
-	"go/token"
 	"io/ioutil"
 	"reflect"
 	"runtime"
 	"runtime/debug"
 )
 
-type Statement interface {
-	Position(*Interpreter) token.Position
-}
-
-func (n *node) Position(i *Interpreter) token.Position { return i.fset.Position(n.pos) }
-
-type Frame interface {
-	Previous() Frame
-	Variables() []reflect.Value
-}
-
-func (f *frame) Previous() Frame {
-	if f.anc == nil {
-		return nil
-	}
-	return f.anc
-}
-
-func (f *frame) Variables() []reflect.Value {
-	return f.data
-}
-
-type Debugger interface {
-	Exec(Statement, Frame)
-}
-
 type Program struct {
-	interp  *Interpreter
 	pkgName string
 	root    *node
 	init    []*node
-	dbg     Debugger
-}
-
-func (p *Program) SetDebugger(dbg Debugger) {
-	p.dbg = dbg
 }
 
 func (interp *Interpreter) Compile(src string) (*Program, error) {
@@ -134,14 +101,10 @@ func (interp *Interpreter) compile(src, name string, inc bool) (*Program, error)
 		root.cfgDot(dotWriter(dotCmd))
 	}
 
-	return &Program{interp, pkgName, root, initNodes, nil}, nil
+	return &Program{pkgName, root, initNodes}, nil
 }
 
 func (interp *Interpreter) Execute(p *Program) (res reflect.Value, err error) {
-	if p.interp != interp {
-		panic("cannot execute a program compiled by a different interpreter")
-	}
-
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -150,8 +113,6 @@ func (interp *Interpreter) Execute(p *Program) (res reflect.Value, err error) {
 			err = Panic{Value: r, Callers: pc[:n], Stack: debug.Stack()}
 		}
 	}()
-
-	interp.frame.prog = p
 
 	// Generate node exec closures.
 	if err = genRun(p.root); err != nil {

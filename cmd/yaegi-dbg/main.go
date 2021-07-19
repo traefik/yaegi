@@ -17,6 +17,7 @@ var mode = flag.String("mode", "stdio", "Listening mode, stdio|net")
 var addr = flag.String("addr", "tcp://localhost:16348", "Net address to listen on, must be a TCP or Unix socket URL")
 var logFile = flag.String("log", "", "Log protocol messages to a file")
 var gopath = flag.String("gopath", "", "GOPATH")
+var stopAtEntry = flag.Bool("stop-at-entry", false, "Stop at program entry")
 
 func fatalf(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format+"\n", args...)
@@ -67,7 +68,10 @@ func main() {
 		fatalf("source is dir: %q", flag.Arg(0))
 	}
 
-	opts := dbg.Options{GoPath: *gopath}
+	opts := dbg.Options{
+		GoPath:      *gopath,
+		StopAtEntry: *stopAtEntry,
+	}
 	adp := dbg.NewEvalPathAdapter(flag.Arg(0), &opts)
 	srv := dap.NewServer(l, adp)
 

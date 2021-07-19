@@ -101,9 +101,9 @@ func (s *Session) send(msg IProtocolMessage) error {
 	s.seq++
 	msg.setSeq(s.seq)
 
-	s.debug("<", msg)
 	err := s.enc.Encode(msg)
 	if err == nil {
+		s.debug("<", msg)
 		return nil
 	}
 

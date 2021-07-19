@@ -19,6 +19,8 @@ type Options struct {
 	SrcPath        string
 	GoPath         string
 	NewInterpreter func(interp.Options) *interp.Interpreter
+
+	StopAtEntry bool
 }
 
 type compileFunc func(*interp.Interpreter, string) (*interp.Program, error)
@@ -30,17 +32,11 @@ type Adapter struct {
 
 	session *dap.Session
 	ccaps   *dap.InitializeRequestArguments
-	context context.Context
-	cancel  context.CancelFunc
 
-	interp *interp.Interpreter
-	prog   *interp.Program
-	cont   chan struct{}
-	stmt   interp.Statement
-	frame  interp.Frame
+	interp   *interp.Interpreter
+	debugger *interp.Debugger
+	event    *interp.DebugEvent
 }
-
-type interpDebugger struct{ *Adapter }
 
 func NewEvalAdapter(src string, opts *Options) *Adapter {
 	return newAdapter((*interp.Interpreter).Compile, src, opts)
@@ -73,8 +69,6 @@ func newAdapter(eval compileFunc, arg string, opts *Options) *Adapter {
 	a.opts = *opts
 	a.compile = eval
 	a.arg = arg
-	a.context, a.cancel = context.WithCancel(context.Background())
-	a.cont = make(chan struct{})
 	return a
 }
 
@@ -115,7 +109,6 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 		var body dap.ResponseBody
 		switch m.Command {
 		case "launch", "attach":
-			var err error
 			a.interp = a.opts.NewInterpreter(interp.Options{
 				Stdin:  iox.ReaderFunc(a.stdin),
 				Stdout: iox.WriterFunc(a.stdout),
@@ -123,7 +116,7 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 				GoPath: a.opts.GoPath,
 			})
 
-			a.prog, err = a.compile(a.interp, a.arg)
+			prog, err := a.compile(a.interp, a.arg)
 			if err == nil {
 				success = true
 				a.session.Event("initialized", nil)
@@ -136,30 +129,69 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 					Data:     err,
 				})
 				message = fmt.Sprintf("Failed to compile: %v", err)
+				break
 			}
+
+			a.debugger = a.interp.Debug(context.Background(), prog, func(e *interp.DebugEvent) {
+				defer func() {
+					r := recover()
+					if r != nil {
+						fmt.Fprintf(os.Stderr, "Panicked while processing debug event:\n%v\n", r)
+					}
+				}()
+
+				if e.Reason() == interp.DebugTerminate {
+					a.session.Event("terminated", nil)
+					stop = true
+					return
+				}
+
+				a.event = e
+				body := new(dap.StoppedEventBody)
+				body.ThreadId = 1
+				switch e.Reason() {
+				case interp.DebugBreak:
+					body.Reason = "breakpoint"
+				case interp.DebugStepInto, interp.DebugStepOver, interp.DebugStepOut:
+					body.Reason = "step"
+				case interp.DebugEntry:
+					body.Reason = "entry"
+				default:
+					body.Reason = "pause"
+				}
+				a.session.Event("stopped", body)
+			}, nil)
 
 		case "setBreakpoints":
 			success = true
 
 		case "configurationDone":
-			a.prog.SetDebugger(&interpDebugger{a})
-
+			if a.opts.StopAtEntry {
+				a.debugger.Step(interp.DebugEntry)
+			} else {
+				a.debugger.Continue()
+			}
 			success = true
-			go func() {
-				defer a.session.Event("terminated", new(dap.TerminatedEventBody))
-				defer a.cancel()
 
-				_, err := a.interp.ExecuteWithContext(a.context, a.prog)
-				if err == nil {
-					return
-				}
+		case "continue":
+			a.debugger.Continue()
+			success = true
 
-				a.session.Event("output", &dap.OutputEventBody{
-					Category: "stderr",
-					Output:   err.Error(),
-					Data:     err,
-				})
-			}()
+		case "stepIn":
+			a.debugger.Step(interp.DebugStepInto)
+			success = true
+
+		case "next":
+			a.debugger.Step(interp.DebugStepOver)
+			success = true
+
+		case "stepOut":
+			a.debugger.Step(interp.DebugStepOut)
+			success = true
+
+		case "pause":
+			a.debugger.Interrupt(interp.DebugPause)
+			success = true
 
 		case "threads":
 			success = true
@@ -174,16 +206,18 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 			args := m.Arguments.(*dap.StackTraceArguments)
 			b := new(dap.StackTraceResponseBody)
 			body = b
-			b.StackFrames = make([]*dap.StackFrame, 0, args.Levels)
 
-			for f := a.frame; f != nil; f = f.Previous() {
-				b.TotalFrames++
-				if len(b.StackFrames) == cap(b.StackFrames) {
-					continue
-				}
+			b.TotalFrames = a.event.FrameDepth()
+			end := b.TotalFrames
+			if args.Levels > 0 {
+				end = args.StartFrame + args.Levels
+			}
 
+			frames := a.event.Frames(args.StartFrame, end)
+			b.StackFrames = make([]*dap.StackFrame, len(frames))
+			for i, f := range frames {
 				var src *dap.Source
-				pos := a.stmt.Position(a.interp)
+				pos := f.Position()
 				if pos != (token.Position{}) {
 					if !a.ccaps.LinesStartAt1 {
 						pos.Line--
@@ -200,13 +234,13 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 					src.Name = filepath.Base(src.Path)
 				}
 
-				b.StackFrames = append(b.StackFrames, &dap.StackFrame{
-					Id:     b.TotalFrames,
-					Name:   fmt.Sprintf("Frame %d", b.TotalFrames),
+				b.StackFrames[i] = &dap.StackFrame{
+					Id:     i,
+					Name:   fmt.Sprintf("Frame %d", i),
 					Line:   pos.Line,
 					Column: pos.Column,
 					Source: src,
-				})
+				}
 			}
 
 		case "scopes":
@@ -226,38 +260,26 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 			}
 			body = b
 
-			f := a.frame
-			for id := args.VariablesReference; f != nil && id > 1; id-- {
-				f = f.Previous()
-			}
+			f := a.event.Frame(args.VariablesReference)
 			if f == nil {
 				break
 			}
 
-			for i, rv := range f.Variables() {
+			for name, rv := range f.Variables() {
 				v := new(dap.Variable)
 				b.Variables = append(b.Variables, v)
-				v.Name = fmt.Sprint(i)
+				v.Name = name
 				v.Value = fmt.Sprint(rv)
 				v.Type = fmt.Sprint(rv.Type())
 			}
 
-		case "continue", "next", "stepIn", "stepOut", "stepOver":
-			success = true
-			select {
-			case a.cont <- struct{}{}:
-			case <-a.context.Done():
-			}
-
-		case "pause", "evaluate", "source":
-			success = true
-
 		case "terminate":
+			a.debugger.Interrupt(interp.DebugTerminate)
 			success = true
-			a.cancel()
 
 		case "disconnect":
 			// Go does not allow forcibly killing a goroutine
+			a.debugger.Interrupt(interp.DebugTerminate)
 			stop = true
 			success = true
 
@@ -277,33 +299,9 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 		a.session.Respond(m, success, message, body)
 	}
 
-	if stop {
-		return true
-	}
-
-	select {
-	case <-a.context.Done():
-		return true
-	default:
-		return false
-	}
-}
-
-func (d *interpDebugger) Exec(s interp.Statement, f interp.Frame) {
-	d.stmt, d.frame = s, f
-
-	d.session.Event("stopped", &dap.StoppedEventBody{
-		Reason:      "breakpoint",
-		Description: "Stepping",
-		ThreadId:    1,
-	})
-
-	select {
-	case <-d.cont:
-	case <-d.context.Done():
-	}
+	return stop
 }
 
 func (a *Adapter) Terminate() {
-	a.cancel()
+	a.debugger.Interrupt(interp.DebugTerminate)
 }
