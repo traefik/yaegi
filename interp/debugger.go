@@ -8,7 +8,7 @@ import (
 )
 
 type Debugger struct {
-	fset    *token.FileSet
+	interp  *Interpreter
 	events  func(*DebugEvent)
 	context context.Context
 	cancel  context.CancelFunc
@@ -38,6 +38,10 @@ type DebugFrame struct {
 	frame *frame
 }
 
+type Breakpoint struct {
+	Line, Column int
+}
+
 type DebugStopReason int
 
 const (
@@ -53,7 +57,7 @@ const (
 
 func (interp *Interpreter) Debug(ctx context.Context, prog *Program, events func(*DebugEvent), opts *DebugOptions) *Debugger {
 	dbg := new(Debugger)
-	dbg.fset = interp.fset
+	dbg.interp = interp
 	dbg.events = events
 	dbg.context, dbg.cancel = context.WithCancel(ctx)
 	dbg.resume = make(chan struct{})
@@ -156,6 +160,49 @@ func (dbg *Debugger) Interrupt(reason DebugStopReason) {
 	}
 }
 
+func (dbg *Debugger) SetBreakpoints(path string, bp []*Breakpoint) []*Breakpoint {
+	found := make([]*Breakpoint, len(bp))
+
+	var root *node
+	for _, r := range dbg.interp.roots {
+		f := dbg.interp.fset.File(r.pos)
+		if f != nil && f.Name() == path {
+			root = r
+			break
+		}
+	}
+
+	if root == nil {
+		return found
+	}
+
+	root.Walk(func(n *node) bool {
+		if !n.pos.IsValid() || n.exec == nil {
+			return true
+		}
+
+		pos := dbg.interp.fset.Position(n.pos)
+		if pos == (token.Position{}) {
+			return true
+		}
+
+		n.bkp = false
+		for i, bp := range bp {
+			if found[i] != nil {
+				continue
+			}
+			if bp.Line == pos.Line {
+				found[i] = bp
+				n.bkp = true
+				break
+			}
+		}
+		return true
+	}, nil)
+
+	return found
+}
+
 func (evt *DebugEvent) Reason() DebugStopReason {
 	return evt.reason
 }
@@ -218,7 +265,7 @@ func (f *DebugFrame) Name() string {
 }
 
 func (f *DebugFrame) Position() token.Position {
-	return f.event.debugger.fset.Position(f.frame.pos)
+	return f.event.debugger.interp.fset.Position(f.frame.pos)
 }
 
 func (f *DebugFrame) Variables() map[string]reflect.Value {

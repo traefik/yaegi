@@ -163,6 +163,73 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 			}, nil)
 
 		case "setBreakpoints":
+			args := m.Arguments.(*dap.SetBreakpointsArguments)
+			if args.Source == nil {
+				message = "Missing source"
+				break
+			}
+
+			path := args.Source.Path
+			if a.opts.SrcPath != "" && path == a.opts.SrcPath {
+				path = "_.go"
+			}
+
+			var bp []*interp.Breakpoint
+			if args.Breakpoints != nil {
+				bp = make([]*interp.Breakpoint, len(args.Breakpoints))
+				for i := range bp {
+					b := args.Breakpoints[i]
+					if !a.ccaps.LinesStartAt1 {
+						b.Line++
+					}
+					if !a.ccaps.ColumnsStartAt1 {
+						b.Column++
+					}
+
+					bp[i] = &interp.Breakpoint{
+						Line:   b.Line,
+						Column: b.Column,
+					}
+				}
+
+			} else {
+				bp = make([]*interp.Breakpoint, len(args.Lines))
+				for i := range bp {
+					l := args.Lines[i]
+					if !a.ccaps.LinesStartAt1 {
+						l++
+					}
+
+					bp[i].Line = l
+				}
+			}
+
+			bp = a.debugger.SetBreakpoints(path, bp)
+
+			b := new(dap.SetBreakpointsResponseBody)
+			body = b
+			b.Breakpoints = make([]*dap.Breakpoint, len(bp))
+
+			for i, bp := range bp {
+				if bp == nil {
+					b.Breakpoints[i] = &dap.Breakpoint{Verified: false}
+					continue
+				}
+
+				if !a.ccaps.LinesStartAt1 {
+					bp.Line++
+				}
+				if !a.ccaps.ColumnsStartAt1 {
+					bp.Column++
+				}
+
+				b.Breakpoints[i] = &dap.Breakpoint{
+					Verified: true,
+					Line:     bp.Line,
+					Column:   bp.Column,
+				}
+			}
+
 			success = true
 
 		case "configurationDone":
@@ -228,7 +295,7 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 
 					src = new(dap.Source)
 					src.Path = pos.Filename
-					if src.Path == "_.go" && a.opts.SrcPath != "" {
+					if a.opts.SrcPath != "" && src.Path == "_.go" {
 						src.Path = a.opts.SrcPath
 					}
 					src.Name = filepath.Base(src.Path)

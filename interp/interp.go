@@ -169,6 +169,7 @@ type Interpreter struct {
 	srcPkg   imports           // source packages used in interpreter, indexed by path
 	pkgNames map[string]string // package names, indexed by import path
 	done     chan struct{}     // for cancellation of channel operations
+	roots    []*node
 
 	hooks *hooks // symbol hooks
 }
