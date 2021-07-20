@@ -77,11 +77,12 @@ func main() {
 
 	buf := new(bytes.Buffer)
 	w := &writer{
-		Writer:    buf,
-		Schema:    &schema,
-		Name:      "Schema",
-		Embed:     *dapMode,
-		OmitEmpty: *dapMode,
+		Writer:     buf,
+		Schema:     &schema,
+		Name:       "Schema",
+		Embed:      *dapMode,
+		OmitEmpty:  *dapMode,
+		NoOptional: !*dapMode,
 	}
 	w.init()
 

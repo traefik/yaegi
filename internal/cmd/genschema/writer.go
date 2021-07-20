@@ -15,10 +15,11 @@ type Schema_Type = jsonx.Schema_Type
 
 type writer struct {
 	io.Writer
-	Schema    *Schema
-	Name      string
-	Embed     bool
-	OmitEmpty bool
+	Schema     *Schema
+	Name       string
+	Embed      bool
+	OmitEmpty  bool
+	NoOptional bool
 
 	seen       map[*Schema]Type
 	seenPlain  map[SimpleTypes]Type
@@ -305,15 +306,16 @@ func (w *writer) writeProperties(name string, s *Schema) {
 
 		w.properties[name][prop] = true
 
-		if prop[0] == '$' {
-			prop = prop[1:]
-		}
-
 		fname := camelCase(prop)
 		ftype := w.writeSchema(name+"_"+fname, s)
 
 		var typ string
-		if required[prop] {
+		if w.NoOptional {
+			typ = ftype.Name
+			if ftype.Kind == Struct {
+				typ = "*" + typ
+			}
+		} else if required[prop] {
 			typ = ftype.Name
 		} else if ftype.Kind == Primitive {
 			ftype = w.writeNullableType(ftype.Type)
