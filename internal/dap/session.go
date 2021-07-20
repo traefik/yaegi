@@ -148,12 +148,7 @@ func (s *Session) initialize() {
 		return
 	}
 
-	args, ok := req.Arguments.(*InitializeRequestArguments)
-	if !ok {
-		s.errorf("initialize: expected initialize request arguments, got %T", req.Arguments)
-		return
-	}
-
+	args := req.Arguments.(*InitializeRequestArguments)
 	caps := s.handler.Initialize(s, args)
 	err = s.Respond(req, true, "Success", caps)
 	if err != nil {

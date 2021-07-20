@@ -20,6 +20,11 @@ func NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{w}
 }
 
+// Encode marshalls a DAP message.
+//
+// Encode will fail if seq has not been set. Encode will fail if the
+// arguments/body of a request, response, or event does not match its
+// command/event field.
 func (c *Encoder) Encode(msg IProtocolMessage) error {
 	json, err := json.Marshal(msg)
 	if err != nil {
@@ -45,6 +50,9 @@ func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{bufio.NewReader(r)}
 }
 
+// Decode unmarshalls a DAP message. Decode guarantees that the arguments/body
+// of a successfully decoded request, response, or event will match the
+// command/event field.
 func (c *Decoder) Decode() (IProtocolMessage, error) {
 	buf := new(bytes.Buffer)
 	for {
