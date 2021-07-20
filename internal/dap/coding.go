@@ -12,8 +12,6 @@ import (
 
 var ErrInvalidContentLength = errors.New("invalid content length")
 
-//go:generate go run ../cmd/json_schema --dap-mode --name dap --path types.go --patch patch.json --url https://microsoft.github.io/debug-adapter-protocol/debugAdapterProtocol.json
-
 type Encoder struct {
 	w io.Writer
 }
@@ -23,11 +21,6 @@ func NewEncoder(w io.Writer) *Encoder {
 }
 
 func (c *Encoder) Encode(msg IProtocolMessage) error {
-	err := msg.prepareForEncoding()
-	if err != nil {
-		return err
-	}
-
 	json, err := json.Marshal(msg)
 	if err != nil {
 		return err
@@ -158,334 +151,129 @@ func (m *ProtocolMessage) prepareForEncoding() error {
 	return nil
 }
 
-func (m *Request) prepareForEncoding() error {
+func (m *Request) MarshalJSON() ([]byte, error) {
 	m.Type = ProtocolMessageType_Request
 
 	hasCmd := m.Command != ""
 	hasArgs := m.Arguments != nil
 	if !hasCmd && !hasArgs {
-		return errors.New("command and arguments unset")
+		return nil, errors.New("command and arguments unset")
 	} else if !hasCmd {
 		m.Command = m.Arguments.requestType()
 	} else if !hasArgs {
 		// ok
 	} else if m.Command != m.Arguments.requestType() {
-		return fmt.Errorf("command is %q but arguments is %q", m.Command, m.Arguments.requestType())
+		return nil, fmt.Errorf("command is %q but arguments is %q", m.Command, m.Arguments.requestType())
 	}
 
-	return m.ProtocolMessage.prepareForEncoding()
+	err := m.ProtocolMessage.prepareForEncoding()
+	if err != nil {
+		return nil, err
+	}
+
+	type T Request
+	return json.Marshal((*T)(m))
 }
 
-func (m *Response) prepareForEncoding() error {
+func (m *Response) MarshalJSON() ([]byte, error) {
 	m.Type = ProtocolMessageType_Response
 
 	hasCmd := m.Command != ""
 	hasBody := m.Body != nil
 	if !hasCmd && !hasBody {
-		return errors.New("command and body unset")
+		return nil, errors.New("command and body unset")
 	} else if !hasCmd {
 		m.Command = m.Body.responseType()
 	} else if !hasBody {
 		// ok
 	} else if m.Command != m.Body.responseType() {
-		return fmt.Errorf("command is %q but body is %q", m.Command, m.Body.responseType())
+		return nil, fmt.Errorf("command is %q but body is %q", m.Command, m.Body.responseType())
 	}
 
 	if m.RequestSeq == 0 {
-		return errors.New("request_seq unset")
+		return nil, errors.New("request_seq unset")
 	}
 
-	return m.ProtocolMessage.prepareForEncoding()
+	err := m.ProtocolMessage.prepareForEncoding()
+	if err != nil {
+		return nil, err
+	}
+
+	type T Response
+	return json.Marshal((*T)(m))
 }
 
-func (m *Event) prepareForEncoding() error {
+func (m *Event) MarshalJSON() ([]byte, error) {
 	m.Type = ProtocolMessageType_Event
 
 	hasEvt := m.Event != ""
 	hasBody := m.Body != nil
 	if !hasEvt && !hasBody {
-		return errors.New("event and body unset")
+		return nil, errors.New("event and body unset")
 	} else if !hasEvt {
 		m.Event = m.Body.eventType()
 	} else if !hasBody {
 		// ok
 	} else if m.Event != m.Body.eventType() {
-		return fmt.Errorf("event is %q but body is %q", m.Event, m.Body.eventType())
+		return nil, fmt.Errorf("event is %q but body is %q", m.Event, m.Body.eventType())
 	}
 
-	return m.ProtocolMessage.prepareForEncoding()
+	err := m.ProtocolMessage.prepareForEncoding()
+	if err != nil {
+		return nil, err
+	}
+
+	type T Event
+	return json.Marshal((*T)(m))
 }
 
-func (r *Request) UnmarshalJSON(b []byte) error {
+func (m *Request) UnmarshalJSON(b []byte) error {
 	var x struct{ Command string }
 	err := json.Unmarshal(b, &x)
 	if err != nil {
 		return err
 	}
 
-	switch x.Command {
-	case "cancel":
-		r.Arguments = new(CancelArguments)
-	case "runInTerminal":
-		r.Arguments = new(RunInTerminalRequestArguments)
-	case "initialize":
-		r.Arguments = new(InitializeRequestArguments)
-	case "configurationDone":
-		r.Arguments = new(ConfigurationDoneArguments)
-	case "launch":
-		r.Arguments = new(LaunchRequestArguments)
-	case "attach":
-		r.Arguments = new(AttachRequestArguments)
-	case "restart":
-		r.Arguments = new(RestartArguments)
-	case "disconnect":
-		r.Arguments = new(DisconnectArguments)
-	case "terminate":
-		r.Arguments = new(TerminateArguments)
-	case "breakpointLocations":
-		r.Arguments = new(BreakpointLocationsArguments)
-	case "setBreakpoints":
-		r.Arguments = new(SetBreakpointsArguments)
-	case "setFunctionBreakpoints":
-		r.Arguments = new(SetFunctionBreakpointsArguments)
-	case "setExceptionBreakpoints":
-		r.Arguments = new(SetExceptionBreakpointsArguments)
-	case "dataBreakpointInfo":
-		r.Arguments = new(DataBreakpointInfoArguments)
-	case "setDataBreakpoints":
-		r.Arguments = new(SetDataBreakpointsArguments)
-	case "setInstructionBreakpoints":
-		r.Arguments = new(SetInstructionBreakpointsArguments)
-	case "continue":
-		r.Arguments = new(ContinueArguments)
-	case "next":
-		r.Arguments = new(NextArguments)
-	case "stepIn":
-		r.Arguments = new(StepInArguments)
-	case "stepOut":
-		r.Arguments = new(StepOutArguments)
-	case "stepBack":
-		r.Arguments = new(StepBackArguments)
-	case "reverseContinue":
-		r.Arguments = new(ReverseContinueArguments)
-	case "restartFrame":
-		r.Arguments = new(RestartFrameArguments)
-	case "goto":
-		r.Arguments = new(GotoArguments)
-	case "pause":
-		r.Arguments = new(PauseArguments)
-	case "stackTrace":
-		r.Arguments = new(StackTraceArguments)
-	case "scopes":
-		r.Arguments = new(ScopesArguments)
-	case "variables":
-		r.Arguments = new(VariablesArguments)
-	case "setVariable":
-		r.Arguments = new(SetVariableArguments)
-	case "source":
-		r.Arguments = new(SourceArguments)
-	case "threads":
-		r.Arguments = new(ThreadsArguments)
-	case "terminateThreads":
-		r.Arguments = new(TerminateThreadsArguments)
-	case "modules":
-		r.Arguments = new(ModulesArguments)
-	case "loadedSources":
-		r.Arguments = new(LoadedSourcesArguments)
-	case "evaluate":
-		r.Arguments = new(EvaluateArguments)
-	case "setExpression":
-		r.Arguments = new(SetExpressionArguments)
-	case "stepInTargets":
-		r.Arguments = new(StepInTargetsArguments)
-	case "gotoTargets":
-		r.Arguments = new(GotoTargetsArguments)
-	case "completions":
-		r.Arguments = new(CompletionsArguments)
-	case "exceptionInfo":
-		r.Arguments = new(ExceptionInfoArguments)
-	case "readMemory":
-		r.Arguments = new(ReadMemoryArguments)
-	case "disassemble":
-		r.Arguments = new(DisassembleArguments)
-	default:
-		return fmt.Errorf("unrecognized command %q", r.Type)
+	m.Arguments, err = newRequest(x.Command)
+	if err != nil {
+		return err
 	}
 
 	type T Request
-	return json.Unmarshal(b, (*T)(r))
+	return json.Unmarshal(b, (*T)(m))
 }
 
-func (r *Response) UnmarshalJSON(b []byte) error {
+func (m *Response) UnmarshalJSON(b []byte) error {
 	var x struct{ Command string }
 	err := json.Unmarshal(b, &x)
 	if err != nil {
 		return err
 	}
 
-	switch x.Command {
-	case "initialize":
-		r.Body = new(Capabilities)
-	case "error":
-		r.Body = new(ErrorResponseBody)
-	case "cancel":
-		r.Body = new(CancelResponseBody)
-	case "runInTerminal":
-		r.Body = new(RunInTerminalResponseBody)
-	case "configurationDone":
-		r.Body = new(ConfigurationDoneResponseBody)
-	case "launch":
-		r.Body = new(LaunchResponseBody)
-	case "attach":
-		r.Body = new(AttachResponseBody)
-	case "restart":
-		r.Body = new(RestartResponseBody)
-	case "disconnect":
-		r.Body = new(DisconnectResponseBody)
-	case "terminate":
-		r.Body = new(TerminateResponseBody)
-	case "breakpointLocations":
-		r.Body = new(BreakpointLocationsResponseBody)
-	case "setBreakpoints":
-		r.Body = new(SetBreakpointsResponseBody)
-	case "setFunctionBreakpoints":
-		r.Body = new(SetFunctionBreakpointsResponseBody)
-	case "setExceptionBreakpoints":
-		r.Body = new(SetExceptionBreakpointsResponseBody)
-	case "dataBreakpointInfo":
-		r.Body = new(DataBreakpointInfoResponseBody)
-	case "setDataBreakpoints":
-		r.Body = new(SetDataBreakpointsResponseBody)
-	case "setInstructionBreakpoints":
-		r.Body = new(SetInstructionBreakpointsResponseBody)
-	case "continue":
-		r.Body = new(ContinueResponseBody)
-	case "next":
-		r.Body = new(NextResponseBody)
-	case "stepIn":
-		r.Body = new(StepInResponseBody)
-	case "stepOut":
-		r.Body = new(StepOutResponseBody)
-	case "stepBack":
-		r.Body = new(StepBackResponseBody)
-	case "reverseContinue":
-		r.Body = new(ReverseContinueResponseBody)
-	case "restartFrame":
-		r.Body = new(RestartFrameResponseBody)
-	case "goto":
-		r.Body = new(GotoResponseBody)
-	case "pause":
-		r.Body = new(PauseResponseBody)
-	case "stackTrace":
-		r.Body = new(StackTraceResponseBody)
-	case "scopes":
-		r.Body = new(ScopesResponseBody)
-	case "variables":
-		r.Body = new(VariablesResponseBody)
-	case "setVariable":
-		r.Body = new(SetVariableResponseBody)
-	case "source":
-		r.Body = new(SourceResponseBody)
-	case "threads":
-		r.Body = new(ThreadsResponseBody)
-	case "terminateThreads":
-		r.Body = new(TerminateThreadsResponseBody)
-	case "modules":
-		r.Body = new(ModulesResponseBody)
-	case "loadedSources":
-		r.Body = new(LoadedSourcesResponseBody)
-	case "evaluate":
-		r.Body = new(EvaluateResponseBody)
-	case "setExpression":
-		r.Body = new(SetExpressionResponseBody)
-	case "stepInTargets":
-		r.Body = new(StepInTargetsResponseBody)
-	case "gotoTargets":
-		r.Body = new(GotoTargetsResponseBody)
-	case "completions":
-		r.Body = new(CompletionsResponseBody)
-	case "exceptionInfo":
-		r.Body = new(ExceptionInfoResponseBody)
-	case "readMemory":
-		r.Body = new(ReadMemoryResponseBody)
-	case "disassemble":
-		r.Body = new(DisassembleResponseBody)
-	default:
-		return fmt.Errorf("unrecognized command %q", r.Type)
+	m.Body, err = newResponse(x.Command)
+	if err != nil {
+		return err
 	}
 
 	type T Response
-	return json.Unmarshal(b, (*T)(r))
+	return json.Unmarshal(b, (*T)(m))
 }
 
-func (e *Event) UnmarshalJSON(b []byte) error {
+func (m *Event) UnmarshalJSON(b []byte) error {
 	var x struct{ Event string }
 	err := json.Unmarshal(b, &x)
 	if err != nil {
 		return err
 	}
 
-	switch x.Event {
-	case "initialized":
-		e.Body = new(InitializedEventBody)
-	case "stopped":
-		e.Body = new(StoppedEventBody)
-	case "continued":
-		e.Body = new(ContinuedEventBody)
-	case "exited":
-		e.Body = new(ExitedEventBody)
-	case "terminated":
-		e.Body = new(TerminatedEventBody)
-	case "thread":
-		e.Body = new(ThreadEventBody)
-	case "output":
-		e.Body = new(OutputEventBody)
-	case "breakpoint":
-		e.Body = new(BreakpointEventBody)
-	case "module":
-		e.Body = new(ModuleEventBody)
-	case "loadedSource":
-		e.Body = new(LoadedSourceEventBody)
-	case "process":
-		e.Body = new(ProcessEventBody)
-	case "capabilities":
-		e.Body = new(CapabilitiesEventBody)
-	case "progressStart":
-		e.Body = new(ProgressStartEventBody)
-	case "progressUpdate":
-		e.Body = new(ProgressUpdateEventBody)
-	case "progressEnd":
-		e.Body = new(ProgressEndEventBody)
-	case "invalidated":
-		e.Body = new(InvalidatedEventBody)
-	default:
-		return fmt.Errorf("unrecognized command %q", e.Type)
+	m.Body, err = newEvent(m.Event)
+	if err != nil {
+		return err
 	}
 
 	type T Event
-	return json.Unmarshal(b, (*T)(e))
+	return json.Unmarshal(b, (*T)(m))
 }
 
 type ConfigurationDoneArguments struct{}
-type ThreadsArguments struct{}
 type LoadedSourcesArguments struct{}
-
-type CancelResponseBody struct{}
-type ConfigurationDoneResponseBody struct{}
-type LaunchResponseBody struct{}
-type AttachResponseBody struct{}
-type RestartResponseBody struct{}
-type DisconnectResponseBody struct{}
-type TerminateResponseBody struct{}
-type SetExceptionBreakpointsResponseBody struct{}
-type NextResponseBody struct{}
-type StepInResponseBody struct{}
-type StepOutResponseBody struct{}
-type StepBackResponseBody struct{}
-type ReverseContinueResponseBody struct{}
-type RestartFrameResponseBody struct{}
-type GotoResponseBody struct{}
-type PauseResponseBody struct{}
-type TerminateThreadsResponseBody struct{}
-
-type InitializedEventBody struct{}

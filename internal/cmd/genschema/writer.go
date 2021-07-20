@@ -5,7 +5,13 @@ import (
 	"io"
 	"os"
 	"sort"
+
+	"github.com/traefik/yaegi/internal/jsonx"
 )
+
+type Schema = jsonx.Schema
+type SimpleTypes = jsonx.SimpleTypes
+type Schema_Type = jsonx.Schema_Type
 
 type writer struct {
 	io.Writer
@@ -118,31 +124,31 @@ func (w *writer) writeType(name string, s *Schema) string {
 	}
 
 	switch s.Type[0] {
-	case SimpleTypes_Object:
+	case jsonx.SimpleTypes_Object:
 		return w.writeObjectType(name, s)
 
-	case SimpleTypes_Array:
+	case jsonx.SimpleTypes_Array:
 		if s.AdditionalItems != nil {
 			fatalf("type %q: additionalItems not supported\n", name)
 		}
 		return "[]" + w.writeSchema(name+"__Items", s.Items)
 
-	case SimpleTypes_Boolean:
+	case jsonx.SimpleTypes_Boolean:
 		if isPlainExceptDefault(s) && s.Default == false {
 			return w.writePlainType("boolean")
 		}
 
-	case SimpleTypes_Integer:
+	case jsonx.SimpleTypes_Integer:
 		if isPlainExceptDefault(s) && s.Default == float64(0) {
 			return w.writePlainType("integer")
 		}
 
-	case SimpleTypes_Number:
+	case jsonx.SimpleTypes_Number:
 		if isPlainExceptDefault(s) && s.Default == float64(0) {
 			return w.writePlainType("number")
 		}
 
-	case SimpleTypes_String:
+	case jsonx.SimpleTypes_String:
 		if isPlainExceptDefault(s) && s.Default == "" {
 			return w.writePlainType("string")
 		}
@@ -159,22 +165,22 @@ func (w *writer) writePlainType(name SimpleTypes) (typ string) {
 	defer func() { w.seenPlain[name] = typ }()
 
 	switch name {
-	case SimpleTypes_Object:
+	case jsonx.SimpleTypes_Object:
 		return "map[string]interface{}"
 
-	case SimpleTypes_Array:
+	case jsonx.SimpleTypes_Array:
 		return "[]interface{}"
 
-	case SimpleTypes_Boolean:
+	case jsonx.SimpleTypes_Boolean:
 		return "bool"
 
-	case SimpleTypes_Integer:
+	case jsonx.SimpleTypes_Integer:
 		return "int"
 
-	case SimpleTypes_Number:
+	case jsonx.SimpleTypes_Number:
 		return "float64"
 
-	case SimpleTypes_String:
+	case jsonx.SimpleTypes_String:
 		return "string"
 
 	default:

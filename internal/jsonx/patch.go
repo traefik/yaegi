@@ -1,11 +1,46 @@
-package main
+package jsonx
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 )
+
+func ApplyPatch(target []byte, patchPath string) ([]byte, error) {
+	f, err := os.Open(patchPath)
+	if err != nil {
+		return nil, fmt.Errorf("read (patch): %v\n", err)
+	}
+
+	var p Patch
+	err = json.NewDecoder(f).Decode(&p)
+	if err != nil {
+		return nil, fmt.Errorf("json (patch): %v\n", err)
+	}
+
+	var v interface{}
+	err = json.Unmarshal(target, &v)
+	if err != nil {
+		return nil, fmt.Errorf("json (target): %v\n", err)
+	}
+
+	for i, p := range p {
+		err = p.Apply(&v)
+		if err != nil {
+			return nil, fmt.Errorf("patch [%d]: %v\n", i, err)
+		}
+	}
+
+	target, err = json.Marshal(v)
+	if err != nil {
+		return nil, fmt.Errorf("json (marshal): %v\n", err)
+	}
+
+	return target, nil
+}
 
 type PatchOpType string
 
