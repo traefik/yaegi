@@ -111,17 +111,17 @@ func main() {
 		w.writeSchema(w.Name, w.Schema)
 	}
 
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, *filePath, buf, parser.ParseComments)
-	if err != nil {
-		fatalf("json: %v\n", err)
-	}
-
 	f, err := os.Create(*filePath)
 	if err != nil {
 		fatalf("json: %v\n", err)
 	}
 	defer f.Close()
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, *filePath, buf, parser.ParseComments)
+	if err != nil {
+		fatalf("json: %v\n", err)
+	}
 
 	err = format.Node(f, fset, file)
 	if err != nil {
@@ -226,10 +226,14 @@ func schemaMerge(opts mergeOpts, name string, s, r *Schema) {
 	}
 
 	schemaReplaceField(opts, name, s, r, "Default")
+	schemaReplaceField(opts, name, s, r, "AdditionalItems")
+	schemaReplaceField(opts, name, s, r, "Items")
+	schemaReplaceField(opts, name, s, r, "Required")
 	schemaReplaceField(opts, name, s, r, "AdditionalProperties")
 	schemaReplaceField(opts, name, s, r, "Definitions")
 	schemaReplaceField(opts, name, s, r, "Properties")
 	schemaReplaceField(opts, name, s, r, "PatternProperties")
+	schemaReplaceField(opts, name, s, r, "Dependencies")
 	schemaReplaceField(opts, name, s, r, "Enum")
 	schemaReplaceField(opts, name, s, r, "Type")
 	schemaReplaceField(opts, name, s, r, "AllOf")

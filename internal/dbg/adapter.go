@@ -78,7 +78,7 @@ func (a *Adapter) stdin(b []byte) (int, error) {
 
 func (a *Adapter) stdout(b []byte) (int, error) {
 	err := a.session.Event("output", &dap.OutputEventBody{
-		Category: "stdout",
+		Category: dap.Str("stdout"),
 		Output:   string(b),
 	})
 	return len(b), err
@@ -86,7 +86,7 @@ func (a *Adapter) stdout(b []byte) (int, error) {
 
 func (a *Adapter) stderr(b []byte) (int, error) {
 	err := a.session.Event("output", &dap.OutputEventBody{
-		Category: "stderr",
+		Category: dap.Str("stderr"),
 		Output:   string(b),
 	})
 	return len(b), err
@@ -96,7 +96,7 @@ func (a *Adapter) stderr(b []byte) (int, error) {
 func (a *Adapter) Initialize(s *dap.Session, ccaps *dap.InitializeRequestArguments) *dap.Capabilities {
 	a.session, a.ccaps = s, ccaps
 	return &dap.Capabilities{
-		SupportsConfigurationDoneRequest: true,
+		SupportsConfigurationDoneRequest: dap.Bool(true),
 	}
 }
 
@@ -124,7 +124,7 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 			} else {
 				stop = true
 				a.session.Event("output", &dap.OutputEventBody{
-					Category: "stderr",
+					Category: dap.Str("stderr"),
 					Output:   err.Error(),
 					Data:     err,
 				})
@@ -148,7 +148,7 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 
 				a.event = e
 				body := new(dap.StoppedEventBody)
-				body.ThreadId = 1
+				body.ThreadId = dap.Int(1)
 				switch e.Reason() {
 				case interp.DebugBreak:
 					body.Reason = "breakpoint"
@@ -164,12 +164,12 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 
 		case "setBreakpoints":
 			args := m.Arguments.(*dap.SetBreakpointsArguments)
-			if args.Source == nil {
+			if args.Source.Path == nil {
 				message = "Missing source"
 				break
 			}
 
-			path := args.Source.Path
+			path := args.Source.Path.Get()
 			if a.opts.SrcPath != "" && path == a.opts.SrcPath {
 				path = "_.go"
 			}
@@ -179,16 +179,16 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 				bp = make([]*interp.Breakpoint, len(args.Breakpoints))
 				for i := range bp {
 					b := args.Breakpoints[i]
-					if !a.ccaps.LinesStartAt1 {
+					if a.ccaps.LinesStartAt1.False() {
 						b.Line++
 					}
-					if !a.ccaps.ColumnsStartAt1 {
-						b.Column++
+					if b.Column != nil && a.ccaps.ColumnsStartAt1.False() {
+						*b.Column++
 					}
 
 					bp[i] = &interp.Breakpoint{
 						Line:   b.Line,
-						Column: b.Column,
+						Column: b.Column.GetOr(0),
 					}
 				}
 
@@ -196,7 +196,7 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 				bp = make([]*interp.Breakpoint, len(args.Lines))
 				for i := range bp {
 					l := args.Lines[i]
-					if !a.ccaps.LinesStartAt1 {
+					if a.ccaps.LinesStartAt1.False() {
 						l++
 					}
 
@@ -216,17 +216,17 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 					continue
 				}
 
-				if !a.ccaps.LinesStartAt1 {
-					bp.Line++
+				if a.ccaps.LinesStartAt1.False() {
+					bp.Line--
 				}
-				if !a.ccaps.ColumnsStartAt1 {
-					bp.Column++
+				if a.ccaps.ColumnsStartAt1.False() {
+					bp.Column--
 				}
 
 				b.Breakpoints[i] = &dap.Breakpoint{
 					Verified: true,
-					Line:     bp.Line,
-					Column:   bp.Column,
+					Line:     dap.Int(bp.Line),
+					Column:   dap.Int(bp.Column),
 				}
 			}
 
@@ -274,31 +274,31 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 			b := new(dap.StackTraceResponseBody)
 			body = b
 
-			b.TotalFrames = a.event.FrameDepth()
-			end := b.TotalFrames
-			if args.Levels > 0 {
-				end = args.StartFrame + args.Levels
+			b.TotalFrames = dap.Int(a.event.FrameDepth())
+			end := b.TotalFrames.Get()
+			if args.Levels.GetOr(0) > 0 {
+				end = args.StartFrame.GetOr(0) + args.Levels.Get()
 			}
 
-			frames := a.event.Frames(args.StartFrame, end)
+			frames := a.event.Frames(args.StartFrame.GetOr(0), end)
 			b.StackFrames = make([]*dap.StackFrame, len(frames))
 			for i, f := range frames {
 				var src *dap.Source
 				pos := f.Position()
 				if pos != (token.Position{}) {
-					if !a.ccaps.LinesStartAt1 {
+					if a.ccaps.LinesStartAt1.False() {
 						pos.Line--
 					}
-					if !a.ccaps.ColumnsStartAt1 {
+					if a.ccaps.ColumnsStartAt1.False() {
 						pos.Column--
 					}
 
 					src = new(dap.Source)
-					src.Path = pos.Filename
-					if a.opts.SrcPath != "" && src.Path == "_.go" {
-						src.Path = a.opts.SrcPath
+					src.Path = dap.Str(pos.Filename)
+					if a.opts.SrcPath != "" && pos.Filename == "_.go" {
+						src.Path = dap.Str(a.opts.SrcPath)
 					}
-					src.Name = filepath.Base(src.Path)
+					src.Name = dap.Str(filepath.Base(src.Path.Get()))
 				}
 
 				b.StackFrames[i] = &dap.StackFrame{
@@ -315,7 +315,7 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 			args := m.Arguments.(*dap.ScopesArguments)
 			body = &dap.ScopesResponseBody{
 				Scopes: []*dap.Scope{
-					{Name: "Frame", PresentationHint: "Locals", VariablesReference: args.FrameId},
+					{Name: "Frame", PresentationHint: dap.Str("Locals"), VariablesReference: args.FrameId},
 				},
 			}
 
@@ -337,7 +337,7 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 				b.Variables = append(b.Variables, v)
 				v.Name = name
 				v.Value = fmt.Sprint(rv)
-				v.Type = fmt.Sprint(rv.Type())
+				v.Type = dap.Str(fmt.Sprint(rv.Type()))
 			}
 
 		case "terminate":

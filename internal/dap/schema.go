@@ -11,27 +11,39 @@ const (
 )
 
 type ProtocolMessage struct {
-	Seq  int                 `json:"seq,omitempty"`
-	Type ProtocolMessageType `json:"type,omitempty"`
+	Seq  int                 `json:"seq"`
+	Type ProtocolMessageType `json:"type"`
 }
 
 type Request struct {
 	ProtocolMessage
 	Arguments RequestArguments `json:"arguments,omitempty"`
-	Command   string           `json:"command,omitempty"`
+	Command   string           `json:"command"`
 }
 
 type AttachRequestArguments struct {
 	Restart interface{} `json:"__restart,omitempty"`
 }
 
+type String string
+
+func (v *String) Eq(u string) bool { return v != nil && string(*v) == u }
+func (v *String) Get() string      { return string(*v) }
+func (v *String) GetOr(u string) string {
+	if v == nil {
+		return u
+	} else {
+		return string(*v)
+	}
+}
+
 type Response struct {
 	ProtocolMessage
 	Body       ResponseBody `json:"body,omitempty"`
-	Command    string       `json:"command,omitempty"`
-	Message    string       `json:"message,omitempty"`
-	RequestSeq int          `json:"request_seq,omitempty"`
-	Success    bool         `json:"success,omitempty"`
+	Command    string       `json:"command"`
+	Message    *String      `json:"message,omitempty"`
+	RequestSeq int          `json:"request_seq"`
+	Success    bool         `json:"success"`
 }
 
 type SourcePresentationHint string
@@ -41,6 +53,18 @@ const (
 	SourcePresentationHint_Emphasize   SourcePresentationHint = "emphasize"
 	SourcePresentationHint_Deemphasize SourcePresentationHint = "deemphasize"
 )
+
+type Integer int
+
+func (v *Integer) Eq(u int) bool { return v != nil && int(*v) == u }
+func (v *Integer) Get() int      { return int(*v) }
+func (v *Integer) GetOr(u int) int {
+	if v == nil {
+		return u
+	} else {
+		return int(*v)
+	}
+}
 
 type ChecksumAlgorithm string
 
@@ -52,77 +76,82 @@ const (
 )
 
 type Checksum struct {
-	Algorithm ChecksumAlgorithm `json:"algorithm,omitempty"`
-	Checksum  string            `json:"checksum,omitempty"`
+	Algorithm ChecksumAlgorithm `json:"algorithm"`
+	Checksum  string            `json:"checksum"`
 }
 
 type Source struct {
-	AdapterData      interface{}            `json:"adapterData,omitempty"`
-	Checksums        []*Checksum            `json:"checksums,omitempty"`
-	Name             string                 `json:"name,omitempty"`
-	Origin           string                 `json:"origin,omitempty"`
-	Path             string                 `json:"path,omitempty"`
-	PresentationHint SourcePresentationHint `json:"presentationHint,omitempty"`
-	SourceReference  int                    `json:"sourceReference,omitempty"`
-	Sources          []*Source              `json:"sources,omitempty"`
+	AdapterData      interface{} `json:"adapterData,omitempty"`
+	Checksums        []*Checksum `json:"checksums,omitempty"`
+	Name             *String     `json:"name,omitempty"`
+	Origin           *String     `json:"origin,omitempty"`
+	Path             *String     `json:"path,omitempty"`
+	PresentationHint *String     `json:"presentationHint,omitempty"`
+	SourceReference  *Integer    `json:"sourceReference,omitempty"`
+	Sources          []*Source   `json:"sources,omitempty"`
 }
 
 type Breakpoint struct {
-	Column               int     `json:"column,omitempty"`
-	EndColumn            int     `json:"endColumn,omitempty"`
-	EndLine              int     `json:"endLine,omitempty"`
-	Id                   int     `json:"id,omitempty"`
-	InstructionReference string  `json:"instructionReference,omitempty"`
-	Line                 int     `json:"line,omitempty"`
-	Message              string  `json:"message,omitempty"`
-	Offset               int     `json:"offset,omitempty"`
-	Source               *Source `json:"source,omitempty"`
-	Verified             bool    `json:"verified,omitempty"`
+	Column               *Integer `json:"column,omitempty"`
+	EndColumn            *Integer `json:"endColumn,omitempty"`
+	EndLine              *Integer `json:"endLine,omitempty"`
+	Id                   *Integer `json:"id,omitempty"`
+	InstructionReference *String  `json:"instructionReference,omitempty"`
+	Line                 *Integer `json:"line,omitempty"`
+	Message              *String  `json:"message,omitempty"`
+	Offset               *Integer `json:"offset,omitempty"`
+	Source               *Source  `json:"source,omitempty"`
+	Verified             bool     `json:"verified"`
 }
 
 type Event struct {
 	ProtocolMessage
 	Body  EventBody `json:"body,omitempty"`
-	Event string    `json:"event,omitempty"`
+	Event string    `json:"event"`
 }
 
 type BreakpointEventBody struct {
-	Breakpoint *Breakpoint `json:"breakpoint,omitempty"`
-	Reason     string      `json:"reason,omitempty"`
+	Breakpoint Breakpoint `json:"breakpoint"`
+	Reason     string     `json:"reason"`
 }
 
 type BreakpointLocation struct {
-	Column    int `json:"column,omitempty"`
-	EndColumn int `json:"endColumn,omitempty"`
-	EndLine   int `json:"endLine,omitempty"`
-	Line      int `json:"line,omitempty"`
+	Column    *Integer `json:"column,omitempty"`
+	EndColumn *Integer `json:"endColumn,omitempty"`
+	EndLine   *Integer `json:"endLine,omitempty"`
+	Line      int      `json:"line"`
 }
 
 type BreakpointLocationsArguments struct {
-	Column    int     `json:"column,omitempty"`
-	EndColumn int     `json:"endColumn,omitempty"`
-	EndLine   int     `json:"endLine,omitempty"`
-	Line      int     `json:"line,omitempty"`
-	Source    *Source `json:"source,omitempty"`
+	Column    *Integer `json:"column,omitempty"`
+	EndColumn *Integer `json:"endColumn,omitempty"`
+	EndLine   *Integer `json:"endLine,omitempty"`
+	Line      int      `json:"line"`
+	Source    Source   `json:"source"`
 }
 
 type BreakpointLocationsResponseBody struct {
-	Breakpoints []*BreakpointLocation `json:"breakpoints,omitempty"`
+	Breakpoints []*BreakpointLocation `json:"breakpoints"`
 }
 
 type CancelArguments struct {
-	ProgressId string `json:"progressId,omitempty"`
-	RequestId  int    `json:"requestId,omitempty"`
+	ProgressId *String  `json:"progressId,omitempty"`
+	RequestId  *Integer `json:"requestId,omitempty"`
 }
 
-type ExceptionBreakpointsFilter struct {
-	ConditionDescription string `json:"conditionDescription,omitempty"`
-	Default              bool   `json:"default,omitempty"`
-	Description          string `json:"description,omitempty"`
-	Filter               string `json:"filter,omitempty"`
-	Label                string `json:"label,omitempty"`
-	SupportsCondition    bool   `json:"supportsCondition,omitempty"`
+type Boolean bool
+
+func (v *Boolean) Eq(u bool) bool { return v != nil && bool(*v) == u }
+func (v *Boolean) Get() bool      { return bool(*v) }
+func (v *Boolean) GetOr(u bool) bool {
+	if v == nil {
+		return u
+	} else {
+		return bool(*v)
+	}
 }
+func (v *Boolean) True() bool  { return v != nil && bool(*v) }
+func (v *Boolean) False() bool { return v != nil && !bool(*v) }
 
 type ColumnDescriptorType string
 
@@ -134,56 +163,65 @@ const (
 )
 
 type ColumnDescriptor struct {
-	AttributeName string               `json:"attributeName,omitempty"`
-	Format        string               `json:"format,omitempty"`
-	Label         string               `json:"label,omitempty"`
-	Type          ColumnDescriptorType `json:"type,omitempty"`
-	Width         int                  `json:"width,omitempty"`
+	AttributeName string   `json:"attributeName"`
+	Format        *String  `json:"format,omitempty"`
+	Label         string   `json:"label"`
+	Type          *String  `json:"type,omitempty"`
+	Width         *Integer `json:"width,omitempty"`
+}
+
+type ExceptionBreakpointsFilter struct {
+	ConditionDescription *String  `json:"conditionDescription,omitempty"`
+	Default              *Boolean `json:"default,omitempty"`
+	Description          *String  `json:"description,omitempty"`
+	Filter               string   `json:"filter"`
+	Label                string   `json:"label"`
+	SupportsCondition    *Boolean `json:"supportsCondition,omitempty"`
 }
 
 type Capabilities struct {
 	AdditionalModuleColumns            []*ColumnDescriptor           `json:"additionalModuleColumns,omitempty"`
 	CompletionTriggerCharacters        []string                      `json:"completionTriggerCharacters,omitempty"`
 	ExceptionBreakpointFilters         []*ExceptionBreakpointsFilter `json:"exceptionBreakpointFilters,omitempty"`
-	SupportSuspendDebuggee             bool                          `json:"supportSuspendDebuggee,omitempty"`
-	SupportTerminateDebuggee           bool                          `json:"supportTerminateDebuggee,omitempty"`
+	SupportSuspendDebuggee             *Boolean                      `json:"supportSuspendDebuggee,omitempty"`
+	SupportTerminateDebuggee           *Boolean                      `json:"supportTerminateDebuggee,omitempty"`
 	SupportedChecksumAlgorithms        []ChecksumAlgorithm           `json:"supportedChecksumAlgorithms,omitempty"`
-	SupportsBreakpointLocationsRequest bool                          `json:"supportsBreakpointLocationsRequest,omitempty"`
-	SupportsCancelRequest              bool                          `json:"supportsCancelRequest,omitempty"`
-	SupportsClipboardContext           bool                          `json:"supportsClipboardContext,omitempty"`
-	SupportsCompletionsRequest         bool                          `json:"supportsCompletionsRequest,omitempty"`
-	SupportsConditionalBreakpoints     bool                          `json:"supportsConditionalBreakpoints,omitempty"`
-	SupportsConfigurationDoneRequest   bool                          `json:"supportsConfigurationDoneRequest,omitempty"`
-	SupportsDataBreakpoints            bool                          `json:"supportsDataBreakpoints,omitempty"`
-	SupportsDelayedStackTraceLoading   bool                          `json:"supportsDelayedStackTraceLoading,omitempty"`
-	SupportsDisassembleRequest         bool                          `json:"supportsDisassembleRequest,omitempty"`
-	SupportsEvaluateForHovers          bool                          `json:"supportsEvaluateForHovers,omitempty"`
-	SupportsExceptionFilterOptions     bool                          `json:"supportsExceptionFilterOptions,omitempty"`
-	SupportsExceptionInfoRequest       bool                          `json:"supportsExceptionInfoRequest,omitempty"`
-	SupportsExceptionOptions           bool                          `json:"supportsExceptionOptions,omitempty"`
-	SupportsFunctionBreakpoints        bool                          `json:"supportsFunctionBreakpoints,omitempty"`
-	SupportsGotoTargetsRequest         bool                          `json:"supportsGotoTargetsRequest,omitempty"`
-	SupportsHitConditionalBreakpoints  bool                          `json:"supportsHitConditionalBreakpoints,omitempty"`
-	SupportsInstructionBreakpoints     bool                          `json:"supportsInstructionBreakpoints,omitempty"`
-	SupportsLoadedSourcesRequest       bool                          `json:"supportsLoadedSourcesRequest,omitempty"`
-	SupportsLogPoints                  bool                          `json:"supportsLogPoints,omitempty"`
-	SupportsModulesRequest             bool                          `json:"supportsModulesRequest,omitempty"`
-	SupportsReadMemoryRequest          bool                          `json:"supportsReadMemoryRequest,omitempty"`
-	SupportsRestartFrame               bool                          `json:"supportsRestartFrame,omitempty"`
-	SupportsRestartRequest             bool                          `json:"supportsRestartRequest,omitempty"`
-	SupportsSetExpression              bool                          `json:"supportsSetExpression,omitempty"`
-	SupportsSetVariable                bool                          `json:"supportsSetVariable,omitempty"`
-	SupportsStepBack                   bool                          `json:"supportsStepBack,omitempty"`
-	SupportsStepInTargetsRequest       bool                          `json:"supportsStepInTargetsRequest,omitempty"`
-	SupportsSteppingGranularity        bool                          `json:"supportsSteppingGranularity,omitempty"`
-	SupportsTerminateRequest           bool                          `json:"supportsTerminateRequest,omitempty"`
-	SupportsTerminateThreadsRequest    bool                          `json:"supportsTerminateThreadsRequest,omitempty"`
-	SupportsValueFormattingOptions     bool                          `json:"supportsValueFormattingOptions,omitempty"`
-	SupportsWriteMemoryRequest         bool                          `json:"supportsWriteMemoryRequest,omitempty"`
+	SupportsBreakpointLocationsRequest *Boolean                      `json:"supportsBreakpointLocationsRequest,omitempty"`
+	SupportsCancelRequest              *Boolean                      `json:"supportsCancelRequest,omitempty"`
+	SupportsClipboardContext           *Boolean                      `json:"supportsClipboardContext,omitempty"`
+	SupportsCompletionsRequest         *Boolean                      `json:"supportsCompletionsRequest,omitempty"`
+	SupportsConditionalBreakpoints     *Boolean                      `json:"supportsConditionalBreakpoints,omitempty"`
+	SupportsConfigurationDoneRequest   *Boolean                      `json:"supportsConfigurationDoneRequest,omitempty"`
+	SupportsDataBreakpoints            *Boolean                      `json:"supportsDataBreakpoints,omitempty"`
+	SupportsDelayedStackTraceLoading   *Boolean                      `json:"supportsDelayedStackTraceLoading,omitempty"`
+	SupportsDisassembleRequest         *Boolean                      `json:"supportsDisassembleRequest,omitempty"`
+	SupportsEvaluateForHovers          *Boolean                      `json:"supportsEvaluateForHovers,omitempty"`
+	SupportsExceptionFilterOptions     *Boolean                      `json:"supportsExceptionFilterOptions,omitempty"`
+	SupportsExceptionInfoRequest       *Boolean                      `json:"supportsExceptionInfoRequest,omitempty"`
+	SupportsExceptionOptions           *Boolean                      `json:"supportsExceptionOptions,omitempty"`
+	SupportsFunctionBreakpoints        *Boolean                      `json:"supportsFunctionBreakpoints,omitempty"`
+	SupportsGotoTargetsRequest         *Boolean                      `json:"supportsGotoTargetsRequest,omitempty"`
+	SupportsHitConditionalBreakpoints  *Boolean                      `json:"supportsHitConditionalBreakpoints,omitempty"`
+	SupportsInstructionBreakpoints     *Boolean                      `json:"supportsInstructionBreakpoints,omitempty"`
+	SupportsLoadedSourcesRequest       *Boolean                      `json:"supportsLoadedSourcesRequest,omitempty"`
+	SupportsLogPoints                  *Boolean                      `json:"supportsLogPoints,omitempty"`
+	SupportsModulesRequest             *Boolean                      `json:"supportsModulesRequest,omitempty"`
+	SupportsReadMemoryRequest          *Boolean                      `json:"supportsReadMemoryRequest,omitempty"`
+	SupportsRestartFrame               *Boolean                      `json:"supportsRestartFrame,omitempty"`
+	SupportsRestartRequest             *Boolean                      `json:"supportsRestartRequest,omitempty"`
+	SupportsSetExpression              *Boolean                      `json:"supportsSetExpression,omitempty"`
+	SupportsSetVariable                *Boolean                      `json:"supportsSetVariable,omitempty"`
+	SupportsStepBack                   *Boolean                      `json:"supportsStepBack,omitempty"`
+	SupportsStepInTargetsRequest       *Boolean                      `json:"supportsStepInTargetsRequest,omitempty"`
+	SupportsSteppingGranularity        *Boolean                      `json:"supportsSteppingGranularity,omitempty"`
+	SupportsTerminateRequest           *Boolean                      `json:"supportsTerminateRequest,omitempty"`
+	SupportsTerminateThreadsRequest    *Boolean                      `json:"supportsTerminateThreadsRequest,omitempty"`
+	SupportsValueFormattingOptions     *Boolean                      `json:"supportsValueFormattingOptions,omitempty"`
+	SupportsWriteMemoryRequest         *Boolean                      `json:"supportsWriteMemoryRequest,omitempty"`
 }
 
 type CapabilitiesEventBody struct {
-	Capabilities *Capabilities `json:"capabilities,omitempty"`
+	Capabilities Capabilities `json:"capabilities"`
 }
 
 type CompletionItemType string
@@ -211,38 +249,38 @@ const (
 )
 
 type CompletionItem struct {
-	Label           string             `json:"label,omitempty"`
-	Length          int                `json:"length,omitempty"`
-	SelectionLength int                `json:"selectionLength,omitempty"`
-	SelectionStart  int                `json:"selectionStart,omitempty"`
-	SortText        string             `json:"sortText,omitempty"`
-	Start           int                `json:"start,omitempty"`
-	Text            string             `json:"text,omitempty"`
-	Type            CompletionItemType `json:"type,omitempty"`
+	Label           string   `json:"label"`
+	Length          *Integer `json:"length,omitempty"`
+	SelectionLength *Integer `json:"selectionLength,omitempty"`
+	SelectionStart  *Integer `json:"selectionStart,omitempty"`
+	SortText        *String  `json:"sortText,omitempty"`
+	Start           *Integer `json:"start,omitempty"`
+	Text            *String  `json:"text,omitempty"`
+	Type            *String  `json:"type,omitempty"`
 }
 
 type CompletionsArguments struct {
-	Column  int    `json:"column,omitempty"`
-	FrameId int    `json:"frameId,omitempty"`
-	Line    int    `json:"line,omitempty"`
-	Text    string `json:"text,omitempty"`
+	Column  int      `json:"column"`
+	FrameId *Integer `json:"frameId,omitempty"`
+	Line    *Integer `json:"line,omitempty"`
+	Text    string   `json:"text"`
 }
 
 type CompletionsResponseBody struct {
-	Targets []*CompletionItem `json:"targets,omitempty"`
+	Targets []*CompletionItem `json:"targets"`
 }
 
 type ContinueArguments struct {
-	ThreadId int `json:"threadId,omitempty"`
+	ThreadId int `json:"threadId"`
 }
 
 type ContinueResponseBody struct {
-	AllThreadsContinued bool `json:"allThreadsContinued,omitempty"`
+	AllThreadsContinued *Boolean `json:"allThreadsContinued,omitempty"`
 }
 
 type ContinuedEventBody struct {
-	AllThreadsContinued bool `json:"allThreadsContinued,omitempty"`
-	ThreadId            int  `json:"threadId,omitempty"`
+	AllThreadsContinued *Boolean `json:"allThreadsContinued,omitempty"`
+	ThreadId            int      `json:"threadId"`
 }
 
 type DataBreakpointAccessType string
@@ -254,61 +292,61 @@ const (
 )
 
 type DataBreakpoint struct {
-	AccessType   DataBreakpointAccessType `json:"accessType,omitempty"`
-	Condition    string                   `json:"condition,omitempty"`
-	DataId       string                   `json:"dataId,omitempty"`
-	HitCondition string                   `json:"hitCondition,omitempty"`
+	AccessType   *String `json:"accessType,omitempty"`
+	Condition    *String `json:"condition,omitempty"`
+	DataId       string  `json:"dataId"`
+	HitCondition *String `json:"hitCondition,omitempty"`
 }
 
 type DataBreakpointInfoArguments struct {
-	Name               string `json:"name,omitempty"`
-	VariablesReference int    `json:"variablesReference,omitempty"`
+	Name               string   `json:"name"`
+	VariablesReference *Integer `json:"variablesReference,omitempty"`
 }
 
 type DataBreakpointInfoResponseBody struct {
 	AccessTypes []DataBreakpointAccessType `json:"accessTypes,omitempty"`
-	CanPersist  bool                       `json:"canPersist,omitempty"`
-	DataId      interface{}                `json:"dataId,omitempty"`
-	Description string                     `json:"description,omitempty"`
+	CanPersist  *Boolean                   `json:"canPersist,omitempty"`
+	DataId      interface{}                `json:"dataId"`
+	Description string                     `json:"description"`
 }
 
 type DisassembleArguments struct {
-	InstructionCount  int    `json:"instructionCount,omitempty"`
-	InstructionOffset int    `json:"instructionOffset,omitempty"`
-	MemoryReference   string `json:"memoryReference,omitempty"`
-	Offset            int    `json:"offset,omitempty"`
-	ResolveSymbols    bool   `json:"resolveSymbols,omitempty"`
+	InstructionCount  int      `json:"instructionCount"`
+	InstructionOffset *Integer `json:"instructionOffset,omitempty"`
+	MemoryReference   string   `json:"memoryReference"`
+	Offset            *Integer `json:"offset,omitempty"`
+	ResolveSymbols    *Boolean `json:"resolveSymbols,omitempty"`
 }
 
 type DisassembledInstruction struct {
-	Address          string  `json:"address,omitempty"`
-	Column           int     `json:"column,omitempty"`
-	EndColumn        int     `json:"endColumn,omitempty"`
-	EndLine          int     `json:"endLine,omitempty"`
-	Instruction      string  `json:"instruction,omitempty"`
-	InstructionBytes string  `json:"instructionBytes,omitempty"`
-	Line             int     `json:"line,omitempty"`
-	Location         *Source `json:"location,omitempty"`
-	Symbol           string  `json:"symbol,omitempty"`
+	Address          string   `json:"address"`
+	Column           *Integer `json:"column,omitempty"`
+	EndColumn        *Integer `json:"endColumn,omitempty"`
+	EndLine          *Integer `json:"endLine,omitempty"`
+	Instruction      string   `json:"instruction"`
+	InstructionBytes *String  `json:"instructionBytes,omitempty"`
+	Line             *Integer `json:"line,omitempty"`
+	Location         *Source  `json:"location,omitempty"`
+	Symbol           *String  `json:"symbol,omitempty"`
 }
 
 type DisassembleResponseBody struct {
-	Instructions []*DisassembledInstruction `json:"instructions,omitempty"`
+	Instructions []*DisassembledInstruction `json:"instructions"`
 }
 
 type DisconnectArguments struct {
-	Restart           bool `json:"restart,omitempty"`
-	SuspendDebuggee   bool `json:"suspendDebuggee,omitempty"`
-	TerminateDebuggee bool `json:"terminateDebuggee,omitempty"`
+	Restart           *Boolean `json:"restart,omitempty"`
+	SuspendDebuggee   *Boolean `json:"suspendDebuggee,omitempty"`
+	TerminateDebuggee *Boolean `json:"terminateDebuggee,omitempty"`
 }
 
 type Message struct {
-	Format        string            `json:"format,omitempty"`
-	Id            int               `json:"id,omitempty"`
-	SendTelemetry bool              `json:"sendTelemetry,omitempty"`
-	ShowUser      bool              `json:"showUser,omitempty"`
-	Url           string            `json:"url,omitempty"`
-	UrlLabel      string            `json:"urlLabel,omitempty"`
+	Format        string            `json:"format"`
+	Id            int               `json:"id"`
+	SendTelemetry *Boolean          `json:"sendTelemetry,omitempty"`
+	ShowUser      *Boolean          `json:"showUser,omitempty"`
+	Url           *String           `json:"url,omitempty"`
+	UrlLabel      *String           `json:"urlLabel,omitempty"`
 	Variables     map[string]string `json:"variables,omitempty"`
 }
 
@@ -317,30 +355,30 @@ type ErrorResponseBody struct {
 }
 
 type ValueFormat struct {
-	Hex bool `json:"hex,omitempty"`
+	Hex *Boolean `json:"hex,omitempty"`
 }
 
 type EvaluateArguments struct {
-	Context    string       `json:"context,omitempty"`
-	Expression string       `json:"expression,omitempty"`
+	Context    *String      `json:"context,omitempty"`
+	Expression string       `json:"expression"`
 	Format     *ValueFormat `json:"format,omitempty"`
-	FrameId    int          `json:"frameId,omitempty"`
+	FrameId    *Integer     `json:"frameId,omitempty"`
 }
 
 type VariablePresentationHint struct {
 	Attributes []string `json:"attributes,omitempty"`
-	Kind       string   `json:"kind,omitempty"`
-	Visibility string   `json:"visibility,omitempty"`
+	Kind       *String  `json:"kind,omitempty"`
+	Visibility *String  `json:"visibility,omitempty"`
 }
 
 type EvaluateResponseBody struct {
-	IndexedVariables   int                       `json:"indexedVariables,omitempty"`
-	MemoryReference    string                    `json:"memoryReference,omitempty"`
-	NamedVariables     int                       `json:"namedVariables,omitempty"`
+	IndexedVariables   *Integer                  `json:"indexedVariables,omitempty"`
+	MemoryReference    *String                   `json:"memoryReference,omitempty"`
+	NamedVariables     *Integer                  `json:"namedVariables,omitempty"`
 	PresentationHint   *VariablePresentationHint `json:"presentationHint,omitempty"`
-	Result             string                    `json:"result,omitempty"`
-	Type               string                    `json:"type,omitempty"`
-	VariablesReference int                       `json:"variablesReference,omitempty"`
+	Result             string                    `json:"result"`
+	Type               *String                   `json:"type,omitempty"`
+	VariablesReference int                       `json:"variablesReference"`
 }
 
 type ExceptionBreakMode string
@@ -353,106 +391,106 @@ const (
 )
 
 type ExceptionDetails struct {
-	EvaluateName   string              `json:"evaluateName,omitempty"`
-	FullTypeName   string              `json:"fullTypeName,omitempty"`
+	EvaluateName   *String             `json:"evaluateName,omitempty"`
+	FullTypeName   *String             `json:"fullTypeName,omitempty"`
 	InnerException []*ExceptionDetails `json:"innerException,omitempty"`
-	Message        string              `json:"message,omitempty"`
-	StackTrace     string              `json:"stackTrace,omitempty"`
-	TypeName       string              `json:"typeName,omitempty"`
+	Message        *String             `json:"message,omitempty"`
+	StackTrace     *String             `json:"stackTrace,omitempty"`
+	TypeName       *String             `json:"typeName,omitempty"`
 }
 
 type ExceptionFilterOptions struct {
-	Condition string `json:"condition,omitempty"`
-	FilterId  string `json:"filterId,omitempty"`
+	Condition *String `json:"condition,omitempty"`
+	FilterId  string  `json:"filterId"`
 }
 
 type ExceptionInfoArguments struct {
-	ThreadId int `json:"threadId,omitempty"`
+	ThreadId int `json:"threadId"`
 }
 
 type ExceptionInfoResponseBody struct {
-	BreakMode   ExceptionBreakMode `json:"breakMode,omitempty"`
-	Description string             `json:"description,omitempty"`
+	BreakMode   ExceptionBreakMode `json:"breakMode"`
+	Description *String            `json:"description,omitempty"`
 	Details     *ExceptionDetails  `json:"details,omitempty"`
-	ExceptionId string             `json:"exceptionId,omitempty"`
+	ExceptionId string             `json:"exceptionId"`
 }
 
 type ExceptionPathSegment struct {
-	Names  []string `json:"names,omitempty"`
-	Negate bool     `json:"negate,omitempty"`
+	Names  []string `json:"names"`
+	Negate *Boolean `json:"negate,omitempty"`
 }
 
 type ExceptionOptions struct {
-	BreakMode ExceptionBreakMode      `json:"breakMode,omitempty"`
+	BreakMode ExceptionBreakMode      `json:"breakMode"`
 	Path      []*ExceptionPathSegment `json:"path,omitempty"`
 }
 
 type ExitedEventBody struct {
-	ExitCode int `json:"exitCode,omitempty"`
+	ExitCode int `json:"exitCode"`
 }
 
 type FunctionBreakpoint struct {
-	Condition    string `json:"condition,omitempty"`
-	HitCondition string `json:"hitCondition,omitempty"`
-	Name         string `json:"name,omitempty"`
+	Condition    *String `json:"condition,omitempty"`
+	HitCondition *String `json:"hitCondition,omitempty"`
+	Name         string  `json:"name"`
 }
 
 type GotoArguments struct {
-	TargetId int `json:"targetId,omitempty"`
-	ThreadId int `json:"threadId,omitempty"`
+	TargetId int `json:"targetId"`
+	ThreadId int `json:"threadId"`
 }
 
 type GotoTarget struct {
-	Column                      int    `json:"column,omitempty"`
-	EndColumn                   int    `json:"endColumn,omitempty"`
-	EndLine                     int    `json:"endLine,omitempty"`
-	Id                          int    `json:"id,omitempty"`
-	InstructionPointerReference string `json:"instructionPointerReference,omitempty"`
-	Label                       string `json:"label,omitempty"`
-	Line                        int    `json:"line,omitempty"`
+	Column                      *Integer `json:"column,omitempty"`
+	EndColumn                   *Integer `json:"endColumn,omitempty"`
+	EndLine                     *Integer `json:"endLine,omitempty"`
+	Id                          int      `json:"id"`
+	InstructionPointerReference *String  `json:"instructionPointerReference,omitempty"`
+	Label                       string   `json:"label"`
+	Line                        int      `json:"line"`
 }
 
 type GotoTargetsArguments struct {
-	Column int     `json:"column,omitempty"`
-	Line   int     `json:"line,omitempty"`
-	Source *Source `json:"source,omitempty"`
+	Column *Integer `json:"column,omitempty"`
+	Line   int      `json:"line"`
+	Source Source   `json:"source"`
 }
 
 type GotoTargetsResponseBody struct {
-	Targets []*GotoTarget `json:"targets,omitempty"`
+	Targets []*GotoTarget `json:"targets"`
 }
 
 type InitializeRequestArguments struct {
-	AdapterID                    string `json:"adapterID,omitempty"`
-	ClientID                     string `json:"clientID,omitempty"`
-	ClientName                   string `json:"clientName,omitempty"`
-	ColumnsStartAt1              bool   `json:"columnsStartAt1,omitempty"`
-	LinesStartAt1                bool   `json:"linesStartAt1,omitempty"`
-	Locale                       string `json:"locale,omitempty"`
-	PathFormat                   string `json:"pathFormat,omitempty"`
-	SupportsInvalidatedEvent     bool   `json:"supportsInvalidatedEvent,omitempty"`
-	SupportsMemoryReferences     bool   `json:"supportsMemoryReferences,omitempty"`
-	SupportsProgressReporting    bool   `json:"supportsProgressReporting,omitempty"`
-	SupportsRunInTerminalRequest bool   `json:"supportsRunInTerminalRequest,omitempty"`
-	SupportsVariablePaging       bool   `json:"supportsVariablePaging,omitempty"`
-	SupportsVariableType         bool   `json:"supportsVariableType,omitempty"`
+	AdapterID                    string   `json:"adapterID"`
+	ClientID                     *String  `json:"clientID,omitempty"`
+	ClientName                   *String  `json:"clientName,omitempty"`
+	ColumnsStartAt1              *Boolean `json:"columnsStartAt1,omitempty"`
+	LinesStartAt1                *Boolean `json:"linesStartAt1,omitempty"`
+	Locale                       *String  `json:"locale,omitempty"`
+	PathFormat                   *String  `json:"pathFormat,omitempty"`
+	SupportsInvalidatedEvent     *Boolean `json:"supportsInvalidatedEvent,omitempty"`
+	SupportsMemoryReferences     *Boolean `json:"supportsMemoryReferences,omitempty"`
+	SupportsProgressReporting    *Boolean `json:"supportsProgressReporting,omitempty"`
+	SupportsRunInTerminalRequest *Boolean `json:"supportsRunInTerminalRequest,omitempty"`
+	SupportsVariablePaging       *Boolean `json:"supportsVariablePaging,omitempty"`
+	SupportsVariableType         *Boolean `json:"supportsVariableType,omitempty"`
 }
 
 type InstructionBreakpoint struct {
-	Condition            string `json:"condition,omitempty"`
-	HitCondition         string `json:"hitCondition,omitempty"`
-	InstructionReference string `json:"instructionReference,omitempty"`
-	Offset               int    `json:"offset,omitempty"`
+	Condition            *String  `json:"condition,omitempty"`
+	HitCondition         *String  `json:"hitCondition,omitempty"`
+	InstructionReference string   `json:"instructionReference"`
+	Offset               *Integer `json:"offset,omitempty"`
 }
 
 type InvalidatedEventBody struct {
 	Areas        []string `json:"areas,omitempty"`
-	StackFrameId int      `json:"stackFrameId,omitempty"`
-	ThreadId     int      `json:"threadId,omitempty"`
+	StackFrameId *Integer `json:"stackFrameId,omitempty"`
+	ThreadId     *Integer `json:"threadId,omitempty"`
 }
 
 type LaunchRequestArguments struct {
-	NoDebug bool        `json:"noDebug,omitempty"`
+	NoDebug *Boolean    `json:"noDebug,omitempty"`
 	Restart interface{} `json:"__restart,omitempty"`
 }
 
@@ -465,25 +503,25 @@ const (
 )
 
 type LoadedSourceEventBody struct {
-	Reason LoadedSourceEventBodyReason `json:"reason,omitempty"`
-	Source *Source                     `json:"source,omitempty"`
+	Reason LoadedSourceEventBodyReason `json:"reason"`
+	Source Source                      `json:"source"`
 }
 
 type LoadedSourcesResponseBody struct {
-	Sources []*Source `json:"sources,omitempty"`
+	Sources []*Source `json:"sources"`
 }
 
 type Module struct {
-	AddressRange   string      `json:"addressRange,omitempty"`
-	DateTimeStamp  string      `json:"dateTimeStamp,omitempty"`
-	Id             interface{} `json:"id,omitempty"`
-	IsOptimized    bool        `json:"isOptimized,omitempty"`
-	IsUserCode     bool        `json:"isUserCode,omitempty"`
-	Name           string      `json:"name,omitempty"`
-	Path           string      `json:"path,omitempty"`
-	SymbolFilePath string      `json:"symbolFilePath,omitempty"`
-	SymbolStatus   string      `json:"symbolStatus,omitempty"`
-	Version        string      `json:"version,omitempty"`
+	AddressRange   *String     `json:"addressRange,omitempty"`
+	DateTimeStamp  *String     `json:"dateTimeStamp,omitempty"`
+	Id             interface{} `json:"id"`
+	IsOptimized    *Boolean    `json:"isOptimized,omitempty"`
+	IsUserCode     *Boolean    `json:"isUserCode,omitempty"`
+	Name           string      `json:"name"`
+	Path           *String     `json:"path,omitempty"`
+	SymbolFilePath *String     `json:"symbolFilePath,omitempty"`
+	SymbolStatus   *String     `json:"symbolStatus,omitempty"`
+	Version        *String     `json:"version,omitempty"`
 }
 
 type ModuleEventBodyReason string
@@ -495,22 +533,22 @@ const (
 )
 
 type ModuleEventBody struct {
-	Module *Module               `json:"module,omitempty"`
-	Reason ModuleEventBodyReason `json:"reason,omitempty"`
+	Module Module                `json:"module"`
+	Reason ModuleEventBodyReason `json:"reason"`
 }
 
 type ModulesArguments struct {
-	ModuleCount int `json:"moduleCount,omitempty"`
-	StartModule int `json:"startModule,omitempty"`
+	ModuleCount *Integer `json:"moduleCount,omitempty"`
+	StartModule *Integer `json:"startModule,omitempty"`
 }
 
 type ModulesResponseBody struct {
-	Modules      []*Module `json:"modules,omitempty"`
-	TotalModules int       `json:"totalModules,omitempty"`
+	Modules      []*Module `json:"modules"`
+	TotalModules *Integer  `json:"totalModules,omitempty"`
 }
 
 type ModulesViewDescriptor struct {
-	Columns []*ColumnDescriptor `json:"columns,omitempty"`
+	Columns []*ColumnDescriptor `json:"columns"`
 }
 
 type SteppingGranularity string
@@ -522,8 +560,8 @@ const (
 )
 
 type NextArguments struct {
-	Granularity SteppingGranularity `json:"granularity,omitempty"`
-	ThreadId    int                 `json:"threadId,omitempty"`
+	Granularity *String `json:"granularity,omitempty"`
+	ThreadId    int     `json:"threadId"`
 }
 
 type OutputEventBodyGroup string
@@ -535,18 +573,18 @@ const (
 )
 
 type OutputEventBody struct {
-	Category           string               `json:"category,omitempty"`
-	Column             int                  `json:"column,omitempty"`
-	Data               interface{}          `json:"data,omitempty"`
-	Group              OutputEventBodyGroup `json:"group,omitempty"`
-	Line               int                  `json:"line,omitempty"`
-	Output             string               `json:"output,omitempty"`
-	Source             *Source              `json:"source,omitempty"`
-	VariablesReference int                  `json:"variablesReference,omitempty"`
+	Category           *String     `json:"category,omitempty"`
+	Column             *Integer    `json:"column,omitempty"`
+	Data               interface{} `json:"data,omitempty"`
+	Group              *String     `json:"group,omitempty"`
+	Line               *Integer    `json:"line,omitempty"`
+	Output             string      `json:"output"`
+	Source             *Source     `json:"source,omitempty"`
+	VariablesReference *Integer    `json:"variablesReference,omitempty"`
 }
 
 type PauseArguments struct {
-	ThreadId int `json:"threadId,omitempty"`
+	ThreadId int `json:"threadId"`
 }
 
 type ProcessEventBodyStartMethod string
@@ -558,43 +596,55 @@ const (
 )
 
 type ProcessEventBody struct {
-	IsLocalProcess  bool                        `json:"isLocalProcess,omitempty"`
-	Name            string                      `json:"name,omitempty"`
-	PointerSize     int                         `json:"pointerSize,omitempty"`
-	StartMethod     ProcessEventBodyStartMethod `json:"startMethod,omitempty"`
-	SystemProcessId int                         `json:"systemProcessId,omitempty"`
+	IsLocalProcess  *Boolean `json:"isLocalProcess,omitempty"`
+	Name            string   `json:"name"`
+	PointerSize     *Integer `json:"pointerSize,omitempty"`
+	StartMethod     *String  `json:"startMethod,omitempty"`
+	SystemProcessId *Integer `json:"systemProcessId,omitempty"`
 }
 
 type ProgressEndEventBody struct {
-	Message    string `json:"message,omitempty"`
-	ProgressId string `json:"progressId,omitempty"`
+	Message    *String `json:"message,omitempty"`
+	ProgressId string  `json:"progressId"`
+}
+
+type Number float64
+
+func (v *Number) Eq(u float64) bool { return v != nil && float64(*v) == u }
+func (v *Number) Get() float64      { return float64(*v) }
+func (v *Number) GetOr(u float64) float64 {
+	if v == nil {
+		return u
+	} else {
+		return float64(*v)
+	}
 }
 
 type ProgressStartEventBody struct {
-	Cancellable bool    `json:"cancellable,omitempty"`
-	Message     string  `json:"message,omitempty"`
-	Percentage  float64 `json:"percentage,omitempty"`
-	ProgressId  string  `json:"progressId,omitempty"`
-	RequestId   int     `json:"requestId,omitempty"`
-	Title       string  `json:"title,omitempty"`
+	Cancellable *Boolean `json:"cancellable,omitempty"`
+	Message     *String  `json:"message,omitempty"`
+	Percentage  *Number  `json:"percentage,omitempty"`
+	ProgressId  string   `json:"progressId"`
+	RequestId   *Integer `json:"requestId,omitempty"`
+	Title       string   `json:"title"`
 }
 
 type ProgressUpdateEventBody struct {
-	Message    string  `json:"message,omitempty"`
-	Percentage float64 `json:"percentage,omitempty"`
-	ProgressId string  `json:"progressId,omitempty"`
+	Message    *String `json:"message,omitempty"`
+	Percentage *Number `json:"percentage,omitempty"`
+	ProgressId string  `json:"progressId"`
 }
 
 type ReadMemoryArguments struct {
-	Count           int    `json:"count,omitempty"`
-	MemoryReference string `json:"memoryReference,omitempty"`
-	Offset          int    `json:"offset,omitempty"`
+	Count           int      `json:"count"`
+	MemoryReference string   `json:"memoryReference"`
+	Offset          *Integer `json:"offset,omitempty"`
 }
 
 type ReadMemoryResponseBody struct {
-	Address         string `json:"address,omitempty"`
-	Data            string `json:"data,omitempty"`
-	UnreadableBytes int    `json:"unreadableBytes,omitempty"`
+	Address         string   `json:"address"`
+	Data            *String  `json:"data,omitempty"`
+	UnreadableBytes *Integer `json:"unreadableBytes,omitempty"`
 }
 
 type RestartArguments struct {
@@ -602,11 +652,11 @@ type RestartArguments struct {
 }
 
 type RestartFrameArguments struct {
-	FrameId int `json:"frameId,omitempty"`
+	FrameId int `json:"frameId"`
 }
 
 type ReverseContinueArguments struct {
-	ThreadId int `json:"threadId,omitempty"`
+	ThreadId int `json:"threadId"`
 }
 
 type RunInTerminalRequestArgumentsKind string
@@ -617,128 +667,128 @@ const (
 )
 
 type RunInTerminalRequestArguments struct {
-	Args  []string                          `json:"args,omitempty"`
-	Cwd   string                            `json:"cwd,omitempty"`
-	Env   map[string]interface{}            `json:"env,omitempty"`
-	Kind  RunInTerminalRequestArgumentsKind `json:"kind,omitempty"`
-	Title string                            `json:"title,omitempty"`
+	Args  []string               `json:"args"`
+	Cwd   string                 `json:"cwd"`
+	Env   map[string]interface{} `json:"env,omitempty"`
+	Kind  *String                `json:"kind,omitempty"`
+	Title *String                `json:"title,omitempty"`
 }
 
 type RunInTerminalResponseBody struct {
-	ProcessId      int `json:"processId,omitempty"`
-	ShellProcessId int `json:"shellProcessId,omitempty"`
+	ProcessId      *Integer `json:"processId,omitempty"`
+	ShellProcessId *Integer `json:"shellProcessId,omitempty"`
 }
 
 type Scope struct {
-	Column             int     `json:"column,omitempty"`
-	EndColumn          int     `json:"endColumn,omitempty"`
-	EndLine            int     `json:"endLine,omitempty"`
-	Expensive          bool    `json:"expensive,omitempty"`
-	IndexedVariables   int     `json:"indexedVariables,omitempty"`
-	Line               int     `json:"line,omitempty"`
-	Name               string  `json:"name,omitempty"`
-	NamedVariables     int     `json:"namedVariables,omitempty"`
-	PresentationHint   string  `json:"presentationHint,omitempty"`
-	Source             *Source `json:"source,omitempty"`
-	VariablesReference int     `json:"variablesReference,omitempty"`
+	Column             *Integer `json:"column,omitempty"`
+	EndColumn          *Integer `json:"endColumn,omitempty"`
+	EndLine            *Integer `json:"endLine,omitempty"`
+	Expensive          bool     `json:"expensive"`
+	IndexedVariables   *Integer `json:"indexedVariables,omitempty"`
+	Line               *Integer `json:"line,omitempty"`
+	Name               string   `json:"name"`
+	NamedVariables     *Integer `json:"namedVariables,omitempty"`
+	PresentationHint   *String  `json:"presentationHint,omitempty"`
+	Source             *Source  `json:"source,omitempty"`
+	VariablesReference int      `json:"variablesReference"`
 }
 
 type ScopesArguments struct {
-	FrameId int `json:"frameId,omitempty"`
+	FrameId int `json:"frameId"`
 }
 
 type ScopesResponseBody struct {
-	Scopes []*Scope `json:"scopes,omitempty"`
+	Scopes []*Scope `json:"scopes"`
 }
 
 type SourceBreakpoint struct {
-	Column       int    `json:"column,omitempty"`
-	Condition    string `json:"condition,omitempty"`
-	HitCondition string `json:"hitCondition,omitempty"`
-	Line         int    `json:"line,omitempty"`
-	LogMessage   string `json:"logMessage,omitempty"`
+	Column       *Integer `json:"column,omitempty"`
+	Condition    *String  `json:"condition,omitempty"`
+	HitCondition *String  `json:"hitCondition,omitempty"`
+	Line         int      `json:"line"`
+	LogMessage   *String  `json:"logMessage,omitempty"`
 }
 
 type SetBreakpointsArguments struct {
 	Breakpoints    []*SourceBreakpoint `json:"breakpoints,omitempty"`
 	Lines          []int               `json:"lines,omitempty"`
-	Source         *Source             `json:"source,omitempty"`
-	SourceModified bool                `json:"sourceModified,omitempty"`
+	Source         Source              `json:"source"`
+	SourceModified *Boolean            `json:"sourceModified,omitempty"`
 }
 
 type SetBreakpointsResponseBody struct {
-	Breakpoints []*Breakpoint `json:"breakpoints,omitempty"`
+	Breakpoints []*Breakpoint `json:"breakpoints"`
 }
 
 type SetDataBreakpointsArguments struct {
-	Breakpoints []*DataBreakpoint `json:"breakpoints,omitempty"`
+	Breakpoints []*DataBreakpoint `json:"breakpoints"`
 }
 
 type SetDataBreakpointsResponseBody struct {
-	Breakpoints []*Breakpoint `json:"breakpoints,omitempty"`
+	Breakpoints []*Breakpoint `json:"breakpoints"`
 }
 
 type SetExceptionBreakpointsArguments struct {
 	ExceptionOptions []*ExceptionOptions       `json:"exceptionOptions,omitempty"`
 	FilterOptions    []*ExceptionFilterOptions `json:"filterOptions,omitempty"`
-	Filters          []string                  `json:"filters,omitempty"`
+	Filters          []string                  `json:"filters"`
 }
 
 type SetExpressionArguments struct {
-	Expression string       `json:"expression,omitempty"`
+	Expression string       `json:"expression"`
 	Format     *ValueFormat `json:"format,omitempty"`
-	FrameId    int          `json:"frameId,omitempty"`
-	Value      string       `json:"value,omitempty"`
+	FrameId    *Integer     `json:"frameId,omitempty"`
+	Value      string       `json:"value"`
 }
 
 type SetExpressionResponseBody struct {
-	IndexedVariables   int                       `json:"indexedVariables,omitempty"`
-	NamedVariables     int                       `json:"namedVariables,omitempty"`
+	IndexedVariables   *Integer                  `json:"indexedVariables,omitempty"`
+	NamedVariables     *Integer                  `json:"namedVariables,omitempty"`
 	PresentationHint   *VariablePresentationHint `json:"presentationHint,omitempty"`
-	Type               string                    `json:"type,omitempty"`
-	Value              string                    `json:"value,omitempty"`
-	VariablesReference int                       `json:"variablesReference,omitempty"`
+	Type               *String                   `json:"type,omitempty"`
+	Value              string                    `json:"value"`
+	VariablesReference *Integer                  `json:"variablesReference,omitempty"`
 }
 
 type SetFunctionBreakpointsArguments struct {
-	Breakpoints []*FunctionBreakpoint `json:"breakpoints,omitempty"`
+	Breakpoints []*FunctionBreakpoint `json:"breakpoints"`
 }
 
 type SetFunctionBreakpointsResponseBody struct {
-	Breakpoints []*Breakpoint `json:"breakpoints,omitempty"`
+	Breakpoints []*Breakpoint `json:"breakpoints"`
 }
 
 type SetInstructionBreakpointsArguments struct {
-	Breakpoints []*InstructionBreakpoint `json:"breakpoints,omitempty"`
+	Breakpoints []*InstructionBreakpoint `json:"breakpoints"`
 }
 
 type SetInstructionBreakpointsResponseBody struct {
-	Breakpoints []*Breakpoint `json:"breakpoints,omitempty"`
+	Breakpoints []*Breakpoint `json:"breakpoints"`
 }
 
 type SetVariableArguments struct {
 	Format             *ValueFormat `json:"format,omitempty"`
-	Name               string       `json:"name,omitempty"`
-	Value              string       `json:"value,omitempty"`
-	VariablesReference int          `json:"variablesReference,omitempty"`
+	Name               string       `json:"name"`
+	Value              string       `json:"value"`
+	VariablesReference int          `json:"variablesReference"`
 }
 
 type SetVariableResponseBody struct {
-	IndexedVariables   int    `json:"indexedVariables,omitempty"`
-	NamedVariables     int    `json:"namedVariables,omitempty"`
-	Type               string `json:"type,omitempty"`
-	Value              string `json:"value,omitempty"`
-	VariablesReference int    `json:"variablesReference,omitempty"`
+	IndexedVariables   *Integer `json:"indexedVariables,omitempty"`
+	NamedVariables     *Integer `json:"namedVariables,omitempty"`
+	Type               *String  `json:"type,omitempty"`
+	Value              string   `json:"value"`
+	VariablesReference *Integer `json:"variablesReference,omitempty"`
 }
 
 type SourceArguments struct {
 	Source          *Source `json:"source,omitempty"`
-	SourceReference int     `json:"sourceReference,omitempty"`
+	SourceReference int     `json:"sourceReference"`
 }
 
 type SourceResponseBody struct {
-	Content  string `json:"content,omitempty"`
-	MimeType string `json:"mimeType,omitempty"`
+	Content  string  `json:"content"`
+	MimeType *String `json:"mimeType,omitempty"`
 }
 
 type StackFramePresentationHint string
@@ -750,83 +800,83 @@ const (
 )
 
 type StackFrame struct {
-	CanRestart                  bool                       `json:"canRestart,omitempty"`
-	Column                      int                        `json:"column,omitempty"`
-	EndColumn                   int                        `json:"endColumn,omitempty"`
-	EndLine                     int                        `json:"endLine,omitempty"`
-	Id                          int                        `json:"id,omitempty"`
-	InstructionPointerReference string                     `json:"instructionPointerReference,omitempty"`
-	Line                        int                        `json:"line,omitempty"`
-	ModuleId                    interface{}                `json:"moduleId,omitempty"`
-	Name                        string                     `json:"name,omitempty"`
-	PresentationHint            StackFramePresentationHint `json:"presentationHint,omitempty"`
-	Source                      *Source                    `json:"source,omitempty"`
+	CanRestart                  *Boolean    `json:"canRestart,omitempty"`
+	Column                      int         `json:"column"`
+	EndColumn                   *Integer    `json:"endColumn,omitempty"`
+	EndLine                     *Integer    `json:"endLine,omitempty"`
+	Id                          int         `json:"id"`
+	InstructionPointerReference *String     `json:"instructionPointerReference,omitempty"`
+	Line                        int         `json:"line"`
+	ModuleId                    interface{} `json:"moduleId,omitempty"`
+	Name                        string      `json:"name"`
+	PresentationHint            *String     `json:"presentationHint,omitempty"`
+	Source                      *Source     `json:"source,omitempty"`
 }
 
 type StackFrameFormat struct {
 	ValueFormat
-	IncludeAll      bool `json:"includeAll,omitempty"`
-	Line            bool `json:"line,omitempty"`
-	Module          bool `json:"module,omitempty"`
-	ParameterNames  bool `json:"parameterNames,omitempty"`
-	ParameterTypes  bool `json:"parameterTypes,omitempty"`
-	ParameterValues bool `json:"parameterValues,omitempty"`
-	Parameters      bool `json:"parameters,omitempty"`
+	IncludeAll      *Boolean `json:"includeAll,omitempty"`
+	Line            *Boolean `json:"line,omitempty"`
+	Module          *Boolean `json:"module,omitempty"`
+	ParameterNames  *Boolean `json:"parameterNames,omitempty"`
+	ParameterTypes  *Boolean `json:"parameterTypes,omitempty"`
+	ParameterValues *Boolean `json:"parameterValues,omitempty"`
+	Parameters      *Boolean `json:"parameters,omitempty"`
 }
 
 type StackTraceArguments struct {
 	Format     *StackFrameFormat `json:"format,omitempty"`
-	Levels     int               `json:"levels,omitempty"`
-	StartFrame int               `json:"startFrame,omitempty"`
-	ThreadId   int               `json:"threadId,omitempty"`
+	Levels     *Integer          `json:"levels,omitempty"`
+	StartFrame *Integer          `json:"startFrame,omitempty"`
+	ThreadId   int               `json:"threadId"`
 }
 
 type StackTraceResponseBody struct {
-	StackFrames []*StackFrame `json:"stackFrames,omitempty"`
-	TotalFrames int           `json:"totalFrames,omitempty"`
+	StackFrames []*StackFrame `json:"stackFrames"`
+	TotalFrames *Integer      `json:"totalFrames,omitempty"`
 }
 
 type StepBackArguments struct {
-	Granularity SteppingGranularity `json:"granularity,omitempty"`
-	ThreadId    int                 `json:"threadId,omitempty"`
+	Granularity *String `json:"granularity,omitempty"`
+	ThreadId    int     `json:"threadId"`
 }
 
 type StepInArguments struct {
-	Granularity SteppingGranularity `json:"granularity,omitempty"`
-	TargetId    int                 `json:"targetId,omitempty"`
-	ThreadId    int                 `json:"threadId,omitempty"`
+	Granularity *String  `json:"granularity,omitempty"`
+	TargetId    *Integer `json:"targetId,omitempty"`
+	ThreadId    int      `json:"threadId"`
 }
 
 type StepInTarget struct {
-	Id    int    `json:"id,omitempty"`
-	Label string `json:"label,omitempty"`
+	Id    int    `json:"id"`
+	Label string `json:"label"`
 }
 
 type StepInTargetsArguments struct {
-	FrameId int `json:"frameId,omitempty"`
+	FrameId int `json:"frameId"`
 }
 
 type StepInTargetsResponseBody struct {
-	Targets []*StepInTarget `json:"targets,omitempty"`
+	Targets []*StepInTarget `json:"targets"`
 }
 
 type StepOutArguments struct {
-	Granularity SteppingGranularity `json:"granularity,omitempty"`
-	ThreadId    int                 `json:"threadId,omitempty"`
+	Granularity *String `json:"granularity,omitempty"`
+	ThreadId    int     `json:"threadId"`
 }
 
 type StoppedEventBody struct {
-	AllThreadsStopped bool   `json:"allThreadsStopped,omitempty"`
-	Description       string `json:"description,omitempty"`
-	HitBreakpointIds  []int  `json:"hitBreakpointIds,omitempty"`
-	PreserveFocusHint bool   `json:"preserveFocusHint,omitempty"`
-	Reason            string `json:"reason,omitempty"`
-	Text              string `json:"text,omitempty"`
-	ThreadId          int    `json:"threadId,omitempty"`
+	AllThreadsStopped *Boolean `json:"allThreadsStopped,omitempty"`
+	Description       *String  `json:"description,omitempty"`
+	HitBreakpointIds  []int    `json:"hitBreakpointIds,omitempty"`
+	PreserveFocusHint *Boolean `json:"preserveFocusHint,omitempty"`
+	Reason            string   `json:"reason"`
+	Text              *String  `json:"text,omitempty"`
+	ThreadId          *Integer `json:"threadId,omitempty"`
 }
 
 type TerminateArguments struct {
-	Restart bool `json:"restart,omitempty"`
+	Restart *Boolean `json:"restart,omitempty"`
 }
 
 type TerminateThreadsArguments struct {
@@ -838,29 +888,29 @@ type TerminatedEventBody struct {
 }
 
 type Thread struct {
-	Id   int    `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
+	Id   int    `json:"id"`
+	Name string `json:"name"`
 }
 
 type ThreadEventBody struct {
-	Reason   string `json:"reason,omitempty"`
-	ThreadId int    `json:"threadId,omitempty"`
+	Reason   string `json:"reason"`
+	ThreadId int    `json:"threadId"`
 }
 
 type ThreadsResponseBody struct {
-	Threads []*Thread `json:"threads,omitempty"`
+	Threads []*Thread `json:"threads"`
 }
 
 type Variable struct {
-	EvaluateName       string                    `json:"evaluateName,omitempty"`
-	IndexedVariables   int                       `json:"indexedVariables,omitempty"`
-	MemoryReference    string                    `json:"memoryReference,omitempty"`
-	Name               string                    `json:"name,omitempty"`
-	NamedVariables     int                       `json:"namedVariables,omitempty"`
+	EvaluateName       *String                   `json:"evaluateName,omitempty"`
+	IndexedVariables   *Integer                  `json:"indexedVariables,omitempty"`
+	MemoryReference    *String                   `json:"memoryReference,omitempty"`
+	Name               string                    `json:"name"`
+	NamedVariables     *Integer                  `json:"namedVariables,omitempty"`
 	PresentationHint   *VariablePresentationHint `json:"presentationHint,omitempty"`
-	Type               string                    `json:"type,omitempty"`
-	Value              string                    `json:"value,omitempty"`
-	VariablesReference int                       `json:"variablesReference,omitempty"`
+	Type               *String                   `json:"type,omitempty"`
+	Value              string                    `json:"value"`
+	VariablesReference int                       `json:"variablesReference"`
 }
 
 type VariablesArgumentsFilter string
@@ -871,20 +921,20 @@ const (
 )
 
 type VariablesArguments struct {
-	Count              int                      `json:"count,omitempty"`
-	Filter             VariablesArgumentsFilter `json:"filter,omitempty"`
-	Format             *ValueFormat             `json:"format,omitempty"`
-	Start              int                      `json:"start,omitempty"`
-	VariablesReference int                      `json:"variablesReference,omitempty"`
+	Count              *Integer     `json:"count,omitempty"`
+	Filter             *String      `json:"filter,omitempty"`
+	Format             *ValueFormat `json:"format,omitempty"`
+	Start              *Integer     `json:"start,omitempty"`
+	VariablesReference int          `json:"variablesReference"`
 }
 
 type VariablesResponseBody struct {
-	Variables []*Variable `json:"variables,omitempty"`
+	Variables []*Variable `json:"variables"`
 }
 
 type WriteMemoryArguments struct {
-	AllowPartial    bool   `json:"allowPartial,omitempty"`
-	Data            string `json:"data,omitempty"`
-	MemoryReference string `json:"memoryReference,omitempty"`
-	Offset          int    `json:"offset,omitempty"`
+	AllowPartial    *Boolean `json:"allowPartial,omitempty"`
+	Data            string   `json:"data"`
+	MemoryReference string   `json:"memoryReference"`
+	Offset          *Integer `json:"offset,omitempty"`
 }

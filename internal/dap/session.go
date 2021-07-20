@@ -125,7 +125,7 @@ func (s *Session) Respond(req *Request, success bool, message string, body Respo
 	resp.RequestSeq = req.Seq
 	resp.Command = req.Command
 	resp.Success = success
-	resp.Message = message
+	resp.Message = Str(message)
 	resp.Body = body
 	return s.send(resp)
 }
