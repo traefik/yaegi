@@ -82,10 +82,6 @@ func main() {
 				continue
 			}
 
-			if cmd.Enum[0] == "configurationDone" {
-				println("!")
-			}
-
 			typ := Type{
 				Identifier: cmd.Enum[0],
 				Name:       name[:len(name)-len("Request")] + "Arguments",
