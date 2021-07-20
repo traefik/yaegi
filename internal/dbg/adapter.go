@@ -236,7 +236,7 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 
 				b.StackFrames[i] = &dap.StackFrame{
 					Id:     i,
-					Name:   fmt.Sprintf("Frame %d", i),
+					Name:   f.Name(),
 					Line:   pos.Line,
 					Column: pos.Column,
 					Source: src,

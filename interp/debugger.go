@@ -8,12 +8,16 @@ import (
 )
 
 type Debugger struct {
+	fset    *token.FileSet
 	events  func(*DebugEvent)
 	context context.Context
 	cancel  context.CancelFunc
 
 	mode   DebugStopReason
 	resume chan struct{}
+
+	fDepth int
+	fStep  int
 
 	result reflect.Value
 	err    error
@@ -23,12 +27,14 @@ type DebugOptions struct {
 }
 
 type DebugEvent struct {
+	debugger  *Debugger
 	reason    DebugStopReason
 	statement *node
 	frame     *frame
 }
 
 type DebugFrame struct {
+	event *DebugEvent
 	frame *frame
 }
 
@@ -47,11 +53,12 @@ const (
 
 func (interp *Interpreter) Debug(ctx context.Context, prog *Program, events func(*DebugEvent), opts *DebugOptions) *Debugger {
 	dbg := new(Debugger)
+	dbg.fset = interp.fset
 	dbg.events = events
 	dbg.context, dbg.cancel = context.WithCancel(ctx)
 	dbg.resume = make(chan struct{})
 
-	interp.frame.debug = dbg.run
+	interp.frame.dbg = dbg
 
 	if opts == nil {
 		opts = new(DebugOptions)
@@ -75,7 +82,30 @@ func (dbg *Debugger) Wait() (reflect.Value, error) {
 	return dbg.result, dbg.err
 }
 
-func (dbg *Debugger) run(n *node, f *frame) {
+func (dbg *Debugger) enterCall(n *node, f *frame) {
+	dbg.fDepth++
+	if f == f.root || f.name != "" {
+		return
+	}
+
+	switch n.kind {
+	case funcLit:
+		f.name = "anonymous"
+	case funcDecl:
+		f.name = n.child[1].ident
+	}
+}
+
+func (dbg *Debugger) exitCall(n *node, f *frame) {
+	dbg.fDepth--
+}
+
+func (dbg *Debugger) exec(n *node, f *frame) {
+	f.pos = n.pos
+	if f.pos == token.NoPos {
+		return
+	}
+
 	switch dbg.mode {
 	case debugRun:
 		if !n.bkp {
@@ -86,9 +116,17 @@ func (dbg *Debugger) run(n *node, f *frame) {
 		dbg.cancel()
 		return
 
-	default:
-		dbg.events(&DebugEvent{dbg.mode, n, f})
+	case DebugStepOut:
+		if dbg.fDepth >= dbg.fStep {
+			return
+		}
+
+	case DebugStepOver:
+		if dbg.fDepth > dbg.fStep {
+			return
+		}
 	}
+	dbg.events(&DebugEvent{dbg, dbg.mode, n, f})
 
 	select {
 	case <-dbg.resume:
@@ -102,18 +140,17 @@ func (dbg *Debugger) Continue() {
 }
 
 func (dbg *Debugger) Step(reason DebugStopReason) {
-	dbg.Interrupt(reason)
+	if dbg.mode != DebugEntry || reason != DebugEntry {
+		dbg.Interrupt(reason)
+	}
+
 	dbg.resume <- struct{}{}
 }
 
 func (dbg *Debugger) Interrupt(reason DebugStopReason) {
-	if dbg.mode == DebugEntry && reason == DebugEntry {
-		return
-	}
-
 	switch reason {
 	case DebugStepInto, DebugStepOver, DebugStepOut, DebugTerminate:
-		dbg.mode = reason
+		dbg.mode, dbg.fStep = reason, dbg.fDepth
 	default:
 		dbg.mode = DebugPause
 	}
@@ -124,8 +161,12 @@ func (evt *DebugEvent) Reason() DebugStopReason {
 }
 
 func (evt *DebugEvent) FrameDepth() int {
+	if evt.frame == evt.frame.root {
+		return 1
+	}
+
 	var n int
-	for f := evt.frame; f != nil; f = f.anc {
+	for f := evt.frame; f != nil && f != f.root; f = f.anc {
 		n++
 	}
 	return n
@@ -135,6 +176,10 @@ func (evt *DebugEvent) Frames(start, end int) []*DebugFrame {
 	count := end - start
 	if count < 0 {
 		return nil
+	}
+
+	if evt.frame == evt.frame.root && start == 0 && end > 0 {
+		return []*DebugFrame{{evt, evt.frame}}
 	}
 
 	f := evt.frame
@@ -147,8 +192,8 @@ func (evt *DebugEvent) Frames(start, end int) []*DebugFrame {
 	}
 
 	frames := make([]*DebugFrame, 0, count)
-	for f := evt.frame; f != nil && len(frames) < count; f = f.anc {
-		frames = append(frames, &DebugFrame{f})
+	for f := evt.frame; f != nil && f != f.root && len(frames) < count; f = f.anc {
+		frames = append(frames, &DebugFrame{evt, f})
 	}
 	return frames
 }
@@ -162,11 +207,18 @@ func (evt *DebugEvent) Frame(n int) *DebugFrame {
 	if f == nil {
 		return nil
 	}
-	return &DebugFrame{f}
+	return &DebugFrame{evt, f}
+}
+
+func (f *DebugFrame) Name() string {
+	if f.frame == f.frame.root {
+		return "init"
+	}
+	return f.frame.name
 }
 
 func (f *DebugFrame) Position() token.Position {
-	return token.Position{}
+	return f.event.debugger.fset.Position(f.frame.pos)
 }
 
 func (f *DebugFrame) Variables() map[string]reflect.Value {

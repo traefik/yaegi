@@ -66,10 +66,13 @@ type frame struct {
 	// Located at start of struct to ensure proper aligment.
 	id uint64
 
-	debug func(*node, *frame)
-	root  *frame          // global space
-	anc   *frame          // ancestor frame (caller space)
-	data  []reflect.Value // values
+	pos  token.Pos
+	name string
+	dbg  *Debugger
+
+	root *frame          // global space
+	anc  *frame          // ancestor frame (caller space)
+	data []reflect.Value // values
 
 	mutex     sync.RWMutex
 	deferred  [][]reflect.Value  // defer stack
