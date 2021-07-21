@@ -1622,27 +1622,6 @@ func getIndexMap(n *node) {
 				dest(f).Set(z)
 				return fnext
 			}
-		case isInterfaceSrc(n.typ):
-			z = reflect.New(n.child[0].typ.val.frameType()).Elem()
-			n.exec = func(f *frame) bltn {
-				v := value0(f).MapIndex(mi)
-				if !v.IsValid() {
-					dest(f).Set(z)
-					return tnext
-				}
-				e := v.Elem()
-				if len(n.typ.field) == 0 {
-					// e is empty interface, do not wrap
-					dest(f).Set(e)
-					return tnext
-				}
-				if e.Type().AssignableTo(valueInterfaceType) {
-					dest(f).Set(e)
-					return tnext
-				}
-				dest(f).Set(reflect.ValueOf(valueInterface{n, e}))
-				return tnext
-			}
 		default:
 			n.exec = func(f *frame) bltn {
 				if v := value0(f).MapIndex(mi); v.IsValid() {
@@ -1666,20 +1645,6 @@ func getIndexMap(n *node) {
 				}
 				dest(f).Set(z)
 				return fnext
-			}
-		case isInterfaceSrc(n.typ):
-			z = reflect.New(n.child[0].typ.val.frameType()).Elem()
-			n.exec = func(f *frame) bltn {
-				if v := value0(f).MapIndex(value1(f)); v.IsValid() {
-					if e := v.Elem(); e.Type().AssignableTo(valueInterfaceType) {
-						dest(f).Set(e)
-					} else {
-						dest(f).Set(reflect.ValueOf(valueInterface{n, e}))
-					}
-				} else {
-					dest(f).Set(z)
-				}
-				return tnext
 			}
 		default:
 			n.exec = func(f *frame) bltn {
@@ -2729,47 +2694,14 @@ func rangeMap(n *node) {
 	if len(n.child) == 4 {
 		index1 := n.child[1].findex  // map value location in frame
 		value = genValue(n.child[2]) // map
-		if isInterfaceSrc(n.child[1].typ) {
-			if len(n.child[1].typ.field) > 0 {
-				n.exec = func(f *frame) bltn {
-					iter := f.data[index2].Interface().(*reflect.MapIter)
-					if !iter.Next() {
-						return fnext
-					}
-					f.data[index0].Set(iter.Key())
-					if e := iter.Value().Elem(); e.Type().AssignableTo(valueInterfaceType) {
-						f.data[index1].Set(e)
-					} else {
-						f.data[index1].Set(reflect.ValueOf(valueInterface{n, e}))
-					}
-					return tnext
-				}
-			} else {
-				// empty interface, do not wrap
-				n.exec = func(f *frame) bltn {
-					iter := f.data[index2].Interface().(*reflect.MapIter)
-					if !iter.Next() {
-						return fnext
-					}
-					f.data[index0].Set(iter.Key())
-					if iter.Value().Elem().IsValid() {
-						f.data[index1].Set(iter.Value().Elem())
-					} else {
-						f.data[index1].Set(reflect.New(interf).Elem())
-					}
-					return tnext
-				}
+		n.exec = func(f *frame) bltn {
+			iter := f.data[index2].Interface().(*reflect.MapIter)
+			if !iter.Next() {
+				return fnext
 			}
-		} else {
-			n.exec = func(f *frame) bltn {
-				iter := f.data[index2].Interface().(*reflect.MapIter)
-				if !iter.Next() {
-					return fnext
-				}
-				f.data[index0].Set(iter.Key())
-				f.data[index1].Set(iter.Value())
-				return tnext
-			}
+			f.data[index0].Set(iter.Key())
+			f.data[index1].Set(iter.Value())
+			return tnext
 		}
 	} else {
 		value = genValue(n.child[1]) // map
