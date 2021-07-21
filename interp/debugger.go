@@ -176,29 +176,34 @@ func (dbg *Debugger) SetBreakpoints(path string, bp []*Breakpoint) []*Breakpoint
 		return found
 	}
 
+	lines := map[int]int{}
+	for i, bp := range bp {
+		lines[bp.Line] = i
+	}
+
+	claimed := map[*node]bool{}
 	root.Walk(func(n *node) bool {
-		if !n.pos.IsValid() || n.exec == nil {
+		if !n.pos.IsValid() {
 			return true
 		}
 
+		if n.action == aNop || getExec(n) == nil {
+			return true
+		}
+
+		var ok bool
 		pos := dbg.interp.fset.Position(n.pos)
-		if pos == (token.Position{}) {
+		i, ok := lines[pos.Line]
+		if !ok || found[i] != nil {
 			return true
 		}
 
-		n.bkp = false
-		for i, bp := range bp {
-			if found[i] != nil {
-				continue
-			}
-			if bp.Line == pos.Line {
-				found[i] = bp
-				n.bkp = true
-				break
-			}
-		}
+		found[i] = bp[i]
+		claimed[n.start] = true
 		return true
-	}, nil)
+	}, func(n *node) {
+		n.bkp = claimed[n]
+	})
 
 	return found
 }
