@@ -171,6 +171,10 @@ func TestEvalBuiltin(t *testing.T) {
 		{src: `imag("test")`, err: "1:33: cannot convert \"test\" to complex128"},
 		{src: `imag(a)`, err: "1:33: invalid argument type []int for imag"},
 		{src: `real(a)`, err: "1:33: invalid argument type []int for real"},
+		{src: `t := map[int]int{}; t[123]++; t`, res: "map[123:1]"},
+		{src: `t := map[int]int{}; t[123]--; t`, res: "map[123:-1]"},
+		{src: `t := map[int]int{}; t[123] += 1; t`, res: "map[123:1]"},
+		{src: `t := map[int]int{}; t[123] -= 1; t`, res: "map[123:-1]"},
 	})
 }
 
