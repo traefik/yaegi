@@ -41,6 +41,7 @@ type Schema struct {
 	MultipleOf           float64             `json:"multipleOf,omitempty"`
 	Not                  *Schema             `json:"not,omitempty"`
 	OneOf                []*Schema           `json:"oneOf,omitempty"`
+	Order                int                 `json:"$order,omitempty"`
 	Pattern              string              `json:"pattern,omitempty"`
 	PatternProperties    map[string]*Schema  `json:"patternProperties,omitempty"`
 	Properties           map[string]*Schema  `json:"properties,omitempty"`

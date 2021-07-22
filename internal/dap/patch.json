@@ -1,8 +1,13 @@
 [
-    { "op": "move",    "from": "/definitions/ProtocolMessage/properties/type/_enum", "path": "/definitions/ProtocolMessage/properties/type/enum" },
-    { "op": "replace", "path": "/definitions/Request/allOf/1/properties/arguments",  "value": { "$ref": "!RequestArguments" } },
-    { "op": "replace", "path": "/definitions/Response/allOf/1/properties/body",      "value": { "$ref": "!ResponseBody" } },
-    { "op": "replace", "path": "/definitions/Event/allOf/1/properties/body",         "value": { "$ref": "!EventBody" } },
+    { "op": "move", "from": "/definitions/ProtocolMessage/properties/type/_enum", "path": "/definitions/ProtocolMessage/properties/type/enum" },
+
+    { "op": "replace", "path": "/definitions/Request/allOf/1/properties/arguments", "value": { "$ref": "!RequestArguments" } },
+    { "op": "replace", "path": "/definitions/Response/allOf/1/properties/body",     "value": { "$ref": "!ResponseBody" } },
+    { "op": "replace", "path": "/definitions/Event/allOf/1/properties/body",        "value": { "$ref": "!EventBody" } },
+
+    { "op": "add", "path": "/definitions/Request/allOf/1/properties/command/$order",  "value": 1 },
+    { "op": "add", "path": "/definitions/Response/allOf/1/properties/command/$order", "value": 1 },
+    { "op": "add", "path": "/definitions/Event/allOf/1/properties/event/$order",      "value": 1 },
 
     { "op": "move", "from": "/definitions/ErrorResponse/allOf/1/properties/body",                     "path": "/definitions/ErrorResponseBody" },
     { "op": "move", "from": "/definitions/RunInTerminalResponse/allOf/1/properties/body",             "path": "/definitions/RunInTerminalResponseBody" },

@@ -1,6 +1,7 @@
 [
     { "op": "add",     "path": "/properties/$ref",                 "value": { "type": "string" } },
-    { "op": "add",     "path": "/properties/$embedded",           "value": { "$ref": "#/definitions/stringArray" } },
+    { "op": "add",     "path": "/properties/$order",               "value": { "type": "integer" } },
+    { "op": "add",     "path": "/properties/$embedded",            "value": { "$ref": "#/definitions/stringArray" } },
     { "op": "replace", "path": "/properties/type",                 "value": { "$ref": "!Schema_Type" } },
     { "op": "replace", "path": "/properties/additionalItems",      "value": { "$ref": "#" } },
     { "op": "replace", "path": "/properties/items",                "value": { "$ref": "#" } },

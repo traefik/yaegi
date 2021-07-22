@@ -282,7 +282,10 @@ func (w *writer) writeObjectType(name string, s *Schema) Type {
 }
 
 func (w *writer) writeProperties(name string, s *Schema) {
-	type Field struct{ Name, Prop, Type string }
+	type Field struct {
+		Name, Prop, Type string
+		Order            int
+	}
 	fields := []Field{}
 	embedded := map[string]bool{}
 	for _, typ := range s.Embedded {
@@ -327,9 +330,10 @@ func (w *writer) writeProperties(name string, s *Schema) {
 		}
 
 		fields = append(fields, Field{
-			Prop: prop,
-			Name: fname,
-			Type: typ,
+			Prop:  prop,
+			Name:  fname,
+			Type:  typ,
+			Order: s.Order,
 		})
 	}
 
@@ -338,13 +342,21 @@ func (w *writer) writeProperties(name string, s *Schema) {
 	}
 
 	sort.Slice(fields, func(i, j int) bool {
+		fi, fj := fields[i], fields[j]
+		ordered := fi.Name != "" && fj.Name != "" && (fi.Order > 0 || fj.Order > 0)
 		switch {
-		case fields[i].Name < fields[j].Name:
+		case ordered && fi.Order == 0:
+			return false
+		case ordered && fj.Order == 0:
 			return true
-		case fields[i].Name > fields[j].Name:
+		case ordered && fi.Order < fj.Order:
+			return true
+		case fi.Name < fj.Name:
+			return true
+		case fi.Name > fj.Name:
 			return false
 		default:
-			return fields[i].Type < fields[j].Type
+			return fi.Type < fj.Type
 		}
 	})
 

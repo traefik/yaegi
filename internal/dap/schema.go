@@ -17,8 +17,8 @@ type ProtocolMessage struct {
 
 type Request struct {
 	ProtocolMessage
-	Arguments RequestArguments `json:"arguments,omitempty"`
 	Command   string           `json:"command"`
+	Arguments RequestArguments `json:"arguments,omitempty"`
 }
 
 type AttachRequestArguments struct {
@@ -39,8 +39,8 @@ func (v *String) GetOr(u string) string {
 
 type Response struct {
 	ProtocolMessage
-	Body       ResponseBody `json:"body,omitempty"`
 	Command    string       `json:"command"`
+	Body       ResponseBody `json:"body,omitempty"`
 	Message    *String      `json:"message,omitempty"`
 	RequestSeq int          `json:"request_seq"`
 	Success    bool         `json:"success"`
@@ -106,8 +106,8 @@ type Breakpoint struct {
 
 type Event struct {
 	ProtocolMessage
-	Body  EventBody `json:"body,omitempty"`
 	Event string    `json:"event"`
+	Body  EventBody `json:"body,omitempty"`
 }
 
 type BreakpointEventBody struct {
