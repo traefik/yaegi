@@ -2,11 +2,10 @@ package interp
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/traefik/yaegi/fs"
 )
 
 // importSrc calls gta on the source code for the package identified by

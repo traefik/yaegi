@@ -10,6 +10,7 @@ import (
 	"go/scanner"
 	"go/token"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"os/signal"
@@ -22,8 +23,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-
-	"github.com/traefik/yaegi/fs"
 )
 
 // Interpreter node structure for AST and CFG.
@@ -262,7 +261,7 @@ type Options struct {
 // New returns a new interpreter.
 func New(options Options) *Interpreter {
 	i := Interpreter{
-		opt:      opt{context: build.Default, filesystem: &fs.RealFS{}},
+		opt:      opt{context: build.Default, filesystem: &RealFS{}},
 		frame:    newFrame(nil, 0, 0),
 		fset:     token.NewFileSet(),
 		universe: initUniverse(),
