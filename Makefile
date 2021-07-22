@@ -1,29 +1,27 @@
-GO?=go
-
 # Static linting of source files. See .golangci.toml for options
 check:
 	golangci-lint run
 
 # Generate stdlib/syscall/syscall_GOOS_GOARCH.go for all platforms
 gen_all_syscall: internal/cmd/extract/extract
-	@for v in $$($(GO) tool dist list); do \
+	@for v in $$(go tool dist list); do \
 		echo syscall_$${v%/*}_$${v#*/}.go; \
-		GOOS=$${v%/*} GOARCH=$${v#*/} $(GO) generate ./stdlib/syscall ./stdlib/unrestricted; \
+		GOOS=$${v%/*} GOARCH=$${v#*/} go generate ./stdlib/syscall ./stdlib/unrestricted; \
 	done
 
 internal/cmd/extract/extract:
 	rm -f internal/cmd/extract/extract
-	$(GO) generate ./internal/cmd/extract
+	go generate ./internal/cmd/extract
 
 generate: gen_all_syscall
-	$(GO) generate
+	go generate
 
 install:
-	GOFLAGS=-ldflags=-X=main.version=$$(git describe --tags) $(GO) install ./...
+	GOFLAGS=-ldflags=-X=main.version=$$(git describe --tags) go install ./...
 
 tests:
-	$(GO) test -v ./...
-	$(GO) test -race ./interp
+	go test -v ./...
+	go test -race ./interp
 
 # https://github.com/goreleaser/godownloader
 install.sh: .goreleaser.yml
