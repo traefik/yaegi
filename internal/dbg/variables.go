@@ -3,6 +3,7 @@ package dbg
 import (
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/traefik/yaegi/internal/dap"
 	"github.com/traefik/yaegi/interp"
@@ -37,29 +38,45 @@ const (
 	rUnsafePointer = reflect.UnsafePointer
 )
 
-type variableReferences struct {
+type variables struct {
+	mu     *sync.Mutex
 	values []variableScope
 	id     int
 }
 
-func (r *variableReferences) Purge() {
+func newVariables() *variables {
+	v := new(variables)
+	v.mu = new(sync.Mutex)
+	return v
+}
+
+func (r *variables) Purge() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	r.id = 0
 	if r.values != nil {
 		r.values = r.values[:0]
 	}
 }
 
-func (r *variableReferences) Add(v variableScope) int {
+func (r *variables) Add(v variableScope) int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	r.id++
 	r.values = append(r.values, v)
 	return r.id
 }
 
-func (r *variableReferences) Get(i int) variableScope {
+func (r *variables) Get(i int) (variableScope, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	if i < 1 || i > len(r.values) {
-		return nil
+		return nil, false
 	}
-	return r.values[i-1]
+	return r.values[i-1], true
 }
 
 func (a *Adapter) newVar(name string, rv reflect.Value) *dap.Variable {
@@ -82,13 +99,13 @@ func (a *Adapter) newVar(name string, rv reflect.Value) *dap.Variable {
 
 	switch rv.Kind() {
 	case rInterface, rPtr:
-		v.VariablesReference = a.varRefs.Add(&elemVars{rv})
+		v.VariablesReference = a.vars.Add(&elemVars{rv})
 	case rArray, rSlice:
-		v.VariablesReference = a.varRefs.Add(&arrayVars{rv})
+		v.VariablesReference = a.vars.Add(&arrayVars{rv})
 	case rStruct:
-		v.VariablesReference = a.varRefs.Add(&structVars{rv})
+		v.VariablesReference = a.vars.Add(&structVars{rv})
 	case rMap:
-		v.VariablesReference = a.varRefs.Add(&mapVars{rv})
+		v.VariablesReference = a.vars.Add(&mapVars{rv})
 	}
 
 	return v

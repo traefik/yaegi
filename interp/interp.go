@@ -105,6 +105,7 @@ func (f *frame) clone(fork bool) *frame {
 		recovered: f.recovered,
 		id:        f.runid(),
 		done:      f.done,
+		debug:     f.debug,
 	}
 	if fork {
 		nf.data = make([]reflect.Value, len(f.data))

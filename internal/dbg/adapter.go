@@ -35,9 +35,10 @@ type Adapter struct {
 
 	interp   *interp.Interpreter
 	debugger *interp.Debugger
-	event    *interp.DebugEvent
 
-	varRefs variableReferences
+	events *events
+	frames *frames
+	vars   *variables
 }
 
 func NewEvalAdapter(src string, opts *Options) *Adapter {
@@ -71,6 +72,9 @@ func newAdapter(eval compileFunc, arg string, opts *Options) *Adapter {
 	a.opts = *opts
 	a.compile = eval
 	a.arg = arg
+	a.events = newEvents()
+	a.frames = newFrames()
+	a.vars = newVariables()
 	return a
 }
 
@@ -135,14 +139,24 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 			}
 
 			a.debugger = a.interp.Debug(context.Background(), prog, func(e *interp.DebugEvent) {
-				defer func() {
-					r := recover()
-					if r != nil {
-						fmt.Fprintf(os.Stderr, "Panicked while processing debug event:\n%v\n", r)
-					}
-				}()
+				if e.Reason() == interp.DebugEnterGoRoutine {
+					a.session.Event("thread", &dap.ThreadEventBody{
+						Reason:   "started",
+						ThreadId: e.GoRoutine(),
+					})
+					return
+				}
 
-				a.varRefs.Purge()
+				if e.Reason() == interp.DebugExitGoRoutine {
+					a.session.Event("thread", &dap.ThreadEventBody{
+						Reason:   "exited",
+						ThreadId: e.GoRoutine(),
+					})
+					return
+				}
+
+				a.frames.Purge()
+				a.vars.Purge()
 
 				if e.Reason() == interp.DebugTerminate {
 					a.session.Event("terminated", nil)
@@ -150,9 +164,10 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 					return
 				}
 
-				a.event = e
+				a.events.Retain(e)
+
 				body := new(dap.StoppedEventBody)
-				body.ThreadId = dap.Int(1)
+				body.ThreadId = dap.Int(e.GoRoutine())
 				switch e.Reason() {
 				case interp.DebugBreak:
 					body.Reason = "breakpoint"
@@ -164,7 +179,9 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 					body.Reason = "pause"
 				}
 				a.session.Event("stopped", body)
-			}, nil)
+			}, &interp.DebugOptions{
+				GoRoutineStartAt1: true,
+			})
 
 		case "setBreakpoints":
 			args := m.Arguments.(*dap.SetBreakpointsArguments)
@@ -238,53 +255,68 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 
 		case "configurationDone":
 			if a.opts.StopAtEntry {
-				a.debugger.Step(interp.DebugEntry)
+				a.debugger.Step(1, interp.DebugEntry)
 			} else {
-				a.debugger.Continue()
+				a.debugger.Continue(1)
 			}
 			success = true
 
 		case "continue":
-			a.debugger.Continue()
-			success = true
+			args := m.Arguments.(*dap.ContinueArguments)
+			defer a.events.Release(args.ThreadId)
+			success = a.debugger.Continue(args.ThreadId)
+			body = &dap.ContinueResponseBody{AllThreadsContinued: dap.Bool(false)}
 
 		case "stepIn":
-			a.debugger.Step(interp.DebugStepInto)
-			success = true
+			args := m.Arguments.(*dap.StepInArguments)
+			defer a.events.Release(args.ThreadId)
+			success = a.debugger.Step(args.ThreadId, interp.DebugStepInto)
 
 		case "next":
-			a.debugger.Step(interp.DebugStepOver)
-			success = true
+			args := m.Arguments.(*dap.NextArguments)
+			defer a.events.Release(args.ThreadId)
+			success = a.debugger.Step(args.ThreadId, interp.DebugStepOver)
 
 		case "stepOut":
-			a.debugger.Step(interp.DebugStepOut)
-			success = true
+			args := m.Arguments.(*dap.StepOutArguments)
+			defer a.events.Release(args.ThreadId)
+			success = a.debugger.Step(args.ThreadId, interp.DebugStepOut)
 
 		case "pause":
-			a.debugger.Interrupt(interp.DebugPause)
-			success = true
+			args := m.Arguments.(*dap.PauseArguments)
+			defer a.events.Release(args.ThreadId)
+			success = a.debugger.Interrupt(args.ThreadId, interp.DebugPause)
 
 		case "threads":
 			success = true
-			body = &dap.ThreadsResponseBody{
-				Threads: []*dap.Thread{
-					{Id: 1, Name: "Main"},
-				},
+			r := a.debugger.GoRoutines()
+			b := &dap.ThreadsResponseBody{Threads: make([]*dap.Thread, len(r))}
+			body = b
+
+			for i, r := range r {
+				b.Threads[i] = &dap.Thread{Id: r.ID(), Name: r.Name()}
 			}
 
 		case "stackTrace":
-			success = true
 			args := m.Arguments.(*dap.StackTraceArguments)
+			e, ok := a.events.Get(args.ThreadId)
+			if !ok {
+				message = "Invalid thread ID"
+				break
+			} else {
+				success = true
+			}
+
 			b := new(dap.StackTraceResponseBody)
 			body = b
 
-			b.TotalFrames = dap.Int(a.event.FrameDepth())
+			b.TotalFrames = dap.Int(e.FrameDepth())
 			end := b.TotalFrames.Get()
 			if args.Levels.GetOr(0) > 0 {
 				end = args.StartFrame.GetOr(0) + args.Levels.Get()
 			}
 
-			frames := a.event.Frames(args.StartFrame.GetOr(0), end)
+			frames := e.Frames(args.StartFrame.GetOr(0), end)
 			b.StackFrames = make([]*dap.StackFrame, len(frames))
 			for i, f := range frames {
 				var src *dap.Source
@@ -306,7 +338,7 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 				}
 
 				b.StackFrames[i] = &dap.StackFrame{
-					Id:     i,
+					Id:     a.frames.Add(f),
 					Name:   f.Name(),
 					Line:   pos.Line,
 					Column: pos.Column,
@@ -316,8 +348,8 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 
 		case "scopes":
 			args := m.Arguments.(*dap.ScopesArguments)
-			f := a.event.Frame(args.FrameId)
-			if f == nil {
+			f, ok := a.frames.Get(args.FrameId)
+			if !ok {
 				message = "Invalid frame ID"
 				break
 			} else {
@@ -337,14 +369,14 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 				b.Scopes[i] = &dap.Scope{
 					Name:               name,
 					PresentationHint:   dap.Str("Locals"),
-					VariablesReference: a.varRefs.Add(&frameVars{sc}),
+					VariablesReference: a.vars.Add(&frameVars{sc}),
 				}
 			}
 
 		case "variables":
 			args := m.Arguments.(*dap.VariablesArguments)
-			scope := a.varRefs.Get(args.VariablesReference)
-			if scope == nil {
+			scope, ok := a.vars.Get(args.VariablesReference)
+			if !ok {
 				message = "Invalid variable reference"
 				break
 			} else {
@@ -356,12 +388,12 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 			}
 
 		case "terminate":
-			a.debugger.Interrupt(interp.DebugTerminate)
+			a.debugger.Terminate()
 			success = true
 
 		case "disconnect":
 			// Go does not allow forcibly killing a goroutine
-			a.debugger.Interrupt(interp.DebugTerminate)
+			a.debugger.Terminate()
 			stop = true
 			success = true
 
@@ -385,5 +417,5 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 }
 
 func (a *Adapter) Terminate() {
-	a.debugger.Interrupt(interp.DebugTerminate)
+	a.debugger.Terminate()
 }

@@ -118,7 +118,7 @@ func (interp *Interpreter) run(n *node, cf *frame) {
 	for i, t := range n.types {
 		f.data[i] = reflect.New(t).Elem()
 	}
-	runCfg(n.start, f, n)
+	runCfg(n.start, f, n, nil)
 }
 
 func isExecNode(n *node, exec bltn) bool {
@@ -176,7 +176,7 @@ func originalExecNode(n *node, exec bltn) *node {
 // Functions set to run during execution of CFG.
 
 // runCfg executes a node AST by walking its CFG and running node builtin at each step.
-func runCfg(n *node, f *frame, funcNode *node) {
+func runCfg(n *node, f *frame, funcNode, callNode *node) {
 	var exec bltn
 	defer func() {
 		f.mutex.Lock()
@@ -196,7 +196,8 @@ func runCfg(n *node, f *frame, funcNode *node) {
 		f.mutex.Unlock()
 	}()
 
-	if n.interp.debugger == nil {
+	dbg := n.interp.debugger
+	if dbg == nil {
 		for exec := n.exec; exec != nil && f.runid() == n.interp.runid(); {
 			exec = exec(f)
 		}
@@ -207,11 +208,11 @@ func runCfg(n *node, f *frame, funcNode *node) {
 		return
 	}
 
-	n.interp.debugger.enterCall(funcNode, f)
-	defer n.interp.debugger.exitCall(funcNode, f)
+	dbg.enterCall(funcNode, callNode, f)
+	defer dbg.exitCall(funcNode, callNode, f)
 
 	for m, exec := n, n.exec; f.runid() == n.interp.runid(); {
-		n.interp.debugger.exec(m, f)
+		dbg.exec(m, f)
 
 		exec = exec(f)
 		if exec == nil {
@@ -985,7 +986,7 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 			}
 
 			// Interpreter code execution.
-			runCfg(start, fr, def)
+			runCfg(start, fr, def, n)
 
 			result := fr.data[:numRet]
 			for i, r := range result {
@@ -1311,10 +1312,10 @@ func call(n *node) {
 
 		// Execute function body
 		if goroutine {
-			go runCfg(def.child[3].start, nf, def)
+			go runCfg(def.child[3].start, nf, def, n)
 			return tnext
 		}
-		runCfg(def.child[3].start, nf, def)
+		runCfg(def.child[3].start, nf, def, n)
 
 		// Handle branching according to boolean result
 		if fnext != nil && !nf.data[0].Bool() {
