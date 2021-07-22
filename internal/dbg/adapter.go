@@ -36,6 +36,8 @@ type Adapter struct {
 	interp   *interp.Interpreter
 	debugger *interp.Debugger
 	event    *interp.DebugEvent
+
+	varRefs variableReferences
 }
 
 func NewEvalAdapter(src string, opts *Options) *Adapter {
@@ -139,6 +141,8 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 						fmt.Fprintf(os.Stderr, "Panicked while processing debug event:\n%v\n", r)
 					}
 				}()
+
+				a.varRefs.Purge()
 
 				if e.Reason() == interp.DebugTerminate {
 					a.session.Event("terminated", nil)
@@ -311,33 +315,44 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 			}
 
 		case "scopes":
-			success = true
 			args := m.Arguments.(*dap.ScopesArguments)
-			body = &dap.ScopesResponseBody{
-				Scopes: []*dap.Scope{
-					{Name: "Frame", PresentationHint: dap.Str("Locals"), VariablesReference: args.FrameId},
-				},
+			f := a.event.Frame(args.FrameId)
+			if f == nil {
+				message = "Invalid frame ID"
+				break
+			} else {
+				success = true
+			}
+
+			sc := f.Scopes()
+			b := &dap.ScopesResponseBody{Scopes: make([]*dap.Scope, len(sc))}
+			body = b
+
+			for i, sc := range sc {
+				name := "Locals"
+				if sc.IsClosure() {
+					name = "Closure"
+				}
+
+				b.Scopes[i] = &dap.Scope{
+					Name:               name,
+					PresentationHint:   dap.Str("Locals"),
+					VariablesReference: a.varRefs.Add(&frameVars{sc}),
+				}
 			}
 
 		case "variables":
-			success = true
 			args := m.Arguments.(*dap.VariablesArguments)
-			b := &dap.VariablesResponseBody{
-				Variables: []*dap.Variable{},
-			}
-			body = b
-
-			f := a.event.Frame(args.VariablesReference)
-			if f == nil {
+			scope := a.varRefs.Get(args.VariablesReference)
+			if scope == nil {
+				message = "Invalid variable reference"
 				break
+			} else {
+				success = true
 			}
 
-			for name, rv := range f.Variables() {
-				v := new(dap.Variable)
-				b.Variables = append(b.Variables, v)
-				v.Name = name
-				v.Value = fmt.Sprint(rv)
-				v.Type = dap.Str(fmt.Sprint(rv.Type()))
+			body = &dap.VariablesResponseBody{
+				Variables: scope.Variables(a),
 			}
 
 		case "terminate":

@@ -66,9 +66,7 @@ type frame struct {
 	// Located at start of struct to ensure proper aligment.
 	id uint64
 
-	pos  token.Pos
-	name string
-	dbg  *Debugger
+	debug *frameDebugData
 
 	root *frame          // global space
 	anc  *frame          // ancestor frame (caller space)
@@ -172,6 +170,8 @@ type Interpreter struct {
 	roots    []*node
 
 	hooks *hooks // symbol hooks
+
+	debugger *Debugger
 }
 
 const (

@@ -34,7 +34,11 @@ type DebugEvent struct {
 }
 
 type DebugFrame struct {
-	event *DebugEvent
+	event  *DebugEvent
+	frames []*frame
+}
+
+type DebugFrameScope struct {
 	frame *frame
 }
 
@@ -55,6 +59,21 @@ const (
 	DebugTerminate
 )
 
+type frameDebugData struct {
+	pos  token.Pos
+	name string
+	kind frameKind
+}
+
+type frameKind int
+
+const (
+	frameUnknown frameKind = iota
+	frameRoot
+	frameCall
+	frameClosure
+)
+
 func (interp *Interpreter) Debug(ctx context.Context, prog *Program, events func(*DebugEvent), opts *DebugOptions) *Debugger {
 	dbg := new(Debugger)
 	dbg.interp = interp
@@ -62,13 +81,14 @@ func (interp *Interpreter) Debug(ctx context.Context, prog *Program, events func
 	dbg.context, dbg.cancel = context.WithCancel(ctx)
 	dbg.resume = make(chan struct{})
 
-	interp.frame.dbg = dbg
+	interp.debugger = dbg
 
 	if opts == nil {
 		opts = new(DebugOptions)
 	}
 
 	go func() {
+		defer func() { interp.debugger = nil }()
 		defer events(&DebugEvent{reason: DebugTerminate})
 		defer dbg.cancel()
 
@@ -88,15 +108,27 @@ func (dbg *Debugger) Wait() (reflect.Value, error) {
 
 func (dbg *Debugger) enterCall(n *node, f *frame) {
 	dbg.fDepth++
-	if f == f.root || f.name != "" {
+
+	if f.debug != nil {
 		return
 	}
 
+	f.debug = new(frameDebugData)
+	if f == f.root {
+		f.debug.kind = frameRoot
+		return
+	}
+
+	f.debug.kind = frameCall
 	switch n.kind {
 	case funcLit:
-		f.name = "anonymous"
+		if n.frame != nil && n.frame.debug == nil {
+			n.frame.debug = new(frameDebugData)
+			n.frame.debug.kind = frameClosure
+			n.frame.debug.pos = n.pos
+		}
 	case funcDecl:
-		f.name = n.child[1].ident
+		f.debug.name = n.child[1].ident
 	}
 }
 
@@ -105,8 +137,11 @@ func (dbg *Debugger) exitCall(n *node, f *frame) {
 }
 
 func (dbg *Debugger) exec(n *node, f *frame) {
-	f.pos = n.pos
-	if f.pos == token.NoPos {
+	if f.debug == nil {
+		f.debug = new(frameDebugData)
+	}
+	f.debug.pos = n.pos
+	if f.debug.pos == token.NoPos {
 		return
 	}
 
@@ -212,15 +247,41 @@ func (evt *DebugEvent) Reason() DebugStopReason {
 	return evt.reason
 }
 
+func (evt *DebugEvent) walkFrames(fn func([]*frame) bool) {
+	if evt.frame == evt.frame.root {
+		fn([]*frame{evt.frame})
+		return
+	}
+
+	var frames []*frame
+	for f := evt.frame; f != nil && f != f.root; f = f.anc {
+		if f.debug == nil || f.debug.kind != frameCall {
+			frames = append(frames, f)
+			continue
+		}
+
+		if len(frames) > 0 {
+			if !fn(frames) {
+				return
+			}
+		}
+
+		frames = frames[:0]
+		frames = append(frames, f)
+	}
+
+	if len(frames) > 0 {
+		fn(frames)
+	}
+}
+
 func (evt *DebugEvent) FrameDepth() int {
 	if evt.frame == evt.frame.root {
 		return 1
 	}
 
 	var n int
-	for f := evt.frame; f != nil && f != f.root; f = f.anc {
-		n++
-	}
+	evt.walkFrames(func([]*frame) bool { n++; return true })
 	return n
 }
 
@@ -230,50 +291,71 @@ func (evt *DebugEvent) Frames(start, end int) []*DebugFrame {
 		return nil
 	}
 
-	if evt.frame == evt.frame.root && start == 0 && end > 0 {
-		return []*DebugFrame{{evt, evt.frame}}
-	}
-
-	f := evt.frame
-	for start > 0 && f != nil {
-		f = f.anc
-		start--
-	}
-	if f == nil {
-		return nil
-	}
-
-	frames := make([]*DebugFrame, 0, count)
-	for f := evt.frame; f != nil && f != f.root && len(frames) < count; f = f.anc {
-		frames = append(frames, &DebugFrame{evt, f})
-	}
+	frames := []*DebugFrame{}
+	evt.walkFrames(func(f []*frame) bool {
+		df := &DebugFrame{evt, make([]*frame, len(f))}
+		copy(df.frames, f)
+		frames = append(frames, df)
+		return len(frames) < count
+	})
 	return frames
 }
 
 func (evt *DebugEvent) Frame(n int) *DebugFrame {
-	f := evt.frame
-	for f != nil && n > 0 {
-		f = f.anc
-		n--
-	}
-	if f == nil {
-		return nil
-	}
-	return &DebugFrame{evt, f}
+	var df *DebugFrame
+	evt.walkFrames(func(f []*frame) bool {
+		if n > 0 {
+			n--
+			return true
+		}
+
+		df = &DebugFrame{evt, f}
+		return false
+	})
+	return df
 }
 
 func (f *DebugFrame) Name() string {
-	if f.frame == f.frame.root {
-		return "init"
+	d := f.frames[0].debug
+	if d == nil {
+		return "<unknown>"
 	}
-	return f.frame.name
+	switch d.kind {
+	case frameRoot:
+		return "<init>"
+	case frameClosure:
+		return "<closure>"
+	case frameCall:
+		if d.name == "" {
+			return "<anonymous>"
+		}
+		return d.name
+	default:
+		return "<unknown>"
+	}
 }
 
 func (f *DebugFrame) Position() token.Position {
-	return f.event.debugger.interp.fset.Position(f.frame.pos)
+	if f.frames[0].debug == nil {
+		return token.Position{}
+	}
+	return f.event.debugger.interp.fset.Position(f.frames[0].debug.pos)
 }
 
-func (f *DebugFrame) Variables() map[string]reflect.Value {
+func (f *DebugFrame) Scopes() []*DebugFrameScope {
+	s := make([]*DebugFrameScope, len(f.frames))
+	for i, f := range f.frames {
+		s[i] = &DebugFrameScope{f}
+	}
+	return s
+}
+
+func (f *DebugFrameScope) IsClosure() bool {
+	return f.frame.debug != nil && f.frame.debug.kind == frameClosure
+}
+
+func (f *DebugFrameScope) Variables() map[string]reflect.Value {
+	// f.event.debugger.interp.scopes
 	m := make(map[string]reflect.Value, len(f.frame.data))
 	for i, v := range f.frame.data {
 		m[fmt.Sprint(i)] = v

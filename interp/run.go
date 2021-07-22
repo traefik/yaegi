@@ -196,7 +196,7 @@ func runCfg(n *node, f *frame, funcNode *node) {
 		f.mutex.Unlock()
 	}()
 
-	if f.root.dbg == nil {
+	if n.interp.debugger == nil {
 		for exec := n.exec; exec != nil && f.runid() == n.interp.runid(); {
 			exec = exec(f)
 		}
@@ -207,11 +207,11 @@ func runCfg(n *node, f *frame, funcNode *node) {
 		return
 	}
 
-	f.root.dbg.enterCall(funcNode, f)
-	defer f.root.dbg.exitCall(funcNode, f)
+	n.interp.debugger.enterCall(funcNode, f)
+	defer n.interp.debugger.exitCall(funcNode, f)
 
 	for m, exec := n, n.exec; f.runid() == n.interp.runid(); {
-		f.root.dbg.exec(m, f)
+		n.interp.debugger.exec(m, f)
 
 		exec = exec(f)
 		if exec == nil {
