@@ -53,8 +53,8 @@ func PrintSomethingElse() {
 
 func TestFilesystemMapFS(t *testing.T) {
 	i := interp.New(interp.Options{
-		GoPath:     "./_pkg",
-		Filesystem: testFilesystem,
+		GoPath:               "./_pkg",
+		SourcecodeFilesystem: testFilesystem,
 	})
 	if err := i.Use(stdlib.Symbols); err != nil {
 		t.Fatal(err)

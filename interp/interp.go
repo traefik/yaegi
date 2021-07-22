@@ -255,7 +255,10 @@ type Options struct {
 	Stdin          io.Reader
 	Stdout, Stderr io.Writer
 
-	Filesystem fs.FS
+	// SourcecodeFilesystem is where the _sourcecode_ is loaded from and does
+	// NOT affect the filesystem of scripts when they run.
+	// It can be any fs.FS compliant filesystem (e.g. embed.FS, or fstest.MapFS for testing)
+	SourcecodeFilesystem fs.FS
 }
 
 // New returns a new interpreter.
@@ -285,8 +288,8 @@ func New(options Options) *Interpreter {
 		i.opt.stderr = os.Stderr
 	}
 
-	if options.Filesystem != nil {
-		i.opt.filesystem = options.Filesystem
+	if options.SourcecodeFilesystem != nil {
+		i.opt.filesystem = options.SourcecodeFilesystem
 	}
 
 	i.opt.context.GOPATH = options.GoPath
