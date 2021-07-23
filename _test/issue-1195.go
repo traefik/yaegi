@@ -1,3 +1,5 @@
+// +build 1.16
+
 package main
 
 import (
