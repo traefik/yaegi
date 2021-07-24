@@ -1223,7 +1223,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 
 		case funcDecl:
 			n.start = n.child[3].start
-			n.types = sc.types
+			n.types, n.scope = sc.types, sc
 			sc = sc.pop()
 			funcName := n.child[1].ident
 			if sym := sc.sym[funcName]; !isMethod(n) && sym != nil {
@@ -1234,7 +1234,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			}
 
 		case funcLit:
-			n.types = sc.types
+			n.types, n.scope = sc.types, sc
 			sc = sc.pop()
 			err = genRun(n)
 

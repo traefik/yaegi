@@ -43,6 +43,7 @@ type node struct {
 	typ    *itype         // type of value in frame, or nil
 	recv   *receiver      // method receiver node for call, or nil
 	types  []reflect.Type // frame types, used by function literals only
+	scope  *scope         // frame scope
 	action action         // action
 	exec   bltn           // generated function to execute
 	gen    bltnGenerator  // generator function to produce above bltn

@@ -219,6 +219,11 @@ func runCfg(n *node, f *frame, funcNode, callNode *node) {
 			break
 		}
 
+		if m == nil {
+			m = originalExecNode(n, exec)
+			continue
+		}
+
 		if isExecNode(m.tnext, exec) {
 			m = m.tnext
 		} else if isExecNode(m.fnext, exec) {

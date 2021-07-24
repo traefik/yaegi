@@ -41,7 +41,6 @@ type frameDebugData struct {
 	pos   token.Pos
 	name  string
 	kind  frameKind
-	def   *node
 	scope *scope
 }
 
@@ -184,7 +183,7 @@ func (dbg *Debugger) enterCall(nFunc, nCall *node, f *frame) {
 
 	f.debug = new(frameDebugData)
 	f.debug.g = f.anc.debug.g
-	f.debug.def = nFunc
+	f.debug.scope = nFunc.scope
 
 	switch nFunc.kind {
 	case funcLit:
@@ -217,15 +216,20 @@ func (dbg *Debugger) exitCall(nFunc, nCall *node, f *frame) {
 }
 
 func (dbg *Debugger) exec(n *node, f *frame) {
-	f.debug.pos = n.pos
-	if f.debug.pos == token.NoPos {
+	if n == nil {
+		f.debug.pos = token.NoPos
+	} else {
+		f.debug.pos = n.pos
+	}
+
+	if n != nil && n.pos == token.NoPos {
 		return
 	}
 
 	g := f.debug.g
 	switch g.mode {
 	case debugRun:
-		if !n.bkp {
+		if n == nil || !n.bkp {
 			return
 		}
 
@@ -328,7 +332,6 @@ func (dbg *Debugger) SetBreakpoints(path string, bp []*Breakpoint) []*Breakpoint
 		lines[bp.Line] = i
 	}
 
-	claimed := map[*node]bool{}
 	root.Walk(func(n *node) bool {
 		if !n.pos.IsValid() {
 			return true
@@ -346,11 +349,9 @@ func (dbg *Debugger) SetBreakpoints(path string, bp []*Breakpoint) []*Breakpoint
 		}
 
 		found[i] = bp[i]
-		claimed[n.start] = true
+		n.bkp = true
 		return true
-	}, func(n *node) {
-		n.bkp = claimed[n]
-	})
+	}, nil)
 
 	return found
 }
@@ -480,12 +481,7 @@ func (f *DebugFrameScope) IsClosure() bool {
 
 func (f *DebugFrameScope) Variables() []*DebugVariable {
 	d := f.frame.debug
-	if d == nil || d.scope == nil && d.def == nil {
-		return nil
-	}
-
-	d.scope = findScopeInterp(d.def)
-	if d.scope == nil {
+	if d == nil || d.scope == nil {
 		return nil
 	}
 
@@ -507,40 +503,6 @@ func (f *DebugFrameScope) Variables() []*DebugVariable {
 	return m
 }
 
-func findScopeInterp(n *node) *scope {
-	sc := findScope(n, n.interp.universe)
-	if sc != nil {
-		return sc
-	}
-
-	for _, sc := range n.interp.scopes {
-		sc = findScope(n, sc)
-		if sc != nil {
-			return sc
-		}
-	}
-
-	return nil
-}
-
-func findScope(n *node, sc *scope) *scope {
-	if sc == nil {
-		return nil
-	}
-
-	if reflect.ValueOf(n.types).Pointer() == reflect.ValueOf(sc.types).Pointer() {
-		return sc
-	}
-
-	for _, sc := range sc.child {
-		sc = findScope(n, sc)
-		if sc != nil {
-			return sc
-		}
-	}
-	return nil
-}
-
 func scanScope(sc *scope, index map[int]string) {
 	for name, sym := range sc.sym {
 		if _, ok := index[sym.index]; ok {
@@ -549,7 +511,10 @@ func scanScope(sc *scope, index map[int]string) {
 		index[sym.index] = name
 	}
 
-	for _, sc := range sc.child {
-		scanScope(sc, index)
+	for _, ch := range sc.child {
+		if ch.def != sc.def {
+			continue
+		}
+		scanScope(ch, index)
 	}
 }
