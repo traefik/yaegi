@@ -115,18 +115,6 @@ func canBeNil(k reflect.Kind) bool {
 	return k == rChan || k == rFunc || k == rInterface || k == rMap || k == rPtr || k == rSlice
 }
 
-func isNode(v reflect.Value) bool {
-	if v.Kind() == rPtr {
-		return isNode(v.Elem())
-	}
-	if v.Kind() != rStruct {
-		return false
-	}
-	typ := v.Type()
-	return typ.Name() == "node" &&
-		typ.PkgPath() == "github.com/traefik/yaegi/interp"
-}
-
 type variableScope interface {
 	Variables(*Adapter) []*dap.Variable
 }
@@ -139,11 +127,8 @@ func (f *frameVars) Variables(a *Adapter) []*dap.Variable {
 	fv := f.DebugFrameScope.Variables()
 	vars := make([]*dap.Variable, 0, len(fv))
 
-	for name, rv := range fv {
-		if isNode(rv) {
-			continue
-		}
-		vars = append(vars, a.newVar(name, rv))
+	for _, v := range fv {
+		vars = append(vars, a.newVar(v.Name, v.Value))
 	}
 	return vars
 }

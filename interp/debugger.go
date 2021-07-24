@@ -9,6 +9,8 @@ import (
 	"sync"
 )
 
+var rNodeType = reflect.TypeOf((*node)(nil)).Elem()
+
 type Debugger struct {
 	interp  *Interpreter
 	events  func(*DebugEvent)
@@ -35,10 +37,12 @@ type debugRoutine struct {
 }
 
 type frameDebugData struct {
-	g    *debugRoutine
-	pos  token.Pos
-	name string
-	kind frameKind
+	g     *debugRoutine
+	pos   token.Pos
+	name  string
+	kind  frameKind
+	def   *node
+	scope *scope
 }
 
 type frameKind int
@@ -67,6 +71,11 @@ type DebugFrame struct {
 
 type DebugFrameScope struct {
 	frame *frame
+}
+
+type DebugVariable struct {
+	Name  string
+	Value reflect.Value
 }
 
 type DebugGoRoutine struct {
@@ -175,6 +184,7 @@ func (dbg *Debugger) enterCall(nFunc, nCall *node, f *frame) {
 
 	f.debug = new(frameDebugData)
 	f.debug.g = f.anc.debug.g
+	f.debug.def = nFunc
 
 	switch nFunc.kind {
 	case funcLit:
@@ -468,10 +478,78 @@ func (f *DebugFrameScope) IsClosure() bool {
 	return f.frame.debug != nil && f.frame.debug.kind == frameClosure
 }
 
-func (f *DebugFrameScope) Variables() map[string]reflect.Value {
-	m := make(map[string]reflect.Value, len(f.frame.data))
+func (f *DebugFrameScope) Variables() []*DebugVariable {
+	d := f.frame.debug
+	if d == nil || d.scope == nil && d.def == nil {
+		return nil
+	}
+
+	d.scope = findScopeInterp(d.def)
+	if d.scope == nil {
+		return nil
+	}
+
+	index := map[int]string{}
+	scanScope(d.scope, index)
+
+	m := make([]*DebugVariable, 0, len(f.frame.data))
 	for i, v := range f.frame.data {
-		m[fmt.Sprint(i)] = v
+		if typ := v.Type(); typ.AssignableTo(rNodeType) || typ.Kind() == reflect.Ptr && typ.Elem().AssignableTo(rNodeType) {
+			continue
+		}
+		name, ok := index[i]
+		if !ok {
+			continue
+		}
+
+		m = append(m, &DebugVariable{name, v})
 	}
 	return m
+}
+
+func findScopeInterp(n *node) *scope {
+	sc := findScope(n, n.interp.universe)
+	if sc != nil {
+		return sc
+	}
+
+	for _, sc := range n.interp.scopes {
+		sc = findScope(n, sc)
+		if sc != nil {
+			return sc
+		}
+	}
+
+	return nil
+}
+
+func findScope(n *node, sc *scope) *scope {
+	if sc == nil {
+		return nil
+	}
+
+	if reflect.ValueOf(n.types).Pointer() == reflect.ValueOf(sc.types).Pointer() {
+		return sc
+	}
+
+	for _, sc := range sc.child {
+		sc = findScope(n, sc)
+		if sc != nil {
+			return sc
+		}
+	}
+	return nil
+}
+
+func scanScope(sc *scope, index map[int]string) {
+	for name, sym := range sc.sym {
+		if _, ok := index[sym.index]; ok {
+			continue
+		}
+		index[sym.index] = name
+	}
+
+	for _, sc := range sc.child {
+		scanScope(sc, index)
+	}
 }
