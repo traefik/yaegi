@@ -314,7 +314,8 @@ func New(options Options) *Interpreter {
 	// fastChan disables the cancellable version of channel operations in evalWithContext
 	i.opt.fastChan, _ = strconv.ParseBool(os.Getenv("YAEGI_FAST_CHAN"))
 
-	// specialStdio allows to assign directly io.Writer and io.Reader to os.Stdxxx, even if they are not file descriptors.
+	// specialStdio allows to assign directly io.Writer and io.Reader to os.Stdxxx,
+	// even if they are not file descriptors.
 	i.opt.specialStdio, _ = strconv.ParseBool(os.Getenv("YAEGI_SPECIAL_STDIO"))
 
 	return &i
