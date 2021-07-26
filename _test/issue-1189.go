@@ -23,8 +23,9 @@ func main() {
 	for _, s := range Is {
 		n += s.Foo()
 	}
-	println(n, Is["foo"].Foo())
+	bar := "bar"
+	println(n, Is["foo"].Foo(), Is[bar].Foo())
 }
 
 // Output:
-// 63 21
+// 63 21 42
