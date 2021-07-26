@@ -1497,7 +1497,11 @@ func callBin(n *node) {
 				}
 				out := callFn(value(f), in)
 				for i := 0; i < len(out); i++ {
-					getFrame(f, n.level).data[n.findex+i].Set(out[i])
+					if out[i].Type().Kind() == reflect.Func {
+						getFrame(f, n.level).data[n.findex+i] = out[i]
+					} else {
+						getFrame(f, n.level).data[n.findex+i].Set(out[i])
+					}
 				}
 				return tnext
 			}
