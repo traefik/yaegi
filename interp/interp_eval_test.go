@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -925,6 +926,84 @@ func TestMultiEvalNoName(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+const goMinorVersionTest = 16
+
+func TestHasIOFS(t *testing.T) {
+	code := `
+// +build go1.16
+
+package main
+
+import (
+	"errors"
+	"io/fs"
+)
+
+func main() {
+	pe := fs.PathError{}
+	pe.Op = "nothing"
+	pe.Path = "/nowhere"
+	pe.Err = errors.New("an error")
+	println(pe.Error())
+}
+
+// Output:
+// nothing /nowhere: an error
+`
+
+	var buf bytes.Buffer
+	i := interp.New(interp.Options{Stdout: &buf})
+	if err := i.Use(interp.Symbols); err != nil {
+		t.Fatal(err)
+	}
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := i.Eval(code); err != nil {
+		t.Fatal(err)
+	}
+
+	var expectedOutput string
+	var minor int
+	var err error
+	version := runtime.Version()
+	fields := strings.Fields(version)
+	// Go stable
+	if len(fields) == 1 {
+		v := strings.Split(version, ".")
+		if len(v) < 2 {
+			t.Fatalf("unexpected: %v", version)
+		}
+		minor, err = strconv.Atoi(v[1])
+		if err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		// Go devel
+		if fields[0] != "devel" {
+			t.Fatalf("unexpected: %v", fields[0])
+		}
+		parts := strings.Split(fields[1], "-")
+		if len(parts) != 2 {
+			t.Fatalf("unexpected: %v", fields[1])
+		}
+		minor, err = strconv.Atoi(strings.TrimPrefix(parts[0], "go1."))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if minor >= goMinorVersionTest {
+		expectedOutput = "nothing /nowhere: an error\n"
+	}
+
+	output := buf.String()
+	if buf.String() != expectedOutput {
+		t.Fatalf("got: %v, wanted: %v", output, expectedOutput)
 	}
 }
 
