@@ -2,4 +2,4 @@
 
 package stdlib
 
-//go:generate ../internal/cmd/extract/extract embed testing/fstest
+//go:generate ../internal/cmd/extract/extract embed io/fs testing/fstest
