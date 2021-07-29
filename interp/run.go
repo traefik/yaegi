@@ -1091,7 +1091,8 @@ func call(n *node) {
 			switch {
 			case isEmptyInterface(arg):
 				values = append(values, genValue(c))
-			case isInterfaceSrc(arg):
+			case isInterfaceSrc(arg) && n.action != aCallSlice:
+				// callSlice implies variadic call with ellipsis, do not wrap in valueInterface.
 				values = append(values, genValueInterface(c))
 			case isInterfaceBin(arg):
 				values = append(values, genInterfaceWrapper(c, arg.rtype))
