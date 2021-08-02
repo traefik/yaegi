@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"path"
 	"path/filepath"
 	"reflect"
 )
@@ -187,6 +188,9 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 			}
 			// Try to import a binary package first, or a source package
 			var pkgName string
+			if packageName := path.Base(ipath); path.Dir(ipath) == packageName {
+				ipath = packageName
+			}
 			if pkg := interp.binPkg[ipath]; pkg != nil {
 				switch name {
 				case "_": // no import of symbols
