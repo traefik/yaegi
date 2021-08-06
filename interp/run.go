@@ -224,11 +224,12 @@ func runCfg(n *node, f *frame, funcNode, callNode *node) {
 			continue
 		}
 
-		if isExecNode(m.tnext, exec) {
+		switch {
+		case isExecNode(m.tnext, exec):
 			m = m.tnext
-		} else if isExecNode(m.fnext, exec) {
+		case isExecNode(m.fnext, exec):
 			m = m.fnext
-		} else {
+		default:
 			m = originalExecNode(m, exec)
 		}
 	}

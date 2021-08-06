@@ -425,8 +425,8 @@ func (interp *Interpreter) EvalPath(path string) (res reflect.Value, err error) 
 	return interp.eval(string(b), path, false)
 }
 
-// EvalPath evaluates Go code located at path and returns the last result computed
-// by the interpreter, and a non nil error in case of failure.
+// EvalPathWithContext evaluates Go code located at path and returns the last
+// result computed by the interpreter, and a non nil error in case of failure.
 // The main function of the main package is executed if present.
 func (interp *Interpreter) EvalPathWithContext(ctx context.Context, path string) (res reflect.Value, err error) {
 	interp.mutex.Lock()

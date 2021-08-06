@@ -264,23 +264,27 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 		case "continue":
 			args := m.Arguments.(*dap.ContinueArguments)
 			defer a.events.Release(args.ThreadId)
-			success = a.debugger.Continue(args.ThreadId)
+			err := a.debugger.Continue(args.ThreadId)
+			success = err == nil
 			body = &dap.ContinueResponseBody{AllThreadsContinued: dap.Bool(false)}
 
 		case "stepIn":
 			args := m.Arguments.(*dap.StepInArguments)
 			defer a.events.Release(args.ThreadId)
-			success = a.debugger.Step(args.ThreadId, interp.DebugStepInto)
+			err := a.debugger.Step(args.ThreadId, interp.DebugStepInto)
+			success = err == nil
 
 		case "next":
 			args := m.Arguments.(*dap.NextArguments)
 			defer a.events.Release(args.ThreadId)
-			success = a.debugger.Step(args.ThreadId, interp.DebugStepOver)
+			err := a.debugger.Step(args.ThreadId, interp.DebugStepOver)
+			success = err == nil
 
 		case "stepOut":
 			args := m.Arguments.(*dap.StepOutArguments)
 			defer a.events.Release(args.ThreadId)
-			success = a.debugger.Step(args.ThreadId, interp.DebugStepOut)
+			err := a.debugger.Step(args.ThreadId, interp.DebugStepOut)
+			success = err == nil
 
 		case "pause":
 			args := m.Arguments.(*dap.PauseArguments)

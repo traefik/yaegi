@@ -8,16 +8,19 @@ import (
 	"runtime/debug"
 )
 
+// A Program is Go code that has been parsed and compiled.
 type Program struct {
 	pkgName string
 	root    *node
 	init    []*node
 }
 
+// Compile parses and compiles a Go code represented as a string.
 func (interp *Interpreter) Compile(src string) (*Program, error) {
 	return interp.compile(src, "", true)
 }
 
+// CompilePath parses and compiles a Go code located at path.
 func (interp *Interpreter) CompilePath(path string) (*Program, error) {
 	if !isFile(path) {
 		_, err := interp.importSrc(mainID, path, NoTest)
@@ -104,6 +107,7 @@ func (interp *Interpreter) compile(src, name string, inc bool) (*Program, error)
 	return &Program{pkgName, root, initNodes}, nil
 }
 
+// Execute executes compiled Go code.
 func (interp *Interpreter) Execute(p *Program) (res reflect.Value, err error) {
 	defer func() {
 		r := recover()
@@ -151,6 +155,7 @@ func (interp *Interpreter) Execute(p *Program) (res reflect.Value, err error) {
 	return res, err
 }
 
+// ExecuteWithContext executes compiled Go code.
 func (interp *Interpreter) ExecuteWithContext(ctx context.Context, p *Program) (res reflect.Value, err error) {
 	interp.mutex.Lock()
 	interp.done = make(chan struct{})
