@@ -2544,6 +2544,8 @@ func doComposite(n *node, hasType bool, keyed bool) {
 			values[fieldIndex] = genValueInterfaceArray(val)
 		case isRecursiveType(ft, rft):
 			values[fieldIndex] = genValueRecursiveInterface(val, rft)
+		case isInterfaceSrc(ft) && !isEmptyInterface(ft):
+			values[fieldIndex] = genValueInterface(val)
 		case isInterface(ft):
 			values[fieldIndex] = genInterfaceWrapper(val, rft)
 		default:
