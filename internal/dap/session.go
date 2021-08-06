@@ -7,12 +7,20 @@ import (
 	"sync"
 )
 
+// Handler handles DAP events.
 type Handler interface {
+	// Called when the DAP session begins.
 	Initialize(*Session, *InitializeRequestArguments) *Capabilities
+
+	// Called for each received DAP message. Returning true will terminate the
+	// session.
 	Process(IProtocolMessage) (stop bool)
+
+	// Called when the DAP session ends.
 	Terminate()
 }
 
+// Session handles the low-level mechanics of a DAP session.
 type Session struct {
 	handler Handler
 	dec     *Decoder
@@ -25,12 +33,9 @@ type Session struct {
 	smu     *sync.Mutex
 }
 
-type SessionRequest struct {
-	*Session
-	*InitializeRequestArguments
-	Message IProtocolMessage
-}
-
+// NewSession returns a new Session. The session reads messages from the reader
+// and writes messages to the writer. If the reader or writer are io.Closers,
+// they will be closed when the session terminates.
 func NewSession(r io.Reader, w io.Writer, handler Handler) *Session {
 	rc, _ := r.(io.ReadCloser)
 	wc, _ := w.(io.WriteCloser)
@@ -44,8 +49,11 @@ func NewSession(r io.Reader, w io.Writer, handler Handler) *Session {
 	}
 }
 
+// Errors returns any errors that occurred during the session.
 func (s *Session) Errors() []error { return s.errs }
 
+// Debug sets the debug writer. If the debug writer is non-null, sent and
+// received DAP messages will be written to it.
 func (s *Session) Debug(w io.Writer) { s.dbg = w }
 
 func (s *Session) debug(dir string, msg IProtocolMessage) {
@@ -61,7 +69,8 @@ func (s *Session) debug(dir string, msg IProtocolMessage) {
 	}
 }
 
-func (s *Session) errorf(format string, a ...interface{}) {
+// Errorf logs an error.
+func (s *Session) Errorf(format string, a ...interface{}) {
 	err := fmt.Errorf(format, a...)
 	s.errs = append(s.errs, err)
 }
@@ -113,6 +122,7 @@ func (s *Session) send(msg IProtocolMessage) error {
 	return err
 }
 
+// Event sends a DAP event.
 func (s *Session) Event(event string, body EventBody) error {
 	evt := new(Event)
 	evt.Event = event
@@ -120,6 +130,7 @@ func (s *Session) Event(event string, body EventBody) error {
 	return s.send(evt)
 }
 
+// Respond sends a DAP response to the given request.
 func (s *Session) Respond(req *Request, success bool, message string, body ResponseBody) error {
 	resp := new(Response)
 	resp.RequestSeq = req.Seq
@@ -133,18 +144,18 @@ func (s *Session) Respond(req *Request, success bool, message string, body Respo
 func (s *Session) initialize() {
 	m, err := s.recv()
 	if err != nil {
-		s.errorf("initialize: decode: %w", err)
+		s.Errorf("initialize: decode: %w", err)
 		return
 	}
 
 	req, ok := m.(*Request)
 	if !ok {
-		s.errorf("initialize: expected a request, got %T", m)
+		s.Errorf("initialize: expected a request, got %T", m)
 		return
 	}
 
 	if req.Command != "initialize" {
-		s.errorf("initialize: expected \"initialize\", got %q", req.Command)
+		s.Errorf("initialize: expected \"initialize\", got %q", req.Command)
 		return
 	}
 
@@ -152,7 +163,7 @@ func (s *Session) initialize() {
 	caps := s.handler.Initialize(s, args)
 	err = s.Respond(req, true, "Success", caps)
 	if err != nil {
-		s.errorf("initialize: encode: %w", err)
+		s.Errorf("initialize: encode: %w", err)
 		return
 	}
 }
@@ -160,12 +171,13 @@ func (s *Session) initialize() {
 func (s *Session) terminate() {
 	err := s.Event("terminated", new(TerminatedEventBody))
 	if err != nil {
-		s.errorf("terminate: encode: %w", err)
+		s.Errorf("terminate: encode: %w", err)
 	}
 
 	s.handler.Terminate()
 }
 
+// Run starts the session. Run blocks until the session is terminated.
 func (s *Session) Run() {
 	defer s.close()
 
@@ -174,7 +186,7 @@ func (s *Session) Run() {
 	for {
 		m, err := s.recv()
 		if err != nil {
-			s.errorf("loop: decode: %w", err)
+			s.Errorf("loop: decode: %w", err)
 			return
 		}
 

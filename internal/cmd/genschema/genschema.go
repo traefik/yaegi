@@ -24,19 +24,28 @@ func fatalf(format string, args ...interface{}) {
 	os.Exit(1)
 }
 
-var schemaUrl = flag.String("url", "", "URL of the schema")
-var packageName = flag.String("name", "", "Package name")
-var filePath = flag.String("path", "", "File to write to")
-var jsonPatch = flag.String("patch", "", "JSON file to apply as a patch")
-var chooseTypes = flag.String("choose", "", "Comma-separated list of types to extract, instead of all types")
-var verbose = flag.Bool("verbose", false, "Print more messages")
+func noerr(fn func() error, msg string, args ...interface{}) {
+	err := fn()
+	if err != nil {
+		fatalf(msg, append(args, err))
+	}
+}
+
+var (
+	schemaURL   = flag.String("url", "", "URL of the schema")
+	packageName = flag.String("name", "", "Package name")
+	filePath    = flag.String("path", "", "File to write to")
+	jsonPatch   = flag.String("patch", "", "JSON file to apply as a patch")
+	chooseTypes = flag.String("choose", "", "Comma-separated list of types to extract, instead of all types")
+	verbose     = flag.Bool("verbose", false, "Print more messages")
+)
 
 var dapMode = flag.Bool("dap-mode", false, "Used for generating Debug Adapter Protocol types")
 
 func main() {
 	flag.Parse()
 
-	if *schemaUrl == "" {
+	if *schemaURL == "" {
 		fatalf("--url is required")
 	}
 	if *packageName == "" {
@@ -46,18 +55,18 @@ func main() {
 		fatalf("--path is required")
 	}
 
-	resp, err := http.Get(*schemaUrl)
+	resp, err := http.Get(*schemaURL) //nolint:bodyclose,noctx // It is closed; context is not relevant
 	if err != nil {
 		fatalf("http: %v\n", err)
 	}
 
 	if resp.StatusCode != 200 {
-		resp.Body.Close()
+		noerr(resp.Body.Close, "failed to close response body: %v")
 		fatalf("http: expected status 200, got %d\n", resp.StatusCode)
 	}
 
 	b, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	noerr(resp.Body.Close, "failed to close response body: %v")
 	if err != nil {
 		fatalf("read (schema): %v\n", err)
 	}
@@ -69,7 +78,7 @@ func main() {
 		}
 	}
 
-	var schema Schema
+	var schema jsonx.Schema
 	err = json.Unmarshal(b, &schema)
 	if err != nil {
 		fatalf("json (schema): %v\n", err)
@@ -99,7 +108,7 @@ func main() {
 		}
 	}
 
-	forEachOrdered(w.Schema.Definitions, func(name string, s *Schema) {
+	forEachOrdered(w.Schema.Definitions, func(name string, s *jsonx.Schema) {
 		name = camelCase(name)
 		if m == nil || m[name] {
 			w.writeSchema(name, s)
@@ -116,7 +125,7 @@ func main() {
 	if err != nil {
 		fatalf("json: %v\n", err)
 	}
-	defer f.Close()
+	defer noerr(f.Close, "failed to close %s: %v", *filePath)
 
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, *filePath, buf, parser.ParseComments)
@@ -130,11 +139,11 @@ func main() {
 	}
 }
 
-func isPlain(s *Schema) bool {
+func isPlain(s *jsonx.Schema) bool {
 	return s.Default == nil && isPlainExceptDefault(s)
 }
 
-func isPlainExceptDefault(s *Schema) bool {
+func isPlainExceptDefault(s *jsonx.Schema) bool {
 	return true &&
 		s.Items == nil &&
 		s.AdditionalProperties == nil &&
@@ -158,7 +167,7 @@ func howMany(v ...interface{}) int {
 	return c
 }
 
-func resolveRef(s *Schema, ref string) (string, *Schema) {
+func resolveRef(s *jsonx.Schema, ref string) (string, *jsonx.Schema) {
 	if ref == "#" {
 		return "", s
 	}
@@ -177,7 +186,7 @@ func resolveRef(s *Schema, ref string) (string, *Schema) {
 	panic("not reachable")
 }
 
-func forEachOrdered(m map[string]*Schema, fn func(string, *Schema)) {
+func forEachOrdered(m map[string]*jsonx.Schema, fn func(string, *jsonx.Schema)) {
 	names := make([]string, 0, len(m))
 	for name := range m {
 		names = append(names, name)
@@ -190,21 +199,21 @@ func forEachOrdered(m map[string]*Schema, fn func(string, *Schema)) {
 	}
 }
 
-func unsupported(name string, s *Schema) {
+func unsupported(name string, s *jsonx.Schema) {
 	fmt.Fprintf(os.Stderr, "type %q: unsupported schema\n", name)
 	enc := json.NewEncoder(os.Stderr)
 	enc.SetIndent("", "    ")
-	enc.Encode(s)
+	enc.Encode(s) //nolint:errcheck
 	os.Exit(1)
 }
 
 type mergeOpts struct {
-	Base        *Schema
+	Base        *jsonx.Schema
 	ResolveRefs bool
 	Recurse     bool
 }
 
-func schemaMerge(opts mergeOpts, name string, s, r *Schema) {
+func schemaMerge(opts mergeOpts, name string, s, r *jsonx.Schema) {
 	if opts.ResolveRefs && r.Ref != "" {
 		if !isPlain(r) {
 			fatalf("type %q: non-plain ref types are not supported\n", name)
@@ -213,7 +222,7 @@ func schemaMerge(opts mergeOpts, name string, s, r *Schema) {
 	}
 
 	if opts.Recurse && r.AllOf != nil {
-		s := new(Schema)
+		s := new(jsonx.Schema)
 		for i, r := range r.AllOf {
 			schemaMerge(opts, fmt.Sprintf("%s[%d]", name, i), s, r)
 		}
@@ -243,7 +252,7 @@ func schemaMerge(opts mergeOpts, name string, s, r *Schema) {
 	schemaReplaceField(opts, name, s, r, "Not")
 }
 
-func schemaReplaceField(opts mergeOpts, name string, s, r *Schema, field string) {
+func schemaReplaceField(opts mergeOpts, name string, s, r *jsonx.Schema, field string) {
 	rf := reflect.ValueOf(r).Elem().FieldByName(field)
 	rv := rf.Interface()
 	if rf.IsNil() {
@@ -253,8 +262,8 @@ func schemaReplaceField(opts mergeOpts, name string, s, r *Schema, field string)
 	sf := reflect.ValueOf(s).Elem().FieldByName(field)
 	sv := sf.Interface()
 	if sf.IsNil() {
-		if _, ok := sv.(map[string]*Schema); ok {
-			sv = map[string]*Schema{}
+		if _, ok := sv.(map[string]*jsonx.Schema); ok {
+			sv = map[string]*jsonx.Schema{}
 			sf.Set(reflect.ValueOf(sv))
 		} else {
 			sf.Set(rf)
@@ -263,12 +272,12 @@ func schemaReplaceField(opts mergeOpts, name string, s, r *Schema, field string)
 	}
 
 	switch sv := sv.(type) {
-	case Schema_Type:
-		m := map[SimpleTypes]bool{}
-		for _, v := range rv.(Schema_Type) {
+	case jsonx.Schema_Type:
+		m := map[jsonx.SimpleTypes]bool{}
+		for _, v := range rv.(jsonx.Schema_Type) {
 			m[v] = true
 		}
-		nv := Schema_Type{}
+		nv := jsonx.Schema_Type{}
 		for _, v := range sv {
 			if m[v] {
 				nv = append(nv, v)
@@ -276,8 +285,8 @@ func schemaReplaceField(opts mergeOpts, name string, s, r *Schema, field string)
 		}
 		sf.Set(reflect.ValueOf(nv))
 
-	case map[string]*Schema:
-		for k, v := range rv.(map[string]*Schema) {
+	case map[string]*jsonx.Schema:
+		for k, v := range rv.(map[string]*jsonx.Schema) {
 			if sv[k] == nil {
 				sv[k] = v
 			} else {

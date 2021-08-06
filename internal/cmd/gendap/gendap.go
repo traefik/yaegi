@@ -17,20 +17,29 @@ import (
 	"github.com/traefik/yaegi/internal/jsonx"
 )
 
-var schemaUrl = flag.String("url", "", "URL of the schema")
-var packageName = flag.String("name", "", "Package name")
-var filePath = flag.String("path", "", "File to write to")
-var jsonPatch = flag.String("patch", "", "JSON file to apply as a patch")
+var (
+	schemaURL   = flag.String("url", "", "URL of the schema")
+	packageName = flag.String("name", "", "Package name")
+	filePath    = flag.String("path", "", "File to write to")
+	jsonPatch   = flag.String("patch", "", "JSON file to apply as a patch")
+)
 
 func fatalf(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format, args...)
 	os.Exit(1)
 }
 
+func noerr(fn func() error, msg string, args ...interface{}) {
+	err := fn()
+	if err != nil {
+		fatalf(msg, append(args, err))
+	}
+}
+
 func main() {
 	flag.Parse()
 
-	if *schemaUrl == "" {
+	if *schemaURL == "" {
 		fatalf("--url is required")
 	}
 	if *packageName == "" {
@@ -40,18 +49,18 @@ func main() {
 		fatalf("--path is required")
 	}
 
-	resp, err := http.Get(*schemaUrl)
+	resp, err := http.Get(*schemaURL) //nolint:bodyclose,noctx // It is closed; context is not relevant
 	if err != nil {
 		fatalf("http: %v\n", err)
 	}
 
 	if resp.StatusCode != 200 {
-		resp.Body.Close()
+		noerr(resp.Body.Close, "failed to close response body: %v")
 		fatalf("http: expected status 200, got %d\n", resp.StatusCode)
 	}
 
 	b, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	noerr(resp.Body.Close, "failed to close response body: %v")
 	if err != nil {
 		fatalf("read (schema): %v\n", err)
 	}
@@ -69,7 +78,7 @@ func main() {
 		fatalf("json (schema): %v\n", err)
 	}
 
-	var requests, responses, events, missing Types
+	var requests, responses, events, missing dapTypes
 	for name, s := range schema.Definitions {
 		if len(s.AllOf) != 2 || s.AllOf[0].Ref == "" {
 			continue
@@ -82,15 +91,16 @@ func main() {
 				continue
 			}
 
-			typ := Type{
+			typ := dapType{
 				Identifier: cmd.Enum[0],
 				Name:       name[:len(name)-len("Request")] + "Arguments",
 			}
-			if schema.Definitions[typ.Name] != nil {
+			switch {
+			case schema.Definitions[typ.Name] != nil:
 				// ok
-			} else if schema.Definitions[name+"Arguments"] != nil {
+			case schema.Definitions[name+"Arguments"] != nil:
 				typ.Name = name + "Arguments"
-			} else {
+			default:
 				missing = append(missing, typ)
 			}
 
@@ -99,16 +109,17 @@ func main() {
 		case "#/definitions/Response":
 			id := name[:len(name)-len("Response")]
 			id = strings.ToLower(id[:1]) + id[1:]
-			typ := Type{
+			typ := dapType{
 				Identifier: id,
 				Name:       name + "Body",
 			}
 
-			if schema.Definitions[typ.Name] != nil {
+			switch {
+			case schema.Definitions[typ.Name] != nil:
 				// ok
-			} else if id == "initialize" && schema.Definitions["Capabilities"] != nil {
+			case id == "initialize" && schema.Definitions["Capabilities"] != nil:
 				typ.Name = "Capabilities"
-			} else {
+			default:
 				missing = append(missing, typ)
 			}
 
@@ -119,7 +130,7 @@ func main() {
 			if evt == nil || len(evt.Enum) != 1 {
 				continue
 			}
-			typ := Type{
+			typ := dapType{
 				Identifier: evt.Enum[0],
 				Name:       name + "Body",
 			}
@@ -162,7 +173,7 @@ func main() {
 	if err != nil {
 		fatalf("json: %v\n", err)
 	}
-	defer f.Close()
+	defer noerr(f.Close, "failed to close %s: %v", *filePath)
 
 	// w.WriteTo(f)
 
@@ -178,30 +189,30 @@ func main() {
 	}
 }
 
-type Type struct {
+type dapType struct {
 	Name, Identifier string
 }
 
-type Types []Type
+type dapTypes []dapType
 
-func (t Types) Less(i, j int) bool { return t[i].Name < t[j].Name }
-func (t Types) Sort()              { sort.Slice(t, t.Less) }
+func (t dapTypes) Less(i, j int) bool { return t[i].Name < t[j].Name }
+func (t dapTypes) Sort()              { sort.Slice(t, t.Less) }
 
-func (t Types) writeFuncs(w io.Writer, name string) {
+func (t dapTypes) writeFuncs(w io.Writer, name string) {
 	for _, t := range t {
 		fmt.Fprintf(w, "func (*%s) %s() string { return %q }\n", t.Name, name, t.Identifier)
 	}
 	fmt.Fprintf(w, "\n")
 }
 
-func (t Types) writeTypes(w io.Writer) {
+func (t dapTypes) writeTypes(w io.Writer) {
 	for _, t := range t {
 		fmt.Fprintf(w, "type %s struct{}\n", t.Name)
 	}
 	fmt.Fprintf(w, "\n")
 }
 
-func (t Types) writeConstructor(w io.Writer, name, typ, err string) {
+func (t dapTypes) writeConstructor(w io.Writer, name, typ, err string) {
 	fmt.Fprintf(w, "func %s(x string) (%s, error) {\n", name, typ)
 	fmt.Fprintf(w, "\tswitch x {\n")
 	for _, t := range t {

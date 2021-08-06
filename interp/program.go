@@ -20,7 +20,7 @@ func (interp *Interpreter) Compile(src string) (*Program, error) {
 	return interp.compile(src, "", true)
 }
 
-// CompilePath parses and compiles a Go code located at path.
+// CompilePath parses and compiles a Go code located at the given path.
 func (interp *Interpreter) CompilePath(path string) (*Program, error) {
 	if !isFile(path) {
 		_, err := interp.importSrc(mainID, path, NoTest)

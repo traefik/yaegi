@@ -10,12 +10,20 @@ import (
 	"strconv"
 )
 
+// ErrInvalidContentLength is the error returned by Decoder.Decode if the
+// Content-Length header has an invalid value.
 var ErrInvalidContentLength = errors.New("invalid content length")
 
+// ErrMissingContentLength is the error returned by Decoder.Decode if the
+// Content-Length header is missing.
+var ErrMissingContentLength = errors.New("missing content length")
+
+// Encoder marshalls DAP messages.
 type Encoder struct {
 	w io.Writer
 }
 
+// NewEncoder returns a new encoder that uses the given writer.
 func NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{w}
 }
@@ -42,10 +50,12 @@ func (c *Encoder) Encode(msg IProtocolMessage) error {
 	return err
 }
 
+// Decoder unmarshalls DAP messages.
 type Decoder struct {
 	r *bufio.Reader
 }
 
+// NewDecoder returns a new decoder that uses the given reader.
 func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{bufio.NewReader(r)}
 }
@@ -53,6 +63,10 @@ func NewDecoder(r io.Reader) *Decoder {
 // Decode unmarshalls a DAP message. Decode guarantees that the arguments/body
 // of a successfully decoded request, response, or event will match the
 // command/event field.
+//
+// Decode returns ErrInvalidContentLength if the Content-Length header has an
+// invalid value. Decode returns ErrMissingContentLength if the Content-Length
+// header is missing.
 func (c *Decoder) Decode() (IProtocolMessage, error) {
 	buf := new(bytes.Buffer)
 	for {
@@ -145,6 +159,7 @@ func (c *Decoder) Decode() (IProtocolMessage, error) {
 	return m, nil
 }
 
+// IProtocolMessage is a DAP protocol message.
 type IProtocolMessage interface {
 	prepareForEncoding() error
 	setSeq(int)
@@ -159,18 +174,20 @@ func (m *ProtocolMessage) prepareForEncoding() error {
 	return nil
 }
 
+// MarshalJSON marshalls the request to JSON.
 func (m *Request) MarshalJSON() ([]byte, error) {
 	m.Type = ProtocolMessageType_Request
 
 	hasCmd := m.Command != ""
 	hasArgs := m.Arguments != nil
-	if !hasCmd && !hasArgs {
+	switch {
+	case !hasCmd && !hasArgs:
 		return nil, errors.New("command and arguments unset")
-	} else if !hasCmd {
+	case !hasCmd:
 		m.Command = m.Arguments.requestType()
-	} else if !hasArgs {
+	case !hasArgs:
 		// ok
-	} else if m.Command != m.Arguments.requestType() {
+	case m.Command != m.Arguments.requestType():
 		return nil, fmt.Errorf("command is %q but arguments is %q", m.Command, m.Arguments.requestType())
 	}
 
@@ -183,18 +200,20 @@ func (m *Request) MarshalJSON() ([]byte, error) {
 	return json.Marshal((*T)(m))
 }
 
+// MarshalJSON marshalls the response to JSON.
 func (m *Response) MarshalJSON() ([]byte, error) {
 	m.Type = ProtocolMessageType_Response
 
 	hasCmd := m.Command != ""
 	hasBody := m.Body != nil
-	if !hasCmd && !hasBody {
+	switch {
+	case !hasCmd && !hasBody:
 		return nil, errors.New("command and body unset")
-	} else if !hasCmd {
+	case !hasCmd:
 		m.Command = m.Body.responseType()
-	} else if !hasBody {
+	case !hasBody:
 		// ok
-	} else if m.Command != m.Body.responseType() {
+	case m.Command != m.Body.responseType():
 		return nil, fmt.Errorf("command is %q but body is %q", m.Command, m.Body.responseType())
 	}
 
@@ -211,18 +230,20 @@ func (m *Response) MarshalJSON() ([]byte, error) {
 	return json.Marshal((*T)(m))
 }
 
+// MarshalJSON marshalls the event to JSON.
 func (m *Event) MarshalJSON() ([]byte, error) {
 	m.Type = ProtocolMessageType_Event
 
 	hasEvt := m.Event != ""
 	hasBody := m.Body != nil
-	if !hasEvt && !hasBody {
+	switch {
+	case !hasEvt && !hasBody:
 		return nil, errors.New("event and body unset")
-	} else if !hasEvt {
+	case !hasEvt:
 		m.Event = m.Body.eventType()
-	} else if !hasBody {
+	case !hasBody:
 		// ok
-	} else if m.Event != m.Body.eventType() {
+	case m.Event != m.Body.eventType():
 		return nil, fmt.Errorf("event is %q but body is %q", m.Event, m.Body.eventType())
 	}
 
@@ -235,6 +256,7 @@ func (m *Event) MarshalJSON() ([]byte, error) {
 	return json.Marshal((*T)(m))
 }
 
+// UnmarshalJSON unmarshalls the request from JSON.
 func (m *Request) UnmarshalJSON(b []byte) error {
 	var x struct{ Command string }
 	err := json.Unmarshal(b, &x)
@@ -251,6 +273,7 @@ func (m *Request) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, (*T)(m))
 }
 
+// UnmarshalJSON unmarshalls the response from JSON.
 func (m *Response) UnmarshalJSON(b []byte) error {
 	var x struct{ Command string }
 	err := json.Unmarshal(b, &x)
@@ -267,6 +290,7 @@ func (m *Response) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, (*T)(m))
 }
 
+// UnmarshalJSON unmarshalls the event from JSON.
 func (m *Event) UnmarshalJSON(b []byte) error {
 	var x struct{ Event string }
 	err := json.Unmarshal(b, &x)
@@ -283,5 +307,7 @@ func (m *Event) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, (*T)(m))
 }
 
-type ConfigurationDoneArguments struct{}
-type LoadedSourcesArguments struct{}
+type (
+	ConfigurationDoneArguments struct{} //nolint:revive
+	LoadedSourcesArguments     struct{} //nolint:revive
+)

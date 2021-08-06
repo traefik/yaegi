@@ -11,13 +11,16 @@ import (
 	"github.com/traefik/yaegi/internal/dap"
 	"github.com/traefik/yaegi/internal/dbg"
 	"github.com/traefik/yaegi/internal/iox"
+	"github.com/traefik/yaegi/interp"
 )
 
-var mode = flag.String("mode", "stdio", "Listening mode, stdio|net")
-var addr = flag.String("addr", "tcp://localhost:16348", "Net address to listen on, must be a TCP or Unix socket URL")
-var logFile = flag.String("log", "", "Log protocol messages to a file")
-var gopath = flag.String("gopath", "", "GOPATH")
-var stopAtEntry = flag.Bool("stop-at-entry", false, "Stop at program entry")
+var (
+	mode        = flag.String("mode", "stdio", "Listening mode, stdio|net")
+	addr        = flag.String("addr", "tcp://localhost:16348", "Net address to listen on, must be a TCP or Unix socket URL")
+	logFile     = flag.String("log", "", "Log protocol messages to a file")
+	gopath      = flag.String("gopath", "", "GOPATH")
+	stopAtEntry = flag.Bool("stop-at-entry", false, "Stop at program entry")
+)
 
 func fatalf(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format+"\n", args...)
@@ -46,9 +49,12 @@ func main() {
 		if u.Scheme == "unix" {
 			addr = u.Path
 			if _, err := os.Stat(addr); err == nil {
-				os.Remove(addr)
+				// Remove any pre-existing connection
+				os.Remove(addr) //nolint:errcheck
 			}
-			defer os.Remove(addr)
+
+			// Remove when done
+			defer os.Remove(addr) //nolint:errcheck
 		} else {
 			addr = u.Host
 		}
@@ -69,8 +75,11 @@ func main() {
 	}
 
 	opts := dbg.Options{
-		GoPath:      *gopath,
 		StopAtEntry: *stopAtEntry,
+		NewInterpreter: func(opts interp.Options) *interp.Interpreter {
+			opts.GoPath = *gopath
+			return interp.New(opts)
+		},
 	}
 	adp := dbg.NewEvalPathAdapter(flag.Arg(0), &opts)
 	srv := dap.NewServer(l, adp)
@@ -83,7 +92,7 @@ func main() {
 		if err != nil {
 			fatalf("log: %v", err)
 		}
-		defer f.Close()
+		defer f.Close() //nolint:errcheck
 		lf = f
 	}
 

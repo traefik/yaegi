@@ -9,46 +9,42 @@ import (
 	"github.com/traefik/yaegi/internal/jsonx"
 )
 
-type Schema = jsonx.Schema
-type SimpleTypes = jsonx.SimpleTypes
-type Schema_Type = jsonx.Schema_Type
-
 type writer struct {
 	io.Writer
-	Schema     *Schema
+	Schema     *jsonx.Schema
 	Name       string
 	Embed      bool
 	OmitEmpty  bool
 	NoOptional bool
 
-	seen       map[*Schema]Type
-	seenPlain  map[SimpleTypes]Type
+	seen       map[*jsonx.Schema]typedata
+	seenPlain  map[jsonx.SimpleTypes]typedata
 	properties map[string]map[string]bool
 }
 
-type Kind int
+type kind int
 
 const (
-	Other Kind = iota
-	Primitive
-	Struct
-	Collection
+	otherType kind = iota
+	primitiveType
+	structType
+	collectionType
 )
 
-type Type struct {
+type typedata struct {
 	Name string
-	Kind Kind
-	Type SimpleTypes
+	Kind kind
+	Type jsonx.SimpleTypes
 }
 
 func (w *writer) init() {
-	w.seen = map[*Schema]Type{}
-	w.seenPlain = map[SimpleTypes]Type{}
+	w.seen = map[*jsonx.Schema]typedata{}
+	w.seenPlain = map[jsonx.SimpleTypes]typedata{}
 	w.properties = map[string]map[string]bool{}
 }
 
-func (w *writer) writeSchema(name string, s *Schema) (typ Type) {
-	if typ := w.seen[s]; typ != (Type{}) {
+func (w *writer) writeSchema(name string, s *jsonx.Schema) (typ typedata) {
+	if typ := w.seen[s]; typ != (typedata{}) {
 		return typ
 	}
 	defer func() {
@@ -71,7 +67,7 @@ func (w *writer) writeSchema(name string, s *Schema) (typ Type) {
 	}
 
 	if isPlain(s) {
-		return Type{"interface{}", Other, jsonx.SimpleTypes_Object}
+		return typedata{"interface{}", otherType, jsonx.SimpleTypes_Object}
 	}
 
 	if howMany(s.Enum, s.AllOf, s.AnyOf, s.OneOf, s.Not) > 1 {
@@ -84,17 +80,17 @@ func (w *writer) writeSchema(name string, s *Schema) (typ Type) {
 
 	if s.AnyOf != nil {
 		fmt.Fprintf(os.Stderr, "type %q: anyOf not supported, using interface{}\n", name)
-		return Type{"interface{}", Other, jsonx.SimpleTypes_Object}
+		return typedata{"interface{}", otherType, jsonx.SimpleTypes_Object}
 	}
 
 	if s.OneOf != nil {
 		fmt.Fprintf(os.Stderr, "type %q: oneOf not supported, using interface{}\n", name)
-		return Type{"interface{}", Other, jsonx.SimpleTypes_Object}
+		return typedata{"interface{}", otherType, jsonx.SimpleTypes_Object}
 	}
 
 	if s.Not != nil {
 		fmt.Fprintf(os.Stderr, "type %q: not not supported, using interface{}\n", name)
-		return Type{"interface{}", Other, jsonx.SimpleTypes_Object}
+		return typedata{"interface{}", otherType, jsonx.SimpleTypes_Object}
 	}
 
 	if s.Enum != nil {
@@ -105,13 +101,13 @@ func (w *writer) writeSchema(name string, s *Schema) (typ Type) {
 	panic("not reachable")
 }
 
-func (w *writer) writeRef(ref string) Type {
+func (w *writer) writeRef(ref string) typedata {
 	if len(ref) == 0 {
 		fatalf("empty ref")
 	}
 
 	if ref[0] == '!' {
-		return Type{ref[1:], Other, ""}
+		return typedata{ref[1:], otherType, ""}
 	}
 
 	name, s := resolveRef(w.Schema, ref)
@@ -122,15 +118,15 @@ func (w *writer) writeRef(ref string) Type {
 	return w.writeSchema(camelCase(name), s)
 }
 
-func (w *writer) writeType(name string, s *Schema) Type {
+func (w *writer) writeType(name string, s *jsonx.Schema) typedata {
 	if len(s.Type) == 0 {
 		// this is not actually valid according to the schema
-		return Type{"interface{}", Other, jsonx.SimpleTypes_Object}
+		return typedata{"interface{}", otherType, jsonx.SimpleTypes_Object}
 	}
 
 	if isPlain(s) {
 		if len(s.Type) > 1 {
-			return Type{"interface{}", Other, jsonx.SimpleTypes_Object}
+			return typedata{"interface{}", otherType, jsonx.SimpleTypes_Object}
 		}
 		return w.writePlainType(s.Type[0])
 	}
@@ -148,10 +144,10 @@ func (w *writer) writeType(name string, s *Schema) Type {
 			fatalf("type %q: additionalItems not supported\n", name)
 		}
 		el := w.writeSchema(name+"__Items", s.Items)
-		if el.Kind == Struct {
-			return Type{"[]*" + el.Name, Collection, jsonx.SimpleTypes_Array}
+		if el.Kind == structType {
+			return typedata{"[]*" + el.Name, collectionType, jsonx.SimpleTypes_Array}
 		}
-		return Type{"[]" + el.Name, Collection, jsonx.SimpleTypes_Array}
+		return typedata{"[]" + el.Name, collectionType, jsonx.SimpleTypes_Array}
 
 	case jsonx.SimpleTypes_Boolean:
 		if isPlainExceptDefault(s) && s.Default == false {
@@ -178,38 +174,38 @@ func (w *writer) writeType(name string, s *Schema) Type {
 	panic("not reachable")
 }
 
-func (w *writer) writePlainType(name SimpleTypes) (typ Type) {
-	if typ := w.seenPlain[name]; typ != (Type{}) {
+func (w *writer) writePlainType(name jsonx.SimpleTypes) (typ typedata) {
+	if typ := w.seenPlain[name]; typ != (typedata{}) {
 		return typ
 	}
 	defer func() { w.seenPlain[name] = typ }()
 
 	switch name {
 	case jsonx.SimpleTypes_Object:
-		return Type{"map[string]interface{}", Collection, name}
+		return typedata{"map[string]interface{}", collectionType, name}
 
 	case jsonx.SimpleTypes_Array:
-		return Type{"[]interface{}", Collection, name}
+		return typedata{"[]interface{}", collectionType, name}
 
 	case jsonx.SimpleTypes_Boolean:
-		return Type{"bool", Primitive, name}
+		return typedata{"bool", primitiveType, name}
 
 	case jsonx.SimpleTypes_Integer:
-		return Type{"int", Primitive, name}
+		return typedata{"int", primitiveType, name}
 
 	case jsonx.SimpleTypes_Number:
-		return Type{"float64", Primitive, name}
+		return typedata{"float64", primitiveType, name}
 
 	case jsonx.SimpleTypes_String:
-		return Type{"string", Primitive, name}
+		return typedata{"string", primitiveType, name}
 
 	default:
 		panic(fmt.Sprintf("unsupported plain type %q", name))
 	}
 }
 
-func (w *writer) writeNullableType(name SimpleTypes) (typ Type) {
-	if typ := w.seenPlain[name+"?"]; typ != (Type{}) {
+func (w *writer) writeNullableType(name jsonx.SimpleTypes) (typ typedata) {
+	if typ := w.seenPlain[name+"?"]; typ != (typedata{}) {
 		return typ
 	}
 	defer func() { w.seenPlain[name+"?"] = typ }()
@@ -223,7 +219,7 @@ func (w *writer) writeNullableType(name SimpleTypes) (typ Type) {
 		fmt.Fprintf(w, "func (v *Boolean) True() bool { return v != nil && bool(*v) }\n")
 		fmt.Fprintf(w, "func (v *Boolean) False() bool { return v != nil && !bool(*v) }\n")
 		fmt.Fprintf(w, "\n")
-		return Type{"Boolean", Primitive, name}
+		return typedata{"Boolean", primitiveType, name}
 
 	case jsonx.SimpleTypes_Integer:
 		fmt.Fprintf(w, "type Integer int\n")
@@ -231,7 +227,7 @@ func (w *writer) writeNullableType(name SimpleTypes) (typ Type) {
 		fmt.Fprintf(w, "func (v *Integer) Get() int { return int(*v) }\n")
 		fmt.Fprintf(w, "func (v *Integer) GetOr(u int) int { if v == nil { return u } else { return int(*v) } }\n")
 		fmt.Fprintf(w, "\n")
-		return Type{"Integer", Primitive, name}
+		return typedata{"Integer", primitiveType, name}
 
 	case jsonx.SimpleTypes_Number:
 		fmt.Fprintf(w, "type Number float64\n")
@@ -239,7 +235,7 @@ func (w *writer) writeNullableType(name SimpleTypes) (typ Type) {
 		fmt.Fprintf(w, "func (v *Number) Get() float64 { return float64(*v) }\n")
 		fmt.Fprintf(w, "func (v *Number) GetOr(u float64) float64 { if v == nil { return u } else { return float64(*v) } }\n")
 		fmt.Fprintf(w, "\n")
-		return Type{"Number", Primitive, name}
+		return typedata{"Number", primitiveType, name}
 
 	case jsonx.SimpleTypes_String:
 		fmt.Fprintf(w, "type String string\n")
@@ -247,41 +243,42 @@ func (w *writer) writeNullableType(name SimpleTypes) (typ Type) {
 		fmt.Fprintf(w, "func (v *String) Get() string { return string(*v) }\n")
 		fmt.Fprintf(w, "func (v *String) GetOr(u string) string { if v == nil { return u } else { return string(*v) } }\n")
 		fmt.Fprintf(w, "\n")
-		return Type{"String", Primitive, name}
+		return typedata{"String", primitiveType, name}
 
 	default:
 		panic(fmt.Sprintf("unsupported plain type %q", name))
 	}
 }
 
-func (w *writer) writeObjectType(name string, s *Schema) Type {
+func (w *writer) writeObjectType(name string, s *jsonx.Schema) typedata {
 	if m, ok := s.Default.(map[string]interface{}); ok && len(m) == 0 {
 		// ok
 	} else if s.Default != nil {
 		fatalf("type %s: unsupported default: %v\n", name, s.Default)
 	}
 
-	if s.AdditionalProperties == nil {
-		w.seen[s] = Type{name, Struct, jsonx.SimpleTypes_Object}
+	switch {
+	case s.AdditionalProperties == nil:
+		w.seen[s] = typedata{name, structType, jsonx.SimpleTypes_Object}
 
 		w.writeProperties(name, s)
 		fmt.Fprintf(w, "\n")
-		return Type{name, Struct, jsonx.SimpleTypes_Object}
-	} else if s.Properties == nil {
+		return typedata{name, structType, jsonx.SimpleTypes_Object}
+	case s.Properties == nil:
 		el := w.writeSchema(name+"__Values", s.AdditionalProperties)
 
-		if el.Kind == Struct {
-			return Type{"map[string]*" + el.Name, Collection, jsonx.SimpleTypes_Object}
+		if el.Kind == structType {
+			return typedata{"map[string]*" + el.Name, collectionType, jsonx.SimpleTypes_Object}
 		}
-		return Type{"map[string]" + el.Name, Collection, jsonx.SimpleTypes_Object}
-	} else {
+		return typedata{"map[string]" + el.Name, collectionType, jsonx.SimpleTypes_Object}
+	default:
 		// TODO this needs a custom un/marshaller
 		unsupported(name, s)
 		panic("not reached")
 	}
 }
 
-func (w *writer) writeProperties(name string, s *Schema) {
+func (w *writer) writeProperties(name string, s *jsonx.Schema) {
 	type Field struct {
 		Name, Prop, Type string
 		Order            int
@@ -313,19 +310,20 @@ func (w *writer) writeProperties(name string, s *Schema) {
 		ftype := w.writeSchema(name+"_"+fname, s)
 
 		var typ string
-		if w.NoOptional {
+		switch {
+		case w.NoOptional:
 			typ = ftype.Name
-			if ftype.Kind == Struct {
+			if ftype.Kind == structType {
 				typ = "*" + typ
 			}
-		} else if required[prop] {
+		case required[prop]:
 			typ = ftype.Name
-		} else if ftype.Kind == Primitive {
+		case ftype.Kind == primitiveType:
 			ftype = w.writeNullableType(ftype.Type)
 			typ = "*" + ftype.Name
-		} else if ftype.Kind == Struct {
+		case ftype.Kind == structType:
 			typ = "*" + ftype.Name
-		} else {
+		default:
 			typ = ftype.Name
 		}
 
@@ -362,19 +360,20 @@ func (w *writer) writeProperties(name string, s *Schema) {
 
 	fmt.Fprintf(w, "type %s struct {\n", name)
 	for _, f := range fields {
-		if f.Name == "" {
+		switch {
+		case f.Name == "":
 			fmt.Fprintf(w, "\t%s\n", f.Type)
-		} else if required[f.Prop] {
+		case required[f.Prop]:
 			fmt.Fprintf(w, "\t%s %s `json:\"%s\"`\n", f.Name, f.Type, f.Prop)
-		} else {
+		default:
 			fmt.Fprintf(w, "\t%s %s `json:\"%s,omitempty\"`\n", f.Name, f.Type, f.Prop)
 		}
 	}
 	fmt.Fprintf(w, "}\n")
 }
 
-func (w *writer) writeAllOf(name string, allOf []*Schema) Type {
-	s := new(Schema)
+func (w *writer) writeAllOf(name string, allOf []*jsonx.Schema) typedata {
+	s := new(jsonx.Schema)
 
 	opts := mergeOpts{
 		Base:        w.Schema,
@@ -394,7 +393,7 @@ func (w *writer) writeAllOf(name string, allOf []*Schema) Type {
 	return w.writeSchema(name, s)
 }
 
-func (w *writer) writeEnum(name string, values []string) Type {
+func (w *writer) writeEnum(name string, values []string) typedata {
 	name = camelCase(name)
 	fmt.Fprintf(w, "type %s string\n", name)
 	fmt.Fprintf(w, "const (\n")
@@ -403,5 +402,5 @@ func (w *writer) writeEnum(name string, values []string) Type {
 	}
 	fmt.Fprintf(w, ")\n")
 	fmt.Fprintf(w, "\n")
-	return Type{name, Primitive, jsonx.SimpleTypes_String}
+	return typedata{name, primitiveType, jsonx.SimpleTypes_String}
 }

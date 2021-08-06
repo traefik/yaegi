@@ -9,53 +9,62 @@ import (
 	"strings"
 )
 
+// ApplyPatch applies an RFC 6902 JSON patch to the target JSON blob.
+//
+// Test operations are not supported.
 func ApplyPatch(target []byte, patchPath string) ([]byte, error) {
 	f, err := os.Open(patchPath)
 	if err != nil {
-		return nil, fmt.Errorf("read (patch): %v\n", err)
+		return nil, fmt.Errorf("read (patch): %v", err)
 	}
 
 	var p Patch
 	err = json.NewDecoder(f).Decode(&p)
 	if err != nil {
-		return nil, fmt.Errorf("json (patch): %v\n", err)
+		return nil, fmt.Errorf("json (patch): %v", err)
 	}
 
 	var v interface{}
 	err = json.Unmarshal(target, &v)
 	if err != nil {
-		return nil, fmt.Errorf("json (target): %v\n", err)
+		return nil, fmt.Errorf("json (target): %v", err)
 	}
 
 	for i, p := range p {
 		err = p.Apply(&v)
 		if err != nil {
-			return nil, fmt.Errorf("patch [%d]: %v\n", i, err)
+			return nil, fmt.Errorf("patch [%d]: %v", i, err)
 		}
 	}
 
 	target, err = json.Marshal(v)
 	if err != nil {
-		return nil, fmt.Errorf("json (marshal): %v\n", err)
+		return nil, fmt.Errorf("json (marshal): %v", err)
 	}
 
 	return target, nil
 }
 
+// PatchOpType is an RFC 6902 JSON patch operation type.
 type PatchOpType string
 
 const (
-	PatchOpAdd     PatchOpType = "add"
-	PatchOpRemove  PatchOpType = "remove"
+	// PatchOpAdd is an RFC 6902 JSON patch add operation.
+	PatchOpAdd PatchOpType = "add"
+	// PatchOpRemove is an RFC 6902 JSON patch remove operation.
+	PatchOpRemove PatchOpType = "remove"
+	// PatchOpReplace is an RFC 6902 JSON patch replace operation.
 	PatchOpReplace PatchOpType = "replace"
-	PatchOpCopy    PatchOpType = "copy"
-	PatchOpMove    PatchOpType = "move"
-
-	// PatchOpTest    PatchOpType = "test"
+	// PatchOpCopy is an RFC 6902 JSON patch copy operation.
+	PatchOpCopy PatchOpType = "copy"
+	// PatchOpMove is an RFC 6902 JSON patch move operation.
+	PatchOpMove PatchOpType = "move"
 )
 
+// NeedsPath returns true if the operation must include "path".
 func (op PatchOpType) NeedsPath() bool { return true }
 
+// NeedsFrom returns true if the operation must include "from".
 func (op PatchOpType) NeedsFrom() bool {
 	switch op {
 	case PatchOpCopy, PatchOpMove:
@@ -65,8 +74,10 @@ func (op PatchOpType) NeedsFrom() bool {
 	}
 }
 
+// PatchPointer is an RFC 6901 JSON pointer.
 type PatchPointer string
 
+// Parse parses the pointer, returning an array of names/indices.
 func (p PatchPointer) Parse() ([]string, error) {
 	if len(p) == 0 {
 		return nil, errors.New("pointer is empty")
@@ -82,6 +93,7 @@ func (p PatchPointer) Parse() ([]string, error) {
 	return s, nil
 }
 
+// PatchOp is an RFC 6902 JSON patch operation.
 type PatchOp struct {
 	Op    PatchOpType
 	From  PatchPointer
@@ -89,8 +101,11 @@ type PatchOp struct {
 	Value interface{}
 }
 
+// Patch is an RFC 6902 JSON patch.
 type Patch []PatchOp
 
+// Apply applies the patch. Apply returns ErrNotFound if From or Path are
+// required and refer to a value that does not exist in v.
 func (op *PatchOp) Apply(v *interface{}) error {
 	path, err := op.Path.Parse()
 	if err != nil {
@@ -106,21 +121,21 @@ func (op *PatchOp) Apply(v *interface{}) error {
 	var jv jsonValue = ptrValue{v}
 	switch op.Op {
 	case PatchOpAdd:
-		jv, err := jsonDerefAll(jv, path, "")
+		jv, err := jsonDerefAll(jv, path)
 		if err != nil && (jv == nil || !errors.Is(err, ErrNotFound)) {
 			return err
 		}
 		jv.Set(op.Value)
 
 	case PatchOpRemove:
-		jv, err := jsonDerefAll(jv, path, "")
+		jv, err := jsonDerefAll(jv, path)
 		if err != nil {
 			return err
 		}
 		jv.Delete()
 
 	case PatchOpReplace:
-		jv, err := jsonDerefAll(jv, path, "")
+		jv, err := jsonDerefAll(jv, path)
 		if err != nil {
 			return err
 		}
@@ -128,22 +143,22 @@ func (op *PatchOp) Apply(v *interface{}) error {
 		jv.Set(op.Value)
 
 	case PatchOpCopy:
-		ju, err := jsonDerefAll(jv, from, "")
+		ju, err := jsonDerefAll(jv, from)
 		if err != nil {
 			return err
 		}
-		jv, err := jsonDerefAll(jv, path, "")
+		jv, err := jsonDerefAll(jv, path)
 		if err != nil && (jv == nil || !errors.Is(err, ErrNotFound)) {
 			return err
 		}
 		jv.Set(ju.Get())
 
 	case PatchOpMove:
-		ju, err := jsonDerefAll(jv, from, "")
+		ju, err := jsonDerefAll(jv, from)
 		if err != nil {
 			return err
 		}
-		jv, err := jsonDerefAll(jv, path, "")
+		jv, err := jsonDerefAll(jv, path)
 		if err != nil && (jv == nil || !errors.Is(err, ErrNotFound)) {
 			return err
 		}
@@ -158,6 +173,7 @@ func (op *PatchOp) Apply(v *interface{}) error {
 	return nil
 }
 
+// ErrNotFound indicates that the specified node was not found.
 var ErrNotFound = errors.New("not found")
 
 type jsonValue interface {
@@ -185,14 +201,15 @@ func (e listEntry) Get() interface{} {
 
 func (e listEntry) Set(u interface{}) {
 	v := e.v.Get().([]interface{})
-	if e.i < 0 {
+	switch {
+	case e.i < 0:
 		v = append(v, u)
-	} else if len(v) < cap(v) {
+	case len(v) < cap(v):
 		v = v[:len(v)+1]
 		for i := len(v) - 1; i > e.i; i-- {
 			v[i] = v[i-1]
 		}
-	} else {
+	default:
 		v2 := make([]interface{}, 0, len(v)+1)
 		v2 = append(v2, v[:e.i]...)
 		v2 = append(v2, u)
@@ -269,7 +286,8 @@ func jsonDeref(v jsonValue, path, fullPath string) (jsonValue, error) {
 	}
 }
 
-func jsonDerefAll(v jsonValue, path []string, fullPath string) (jsonValue, error) {
+func jsonDerefAll(v jsonValue, path []string) (jsonValue, error) {
+	var fullPath string
 	var err error
 	for i, p := range path {
 		v, err = jsonDeref(v, p, fullPath)

@@ -4,9 +4,11 @@ package dap
 
 import "fmt"
 
-type RequestArguments interface{ requestType() string }
-type ResponseBody interface{ responseType() string }
-type EventBody interface{ eventType() string }
+type (
+	RequestArguments interface{ requestType() string }
+	ResponseBody     interface{ responseType() string }
+	EventBody        interface{ eventType() string }
+)
 
 func (*AttachRequestArguments) requestType() string             { return "attach" }
 func (*BreakpointLocationsArguments) requestType() string       { return "breakpointLocations" }
@@ -116,26 +118,28 @@ func (*StoppedEventBody) eventType() string        { return "stopped" }
 func (*TerminatedEventBody) eventType() string     { return "terminated" }
 func (*ThreadEventBody) eventType() string         { return "thread" }
 
-type AttachResponseBody struct{}
-type CancelResponseBody struct{}
-type ConfigurationDoneResponseBody struct{}
-type DisconnectResponseBody struct{}
-type GotoResponseBody struct{}
-type InitializedEventBody struct{}
-type LaunchResponseBody struct{}
-type NextResponseBody struct{}
-type PauseResponseBody struct{}
-type RestartFrameResponseBody struct{}
-type RestartResponseBody struct{}
-type ReverseContinueResponseBody struct{}
-type SetExceptionBreakpointsResponseBody struct{}
-type StepBackResponseBody struct{}
-type StepInResponseBody struct{}
-type StepOutResponseBody struct{}
-type TerminateResponseBody struct{}
-type TerminateThreadsResponseBody struct{}
-type ThreadsArguments struct{}
-type WriteMemoryResponseBody struct{}
+type (
+	AttachResponseBody                  struct{}
+	CancelResponseBody                  struct{}
+	ConfigurationDoneResponseBody       struct{}
+	DisconnectResponseBody              struct{}
+	GotoResponseBody                    struct{}
+	InitializedEventBody                struct{}
+	LaunchResponseBody                  struct{}
+	NextResponseBody                    struct{}
+	PauseResponseBody                   struct{}
+	RestartFrameResponseBody            struct{}
+	RestartResponseBody                 struct{}
+	ReverseContinueResponseBody         struct{}
+	SetExceptionBreakpointsResponseBody struct{}
+	StepBackResponseBody                struct{}
+	StepInResponseBody                  struct{}
+	StepOutResponseBody                 struct{}
+	TerminateResponseBody               struct{}
+	TerminateThreadsResponseBody        struct{}
+	ThreadsArguments                    struct{}
+	WriteMemoryResponseBody             struct{}
+)
 
 func newRequest(x string) (RequestArguments, error) {
 	switch x {

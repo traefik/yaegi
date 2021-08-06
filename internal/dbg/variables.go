@@ -9,6 +9,7 @@ import (
 	"github.com/traefik/yaegi/interp"
 )
 
+//nolint:deadcode,varcheck
 const (
 	rBool          = reflect.Bool
 	rInt           = reflect.Int

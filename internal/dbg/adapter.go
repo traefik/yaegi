@@ -15,16 +15,23 @@ import (
 	"github.com/traefik/yaegi/stdlib"
 )
 
+// Options for Adapter.
 type Options struct {
-	SrcPath        string
-	GoPath         string
+	// SrcPath is used for setting breakpoints on '_.go'. If it is non-empty,
+	// SrcPath will be replaced with _.go in breakpoint requests and vice versa
+	// in stack traces.
+	SrcPath string
+
+	// NewInterpreter is called to create the interpreter.
 	NewInterpreter func(interp.Options) *interp.Interpreter
 
+	// If StopAtEntry is set, the debugger will halt on entry.
 	StopAtEntry bool
 }
 
 type compileFunc func(*interp.Interpreter, string) (*interp.Program, error)
 
+// Adapter is a DAP handler that debugs Go code compiled with an interpreter.
 type Adapter struct {
 	opts    Options
 	compile compileFunc
@@ -41,10 +48,14 @@ type Adapter struct {
 	vars   *variables
 }
 
+// NewEvalAdapter returns an Adapter that debugs a Go code represented as a
+// string.
 func NewEvalAdapter(src string, opts *Options) *Adapter {
 	return newAdapter((*interp.Interpreter).Compile, src, opts)
 }
 
+// NewEvalPathAdapter returns an Adapter that debugs Go code located at the
+// given path.
 func NewEvalPathAdapter(path string, opts *Options) *Adapter {
 	return newAdapter((*interp.Interpreter).CompilePath, path, opts)
 }
@@ -56,14 +67,21 @@ func newAdapter(eval compileFunc, arg string, opts *Options) *Adapter {
 	if opts.NewInterpreter == nil {
 		opts.NewInterpreter = func(opts interp.Options) *interp.Interpreter {
 			i := interp.New(opts)
-			i.Use(stdlib.Symbols)
-			i.Use(interp.Exports{
+			err := i.Use(stdlib.Symbols)
+			if err != nil {
+				panic("failed to Use stdlib")
+			}
+
+			err = i.Use(interp.Exports{
 				"dbg/dbg": map[string]reflect.Value{
 					"Debug": reflect.ValueOf(func() {
 						println("!")
 					}),
 				},
 			})
+			if err != nil {
+				panic("failed to Use debug helpers")
+			}
 			return i
 		}
 	}
@@ -78,27 +96,63 @@ func newAdapter(eval compileFunc, arg string, opts *Options) *Adapter {
 	return a
 }
 
+func (a *Adapter) errorf(msg string, args ...interface{}) {
+	err := args[len(args)-1].(error)
+	if err == nil {
+		return
+	}
+	a.session.Errorf(msg, append(args, err))
+}
+
+func (a *Adapter) event(event string, body dap.EventBody) {
+	err := a.session.Event(event, body)
+	a.errorf("failed to send %q event: %v", event, err)
+}
+
+func (a *Adapter) step(id int, reason interp.DebugEventReason) bool {
+	err := a.debugger.Step(id, reason)
+	a.errorf("failed to step routine %d: %v", id, err)
+	return err == nil
+}
+
+func (a *Adapter) cont(id int) bool {
+	err := a.debugger.Continue(id)
+	a.errorf("failed to continue routine %d: %v", id, err)
+	return err == nil
+}
+
+// read from stdin.
 func (a *Adapter) stdin(b []byte) (int, error) {
 	return 0, io.EOF
 }
 
+// send a stdout event.
 func (a *Adapter) stdout(b []byte) (int, error) {
 	err := a.session.Event("output", &dap.OutputEventBody{
 		Category: dap.Str("stdout"),
 		Output:   string(b),
 	})
-	return len(b), err
+	if err != nil {
+		a.session.Errorf("failed to send stdout: %v", err)
+		return 0, err
+	}
+	return len(b), nil
 }
 
+// send a stderr event.
 func (a *Adapter) stderr(b []byte) (int, error) {
 	err := a.session.Event("output", &dap.OutputEventBody{
 		Category: dap.Str("stderr"),
 		Output:   string(b),
 	})
-	return len(b), err
+	if err != nil {
+		a.session.Errorf("failed to send stderr: %v", err)
+		return 0, err
+	}
+	return len(b), nil
 }
 
-// Initialize should not be called, as it is only intended
+// Initialize implements dap.Handler and should not be called directly.
 func (a *Adapter) Initialize(s *dap.Session, ccaps *dap.InitializeRequestArguments) *dap.Capabilities {
 	a.session, a.ccaps = s, ccaps
 	return &dap.Capabilities{
@@ -106,9 +160,9 @@ func (a *Adapter) Initialize(s *dap.Session, ccaps *dap.InitializeRequestArgumen
 	}
 }
 
-// Process should not be called, as it is only intended
+// Process implements dap.Handler and should not be called directly.
 func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
-	switch m := m.(type) {
+	switch m := m.(type) { //nolint:gocritic
 	case *dap.Request:
 		success := false
 		var message string
@@ -119,17 +173,15 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 				Stdin:  iox.ReaderFunc(a.stdin),
 				Stdout: iox.WriterFunc(a.stdout),
 				Stderr: iox.WriterFunc(a.stderr),
-				GoPath: a.opts.GoPath,
 			})
 
 			prog, err := a.compile(a.interp, a.arg)
 			if err == nil {
 				success = true
-				a.session.Event("initialized", nil)
-
+				a.event("initialized", nil)
 			} else {
 				stop = true
-				a.session.Event("output", &dap.OutputEventBody{
+				a.event("output", &dap.OutputEventBody{
 					Category: dap.Str("stderr"),
 					Output:   err.Error(),
 					Data:     err,
@@ -140,7 +192,7 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 
 			a.debugger = a.interp.Debug(context.Background(), prog, func(e *interp.DebugEvent) {
 				if e.Reason() == interp.DebugEnterGoRoutine {
-					a.session.Event("thread", &dap.ThreadEventBody{
+					a.event("thread", &dap.ThreadEventBody{
 						Reason:   "started",
 						ThreadId: e.GoRoutine(),
 					})
@@ -148,7 +200,7 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 				}
 
 				if e.Reason() == interp.DebugExitGoRoutine {
-					a.session.Event("thread", &dap.ThreadEventBody{
+					a.event("thread", &dap.ThreadEventBody{
 						Reason:   "exited",
 						ThreadId: e.GoRoutine(),
 					})
@@ -159,7 +211,7 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 				a.vars.Purge()
 
 				if e.Reason() == interp.DebugTerminate {
-					a.session.Event("terminated", nil)
+					a.event("terminated", nil)
 					stop = true
 					return
 				}
@@ -178,7 +230,7 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 				default:
 					body.Reason = "pause"
 				}
-				a.session.Event("stopped", body)
+				a.event("stopped", body)
 			}, &interp.DebugOptions{
 				GoRoutineStartAt1: true,
 			})
@@ -212,7 +264,6 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 						Column: b.Column.GetOr(0),
 					}
 				}
-
 			} else {
 				bp = make([]*interp.Breakpoint, len(args.Lines))
 				for i := range bp {
@@ -255,36 +306,31 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 
 		case "configurationDone":
 			if a.opts.StopAtEntry {
-				a.debugger.Step(1, interp.DebugEntry)
+				success = a.step(1, interp.DebugEntry)
 			} else {
-				a.debugger.Continue(1)
+				success = a.cont(1)
 			}
-			success = true
 
 		case "continue":
 			args := m.Arguments.(*dap.ContinueArguments)
 			defer a.events.Release(args.ThreadId)
-			err := a.debugger.Continue(args.ThreadId)
-			success = err == nil
+			success = a.cont(args.ThreadId)
 			body = &dap.ContinueResponseBody{AllThreadsContinued: dap.Bool(false)}
 
 		case "stepIn":
 			args := m.Arguments.(*dap.StepInArguments)
 			defer a.events.Release(args.ThreadId)
-			err := a.debugger.Step(args.ThreadId, interp.DebugStepInto)
-			success = err == nil
+			success = a.step(args.ThreadId, interp.DebugStepInto)
 
 		case "next":
 			args := m.Arguments.(*dap.NextArguments)
 			defer a.events.Release(args.ThreadId)
-			err := a.debugger.Step(args.ThreadId, interp.DebugStepOver)
-			success = err == nil
+			success = a.step(args.ThreadId, interp.DebugStepOver)
 
 		case "stepOut":
 			args := m.Arguments.(*dap.StepOutArguments)
 			defer a.events.Release(args.ThreadId)
-			err := a.debugger.Step(args.ThreadId, interp.DebugStepOut)
-			success = err == nil
+			success = a.step(args.ThreadId, interp.DebugStepOut)
 
 		case "pause":
 			args := m.Arguments.(*dap.PauseArguments)
@@ -414,12 +460,14 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 			}
 		}
 
-		a.session.Respond(m, success, message, body)
+		err := a.session.Respond(m, success, message, body)
+		a.errorf("failed to respond: %v", err)
 	}
 
 	return stop
 }
 
+// Terminate implements dap.Handler and should not be called directly.
 func (a *Adapter) Terminate() {
 	a.debugger.Terminate()
 }
