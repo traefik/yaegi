@@ -8,7 +8,7 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"reflect"
@@ -65,7 +65,7 @@ func main() {
 		fatalf("http: expected status 200, got %d\n", resp.StatusCode)
 	}
 
-	b, err := io.ReadAll(resp.Body)
+	b, err := ioutil.ReadAll(resp.Body)
 	noerr(resp.Body.Close, "failed to close response body: %v")
 	if err != nil {
 		fatalf("read (schema): %v\n", err)

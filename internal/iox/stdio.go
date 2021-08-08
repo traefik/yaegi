@@ -1,12 +1,16 @@
 package iox
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
 	"sync"
 	"time"
 )
+
+// TODO use net.ErrClosed when support for 1.15 is dropped
+var ErrClosed = errors.New("closed")
 
 // NewStdio returns a new Stdio listener.
 func NewStdio() net.Listener {
@@ -31,7 +35,7 @@ func (s *Stdio) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.state == stdioClosed {
-		return net.ErrClosed
+		return ErrClosed
 	}
 
 	s.state = stdioClosed
@@ -46,7 +50,7 @@ func (s *Stdio) Accept() (net.Conn, error) {
 
 	for s.state != stdioIdle {
 		if s.state == stdioClosed {
-			return nil, net.ErrClosed
+			return nil, ErrClosed
 		}
 
 		s.cond.Wait()
