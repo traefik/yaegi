@@ -287,7 +287,7 @@ func (dbg *Debugger) exitCall(nFunc, nCall *node, f *frame) {
 }
 
 // called by the interpreter prior to executing the node.
-func (dbg *Debugger) exec(n *node, f *frame) {
+func (dbg *Debugger) exec(n *node, f *frame) (stop bool) {
 	if n == nil {
 		f.debug.pos = token.NoPos
 	} else {
@@ -295,38 +295,42 @@ func (dbg *Debugger) exec(n *node, f *frame) {
 	}
 
 	if n != nil && n.pos == token.NoPos {
-		return
+		return false
 	}
 
 	g := f.debug.g
 	defer func() { g.running = true }()
 
+	e := &DebugEvent{dbg, g.mode, f}
 	switch g.mode {
 	case debugRun:
 		if n == nil || !n.bkp {
 			return
 		}
+		e.reason = DebugBreak
 
 	case DebugTerminate:
 		dbg.cancel()
-		return
+		return true
 
 	case DebugStepOut:
 		if g.fDepth >= g.fStep {
-			return
+			return false
 		}
 
 	case DebugStepOver:
 		if g.fDepth > g.fStep {
-			return
+			return false
 		}
 	}
-	dbg.events(&DebugEvent{dbg, g.mode, f})
+	dbg.events(e)
 
 	g.running = false
 	select {
 	case <-g.resume:
+		return false
 	case <-dbg.context.Done():
+		return true
 	}
 }
 
@@ -346,6 +350,10 @@ func (dbg *Debugger) Continue(id int) error {
 
 // update the exec mode of this routine.
 func (g *debugRoutine) setMode(reason DebugEventReason) {
+	if g.mode == DebugTerminate {
+		return
+	}
+
 	if g.mode == DebugEntry && reason == DebugEntry {
 		return
 	}
@@ -398,6 +406,7 @@ func (dbg *Debugger) Terminate() {
 	dbg.gLock.Unlock()
 
 	for _, g := range g {
+		g.mode = DebugTerminate
 		close(g.resume)
 	}
 }

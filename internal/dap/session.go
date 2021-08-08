@@ -2,19 +2,24 @@ package dap
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
 )
 
+// ErrStop is the error returned by a handler to indicate that the session
+// should terminate.
+var ErrStop = errors.New("stop")
+
 // Handler handles DAP events.
 type Handler interface {
 	// Called when the DAP session begins.
-	Initialize(*Session, *InitializeRequestArguments) *Capabilities
+	Initialize(*Session, *InitializeRequestArguments) (*Capabilities, error)
 
-	// Called for each received DAP message. Returning true will terminate the
-	// session.
-	Process(IProtocolMessage) (stop bool)
+	// Called for each received DAP message. Returning an error will terminate
+	// the session.
+	Process(IProtocolMessage) error
 
 	// Called when the DAP session ends.
 	Terminate()
@@ -25,32 +30,22 @@ type Session struct {
 	handler Handler
 	dec     *Decoder
 	enc     *Encoder
-	rc      io.Closer
-	wc      io.Closer
 	dbg     io.Writer
-	errs    []error
 	seq     int
 	smu     *sync.Mutex
 }
 
 // NewSession returns a new Session. The session reads messages from the reader
-// and writes messages to the writer. If the reader or writer are io.Closers,
-// they will be closed when the session terminates.
+// and writes messages to the writer. The caller is responsible for closing the
+// reader and writer.
 func NewSession(r io.Reader, w io.Writer, handler Handler) *Session {
-	rc, _ := r.(io.ReadCloser)
-	wc, _ := w.(io.WriteCloser)
 	return &Session{
 		handler: handler,
-		rc:      rc,
-		wc:      wc,
 		dec:     NewDecoder(r),
 		enc:     NewEncoder(w),
 		smu:     new(sync.Mutex),
 	}
 }
-
-// Errors returns any errors that occurred during the session.
-func (s *Session) Errors() []error { return s.errs }
 
 // Debug sets the debug writer. If the debug writer is non-null, sent and
 // received DAP messages will be written to it.
@@ -66,27 +61,6 @@ func (s *Session) debug(dir string, msg IProtocolMessage) {
 		fmt.Fprintf(s.dbg, "%s %s\n", dir, b)
 	} else {
 		fmt.Fprintf(s.dbg, "%s !%v\n", dir, err)
-	}
-}
-
-// Errorf logs an error.
-func (s *Session) Errorf(format string, a ...interface{}) {
-	err := fmt.Errorf(format, a...)
-	s.errs = append(s.errs, err)
-}
-
-func (s *Session) close() {
-	if s.rc != nil {
-		err := s.rc.Close()
-		if err != nil {
-			s.errs = append(s.errs, err)
-		}
-	}
-	if s.wc != nil {
-		err := s.wc.Close()
-		if err != nil {
-			s.errs = append(s.errs, err)
-		}
 	}
 }
 
@@ -141,60 +115,61 @@ func (s *Session) Respond(req *Request, success bool, message string, body Respo
 	return s.send(resp)
 }
 
-func (s *Session) initialize() {
+func (s *Session) initialize() error {
 	m, err := s.recv()
 	if err != nil {
-		s.Errorf("initialize: decode: %w", err)
-		return
+		return fmt.Errorf("initialize: decode: %w", err)
 	}
 
 	req, ok := m.(*Request)
 	if !ok {
-		s.Errorf("initialize: expected a request, got %T", m)
-		return
+		return fmt.Errorf("initialize: expected a request, got %T", m)
 	}
 
 	if req.Command != "initialize" {
-		s.Errorf("initialize: expected \"initialize\", got %q", req.Command)
-		return
+		return fmt.Errorf("initialize: expected \"initialize\", got %q", req.Command)
 	}
 
 	args := req.Arguments.(*InitializeRequestArguments)
-	caps := s.handler.Initialize(s, args)
+	caps, err := s.handler.Initialize(s, args)
+	if err != nil {
+		return err
+	}
+
 	err = s.Respond(req, true, "Success", caps)
 	if err != nil {
-		s.Errorf("initialize: encode: %w", err)
-		return
+		return fmt.Errorf("initialize: encode: %w", err)
 	}
+
+	return nil
 }
 
-func (s *Session) terminate() {
+func (s *Session) terminate() error {
 	err := s.Event("terminated", new(TerminatedEventBody))
-	if err != nil {
-		s.Errorf("terminate: encode: %w", err)
-	}
-
 	s.handler.Terminate()
+	return err
 }
 
 // Run starts the session. Run blocks until the session is terminated.
-func (s *Session) Run() {
-	defer s.close()
-
-	s.initialize()
+func (s *Session) Run() error {
+	err := s.initialize()
+	if err != nil {
+		return err
+	}
 
 	for {
 		m, err := s.recv()
 		if err != nil {
-			s.Errorf("loop: decode: %w", err)
-			return
+			return fmt.Errorf("loop: decode: %w", err)
 		}
 
-		stop := s.handler.Process(m)
-		if stop {
+		err = s.handler.Process(m)
+		if errors.Is(err, ErrStop) {
 			break
+		} else if err != nil {
+			return err
 		}
 	}
 
-	s.terminate()
+	return s.terminate()
 }

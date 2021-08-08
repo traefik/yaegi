@@ -18,11 +18,11 @@ func NewServer(l net.Listener, handler Handler) *Server {
 
 // Accept accepts a connection from the listener and returns a new session that
 // reads and writes to the connection.
-func (s *Server) Accept() (*Session, error) {
+func (s *Server) Accept() (*Session, net.Conn, error) {
 	conn, err := s.l.Accept()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return NewSession(conn, conn, s.handler), nil
+	return NewSession(conn, conn, s.handler), conn, nil
 }

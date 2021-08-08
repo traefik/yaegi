@@ -212,7 +212,9 @@ func runCfg(n *node, f *frame, funcNode, callNode *node) {
 	defer dbg.exitCall(funcNode, callNode, f)
 
 	for m, exec := n, n.exec; f.runid() == n.interp.runid(); {
-		dbg.exec(m, f)
+		if dbg.exec(m, f) {
+			break
+		}
 
 		exec = exec(f)
 		if exec == nil {

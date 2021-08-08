@@ -11,7 +11,6 @@ import (
 	"github.com/traefik/yaegi/internal/dap"
 	"github.com/traefik/yaegi/internal/iox"
 	"github.com/traefik/yaegi/interp"
-	"github.com/traefik/yaegi/stdlib"
 )
 
 // Options for Adapter.
@@ -22,10 +21,13 @@ type Options struct {
 	SrcPath string
 
 	// NewInterpreter is called to create the interpreter.
-	NewInterpreter func(interp.Options) *interp.Interpreter
+	NewInterpreter func(interp.Options) (*interp.Interpreter, error)
 
 	// If StopAtEntry is set, the debugger will halt on entry.
 	StopAtEntry bool
+
+	// Non-fatal errors will be sent to Errors if it is non-nil
+	Errors chan<- error
 }
 
 type compileFunc func(*interp.Interpreter, string) (*interp.Program, error)
@@ -64,7 +66,9 @@ func newAdapter(eval compileFunc, arg string, opts *Options) *Adapter {
 		opts = new(Options)
 	}
 	if opts.NewInterpreter == nil {
-		opts.NewInterpreter = interp.New
+		opts.NewInterpreter = func(opts interp.Options) (*interp.Interpreter, error) {
+			return interp.New(opts), nil
+		}
 	}
 
 	a := new(Adapter)
@@ -77,29 +81,20 @@ func newAdapter(eval compileFunc, arg string, opts *Options) *Adapter {
 	return a
 }
 
-func (a *Adapter) errorf(msg string, args ...interface{}) {
-	last := args[len(args)-1]
-	if last == nil {
-		return
-	}
-	a.session.Errorf(msg, append(args, last.(error)))
-}
-
-func (a *Adapter) event(event string, body dap.EventBody) {
-	err := a.session.Event(event, body)
-	a.errorf("failed to send %q event: %v", event, err)
-}
-
-func (a *Adapter) step(id int, reason interp.DebugEventReason) bool {
+func (a *Adapter) step(id int, reason interp.DebugEventReason) (bool, string) {
 	err := a.debugger.Step(id, reason)
-	a.errorf("failed to step routine %d: %v", id, err)
-	return err == nil
+	if err == nil {
+		return true, ""
+	}
+	return false, fmt.Sprintf("routine %d: failed to step: %v", id, err)
 }
 
-func (a *Adapter) cont(id int) bool {
+func (a *Adapter) cont(id int) (bool, string) {
 	err := a.debugger.Continue(id)
-	a.errorf("failed to continue routine %d: %v", id, err)
-	return err == nil
+	if err == nil {
+		return true, ""
+	}
+	return false, fmt.Sprintf("routine %d: failed to continue: %v", id, err)
 }
 
 // read from stdin.
@@ -114,7 +109,6 @@ func (a *Adapter) stdout(b []byte) (int, error) {
 		Output:   string(b),
 	})
 	if err != nil {
-		a.session.Errorf("failed to send stdout: %v", err)
 		return 0, err
 	}
 	return len(b), nil
@@ -127,22 +121,22 @@ func (a *Adapter) stderr(b []byte) (int, error) {
 		Output:   string(b),
 	})
 	if err != nil {
-		a.session.Errorf("failed to send stderr: %v", err)
 		return 0, err
 	}
 	return len(b), nil
 }
 
 // Initialize implements dap.Handler and should not be called directly.
-func (a *Adapter) Initialize(s *dap.Session, ccaps *dap.InitializeRequestArguments) *dap.Capabilities {
+func (a *Adapter) Initialize(s *dap.Session, ccaps *dap.InitializeRequestArguments) (*dap.Capabilities, error) {
 	a.session, a.ccaps = s, ccaps
 	return &dap.Capabilities{
 		SupportsConfigurationDoneRequest: dap.Bool(true),
-	}
+	}, nil
 }
 
 // Process implements dap.Handler and should not be called directly.
-func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
+func (a *Adapter) Process(m dap.IProtocolMessage) error {
+	var stop bool
 	switch m := m.(type) { //nolint:gocritic
 	case *dap.Request:
 		success := false
@@ -150,24 +144,23 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 		var body dap.ResponseBody
 		switch m.Command {
 		case "launch", "attach":
-			a.interp = a.opts.NewInterpreter(interp.Options{
+			i, err := a.opts.NewInterpreter(interp.Options{
 				Stdin:  iox.ReaderFunc(a.stdin),
 				Stdout: iox.WriterFunc(a.stdout),
 				Stderr: iox.WriterFunc(a.stderr),
 			})
-
-			err := a.interp.Use(stdlib.Symbols)
 			if err != nil {
-				panic("failed to Use stdlib")
+				return err
 			}
+			a.interp = i
 
 			prog, err := a.compile(a.interp, a.arg)
 			if err == nil {
 				success = true
-				a.event("initialized", nil)
+				err = a.session.Event("initialized", nil)
 			} else {
 				stop = true
-				a.event("output", &dap.OutputEventBody{
+				err = a.session.Event("output", &dap.OutputEventBody{
 					Category: dap.Str("stderr"),
 					Output:   err.Error(),
 					Data:     err,
@@ -175,21 +168,30 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 				message = fmt.Sprintf("Failed to compile: %v", err)
 				break
 			}
+			if err != nil {
+				return err
+			}
 
 			a.debugger = a.interp.Debug(context.Background(), prog, func(e *interp.DebugEvent) {
 				if e.Reason() == interp.DebugEnterGoRoutine {
-					a.event("thread", &dap.ThreadEventBody{
+					err := a.session.Event("thread", &dap.ThreadEventBody{
 						Reason:   "started",
 						ThreadId: e.GoRoutine(),
 					})
+					if a.opts.Errors != nil {
+						a.opts.Errors <- err
+					}
 					return
 				}
 
 				if e.Reason() == interp.DebugExitGoRoutine {
-					a.event("thread", &dap.ThreadEventBody{
+					err := a.session.Event("thread", &dap.ThreadEventBody{
 						Reason:   "exited",
 						ThreadId: e.GoRoutine(),
 					})
+					if a.opts.Errors != nil {
+						a.opts.Errors <- err
+					}
 					return
 				}
 
@@ -197,7 +199,10 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 				a.vars.Purge()
 
 				if e.Reason() == interp.DebugTerminate {
-					a.event("terminated", nil)
+					err := a.session.Event("terminated", nil)
+					if a.opts.Errors != nil {
+						a.opts.Errors <- err
+					}
 					stop = true
 					return
 				}
@@ -216,7 +221,10 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 				default:
 					body.Reason = "pause"
 				}
-				a.event("stopped", body)
+				err := a.session.Event("stopped", body)
+				if a.opts.Errors != nil {
+					a.opts.Errors <- err
+				}
 			}, &interp.DebugOptions{
 				GoRoutineStartAt1: true,
 			})
@@ -292,35 +300,35 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 
 		case "configurationDone":
 			if a.opts.StopAtEntry {
-				success = a.step(1, interp.DebugEntry)
+				success, message = a.step(1, interp.DebugEntry)
 			} else {
-				success = a.cont(1)
+				success, message = a.cont(1)
 			}
 
 		case "continue":
 			args := m.Arguments.(*dap.ContinueArguments)
-			defer a.events.Release(args.ThreadId)
-			success = a.cont(args.ThreadId)
+			a.events.Release(args.ThreadId)
+			success, message = a.cont(args.ThreadId)
 			body = &dap.ContinueResponseBody{AllThreadsContinued: dap.Bool(false)}
 
 		case "stepIn":
 			args := m.Arguments.(*dap.StepInArguments)
-			defer a.events.Release(args.ThreadId)
-			success = a.step(args.ThreadId, interp.DebugStepInto)
+			a.events.Release(args.ThreadId)
+			success, message = a.step(args.ThreadId, interp.DebugStepInto)
 
 		case "next":
 			args := m.Arguments.(*dap.NextArguments)
-			defer a.events.Release(args.ThreadId)
-			success = a.step(args.ThreadId, interp.DebugStepOver)
+			a.events.Release(args.ThreadId)
+			success, message = a.step(args.ThreadId, interp.DebugStepOver)
 
 		case "stepOut":
 			args := m.Arguments.(*dap.StepOutArguments)
-			defer a.events.Release(args.ThreadId)
-			success = a.step(args.ThreadId, interp.DebugStepOut)
+			a.events.Release(args.ThreadId)
+			success, message = a.step(args.ThreadId, interp.DebugStepOut)
 
 		case "pause":
 			args := m.Arguments.(*dap.PauseArguments)
-			defer a.events.Release(args.ThreadId)
+			a.events.Release(args.ThreadId)
 			success = a.debugger.Interrupt(args.ThreadId, interp.DebugPause)
 
 		case "threads":
@@ -447,15 +455,21 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 		}
 
 		err := a.session.Respond(m, success, message, body)
-		a.errorf("failed to respond: %v", err)
+		if err != nil {
+			return err
+		}
 	}
 
-	return stop
+	if stop {
+		return dap.ErrStop
+	}
+	return nil
 }
 
 // Terminate implements dap.Handler and should not be called directly.
 func (a *Adapter) Terminate() {
 	if a.debugger != nil {
 		a.debugger.Terminate()
+		a.debugger.Wait() //nolint:errcheck
 	}
 }

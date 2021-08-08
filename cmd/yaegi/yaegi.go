@@ -104,11 +104,12 @@ import (
 )
 
 const (
-	Extract = "extract"
-	Help    = "help"
-	Run     = "run"
-	Test    = "test"
-	Version = "version"
+	Extract     = "extract"
+	Help        = "help"
+	Run         = "run"
+	Test        = "test"
+	DebugServer = "debug-server"
+	Version     = "version"
 )
 
 var version = "devel" // This may be overwritten at build time.
@@ -133,6 +134,8 @@ func main() {
 		err = run(os.Args[2:])
 	case Test:
 		err = test(os.Args[2:])
+	case DebugServer:
+		err = debugServer(os.Args[2:])
 	case Version:
 		fmt.Println(version)
 	default:
