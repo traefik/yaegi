@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"reflect"
 
 	"github.com/traefik/yaegi/internal/dap"
 	"github.com/traefik/yaegi/internal/iox"
@@ -65,25 +64,7 @@ func newAdapter(eval compileFunc, arg string, opts *Options) *Adapter {
 		opts = new(Options)
 	}
 	if opts.NewInterpreter == nil {
-		opts.NewInterpreter = func(opts interp.Options) *interp.Interpreter {
-			i := interp.New(opts)
-			err := i.Use(stdlib.Symbols)
-			if err != nil {
-				panic("failed to Use stdlib")
-			}
-
-			err = i.Use(interp.Exports{
-				"dbg/dbg": map[string]reflect.Value{
-					"Debug": reflect.ValueOf(func() {
-						println("!")
-					}),
-				},
-			})
-			if err != nil {
-				panic("failed to Use debug helpers")
-			}
-			return i
-		}
+		opts.NewInterpreter = interp.New
 	}
 
 	a := new(Adapter)
@@ -97,11 +78,11 @@ func newAdapter(eval compileFunc, arg string, opts *Options) *Adapter {
 }
 
 func (a *Adapter) errorf(msg string, args ...interface{}) {
-	err := args[len(args)-1].(error)
-	if err == nil {
+	last := args[len(args)-1]
+	if last == nil {
 		return
 	}
-	a.session.Errorf(msg, append(args, err))
+	a.session.Errorf(msg, append(args, last.(error)))
 }
 
 func (a *Adapter) event(event string, body dap.EventBody) {
@@ -174,6 +155,11 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 				Stdout: iox.WriterFunc(a.stdout),
 				Stderr: iox.WriterFunc(a.stderr),
 			})
+
+			err := a.interp.Use(stdlib.Symbols)
+			if err != nil {
+				panic("failed to Use stdlib")
+			}
 
 			prog, err := a.compile(a.interp, a.arg)
 			if err == nil {
@@ -469,5 +455,7 @@ func (a *Adapter) Process(m dap.IProtocolMessage) (stop bool) {
 
 // Terminate implements dap.Handler and should not be called directly.
 func (a *Adapter) Terminate() {
-	a.debugger.Terminate()
+	if a.debugger != nil {
+		a.debugger.Terminate()
+	}
 }
