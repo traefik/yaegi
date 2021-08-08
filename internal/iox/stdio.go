@@ -9,7 +9,9 @@ import (
 	"time"
 )
 
-// TODO use net.ErrClosed when support for 1.15 is dropped
+// ErrClosed is the error returned by Stdio.Accept if it has been closed.
+//
+// TODO use net.ErrClosed when support for 1.15 is dropped.
 var ErrClosed = errors.New("closed")
 
 // NewStdio returns a new Stdio listener.
