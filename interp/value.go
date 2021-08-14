@@ -197,7 +197,19 @@ func genValue(n *node) func(*frame) reflect.Value {
 		} else {
 			v = reflect.ValueOf(n.val)
 		}
-		return func(f *frame) reflect.Value { return v }
+		return func(f *frame) reflect.Value {
+			// It is possible that the nodes val had not been set
+			// when getting the value. In this case, recheck it
+			// at runtime.
+			if !v.IsValid() {
+				return v
+			}
+
+			if w, ok := n.val.(reflect.Value); ok {
+				return w
+			}
+			return reflect.ValueOf(n.val)
+		}
 	default:
 		if n.rval.IsValid() {
 			convertConstantValue(n)
