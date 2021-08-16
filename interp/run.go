@@ -1265,7 +1265,10 @@ func call(n *node) {
 					}
 				default:
 					val := v(f)
-					if !val.IsZero() {
+					// The !val.IsZero is to work around a recursive struct zero interface
+					// issue. Once there is a better way to handle this case, the dest
+					// can just be set.
+					if !val.IsZero() || dest[i].Type().Kind() == reflect.Interface {
 						dest[i].Set(val)
 					}
 				}
