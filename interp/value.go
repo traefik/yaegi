@@ -197,17 +197,7 @@ func genValue(n *node) func(*frame) reflect.Value {
 		} else {
 			v = reflect.ValueOf(n.val)
 		}
-		// If node value is not yet resolved due to forward function declaration,
-		// then we have to perform node resolution at runtime.
-		if _, ok := v.Interface().(*node); ok {
-			return func(f *frame) reflect.Value { return v }
-		}
-		return func(f *frame) reflect.Value {
-			if w, ok := n.val.(reflect.Value); ok {
-				return w
-			}
-			return reflect.ValueOf(n.val)
-		}
+		return func(f *frame) reflect.Value { return v }
 	default:
 		if n.rval.IsValid() {
 			convertConstantValue(n)
