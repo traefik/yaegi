@@ -1,4 +1,4 @@
-// +build go1.15
+// +build go1.16
 
 // Package stdlib provides wrappers of standard library packages to be imported natively in Yaegi.
 package stdlib
@@ -50,3 +50,4 @@ func init() {
 //go:generate ../internal/cmd/extract/extract testing testing/iotest testing/quick
 //go:generate ../internal/cmd/extract/extract text/scanner text/tabwriter text/template text/template/parse
 //go:generate ../internal/cmd/extract/extract time unicode unicode/utf16 unicode/utf8
+//go:generate ../internal/cmd/extract/extract embed io/fs testing/fstest

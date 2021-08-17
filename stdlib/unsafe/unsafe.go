@@ -1,4 +1,4 @@
-// +build go1.14
+// +build go1.16
 
 // Package unsafe provides wrapper of standard library unsafe package to be imported natively in Yaegi.
 package unsafe
