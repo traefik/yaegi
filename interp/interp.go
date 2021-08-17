@@ -258,6 +258,7 @@ type Options struct {
 	// SourcecodeFilesystem is where the _sourcecode_ is loaded from and does
 	// NOT affect the filesystem of scripts when they run.
 	// It can be any fs.FS compliant filesystem (e.g. embed.FS, or fstest.MapFS for testing)
+	// See example/fs/fs_test.go for an example.
 	SourcecodeFilesystem fs.FS
 }
 
