@@ -43,7 +43,7 @@ func TestPackages(t *testing.T) {
 			// We check this one because it shows both defects when we break it: the value
 			// gets corrupted, and the type becomes token.INT
 			// TODO(mpl): if the ident between key and value becomes annoying, be smarter about it.
-			contains: `"MaxFloat64":             reflect.ValueOf(constant.MakeFromLiteral("179769313486231570814527423731704356798100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", token.FLOAT, 0)),`,
+			contains: `"MaxFloat32":             reflect.ValueOf(constant.MakeFromLiteral("340282346638528859811704183484516925440", token.FLOAT, 0)),`,
 		},
 		{
 			desc:     "using relative path, using go.mod",

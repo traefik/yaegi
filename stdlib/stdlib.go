@@ -1,4 +1,4 @@
-// +build go1.15
+// +build go1.16
 
 // Package stdlib provides wrappers of standard library packages to be imported natively in Yaegi.
 package stdlib
@@ -27,7 +27,7 @@ func init() {
 //go:generate ../internal/cmd/extract/extract crypto/subtle crypto/tls crypto/x509 crypto/x509/pkix
 //go:generate ../internal/cmd/extract/extract database/sql database/sql/driver
 //go:generate ../internal/cmd/extract/extract debug/dwarf debug/elf debug/gosym debug/macho debug/pe debug/plan9obj
-//go:generate ../internal/cmd/extract/extract encoding encoding/ascii85 encoding/asn1 encoding/base32
+//go:generate ../internal/cmd/extract/extract embed encoding encoding/ascii85 encoding/asn1 encoding/base32
 //go:generate ../internal/cmd/extract/extract encoding/base64 encoding/binary encoding/csv encoding/gob
 //go:generate ../internal/cmd/extract/extract encoding/hex encoding/json encoding/pem encoding/xml
 //go:generate ../internal/cmd/extract/extract errors expvar flag fmt
@@ -37,7 +37,7 @@ func init() {
 //go:generate ../internal/cmd/extract/extract html html/template
 //go:generate ../internal/cmd/extract/extract image image/color image/color/palette
 //go:generate ../internal/cmd/extract/extract image/draw image/gif image/jpeg image/png index/suffixarray
-//go:generate ../internal/cmd/extract/extract io io/ioutil log log/syslog
+//go:generate ../internal/cmd/extract/extract io io/fs io/ioutil log log/syslog
 //go:generate ../internal/cmd/extract/extract math math/big math/bits math/cmplx math/rand
 //go:generate ../internal/cmd/extract/extract mime mime/multipart mime/quotedprintable
 //go:generate ../internal/cmd/extract/extract net net/http net/http/cgi net/http/cookiejar net/http/fcgi
@@ -47,6 +47,6 @@ func init() {
 //go:generate ../internal/cmd/extract/extract path path/filepath reflect regexp regexp/syntax
 //go:generate ../internal/cmd/extract/extract runtime runtime/debug runtime/pprof runtime/trace
 //go:generate ../internal/cmd/extract/extract sort strconv strings sync sync/atomic
-//go:generate ../internal/cmd/extract/extract testing testing/iotest testing/quick
+//go:generate ../internal/cmd/extract/extract testing testing/fstest testing/iotest testing/quick
 //go:generate ../internal/cmd/extract/extract text/scanner text/tabwriter text/template text/template/parse
 //go:generate ../internal/cmd/extract/extract time unicode unicode/utf16 unicode/utf8

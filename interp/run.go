@@ -1879,7 +1879,8 @@ func writableDeref(v reflect.Value) reflect.Value {
 	// Here we have an interface to a struct. Any attempt to dereference it will
 	// make a copy of the struct. We need to get a Value to the actual struct.
 	// TODO: using unsafe is a temporary measure. Rethink this.
-	return reflect.NewAt(v.Elem().Type(), unsafe.Pointer(v.InterfaceData()[1])).Elem() //nolint:govet
+	// TODO: InterfaceData has been depreciated, this is even less of a good idea now.
+	return reflect.NewAt(v.Elem().Type(), unsafe.Pointer(v.InterfaceData()[1])).Elem() //nolint:govet,staticcheck
 }
 
 func getPtrIndexSeq(n *node) {
