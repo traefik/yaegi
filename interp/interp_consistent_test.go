@@ -98,7 +98,9 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "server1.go" || // syntax parsing
 			file.Name() == "server0.go" || // syntax parsing
 			file.Name() == "server.go" || // syntax parsing
-			file.Name() == "range9.go" { // expect error
+			file.Name() == "range9.go" || // expect error
+			file.Name() == "unsafe6.go" || // needs go.mod to be 1.17
+			file.Name() == "unsafe7.go" { // needs go.mod to be 1.17
 			continue
 		}
 
