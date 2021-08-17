@@ -178,6 +178,7 @@ var knownArch = map[string]bool{
 	"amd64":    true,
 	"arm":      true,
 	"arm64":    true,
+	"loong64":  true,
 	"mips":     true,
 	"mips64":   true,
 	"mips64le": true,
