@@ -161,7 +161,11 @@ func Test_pkgDir(t *testing.T) {
 		},
 	}
 
-	interp := &Interpreter{}
+	interp := &Interpreter{
+		opt: opt{
+			filesystem: &RealFS{},
+		},
+	}
 
 	for _, test := range testCases {
 		test := test
@@ -247,7 +251,7 @@ func Test_previousRoot(t *testing.T) {
 			} else {
 				rootPath = vendor
 			}
-			p, err := previousRoot(rootPath, test.root)
+			p, err := previousRoot(&RealFS{}, rootPath, test.root)
 			if err != nil {
 				t.Error(err)
 			}
