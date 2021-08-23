@@ -31,6 +31,7 @@ func debugServer(arg []string) error {
 		logFile       string
 		stopAtEntry   bool
 		singleSession bool
+		asString      bool
 		tags          string
 		noAutoImport  bool
 		err           error
@@ -47,6 +48,7 @@ func debugServer(arg []string) error {
 	dflag.StringVar(&logFile, "log", "", "Log protocol messages to a file")
 	dflag.BoolVar(&stopAtEntry, "stop-at-entry", false, "Stop at program entry")
 	dflag.BoolVar(&singleSession, "single-session", true, "Run a single debug session and exit once it terminates")
+	dflag.BoolVar(&asString, "as-string", false, "Use Eval instead of EvalPath")
 	dflag.StringVar(&tags, "tags", "", "set a list of build tags")
 	dflag.BoolVar(&useSyscall, "syscall", useSyscall, "include syscall symbols")
 	dflag.BoolVar(&useUnrestricted, "unrestricted", useUnrestricted, "include unrestricted symbols")
@@ -121,7 +123,26 @@ func debugServer(arg []string) error {
 	}
 
 	var adp *dbg.Adapter
-	if src, ok := isScript(args[0]); ok {
+	if asString {
+		b, err := ioutil.ReadFile(args[0])
+		if err != nil {
+			return err
+		}
+
+		opts.NewInterpreter = func(opts interp.Options) (*interp.Interpreter, error) {
+			i, err := newInterp(opts)
+			if err != nil {
+				return nil, err
+			}
+
+			if !noAutoImport {
+				i.ImportUsed()
+			}
+			return i, nil
+		}
+
+		adp = dbg.NewEvalAdapter(string(b), opts)
+	} else if src, ok := isScript(args[0]); ok {
 		opts.NewInterpreter = func(opts interp.Options) (*interp.Interpreter, error) {
 			i, err := newInterp(opts)
 			if err != nil {
