@@ -25,6 +25,7 @@ import (
 
 // Interpreter node structure for AST and CFG.
 type node struct {
+	debug  *nodeDebugData // debug info
 	child  []*node        // child subtrees (AST)
 	anc    *node          // ancestor (AST)
 	start  *node          // entry point in subtree (CFG)
@@ -50,7 +51,45 @@ type node struct {
 	val    interface{}    // static generic value (CFG execution)
 	rval   reflect.Value  // reflection value to let runtime access interpreter (CFG)
 	ident  string         // set if node is a var or func
-	bkp    bool           // breakpoint
+}
+
+func (n *node) shouldBreak() bool {
+	if n == nil || n.debug == nil {
+		return false
+	}
+
+	if n.debug.breakOnLine || n.debug.breakOnCall {
+		return true
+	}
+
+	return false
+}
+
+func (n *node) setProgram(p *Program) {
+	if n.debug == nil {
+		n.debug = new(nodeDebugData)
+	}
+	n.debug.program = p
+}
+
+func (n *node) setBreakOnCall(v bool) {
+	if n.debug == nil {
+		if !v {
+			return
+		}
+		n.debug = new(nodeDebugData)
+	}
+	n.debug.breakOnCall = v
+}
+
+func (n *node) setBreakOnLine(v bool) {
+	if n.debug == nil {
+		if !v {
+			return
+		}
+		n.debug = new(nodeDebugData)
+	}
+	n.debug.breakOnLine = v
 }
 
 // receiver stores method receiver object access path.

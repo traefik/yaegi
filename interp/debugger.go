@@ -52,10 +52,17 @@ type debugRoutine struct {
 	fStep  int
 }
 
+// node debug state.
+type nodeDebugData struct {
+	program     *Program
+	breakOnLine bool
+	breakOnCall bool
+}
+
 // frame debug state.
 type frameDebugData struct {
 	g     *debugRoutine
-	pos   token.Pos
+	node  *node
 	name  string
 	kind  frameKind
 	scope *scope
@@ -113,9 +120,13 @@ type DebugGoRoutine struct {
 	id int
 }
 
-// Breakpoint can be used to set breakpoints while debugging a program.
+// Breakpoint is the result of attempting to set a breakpoint.
 type Breakpoint struct {
-	Line, Column int
+	// Valid indicates whether the breakpoint was successfully set.
+	Valid bool
+
+	// Position indicates the source position of the breakpoint.
+	Position token.Position
 }
 
 // DebugEventReason is the reason a debug event occurred.
@@ -185,6 +196,11 @@ func (interp *Interpreter) Debug(ctx context.Context, prog *Program, events func
 
 	interp.debugger = dbg
 	interp.frame.debug = &frameDebugData{kind: frameRoot, g: mainG}
+
+	prog.root.Walk(func(n *node) bool {
+		n.setProgram(prog)
+		return true
+	}, nil)
 
 	go func() {
 		defer func() { interp.debugger = nil }()
@@ -258,7 +274,7 @@ func (dbg *Debugger) enterCall(nFunc, nCall *node, f *frame) {
 		f.debug.kind = frameCall
 		if nFunc.frame != nil {
 			nFunc.frame.debug.kind = frameClosure
-			nFunc.frame.debug.pos = nFunc.pos
+			nFunc.frame.debug.node = nFunc
 		}
 
 	case funcDecl:
@@ -288,11 +304,7 @@ func (dbg *Debugger) exitCall(nFunc, nCall *node, f *frame) {
 
 // called by the interpreter prior to executing the node.
 func (dbg *Debugger) exec(n *node, f *frame) (stop bool) {
-	if n == nil {
-		f.debug.pos = token.NoPos
-	} else {
-		f.debug.pos = n.pos
-	}
+	f.debug.node = n
 
 	if n != nil && n.pos == token.NoPos {
 		return false
@@ -302,23 +314,23 @@ func (dbg *Debugger) exec(n *node, f *frame) (stop bool) {
 	defer func() { g.running = true }()
 
 	e := &DebugEvent{dbg, g.mode, f}
-	switch g.mode {
-	case debugRun:
-		if n == nil || !n.bkp {
-			return
-		}
-		e.reason = DebugBreak
-
-	case DebugTerminate:
+	switch {
+	case g.mode == DebugTerminate:
 		dbg.cancel()
 		return true
 
-	case DebugStepOut:
+	case n.shouldBreak():
+		e.reason = DebugBreak
+
+	case g.mode == debugRun:
+		return false
+
+	case g.mode == DebugStepOut:
 		if g.fDepth >= g.fStep {
 			return false
 		}
 
-	case DebugStepOver:
+	case g.mode == DebugStepOver:
 		if g.fDepth > g.fStep {
 			return false
 		}
@@ -411,51 +423,118 @@ func (dbg *Debugger) Terminate() {
 	}
 }
 
-// SetBreakpoints sets breakpoints for the given path. SetBreakpoints returns a
-// copy of the input array, with invalid breakpoints set to nil.
-func (dbg *Debugger) SetBreakpoints(path string, bp []*Breakpoint) []*Breakpoint {
-	found := make([]*Breakpoint, len(bp))
+// BreakpointTarget is the target of a request to set breakpoints.
+type BreakpointTarget func(*Debugger, func(*node))
 
-	var root *node
-	for _, r := range dbg.interp.roots {
-		f := dbg.interp.fset.File(r.pos)
-		if f != nil && f.Name() == path {
-			root = r
-			break
+// PathBreakpointTarget is used to set breapoints on compiled code by path. This
+// can be used to set breakpoints on code compiled with EvalPath, or source
+// packages loaded by Yaegi.
+func PathBreakpointTarget(path string) BreakpointTarget {
+	return func(dbg *Debugger, cb func(*node)) {
+		for _, r := range dbg.interp.roots {
+			f := dbg.interp.fset.File(r.pos)
+			if f != nil && f.Name() == path {
+				cb(r)
+				return
+			}
 		}
 	}
+}
 
-	if root == nil {
-		return found
+// ProgramBreakpointTarget is used to set breakpoints on a Program.
+func ProgramBreakpointTarget(prog *Program) BreakpointTarget {
+	return func(_ *Debugger, cb func(*node)) {
+		cb(prog.root)
+	}
+}
+
+// AllBreakpointTarget is used to set breakpoints on all compiled code. Do not
+// use with LineBreakpoint.
+func AllBreakpointTarget() BreakpointTarget {
+	return func(dbg *Debugger, cb func(*node)) {
+		for _, r := range dbg.interp.roots {
+			cb(r)
+		}
+	}
+}
+
+type breakpointSetup struct {
+	roots []*node
+	lines map[int]int
+	funcs map[string]int
+}
+
+// BreakpointRequest is a request to set a breakpoint.
+type BreakpointRequest func(*breakpointSetup, int)
+
+// LineBreakpoint requests a breakpoint on the given line.
+func LineBreakpoint(line int) BreakpointRequest {
+	return func(b *breakpointSetup, i int) {
+		b.lines[line] = i
+	}
+}
+
+// FunctionBreakpoint requests a breakpoint on the named function.
+func FunctionBreakpoint(name string) BreakpointRequest {
+	return func(b *breakpointSetup, i int) {
+		b.funcs[name] = i
+	}
+}
+
+// SetBreakpoints sets breakpoints for the given target. The returned array has
+// an entry for every request, in order. If a given breakpoint request cannot be
+// satisfied, the corresponding entry will be marked invalid. If the target
+// cannot be found, all entries will be marked invalid.
+func (dbg *Debugger) SetBreakpoints(target BreakpointTarget, requests ...BreakpointRequest) []Breakpoint {
+	// start with all breakpoints unverified
+	results := make([]Breakpoint, len(requests))
+
+	// prepare all the requests
+	setup := new(breakpointSetup)
+	target(dbg, func(root *node) {
+		setup.roots = append(setup.roots, root)
+		setup.lines = make(map[int]int, len(requests))
+		setup.funcs = make(map[string]int, len(requests))
+		for i, rq := range requests {
+			rq(setup, i)
+		}
+	})
+
+	// find breakpoints
+	for _, root := range setup.roots {
+		root.Walk(func(n *node) bool {
+			// function breakpoints
+			if len(setup.funcs) > 0 && n.kind == funcDecl {
+				// reset stale breakpoints
+				n.start.setBreakOnCall(false)
+
+				if i, ok := setup.funcs[n.child[1].ident]; ok && !results[i].Valid {
+					results[i].Valid = true
+					results[i].Position = dbg.interp.fset.Position(n.start.pos)
+					n.start.setBreakOnCall(true)
+					return true
+				}
+			}
+
+			// line breakpoints
+			if len(setup.lines) > 0 && n.pos.IsValid() && n.action != aNop && getExec(n) != nil {
+				// reset stale breakpoints
+				n.setBreakOnLine(false)
+
+				pos := dbg.interp.fset.Position(n.pos)
+				if i, ok := setup.lines[pos.Line]; ok && !results[i].Valid {
+					results[i].Valid = true
+					results[i].Position = pos
+					n.setBreakOnLine(true)
+					return true
+				}
+			}
+
+			return true
+		}, nil)
 	}
 
-	lines := map[int]int{}
-	for i, bp := range bp {
-		lines[bp.Line] = i
-	}
-
-	root.Walk(func(n *node) bool {
-		if !n.pos.IsValid() {
-			return true
-		}
-
-		if n.action == aNop || getExec(n) == nil {
-			return true
-		}
-
-		var ok bool
-		pos := dbg.interp.fset.Position(n.pos)
-		i, ok := lines[pos.Line]
-		if !ok || found[i] != nil {
-			return true
-		}
-
-		found[i] = bp[i]
-		n.bkp = true
-		return true
-	}, nil)
-
-	return found
+	return results
 }
 
 // GoRoutines returns an array of live Go routines.
@@ -575,12 +654,24 @@ func (f *DebugFrame) Name() string {
 }
 
 // Position returns the current position of the frame. This is effectively the
-// program counter/link register.
+// program counter/link register. May return `Position{}`.
 func (f *DebugFrame) Position() token.Position {
-	if f.frames[0].debug == nil {
+	d := f.frames[0].debug
+	if d == nil || d.node == nil {
 		return token.Position{}
 	}
-	return f.event.debugger.interp.fset.Position(f.frames[0].debug.pos)
+	return f.event.debugger.interp.fset.Position(d.node.pos)
+}
+
+// Program returns the program associated with the current position of the
+// frame. May return nil.
+func (f *DebugFrame) Program() *Program {
+	d := f.frames[0].debug
+	if d == nil || d.node == nil {
+		return nil
+	}
+
+	return d.node.debug.program
 }
 
 // Scopes returns the variable scopes of the frame.
