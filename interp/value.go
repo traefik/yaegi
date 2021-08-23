@@ -191,13 +191,7 @@ func genValue(n *node) func(*frame) reflect.Value {
 		}
 		return func(f *frame) reflect.Value { return v }
 	case funcDecl:
-		var v reflect.Value
-		if w, ok := n.val.(reflect.Value); ok {
-			v = w
-		} else {
-			v = reflect.ValueOf(n.val)
-		}
-		return func(f *frame) reflect.Value { return v }
+		return genNodeVal(n)
 	default:
 		if n.rval.IsValid() {
 			convertConstantValue(n)
@@ -215,16 +209,32 @@ func genValue(n *node) func(*frame) reflect.Value {
 			return valueGenerator(n, i)
 		}
 		if n.findex == notInFrame {
-			var v reflect.Value
-			if w, ok := n.val.(reflect.Value); ok {
-				v = w
-			} else {
-				v = reflect.ValueOf(n.val)
+			return genNodeVal(n)
+		}
+		if n.kind == blockStmt {
+			n := n.lastChild()
+			switch n.kind {
+			case defineStmt, assignStmt:
+				return genNodeVal(n)
+			case declStmt:
+				n := n.lastChild()
+				if n.kind == varDecl {
+					return genNodeVal(n)
+				}
 			}
-			return func(f *frame) reflect.Value { return v }
 		}
 		return valueGenerator(n, n.findex)
 	}
+}
+
+func genNodeVal(n *node) func(*frame) reflect.Value {
+	var v reflect.Value
+	if w, ok := n.val.(reflect.Value); ok {
+		v = w
+	} else {
+		v = reflect.ValueOf(n.val)
+	}
+	return func(f *frame) reflect.Value { return v }
 }
 
 func genDestValue(typ *itype, n *node) func(*frame) reflect.Value {
