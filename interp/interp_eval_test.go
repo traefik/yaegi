@@ -140,6 +140,8 @@ func TestEvalBuiltin(t *testing.T) {
 		{src: `string(append([]byte("hello "), "world"...))`, res: "hello world"},
 		{src: `e := "world"; string(append([]byte("hello "), e...))`, res: "hello world"},
 		{src: `b := []int{1}; b = append(1, 2, 3); b`, err: "1:54: first argument to append must be slice; have int"},
+		{src: `a1 := []int{0,1,2}; append(a1)`, res: "[0 1 2]"},
+		{src: `append(nil)`, err: "first argument to append must be slice; have nil"},
 		{src: `g := len(a)`, res: "1"},
 		{src: `g := cap(a)`, res: "1"},
 		{src: `g := len("test")`, res: "4"},
