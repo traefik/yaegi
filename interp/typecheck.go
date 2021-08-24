@@ -739,6 +739,9 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 			return params[0].nod.cfgErrorf("first argument to append must be slice; have %s", typ.id())
 		}
 
+		if nparams == 1 {
+			return nil
+		}
 		// Special case append([]byte, "test"...) is allowed.
 		t1 := params[1].Type()
 		if nparams == 2 && ellipsis && t.Elem().Kind() == reflect.Uint8 && t1.TypeOf().Kind() == reflect.String {

@@ -2928,7 +2928,13 @@ func _append(n *node) {
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
-	if len(n.child) > 3 {
+	switch l := len(n.child); {
+	case l == 2:
+		n.exec = func(f *frame) bltn {
+			dest(f).Set(value(f))
+			return next
+		}
+	case l > 3:
 		args := n.child[2:]
 		l := len(args)
 		values := make([]func(*frame) reflect.Value, l)
@@ -2957,7 +2963,7 @@ func _append(n *node) {
 			dest(f).Set(reflect.Append(value(f), sl...))
 			return next
 		}
-	} else {
+	default:
 		var value0 func(*frame) reflect.Value
 		switch elem := n.typ.elem(); {
 		case isEmptyInterface(elem):
