@@ -140,6 +140,8 @@ func TestEvalBuiltin(t *testing.T) {
 		{src: `string(append([]byte("hello "), "world"...))`, res: "hello world"},
 		{src: `e := "world"; string(append([]byte("hello "), e...))`, res: "hello world"},
 		{src: `b := []int{1}; b = append(1, 2, 3); b`, err: "1:54: first argument to append must be slice; have int"},
+		{src: `a1 := []int{0,1,2}; append(a1)`, res: "[0 1 2]"},
+		{src: `append(nil)`, err: "first argument to append must be slice; have nil"},
 		{src: `g := len(a)`, res: "1"},
 		{src: `g := cap(a)`, res: "1"},
 		{src: `g := len("test")`, res: "4"},
@@ -495,8 +497,6 @@ func TestEvalSliceExpression(t *testing.T) {
 		{src: `a := []int{0,1,2,3}[1::4]`, err: "1:49: 2nd index required in 3-index slice"},
 		{src: `a := []int{0,1,2,3}[1:3:]`, err: "1:51: 3rd index required in 3-index slice"},
 		{src: `a := []int{0,1,2}[3:1]`, err: "invalid index values, must be low <= high <= max"},
-		{src: `a := []int{0,1,2}; append(a)`, res: "[0 1 2]"},
-		{src: `append(nil)`, err: "first argument to append must be slice; have nil"},
 		{pre: func() { eval(t, i, `type Str = string; var r Str = "truc"`) }, src: `r[1]`, res: "114"},
 	})
 }
