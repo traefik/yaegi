@@ -496,6 +496,7 @@ func TestEvalSliceExpression(t *testing.T) {
 		{src: `a := []int{0,1,2,3}[1:3:]`, err: "1:51: 3rd index required in 3-index slice"},
 		{src: `a := []int{0,1,2}[3:1]`, err: "invalid index values, must be low <= high <= max"},
 		{src: `a := []int{0,1,2}; append(a)`, res: "[0 1 2]"},
+		{src: `append(nil)`, err: "first argument to append must be slice; have nil"},
 		{pre: func() { eval(t, i, `type Str = string; var r Str = "truc"`) }, src: `r[1]`, res: "114"},
 	})
 }
