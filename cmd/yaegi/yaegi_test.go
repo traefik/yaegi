@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -49,7 +50,15 @@ func TestYaegiCmdCancel(t *testing.T) {
 	}()
 
 	yaegi := filepath.Join(tmp, "yaegi")
-	build := exec.Command("go", "build", "-race", "-o", yaegi, ".")
+
+	args := []string{"build"}
+	if raceDetectorSupported(runtime.GOOS, runtime.GOARCH) {
+		args = append(args, "-race")
+	}
+	args = append(args, "-o", yaegi, ".")
+
+	build := exec.Command("go", args...)
+
 	out, err := build.CombinedOutput()
 	if err != nil {
 		t.Fatalf("failed to build yaegi command: %v: %s", err, out)
@@ -113,5 +122,18 @@ func TestYaegiCmdCancel(t *testing.T) {
 		if strings.TrimSuffix(errBuf.String(), "\n") != context.Canceled.Error() {
 			t.Errorf("unexpected error: %q", &errBuf)
 		}
+	}
+}
+
+func raceDetectorSupported(goos, goarch string) bool {
+	switch goos {
+	case "linux":
+		return goarch == "amd64" || goarch == "ppc64le" || goarch == "arm64"
+	case "darwin":
+		return goarch == "amd64" || goarch == "arm64"
+	case "freebsd", "netbsd", "openbsd", "windows":
+		return goarch == "amd64"
+	default:
+		return false
 	}
 }
