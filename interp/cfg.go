@@ -145,10 +145,10 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						switch typ.Kind() {
 						case reflect.Map:
 							n.anc.gen = rangeMap
-							ityp := &itype{cat: valueT, rtype: reflect.TypeOf((*reflect.MapIter)(nil))}
+							ityp := valueTOf(reflect.TypeOf((*reflect.MapIter)(nil)))
 							sc.add(ityp)
-							ktyp = &itype{cat: valueT, rtype: typ.Key()}
-							vtyp = &itype{cat: valueT, rtype: typ.Elem()}
+							ktyp = valueTOf(typ.Key())
+							vtyp = valueTOf(typ.Elem())
 						case reflect.String:
 							sc.add(sc.getType("int")) // Add a dummy type to store array shallow copy for range
 							sc.add(sc.getType("int")) // Add a dummy type to store index for range
@@ -157,11 +157,11 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						case reflect.Array, reflect.Slice:
 							sc.add(sc.getType("int")) // Add a dummy type to store array shallow copy for range
 							ktyp = sc.getType("int")
-							vtyp = &itype{cat: valueT, rtype: typ.Elem()}
+							vtyp = valueTOf(typ.Elem())
 						}
 					case mapT:
 						n.anc.gen = rangeMap
-						ityp := &itype{cat: valueT, rtype: reflect.TypeOf((*reflect.MapIter)(nil))}
+						ityp := valueTOf(reflect.TypeOf((*reflect.MapIter)(nil)))
 						sc.add(ityp)
 						ktyp = o.typ.key
 						vtyp = o.typ.val
@@ -169,7 +169,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						ktyp = sc.getType("int")
 						vtyp = o.typ.val
 						if vtyp.cat == valueT {
-							vtyp = &itype{cat: valueT, rtype: vtyp.rtype.Elem()}
+							vtyp = valueTOf(vtyp.rtype.Elem())
 						} else {
 							vtyp = vtyp.val
 						}
@@ -296,7 +296,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					n.typ = n.anc.typ.key
 				} else if atyp := n.anc.typ; atyp != nil {
 					if atyp.cat == valueT {
-						n.typ = &itype{cat: valueT, rtype: atyp.rtype.Elem()}
+						n.typ = valueTOf(atyp.rtype.Elem())
 					} else {
 						n.typ = atyp.val
 					}
@@ -513,7 +513,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 							return
 						}
 						if src.typ.isBinMethod {
-							dest.typ = &itype{cat: valueT, rtype: src.typ.methodCallType()}
+							dest.typ = valueTOf(src.typ.methodCallType())
 						} else {
 							// In a new definition, propagate the source type to the destination
 							// type. If the source is an untyped constant, make sure that the
@@ -762,7 +762,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			case ptrT:
 				n.typ = t.val
 				if t.val.cat == valueT {
-					n.typ = &itype{cat: valueT, rtype: t.val.rtype.Elem()}
+					n.typ = valueTOf(t.val.rtype.Elem())
 				} else {
 					n.typ = t.val.val
 				}
@@ -772,7 +772,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				if t.rtype.Kind() == reflect.String {
 					n.typ = sc.getType("byte")
 				} else {
-					n.typ = &itype{cat: valueT, rtype: t.rtype.Elem()}
+					n.typ = valueTOf(t.rtype.Elem())
 				}
 			default:
 				n.typ = t.val
@@ -973,13 +973,13 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 							sc.add(funcType.ret[i])
 						}
 					} else {
-						n.typ = &itype{cat: valueT, rtype: typ.Out(0)}
+						n.typ = valueTOf(typ.Out(0))
 						if n.anc.kind == returnStmt {
 							n.findex = childPos(n)
 						} else {
 							n.findex = sc.add(n.typ)
 							for i := 1; i < typ.NumOut(); i++ {
-								sc.add(&itype{cat: valueT, rtype: typ.Out(i)})
+								sc.add(valueTOf(typ.Out(i)))
 							}
 						}
 					}
@@ -995,7 +995,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					err = n.cfgErrorf("struct does not contain field: %s", c1.child[1].ident)
 					break
 				}
-				n.typ = &itype{cat: valueT, rtype: reflect.TypeOf(field.Offset)}
+				n.typ = valueTOf(reflect.TypeOf(field.Offset))
 				n.rval = reflect.ValueOf(field.Offset)
 				n.gen = nop
 			default:
@@ -1081,8 +1081,8 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				case reflect.Struct:
 					err = check.structBinLitExpr(child, rtype)
 				case reflect.Map:
-					ktyp := &itype{cat: valueT, rtype: rtype.Key()}
-					vtyp := &itype{cat: valueT, rtype: rtype.Elem()}
+					ktyp := valueTOf(rtype.Key())
+					vtyp := valueTOf(rtype.Elem())
 					err = check.mapLitExpr(child, ktyp, vtyp)
 				}
 			}
@@ -1480,9 +1480,9 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				pkg := n.child[0].sym.typ.path
 				if s, ok := interp.binPkg[pkg][name]; ok {
 					if isBinType(s) {
-						n.typ = &itype{cat: valueT, rtype: s.Type().Elem()}
+						n.typ = valueTOf(s.Type().Elem())
 					} else {
-						n.typ = &itype{cat: valueT, rtype: fixPossibleConstType(s.Type()), untyped: isValueUntyped(s)}
+						n.typ = valueTOf(fixPossibleConstType(s.Type()), withUntyped(isValueUntyped(s)))
 						n.rval = s
 					}
 					n.action = aGetSym
@@ -1534,16 +1534,14 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						n.gen = getPtrIndexSeq
 						if n.typ.cat == funcT {
 							// Function in a struct field is always wrapped in reflect.Value.
-							rtype := n.typ.TypeOf()
-							n.typ = &itype{cat: valueT, rtype: rtype, val: n.typ}
+							n.typ = wrapperValueTOf(n.typ.TypeOf(), n.typ)
 						}
 					default:
 						n.gen = getIndexSeq
 						n.typ = n.typ.fieldSeq(ti)
 						if n.typ.cat == funcT {
 							// Function in a struct field is always wrapped in reflect.Value.
-							rtype := n.typ.TypeOf()
-							n.typ = &itype{cat: valueT, rtype: rtype, val: n.typ}
+							n.typ = wrapperValueTOf(n.typ.TypeOf(), n.typ)
 						}
 					}
 					break
@@ -1565,7 +1563,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						}
 					}
 					n.val = lind
-					n.typ = &itype{cat: valueT, rtype: s.Type}
+					n.typ = valueTOf(s.Type)
 					break
 				}
 				// No field (embedded or not) matched. Try to match a method.
@@ -1582,13 +1580,13 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						n.gen = getIndexBinMethod
 						n.action = aGetMethod
 						n.recv = &receiver{node: n.child[0]}
-						n.typ = &itype{cat: valueT, rtype: method.Type, isBinMethod: true}
+						n.typ = valueTOf(method.Type, isBinMethod())
 						if hasRecvType {
 							n.typ.recv = n.typ
 						}
 					case n.typ.rtype.Kind() == reflect.Ptr:
 						if field, ok := n.typ.rtype.Elem().FieldByName(n.child[1].ident); ok {
-							n.typ = &itype{cat: valueT, rtype: field.Type}
+							n.typ = valueTOf(field.Type)
 							n.val = field.Index
 							n.gen = getPtrIndexSeq
 							break
@@ -1596,7 +1594,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						err = n.cfgErrorf("undefined field or method: %s", n.child[1].ident)
 					case n.typ.rtype.Kind() == reflect.Struct:
 						if field, ok := n.typ.rtype.FieldByName(n.child[1].ident); ok {
-							n.typ = &itype{cat: valueT, rtype: field.Type}
+							n.typ = valueTOf(field.Type)
 							n.val = field.Index
 							n.gen = getIndexSeq
 							break
@@ -1608,7 +1606,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						if m2, ok2 := pt.MethodByName(n.child[1].ident); ok2 {
 							n.val = m2.Index
 							n.gen = getIndexBinPtrMethod
-							n.typ = &itype{cat: valueT, rtype: m2.Type, recv: &itype{cat: valueT, rtype: pt}, isBinMethod: true}
+							n.typ = valueTOf(m2.Type, isBinMethod(), withRecv(valueTOf(pt)))
 							n.recv = &receiver{node: n.child[0]}
 							n.action = aGetMethod
 							break
@@ -1619,18 +1617,18 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					// Handle pointer on object defined in runtime
 					if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
 						n.val = method.Index
-						n.typ = &itype{cat: valueT, rtype: method.Type, recv: n.typ, isBinMethod: true}
+						n.typ = valueTOf(method.Type, isBinMethod(), withRecv(n.typ))
 						n.recv = &receiver{node: n.child[0]}
 						n.gen = getIndexBinElemMethod
 						n.action = aGetMethod
 					} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
 						n.val = method.Index
 						n.gen = getIndexBinMethod
-						n.typ = &itype{cat: valueT, rtype: method.Type, recv: &itype{cat: valueT, rtype: reflect.PtrTo(n.typ.val.rtype)}, isBinMethod: true}
+						n.typ = valueTOf(method.Type, withRecv(valueTOf(reflect.PtrTo(n.typ.val.rtype), isBinMethod())))
 						n.recv = &receiver{node: n.child[0]}
 						n.action = aGetMethod
 					} else if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
-						n.typ = &itype{cat: valueT, rtype: field.Type}
+						n.typ = valueTOf(field.Type)
 						n.val = field.Index
 						n.gen = getPtrIndexSeq
 					} else {
@@ -1665,7 +1663,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					}
 					n.recv = &receiver{node: n.child[0], index: lind}
 					n.val = append([]int{m.Index}, lind...)
-					n.typ = &itype{cat: valueT, rtype: m.Type, recv: n.child[0].typ, isBinMethod: true}
+					n.typ = valueTOf(m.Type, isBinMethod(), withRecv(n.child[0].typ))
 				} else {
 					err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
 				}
@@ -1745,7 +1743,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				}
 
 				if c0 := n.child[0]; c0.typ.cat == valueT {
-					n.typ = &itype{cat: valueT, rtype: c0.typ.rtype.Elem()}
+					n.typ = valueTOf(c0.typ.rtype.Elem())
 				} else {
 					n.typ = c0.typ.val
 				}
@@ -1879,7 +1877,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			if n.anc.action != aAssignX {
 				if c0.typ.cat == valueT && isFunc(c1.typ) {
 					// Avoid special wrapping of interfaces and func types.
-					n.typ = &itype{cat: valueT, rtype: c1.typ.TypeOf()}
+					n.typ = valueTOf(c1.typ.TypeOf())
 				} else {
 					n.typ = c1.typ
 				}
@@ -1911,7 +1909,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			if n.action == aRecv {
 				// Channel receive operation: set type to the channel data type
 				if n.typ.cat == valueT {
-					n.typ = &itype{cat: valueT, rtype: n.typ.rtype.Elem()}
+					n.typ = valueTOf(n.typ.rtype.Elem())
 				} else {
 					n.typ = n.typ.val
 				}
@@ -1995,7 +1993,7 @@ func compDefineX(sc *scope, n *node) error {
 		if funtype.cat == valueT {
 			// Handle functions imported from runtime.
 			for i := 0; i < funtype.rtype.NumOut(); i++ {
-				types = append(types, &itype{cat: valueT, rtype: funtype.rtype.Out(i)})
+				types = append(types, valueTOf(funtype.rtype.Out(i)))
 			}
 		} else {
 			types = funtype.ret

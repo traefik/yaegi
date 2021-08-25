@@ -139,6 +139,56 @@ func errorMethodType(sc *scope) *itype {
 	return &itype{cat: funcT, ret: []*itype{sc.getType("string")}}
 }
 
+type itypeOption func(*itype)
+
+func isBinMethod() itypeOption {
+	return func(t *itype) {
+		t.isBinMethod = true
+	}
+}
+
+func withRecv(typ *itype) itypeOption {
+	return func(t *itype) {
+		t.recv = typ
+	}
+}
+
+func withNode(n *node) itypeOption {
+	return func(t *itype) {
+		t.node = n
+	}
+}
+
+func withScope(sc *scope) itypeOption {
+	return func(t *itype) {
+		t.scope = sc
+	}
+}
+
+func withUntyped(b bool) itypeOption {
+	return func(t *itype) {
+		t.untyped = b
+	}
+}
+
+// valueTOf returns a valueT itype.
+func valueTOf(rtype reflect.Type, opts ...itypeOption) *itype {
+	t := &itype{cat: valueT, rtype: rtype}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
+}
+
+// wrapperValueTOf returns a valueT itype wrapping an itype.
+func wrapperValueTOf(rtype reflect.Type, val *itype, opts ...itypeOption) *itype {
+	t := &itype{cat: valueT, rtype: rtype, val: val}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
+}
+
 // nodeType returns a type definition for the corresponding AST subtree.
 func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	if n.typ != nil && !n.typ.incomplete {
@@ -289,7 +339,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			dt = sc.def.typ.ret[childPos(n)]
 		}
 
-		if isInterface(dt) {
+		if isInterfaceSrc(dt) {
 			dt.val = t
 		}
 		t = dt
@@ -339,7 +389,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					case k == reflect.Complex128:
 						t = sc.getType("float64")
 					case t.untyped && isNumber(t.TypeOf()):
-						t = &itype{cat: valueT, rtype: floatType, untyped: true, scope: sc}
+						t = valueTOf(floatType, withUntyped(true), withScope(sc))
 					default:
 						err = n.cfgErrorf("invalid complex type %s", k)
 					}
@@ -364,7 +414,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			switch t.cat {
 			case valueT:
 				if rt := t.rtype; rt.Kind() == reflect.Func && rt.NumOut() == 1 {
-					t = &itype{cat: valueT, rtype: rt.Out(0), scope: sc}
+					t = valueTOf(rt.Out(0), withScope(sc))
 				}
 			default:
 				if len(t.ret) == 1 {
@@ -590,11 +640,11 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			if m, _ := lt.lookupMethod(name); m != nil {
 				t, err = nodeType(interp, sc, m.child[2])
 			} else if bm, _, _, ok := lt.lookupBinMethod(name); ok {
-				t = &itype{cat: valueT, rtype: bm.Type, recv: lt, isBinMethod: true, scope: sc}
+				t = valueTOf(bm.Type, isBinMethod(), withRecv(lt), withScope(sc))
 			} else if ti := lt.lookupField(name); len(ti) > 0 {
 				t = lt.fieldSeq(ti)
 			} else if bs, _, ok := lt.lookupBinField(name); ok {
-				t = &itype{cat: valueT, rtype: bs.Type, scope: sc}
+				t = valueTOf(bs.Type, withScope(sc))
 			} else {
 				err = lt.node.cfgErrorf("undefined selector %s", name)
 			}
@@ -818,9 +868,9 @@ func (t *itype) in(i int) *itype {
 				i++
 			}
 			if t.rtype.IsVariadic() && i == t.rtype.NumIn()-1 {
-				return &itype{cat: variadicT, val: &itype{cat: valueT, rtype: t.rtype.In(i).Elem()}}
+				return &itype{cat: variadicT, val: valueTOf(t.rtype.In(i).Elem())}
 			}
-			return &itype{cat: valueT, rtype: t.rtype.In(i)}
+			return valueTOf(t.rtype.In(i))
 		}
 	}
 	return nil
@@ -844,7 +894,7 @@ func (t *itype) out(i int) *itype {
 		return t.ret[i]
 	case valueT:
 		if t.rtype.Kind() == reflect.Func {
-			return &itype{cat: valueT, rtype: t.rtype.Out(i)}
+			return valueTOf(t.rtype.Out(i))
 		}
 	}
 	return nil
@@ -1418,7 +1468,7 @@ func lookupFieldOrMethod(t *itype, name string) *itype {
 				recv = &itype{cat: ptrT, val: t}
 			}
 		}
-		return &itype{cat: valueT, rtype: m.Type, recv: recv}
+		return valueTOf(m.Type, withRecv(recv))
 	case t.cat == interfaceT:
 		seq := t.lookupField(name)
 		if seq == nil {
@@ -1644,7 +1694,7 @@ func (t *itype) hasNil() bool {
 
 func (t *itype) elem() *itype {
 	if t.cat == valueT {
-		return &itype{cat: valueT, rtype: t.rtype.Elem()}
+		return valueTOf(t.rtype.Elem())
 	}
 	return t.val
 }
@@ -1733,7 +1783,7 @@ func chanElement(t *itype) *itype {
 	case chanT, chanSendT, chanRecvT:
 		return t.val
 	case valueT:
-		return &itype{cat: valueT, rtype: t.rtype.Elem(), node: t.node, scope: t.scope}
+		return valueTOf(t.rtype.Elem(), withNode(t.node), withScope(t.scope))
 	}
 	return nil
 }

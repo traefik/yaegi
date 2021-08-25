@@ -79,7 +79,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 					return false
 				}
 				if typ.isBinMethod {
-					typ = &itype{cat: valueT, rtype: typ.methodCallType(), isBinMethod: true, scope: sc}
+					typ = valueTOf(typ.methodCallType(), isBinMethod(), withScope(sc))
 				}
 				sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val, node: n}
 				if n.anc.kind == constDecl {
@@ -200,7 +200,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 						if isBinType(v) {
 							typ = typ.Elem()
 						}
-						sc.sym[n] = &symbol{kind: binSym, typ: &itype{cat: valueT, rtype: typ, scope: sc}, rval: v}
+						sc.sym[n] = &symbol{kind: binSym, typ: valueTOf(typ, withScope(sc)), rval: v}
 					}
 				default: // import symbols in package namespace
 					if name == "" {

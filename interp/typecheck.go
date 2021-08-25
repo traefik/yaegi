@@ -440,7 +440,7 @@ func (check typecheck) structBinLitExpr(child []*node, typ reflect.Type) error {
 				return c.cfgErrorf("unknown field %s in struct literal", name)
 			}
 
-			if err := check.assignment(val, &itype{cat: valueT, rtype: field.Type}, "struct literal"); err != nil {
+			if err := check.assignment(val, valueTOf(field.Type), "struct literal"); err != nil {
 				return err
 			}
 
@@ -466,7 +466,7 @@ func (check typecheck) structBinLitExpr(child []*node, typ reflect.Type) error {
 			return c.cfgErrorf("implicit assignment to unexported field %s in %s literal", field.Name, typ)
 		}
 
-		if err := check.assignment(c, &itype{cat: valueT, rtype: field.Type}, "struct literal"); err != nil {
+		if err := check.assignment(c, valueTOf(field.Type), "struct literal"); err != nil {
 			return err
 		}
 	}
@@ -760,7 +760,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 				cat: funcT,
 				arg: []*itype{
 					typ,
-					{cat: variadicT, val: &itype{cat: valueT, rtype: t.Elem()}},
+					{cat: variadicT, val: valueTOf(t.Elem())},
 				},
 				ret: []*itype{typ},
 			},
@@ -913,7 +913,7 @@ func arrayDeref(typ *itype) *itype {
 	if typ.cat == valueT && typ.TypeOf().Kind() == reflect.Ptr {
 		t := typ.TypeOf()
 		if t.Elem().Kind() == reflect.Array {
-			return &itype{cat: valueT, rtype: t.Elem()}
+			return valueTOf(t.Elem())
 		}
 		return typ
 	}
@@ -973,7 +973,7 @@ func (check typecheck) argument(p param, ftyp *itype, i, l int, ellipsis bool) e
 			return p.nod.cfgErrorf("can only use ... with matching parameter")
 		}
 		t := p.Type().TypeOf()
-		if t.Kind() != reflect.Slice || !(&itype{cat: valueT, rtype: t.Elem()}).assignableTo(atyp) {
+		if t.Kind() != reflect.Slice || !(valueTOf(t.Elem())).assignableTo(atyp) {
 			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.typ.id(), (&itype{cat: sliceT, val: atyp}).id())
 		}
 		return nil
@@ -997,7 +997,7 @@ func getArg(ftyp *itype, i int) *itype {
 	case i < l:
 		return ftyp.in(i)
 	case ftyp.cat == valueT && i < ftyp.rtype.NumIn():
-		return &itype{cat: valueT, rtype: ftyp.rtype.In(i)}
+		return valueTOf(ftyp.rtype.In(i))
 	default:
 		return nil
 	}

@@ -962,7 +962,7 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 }
 
 func genFunctionNode(v reflect.Value) *node {
-	return &node{kind: funcType, action: aNop, rval: v, typ: &itype{cat: valueT, rtype: v.Type()}}
+	return &node{kind: funcType, action: aNop, rval: v, typ: valueTOf(v.Type())}
 }
 
 func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
