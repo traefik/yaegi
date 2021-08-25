@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/traefik/yaegi/internal/unsafe2"
 )
 
 // tcat defines interpreter type categories.
@@ -1582,13 +1584,35 @@ var (
 	constVal = reflect.TypeOf((*constant.Value)(nil)).Elem()
 )
 
+type fieldRebuild struct {
+	typ *itype
+	idx int
+}
+
+type refTypeContext struct {
+	defined    map[string]*itype
+	refs       map[string][]fieldRebuild
+	rebuilding bool
+}
+
+// Clone creates a copy if the ref type context without the `needsRebuild` set.
+func (c *refTypeContext) Clone() *refTypeContext {
+	return &refTypeContext{defined: c.defined, refs: c.refs, rebuilding: c.rebuilding}
+}
+
 // RefType returns a reflect.Type representation from an interpreter type.
 // In simple cases, reflect types are directly mapped from the interpreter
 // counterpart.
 // For recursive named struct or interfaces, as reflect does not permit to
 // create a recursive named struct, an interface{} is returned in place to
 // avoid infinitely nested structs.
-func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.Type {
+func (t *itype) refType(ctx *refTypeContext) reflect.Type {
+	if ctx == nil {
+		ctx = &refTypeContext{
+			defined: map[string]*itype{},
+			refs:    map[string][]fieldRebuild{},
+		}
+	}
 	if t.incomplete || t.cat == nilT {
 		var err error
 		if t, err = t.finalize(); err != nil {
@@ -1612,82 +1636,82 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 			t.recursive = recursive
 		}
 	}
-	if wrapRecursive && t.recursive {
-		return interf
-	}
-	if t.rtype != nil {
+	if t.rtype != nil && !ctx.rebuilding {
 		return t.rtype
 	}
-	if defined[name] != nil && defined[name].rtype != nil {
-		return defined[name].rtype
-	}
-	if t.val != nil && t.val.cat == structT && t.val.rtype == nil && hasRecursiveStruct(t.val, copyDefined(defined)) {
-		// Replace reference to self (direct or indirect) by an interface{} to handle
-		// recursive types with reflect.
-		typ := *t.val
-		t.val = &typ
-		t.val.rtype = interf
-		recursive = true
+	if dt := ctx.defined[name]; dt != nil {
+		if dt.rtype != nil {
+			t.rtype = dt.rtype
+			return dt.rtype
+		}
+
+		// To indicate that a rebuild is needed on the nearest struct
+		// field, create an entry with a nil type.
+		flds := ctx.refs[name]
+		ctx.refs[name] = append(flds, fieldRebuild{})
+		return unsafe2.DummyType
 	}
 	switch t.cat {
 	case aliasT:
-		t.rtype = t.val.refType(defined, wrapRecursive)
+		t.rtype = t.val.refType(ctx)
 	case arrayT:
-		t.rtype = reflect.ArrayOf(t.length, t.val.refType(defined, wrapRecursive))
+		t.rtype = reflect.ArrayOf(t.length, t.val.refType(ctx))
 	case sliceT, variadicT:
-		t.rtype = reflect.SliceOf(t.val.refType(defined, wrapRecursive))
+		t.rtype = reflect.SliceOf(t.val.refType(ctx))
 	case chanT:
-		t.rtype = reflect.ChanOf(reflect.BothDir, t.val.refType(defined, wrapRecursive))
+		t.rtype = reflect.ChanOf(reflect.BothDir, t.val.refType(ctx))
 	case chanRecvT:
-		t.rtype = reflect.ChanOf(reflect.RecvDir, t.val.refType(defined, wrapRecursive))
+		t.rtype = reflect.ChanOf(reflect.RecvDir, t.val.refType(ctx))
 	case chanSendT:
-		t.rtype = reflect.ChanOf(reflect.SendDir, t.val.refType(defined, wrapRecursive))
+		t.rtype = reflect.ChanOf(reflect.SendDir, t.val.refType(ctx))
 	case errorT:
 		t.rtype = reflect.TypeOf(new(error)).Elem()
 	case funcT:
-		if t.name != "" {
-			defined[name] = t // TODO(marc): make sure that key is name and not t.name.
-		}
 		variadic := false
 		in := make([]reflect.Type, len(t.arg))
 		out := make([]reflect.Type, len(t.ret))
 		for i, v := range t.arg {
-			in[i] = v.refType(defined, true)
+			in[i] = v.refType(ctx)
 			variadic = v.cat == variadicT
 		}
 		for i, v := range t.ret {
-			out[i] = v.refType(defined, true)
+			out[i] = v.refType(ctx)
 		}
 		t.rtype = reflect.FuncOf(in, out, variadic)
 	case interfaceT:
 		t.rtype = interf
 	case mapT:
-		t.rtype = reflect.MapOf(t.key.refType(defined, wrapRecursive), t.val.refType(defined, wrapRecursive))
+		t.rtype = reflect.MapOf(t.key.refType(ctx), t.val.refType(ctx))
 	case ptrT:
-		t.rtype = reflect.PtrTo(t.val.refType(defined, wrapRecursive))
+		t.rtype = reflect.PtrTo(t.val.refType(ctx))
 	case structT:
 		if t.name != "" {
-			// Check against local t.name and not name to catch recursive type definitions.
-			if defined[t.name] != nil {
-				recursive = true
-			}
-			defined[t.name] = t
+			ctx.defined[name] = t
 		}
 		var fields []reflect.StructField
-		// TODO(mpl): make Anonymous work for recursive types too. Maybe not worth the
-		// effort, and we're better off just waiting for
-		// https://github.com/golang/go/issues/39717 to land.
-		for _, f := range t.field {
+		for i, f := range t.field {
+			fctx := ctx.Clone()
 			field := reflect.StructField{
-				Name: exportName(f.name), Type: f.typ.refType(defined, wrapRecursive),
+				Name: exportName(f.name), Type: f.typ.refType(fctx),
 				Tag: reflect.StructTag(f.tag), Anonymous: (f.embed && !recursive),
 			}
 			fields = append(fields, field)
+			// Find any nil type refs that indicates a rebuild is needed on this field.
+			for _, flds := range ctx.refs {
+				for j, fld := range flds {
+					if fld.typ == nil {
+						flds[j] = fieldRebuild{typ: t, idx: i}
+					}
+				}
+			}
 		}
-		if recursive && wrapRecursive {
-			t.rtype = interf
-		} else {
-			t.rtype = reflect.StructOf(fields)
+		t.rtype = reflect.StructOf(fields)
+
+		// The rtype has now been built, we can go back and rebuild
+		// all the recursive types that relied on this type.
+		for _, f := range ctx.refs[name] {
+			ftyp := f.typ.field[f.idx].typ.refType(&refTypeContext{defined: ctx.defined, rebuilding: true})
+			unsafe2.SwapFieldType(f.typ.rtype, f.idx, ftyp)
 		}
 	default:
 		if z, _ := t.zero(); z.IsValid() {
@@ -1699,7 +1723,7 @@ func (t *itype) refType(defined map[string]*itype, wrapRecursive bool) reflect.T
 
 // TypeOf returns the reflection type of dynamic interpreter type t.
 func (t *itype) TypeOf() reflect.Type {
-	return t.refType(map[string]*itype{}, false)
+	return t.refType(nil)
 }
 
 func (t *itype) frameType() (r reflect.Type) {
@@ -1800,44 +1824,6 @@ func (t *itype) elem() *itype {
 		return valueTOf(t.rtype.Elem())
 	}
 	return t.val
-}
-
-func copyDefined(m map[string]*itype) map[string]*itype {
-	n := make(map[string]*itype, len(m))
-	for k, v := range m {
-		n[k] = v
-	}
-	return n
-}
-
-// hasRecursiveStruct determines if a struct is a recursion or a recursion
-// intermediate. A recursion intermediate is a struct that contains a recursive
-// struct.
-func hasRecursiveStruct(t *itype, defined map[string]*itype) bool {
-	if len(defined) == 0 {
-		return false
-	}
-
-	typ := t
-	for typ != nil {
-		if typ.cat != structT {
-			typ = typ.val
-			continue
-		}
-
-		if defined[typ.path+"/"+typ.name] != nil {
-			return true
-		}
-		defined[typ.path+"/"+typ.name] = typ
-
-		for _, f := range typ.field {
-			if hasRecursiveStruct(f.typ, copyDefined(defined)) {
-				return true
-			}
-		}
-		return false
-	}
-	return false
 }
 
 func constToInt(c constant.Value) int {
