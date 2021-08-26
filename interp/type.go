@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -126,17 +127,35 @@ type itype struct {
 	isBinMethod bool          // true if the type refers to a bin method function
 	node        *node         // root AST node of type definition
 	scope       *scope        // type declaration scope (in case of re-parse incomplete type)
+	str         string        // String representation of the type
 }
 
-func untypedBool() *itype    { return &itype{cat: boolT, name: "bool", untyped: true} }
-func untypedString() *itype  { return &itype{cat: stringT, name: "string", untyped: true} }
-func untypedRune() *itype    { return &itype{cat: int32T, name: "int32", untyped: true} }
-func untypedInt() *itype     { return &itype{cat: intT, name: "int", untyped: true} }
-func untypedFloat() *itype   { return &itype{cat: float64T, name: "float64", untyped: true} }
-func untypedComplex() *itype { return &itype{cat: complex128T, name: "complex128", untyped: true} }
+func untypedBool() *itype {
+	return &itype{cat: boolT, name: "bool", untyped: true, str: "untyped bool"}
+}
+
+func untypedString() *itype {
+	return &itype{cat: stringT, name: "string", untyped: true, str: "untyped string"}
+}
+
+func untypedRune() *itype {
+	return &itype{cat: int32T, name: "int32", untyped: true, str: "untyped rune"}
+}
+
+func untypedInt() *itype {
+	return &itype{cat: intT, name: "int", untyped: true, str: "untyped int"}
+}
+
+func untypedFloat() *itype {
+	return &itype{cat: float64T, name: "float64", untyped: true, str: "untyped float"}
+}
+
+func untypedComplex() *itype {
+	return &itype{cat: complex128T, name: "complex128", untyped: true, str: "untyped complex"}
+}
 
 func errorMethodType(sc *scope) *itype {
-	return &itype{cat: funcT, ret: []*itype{sc.getType("string")}}
+	return &itype{cat: funcT, ret: []*itype{sc.getType("string")}, str: "func() string"}
 }
 
 type itypeOption func(*itype)
@@ -173,7 +192,7 @@ func withUntyped(b bool) itypeOption {
 
 // valueTOf returns a valueT itype.
 func valueTOf(rtype reflect.Type, opts ...itypeOption) *itype {
-	t := &itype{cat: valueT, rtype: rtype}
+	t := &itype{cat: valueT, rtype: rtype, str: rtype.String()}
 	for _, opt := range opts {
 		opt(t)
 	}
@@ -182,7 +201,7 @@ func valueTOf(rtype reflect.Type, opts ...itypeOption) *itype {
 
 // wrapperValueTOf returns a valueT itype wrapping an itype.
 func wrapperValueTOf(rtype reflect.Type, val *itype, opts ...itypeOption) *itype {
-	t := &itype{cat: valueT, rtype: rtype, val: val}
+	t := &itype{cat: valueT, rtype: rtype, val: val, str: rtype.String()}
 	for _, opt := range opts {
 		opt(t)
 	}
@@ -191,7 +210,7 @@ func wrapperValueTOf(rtype reflect.Type, val *itype, opts ...itypeOption) *itype
 
 // ptrOf returns a pointer to t.
 func ptrOf(val *itype, opts ...itypeOption) *itype {
-	t := &itype{cat: ptrT, val: val}
+	t := &itype{cat: ptrT, val: val, str: "*" + val.str}
 	for _, opt := range opts {
 		opt(t)
 	}
@@ -204,6 +223,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		return n.typ, nil
 	}
 
+	repr := strings.Builder{}
 	t := &itype{node: n, scope: sc}
 
 	if n.anc.kind == typeSpec {
@@ -223,6 +243,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
 			return nil, err
 		}
+		repr.WriteString("*" + t.val.str)
 		t.incomplete = t.val.incomplete
 
 	case arrayType:
@@ -234,10 +255,14 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				return nil, err
 			}
 			t.incomplete = t.val.incomplete
+			if t.val != nil {
+				repr.WriteString("[]" + t.val.str)
+			}
 			break
 		}
 		// Array size is defined.
 		t.cat = arrayT
+		repr.WriteByte('[')
 		switch v := c0.rval; {
 		case v.IsValid():
 			// Size if defined by a constant litteral value.
@@ -247,9 +272,11 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			} else {
 				t.length = int(v.Int())
 			}
+			repr.WriteString(strconv.Itoa(t.length))
 		case c0.kind == ellipsisExpr:
 			// [...]T expression, get size from the length of composite array.
 			t.length = arrayTypeLen(n.anc)
+			repr.WriteString("...")
 		case c0.kind == identExpr:
 			sym, _, ok := sc.lookup(c0.ident)
 			if !ok {
@@ -265,6 +292,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				break
 			}
 			t.length = int(vInt(sym.rval))
+			repr.WriteString(strconv.Itoa(t.length))
 		default:
 			// Size is defined by a numeric constant expression.
 			if _, err = interp.cfg(c0, sc.pkgID); err != nil {
@@ -276,10 +304,12 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				break
 			}
 			t.length = constToInt(v)
+			repr.WriteString(strconv.Itoa(t.length))
 		}
 		if t.val, err = nodeType(interp, sc, n.child[1]); err != nil {
 			return nil, err
 		}
+		repr.WriteString("]" + t.val.str)
 		t.incomplete = t.incomplete || t.val.incomplete
 
 	case basicLit:
@@ -337,7 +367,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			// assigned to it, we need to make a new itype from scratch everytime a new
 			// assignment is made, and not let different nodes (of the same variable) share the
 			// same itype. Otherwise they would overwrite each other.
-			a.child[0].typ = &itype{cat: interfaceT, val: dt}
+			a.child[0].typ = &itype{cat: interfaceT, val: dt, str: "interface{}"}
 
 		case a.kind == defineStmt && len(a.child) > a.nleft+a.nright:
 			if dt, err = nodeType(interp, sc, a.child[a.nleft]); err != nil {
@@ -384,7 +414,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 						err = n.cfgErrorf("invalid types %s and %s", t0.Kind(), t1.Kind())
 					}
 					if nt0.untyped && nt1.untyped {
-						t.untyped = true
+						t = untypedComplex()
 					}
 				}
 			case bltnReal, bltnImag:
@@ -442,6 +472,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
 			return nil, err
 		}
+		repr.WriteString("chan " + t.val.str)
 		t.incomplete = t.val.incomplete
 
 	case chanTypeRecv:
@@ -449,6 +480,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
 			return nil, err
 		}
+		repr.WriteString("<-chan " + t.val.str)
 		t.incomplete = t.val.incomplete
 
 	case chanTypeSend:
@@ -456,6 +488,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
 			return nil, err
 		}
+		repr.WriteString("chan<- " + t.val.str)
 		t.incomplete = t.val.incomplete
 
 	case ellipsisExpr:
@@ -463,6 +496,8 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
 			return nil, err
 		}
+		repr.WriteString("...")
+		repr.WriteString(t.val.str)
 		t.incomplete = t.val.incomplete
 
 	case funcLit:
@@ -470,6 +505,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 
 	case funcType:
 		t.cat = funcT
+		repr.WriteString("func(")
 		// Handle input parameters
 		for _, arg := range n.child[0].child {
 			cl := len(arg.child) - 1
@@ -484,7 +520,11 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			}
 			t.incomplete = t.incomplete || typ.incomplete
 		}
+		repr.WriteString(paramsTypeString(t.arg))
+		repr.WriteString(")")
 		if len(n.child) == 2 {
+			repr.WriteByte(' ')
+
 			// Handle returned values
 			for _, ret := range n.child[1].child {
 				cl := len(ret.child) - 1
@@ -498,6 +538,15 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					t.ret = append(t.ret, typ)
 				}
 				t.incomplete = t.incomplete || typ.incomplete
+			}
+			rets := paramsTypeString(t.ret)
+			multiRet := strings.Contains(rets, ",")
+			if multiRet {
+				repr.WriteByte('(')
+			}
+			repr.WriteString(rets)
+			if multiRet {
+				repr.WriteByte(')')
 			}
 		}
 
@@ -552,13 +601,15 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				sym.typ = t
 			}
 		}
+		repr.WriteString("interface {")
 		for _, field := range n.child[0].child {
 			f0 := field.child[0]
 			if len(field.child) == 1 {
 				if f0.ident == "error" {
 					// Unwrap error interface inplace rather than embedding it, because
 					// "error" is lower case which may cause problems with reflect for method lookup.
-					t.field = append(t.field, structField{name: "Error", typ: errorMethodType(sc)})
+					typ := errorMethodType(sc)
+					t.field = append(t.field, structField{name: "Error", typ: typ})
 					continue
 				}
 				typ, err := nodeType(interp, sc, f0)
@@ -574,12 +625,19 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				return nil, err
 			}
 			t.field = append(t.field, structField{name: f0.ident, typ: typ})
+			repr.WriteString(" " + f0.ident + typ.str[4:])
 			incomplete = incomplete || typ.incomplete
 		}
+		methStr := methodsTypeString(t.field)
+		repr.WriteString(methStr)
+		if methStr != "" {
+			repr.WriteByte(' ')
+		}
+		repr.WriteByte('}')
 		t.incomplete = incomplete
 
 	case landExpr, lorExpr:
-		t.cat = boolT
+		t = sc.getType("bool")
 
 	case mapType:
 		t.cat = mapT
@@ -589,6 +647,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		if t.val, err = nodeType(interp, sc, n.child[1]); err != nil {
 			return nil, err
 		}
+		repr.WriteString("map[" + t.key.str + "]" + t.val.str)
 		t.incomplete = t.key.incomplete || t.val.incomplete
 
 	case parenExpr:
@@ -637,6 +696,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					// A bin type is encoded as a pointer on a typed nil value.
 					t.rtype = t.rtype.Elem()
 				}
+				repr.WriteString(t.rtype.String())
 			} else {
 				err = n.cfgErrorf("undefined selector %s.%s", lt.path, name)
 			}
@@ -670,7 +730,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			t = t.val
 		}
 		if t.cat == arrayT {
-			t = &itype{cat: sliceT, val: t.val, incomplete: t.incomplete, node: n, scope: sc}
+			t = &itype{cat: sliceT, val: t.val, incomplete: t.incomplete, node: n, scope: sc, str: "[]" + t.val.str}
 		}
 
 	case structType:
@@ -681,6 +741,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				sym.typ = t
 			}
 		}
+		repr.WriteString("struct {")
 		for _, c := range n.child[0].child {
 			switch {
 			case len(c.child) == 1:
@@ -715,6 +776,12 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				}
 			}
 		}
+		fieldStr := fieldsTypeString(t.field)
+		repr.WriteString(fieldStr)
+		if fieldStr != "" {
+			repr.WriteByte(' ')
+		}
+		repr.WriteByte('}')
 		t.incomplete = incomplete
 
 	default:
@@ -723,6 +790,16 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 
 	if err == nil && t.cat == nilT && !t.incomplete {
 		err = n.cfgErrorf("use of untyped nil %s", t.name)
+	}
+
+	switch {
+	case t == nil:
+	case t.cat == nilT:
+		t.str = "nil"
+	case t.name != "" && t.path != "":
+		t.str = t.path + "." + t.name
+	case repr.Len() > 0:
+		t.str = repr.String()
 	}
 
 	return t, err
@@ -1173,74 +1250,11 @@ func (t *itype) methods() methodSet {
 
 // id returns a unique type identificator string.
 func (t *itype) id() (res string) {
-	if t.name != "" {
-		if t.path != "" {
-			return t.path + "." + t.name
-		}
-		return t.name
+	// Prefer the wrapped type string over the rtype string.
+	if t.cat == valueT && t.val != nil {
+		return t.val.str
 	}
-	switch t.cat {
-	case nilT:
-		res = "nil"
-	case arrayT:
-		res = "[" + strconv.Itoa(t.length) + "]" + t.val.id()
-	case chanT:
-		res = "chan " + t.val.id()
-	case chanSendT:
-		res = "chan<- " + t.val.id()
-	case chanRecvT:
-		res = "<-chan " + t.val.id()
-	case funcT:
-		res = "func("
-		for i, t := range t.arg {
-			if i > 0 {
-				res += ","
-			}
-			res += t.id()
-		}
-		res += ")("
-		for i, t := range t.ret {
-			if i > 0 {
-				res += ","
-			}
-			res += t.id()
-		}
-		res += ")"
-	case interfaceT:
-		res = "interface{"
-		for _, t := range t.field {
-			res += t.name + " " + t.typ.id() + ";"
-		}
-		res += "}"
-	case mapT:
-		res = "map[" + t.key.id() + "]" + t.val.id()
-	case ptrT:
-		res = "*" + t.val.id()
-	case sliceT:
-		res = "[]" + t.val.id()
-	case structT:
-		res = "struct{"
-		for _, t := range t.field {
-			res += t.name + " " + t.typ.id() + ";"
-		}
-		res += "}"
-	case valueT:
-		if isConstantValue(t.rtype) {
-			res = fixPossibleConstType(t.rtype).String()
-			break
-		}
-		res = ""
-		if t.rtype.PkgPath() != "" {
-			res += t.rtype.PkgPath() + "."
-		}
-		res += t.rtype.Name()
-	case variadicT:
-		res = "..." + t.val.id()
-	}
-	if res == "" {
-		res = t.TypeOf().String()
-	}
-	return res
+	return t.str
 }
 
 // fixPossibleConstType returns the input type if it not a constant value,
@@ -1673,17 +1687,32 @@ func (t *itype) defaultType(v reflect.Value) *itype {
 	}
 	// The default type can also be derived from a constant value.
 	if v.IsValid() && t.TypeOf().Implements(constVal) {
+		// TODO: find a way to get actual types here
 		switch v.Interface().(constant.Value).Kind() {
 		case constant.String:
-			t = untypedString()
+			t = &itype{cat: stringT, name: "string", str: "string"}
 		case constant.Bool:
-			t = untypedBool()
+			t = &itype{cat: boolT, name: "bool", str: "bool"}
 		case constant.Int:
-			t = untypedInt()
+			t = &itype{cat: intT, name: "int", str: "int"}
 		case constant.Float:
-			t = untypedFloat()
+			t = &itype{cat: float64T, name: "float64", str: "float64"}
 		case constant.Complex:
-			t = untypedComplex()
+			t = &itype{cat: complex128T, name: "complex128", str: "complex128"}
+		}
+	}
+	if t.untyped {
+		switch t.cat {
+		case stringT:
+			t = &itype{cat: stringT, name: "string", str: "string"}
+		case boolT:
+			t = &itype{cat: boolT, name: "bool", str: "bool"}
+		case intT:
+			t = &itype{cat: intT, name: "int", str: "int"}
+		case float64T:
+			t = &itype{cat: float64T, name: "float64", str: "float64"}
+		case complex128T:
+			t = &itype{cat: complex128T, name: "complex128", str: "complex128"}
 		}
 	}
 	typ := *t

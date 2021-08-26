@@ -8,4 +8,4 @@ func main() {
 }
 
 // Error:
-// _test/assign15.go:5:26: cannot use type chan<- struct{} as type <-chan struct{} in assignment
+// _test/assign15.go:5:26: cannot use type chan<- struct {} as type <-chan struct {} in assignment

@@ -167,7 +167,7 @@ func (check typecheck) shift(n *node) error {
 
 	switch {
 	case c1.typ.untyped:
-		if err := check.convertUntyped(c1, &itype{cat: uintT, name: "uint"}); err != nil {
+		if err := check.convertUntyped(c1, &itype{cat: uintT, name: "uint", str: "uint"}); err != nil {
 			return n.cfgErrorf("invalid operation: shift count type %v, must be integer", c1.typ.id())
 		}
 	case isInt(t1):
@@ -277,7 +277,7 @@ func zeroConst(n *node) bool {
 }
 
 func (check typecheck) index(n *node, max int) error {
-	if err := check.convertUntyped(n, &itype{cat: intT, name: "int"}); err != nil {
+	if err := check.convertUntyped(n, &itype{cat: intT, name: "int", str: "int"}); err != nil {
 		return err
 	}
 
@@ -746,7 +746,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 		t1 := params[1].Type()
 		if nparams == 2 && ellipsis && t.Elem().Kind() == reflect.Uint8 && t1.TypeOf().Kind() == reflect.String {
 			if t1.untyped {
-				return check.convertUntyped(params[1].nod, &itype{cat: stringT, name: "string"})
+				return check.convertUntyped(params[1].nod, &itype{cat: stringT, name: "string", str: "string"})
 			}
 			return nil
 		}
@@ -799,7 +799,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 		case !typ0.untyped && typ1.untyped:
 			err = check.convertUntyped(p1.nod, typ0)
 		case typ0.untyped && typ1.untyped:
-			fltType := &itype{cat: float64T, name: "float64"}
+			fltType := &itype{cat: float64T, name: "float64", str: "float64"}
 			err = check.convertUntyped(p0.nod, fltType)
 			if err != nil {
 				break
@@ -822,7 +822,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 		p := params[0]
 		typ := p.Type()
 		if typ.untyped {
-			if err := check.convertUntyped(p.nod, &itype{cat: complex128T, name: "complex128"}); err != nil {
+			if err := check.convertUntyped(p.nod, &itype{cat: complex128T, name: "complex128", str: "complex128"}); err != nil {
 				return err
 			}
 		}
@@ -889,7 +889,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 		}
 
 	case bltnPanic:
-		return check.assignment(params[0].nod, &itype{cat: interfaceT}, "argument to panic")
+		return check.assignment(params[0].nod, &itype{cat: interfaceT, str: "interface{}"}, "argument to panic")
 	case bltnPrint, bltnPrintln:
 		for _, param := range params {
 			if param.typ != nil {
@@ -974,7 +974,7 @@ func (check typecheck) argument(p param, ftyp *itype, i, l int, ellipsis bool) e
 		}
 		t := p.Type().TypeOf()
 		if t.Kind() != reflect.Slice || !(valueTOf(t.Elem())).assignableTo(atyp) {
-			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.typ.id(), (&itype{cat: sliceT, val: atyp}).id())
+			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.typ.id(), (&itype{cat: sliceT, val: atyp, str: "[]"+atyp.str}).id())
 		}
 		return nil
 	}

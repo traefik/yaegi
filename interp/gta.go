@@ -273,6 +273,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 				n.typ.name = typeName
 				n.typ.path = importPath
 			}
+			n.typ.str = n.typ.path+"."+n.typ.name
 
 			asImportName := filepath.Join(typeName, baseName)
 			if _, exists := sc.sym[asImportName]; exists {
