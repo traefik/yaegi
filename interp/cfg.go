@@ -477,7 +477,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				break
 			}
 
-			n.typ = &itype{cat: ptrT, val: n.child[0].typ}
+			n.typ = ptrOf(n.child[0].typ)
 			n.findex = sc.add(n.typ)
 
 		case assignStmt, defineStmt:
@@ -1732,7 +1732,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			case n.child[0].isType(sc):
 				// pointer type expression
 				n.gen = nop
-				n.typ = &itype{cat: ptrT, val: n.child[0].typ}
+				n.typ = ptrOf(n.child[0].typ)
 			default:
 				// dereference expression
 				wireChild(n)

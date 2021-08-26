@@ -189,6 +189,15 @@ func wrapperValueTOf(rtype reflect.Type, val *itype, opts ...itypeOption) *itype
 	return t
 }
 
+// ptrOf returns a pointer to t.
+func ptrOf(val *itype, opts ...itypeOption) *itype {
+	t := &itype{cat: ptrT, val: val}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
+}
+
 // nodeType returns a type definition for the corresponding AST subtree.
 func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	if n.typ != nil && !n.typ.incomplete {
@@ -400,7 +409,9 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				t, err = nodeType(interp, sc, n.child[1])
 			case bltnNew:
 				t, err = nodeType(interp, sc, n.child[1])
-				t = &itype{cat: ptrT, val: t, incomplete: t.incomplete, scope: sc}
+				incomplete := t.incomplete
+				t = ptrOf(t, withScope(sc))
+				t.incomplete = incomplete
 			case bltnRecover:
 				t = sc.getType("interface{}")
 			}
@@ -1465,7 +1476,7 @@ func lookupFieldOrMethod(t *itype, name string) *itype {
 		if t.rtype.Kind() != reflect.Interface {
 			recv = t
 			if isPtr && t.cat != ptrT && t.rtype.Kind() != reflect.Ptr {
-				recv = &itype{cat: ptrT, val: t}
+				recv = ptrOf(t)
 			}
 		}
 		return valueTOf(m.Type, withRecv(recv))

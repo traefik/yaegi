@@ -149,7 +149,8 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: importPath, incomplete: true, node: rtn.child[0], scope: sc}}
 						elementType = sc.sym[typeName].typ
 					}
-					rcvrtype = &itype{cat: ptrT, val: elementType, incomplete: elementType.incomplete, node: rtn, scope: sc}
+					rcvrtype = ptrOf(elementType, withNode(rtn), withScope(sc))
+					rcvrtype.incomplete = elementType.incomplete
 					elementType.method = append(elementType.method, n)
 				} else {
 					rcvrtype = sc.getType(typeName)
