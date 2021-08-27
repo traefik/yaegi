@@ -230,6 +230,33 @@ func namedOf(val *itype, path, name string, opts ...itypeOption) *itype {
 	return t
 }
 
+type chanDir uint8
+
+const (
+	chanSendRecv chanDir = iota
+	chanSend
+	chanRecv
+)
+
+// chanOf returns a channel
+func chanOf(val *itype, dir chanDir, opts ...itypeOption) *itype {
+	cat := chanT
+	str := "chan"
+	switch dir {
+	case chanSend:
+		cat = chanSendT
+		str = "chan<-"
+	case chanRecv:
+		cat = chanRecvT
+		str = "<-chan"
+	}
+	t := &itype{cat: cat, val: val, str: str}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
+}
+
 // nodeType returns a type definition for the corresponding AST subtree.
 func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	if n.typ != nil && !n.typ.incomplete {
