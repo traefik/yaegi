@@ -196,6 +196,9 @@ func valueTOf(rtype reflect.Type, opts ...itypeOption) *itype {
 	for _, opt := range opts {
 		opt(t)
 	}
+	if t.untyped {
+		t.str = "untyped " + t.str
+	}
 	return t
 }
 
@@ -221,7 +224,7 @@ func ptrOf(val *itype, opts ...itypeOption) *itype {
 func namedOf(val *itype, path, name string, opts ...itypeOption) *itype {
 	str := name
 	if path != "" {
-		str = path+"."+name
+		str = path + "." + name
 	}
 	t := &itype{cat: aliasT, val: val, path: path, name: name, str: str}
 	for _, opt := range opts {
@@ -641,7 +644,11 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				sym.typ = t
 			}
 		}
-		repr.WriteString("interface {")
+		start := "interface{"
+		if len(n.child[0].child) >= 1 {
+			start = "interface {"
+		}
+		repr.WriteString(start)
 		for _, field := range n.child[0].child {
 			f0 := field.child[0]
 			if len(field.child) == 1 {
@@ -670,10 +677,11 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		}
 		methStr := methodsTypeString(t.field)
 		repr.WriteString(methStr)
+		end := "}"
 		if methStr != "" {
-			repr.WriteByte(' ')
+			end = " }"
 		}
-		repr.WriteByte('}')
+		repr.WriteString(end)
 		t.incomplete = incomplete
 
 	case landExpr, lorExpr:

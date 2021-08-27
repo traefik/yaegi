@@ -974,7 +974,7 @@ func (check typecheck) argument(p param, ftyp *itype, i, l int, ellipsis bool) e
 		}
 		t := p.Type().TypeOf()
 		if t.Kind() != reflect.Slice || !(valueTOf(t.Elem())).assignableTo(atyp) {
-			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.typ.id(), (&itype{cat: sliceT, val: atyp, str: "[]"+atyp.str}).id())
+			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.typ.id(), (&itype{cat: sliceT, val: atyp, str: "[]" + atyp.str}).id())
 		}
 		return nil
 	}
