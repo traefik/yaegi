@@ -51,7 +51,7 @@ const nilIdent = "nil"
 // Following this pass, the CFG is ready to run.
 func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 	sc := interp.initScopePkg(importPath)
-	check := typecheck{}
+	check := typecheck{scope: sc}
 	var initNodes []*node
 	var err error
 

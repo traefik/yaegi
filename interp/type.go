@@ -241,7 +241,7 @@ const (
 	chanRecv
 )
 
-// chanOf returns a channel
+// chanOf returns a channel of the underlying type val.
 func chanOf(val *itype, dir chanDir, opts ...itypeOption) *itype {
 	cat := chanT
 	str := "chan"
@@ -254,6 +254,15 @@ func chanOf(val *itype, dir chanDir, opts ...itypeOption) *itype {
 		str = "<-chan"
 	}
 	t := &itype{cat: cat, val: val, str: str}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
+}
+
+// sliceOf returns a slice type of the underlying val.
+func sliceOf(val *itype, opts ...itypeOption) *itype {
+	t := &itype{cat: sliceT, val: val, str: "[]" + val.str}
 	for _, opt := range opts {
 		opt(t)
 	}
@@ -778,7 +787,9 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			t = t.val
 		}
 		if t.cat == arrayT {
-			t = &itype{cat: sliceT, val: t.val, incomplete: t.incomplete, node: n, scope: sc, str: "[]" + t.val.str}
+			incomplete := t.incomplete
+			t = sliceOf(t.val, withNode(n), withScope(sc))
+			t.incomplete = incomplete
 		}
 
 	case structType:
@@ -1004,7 +1015,8 @@ func (t *itype) in(i int) *itype {
 				i++
 			}
 			if t.rtype.IsVariadic() && i == t.rtype.NumIn()-1 {
-				return &itype{cat: variadicT, val: valueTOf(t.rtype.In(i).Elem())}
+				val := valueTOf(t.rtype.In(i).Elem())
+				return &itype{cat: variadicT, val: val, str: "..." + val.str}
 			}
 			return valueTOf(t.rtype.In(i))
 		}
@@ -1729,43 +1741,46 @@ func (t *itype) implements(it *itype) bool {
 }
 
 // defaultType returns the default type of an untyped type.
-func (t *itype) defaultType(v reflect.Value) *itype {
+func (t *itype) defaultType(v reflect.Value, sc *scope) *itype {
 	if !t.untyped {
 		return t
 	}
+
+	var typ = t
 	// The default type can also be derived from a constant value.
 	if v.IsValid() && t.TypeOf().Implements(constVal) {
 		// TODO: find a way to get actual types here
 		switch v.Interface().(constant.Value).Kind() {
 		case constant.String:
-			t = &itype{cat: stringT, name: "string", str: "string"}
+			typ = sc.getType("string")
 		case constant.Bool:
-			t = &itype{cat: boolT, name: "bool", str: "bool"}
+			typ = sc.getType("bool")
 		case constant.Int:
-			t = &itype{cat: intT, name: "int", str: "int"}
+			typ = sc.getType("int")
 		case constant.Float:
-			t = &itype{cat: float64T, name: "float64", str: "float64"}
+			typ = sc.getType("float64")
 		case constant.Complex:
-			t = &itype{cat: complex128T, name: "complex128", str: "complex128"}
+			typ = sc.getType("complex128")
 		}
 	}
-	if t.untyped {
+	if typ.untyped {
 		switch t.cat {
 		case stringT:
-			t = &itype{cat: stringT, name: "string", str: "string"}
+			typ = sc.getType("string")
 		case boolT:
-			t = &itype{cat: boolT, name: "bool", str: "bool"}
+			typ = sc.getType("bool")
 		case intT:
-			t = &itype{cat: intT, name: "int", str: "int"}
+			typ = sc.getType("int")
 		case float64T:
-			t = &itype{cat: float64T, name: "float64", str: "float64"}
+			typ = sc.getType("float64")
 		case complex128T:
-			t = &itype{cat: complex128T, name: "complex128", str: "complex128"}
+			typ = sc.getType("complex128")
+		default:
+			*typ = *t
+			typ.untyped = false
 		}
 	}
-	typ := *t
-	typ.untyped = false
-	return &typ
+	return typ
 }
 
 func (t *itype) isNil() bool { return t.cat == nilT }
