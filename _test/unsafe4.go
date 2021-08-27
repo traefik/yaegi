@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"math/bits"
 	"unsafe"
 )
 
-const SSize = 24
+const WSize = bits.UintSize / 8
 
 type S struct {
 	X int
@@ -20,7 +21,8 @@ func main() {
 		{X: 3},
 	}
 	addr := unsafe.Pointer(&arr[0])
-	s := *(*S)(unsafe.Pointer(uintptr(addr) + SSize*2))
+	// s := *(*S)(unsafe.Pointer(uintptr(addr) + SSize*2))
+	s := *(*S)(unsafe.Pointer(uintptr(addr) + WSize*6))
 
 	fmt.Println(s.X)
 }
