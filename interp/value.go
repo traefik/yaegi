@@ -370,7 +370,7 @@ func getConcreteValue(val reflect.Value) reflect.Value {
 }
 
 func zeroInterfaceValue() reflect.Value {
-	n := &node{kind: basicLit, typ: &itype{cat: nilT, untyped: true}}
+	n := &node{kind: basicLit, typ: &itype{cat: nilT, untyped: true, str: "nil"}}
 	v := reflect.New(interf).Elem()
 	return reflect.ValueOf(valueInterface{n, v})
 }

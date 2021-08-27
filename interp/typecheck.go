@@ -14,7 +14,9 @@ type opPredicates map[action]func(reflect.Type) bool
 // Due to variant type systems (itype vs reflect.Type) a single
 // type system should used, namely reflect.Type with exception
 // of the untyped flag on itype.
-type typecheck struct{}
+type typecheck struct {
+	scope *scope
+}
 
 // op type checks an expression against a set of expression predicates.
 func (check typecheck) op(p opPredicates, a action, n, c *node, t reflect.Type) error {
@@ -40,7 +42,7 @@ func (check typecheck) assignment(n *node, typ *itype, context string) error {
 			if typ == nil && n.typ.cat == nilT {
 				return n.cfgErrorf("use of untyped nil in %s", context)
 			}
-			typ = n.typ.defaultType(n.rval)
+			typ = n.typ.defaultType(n.rval, check.scope)
 		}
 		if err := check.convertUntyped(n, typ); err != nil {
 			return err
@@ -72,7 +74,7 @@ func (check typecheck) assignExpr(n, dest, src *node) error {
 		isConst := n.anc.kind == constDecl
 		if !isConst {
 			// var operations must be typed
-			dest.typ = dest.typ.defaultType(src.rval)
+			dest.typ = dest.typ.defaultType(src.rval, check.scope)
 		}
 
 		return check.assignment(src, dest.typ, "assignment")
@@ -167,7 +169,7 @@ func (check typecheck) shift(n *node) error {
 
 	switch {
 	case c1.typ.untyped:
-		if err := check.convertUntyped(c1, &itype{cat: uintT, name: "uint"}); err != nil {
+		if err := check.convertUntyped(c1, check.scope.getType("uint")); err != nil {
 			return n.cfgErrorf("invalid operation: shift count type %v, must be integer", c1.typ.id())
 		}
 	case isInt(t1):
@@ -277,7 +279,7 @@ func zeroConst(n *node) bool {
 }
 
 func (check typecheck) index(n *node, max int) error {
-	if err := check.convertUntyped(n, &itype{cat: intT, name: "int"}); err != nil {
+	if err := check.convertUntyped(n, check.scope.getType("int")); err != nil {
 		return err
 	}
 
@@ -440,7 +442,7 @@ func (check typecheck) structBinLitExpr(child []*node, typ reflect.Type) error {
 				return c.cfgErrorf("unknown field %s in struct literal", name)
 			}
 
-			if err := check.assignment(val, &itype{cat: valueT, rtype: field.Type}, "struct literal"); err != nil {
+			if err := check.assignment(val, valueTOf(field.Type), "struct literal"); err != nil {
 				return err
 			}
 
@@ -466,7 +468,7 @@ func (check typecheck) structBinLitExpr(child []*node, typ reflect.Type) error {
 			return c.cfgErrorf("implicit assignment to unexported field %s in %s literal", field.Name, typ)
 		}
 
-		if err := check.assignment(c, &itype{cat: valueT, rtype: field.Type}, "struct literal"); err != nil {
+		if err := check.assignment(c, valueTOf(field.Type), "struct literal"); err != nil {
 			return err
 		}
 	}
@@ -651,7 +653,7 @@ func (check typecheck) conversion(n *node, typ *itype) error {
 		return nil
 	}
 	if isInterface(typ) || !isConstType(typ) {
-		typ = n.typ.defaultType(n.rval)
+		typ = n.typ.defaultType(n.rval, check.scope)
 	}
 	return check.convertUntyped(n, typ)
 }
@@ -746,7 +748,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 		t1 := params[1].Type()
 		if nparams == 2 && ellipsis && t.Elem().Kind() == reflect.Uint8 && t1.TypeOf().Kind() == reflect.String {
 			if t1.untyped {
-				return check.convertUntyped(params[1].nod, &itype{cat: stringT, name: "string"})
+				return check.convertUntyped(params[1].nod, check.scope.getType("string"))
 			}
 			return nil
 		}
@@ -760,7 +762,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 				cat: funcT,
 				arg: []*itype{
 					typ,
-					{cat: variadicT, val: &itype{cat: valueT, rtype: t.Elem()}},
+					{cat: variadicT, val: valueTOf(t.Elem())},
 				},
 				ret: []*itype{typ},
 			},
@@ -799,7 +801,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 		case !typ0.untyped && typ1.untyped:
 			err = check.convertUntyped(p1.nod, typ0)
 		case typ0.untyped && typ1.untyped:
-			fltType := &itype{cat: float64T, name: "float64"}
+			fltType := check.scope.getType("float64")
 			err = check.convertUntyped(p0.nod, fltType)
 			if err != nil {
 				break
@@ -822,7 +824,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 		p := params[0]
 		typ := p.Type()
 		if typ.untyped {
-			if err := check.convertUntyped(p.nod, &itype{cat: complex128T, name: "complex128"}); err != nil {
+			if err := check.convertUntyped(p.nod, check.scope.getType("complex128")); err != nil {
 				return err
 			}
 		}
@@ -889,7 +891,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 		}
 
 	case bltnPanic:
-		return check.assignment(params[0].nod, &itype{cat: interfaceT}, "argument to panic")
+		return check.assignment(params[0].nod, check.scope.getType("interface{}"), "argument to panic")
 	case bltnPrint, bltnPrintln:
 		for _, param := range params {
 			if param.typ != nil {
@@ -913,7 +915,7 @@ func arrayDeref(typ *itype) *itype {
 	if typ.cat == valueT && typ.TypeOf().Kind() == reflect.Ptr {
 		t := typ.TypeOf()
 		if t.Elem().Kind() == reflect.Array {
-			return &itype{cat: valueT, rtype: t.Elem()}
+			return valueTOf(t.Elem())
 		}
 		return typ
 	}
@@ -973,8 +975,8 @@ func (check typecheck) argument(p param, ftyp *itype, i, l int, ellipsis bool) e
 			return p.nod.cfgErrorf("can only use ... with matching parameter")
 		}
 		t := p.Type().TypeOf()
-		if t.Kind() != reflect.Slice || !(&itype{cat: valueT, rtype: t.Elem()}).assignableTo(atyp) {
-			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.typ.id(), (&itype{cat: sliceT, val: atyp}).id())
+		if t.Kind() != reflect.Slice || !(valueTOf(t.Elem())).assignableTo(atyp) {
+			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.typ.id(), (sliceOf(atyp)).id())
 		}
 		return nil
 	}
@@ -997,7 +999,7 @@ func getArg(ftyp *itype, i int) *itype {
 	case i < l:
 		return ftyp.in(i)
 	case ftyp.cat == valueT && i < ftyp.rtype.NumIn():
-		return &itype{cat: valueT, rtype: ftyp.rtype.In(i)}
+		return valueTOf(ftyp.rtype.In(i))
 	default:
 		return nil
 	}
@@ -1057,7 +1059,7 @@ func (check typecheck) convertUntyped(n *node, typ *itype) error {
 		if len(n.typ.methods()) > 0 { // untyped cannot be set to iface
 			return convErr
 		}
-		ityp = n.typ.defaultType(n.rval)
+		ityp = n.typ.defaultType(n.rval, check.scope)
 		rtyp = ntyp
 	case isArray(typ) || isMap(typ) || isChan(typ) || isFunc(typ) || isPtr(typ):
 		// TODO(nick): above we are acting on itype, but really it is an rtype check. This is not clear which type

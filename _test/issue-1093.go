@@ -10,4 +10,4 @@ func main() {
 }
 
 // Error:
-// 9:6: cannot use type string as type int in assignment
+// 9:6: cannot use type untyped string as type int in assignment

@@ -79,7 +79,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 					return false
 				}
 				if typ.isBinMethod {
-					typ = &itype{cat: valueT, rtype: typ.methodCallType(), isBinMethod: true, scope: sc}
+					typ = valueTOf(typ.methodCallType(), isBinMethod(), withScope(sc))
 				}
 				sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val, node: n}
 				if n.anc.kind == constDecl {
@@ -149,7 +149,8 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: importPath, incomplete: true, node: rtn.child[0], scope: sc}}
 						elementType = sc.sym[typeName].typ
 					}
-					rcvrtype = &itype{cat: ptrT, val: elementType, incomplete: elementType.incomplete, node: rtn, scope: sc}
+					rcvrtype = ptrOf(elementType, withNode(rtn), withScope(sc))
+					rcvrtype.incomplete = elementType.incomplete
 					elementType.method = append(elementType.method, n)
 				} else {
 					rcvrtype = sc.getType(typeName)
@@ -200,7 +201,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 						if isBinType(v) {
 							typ = typ.Elem()
 						}
-						sc.sym[n] = &symbol{kind: binSym, typ: &itype{cat: valueT, rtype: typ, scope: sc}, rval: v}
+						sc.sym[n] = &symbol{kind: binSym, typ: valueTOf(typ, withScope(sc)), rval: v}
 					}
 				default: // import symbols in package namespace
 					if name == "" {
@@ -265,13 +266,16 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 
 			switch n.child[1].kind {
 			case identExpr, selectorExpr:
-				n.typ = &itype{cat: aliasT, val: typ, name: typeName, path: importPath, field: typ.field, incomplete: typ.incomplete, scope: sc, node: n.child[0]}
+				n.typ = namedOf(typ, importPath, typeName, withNode(n.child[0]), withScope(sc))
+				n.typ.incomplete = typ.incomplete
+				n.typ.field = typ.field
 				copy(n.typ.method, typ.method)
 			default:
 				n.typ = typ
 				n.typ.name = typeName
 				n.typ.path = importPath
 			}
+			n.typ.str = n.typ.path + "." + n.typ.name
 
 			asImportName := filepath.Join(typeName, baseName)
 			if _, exists := sc.sym[asImportName]; exists {
