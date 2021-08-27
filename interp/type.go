@@ -1746,7 +1746,7 @@ func (t *itype) defaultType(v reflect.Value, sc *scope) *itype {
 		return t
 	}
 
-	var typ = t
+	typ := t
 	// The default type can also be derived from a constant value.
 	if v.IsValid() && t.TypeOf().Implements(constVal) {
 		// TODO: find a way to get actual types here

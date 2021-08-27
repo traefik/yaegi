@@ -14,7 +14,7 @@ type opPredicates map[action]func(reflect.Type) bool
 // Due to variant type systems (itype vs reflect.Type) a single
 // type system should used, namely reflect.Type with exception
 // of the untyped flag on itype.
-type typecheck struct{
+type typecheck struct {
 	scope *scope
 }
 
