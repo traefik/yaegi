@@ -217,6 +217,19 @@ func ptrOf(val *itype, opts ...itypeOption) *itype {
 	return t
 }
 
+// namedOf returns a named type of val.
+func namedOf(val *itype, path, name string, opts ...itypeOption) *itype {
+	str := name
+	if path != "" {
+		str = path+"."+name
+	}
+	t := &itype{cat: aliasT, val: val, path: path, name: name, str: str}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
+}
+
 // nodeType returns a type definition for the corresponding AST subtree.
 func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	if n.typ != nil && !n.typ.incomplete {

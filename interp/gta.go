@@ -266,7 +266,9 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 
 			switch n.child[1].kind {
 			case identExpr, selectorExpr:
-				n.typ = &itype{cat: aliasT, val: typ, name: typeName, path: importPath, field: typ.field, incomplete: typ.incomplete, scope: sc, node: n.child[0]}
+				n.typ = namedOf(typ, importPath, typeName, withNode(n.child[0]), withScope(sc))
+				n.typ.incomplete = typ.incomplete
+				n.typ.field = typ.field
 				copy(n.typ.method, typ.method)
 			default:
 				n.typ = typ

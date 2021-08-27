@@ -430,7 +430,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 
 			switch n.child[1].kind {
 			case identExpr, selectorExpr:
-				n.typ = &itype{cat: aliasT, val: typ, name: typeName}
+				n.typ = namedOf(typ, "", typeName)
 			default:
 				n.typ = typ
 				n.typ.name = typeName
