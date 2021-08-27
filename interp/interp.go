@@ -7,11 +7,13 @@ import (
 	"flag"
 	"fmt"
 	"go/build"
+	"go/constant"
 	"go/scanner"
 	"go/token"
 	"io"
 	"io/fs"
 	"log"
+	"math/bits"
 	"os"
 	"os/signal"
 	"path"
@@ -696,17 +698,17 @@ func (interp *Interpreter) Use(values Exports) error {
 	// Checks if input values correspond to stdlib packages by looking for one
 	// well known stdlib package path.
 	if _, ok := values["fmt/fmt"]; ok {
-		fixStdio(interp)
+		fixStdlib(interp)
 	}
 	return nil
 }
 
-// fixStdio redefines interpreter stdlib symbols to use the standard input,
+// fixStdlib redefines interpreter stdlib symbols to use the standard input,
 // output and errror assigned to the interpreter. The changes are limited to
 // the interpreter only.
 // Note that it is possible to escape the virtualized stdio by
 // read/write directly to file descriptors 0, 1, 2.
-func fixStdio(interp *Interpreter) {
+func fixStdlib(interp *Interpreter) {
 	p := interp.binPkg["fmt"]
 	if p == nil {
 		return
@@ -768,6 +770,11 @@ func fixStdio(interp *Interpreter) {
 				p["Stderr"] = reflect.ValueOf(&s).Elem()
 			}
 		}
+	}
+
+	if p = interp.binPkg["math/bits"]; p != nil {
+		// Do not trust extracted value maybe from another arch.
+		p["UintSize"] = reflect.ValueOf(constant.MakeInt64(bits.UintSize))
 	}
 }
 
