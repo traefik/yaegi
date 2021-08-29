@@ -298,25 +298,22 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	var err error
 	switch n.kind {
 	case addressExpr, starExpr:
-		t.cat = ptrT
-		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
+		val, err := nodeType(interp, sc, n.child[0])
+		if err != nil {
 			return nil, err
 		}
-		repr.WriteString("*" + t.val.str)
-		t.incomplete = t.val.incomplete
+		t = ptrOf(val, withNode(n), withScope(sc))
+		t.incomplete = val.incomplete
 
 	case arrayType:
 		c0 := n.child[0]
 		if len(n.child) == 1 {
-			// Array size is not defined.
-			t.cat = sliceT
-			if t.val, err = nodeType(interp, sc, c0); err != nil {
+			val, err := nodeType(interp, sc, c0)
+			if err != nil {
 				return nil, err
 			}
-			t.incomplete = t.val.incomplete
-			if t.val != nil {
-				repr.WriteString("[]" + t.val.str)
-			}
+			t = sliceOf(val, withNode(n), withScope(sc))
+			t.incomplete = val.incomplete
 			break
 		}
 		// Array size is defined.
@@ -526,29 +523,20 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	case compositeLitExpr:
 		t, err = nodeType(interp, sc, n.child[0])
 
-	case chanType:
-		t.cat = chanT
-		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
+	case chanType, chanTypeRecv, chanTypeSend:
+		dir := chanSendRecv
+		switch n.kind {
+		case chanTypeRecv:
+			dir = chanRecv
+		case chanTypeSend:
+			dir = chanSend
+		}
+		val, err := nodeType(interp, sc, n.child[0])
+		if err != nil {
 			return nil, err
 		}
-		repr.WriteString("chan " + t.val.str)
-		t.incomplete = t.val.incomplete
-
-	case chanTypeRecv:
-		t.cat = chanRecvT
-		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
-			return nil, err
-		}
-		repr.WriteString("<-chan " + t.val.str)
-		t.incomplete = t.val.incomplete
-
-	case chanTypeSend:
-		t.cat = chanSendT
-		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
-			return nil, err
-		}
-		repr.WriteString("chan<- " + t.val.str)
-		t.incomplete = t.val.incomplete
+		t = chanOf(val, dir, withNode(n), withScope(sc))
+		t.incomplete = val.incomplete
 
 	case ellipsisExpr:
 		t.cat = variadicT
