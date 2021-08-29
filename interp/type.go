@@ -246,16 +246,16 @@ const (
 // chanOf returns a channel of the underlying type val.
 func chanOf(val *itype, dir chanDir, opts ...itypeOption) *itype {
 	cat := chanT
-	str := "chan"
+	str := "chan "
 	switch dir {
 	case chanSend:
 		cat = chanSendT
-		str = "chan<-"
+		str = "chan<- "
 	case chanRecv:
 		cat = chanRecvT
-		str = "<-chan"
+		str = "<-chan "
 	}
-	t := &itype{cat: cat, val: val, str: str}
+	t := &itype{cat: cat, val: val, str: str + val.str}
 	for _, opt := range opts {
 		opt(t)
 	}
@@ -678,7 +678,6 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				return nil, err
 			}
 			t.field = append(t.field, structField{name: f0.ident, typ: typ})
-			repr.WriteString(" " + f0.ident + typ.str[4:])
 			incomplete = incomplete || typ.incomplete
 		}
 		methStr := methodsTypeString(t.field)
