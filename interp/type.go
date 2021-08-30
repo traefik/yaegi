@@ -1611,8 +1611,10 @@ func (c *refTypeContext) Clone() *refTypeContext {
 // In simple cases, reflect types are directly mapped from the interpreter
 // counterpart.
 // For recursive named struct or interfaces, as reflect does not permit to
-// create a recursive named struct, an interface{} is returned in place to
-// avoid infinitely nested structs.
+// create a recursive named struct, a nil type is set temporarily for each recursive
+// field. When done, the nil type fields are updated with the original reflect type
+// pointer using unsafe. We thus obtain a usable recursive type definition, except 
+// for string representation, as created reflect types are still unnamed.
 func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 	if ctx == nil {
 		ctx = &refTypeContext{
