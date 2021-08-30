@@ -752,10 +752,6 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 			}
 			return nil
 		}
-		// We cannot check a recursive type.
-		if isRecursiveType(typ, typ.TypeOf()) {
-			return nil
-		}
 
 		fun := &node{
 			typ: &itype{
