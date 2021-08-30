@@ -118,6 +118,7 @@ type itype struct {
 	recv        *itype        // Receiver type for funcT or nil
 	arg         []*itype      // Argument types if funcT or nil
 	ret         []*itype      // Return types if funcT or nil
+	ptr         *itype        // Pointer to this type. Might be nil
 	method      []*node       // Associated methods or nil
 	name        string        // name of type within its package for a defined type
 	path        string        // for a defined type, the package import path
@@ -215,10 +216,14 @@ func wrapperValueTOf(rtype reflect.Type, val *itype, opts ...itypeOption) *itype
 
 // ptrOf returns a pointer to t.
 func ptrOf(val *itype, opts ...itypeOption) *itype {
+	if val.ptr != nil {
+		return val.ptr
+	}
 	t := &itype{cat: ptrT, val: val, str: "*" + val.str}
 	for _, opt := range opts {
 		opt(t)
 	}
+	val.ptr = t
 	return t
 }
 
