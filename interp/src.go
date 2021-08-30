@@ -97,7 +97,7 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 
 		subRPath := effectivePkg(rPath, importPath)
 		var list []*node
-		list, err = interp.gta(root, subRPath, importPath)
+		list, err = interp.gta(root, subRPath, importPath, pkgName)
 		if err != nil {
 			return "", err
 		}
@@ -106,7 +106,7 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 
 	// Revisit incomplete nodes where GTA could not complete.
 	for _, nodes := range revisit {
-		if err = interp.gtaRetry(nodes, importPath); err != nil {
+		if err = interp.gtaRetry(nodes, importPath, pkgName); err != nil {
 			return "", err
 		}
 	}

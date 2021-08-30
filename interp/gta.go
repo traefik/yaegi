@@ -11,7 +11,7 @@ import (
 // All function bodies are skipped. GTA is necessary to handle out of
 // order declarations and multiple source files packages.
 // rpath is the relative path to the directory containing the source for the package.
-func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, error) {
+func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([]*node, error) {
 	sc := interp.initScopePkg(importPath)
 	var err error
 	var revisit []*node
@@ -266,14 +266,14 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 
 			switch n.child[1].kind {
 			case identExpr, selectorExpr:
-				n.typ = namedOf(typ, importPath, typeName, withNode(n.child[0]), withScope(sc))
+				n.typ = namedOf(typ, pkgName, typeName, withNode(n.child[0]), withScope(sc))
 				n.typ.incomplete = typ.incomplete
 				n.typ.field = typ.field
 				copy(n.typ.method, typ.method)
 			default:
 				n.typ = typ
 				n.typ.name = typeName
-				n.typ.path = importPath
+				n.typ.path = pkgName
 			}
 			n.typ.str = n.typ.path + "." + n.typ.name
 
@@ -312,11 +312,11 @@ func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, e
 }
 
 // gtaRetry (re)applies gta until all global constants and types are defined.
-func (interp *Interpreter) gtaRetry(nodes []*node, importPath string) error {
+func (interp *Interpreter) gtaRetry(nodes []*node, importPath, pkgName string) error {
 	revisit := []*node{}
 	for {
 		for _, n := range nodes {
-			list, err := interp.gta(n, importPath, importPath)
+			list, err := interp.gta(n, importPath, importPath, pkgName)
 			if err != nil {
 				return err
 			}
