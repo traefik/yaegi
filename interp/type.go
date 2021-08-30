@@ -276,6 +276,11 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	if n.typ != nil && !n.typ.incomplete {
 		return n.typ, nil
 	}
+	if sname := typeName(n); sname != "" {
+		if sym, _, found := sc.lookup(sname); found && sym.kind == typeSym && sym.typ != nil && sym.typ.isComplete() {
+			return sym.typ, nil
+		}
+	}
 
 	repr := strings.Builder{}
 	t := &itype{node: n, scope: sc}
