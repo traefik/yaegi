@@ -612,6 +612,8 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			ident := filepath.Join(n.ident, baseName)
 			sym, _, found = sc.lookup(ident)
 			if !found {
+				t.name = n.ident
+				t.path = sc.pkgID
 				t.incomplete = true
 				sc.sym[n.ident] = &symbol{kind: typeSym, typ: t}
 				break
@@ -855,12 +857,12 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 
 	switch {
 	case t == nil:
-	case t.cat == nilT:
-		t.str = "nil"
 	case t.name != "" && t.path != "":
 		t.str = t.path + "." + t.name
 	case repr.Len() > 0:
 		t.str = repr.String()
+	case t.cat == nilT:
+		t.str = "nil"
 	}
 
 	return t, err
