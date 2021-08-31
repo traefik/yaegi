@@ -1773,15 +1773,19 @@ func (t *itype) defaultType(v reflect.Value, sc *scope) *itype {
 
 	typ := t
 	// The default type can also be derived from a constant value.
-	if v.IsValid() && t.TypeOf().Implements(constVal) {
-		// TODO: find a way to get actual types here
+	if v.IsValid() && v.Type().Implements(constVal) {
 		switch v.Interface().(constant.Value).Kind() {
 		case constant.String:
 			typ = sc.getType("string")
 		case constant.Bool:
 			typ = sc.getType("bool")
 		case constant.Int:
-			typ = sc.getType("int")
+			switch t.cat {
+			case int32T:
+				typ = sc.getType("int32")
+			default:
+				typ = sc.getType("int")
+			}
 		case constant.Float:
 			typ = sc.getType("float64")
 		case constant.Complex:
