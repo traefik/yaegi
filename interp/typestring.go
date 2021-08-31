@@ -20,16 +20,15 @@ func methodsTypeString(fields []structField) string {
 			}
 			continue
 		}
-		strs = append(strs, " "+field.name+field.typ.str[4:])
+		strs = append(strs, field.name+field.typ.str[4:])
 	}
-	return strings.Join(strs, ";")
+	return strings.Join(strs, "; ")
 }
 
 func fieldsTypeString(fields []structField) string {
 	strs := make([]string, 0, len(fields))
 	for _, field := range fields {
 		var repr strings.Builder
-		repr.WriteByte(' ')
 		if !field.embed {
 			repr.WriteString(field.name)
 			repr.WriteByte(' ')
@@ -37,5 +36,5 @@ func fieldsTypeString(fields []structField) string {
 		repr.WriteString(field.typ.str)
 		strs = append(strs, repr.String())
 	}
-	return strings.Join(strs, ";")
+	return strings.Join(strs, "; ")
 }
