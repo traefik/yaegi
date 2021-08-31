@@ -57,7 +57,7 @@ func (check typecheck) assignment(n *node, typ *itype, context string) error {
 		return nil
 	}
 
-	if !n.typ.assignableTo(typ) {
+	if !n.typ.assignableTo(typ, n) {
 		if context == "" {
 			return n.cfgErrorf("cannot use type %s as type %s", n.typ.id(), typ.id())
 		}
@@ -184,7 +184,7 @@ func (check typecheck) shift(n *node) error {
 func (check typecheck) comparison(n *node) error {
 	c0, c1 := n.child[0], n.child[1]
 
-	if !c0.typ.assignableTo(c1.typ) && !c1.typ.assignableTo(c0.typ) {
+	if !c0.typ.assignableTo(c1.typ, c0) && !c1.typ.assignableTo(c0.typ, c1) {
 		return n.cfgErrorf("invalid operation: mismatched types %s and %s", c0.typ.id(), c1.typ.id())
 	}
 
@@ -854,7 +854,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 			return params[0].nod.cfgErrorf("first argument to delete must be map; have %s", typ.id())
 		}
 		ktyp := params[1].Type()
-		if !ktyp.assignableTo(typ.key) {
+		if !ktyp.assignableTo(typ.key, nil) {
 			return params[1].nod.cfgErrorf("cannot use %s as type %s in delete", ktyp.id(), typ.key.id())
 		}
 	case bltnMake:
@@ -971,14 +971,14 @@ func (check typecheck) argument(p param, ftyp *itype, i, l int, ellipsis bool) e
 			return p.nod.cfgErrorf("can only use ... with matching parameter")
 		}
 		t := p.Type().TypeOf()
-		if t.Kind() != reflect.Slice || !(valueTOf(t.Elem())).assignableTo(atyp) {
+		if t.Kind() != reflect.Slice || !(valueTOf(t.Elem())).assignableTo(atyp, nil) {
 			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.typ.id(), (sliceOf(atyp)).id())
 		}
 		return nil
 	}
 
 	if p.typ != nil {
-		if !p.typ.assignableTo(atyp) {
+		if !p.typ.assignableTo(atyp, p.nod) {
 			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.child[0].typ.id(), getArgsID(ftyp))
 		}
 		return nil

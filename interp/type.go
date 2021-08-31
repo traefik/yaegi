@@ -1154,7 +1154,7 @@ func (t *itype) comparable() bool {
 	return t.cat == nilT || typ != nil && typ.Comparable()
 }
 
-func (t *itype) assignableTo(o *itype) bool {
+func (t *itype) assignableTo(o *itype, n *node) bool {
 	if t.equals(o) {
 		return true
 	}
@@ -1179,7 +1179,6 @@ func (t *itype) assignableTo(o *itype) bool {
 		return true
 	}
 
-	n := t.node
 	if n == nil || !n.rval.IsValid() {
 		return false
 	}
@@ -1195,7 +1194,7 @@ func (t *itype) assignableTo(o *itype) bool {
 
 // convertibleTo returns true if t is convertible to o.
 func (t *itype) convertibleTo(o *itype) bool {
-	if t.assignableTo(o) {
+	if t.assignableTo(o, nil) {
 		return true
 	}
 

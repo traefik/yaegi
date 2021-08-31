@@ -540,6 +540,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					sym, level, _ = sc.lookup(dest.ident)
 				}
 
+				log.Println(n.cfgErrorf("assign"))
 				err = check.assignExpr(n, dest, src)
 				if err != nil {
 					break
@@ -1450,7 +1451,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				}
 				// TODO(mpl): move any of that code to typecheck?
 				c.typ.node = c
-				if !c.typ.assignableTo(typ) {
+				if !c.typ.assignableTo(typ, c) {
 					err = c.cfgErrorf("cannot use %v (type %v) as type %v in return argument", c.ident, c.typ.cat, typ.cat)
 					return
 				}
