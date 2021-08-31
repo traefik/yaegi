@@ -118,6 +118,7 @@ type itype struct {
 	recv        *itype        // Receiver type for funcT or nil
 	arg         []*itype      // Argument types if funcT or nil
 	ret         []*itype      // Return types if funcT or nil
+	ptr         *itype        // Pointer to this type. Might be nil
 	method      []*node       // Associated methods or nil
 	name        string        // name of type within its package for a defined type
 	path        string        // for a defined type, the package import path
@@ -215,10 +216,14 @@ func wrapperValueTOf(rtype reflect.Type, val *itype, opts ...itypeOption) *itype
 
 // ptrOf returns a pointer to t.
 func ptrOf(val *itype, opts ...itypeOption) *itype {
+	if val.ptr != nil {
+		return val.ptr
+	}
 	t := &itype{cat: ptrT, val: val, str: "*" + val.str}
 	for _, opt := range opts {
 		opt(t)
 	}
+	val.ptr = t
 	return t
 }
 
@@ -246,16 +251,16 @@ const (
 // chanOf returns a channel of the underlying type val.
 func chanOf(val *itype, dir chanDir, opts ...itypeOption) *itype {
 	cat := chanT
-	str := "chan"
+	str := "chan "
 	switch dir {
 	case chanSend:
 		cat = chanSendT
-		str = "chan<-"
+		str = "chan<- "
 	case chanRecv:
 		cat = chanRecvT
-		str = "<-chan"
+		str = "<-chan "
 	}
-	t := &itype{cat: cat, val: val, str: str}
+	t := &itype{cat: cat, val: val, str: str + val.str}
 	for _, opt := range opts {
 		opt(t)
 	}
@@ -298,25 +303,22 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	var err error
 	switch n.kind {
 	case addressExpr, starExpr:
-		t.cat = ptrT
-		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
+		val, err := nodeType(interp, sc, n.child[0])
+		if err != nil {
 			return nil, err
 		}
-		repr.WriteString("*" + t.val.str)
-		t.incomplete = t.val.incomplete
+		t = ptrOf(val, withNode(n), withScope(sc))
+		t.incomplete = val.incomplete
 
 	case arrayType:
 		c0 := n.child[0]
 		if len(n.child) == 1 {
-			// Array size is not defined.
-			t.cat = sliceT
-			if t.val, err = nodeType(interp, sc, c0); err != nil {
+			val, err := nodeType(interp, sc, c0)
+			if err != nil {
 				return nil, err
 			}
-			t.incomplete = t.val.incomplete
-			if t.val != nil {
-				repr.WriteString("[]" + t.val.str)
-			}
+			t = sliceOf(val, withNode(n), withScope(sc))
+			t.incomplete = val.incomplete
 			break
 		}
 		// Array size is defined.
@@ -526,29 +528,20 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 	case compositeLitExpr:
 		t, err = nodeType(interp, sc, n.child[0])
 
-	case chanType:
-		t.cat = chanT
-		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
+	case chanType, chanTypeRecv, chanTypeSend:
+		dir := chanSendRecv
+		switch n.kind {
+		case chanTypeRecv:
+			dir = chanRecv
+		case chanTypeSend:
+			dir = chanSend
+		}
+		val, err := nodeType(interp, sc, n.child[0])
+		if err != nil {
 			return nil, err
 		}
-		repr.WriteString("chan " + t.val.str)
-		t.incomplete = t.val.incomplete
-
-	case chanTypeRecv:
-		t.cat = chanRecvT
-		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
-			return nil, err
-		}
-		repr.WriteString("<-chan " + t.val.str)
-		t.incomplete = t.val.incomplete
-
-	case chanTypeSend:
-		t.cat = chanSendT
-		if t.val, err = nodeType(interp, sc, n.child[0]); err != nil {
-			return nil, err
-		}
-		repr.WriteString("chan<- " + t.val.str)
-		t.incomplete = t.val.incomplete
+		t = chanOf(val, dir, withNode(n), withScope(sc))
+		t.incomplete = val.incomplete
 
 	case ellipsisExpr:
 		t.cat = variadicT
@@ -690,7 +683,6 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				return nil, err
 			}
 			t.field = append(t.field, structField{name: f0.ident, typ: typ})
-			repr.WriteString(" " + f0.ident + typ.str[4:])
 			incomplete = incomplete || typ.incomplete
 		}
 		methStr := methodsTypeString(t.field)
