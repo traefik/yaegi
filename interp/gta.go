@@ -286,15 +286,10 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 			sym, exists := sc.sym[typeName]
 			if !exists {
 				sc.sym[typeName] = &symbol{kind: typeSym}
-			} else {
-				if sym.typ != nil && (len(sym.typ.method) > 0) {
-					// Type has already been seen as a receiver in a method function
-					n.typ.method = append(n.typ.method, sym.typ.method...)
-				} else {
-					// TODO(mpl): figure out how to detect redeclarations without breaking type aliases.
-					// Allow redeclarations for now.
-					sc.sym[typeName] = &symbol{kind: typeSym}
-				}
+			} else if sym.typ == nil || len(sym.typ.method) == 0 {
+				// TODO(mpl): figure out how to detect redeclarations without breaking type aliases.
+				// Allow redeclarations for now.
+				sc.sym[typeName] = &symbol{kind: typeSym}
 			}
 			sc.sym[typeName].typ = n.typ
 			if !n.typ.isComplete() {
