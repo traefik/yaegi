@@ -356,7 +356,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			repr.WriteString(strconv.Itoa(t.length))
 		default:
 			// Size is defined by a numeric constant expression.
-			if _, err = interp.cfg(c0, sc.pkgID); err != nil {
+			if _, err = interp.cfg(c0, sc.pkgID, sc.pkgName); err != nil {
 				return nil, err
 			}
 			v, ok := c0.rval.Interface().(constant.Value)

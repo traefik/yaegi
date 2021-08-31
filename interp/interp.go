@@ -542,7 +542,7 @@ func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, 
 	}
 
 	// Annotate AST with CFG informations.
-	initNodes, err := interp.cfg(root, pkgName)
+	initNodes, err := interp.cfg(root, pkgName, pkgName)
 	if err != nil {
 		if interp.cfgDot {
 			dotCmd := interp.dotCmd

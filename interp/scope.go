@@ -78,6 +78,7 @@ type scope struct {
 	loop        *node              // loop exit node for break statement
 	loopRestart *node              // loop restart node for continue statement
 	pkgID       string             // unique id of package in which scope is defined
+	pkgName     string             // package name for the package
 	types       []reflect.Type     // frame layout, may be shared by same level scopes
 	level       int                // frame level: number of frame indirections to access var during execution
 	sym         map[string]*symbol // map of symbols defined in this current scope
@@ -227,7 +228,7 @@ func (s *scope) add(typ *itype) (index int) {
 	return
 }
 
-func (interp *Interpreter) initScopePkg(pkgID string) *scope {
+func (interp *Interpreter) initScopePkg(pkgID, pkgName string) *scope {
 	sc := interp.universe
 
 	interp.mutex.Lock()
@@ -236,6 +237,7 @@ func (interp *Interpreter) initScopePkg(pkgID string) *scope {
 	}
 	sc = interp.scopes[pkgID]
 	sc.pkgID = pkgID
+	sc.pkgName = pkgName
 	interp.mutex.Unlock()
 	return sc
 }

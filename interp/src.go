@@ -114,7 +114,7 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 	// Generate control flow graphs.
 	for _, root := range rootNodes {
 		var nodes []*node
-		if nodes, err = interp.cfg(root, importPath); err != nil {
+		if nodes, err = interp.cfg(root, importPath, pkgName); err != nil {
 			return "", err
 		}
 		initNodes = append(initNodes, nodes...)

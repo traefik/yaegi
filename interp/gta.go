@@ -12,7 +12,7 @@ import (
 // order declarations and multiple source files packages.
 // rpath is the relative path to the directory containing the source for the package.
 func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([]*node, error) {
-	sc := interp.initScopePkg(importPath)
+	sc := interp.initScopePkg(importPath, pkgName)
 	var err error
 	var revisit []*node
 
@@ -26,7 +26,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 		case constDecl:
 			// Early parse of constDecl subtree, to compute all constant
 			// values which may be used in further declarations.
-			if _, err = interp.cfg(n, importPath); err != nil {
+			if _, err = interp.cfg(n, importPath, pkgName); err != nil {
 				// No error processing here, to allow recovery in subtree nodes.
 				// TODO(marc): check for a non recoverable error and return it for better diagnostic.
 				err = nil
@@ -55,7 +55,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				dest, src := n.child[i], n.child[sbase+i]
 				val := reflect.ValueOf(sc.iota)
 				if n.anc.kind == constDecl {
-					if _, err2 := interp.cfg(n, importPath); err2 != nil {
+					if _, err2 := interp.cfg(n, importPath, pkgName); err2 != nil {
 						// Constant value can not be computed yet.
 						// Come back when child dependencies are known.
 						revisit = append(revisit, n)
@@ -146,7 +146,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 					elementType := sc.getType(typeName)
 					if elementType == nil {
 						// Add type if necessary, so method can be registered
-						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: importPath, incomplete: true, node: rtn.child[0], scope: sc}}
+						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: pkgName, incomplete: true, node: rtn.child[0], scope: sc}}
 						elementType = sc.sym[typeName].typ
 					}
 					rcvrtype = ptrOf(elementType, withNode(rtn), withScope(sc))
@@ -156,7 +156,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 					rcvrtype = sc.getType(typeName)
 					if rcvrtype == nil {
 						// Add type if necessary, so method can be registered
-						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: importPath, incomplete: true, node: rtn, scope: sc}}
+						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: pkgName, incomplete: true, node: rtn, scope: sc}}
 						rcvrtype = sc.sym[typeName].typ
 					}
 				}
