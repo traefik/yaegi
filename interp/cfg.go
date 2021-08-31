@@ -540,7 +540,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					sym, level, _ = sc.lookup(dest.ident)
 				}
 
-				log.Println(n.cfgErrorf("assign"))
 				err = check.assignExpr(n, dest, src)
 				if err != nil {
 					break
