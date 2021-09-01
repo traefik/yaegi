@@ -295,7 +295,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				if n.anc.kind == keyValueExpr && n == n.anc.child[0] {
 					n.typ = n.anc.typ.key
 				} else if atyp := n.anc.typ; atyp != nil {
-					if atyp.cat == valueT {
+					if atyp.cat == valueT && hasElem(atyp.rtype) {
 						n.typ = &itype{cat: valueT, rtype: atyp.rtype.Elem()}
 					} else {
 						n.typ = atyp.val
