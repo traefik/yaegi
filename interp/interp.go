@@ -7,11 +7,13 @@ import (
 	"flag"
 	"fmt"
 	"go/build"
+	"go/constant"
 	"go/scanner"
 	"go/token"
 	"io"
 	"io/fs"
 	"log"
+	"math/bits"
 	"os"
 	"os/signal"
 	"path"
@@ -388,27 +390,27 @@ const (
 func initUniverse() *scope {
 	sc := &scope{global: true, sym: map[string]*symbol{
 		// predefined Go types
-		"bool":        {kind: typeSym, typ: &itype{cat: boolT, name: "bool"}},
-		"byte":        {kind: typeSym, typ: &itype{cat: uint8T, name: "uint8"}},
-		"complex64":   {kind: typeSym, typ: &itype{cat: complex64T, name: "complex64"}},
-		"complex128":  {kind: typeSym, typ: &itype{cat: complex128T, name: "complex128"}},
-		"error":       {kind: typeSym, typ: &itype{cat: errorT, name: "error"}},
-		"float32":     {kind: typeSym, typ: &itype{cat: float32T, name: "float32"}},
-		"float64":     {kind: typeSym, typ: &itype{cat: float64T, name: "float64"}},
-		"int":         {kind: typeSym, typ: &itype{cat: intT, name: "int"}},
-		"int8":        {kind: typeSym, typ: &itype{cat: int8T, name: "int8"}},
-		"int16":       {kind: typeSym, typ: &itype{cat: int16T, name: "int16"}},
-		"int32":       {kind: typeSym, typ: &itype{cat: int32T, name: "int32"}},
-		"int64":       {kind: typeSym, typ: &itype{cat: int64T, name: "int64"}},
-		"interface{}": {kind: typeSym, typ: &itype{cat: interfaceT}},
-		"rune":        {kind: typeSym, typ: &itype{cat: int32T, name: "int32"}},
-		"string":      {kind: typeSym, typ: &itype{cat: stringT, name: "string"}},
-		"uint":        {kind: typeSym, typ: &itype{cat: uintT, name: "uint"}},
-		"uint8":       {kind: typeSym, typ: &itype{cat: uint8T, name: "uint8"}},
-		"uint16":      {kind: typeSym, typ: &itype{cat: uint16T, name: "uint16"}},
-		"uint32":      {kind: typeSym, typ: &itype{cat: uint32T, name: "uint32"}},
-		"uint64":      {kind: typeSym, typ: &itype{cat: uint64T, name: "uint64"}},
-		"uintptr":     {kind: typeSym, typ: &itype{cat: uintptrT, name: "uintptr"}},
+		"bool":        {kind: typeSym, typ: &itype{cat: boolT, name: "bool", str: "bool"}},
+		"byte":        {kind: typeSym, typ: &itype{cat: uint8T, name: "uint8", str: "uint8"}},
+		"complex64":   {kind: typeSym, typ: &itype{cat: complex64T, name: "complex64", str: "complex64"}},
+		"complex128":  {kind: typeSym, typ: &itype{cat: complex128T, name: "complex128", str: "complex128"}},
+		"error":       {kind: typeSym, typ: &itype{cat: errorT, name: "error", str: "error"}},
+		"float32":     {kind: typeSym, typ: &itype{cat: float32T, name: "float32", str: "float32"}},
+		"float64":     {kind: typeSym, typ: &itype{cat: float64T, name: "float64", str: "float64"}},
+		"int":         {kind: typeSym, typ: &itype{cat: intT, name: "int", str: "int"}},
+		"int8":        {kind: typeSym, typ: &itype{cat: int8T, name: "int8", str: "int8"}},
+		"int16":       {kind: typeSym, typ: &itype{cat: int16T, name: "int16", str: "int16"}},
+		"int32":       {kind: typeSym, typ: &itype{cat: int32T, name: "int32", str: "int32"}},
+		"int64":       {kind: typeSym, typ: &itype{cat: int64T, name: "int64", str: "int64"}},
+		"interface{}": {kind: typeSym, typ: &itype{cat: interfaceT, str: "interface{}"}},
+		"rune":        {kind: typeSym, typ: &itype{cat: int32T, name: "int32", str: "int32"}},
+		"string":      {kind: typeSym, typ: &itype{cat: stringT, name: "string", str: "string"}},
+		"uint":        {kind: typeSym, typ: &itype{cat: uintT, name: "uint", str: "uint"}},
+		"uint8":       {kind: typeSym, typ: &itype{cat: uint8T, name: "uint8", str: "uint8"}},
+		"uint16":      {kind: typeSym, typ: &itype{cat: uint16T, name: "uint16", str: "uint16"}},
+		"uint32":      {kind: typeSym, typ: &itype{cat: uint32T, name: "uint32", str: "uint32"}},
+		"uint64":      {kind: typeSym, typ: &itype{cat: uint64T, name: "uint64", str: "uint64"}},
+		"uintptr":     {kind: typeSym, typ: &itype{cat: uintptrT, name: "uintptr", str: "uintptr"}},
 
 		// predefined Go constants
 		"false": {kind: constSym, typ: untypedBool(), rval: reflect.ValueOf(false)},
@@ -416,7 +418,7 @@ func initUniverse() *scope {
 		"iota":  {kind: constSym, typ: untypedInt()},
 
 		// predefined Go zero value
-		"nil": {typ: &itype{cat: nilT, untyped: true}},
+		"nil": {typ: &itype{cat: nilT, untyped: true, str: "nil"}},
 
 		// predefined Go builtins
 		bltnAppend:  {kind: bltnSym, builtin: _append},
@@ -658,17 +660,17 @@ func (interp *Interpreter) Use(values Exports) error {
 	// Checks if input values correspond to stdlib packages by looking for one
 	// well known stdlib package path.
 	if _, ok := values["fmt/fmt"]; ok {
-		fixStdio(interp)
+		fixStdlib(interp)
 	}
 	return nil
 }
 
-// fixStdio redefines interpreter stdlib symbols to use the standard input,
+// fixStdlib redefines interpreter stdlib symbols to use the standard input,
 // output and errror assigned to the interpreter. The changes are limited to
 // the interpreter only.
 // Note that it is possible to escape the virtualized stdio by
 // read/write directly to file descriptors 0, 1, 2.
-func fixStdio(interp *Interpreter) {
+func fixStdlib(interp *Interpreter) {
 	p := interp.binPkg["fmt"]
 	if p == nil {
 		return
@@ -730,6 +732,11 @@ func fixStdio(interp *Interpreter) {
 				p["Stderr"] = reflect.ValueOf(&s).Elem()
 			}
 		}
+	}
+
+	if p = interp.binPkg["math/bits"]; p != nil {
+		// Do not trust extracted value maybe from another arch.
+		p["UintSize"] = reflect.ValueOf(constant.MakeInt64(bits.UintSize))
 	}
 }
 

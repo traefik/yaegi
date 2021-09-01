@@ -63,10 +63,10 @@
   exclude = []
 
   [[issues.exclude-rules]]
-    path = "interp/.+_test\\.go"
+    path = ".+_test\\.go"
     linters = ["goconst"]
   [[issues.exclude-rules]]
-    path = "interp/.+_test\\.go"
+    path = ".+_test\\.go"
     text = "var-declaration:"
 
   [[issues.exclude-rules]]

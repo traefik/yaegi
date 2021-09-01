@@ -9,7 +9,7 @@ func main() {
 	const huge = 1 << 100
 	const large = huge >> 38
 
-	fmt.Println(large)
+	fmt.Println(int64(large))
 }
 
 // Output:

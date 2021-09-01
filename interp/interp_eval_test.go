@@ -43,8 +43,8 @@ func TestEvalArithmetic(t *testing.T) {
 		{desc: "add_FI", src: "2.3 + 3", res: "5.3"},
 		{desc: "add_IF", src: "2 + 3.3", res: "5.3"},
 		{desc: "add_SS", src: `"foo" + "bar"`, res: "foobar"},
-		{desc: "add_SI", src: `"foo" + 1`, err: "1:28: invalid operation: mismatched types string and int"},
-		{desc: "sub_SS", src: `"foo" - "bar"`, err: "1:28: invalid operation: operator - not defined on string"},
+		{desc: "add_SI", src: `"foo" + 1`, err: "1:28: invalid operation: mismatched types untyped string and untyped int"},
+		{desc: "sub_SS", src: `"foo" - "bar"`, err: "1:28: invalid operation: operator - not defined on untyped string"},
 		{desc: "sub_II", src: "7 - 3", res: "4"},
 		{desc: "sub_FI", src: "7.2 - 3", res: "4.2"},
 		{desc: "sub_IF", src: "7 - 3.2", res: "3.8"},
@@ -52,23 +52,23 @@ func TestEvalArithmetic(t *testing.T) {
 		{desc: "mul_FI", src: "2.2 * 3", res: "6.6"},
 		{desc: "mul_IF", src: "3 * 2.2", res: "6.6"},
 		{desc: "quo_Z", src: "3 / 0", err: "1:28: invalid operation: division by zero"},
-		{desc: "rem_FI", src: "8.2 % 4", err: "1:28: invalid operation: operator % not defined on float64"},
+		{desc: "rem_FI", src: "8.2 % 4", err: "1:28: invalid operation: operator % not defined on untyped float"},
 		{desc: "rem_Z", src: "8 % 0", err: "1:28: invalid operation: division by zero"},
 		{desc: "shl_II", src: "1 << 8", res: "256"},
-		{desc: "shl_IN", src: "1 << -1", err: "1:28: invalid operation: shift count type int, must be integer"},
+		{desc: "shl_IN", src: "1 << -1", err: "1:28: invalid operation: shift count type untyped int, must be integer"},
 		{desc: "shl_IF", src: "1 << 1.0", res: "2"},
-		{desc: "shl_IF1", src: "1 << 1.1", err: "1:28: invalid operation: shift count type float64, must be integer"},
+		{desc: "shl_IF1", src: "1 << 1.1", err: "1:28: invalid operation: shift count type untyped float, must be integer"},
 		{desc: "shl_IF2", src: "1.0 << 1", res: "2"},
 		{desc: "shr_II", src: "1 >> 8", res: "0"},
-		{desc: "shr_IN", src: "1 >> -1", err: "1:28: invalid operation: shift count type int, must be integer"},
+		{desc: "shr_IN", src: "1 >> -1", err: "1:28: invalid operation: shift count type untyped int, must be integer"},
 		{desc: "shr_IF", src: "1 >> 1.0", res: "0"},
-		{desc: "shr_IF1", src: "1 >> 1.1", err: "1:28: invalid operation: shift count type float64, must be integer"},
+		{desc: "shr_IF1", src: "1 >> 1.1", err: "1:28: invalid operation: shift count type untyped float, must be integer"},
 		{desc: "neg_I", src: "-2", res: "-2"},
 		{desc: "pos_I", src: "+2", res: "2"},
 		{desc: "bitnot_I", src: "^2", res: "-3"},
-		{desc: "bitnot_F", src: "^0.2", err: "1:28: invalid operation: operator ^ not defined on float64"},
+		{desc: "bitnot_F", src: "^0.2", err: "1:28: invalid operation: operator ^ not defined on untyped float"},
 		{desc: "not_B", src: "!false", res: "true"},
-		{desc: "not_I", src: "!0", err: "1:28: invalid operation: operator ! not defined on int"},
+		{desc: "not_I", src: "!0", err: "1:28: invalid operation: operator ! not defined on untyped int"},
 	})
 }
 
@@ -76,7 +76,7 @@ func TestEvalShift(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
 		{src: "a, b, m := uint32(1), uint32(2), uint32(0); m = a + (1 << b)", res: "5"},
-		{src: "c := uint(1); d := uint(+(-(1 << c)))", res: "18446744073709551614"},
+		{src: "c := uint(1); d := uint64(+(-(1 << c)))", res: "18446744073709551614"},
 		{src: "e, f := uint32(0), uint32(0); f = 1 << -(e * 2)", res: "1"},
 		{src: "p := uint(0xdead); byte((1 << (p & 7)) - 1)", res: "31"},
 		{pre: func() { eval(t, i, "const k uint = 1 << 17") }, src: "int(k)", res: "131072"},
@@ -119,10 +119,10 @@ func TestEvalAssign(t *testing.T) {
 
 	runTests(t, i, []testCase{
 		{src: `a := "Hello"; a += " world"`, res: "Hello world"},
-		{src: `b := "Hello"; b += 1`, err: "1:42: invalid operation: mismatched types string and int"},
+		{src: `b := "Hello"; b += 1`, err: "1:42: invalid operation: mismatched types string and untyped int"},
 		{src: `c := "Hello"; c -= " world"`, err: "1:42: invalid operation: operator -= not defined on string"},
 		{src: "e := 64.4; e %= 64", err: "1:39: invalid operation: operator %= not defined on float64"},
-		{src: "f := int64(3.2)", err: "1:39: cannot convert expression of type float64 to type int64"},
+		{src: "f := int64(3.2)", err: "1:39: cannot convert expression of type untyped float to type int64"},
 		{src: "g := 1; g <<= 8", res: "256"},
 		{src: "h := 1; h >>= 8", res: "0"},
 		{src: "i := 1; j := &i; (*j) = 2", res: "2"},
@@ -139,7 +139,9 @@ func TestEvalBuiltin(t *testing.T) {
 		{src: `c := []int{1}; d := []int{2, 3}; c = append(c, d...); c`, res: "[1 2 3]"},
 		{src: `string(append([]byte("hello "), "world"...))`, res: "hello world"},
 		{src: `e := "world"; string(append([]byte("hello "), e...))`, res: "hello world"},
-		{src: `b := []int{1}; b = append(1, 2, 3); b`, err: "1:54: first argument to append must be slice; have int"},
+		{src: `b := []int{1}; b = append(1, 2, 3); b`, err: "1:54: first argument to append must be slice; have untyped int"},
+		{src: `a1 := []int{0,1,2}; append(a1)`, res: "[0 1 2]"},
+		{src: `append(nil)`, err: "first argument to append must be slice; have nil"},
 		{src: `g := len(a)`, res: "1"},
 		{src: `g := cap(a)`, res: "1"},
 		{src: `g := len("test")`, res: "4"},
@@ -161,10 +163,10 @@ func TestEvalBuiltin(t *testing.T) {
 		{src: `k := []int{3, 4}; copy(k, []int{1,2}); k`, res: "[1 2]"},
 		{src: `f := []byte("Hello"); copy(f, "world"); string(f)`, res: "world"},
 		{src: `copy(g, g)`, err: "1:28: copy expects slice arguments"},
-		{src: `copy(a, "world")`, err: "1:28: arguments to copy have different element types []int and string"},
+		{src: `copy(a, "world")`, err: "1:28: arguments to copy have different element types []int and untyped string"},
 		{src: `l := map[string]int{"a": 1, "b": 2}; delete(l, "a"); l`, res: "map[b:2]"},
 		{src: `delete(a, 1)`, err: "1:35: first argument to delete must be map; have []int"},
-		{src: `l := map[string]int{"a": 1, "b": 2}; delete(l, 1)`, err: "1:75: cannot use int as type string in delete"},
+		{src: `l := map[string]int{"a": 1, "b": 2}; delete(l, 1)`, err: "1:75: cannot use untyped int as type string in delete"},
 		{src: `a := []int{1,2}; println(a...)`, err: "invalid use of ... with builtin println"},
 		{src: `m := complex(3, 2); real(m)`, res: "3"},
 		{src: `m := complex(3, 2); imag(m)`, res: "2"},
@@ -438,7 +440,7 @@ func TestEvalCompositeArray(t *testing.T) {
 		{src: "a := []int{1, 2, 7: 20, 30}", res: "[1 2 0 0 0 0 0 20 30]"},
 		{src: `a := []int{1, 1.2}`, err: "1:42: 6/5 truncated to int"},
 		{src: `a := []int{0:1, 0:1}`, err: "1:46: duplicate index 0 in array or slice literal"},
-		{src: `a := []int{1.1:1, 1.2:"test"}`, err: "1:39: index float64 must be integer constant"},
+		{src: `a := []int{1.1:1, 1.2:"test"}`, err: "1:39: index untyped float must be integer constant"},
 		{src: `a := [2]int{1, 1.2}`, err: "1:43: 6/5 truncated to int"},
 		{src: `a := [1]int{1, 2}`, err: "1:43: index 1 is out of bounds (>= 1)"},
 		{src: `b := [l]int{1, 2}`, res: "[1 2 0 0 0 0 0 0 0 0]"},
@@ -505,7 +507,7 @@ func TestEvalConversion(t *testing.T) {
 		{src: `a := uint64(1)`, res: "1"},
 		{src: `i := 1.1; a := uint64(i)`, res: "1"},
 		{src: `b := string(49)`, res: "1"},
-		{src: `c := uint64(1.1)`, err: "1:40: cannot convert expression of type float64 to type uint64"},
+		{src: `c := uint64(1.1)`, err: "1:40: cannot convert expression of type untyped float to type uint64"},
 	})
 }
 
@@ -634,7 +636,7 @@ func TestEvalCall(t *testing.T) {
 				a := test([]int{1}...)`, err: "2:10: invalid use of ..., corresponding parameter is non-variadic"},
 		{src: ` test := func(a ...int) int { return 1 }
 				blah := func() (int, int) { return 1, 1 }
-				a := test(blah()...)`, err: "3:15: cannot use ... with 2-valued func()(int,int)"},
+				a := test(blah()...)`, err: "3:15: cannot use ... with 2-valued func() (int,int)"},
 		{src: ` test := func(a, b int) int { return a }
 				blah := func() (int, int) { return 1, 1 }
 				a := test(blah())`, res: "1"},
@@ -643,10 +645,10 @@ func TestEvalCall(t *testing.T) {
 				a := test(blah(), blah())`, res: "1"},
 		{src: ` test := func(a, b, c, d int) int { return a }
 				blah := func() (int, int) { return 1, 1 }
-				a := test(blah(), blah())`, err: "3:15: cannot use func()(int,int) as type int"},
+				a := test(blah(), blah())`, err: "3:15: cannot use func() (int,int) as type int"},
 		{src: ` test := func(a, b int) int { return a }
 				blah := func() (int, float64) { return 1, 1.1 }
-				a := test(blah())`, err: "3:15: cannot use func()(int,float64) as type (int,int)"},
+				a := test(blah())`, err: "3:15: cannot use func() (int,float64) as type (int,int)"},
 	})
 }
 

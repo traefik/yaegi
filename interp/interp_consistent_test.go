@@ -220,12 +220,12 @@ func TestInterpErrorConsistency(t *testing.T) {
 		},
 		{
 			fileName:       "issue-1093.go",
-			expectedInterp: "9:6: cannot use type string as type int in assignment",
+			expectedInterp: "9:6: cannot use type untyped string as type int in assignment",
 			expectedExec:   `9:4: cannot use "a" + b() (type string) as type int in assignment`,
 		},
 		{
 			fileName:       "op1.go",
-			expectedInterp: "5:2: invalid operation: mismatched types int and float64",
+			expectedInterp: "5:2: invalid operation: mismatched types int and untyped float",
 			expectedExec:   "5:4: constant 1.3 truncated to integer",
 		},
 		{

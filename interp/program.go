@@ -60,12 +60,12 @@ func (interp *Interpreter) compile(src, name string, inc bool) (*Program, error)
 	}
 
 	// Perform global types analysis.
-	if err = interp.gtaRetry([]*node{root}, pkgName); err != nil {
+	if err = interp.gtaRetry([]*node{root}, pkgName, pkgName); err != nil {
 		return nil, err
 	}
 
 	// Annotate AST with CFG informations.
-	initNodes, err := interp.cfg(root, pkgName)
+	initNodes, err := interp.cfg(root, pkgName, pkgName)
 	if err != nil {
 		if interp.cfgDot {
 			dotCmd := interp.dotCmd
