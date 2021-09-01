@@ -78,12 +78,3 @@
   [[issues.exclude-rules]]
     path = "interp/interp_eval_test.go"
     linters = ["thelper"]
-  [[issues.exclude-rules]]
-    path = "internal/jsonx/(schema|overrides)\\.go"
-    text = "exported:|var-naming:"
-  [[issues.exclude-rules]]
-    path = "internal/dap/(schema|types)\\.go"
-    text = "exported:"
-  [[issues.exclude-rules]]
-    path = "internal/dap/"
-    linters = ["goconst"]
