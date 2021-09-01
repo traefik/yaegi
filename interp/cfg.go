@@ -49,8 +49,8 @@ const nilIdent = "nil"
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
 // Following this pass, the CFG is ready to run.
-func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
-	sc := interp.initScopePkg(importPath)
+func (interp *Interpreter) cfg(root *node, importPath, pkgName string) ([]*node, error) {
+	sc := interp.initScopePkg(importPath, pkgName)
 	check := typecheck{scope: sc}
 	var initNodes []*node
 	var err error
@@ -430,7 +430,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 
 			switch n.child[1].kind {
 			case identExpr, selectorExpr:
-				n.typ = namedOf(typ, "", typeName)
+				n.typ = namedOf(typ, pkgName, typeName)
 			default:
 				n.typ = typ
 				n.typ.name = typeName
@@ -443,7 +443,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			// values which may be used in further declarations.
 			if !sc.global {
 				for _, c := range n.child {
-					if _, err = interp.cfg(c, importPath); err != nil {
+					if _, err = interp.cfg(c, importPath, pkgName); err != nil {
 						// No error processing here, to allow recovery in subtree nodes.
 						err = nil
 					}
