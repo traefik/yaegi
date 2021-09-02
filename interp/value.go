@@ -65,15 +65,17 @@ func genValueBinMethodOnInterface(n *node, defaultGen func(*frame) reflect.Value
 			nod = vi.node
 		}
 
-		if nod == nil {
+		if nod == nil || nod.typ.rtype == nil {
 			return defaultGen(f)
 		}
 
-		typ := nod.typ
-		if typ.node != nil || typ.cat != valueT {
+		// Try to get the bin method, if it doesnt exist, fall back to
+		// the default generator function.
+		meth, ok := nod.typ.rtype.MethodByName(c0.child[1].ident)
+		if !ok {
 			return defaultGen(f)
 		}
-		meth, _ := typ.rtype.MethodByName(c0.child[1].ident)
+
 		return meth.Func
 	}
 }
