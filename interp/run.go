@@ -297,6 +297,9 @@ func typeAssert(n *node, withResult, withOk bool) {
 				}
 				return next
 			}
+			if c0.typ.cat == valueT {
+				valf = reflect.ValueOf(v)
+			}
 			if v.node.typ.id() == typID {
 				if withResult {
 					value0(f).Set(valf)
