@@ -181,6 +181,7 @@ type opt struct {
 	stdin        io.Reader     // standard input
 	stdout       io.Writer     // standard output
 	stderr       io.Writer     // standard error
+	args         []string      // cmdline args
 	filesystem   fs.FS
 }
 
@@ -303,6 +304,9 @@ type Options struct {
 	Stdin          io.Reader
 	Stdout, Stderr io.Writer
 
+	// Cmdline args, defaults to os.Args.
+	Args []string
+
 	// SourcecodeFilesystem is where the _sourcecode_ is loaded from and does
 	// NOT affect the filesystem of scripts when they run.
 	// It can be any fs.FS compliant filesystem (e.g. embed.FS, or fstest.MapFS for testing)
@@ -335,6 +339,10 @@ func New(options Options) *Interpreter {
 
 	if i.opt.stderr = options.Stderr; i.opt.stderr == nil {
 		i.opt.stderr = os.Stderr
+	}
+
+	if i.opt.args = options.Args; i.opt.args == nil {
+		i.opt.args = os.Args
 	}
 
 	if options.SourcecodeFilesystem != nil {
@@ -716,6 +724,7 @@ func fixStdlib(interp *Interpreter) {
 	}
 
 	if p = interp.binPkg["os"]; p != nil {
+		p["Args"] = reflect.ValueOf(&interp.args).Elem()
 		if interp.specialStdio {
 			// Inherit streams from interpreter even if they do not have a file descriptor.
 			p["Stdin"] = reflect.ValueOf(&stdin).Elem()
