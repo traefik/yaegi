@@ -270,6 +270,14 @@ func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, err
 		}
 	}
 
+	if len(e.Tag) != 0 {
+		prefix := ""
+		if len(buildTags) != 0 {
+			prefix = ","
+		}
+		buildTags += prefix + e.Tag
+	}
+
 	b := new(bytes.Buffer)
 	data := map[string]interface{}{
 		"Dest":       e.Dest,
@@ -336,6 +344,7 @@ type Extractor struct {
 	License string   // License text to be included in the created package, optional.
 	Exclude []string // Comma separated list of regexp matching symbols to exclude.
 	Include []string // Comma separated list of regexp matching symbols to include.
+	Tag     string   // Build tag to be added to the created package.
 }
 
 // importPath checks whether pkgIdent is an existing directory relative to
