@@ -295,7 +295,7 @@ func (interp *Interpreter) cfg(root *node, importPath, pkgName string) ([]*node,
 				if n.anc.kind == keyValueExpr && n == n.anc.child[0] {
 					n.typ = n.anc.typ.key
 				} else if atyp := n.anc.typ; atyp != nil {
-					if atyp.cat == valueT {
+					if atyp.cat == valueT && hasElem(atyp.rtype) {
 						n.typ = valueTOf(atyp.rtype.Elem())
 					} else {
 						n.typ = atyp.val
@@ -1223,7 +1223,7 @@ func (interp *Interpreter) cfg(root *node, importPath, pkgName string) ([]*node,
 
 		case funcDecl:
 			n.start = n.child[3].start
-			n.types = sc.types
+			n.types, n.scope = sc.types, sc
 			sc = sc.pop()
 			funcName := n.child[1].ident
 			if sym := sc.sym[funcName]; !isMethod(n) && sym != nil {
@@ -1234,7 +1234,7 @@ func (interp *Interpreter) cfg(root *node, importPath, pkgName string) ([]*node,
 			}
 
 		case funcLit:
-			n.types = sc.types
+			n.types, n.scope = sc.types, sc
 			sc = sc.pop()
 			err = genRun(n)
 

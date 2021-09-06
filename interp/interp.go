@@ -19,8 +19,6 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
-	"runtime"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,6 +27,7 @@ import (
 
 // Interpreter node structure for AST and CFG.
 type node struct {
+	debug  *nodeDebugData // debug info
 	child  []*node        // child subtrees (AST)
 	anc    *node          // ancestor (AST)
 	start  *node          // entry point in subtree (CFG)
@@ -47,12 +46,52 @@ type node struct {
 	typ    *itype         // type of value in frame, or nil
 	recv   *receiver      // method receiver node for call, or nil
 	types  []reflect.Type // frame types, used by function literals only
+	scope  *scope         // frame scope
 	action action         // action
 	exec   bltn           // generated function to execute
 	gen    bltnGenerator  // generator function to produce above bltn
 	val    interface{}    // static generic value (CFG execution)
 	rval   reflect.Value  // reflection value to let runtime access interpreter (CFG)
 	ident  string         // set if node is a var or func
+}
+
+func (n *node) shouldBreak() bool {
+	if n == nil || n.debug == nil {
+		return false
+	}
+
+	if n.debug.breakOnLine || n.debug.breakOnCall {
+		return true
+	}
+
+	return false
+}
+
+func (n *node) setProgram(p *Program) {
+	if n.debug == nil {
+		n.debug = new(nodeDebugData)
+	}
+	n.debug.program = p
+}
+
+func (n *node) setBreakOnCall(v bool) {
+	if n.debug == nil {
+		if !v {
+			return
+		}
+		n.debug = new(nodeDebugData)
+	}
+	n.debug.breakOnCall = v
+}
+
+func (n *node) setBreakOnLine(v bool) {
+	if n.debug == nil {
+		if !v {
+			return
+		}
+		n.debug = new(nodeDebugData)
+	}
+	n.debug.breakOnLine = v
 }
 
 // receiver stores method receiver object access path.
@@ -68,6 +107,8 @@ type frame struct {
 	// via newFrame/runid/setrunid/clone.
 	// Located at start of struct to ensure proper aligment.
 	id uint64
+
+	debug *frameDebugData
 
 	root *frame          // global space
 	anc  *frame          // ancestor frame (caller space)
@@ -106,6 +147,7 @@ func (f *frame) clone(fork bool) *frame {
 		recovered: f.recovered,
 		id:        f.runid(),
 		done:      f.done,
+		debug:     f.debug,
 	}
 	if fork {
 		nf.data = make([]reflect.Value, len(f.data))
@@ -169,8 +211,11 @@ type Interpreter struct {
 	srcPkg   imports           // source packages used in interpreter, indexed by path
 	pkgNames map[string]string // package names, indexed by import path
 	done     chan struct{}     // for cancellation of channel operations
+	roots    []*node
 
 	hooks *hooks // symbol hooks
+
+	debugger *Debugger
 }
 
 const (
@@ -432,6 +477,30 @@ func (interp *Interpreter) EvalPath(path string) (res reflect.Value, err error) 
 	return interp.eval(string(b), path, false)
 }
 
+// EvalPathWithContext evaluates Go code located at path and returns the last
+// result computed by the interpreter, and a non nil error in case of failure.
+// The main function of the main package is executed if present.
+func (interp *Interpreter) EvalPathWithContext(ctx context.Context, path string) (res reflect.Value, err error) {
+	interp.mutex.Lock()
+	interp.done = make(chan struct{})
+	interp.cancelChan = !interp.opt.fastChan
+	interp.mutex.Unlock()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		res, err = interp.EvalPath(path)
+	}()
+
+	select {
+	case <-ctx.Done():
+		interp.stop()
+		return reflect.Value{}, ctx.Err()
+	case <-done:
+	}
+	return res, err
+}
+
 // EvalTest evaluates Go code located at path, including test files with "_test.go" suffix.
 // A non nil error is returned in case of failure.
 // The main function, test functions and benchmark functions are internally compiled but not
@@ -503,123 +572,16 @@ func isFile(filesystem fs.FS, path string) bool {
 }
 
 func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, err error) {
-	if name != "" {
-		interp.name = name
-	}
-	if interp.name == "" {
-		interp.name = DefaultSourceName
-	}
-
-	defer func() {
-		r := recover()
-		if r != nil {
-			var pc [64]uintptr // 64 frames should be enough.
-			n := runtime.Callers(1, pc[:])
-			err = Panic{Value: r, Callers: pc[:n], Stack: debug.Stack()}
-		}
-	}()
-
-	// Parse source to AST.
-	pkgName, root, err := interp.ast(src, interp.name, inc)
-	if err != nil || root == nil {
-		return res, err
-	}
-
-	if interp.astDot {
-		dotCmd := interp.dotCmd
-		if dotCmd == "" {
-			dotCmd = defaultDotCmd(interp.name, "yaegi-ast-")
-		}
-		root.astDot(dotWriter(dotCmd), interp.name)
-		if interp.noRun {
-			return res, err
-		}
-	}
-
-	// Perform global types analysis.
-	if err = interp.gtaRetry([]*node{root}, pkgName, pkgName); err != nil {
-		return res, err
-	}
-
-	// Annotate AST with CFG informations.
-	initNodes, err := interp.cfg(root, pkgName, pkgName)
+	prog, err := interp.compile(src, name, inc)
 	if err != nil {
-		if interp.cfgDot {
-			dotCmd := interp.dotCmd
-			if dotCmd == "" {
-				dotCmd = defaultDotCmd(interp.name, "yaegi-cfg-")
-			}
-			root.cfgDot(dotWriter(dotCmd))
-		}
 		return res, err
-	}
-
-	if root.kind != fileStmt {
-		// REPL may skip package statement.
-		setExec(root.start)
-	}
-	interp.mutex.Lock()
-	gs := interp.scopes[pkgName]
-	if interp.universe.sym[pkgName] == nil {
-		// Make the package visible under a path identical to its name.
-		interp.srcPkg[pkgName] = gs.sym
-		interp.universe.sym[pkgName] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: pkgName}}
-		interp.pkgNames[pkgName] = pkgName
-	}
-	interp.mutex.Unlock()
-
-	// Add main to list of functions to run, after all inits.
-	if m := gs.sym[mainID]; pkgName == mainID && m != nil {
-		initNodes = append(initNodes, m.node)
-	}
-
-	if interp.cfgDot {
-		dotCmd := interp.dotCmd
-		if dotCmd == "" {
-			dotCmd = defaultDotCmd(interp.name, "yaegi-cfg-")
-		}
-		root.cfgDot(dotWriter(dotCmd))
 	}
 
 	if interp.noRun {
 		return res, err
 	}
 
-	// Generate node exec closures.
-	if err = genRun(root); err != nil {
-		return res, err
-	}
-
-	// Init interpreter execution memory frame.
-	interp.frame.setrunid(interp.runid())
-	interp.frame.mutex.Lock()
-	interp.resizeFrame()
-	interp.frame.mutex.Unlock()
-
-	// Execute node closures.
-	interp.run(root, nil)
-
-	// Wire and execute global vars.
-	n, err := genGlobalVars([]*node{root}, interp.scopes[pkgName])
-	if err != nil {
-		return res, err
-	}
-	interp.run(n, nil)
-
-	for _, n := range initNodes {
-		interp.run(n, interp.frame)
-	}
-	v := genValue(root)
-	res = v(interp.frame)
-
-	// If result is an interpreter node, wrap it in a runtime callable function.
-	if res.IsValid() {
-		if n, ok := res.Interface().(*node); ok {
-			res = genFunctionWrapper(n)(interp.frame)
-		}
-	}
-
-	return res, err
+	return interp.Execute(prog)
 }
 
 // EvalWithContext evaluates Go code represented as a string. It returns

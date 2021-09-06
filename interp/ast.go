@@ -901,6 +901,7 @@ func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error
 	if pkgName == "" {
 		return "", root, errors.New("no package name found")
 	}
+	interp.roots = append(interp.roots, root)
 	return pkgName, root, err
 }
 

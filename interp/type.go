@@ -1875,6 +1875,14 @@ func (t *itype) elem() *itype {
 	return t.val
 }
 
+func hasElem(t reflect.Type) bool {
+	switch t.Kind() {
+	case reflect.Array, reflect.Chan, reflect.Map, reflect.Ptr, reflect.Slice:
+		return true
+	}
+	return false
+}
+
 func constToInt(c constant.Value) int {
 	if constant.BitLen(c) > 64 {
 		panic(fmt.Sprintf("constant %s overflows int64", c.ExactString()))
