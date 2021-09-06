@@ -888,11 +888,11 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		err = n.cfgErrorf("use of untyped nil %s", t.name)
 	}
 
-	if n.anc.kind == typeSpec {
+	// The existing symbol data needs to be recovered, but not in the
+	// case where we are aliasing another type.
+	if n.anc.kind == typeSpec && n.kind != selectorExpr && n.kind != identExpr {
 		name := n.anc.child[0].ident
 		if sym := sc.sym[name]; sym != nil {
-			// Recover previously declared methods and set the type name.
-			t.method = sym.typ.method
 			t.path = sc.pkgName
 			t.name = name
 		}
