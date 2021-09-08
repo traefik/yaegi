@@ -1633,7 +1633,6 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 			panic(err)
 		}
 	}
-	recursive := false
 	name := t.path + "/" + t.name
 
 	if t.rtype != nil && !ctx.rebuilding {
@@ -1693,7 +1692,7 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 			fctx := ctx.Clone()
 			field := reflect.StructField{
 				Name: exportName(f.name), Type: f.typ.refType(fctx),
-				Tag: reflect.StructTag(f.tag), Anonymous: (f.embed && !recursive),
+				Tag: reflect.StructTag(f.tag), Anonymous: f.embed,
 			}
 			fields = append(fields, field)
 			// Find any nil type refs that indicates a rebuild is needed on this field.
