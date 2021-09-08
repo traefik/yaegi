@@ -572,7 +572,7 @@ func (interp *Interpreter) cfg(root *node, importPath, pkgName string) ([]*node,
 					dest.gen = nop
 				case isFuncField(dest):
 					// Setting a struct field of function type requires an extra step. Do not optimize.
-				case isCall(src) && !isInterfaceSrc(dest.typ) && !isRecursiveField(dest) && n.kind != defineStmt:
+				case isCall(src) && !isInterfaceSrc(dest.typ) && n.kind != defineStmt:
 					// Call action may perform the assignment directly.
 					if dest.typ.id() != src.typ.id() {
 						// Skip optimitization if returned type doesn't match assigned one.
@@ -2401,20 +2401,6 @@ func isKey(n *node) bool {
 
 func isField(n *node) bool {
 	return n.kind == selectorExpr && len(n.child) > 0 && n.child[0].typ != nil && isStruct(n.child[0].typ)
-}
-
-func isRecursiveField(n *node) bool {
-	if !isField(n) {
-		return false
-	}
-	t := n.typ
-	for t != nil {
-		if t.recursive {
-			return true
-		}
-		t = t.val
-	}
-	return false
 }
 
 func isInConstOrTypeDecl(n *node) bool {
