@@ -1023,42 +1023,6 @@ func (t *itype) addMethod(n *node) {
 	t.method = append(t.method, n)
 }
 
-// ReferTo returns true if the type contains a reference to a
-// full type name. It allows to assess a type recursive status.
-func (t *itype) referTo(name string, seen map[*itype]bool) bool {
-	if t.path+"/"+t.name == name {
-		return true
-	}
-	if seen[t] {
-		return false
-	}
-	seen[t] = true
-	switch t.cat {
-	case aliasT, arrayT, chanT, chanRecvT, chanSendT, ptrT, sliceT, variadicT:
-		return t.val.referTo(name, seen)
-	case funcT:
-		for _, a := range t.arg {
-			if a.referTo(name, seen) {
-				return true
-			}
-		}
-		for _, a := range t.ret {
-			if a.referTo(name, seen) {
-				return true
-			}
-		}
-	case mapT:
-		return t.key.referTo(name, seen) || t.val.referTo(name, seen)
-	case structT, interfaceT:
-		for _, f := range t.field {
-			if f.typ.referTo(name, seen) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func (t *itype) numIn() int {
 	switch t.cat {
 	case funcT:
