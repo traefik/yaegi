@@ -163,7 +163,7 @@ func Test_pkgDir(t *testing.T) {
 
 	interp := &Interpreter{
 		opt: opt{
-			filesystem: &RealFS{},
+			filesystem: &realFS{},
 		},
 	}
 
@@ -251,7 +251,7 @@ func Test_previousRoot(t *testing.T) {
 			} else {
 				rootPath = vendor
 			}
-			p, err := previousRoot(&RealFS{}, rootPath, test.root)
+			p, err := previousRoot(&realFS{}, rootPath, test.root)
 			if err != nil {
 				t.Error(err)
 			}
