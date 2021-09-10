@@ -17,3 +17,6 @@ func (t *T) PrintT() {
 func main() {
 	globalT.PrintT()
 }
+
+// Output:
+// test

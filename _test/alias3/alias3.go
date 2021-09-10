@@ -7,6 +7,3 @@ type T struct {
 func (t *T) Print() {
 	println(t.A)
 }
-
-// Output:
-// test
