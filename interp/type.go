@@ -777,28 +777,17 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen map[*node]bool) (t 
 		// Resolve the left part of selector, then lookup the right part on it
 		var lt *itype
 
-		// If we are in a list of func parameters, and we are a selector on a binPkgT, but
-		// one of the other parameters has the same name as the pkg name, in the list of
-		// symbols we would find the other parameter instead of the pkg because it comes
-		// first when looking up in the stack of scopes. So in that case we force the
-		// lookup directly in the root scope to shortcircuit that issue.
-		var localScope *scope
-		localScope = sc
-		if n.anc != nil && len(n.anc.child) > 1 && n.anc.child[1] == n &&
-			// This check is weaker than what we actually want to know, i.e. whether
-			// n.anc.child[0] is a variable, but it seems at this point in the run we have no
-			// way of knowing that yet (typ is nil, so there's no typ.cat yet).
-			n.anc.child[0].kind == identExpr {
-			for {
-				if localScope.level == 0 {
-					break
-				}
-				localScope = localScope.anc
-			}
+		// Lookup the package symbol first if we are in a field expression as
+		// a previous parameter has the same name as the package, we need to
+		// prioritize the package type.
+		if n.anc.kind == fieldExpr {
+			lt = findPackageType(interp, sc, n.child[0])
 		}
-
-		if lt, err = nodeType2(interp, localScope, n.child[0], seen); err != nil {
-			return nil, err
+		if lt == nil {
+			// No package was found or we are not in a field expression, we are looking for a variable.
+			if lt, err = nodeType2(interp, sc, n.child[0], seen); err != nil {
+				return nil, err
+			}
 		}
 
 		if lt.incomplete {
@@ -925,6 +914,24 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen map[*node]bool) (t 
 	}
 
 	return t, err
+}
+
+// findPackageType searches the top level scope for a package type.
+func findPackageType(interp *Interpreter, sc *scope, n *node) *itype {
+	// Find the root scope, the package symbols will exist there.
+	for {
+		if sc.level == 0 {
+			break
+		}
+		sc = sc.anc
+	}
+
+	baseName := filepath.Base(interp.fset.Position(n.pos).Filename)
+	sym, _, found := sc.lookup(filepath.Join(n.ident, baseName))
+	if !found || sym.typ == nil && sym.typ.cat != srcPkgT && sym.typ.cat != binPkgT {
+		return nil
+	}
+	return sym.typ
 }
 
 func isBuiltinCall(n *node, sc *scope) bool {
