@@ -377,6 +377,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen map[*node]bool) (t 
 				return sym.typ, nil
 			}
 			if seen[n] {
+				// TODO (marc): find a better way to distinguish recursive vs incomplete types.
 				sym.typ.incomplete = false
 				return sym.typ, nil
 			}
