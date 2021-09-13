@@ -215,7 +215,7 @@ func genDestValue(typ *itype, n *node) func(*frame) reflect.Value {
 	switch {
 	case isInterfaceSrc(typ) && !isEmptyInterface(typ):
 		return genValueInterface(n)
-	case isFuncSrc(typ) && n.typ.cat == valueT:
+	case isFuncSrc(typ) && (n.typ.cat == valueT || n.typ.cat == nilT):
 		return genValueNode(n)
 	case typ.cat == valueT && isFuncSrc(n.typ):
 		return genFunctionWrapper(n)
