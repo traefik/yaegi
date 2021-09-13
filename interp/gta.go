@@ -63,7 +63,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				}
 				typ := atyp
 				if typ == nil {
-					if typ, err = nodeType(interp, sc, src); err != nil {
+					if typ, err = nodeType(interp, sc, src); err != nil || typ == nil {
 						return false
 					}
 					val = src.rval
@@ -150,7 +150,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 					}
 					rcvrtype = ptrOf(elementType, withNode(rtn), withScope(sc))
 					rcvrtype.incomplete = elementType.incomplete
-					elementType.method = append(elementType.method, n)
+					elementType.addMethod(n)
 				} else {
 					rcvrtype = sc.getType(typeName)
 					if rcvrtype == nil {
@@ -159,7 +159,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 						rcvrtype = sc.sym[typeName].typ
 					}
 				}
-				rcvrtype.method = append(rcvrtype.method, n)
+				rcvrtype.addMethod(n)
 				n.child[0].child[0].lastChild().typ = rcvrtype
 			case ident == "init":
 				// init functions do not get declared as per the Go spec.
@@ -288,7 +288,9 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 			} else {
 				if sym.typ != nil && (len(sym.typ.method) > 0) {
 					// Type has already been seen as a receiver in a method function
-					n.typ.method = append(n.typ.method, sym.typ.method...)
+					for _, m := range sym.typ.method {
+						n.typ.addMethod(m)
+					}
 				} else {
 					// TODO(mpl): figure out how to detect redeclarations without breaking type aliases.
 					// Allow redeclarations for now.
