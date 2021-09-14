@@ -573,7 +573,7 @@ func isFile(filesystem fs.FS, path string) bool {
 }
 
 func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, err error) {
-	prog, err := interp.compile(src, name, inc)
+	prog, err := interp.compileSrc(src, name, inc)
 	if err != nil {
 		return res, err
 	}
