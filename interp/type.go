@@ -1615,7 +1615,7 @@ type refTypeContext struct {
 	rebuilding bool
 }
 
-// Clone creates a copy if the ref type context without the `needsRebuild` set.
+// Clone creates a copy of the ref type context.
 func (c *refTypeContext) Clone() *refTypeContext {
 	return &refTypeContext{defined: c.defined, refs: c.refs, rebuilding: c.rebuilding}
 }
