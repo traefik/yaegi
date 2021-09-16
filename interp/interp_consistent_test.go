@@ -107,7 +107,8 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "type29.go" || // expect error
 			file.Name() == "type30.go" || // expect error
 			file.Name() == "type31.go" || // expect error
-			file.Name() == "type32.go" { // expect error
+			file.Name() == "type32.go" || // expect error
+			file.Name() == "type33.go" { // expect error
 			continue
 		}
 

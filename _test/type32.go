@@ -14,4 +14,4 @@ func main() {
 }
 
 // Error:
-// 9:6: cannot define new methods on non-local type int
+// 5:1: cannot define new methods on non-local type int

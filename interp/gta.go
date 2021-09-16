@@ -149,36 +149,26 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				n.ident = ident
 				rcvr := n.child[0].child[0]
 				rtn := rcvr.lastChild()
-				typName := rtn.ident
+				typName, typPtr := rtn.ident, false
 				if typName == "" {
-					// The receiver is a pointer, retrieve typName from indirection
-					typName = rtn.child[0].ident
-					sym, _, found := sc.lookup(typName)
-					if !found {
-						// Add type if necessary, so method can be registered
-						sym = &symbol{kind: typeSym, typ: &itype{name: typName, path: pkgName, incomplete: true, node: rtn.child[0], scope: sc}}
-						sc.sym[typName] = sym
-					}
-					if sym.kind != typeSym || (sym.node != nil && sym.node.kind == typeSpecAssign) {
-						err = n.cfgErrorf("cannot define new methods on non-local type %s", baseType(sym.typ).id())
-						return false
-					}
+					typName, typPtr = rtn.child[0].ident, true
+				}
+				sym, _, found := sc.lookup(typName)
+				if !found {
+					n.meta = n.cfgErrorf("undefined: %s", typName)
+					revisit = append(revisit, n)
+					return false
+				}
+				if sym.kind != typeSym || (sym.node != nil && sym.node.kind == typeSpecAssign) {
+					err = n.cfgErrorf("cannot define new methods on non-local type %s", baseType(sym.typ).id())
+					return false
+				}
+				rcvrtype = sym.typ
+				if typPtr {
 					elementType := sym.typ
 					rcvrtype = ptrOf(elementType, withNode(rtn), withScope(sc))
 					rcvrtype.incomplete = elementType.incomplete
 					elementType.addMethod(n)
-				} else {
-					sym, _, found := sc.lookup(typName)
-					if !found {
-						// Add type if necessary, so method can be registered
-						sym = &symbol{kind: typeSym, typ: &itype{name: typName, path: pkgName, incomplete: true, node: rtn, scope: sc}}
-						sc.sym[typName] = sym
-					}
-					if sym.kind != typeSym || (sym.node != nil && sym.node.kind == typeSpecAssign) {
-						err = n.cfgErrorf("cannot define new methods on non-local type %s", baseType(sym.typ).id())
-						return false
-					}
-					rcvrtype = sym.typ
 				}
 				rcvrtype.addMethod(n)
 				n.child[0].child[0].lastChild().typ = rcvrtype
@@ -375,7 +365,7 @@ func (interp *Interpreter) gtaRetry(nodes []*node, importPath, pkgName string) e
 			if err := definedType(n.typ); err != nil {
 				return err
 			}
-		case defineStmt:
+		case defineStmt, funcDecl:
 			if err, ok := n.meta.(error); ok {
 				return err
 			}
