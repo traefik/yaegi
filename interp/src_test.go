@@ -60,7 +60,7 @@ func Test_pkgDir(t *testing.T) {
 
 	// Create project
 	project := filepath.Join(goPath, "src", "guthib.com", "foo", "root")
-	if err := os.MkdirAll(project, 0700); err != nil {
+	if err := os.MkdirAll(project, 0o700); err != nil {
 		t.Fatal(err)
 	}
 
@@ -81,7 +81,7 @@ func Test_pkgDir(t *testing.T) {
 			path: "guthib.com/foo/bar",
 			root: "",
 			setup: func() error {
-				return os.MkdirAll(filepath.Join(goPath, "src", "guthib.com", "foo", "bar"), 0700)
+				return os.MkdirAll(filepath.Join(goPath, "src", "guthib.com", "foo", "bar"), 0o700)
 			},
 			expected: expected{
 				dir:   filepath.Join(goPath, "src", "guthib.com", "foo", "bar"),
@@ -93,7 +93,7 @@ func Test_pkgDir(t *testing.T) {
 			path: "guthib.com/foo/bar",
 			root: filepath.Join("guthib.com", "foo", "root"),
 			setup: func() error {
-				return os.MkdirAll(filepath.Join(project, "vendor", "guthib.com", "foo", "bar"), 0700)
+				return os.MkdirAll(filepath.Join(project, "vendor", "guthib.com", "foo", "bar"), 0o700)
 			},
 			expected: expected{
 				dir:   filepath.Join(goPath, "src", "guthib.com", "foo", "root", "vendor", "guthib.com", "foo", "bar"),
@@ -105,7 +105,7 @@ func Test_pkgDir(t *testing.T) {
 			path: "guthib.com/foo/bar",
 			root: filepath.Join("guthib.com", "foo", "root"),
 			setup: func() error {
-				return os.MkdirAll(filepath.Join(goPath, "src", "guthib.com", "foo", "bar"), 0700)
+				return os.MkdirAll(filepath.Join(goPath, "src", "guthib.com", "foo", "bar"), 0o700)
 			},
 			expected: expected{
 				dir:   filepath.Join(goPath, "src", "guthib.com", "foo", "bar"),
@@ -117,10 +117,10 @@ func Test_pkgDir(t *testing.T) {
 			path: "guthib.com/foo/bar",
 			root: filepath.Join("guthib.com", "foo", "root", "vendor", "guthib.com", "foo", "bir"),
 			setup: func() error {
-				if err := os.MkdirAll(filepath.Join(project, "vendor", "guthib.com", "foo", "bar"), 0700); err != nil {
+				if err := os.MkdirAll(filepath.Join(project, "vendor", "guthib.com", "foo", "bar"), 0o700); err != nil {
 					return err
 				}
-				return os.MkdirAll(filepath.Join(project, "vendor", "guthib.com", "foo", "bir"), 0700)
+				return os.MkdirAll(filepath.Join(project, "vendor", "guthib.com", "foo", "bir"), 0o700)
 			},
 			expected: expected{
 				dir:   filepath.Join(goPath, "src", "guthib.com", "foo", "root", "vendor", "guthib.com", "foo", "bar"),
@@ -132,10 +132,10 @@ func Test_pkgDir(t *testing.T) {
 			path: "guthib.com/foo/bar",
 			root: filepath.Join("guthib.com", "foo", "root", "vendor", "guthib.com", "foo", "bir"),
 			setup: func() error {
-				if err := os.MkdirAll(filepath.Join(goPath, "src", "guthib.com", "foo", "bar"), 0700); err != nil {
+				if err := os.MkdirAll(filepath.Join(goPath, "src", "guthib.com", "foo", "bar"), 0o700); err != nil {
 					return err
 				}
-				return os.MkdirAll(filepath.Join(project, "vendor", "guthib.com", "foo", "bir"), 0700)
+				return os.MkdirAll(filepath.Join(project, "vendor", "guthib.com", "foo", "bir"), 0o700)
 			},
 			expected: expected{
 				dir:   filepath.Join(goPath, "src", "guthib.com", "foo", "bar"),
@@ -149,10 +149,10 @@ func Test_pkgDir(t *testing.T) {
 			setup: func() error {
 				if err := os.MkdirAll(
 					filepath.Join(goPath, "src", "guthib.com", "foo", "root", "vendor", "guthib.com", "foo", "bir", "vendor", "guthib.com", "foo", "bur"),
-					0700); err != nil {
+					0o700); err != nil {
 					return err
 				}
-				return os.MkdirAll(filepath.Join(project, "vendor", "guthib.com", "foo", "bar"), 0700)
+				return os.MkdirAll(filepath.Join(project, "vendor", "guthib.com", "foo", "bar"), 0o700)
 			},
 			expected: expected{
 				dir:   filepath.Join(project, "vendor", "guthib.com", "foo", "bar"),
@@ -173,7 +173,7 @@ func Test_pkgDir(t *testing.T) {
 			if err := os.RemoveAll(goPath); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.MkdirAll(goPath, 0700); err != nil {
+			if err := os.MkdirAll(goPath, 0o700); err != nil {
 				t.Fatal(err)
 			}
 

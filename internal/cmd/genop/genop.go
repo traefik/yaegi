@@ -1183,7 +1183,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err = ioutil.WriteFile("op.go", source, 0666); err != nil {
+	if err = ioutil.WriteFile("op.go", source, 0o666); err != nil {
 		log.Fatal(err)
 	}
 }
