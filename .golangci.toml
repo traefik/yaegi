@@ -76,5 +76,8 @@
     path = "interp/interp.go"
     text = "`out` can be `io.Writer`"
   [[issues.exclude-rules]]
+    path = "interp/interp.go"
+    text = "`Panic` should conform to the `XxxError` format"
+  [[issues.exclude-rules]]
     path = "interp/interp_eval_test.go"
     linters = ["thelper"]
