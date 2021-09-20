@@ -37,10 +37,17 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 			}
 
 		case defineStmt:
-			var atyp *itype
+			var (
+				atyp *itype
+				err2 error
+			)
 			if n.nleft+n.nright < len(n.child) {
 				// Type is declared explicitly in the assign expression.
-				if atyp, err = nodeType(interp, sc, n.child[n.nleft]); err != nil {
+				if atyp, err2 = nodeType(interp, sc, n.child[n.nleft]); err2 != nil {
+					// The type does not exist yet, stash the error and come back
+					// when the type is known.
+					n.meta = err2
+					revisit = append(revisit, n)
 					return false
 				}
 			}
@@ -63,7 +70,11 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				}
 				typ := atyp
 				if typ == nil {
-					if typ, err = nodeType(interp, sc, src); err != nil || typ == nil {
+					if typ, err2 = nodeType(interp, sc, src); err2 != nil || typ == nil {
+						// The type does is not known yet, stash the error and come back
+						// when the type is known.
+						n.meta = err2
+						revisit = append(revisit, n)
 						return false
 					}
 					val = src.rval
@@ -334,8 +345,13 @@ func (interp *Interpreter) gtaRetry(nodes []*node, importPath, pkgName string) e
 
 	if len(revisit) > 0 {
 		n := revisit[0]
-		if n.kind == typeSpec {
+		switch n.kind {
+		case typeSpec:
 			if err := definedType(n.typ); err != nil {
+				return err
+			}
+		case defineStmt:
+			if err, ok := n.meta.(error); ok {
 				return err
 			}
 		}

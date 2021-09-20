@@ -53,6 +53,7 @@ type node struct {
 	val    interface{}    // static generic value (CFG execution)
 	rval   reflect.Value  // reflection value to let runtime access interpreter (CFG)
 	ident  string         // set if node is a var or func
+	meta   interface{}    // meta stores meta information between gta runs, like errors
 }
 
 func (n *node) shouldBreak() bool {
