@@ -81,8 +81,14 @@ func genValueBinMethodOnInterface(n *node, defaultGen func(*frame) reflect.Value
 }
 
 func genValueRecvIndirect(n *node) func(*frame) reflect.Value {
-	v := genValueRecv(n)
-	return func(f *frame) reflect.Value { return v(f).Elem() }
+	vr := genValueRecv(n)
+	return func(f *frame) reflect.Value {
+		v := vr(f)
+		if vi, ok := v.Interface().(valueInterface); ok {
+			return vi.value
+		}
+		return v.Elem()
+	}
 }
 
 func genValueRecv(n *node) func(*frame) reflect.Value {
@@ -312,7 +318,7 @@ func genValueInterface(n *node) func(*frame) reflect.Value {
 		}
 
 		// empty interface, do not wrap.
-		if nod.typ.cat == interfaceT && len(nod.typ.field) == 0 {
+		if nod != nil && nod.typ.cat == interfaceT && len(nod.typ.field) == 0 {
 			return v
 		}
 
