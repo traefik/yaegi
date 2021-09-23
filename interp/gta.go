@@ -149,26 +149,26 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				n.ident = ident
 				rcvr := n.child[0].child[0]
 				rtn := rcvr.lastChild()
-				typeName := rtn.ident
-				if typeName == "" {
-					// The receiver is a pointer, retrieve typeName from indirection
-					typeName = rtn.child[0].ident
-					elementType := sc.getType(typeName)
-					if elementType == nil {
-						// Add type if necessary, so method can be registered
-						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: pkgName, incomplete: true, node: rtn.child[0], scope: sc}}
-						elementType = sc.sym[typeName].typ
-					}
+				typName, typPtr := rtn.ident, false
+				if typName == "" {
+					typName, typPtr = rtn.child[0].ident, true
+				}
+				sym, _, found := sc.lookup(typName)
+				if !found {
+					n.meta = n.cfgErrorf("undefined: %s", typName)
+					revisit = append(revisit, n)
+					return false
+				}
+				if sym.kind != typeSym || (sym.node != nil && sym.node.kind == typeSpecAssign) {
+					err = n.cfgErrorf("cannot define new methods on non-local type %s", baseType(sym.typ).id())
+					return false
+				}
+				rcvrtype = sym.typ
+				if typPtr {
+					elementType := sym.typ
 					rcvrtype = ptrOf(elementType, withNode(rtn), withScope(sc))
 					rcvrtype.incomplete = elementType.incomplete
 					elementType.addMethod(n)
-				} else {
-					rcvrtype = sc.getType(typeName)
-					if rcvrtype == nil {
-						// Add type if necessary, so method can be registered
-						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: pkgName, incomplete: true, node: rtn, scope: sc}}
-						rcvrtype = sc.sym[typeName].typ
-					}
 				}
 				rcvrtype.addMethod(n)
 				n.child[0].child[0].lastChild().typ = rcvrtype
@@ -265,7 +265,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				err = n.cfgErrorf("import %q error: %v", ipath, err)
 			}
 
-		case typeSpec:
+		case typeSpec, typeSpecAssign:
 			typeName := n.child[0].ident
 			var typ *itype
 			if typ, err = nodeType(interp, sc, n.child[1]); err != nil {
@@ -295,9 +295,13 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 			}
 			sym, exists := sc.sym[typeName]
 			if !exists {
-				sc.sym[typeName] = &symbol{kind: typeSym}
+				sc.sym[typeName] = &symbol{kind: typeSym, node: n}
 			} else {
 				if sym.typ != nil && (len(sym.typ.method) > 0) {
+					if n.kind == typeSpecAssign {
+						err = n.cfgErrorf("cannot define new methods on non-local type %s", baseType(typ).id())
+						return false
+					}
 					// Type has already been seen as a receiver in a method function
 					for _, m := range sym.typ.method {
 						n.typ.addMethod(m)
@@ -305,7 +309,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				} else {
 					// TODO(mpl): figure out how to detect redeclarations without breaking type aliases.
 					// Allow redeclarations for now.
-					sc.sym[typeName] = &symbol{kind: typeSym}
+					sc.sym[typeName] = &symbol{kind: typeSym, node: n}
 				}
 			}
 			sc.sym[typeName].typ = n.typ
@@ -321,6 +325,17 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 		sc.pop()
 	}
 	return revisit, err
+}
+
+func baseType(t *itype) *itype {
+	for {
+		switch t.cat {
+		case ptrT, aliasT:
+			t = t.val
+		default:
+			return t
+		}
+	}
 }
 
 // gtaRetry (re)applies gta until all global constants and types are defined.
@@ -346,11 +361,11 @@ func (interp *Interpreter) gtaRetry(nodes []*node, importPath, pkgName string) e
 	if len(revisit) > 0 {
 		n := revisit[0]
 		switch n.kind {
-		case typeSpec:
+		case typeSpec, typeSpecAssign:
 			if err := definedType(n.typ); err != nil {
 				return err
 			}
-		case defineStmt:
+		case defineStmt, funcDecl:
 			if err, ok := n.meta.(error); ok {
 				return err
 			}

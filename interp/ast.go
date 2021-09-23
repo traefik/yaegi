@@ -93,7 +93,8 @@ const (
 	switchIfStmt
 	typeAssertExpr
 	typeDecl
-	typeSpec
+	typeSpec       // type A int
+	typeSpecAssign // type A = int
 	typeSwitch
 	unaryExpr
 	valueSpec
@@ -176,6 +177,7 @@ var kinds = [...]string{
 	typeAssertExpr:    "typeAssertExpr",
 	typeDecl:          "typeDecl",
 	typeSpec:          "typeSpec",
+	typeSpecAssign:    "typeSpecAssign",
 	typeSwitch:        "typeSwitch",
 	unaryExpr:         "unaryExpr",
 	valueSpec:         "valueSpec",
@@ -826,6 +828,10 @@ func (interp *Interpreter) ast(src, name string, inc bool) (string, *node, error
 			st.push(addChild(&root, anc, pos, typeAssertExpr, aTypeAssert), nod)
 
 		case *ast.TypeSpec:
+			if a.Assign.IsValid() {
+				st.push(addChild(&root, anc, pos, typeSpecAssign, aNop), nod)
+				break
+			}
 			st.push(addChild(&root, anc, pos, typeSpec, aNop), nod)
 
 		case *ast.TypeSwitchStmt:
