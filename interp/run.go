@@ -1006,9 +1006,14 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 	if typ == nil || typ.Kind() != reflect.Interface || typ.NumMethod() == 0 || n.typ.cat == valueT {
 		return value
 	}
-	nt := n.typ.frameType()
-	if nt != nil && nt.Implements(typ) {
-		return value
+	tc := n.typ.cat
+	if tc != structT {
+		// Always force wrapper generation for struct types, as they may contain
+		// embedded interface fields which require wrapping, even if reported as
+		// implementing typ by reflect.
+		if nt := n.typ.frameType(); nt != nil && nt.Implements(typ) {
+			return value
+		}
 	}
 	mn := typ.NumMethod()
 	names := make([]string, mn)
@@ -1026,7 +1031,7 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 
 	return func(f *frame) reflect.Value {
 		v := value(f)
-		if v.Type().Implements(typ) {
+		if tc != structT && v.Type().Implements(typ) {
 			return v
 		}
 		vv := v
