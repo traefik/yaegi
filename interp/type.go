@@ -364,12 +364,25 @@ func structOf(t *itype, fields []structField, opts ...itypeOption) *itype {
 	return t
 }
 
-// nodeType returns a type definition for the corresponding AST subtree.
-func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
-	return nodeType2(interp, sc, n, map[*node]bool{})
+// seenNode determines if a node has been seen.
+//
+// seenNode treats the slice of nodes as the path traveled down a node
+// tree.
+func seenNode(ns []*node, n *node) bool {
+	for _, nn := range ns {
+		if nn == n {
+			return true
+		}
+	}
+	return false
 }
 
-func nodeType2(interp *Interpreter, sc *scope, n *node, seen map[*node]bool) (t *itype, err error) {
+// nodeType returns a type definition for the corresponding AST subtree.
+func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
+	return nodeType2(interp, sc, n, nil)
+}
+
+func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype, err error) {
 	if n.typ != nil && !n.typ.incomplete {
 		return n.typ, nil
 	}
@@ -379,14 +392,15 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen map[*node]bool) (t 
 			if sym.typ.isComplete() {
 				return sym.typ, nil
 			}
-			if seen[n] {
-				// TODO (marc): find a better way to distinguish recursive vs incomplete types.
+			if seenNode(seen, n) {
+				// We have seen this node in our tree, so it must be recursive.
 				sym.typ.incomplete = false
 				return sym.typ, nil
 			}
 		}
 	}
-	seen[n] = true
+	seen = append(seen, n)
+	defer func() { seen = seen[:len(seen)-1] }()
 
 	switch n.kind {
 	case addressExpr, starExpr:
