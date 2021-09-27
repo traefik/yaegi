@@ -2560,7 +2560,7 @@ func gotoLabel(s *symbol) {
 func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerator) {
 	switch typ.cat {
 	case aliasT, ptrT:
-		gen = compositeGenerator(n, n.typ.val, rtyp)
+		gen = compositeGenerator(n, typ.val, rtyp)
 	case arrayT, sliceT:
 		gen = arrayLit
 	case mapT:

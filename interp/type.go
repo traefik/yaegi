@@ -239,6 +239,9 @@ func namedOf(val *itype, path, name string, opts ...itypeOption) *itype {
 	if path != "" {
 		str = path + "." + name
 	}
+	for val.cat == aliasT {
+		val = val.val
+	}
 	t := &itype{cat: aliasT, val: val, path: path, name: name, str: str}
 	for _, opt := range opts {
 		opt(t)
