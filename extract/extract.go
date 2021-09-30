@@ -80,7 +80,7 @@ func init() {
 		{{end}}
 	}
 	{{range $m := $value.Method -}}
-		func (W {{$value.Name}}) {{$m.Name}}{{$m.Param}} {{$m.Result}} { {{$m.Ret}} W.W{{$m.Name}}{{$m.Arg}} }
+		func (W {{$value.Name}}) {{$m.Name}}{{$m.Param}} {{$m.Result}} { if W.W{{$m.Name}} == nil {return}; {{$m.Ret}} W.W{{$m.Name}}{{$m.Arg}} }
 	{{end}}
 {{end}}
 `
@@ -220,7 +220,11 @@ func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, err
 					results := make([]string, sign.Results().Len())
 					for j := range results {
 						v := sign.Results().At(j)
-						results[j] = v.Name() + " " + types.TypeString(v.Type(), qualify)
+						name := v.Name()
+						if name == "" {
+							name = fmt.Sprintf("r%d", j)
+						}
+						results[j] = name + " " + types.TypeString(v.Type(), qualify)
 					}
 					result := "(" + strings.Join(results, ", ") + ")"
 
