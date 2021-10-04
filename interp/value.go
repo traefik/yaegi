@@ -318,7 +318,7 @@ func genValueInterface(n *node) func(*frame) reflect.Value {
 		}
 
 		// empty interface, do not wrap.
-		if nod != nil && nod.typ.cat == interfaceT && len(nod.typ.field) == 0 {
+		if nod != nil && isEmptyInterface(nod.typ) {
 			return v
 		}
 
