@@ -49,6 +49,12 @@ type _sort_Interface struct {
 	WSwap  func(i int, j int)
 }
 
-func (W _sort_Interface) Len() int               { return W.WLen() }
-func (W _sort_Interface) Less(i int, j int) bool { return W.WLess(i, j) }
-func (W _sort_Interface) Swap(i int, j int)      { W.WSwap(i, j) }
+func (W _sort_Interface) Len() int {
+	return W.WLen()
+}
+func (W _sort_Interface) Less(i int, j int) bool {
+	return W.WLess(i, j)
+}
+func (W _sort_Interface) Swap(i int, j int) {
+	W.WSwap(i, j)
+}

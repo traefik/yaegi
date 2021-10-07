@@ -39,8 +39,12 @@ type _mime_multipart_File struct {
 	WSeek   func(offset int64, whence int) (int64, error)
 }
 
-func (W _mime_multipart_File) Close() error                     { return W.WClose() }
-func (W _mime_multipart_File) Read(p []byte) (n int, err error) { return W.WRead(p) }
+func (W _mime_multipart_File) Close() error {
+	return W.WClose()
+}
+func (W _mime_multipart_File) Read(p []byte) (n int, err error) {
+	return W.WRead(p)
+}
 func (W _mime_multipart_File) ReadAt(p []byte, off int64) (n int, err error) {
 	return W.WReadAt(p, off)
 }

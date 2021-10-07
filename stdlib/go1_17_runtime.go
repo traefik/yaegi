@@ -76,5 +76,9 @@ type _runtime_Error struct {
 	WRuntimeError func()
 }
 
-func (W _runtime_Error) Error() string { return W.WError() }
-func (W _runtime_Error) RuntimeError() { W.WRuntimeError() }
+func (W _runtime_Error) Error() string {
+	return W.WError()
+}
+func (W _runtime_Error) RuntimeError() {
+	W.WRuntimeError()
+}

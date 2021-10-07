@@ -40,5 +40,9 @@ type _image_png_EncoderBufferPool struct {
 	WPut   func(a0 *png.EncoderBuffer)
 }
 
-func (W _image_png_EncoderBufferPool) Get() *png.EncoderBuffer   { return W.WGet() }
-func (W _image_png_EncoderBufferPool) Put(a0 *png.EncoderBuffer) { W.WPut(a0) }
+func (W _image_png_EncoderBufferPool) Get() *png.EncoderBuffer {
+	return W.WGet()
+}
+func (W _image_png_EncoderBufferPool) Put(a0 *png.EncoderBuffer) {
+	W.WPut(a0)
+}

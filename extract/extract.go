@@ -80,7 +80,14 @@ func init() {
 		{{end}}
 	}
 	{{range $m := $value.Method -}}
-		func (W {{$value.Name}}) {{$m.Name}}{{$m.Param}} {{$m.Result}} { {{$m.Ret}} W.W{{$m.Name}}{{$m.Arg}} }
+		func (W {{$value.Name}}) {{$m.Name}}{{$m.Param}} {{$m.Result}} {
+			{{- if eq $m.Name "String"}}
+			if W.WString == nil {
+				return ""
+			}
+			{{end -}}
+			{{$m.Ret}} W.W{{$m.Name}}{{$m.Arg}}
+		}
 	{{end}}
 {{end}}
 `

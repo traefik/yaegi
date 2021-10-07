@@ -2268,7 +2268,9 @@ type _syscall_Conn struct {
 	WSyscallConn func() (syscall.RawConn, error)
 }
 
-func (W _syscall_Conn) SyscallConn() (syscall.RawConn, error) { return W.WSyscallConn() }
+func (W _syscall_Conn) SyscallConn() (syscall.RawConn, error) {
+	return W.WSyscallConn()
+}
 
 // _syscall_RawConn is an interface wrapper for RawConn type
 type _syscall_RawConn struct {
@@ -2278,9 +2280,15 @@ type _syscall_RawConn struct {
 	WWrite   func(f func(fd uintptr) (done bool)) error
 }
 
-func (W _syscall_RawConn) Control(f func(fd uintptr)) error           { return W.WControl(f) }
-func (W _syscall_RawConn) Read(f func(fd uintptr) (done bool)) error  { return W.WRead(f) }
-func (W _syscall_RawConn) Write(f func(fd uintptr) (done bool)) error { return W.WWrite(f) }
+func (W _syscall_RawConn) Control(f func(fd uintptr)) error {
+	return W.WControl(f)
+}
+func (W _syscall_RawConn) Read(f func(fd uintptr) (done bool)) error {
+	return W.WRead(f)
+}
+func (W _syscall_RawConn) Write(f func(fd uintptr) (done bool)) error {
+	return W.WWrite(f)
+}
 
 // _syscall_RoutingMessage is an interface wrapper for RoutingMessage type
 type _syscall_RoutingMessage struct {

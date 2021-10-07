@@ -44,4 +44,6 @@ type _compress_zlib_Resetter struct {
 	WReset func(r io.Reader, dict []byte) error
 }
 
-func (W _compress_zlib_Resetter) Reset(r io.Reader, dict []byte) error { return W.WReset(r, dict) }
+func (W _compress_zlib_Resetter) Reset(r io.Reader, dict []byte) error {
+	return W.WReset(r, dict)
+}
