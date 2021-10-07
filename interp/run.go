@@ -952,20 +952,24 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 				d[i] = reflect.New(t).Elem()
 			}
 
-			// Copy method receiver as first argument, if defined.
-			if rcvr != nil {
+			if rcvr == nil {
+				d = d[numRet:]
+			} else {
+				// Copy method receiver as first argument.
 				src, dest := rcvr(f), d[numRet]
-				if src.Type().Kind() != dest.Type().Kind() {
+				sk, dk := src.Type().Kind(), dest.Type().Kind()
+				switch {
+				case sk == reflect.Ptr && dk != reflect.Ptr:
+					dest.Set(src.Elem())
+				case sk != reflect.Ptr && dk == reflect.Ptr:
 					dest.Set(src.Addr())
-				} else {
+				default:
 					if wrappedSrc, ok := src.Interface().(valueInterface); ok {
 						src = wrappedSrc.value
 					}
 					dest.Set(src)
 				}
 				d = d[numRet+1:]
-			} else {
-				d = d[numRet:]
 			}
 
 			// Copy function input arguments in local frame.
@@ -1034,32 +1038,38 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 		if tc != structT && v.Type().Implements(typ) {
 			return v
 		}
-		vv := v
 		switch v.Kind() {
 		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
 			if v.IsNil() {
 				return reflect.New(typ).Elem()
 			}
-			if v.Kind() == reflect.Ptr {
-				vv = v.Elem()
-			}
+		}
+		var n2 *node
+		if vi, ok := v.Interface().(valueInterface); ok {
+			n2 = vi.node
 		}
 		v = getConcreteValue(v)
 		w := reflect.New(wrap).Elem()
 		w.Field(0).Set(v)
 		for i, m := range methods {
 			if m == nil {
-				if r := v.MethodByName(names[i]); r.IsValid() {
+				// First direct method lookup on field.
+				if r := methodByName(v, names[i]); r.IsValid() {
 					w.Field(i + 1).Set(r)
 					continue
 				}
-				o := vv.FieldByIndex(indexes[i])
-				if r := o.MethodByName(names[i]); r.IsValid() {
-					w.Field(i + 1).Set(r)
-				} else {
+				if n2 == nil {
 					panic(n.cfgErrorf("method not found: %s", names[i]))
 				}
-				continue
+				// Method lookup in embedded valueInterface.
+				m2, i2 := n2.typ.lookupMethod(names[i])
+				if m2 != nil {
+					nod := *m2
+					nod.recv = &receiver{n, v, i2}
+					w.Field(i + 1).Set(genFunctionWrapper(&nod)(f))
+					continue
+				}
+				panic(n.cfgErrorf("method not found: %s", names[i]))
 			}
 			nod := *m
 			nod.recv = &receiver{n, v, indexes[i]}
@@ -1067,6 +1077,17 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 		}
 		return w
 	}
+}
+
+// methodByName return the method corresponding to name on value, or nil if not found.
+// The search is extended on valueInterface wrapper if present.
+func methodByName(value reflect.Value, name string) reflect.Value {
+	if vi, ok := value.Interface().(valueInterface); ok {
+		if v := getConcreteValue(vi.value).MethodByName(name); v.IsValid() {
+			return v
+		}
+	}
+	return value.MethodByName(name)
 }
 
 func call(n *node) {
@@ -1492,12 +1513,13 @@ func callBin(n *node) {
 			rvalues := make([]func(*frame) reflect.Value, funcType.NumOut())
 			for i := range rvalues {
 				c := n.anc.child[i]
-				if c.ident != "_" {
-					if isInterfaceSrc(c.typ) {
-						rvalues[i] = genValueInterfaceValue(c)
-					} else {
-						rvalues[i] = genValue(c)
-					}
+				if c.ident == "_" {
+					continue
+				}
+				if isInterfaceSrc(c.typ) {
+					rvalues[i] = genValueInterfaceValue(c)
+				} else {
+					rvalues[i] = genValue(c)
 				}
 			}
 			n.exec = func(f *frame) bltn {
@@ -1524,7 +1546,11 @@ func callBin(n *node) {
 				}
 				out := callFn(value(f), in)
 				for i, v := range out {
-					f.data[b+i].Set(v)
+					dest := f.data[b+i]
+					if _, ok := dest.Interface().(valueInterface); ok {
+						v = reflect.ValueOf(valueInterface{value: v})
+					}
+					dest.Set(v)
 				}
 				return tnext
 			}
