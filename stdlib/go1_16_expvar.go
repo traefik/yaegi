@@ -41,4 +41,9 @@ type _expvar_Var struct {
 	WString func() string
 }
 
-func (W _expvar_Var) String() string { return W.WString() }
+func (W _expvar_Var) String() string {
+	if W.WString == nil {
+		return ""
+	}
+	return W.WString()
+}

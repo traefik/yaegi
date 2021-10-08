@@ -974,6 +974,10 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 
 			// Copy function input arguments in local frame.
 			for i, arg := range in {
+				if i >= len(d) {
+					// In case of unused arg, there may be not even a frame entry allocated, just skip.
+					break
+				}
 				typ := def.typ.arg[i]
 				switch {
 				case isEmptyInterface(typ):

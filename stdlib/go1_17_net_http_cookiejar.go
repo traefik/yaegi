@@ -35,4 +35,9 @@ type _net_http_cookiejar_PublicSuffixList struct {
 func (W _net_http_cookiejar_PublicSuffixList) PublicSuffix(domain string) string {
 	return W.WPublicSuffix(domain)
 }
-func (W _net_http_cookiejar_PublicSuffixList) String() string { return W.WString() }
+func (W _net_http_cookiejar_PublicSuffixList) String() string {
+	if W.WString == nil {
+		return ""
+	}
+	return W.WString()
+}

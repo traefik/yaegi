@@ -41,7 +41,15 @@ type _context_Context struct {
 	WValue    func(key interface{}) interface{}
 }
 
-func (W _context_Context) Deadline() (deadline time.Time, ok bool) { return W.WDeadline() }
-func (W _context_Context) Done() <-chan struct{}                   { return W.WDone() }
-func (W _context_Context) Err() error                              { return W.WErr() }
-func (W _context_Context) Value(key interface{}) interface{}       { return W.WValue(key) }
+func (W _context_Context) Deadline() (deadline time.Time, ok bool) {
+	return W.WDeadline()
+}
+func (W _context_Context) Done() <-chan struct{} {
+	return W.WDone()
+}
+func (W _context_Context) Err() error {
+	return W.WErr()
+}
+func (W _context_Context) Value(key interface{}) interface{} {
+	return W.WValue(key)
+}

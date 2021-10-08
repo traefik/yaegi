@@ -50,8 +50,12 @@ func (W _crypto_elliptic_Curve) Add(x1 *big.Int, y1 *big.Int, x2 *big.Int, y2 *b
 func (W _crypto_elliptic_Curve) Double(x1 *big.Int, y1 *big.Int) (x *big.Int, y *big.Int) {
 	return W.WDouble(x1, y1)
 }
-func (W _crypto_elliptic_Curve) IsOnCurve(x *big.Int, y *big.Int) bool { return W.WIsOnCurve(x, y) }
-func (W _crypto_elliptic_Curve) Params() *elliptic.CurveParams         { return W.WParams() }
+func (W _crypto_elliptic_Curve) IsOnCurve(x *big.Int, y *big.Int) bool {
+	return W.WIsOnCurve(x, y)
+}
+func (W _crypto_elliptic_Curve) Params() *elliptic.CurveParams {
+	return W.WParams()
+}
 func (W _crypto_elliptic_Curve) ScalarBaseMult(k []byte) (x *big.Int, y *big.Int) {
 	return W.WScalarBaseMult(k)
 }

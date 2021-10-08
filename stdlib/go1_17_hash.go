@@ -34,11 +34,21 @@ type _hash_Hash struct {
 	WWrite     func(p []byte) (n int, err error)
 }
 
-func (W _hash_Hash) BlockSize() int                    { return W.WBlockSize() }
-func (W _hash_Hash) Reset()                            { W.WReset() }
-func (W _hash_Hash) Size() int                         { return W.WSize() }
-func (W _hash_Hash) Sum(b []byte) []byte               { return W.WSum(b) }
-func (W _hash_Hash) Write(p []byte) (n int, err error) { return W.WWrite(p) }
+func (W _hash_Hash) BlockSize() int {
+	return W.WBlockSize()
+}
+func (W _hash_Hash) Reset() {
+	W.WReset()
+}
+func (W _hash_Hash) Size() int {
+	return W.WSize()
+}
+func (W _hash_Hash) Sum(b []byte) []byte {
+	return W.WSum(b)
+}
+func (W _hash_Hash) Write(p []byte) (n int, err error) {
+	return W.WWrite(p)
+}
 
 // _hash_Hash32 is an interface wrapper for Hash32 type
 type _hash_Hash32 struct {
@@ -51,12 +61,24 @@ type _hash_Hash32 struct {
 	WWrite     func(p []byte) (n int, err error)
 }
 
-func (W _hash_Hash32) BlockSize() int                    { return W.WBlockSize() }
-func (W _hash_Hash32) Reset()                            { W.WReset() }
-func (W _hash_Hash32) Size() int                         { return W.WSize() }
-func (W _hash_Hash32) Sum(b []byte) []byte               { return W.WSum(b) }
-func (W _hash_Hash32) Sum32() uint32                     { return W.WSum32() }
-func (W _hash_Hash32) Write(p []byte) (n int, err error) { return W.WWrite(p) }
+func (W _hash_Hash32) BlockSize() int {
+	return W.WBlockSize()
+}
+func (W _hash_Hash32) Reset() {
+	W.WReset()
+}
+func (W _hash_Hash32) Size() int {
+	return W.WSize()
+}
+func (W _hash_Hash32) Sum(b []byte) []byte {
+	return W.WSum(b)
+}
+func (W _hash_Hash32) Sum32() uint32 {
+	return W.WSum32()
+}
+func (W _hash_Hash32) Write(p []byte) (n int, err error) {
+	return W.WWrite(p)
+}
 
 // _hash_Hash64 is an interface wrapper for Hash64 type
 type _hash_Hash64 struct {
@@ -69,9 +91,21 @@ type _hash_Hash64 struct {
 	WWrite     func(p []byte) (n int, err error)
 }
 
-func (W _hash_Hash64) BlockSize() int                    { return W.WBlockSize() }
-func (W _hash_Hash64) Reset()                            { W.WReset() }
-func (W _hash_Hash64) Size() int                         { return W.WSize() }
-func (W _hash_Hash64) Sum(b []byte) []byte               { return W.WSum(b) }
-func (W _hash_Hash64) Sum64() uint64                     { return W.WSum64() }
-func (W _hash_Hash64) Write(p []byte) (n int, err error) { return W.WWrite(p) }
+func (W _hash_Hash64) BlockSize() int {
+	return W.WBlockSize()
+}
+func (W _hash_Hash64) Reset() {
+	W.WReset()
+}
+func (W _hash_Hash64) Size() int {
+	return W.WSize()
+}
+func (W _hash_Hash64) Sum(b []byte) []byte {
+	return W.WSum(b)
+}
+func (W _hash_Hash64) Sum64() uint64 {
+	return W.WSum64()
+}
+func (W _hash_Hash64) Write(p []byte) (n int, err error) {
+	return W.WWrite(p)
+}
