@@ -67,6 +67,15 @@ type _go_constant_Value struct {
 	WString      func() string
 }
 
-func (W _go_constant_Value) ExactString() string { return W.WExactString() }
-func (W _go_constant_Value) Kind() constant.Kind { return W.WKind() }
-func (W _go_constant_Value) String() string      { return W.WString() }
+func (W _go_constant_Value) ExactString() string {
+	return W.WExactString()
+}
+func (W _go_constant_Value) Kind() constant.Kind {
+	return W.WKind()
+}
+func (W _go_constant_Value) String() string {
+	if W.WString == nil {
+		return ""
+	}
+	return W.WString()
+}

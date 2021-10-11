@@ -78,7 +78,18 @@ type _text_template_parse_Node struct {
 	WType     func() parse.NodeType
 }
 
-func (W _text_template_parse_Node) Copy() parse.Node     { return W.WCopy() }
-func (W _text_template_parse_Node) Position() parse.Pos  { return W.WPosition() }
-func (W _text_template_parse_Node) String() string       { return W.WString() }
-func (W _text_template_parse_Node) Type() parse.NodeType { return W.WType() }
+func (W _text_template_parse_Node) Copy() parse.Node {
+	return W.WCopy()
+}
+func (W _text_template_parse_Node) Position() parse.Pos {
+	return W.WPosition()
+}
+func (W _text_template_parse_Node) String() string {
+	if W.WString == nil {
+		return ""
+	}
+	return W.WString()
+}
+func (W _text_template_parse_Node) Type() parse.NodeType {
+	return W.WType()
+}

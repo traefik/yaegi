@@ -64,7 +64,9 @@ type _crypto_Decrypter struct {
 func (W _crypto_Decrypter) Decrypt(rand io.Reader, msg []byte, opts crypto.DecrypterOpts) (plaintext []byte, err error) {
 	return W.WDecrypt(rand, msg, opts)
 }
-func (W _crypto_Decrypter) Public() crypto.PublicKey { return W.WPublic() }
+func (W _crypto_Decrypter) Public() crypto.PublicKey {
+	return W.WPublic()
+}
 
 // _crypto_DecrypterOpts is an interface wrapper for DecrypterOpts type
 type _crypto_DecrypterOpts struct {
@@ -88,7 +90,9 @@ type _crypto_Signer struct {
 	WSign   func(rand io.Reader, digest []byte, opts crypto.SignerOpts) (signature []byte, err error)
 }
 
-func (W _crypto_Signer) Public() crypto.PublicKey { return W.WPublic() }
+func (W _crypto_Signer) Public() crypto.PublicKey {
+	return W.WPublic()
+}
 func (W _crypto_Signer) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) (signature []byte, err error) {
 	return W.WSign(rand, digest, opts)
 }
@@ -99,4 +103,6 @@ type _crypto_SignerOpts struct {
 	WHashFunc func() crypto.Hash
 }
 
-func (W _crypto_SignerOpts) HashFunc() crypto.Hash { return W.WHashFunc() }
+func (W _crypto_SignerOpts) HashFunc() crypto.Hash {
+	return W.WHashFunc()
+}

@@ -52,10 +52,18 @@ type _image_draw_Image struct {
 	WSet        func(x int, y int, c color.Color)
 }
 
-func (W _image_draw_Image) At(x int, y int) color.Color     { return W.WAt(x, y) }
-func (W _image_draw_Image) Bounds() image.Rectangle         { return W.WBounds() }
-func (W _image_draw_Image) ColorModel() color.Model         { return W.WColorModel() }
-func (W _image_draw_Image) Set(x int, y int, c color.Color) { W.WSet(x, y, c) }
+func (W _image_draw_Image) At(x int, y int) color.Color {
+	return W.WAt(x, y)
+}
+func (W _image_draw_Image) Bounds() image.Rectangle {
+	return W.WBounds()
+}
+func (W _image_draw_Image) ColorModel() color.Model {
+	return W.WColorModel()
+}
+func (W _image_draw_Image) Set(x int, y int, c color.Color) {
+	W.WSet(x, y, c)
+}
 
 // _image_draw_Quantizer is an interface wrapper for Quantizer type
 type _image_draw_Quantizer struct {

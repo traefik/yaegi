@@ -149,10 +149,18 @@ type _os_DirEntry struct {
 	WType  func() fs.FileMode
 }
 
-func (W _os_DirEntry) Info() (fs.FileInfo, error) { return W.WInfo() }
-func (W _os_DirEntry) IsDir() bool                { return W.WIsDir() }
-func (W _os_DirEntry) Name() string               { return W.WName() }
-func (W _os_DirEntry) Type() fs.FileMode          { return W.WType() }
+func (W _os_DirEntry) Info() (fs.FileInfo, error) {
+	return W.WInfo()
+}
+func (W _os_DirEntry) IsDir() bool {
+	return W.WIsDir()
+}
+func (W _os_DirEntry) Name() string {
+	return W.WName()
+}
+func (W _os_DirEntry) Type() fs.FileMode {
+	return W.WType()
+}
 
 // _os_FileInfo is an interface wrapper for FileInfo type
 type _os_FileInfo struct {
@@ -165,12 +173,24 @@ type _os_FileInfo struct {
 	WSys     func() interface{}
 }
 
-func (W _os_FileInfo) IsDir() bool        { return W.WIsDir() }
-func (W _os_FileInfo) ModTime() time.Time { return W.WModTime() }
-func (W _os_FileInfo) Mode() fs.FileMode  { return W.WMode() }
-func (W _os_FileInfo) Name() string       { return W.WName() }
-func (W _os_FileInfo) Size() int64        { return W.WSize() }
-func (W _os_FileInfo) Sys() interface{}   { return W.WSys() }
+func (W _os_FileInfo) IsDir() bool {
+	return W.WIsDir()
+}
+func (W _os_FileInfo) ModTime() time.Time {
+	return W.WModTime()
+}
+func (W _os_FileInfo) Mode() fs.FileMode {
+	return W.WMode()
+}
+func (W _os_FileInfo) Name() string {
+	return W.WName()
+}
+func (W _os_FileInfo) Size() int64 {
+	return W.WSize()
+}
+func (W _os_FileInfo) Sys() interface{} {
+	return W.WSys()
+}
 
 // _os_Signal is an interface wrapper for Signal type
 type _os_Signal struct {
@@ -179,5 +199,12 @@ type _os_Signal struct {
 	WString func() string
 }
 
-func (W _os_Signal) Signal()        { W.WSignal() }
-func (W _os_Signal) String() string { return W.WString() }
+func (W _os_Signal) Signal() {
+	W.WSignal()
+}
+func (W _os_Signal) String() string {
+	if W.WString == nil {
+		return ""
+	}
+	return W.WString()
+}

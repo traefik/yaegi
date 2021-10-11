@@ -114,8 +114,12 @@ type _database_sql_driver_Conn struct {
 	WPrepare func(query string) (driver.Stmt, error)
 }
 
-func (W _database_sql_driver_Conn) Begin() (driver.Tx, error) { return W.WBegin() }
-func (W _database_sql_driver_Conn) Close() error              { return W.WClose() }
+func (W _database_sql_driver_Conn) Begin() (driver.Tx, error) {
+	return W.WBegin()
+}
+func (W _database_sql_driver_Conn) Close() error {
+	return W.WClose()
+}
 func (W _database_sql_driver_Conn) Prepare(query string) (driver.Stmt, error) {
 	return W.WPrepare(query)
 }
@@ -150,7 +154,9 @@ type _database_sql_driver_Connector struct {
 func (W _database_sql_driver_Connector) Connect(a0 context.Context) (driver.Conn, error) {
 	return W.WConnect(a0)
 }
-func (W _database_sql_driver_Connector) Driver() driver.Driver { return W.WDriver() }
+func (W _database_sql_driver_Connector) Driver() driver.Driver {
+	return W.WDriver()
+}
 
 // _database_sql_driver_Driver is an interface wrapper for Driver type
 type _database_sql_driver_Driver struct {
@@ -158,7 +164,9 @@ type _database_sql_driver_Driver struct {
 	WOpen  func(name string) (driver.Conn, error)
 }
 
-func (W _database_sql_driver_Driver) Open(name string) (driver.Conn, error) { return W.WOpen(name) }
+func (W _database_sql_driver_Driver) Open(name string) (driver.Conn, error) {
+	return W.WOpen(name)
+}
 
 // _database_sql_driver_DriverContext is an interface wrapper for DriverContext type
 type _database_sql_driver_DriverContext struct {
@@ -206,7 +214,9 @@ type _database_sql_driver_Pinger struct {
 	WPing  func(ctx context.Context) error
 }
 
-func (W _database_sql_driver_Pinger) Ping(ctx context.Context) error { return W.WPing(ctx) }
+func (W _database_sql_driver_Pinger) Ping(ctx context.Context) error {
+	return W.WPing(ctx)
+}
 
 // _database_sql_driver_Queryer is an interface wrapper for Queryer type
 type _database_sql_driver_Queryer struct {
@@ -235,8 +245,12 @@ type _database_sql_driver_Result struct {
 	WRowsAffected func() (int64, error)
 }
 
-func (W _database_sql_driver_Result) LastInsertId() (int64, error) { return W.WLastInsertId() }
-func (W _database_sql_driver_Result) RowsAffected() (int64, error) { return W.WRowsAffected() }
+func (W _database_sql_driver_Result) LastInsertId() (int64, error) {
+	return W.WLastInsertId()
+}
+func (W _database_sql_driver_Result) RowsAffected() (int64, error) {
+	return W.WRowsAffected()
+}
 
 // _database_sql_driver_Rows is an interface wrapper for Rows type
 type _database_sql_driver_Rows struct {
@@ -246,9 +260,15 @@ type _database_sql_driver_Rows struct {
 	WNext    func(dest []driver.Value) error
 }
 
-func (W _database_sql_driver_Rows) Close() error                   { return W.WClose() }
-func (W _database_sql_driver_Rows) Columns() []string              { return W.WColumns() }
-func (W _database_sql_driver_Rows) Next(dest []driver.Value) error { return W.WNext(dest) }
+func (W _database_sql_driver_Rows) Close() error {
+	return W.WClose()
+}
+func (W _database_sql_driver_Rows) Columns() []string {
+	return W.WColumns()
+}
+func (W _database_sql_driver_Rows) Next(dest []driver.Value) error {
+	return W.WNext(dest)
+}
 
 // _database_sql_driver_RowsColumnTypeDatabaseTypeName is an interface wrapper for RowsColumnTypeDatabaseTypeName type
 type _database_sql_driver_RowsColumnTypeDatabaseTypeName struct {
@@ -259,11 +279,15 @@ type _database_sql_driver_RowsColumnTypeDatabaseTypeName struct {
 	WNext                       func(dest []driver.Value) error
 }
 
-func (W _database_sql_driver_RowsColumnTypeDatabaseTypeName) Close() error { return W.WClose() }
+func (W _database_sql_driver_RowsColumnTypeDatabaseTypeName) Close() error {
+	return W.WClose()
+}
 func (W _database_sql_driver_RowsColumnTypeDatabaseTypeName) ColumnTypeDatabaseTypeName(index int) string {
 	return W.WColumnTypeDatabaseTypeName(index)
 }
-func (W _database_sql_driver_RowsColumnTypeDatabaseTypeName) Columns() []string { return W.WColumns() }
+func (W _database_sql_driver_RowsColumnTypeDatabaseTypeName) Columns() []string {
+	return W.WColumns()
+}
 func (W _database_sql_driver_RowsColumnTypeDatabaseTypeName) Next(dest []driver.Value) error {
 	return W.WNext(dest)
 }
@@ -277,11 +301,15 @@ type _database_sql_driver_RowsColumnTypeLength struct {
 	WNext             func(dest []driver.Value) error
 }
 
-func (W _database_sql_driver_RowsColumnTypeLength) Close() error { return W.WClose() }
+func (W _database_sql_driver_RowsColumnTypeLength) Close() error {
+	return W.WClose()
+}
 func (W _database_sql_driver_RowsColumnTypeLength) ColumnTypeLength(index int) (length int64, ok bool) {
 	return W.WColumnTypeLength(index)
 }
-func (W _database_sql_driver_RowsColumnTypeLength) Columns() []string { return W.WColumns() }
+func (W _database_sql_driver_RowsColumnTypeLength) Columns() []string {
+	return W.WColumns()
+}
 func (W _database_sql_driver_RowsColumnTypeLength) Next(dest []driver.Value) error {
 	return W.WNext(dest)
 }
@@ -295,11 +323,15 @@ type _database_sql_driver_RowsColumnTypeNullable struct {
 	WNext               func(dest []driver.Value) error
 }
 
-func (W _database_sql_driver_RowsColumnTypeNullable) Close() error { return W.WClose() }
+func (W _database_sql_driver_RowsColumnTypeNullable) Close() error {
+	return W.WClose()
+}
 func (W _database_sql_driver_RowsColumnTypeNullable) ColumnTypeNullable(index int) (nullable bool, ok bool) {
 	return W.WColumnTypeNullable(index)
 }
-func (W _database_sql_driver_RowsColumnTypeNullable) Columns() []string { return W.WColumns() }
+func (W _database_sql_driver_RowsColumnTypeNullable) Columns() []string {
+	return W.WColumns()
+}
 func (W _database_sql_driver_RowsColumnTypeNullable) Next(dest []driver.Value) error {
 	return W.WNext(dest)
 }
@@ -313,11 +345,15 @@ type _database_sql_driver_RowsColumnTypePrecisionScale struct {
 	WNext                     func(dest []driver.Value) error
 }
 
-func (W _database_sql_driver_RowsColumnTypePrecisionScale) Close() error { return W.WClose() }
+func (W _database_sql_driver_RowsColumnTypePrecisionScale) Close() error {
+	return W.WClose()
+}
 func (W _database_sql_driver_RowsColumnTypePrecisionScale) ColumnTypePrecisionScale(index int) (precision int64, scale int64, ok bool) {
 	return W.WColumnTypePrecisionScale(index)
 }
-func (W _database_sql_driver_RowsColumnTypePrecisionScale) Columns() []string { return W.WColumns() }
+func (W _database_sql_driver_RowsColumnTypePrecisionScale) Columns() []string {
+	return W.WColumns()
+}
 func (W _database_sql_driver_RowsColumnTypePrecisionScale) Next(dest []driver.Value) error {
 	return W.WNext(dest)
 }
@@ -331,11 +367,15 @@ type _database_sql_driver_RowsColumnTypeScanType struct {
 	WNext               func(dest []driver.Value) error
 }
 
-func (W _database_sql_driver_RowsColumnTypeScanType) Close() error { return W.WClose() }
+func (W _database_sql_driver_RowsColumnTypeScanType) Close() error {
+	return W.WClose()
+}
 func (W _database_sql_driver_RowsColumnTypeScanType) ColumnTypeScanType(index int) reflect.Type {
 	return W.WColumnTypeScanType(index)
 }
-func (W _database_sql_driver_RowsColumnTypeScanType) Columns() []string { return W.WColumns() }
+func (W _database_sql_driver_RowsColumnTypeScanType) Columns() []string {
+	return W.WColumns()
+}
 func (W _database_sql_driver_RowsColumnTypeScanType) Next(dest []driver.Value) error {
 	return W.WNext(dest)
 }
@@ -350,11 +390,21 @@ type _database_sql_driver_RowsNextResultSet struct {
 	WNextResultSet    func() error
 }
 
-func (W _database_sql_driver_RowsNextResultSet) Close() error                   { return W.WClose() }
-func (W _database_sql_driver_RowsNextResultSet) Columns() []string              { return W.WColumns() }
-func (W _database_sql_driver_RowsNextResultSet) HasNextResultSet() bool         { return W.WHasNextResultSet() }
-func (W _database_sql_driver_RowsNextResultSet) Next(dest []driver.Value) error { return W.WNext(dest) }
-func (W _database_sql_driver_RowsNextResultSet) NextResultSet() error           { return W.WNextResultSet() }
+func (W _database_sql_driver_RowsNextResultSet) Close() error {
+	return W.WClose()
+}
+func (W _database_sql_driver_RowsNextResultSet) Columns() []string {
+	return W.WColumns()
+}
+func (W _database_sql_driver_RowsNextResultSet) HasNextResultSet() bool {
+	return W.WHasNextResultSet()
+}
+func (W _database_sql_driver_RowsNextResultSet) Next(dest []driver.Value) error {
+	return W.WNext(dest)
+}
+func (W _database_sql_driver_RowsNextResultSet) NextResultSet() error {
+	return W.WNextResultSet()
+}
 
 // _database_sql_driver_SessionResetter is an interface wrapper for SessionResetter type
 type _database_sql_driver_SessionResetter struct {
@@ -375,11 +425,15 @@ type _database_sql_driver_Stmt struct {
 	WQuery    func(args []driver.Value) (driver.Rows, error)
 }
 
-func (W _database_sql_driver_Stmt) Close() error { return W.WClose() }
+func (W _database_sql_driver_Stmt) Close() error {
+	return W.WClose()
+}
 func (W _database_sql_driver_Stmt) Exec(args []driver.Value) (driver.Result, error) {
 	return W.WExec(args)
 }
-func (W _database_sql_driver_Stmt) NumInput() int { return W.WNumInput() }
+func (W _database_sql_driver_Stmt) NumInput() int {
+	return W.WNumInput()
+}
 func (W _database_sql_driver_Stmt) Query(args []driver.Value) (driver.Rows, error) {
 	return W.WQuery(args)
 }
@@ -411,8 +465,12 @@ type _database_sql_driver_Tx struct {
 	WRollback func() error
 }
 
-func (W _database_sql_driver_Tx) Commit() error   { return W.WCommit() }
-func (W _database_sql_driver_Tx) Rollback() error { return W.WRollback() }
+func (W _database_sql_driver_Tx) Commit() error {
+	return W.WCommit()
+}
+func (W _database_sql_driver_Tx) Rollback() error {
+	return W.WRollback()
+}
 
 // _database_sql_driver_Validator is an interface wrapper for Validator type
 type _database_sql_driver_Validator struct {
@@ -420,7 +478,9 @@ type _database_sql_driver_Validator struct {
 	WIsValid func() bool
 }
 
-func (W _database_sql_driver_Validator) IsValid() bool { return W.WIsValid() }
+func (W _database_sql_driver_Validator) IsValid() bool {
+	return W.WIsValid()
+}
 
 // _database_sql_driver_Value is an interface wrapper for Value type
 type _database_sql_driver_Value struct {
@@ -443,4 +503,6 @@ type _database_sql_driver_Valuer struct {
 	WValue func() (driver.Value, error)
 }
 
-func (W _database_sql_driver_Valuer) Value() (driver.Value, error) { return W.WValue() }
+func (W _database_sql_driver_Valuer) Value() (driver.Value, error) {
+	return W.WValue()
+}

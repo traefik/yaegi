@@ -55,10 +55,18 @@ type _image_draw_Image struct {
 	WSet        func(x int, y int, c color.Color)
 }
 
-func (W _image_draw_Image) At(x int, y int) color.Color     { return W.WAt(x, y) }
-func (W _image_draw_Image) Bounds() image.Rectangle         { return W.WBounds() }
-func (W _image_draw_Image) ColorModel() color.Model         { return W.WColorModel() }
-func (W _image_draw_Image) Set(x int, y int, c color.Color) { W.WSet(x, y, c) }
+func (W _image_draw_Image) At(x int, y int) color.Color {
+	return W.WAt(x, y)
+}
+func (W _image_draw_Image) Bounds() image.Rectangle {
+	return W.WBounds()
+}
+func (W _image_draw_Image) ColorModel() color.Model {
+	return W.WColorModel()
+}
+func (W _image_draw_Image) Set(x int, y int, c color.Color) {
+	W.WSet(x, y, c)
+}
 
 // _image_draw_Quantizer is an interface wrapper for Quantizer type
 type _image_draw_Quantizer struct {
@@ -81,9 +89,21 @@ type _image_draw_RGBA64Image struct {
 	WSetRGBA64  func(x int, y int, c color.RGBA64)
 }
 
-func (W _image_draw_RGBA64Image) At(x int, y int) color.Color            { return W.WAt(x, y) }
-func (W _image_draw_RGBA64Image) Bounds() image.Rectangle                { return W.WBounds() }
-func (W _image_draw_RGBA64Image) ColorModel() color.Model                { return W.WColorModel() }
-func (W _image_draw_RGBA64Image) RGBA64At(x int, y int) color.RGBA64     { return W.WRGBA64At(x, y) }
-func (W _image_draw_RGBA64Image) Set(x int, y int, c color.Color)        { W.WSet(x, y, c) }
-func (W _image_draw_RGBA64Image) SetRGBA64(x int, y int, c color.RGBA64) { W.WSetRGBA64(x, y, c) }
+func (W _image_draw_RGBA64Image) At(x int, y int) color.Color {
+	return W.WAt(x, y)
+}
+func (W _image_draw_RGBA64Image) Bounds() image.Rectangle {
+	return W.WBounds()
+}
+func (W _image_draw_RGBA64Image) ColorModel() color.Model {
+	return W.WColorModel()
+}
+func (W _image_draw_RGBA64Image) RGBA64At(x int, y int) color.RGBA64 {
+	return W.WRGBA64At(x, y)
+}
+func (W _image_draw_RGBA64Image) Set(x int, y int, c color.Color) {
+	W.WSet(x, y, c)
+}
+func (W _image_draw_RGBA64Image) SetRGBA64(x int, y int, c color.RGBA64) {
+	W.WSetRGBA64(x, y, c)
+}

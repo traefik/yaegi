@@ -66,20 +66,54 @@ type _testing_TB struct {
 	WTempDir func() string
 }
 
-func (W _testing_TB) Cleanup(a0 func())                         { W.WCleanup(a0) }
-func (W _testing_TB) Error(args ...interface{})                 { W.WError(args...) }
-func (W _testing_TB) Errorf(format string, args ...interface{}) { W.WErrorf(format, args...) }
-func (W _testing_TB) Fail()                                     { W.WFail() }
-func (W _testing_TB) FailNow()                                  { W.WFailNow() }
-func (W _testing_TB) Failed() bool                              { return W.WFailed() }
-func (W _testing_TB) Fatal(args ...interface{})                 { W.WFatal(args...) }
-func (W _testing_TB) Fatalf(format string, args ...interface{}) { W.WFatalf(format, args...) }
-func (W _testing_TB) Helper()                                   { W.WHelper() }
-func (W _testing_TB) Log(args ...interface{})                   { W.WLog(args...) }
-func (W _testing_TB) Logf(format string, args ...interface{})   { W.WLogf(format, args...) }
-func (W _testing_TB) Name() string                              { return W.WName() }
-func (W _testing_TB) Skip(args ...interface{})                  { W.WSkip(args...) }
-func (W _testing_TB) SkipNow()                                  { W.WSkipNow() }
-func (W _testing_TB) Skipf(format string, args ...interface{})  { W.WSkipf(format, args...) }
-func (W _testing_TB) Skipped() bool                             { return W.WSkipped() }
-func (W _testing_TB) TempDir() string                           { return W.WTempDir() }
+func (W _testing_TB) Cleanup(a0 func()) {
+	W.WCleanup(a0)
+}
+func (W _testing_TB) Error(args ...interface{}) {
+	W.WError(args...)
+}
+func (W _testing_TB) Errorf(format string, args ...interface{}) {
+	W.WErrorf(format, args...)
+}
+func (W _testing_TB) Fail() {
+	W.WFail()
+}
+func (W _testing_TB) FailNow() {
+	W.WFailNow()
+}
+func (W _testing_TB) Failed() bool {
+	return W.WFailed()
+}
+func (W _testing_TB) Fatal(args ...interface{}) {
+	W.WFatal(args...)
+}
+func (W _testing_TB) Fatalf(format string, args ...interface{}) {
+	W.WFatalf(format, args...)
+}
+func (W _testing_TB) Helper() {
+	W.WHelper()
+}
+func (W _testing_TB) Log(args ...interface{}) {
+	W.WLog(args...)
+}
+func (W _testing_TB) Logf(format string, args ...interface{}) {
+	W.WLogf(format, args...)
+}
+func (W _testing_TB) Name() string {
+	return W.WName()
+}
+func (W _testing_TB) Skip(args ...interface{}) {
+	W.WSkip(args...)
+}
+func (W _testing_TB) SkipNow() {
+	W.WSkipNow()
+}
+func (W _testing_TB) Skipf(format string, args ...interface{}) {
+	W.WSkipf(format, args...)
+}
+func (W _testing_TB) Skipped() bool {
+	return W.WSkipped()
+}
+func (W _testing_TB) TempDir() string {
+	return W.WTempDir()
+}

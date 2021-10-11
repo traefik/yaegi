@@ -37,8 +37,18 @@ type _container_heap_Interface struct {
 	WSwap  func(i int, j int)
 }
 
-func (W _container_heap_Interface) Len() int               { return W.WLen() }
-func (W _container_heap_Interface) Less(i int, j int) bool { return W.WLess(i, j) }
-func (W _container_heap_Interface) Pop() interface{}       { return W.WPop() }
-func (W _container_heap_Interface) Push(x interface{})     { W.WPush(x) }
-func (W _container_heap_Interface) Swap(i int, j int)      { W.WSwap(i, j) }
+func (W _container_heap_Interface) Len() int {
+	return W.WLen()
+}
+func (W _container_heap_Interface) Less(i int, j int) bool {
+	return W.WLess(i, j)
+}
+func (W _container_heap_Interface) Pop() interface{} {
+	return W.WPop()
+}
+func (W _container_heap_Interface) Push(x interface{}) {
+	W.WPush(x)
+}
+func (W _container_heap_Interface) Swap(i int, j int) {
+	W.WSwap(i, j)
+}
