@@ -1071,7 +1071,7 @@ func (t *itype) in(i int) *itype {
 		return t.arg[i]
 	case valueT:
 		if t.rtype.Kind() == reflect.Func {
-			if t.recv != nil {
+			if t.recv != nil && !isInterface(t.recv) {
 				i++
 			}
 			if t.rtype.IsVariadic() && i == t.rtype.NumIn()-1 {
