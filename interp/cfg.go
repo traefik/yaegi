@@ -49,8 +49,10 @@ const nilIdent = "nil"
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
 // Following this pass, the CFG is ready to run.
-func (interp *Interpreter) cfg(root *node, importPath, pkgName string) ([]*node, error) {
-	sc := interp.initScopePkg(importPath, pkgName)
+func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string) ([]*node, error) {
+	if sc == nil {
+		sc = interp.initScopePkg(importPath, pkgName)
+	}
 	check := typecheck{scope: sc}
 	var initNodes []*node
 	var err error
@@ -443,7 +445,7 @@ func (interp *Interpreter) cfg(root *node, importPath, pkgName string) ([]*node,
 			// values which may be used in further declarations.
 			if !sc.global {
 				for _, c := range n.child {
-					if _, err = interp.cfg(c, importPath, pkgName); err != nil {
+					if _, err = interp.cfg(c, sc, importPath, pkgName); err != nil {
 						// No error processing here, to allow recovery in subtree nodes.
 						err = nil
 					}
@@ -885,18 +887,28 @@ func (interp *Interpreter) cfg(root *node, importPath, pkgName string) ([]*node,
 					// Store result directly to frame output location, to avoid a frame copy.
 					n.findex = 0
 				case bname == "cap" && isInConstOrTypeDecl(n):
-					switch n.child[1].typ.TypeOf().Kind() {
+					t := n.child[1].typ.TypeOf()
+				KIND1:
+					switch t.Kind() {
 					case reflect.Array, reflect.Chan:
 						capConst(n)
+					case reflect.Ptr:
+						t = t.Elem()
+						goto KIND1
 					default:
 						err = n.cfgErrorf("cap argument is not an array or channel")
 					}
 					n.findex = notInFrame
 					n.gen = nop
 				case bname == "len" && isInConstOrTypeDecl(n):
-					switch n.child[1].typ.TypeOf().Kind() {
+					t := n.child[1].typ.TypeOf()
+				KIND2:
+					switch t.Kind() {
 					case reflect.Array, reflect.Chan, reflect.String:
 						lenConst(n)
+					case reflect.Ptr:
+						t = t.Elem()
+						goto KIND2
 					default:
 						err = n.cfgErrorf("len argument is not an array, channel or string")
 					}
@@ -1255,7 +1267,7 @@ func (interp *Interpreter) cfg(root *node, importPath, pkgName string) ([]*node,
 				// retry with the filename, in case ident is a package name.
 				sym, level, found = sc.lookup(filepath.Join(n.ident, baseName))
 				if !found {
-					err = n.cfgErrorf("undefined: %s", n.ident)
+					err = n.cfgErrorf("undefined: %s %d", n.ident, n.index)
 					break
 				}
 			}
@@ -2407,7 +2419,7 @@ func isInConstOrTypeDecl(n *node) bool {
 	anc := n.anc
 	for anc != nil {
 		switch anc.kind {
-		case constDecl, typeDecl:
+		case constDecl, typeDecl, arrayType, chanType:
 			return true
 		case varDecl, funcDecl:
 			return false

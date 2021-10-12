@@ -25,7 +25,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 		case constDecl:
 			// Early parse of constDecl subtree, to compute all constant
 			// values which may be used in further declarations.
-			if _, err = interp.cfg(n, importPath, pkgName); err != nil {
+			if _, err = interp.cfg(n, sc, importPath, pkgName); err != nil {
 				// No error processing here, to allow recovery in subtree nodes.
 				// TODO(marc): check for a non recoverable error and return it for better diagnostic.
 				err = nil
@@ -61,7 +61,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				dest, src := n.child[i], n.child[sbase+i]
 				val := src.rval
 				if n.anc.kind == constDecl {
-					if _, err2 := interp.cfg(n, importPath, pkgName); err2 != nil {
+					if _, err2 := interp.cfg(n, sc, importPath, pkgName); err2 != nil {
 						// Constant value can not be computed yet.
 						// Come back when child dependencies are known.
 						revisit = append(revisit, n)
