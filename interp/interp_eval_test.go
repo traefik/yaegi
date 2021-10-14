@@ -445,6 +445,7 @@ func TestEvalCompositeArray(t *testing.T) {
 		{src: `a := [1]int{1, 2}`, err: "1:43: index 1 is out of bounds (>= 1)"},
 		{src: `b := [l]int{1, 2}`, res: "[1 2 0 0 0 0 0 0 0 0]"},
 		{src: `i := 10; a := [i]int{1, 2}`, err: "1:43: non-constant array bound \"i\""},
+		{src: `c := [...]float64{1, 3: 3.4, 5}`, res: "[1 0 0 3.4 5]"},
 	})
 }
 

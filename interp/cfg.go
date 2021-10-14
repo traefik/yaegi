@@ -2625,6 +2625,8 @@ func arrayTypeLen(n *node) int {
 			if v := c.child[0].rval; v.IsValid() {
 				r = int(c.child[0].rval.Int())
 			}
+		} else {
+			r = max + 1
 		}
 		if r > max {
 			max = r
