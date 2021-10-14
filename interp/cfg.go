@@ -858,7 +858,9 @@ func (interp *Interpreter) cfg(root *node, importPath, pkgName string) ([]*node,
 
 		case labeledStmt:
 			wireChild(n)
-			n.start = n.child[1].start
+			if len(n.child) > 1 {
+				n.start = n.child[1].start
+			}
 			gotoLabel(n.sym)
 
 		case callExpr:
