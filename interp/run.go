@@ -3144,23 +3144,37 @@ func _delete(n *node) {
 }
 
 func capConst(n *node) {
-	n.rval = reflect.New(reflect.TypeOf(int(0))).Elem()
 	// There is no Cap() method for reflect.Type, just return Len() instead.
-	n.rval.SetInt(int64(n.child[1].typ.TypeOf().Len()))
+	lenConst(n)
 }
 
 func lenConst(n *node) {
 	n.rval = reflect.New(reflect.TypeOf(int(0))).Elem()
-	if c1 := n.child[1]; c1.rval.IsValid() {
+	c1 := n.child[1]
+	if c1.rval.IsValid() {
 		n.rval.SetInt(int64(len(vString(c1.rval))))
-	} else {
-		n.rval.SetInt(int64(c1.typ.TypeOf().Len()))
+		return
 	}
+	t := c1.typ.TypeOf()
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	n.rval.SetInt(int64(t.Len()))
 }
 
 func _len(n *node) {
 	dest := genValueOutput(n, reflect.TypeOf(int(0)))
 	value := genValue(n.child[1])
+	if isPtr(n.child[1].typ) {
+		val := value
+		value = func(f *frame) reflect.Value {
+			v := val(f).Elem()
+			for v.Type().Kind() == reflect.Ptr {
+				v = v.Elem()
+			}
+			return v
+		}
+	}
 	next := getExec(n.tnext)
 
 	if wantEmptyInterface(n) {
