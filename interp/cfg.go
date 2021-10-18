@@ -2619,8 +2619,8 @@ func arrayTypeLen(n *node, sc *scope) (int, error) {
 		return n.typ.length, nil
 	}
 	max := -1
-	for i, c := range n.child[1:] {
-		r := i
+	for _, c := range n.child[1:] {
+		var r int
 		if c.kind == keyValueExpr {
 			c0 := c.child[0]
 			v := c0.rval
