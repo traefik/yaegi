@@ -2652,7 +2652,7 @@ func arrayTypeLen(n *node, sc *scope) (int, error) {
 					r = int(sym.rval.Int())
 				} else {
 					// Key is defined by a numeric constant expression.
-					if _, err := c0.interp.cfg(c0, sc.pkgID, sc.pkgName); err != nil {
+					if _, err := c0.interp.cfg(c0, sc, sc.pkgID, sc.pkgName); err != nil {
 						return 0, err
 					}
 					cv, ok := c0.rval.Interface().(constant.Value)
