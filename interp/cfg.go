@@ -2614,16 +2614,41 @@ func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerat
 // arrayTypeLen returns the node's array length. If the expression is an
 // array variable it is determined from the value's type, otherwise it is
 // computed from the source definition.
-func arrayTypeLen(n *node) int {
+func arrayTypeLen(n *node, sc *scope) (int, error) {
 	if n.typ != nil && n.typ.cat == arrayT {
-		return n.typ.length
+		return n.typ.length, nil
 	}
 	max := -1
 	for i, c := range n.child[1:] {
 		r := i
 		if c.kind == keyValueExpr {
-			if v := c.child[0].rval; v.IsValid() {
-				r = int(c.child[0].rval.Int())
+			c0 := c.child[0]
+			v := c0.rval
+			if v.IsValid() {
+				r = int(v.Int())
+			} else {
+				// Resolve array key value as a constant.
+				if c0.kind == identExpr {
+					// Key is defined by a symbol which must be a constant integer.
+					sym, _, ok := sc.lookup(c0.ident)
+					if !ok {
+						return 0, c0.cfgErrorf("undefined: %s", c0.ident)
+					}
+					if sym.kind != constSym {
+						return 0, c0.cfgErrorf("non-constant array bound %q", c0.ident)
+					}
+					r = int(sym.rval.Int())
+				} else {
+					// Key is defined by a numeric constant expression.
+					if _, err := c0.interp.cfg(c0, sc.pkgID, sc.pkgName); err != nil {
+						return 0, err
+					}
+					cv, ok := c0.rval.Interface().(constant.Value)
+					if !ok {
+						return 0, c0.cfgErrorf("non-constant expression")
+					}
+					r = constToInt(cv)
+				}
 			}
 		} else {
 			r = max + 1
@@ -2632,7 +2657,7 @@ func arrayTypeLen(n *node) int {
 			max = r
 		}
 	}
-	return max + 1
+	return max + 1, nil
 }
 
 // isValueUntyped returns true if value is untyped.

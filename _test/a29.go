@@ -6,16 +6,18 @@ const (
 	zero = iota
 	one
 	two
+	three
 )
 
 func main() {
 	a := [...]string{
-		zero: "zero",
-		one:  "one",
-		two:  "two",
+		zero:      "zero",
+		one:       "one",
+		three:     "three",
+		three + 2: "five",
 	}
 	fmt.Printf("%v %T\n", a, a)
 }
 
 // Output:
-// [zero one two] [3]string
+// [zero one  three  five] [6]string
