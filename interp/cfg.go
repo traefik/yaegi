@@ -284,11 +284,11 @@ func (interp *Interpreter) cfg(root *node, importPath, pkgName string) ([]*node,
 
 		case compositeLitExpr:
 			if len(n.child) > 0 && n.child[0].isType(sc) {
-				// Get type from 1st child
+				// Get type from 1st child.
 				if n.typ, err = nodeType(interp, sc, n.child[0]); err != nil {
 					return false
 				}
-				// Indicate that the first child is the type
+				// Indicate that the first child is the type.
 				n.nleft = 1
 			} else {
 				// Get type from ancestor (implicit type)
