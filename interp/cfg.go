@@ -2649,7 +2649,7 @@ func arrayTypeLen(n *node, sc *scope) (int, error) {
 					if sym.kind != constSym {
 						return 0, c0.cfgErrorf("non-constant array bound %q", c0.ident)
 					}
-					r = int(sym.rval.Int())
+					r = int(vInt(sym.rval))
 				} else {
 					// Key is defined by a numeric constant expression.
 					if _, err := c0.interp.cfg(c0, sc, sc.pkgID, sc.pkgName); err != nil {
