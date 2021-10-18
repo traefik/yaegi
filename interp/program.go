@@ -79,7 +79,7 @@ func (interp *Interpreter) CompileAST(n ast.Node) (*Program, error) {
 	}
 
 	// Annotate AST with CFG informations.
-	initNodes, err := interp.cfg(root, pkgName, pkgName)
+	initNodes, err := interp.cfg(root, nil, pkgName, pkgName)
 	if err != nil {
 		if interp.cfgDot {
 			dotCmd := interp.dotCmd

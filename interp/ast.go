@@ -637,7 +637,7 @@ func (interp *Interpreter) ast(f ast.Node) (string, *node, error) {
 			}
 			st.push(addChild(&root, anc, pos, kind, aNop), nod)
 
-		case *ast.CommentGroup:
+		case *ast.CommentGroup, *ast.EmptyStmt:
 			return false
 
 		case *ast.CompositeLit:
