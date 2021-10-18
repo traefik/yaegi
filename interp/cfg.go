@@ -888,13 +888,12 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.findex = 0
 				case bname == "cap" && isInConstOrTypeDecl(n):
 					t := n.child[1].typ.TypeOf()
-				KIND1:
+					for t.Kind() == reflect.Ptr {
+						t = t.Elem()
+					}
 					switch t.Kind() {
 					case reflect.Array, reflect.Chan:
 						capConst(n)
-					case reflect.Ptr:
-						t = t.Elem()
-						goto KIND1
 					default:
 						err = n.cfgErrorf("cap argument is not an array or channel")
 					}
@@ -902,13 +901,12 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.gen = nop
 				case bname == "len" && isInConstOrTypeDecl(n):
 					t := n.child[1].typ.TypeOf()
-				KIND2:
+					for t.Kind() == reflect.Ptr {
+						t = t.Elem()
+					}
 					switch t.Kind() {
 					case reflect.Array, reflect.Chan, reflect.String:
 						lenConst(n)
-					case reflect.Ptr:
-						t = t.Elem()
-						goto KIND2
 					default:
 						err = n.cfgErrorf("len argument is not an array, channel or string")
 					}
