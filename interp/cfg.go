@@ -2633,38 +2633,42 @@ func arrayTypeLen(n *node, sc *scope) (int, error) {
 	max := -1
 	for _, c := range n.child[1:] {
 		var r int
-		if c.kind == keyValueExpr {
-			c0 := c.child[0]
-			v := c0.rval
-			if v.IsValid() {
-				r = int(v.Int())
-			} else {
-				// Resolve array key value as a constant.
-				if c0.kind == identExpr {
-					// Key is defined by a symbol which must be a constant integer.
-					sym, _, ok := sc.lookup(c0.ident)
-					if !ok {
-						return 0, c0.cfgErrorf("undefined: %s", c0.ident)
-					}
-					if sym.kind != constSym {
-						return 0, c0.cfgErrorf("non-constant array bound %q", c0.ident)
-					}
-					r = int(vInt(sym.rval))
-				} else {
-					// Key is defined by a numeric constant expression.
-					if _, err := c0.interp.cfg(c0, sc, sc.pkgID, sc.pkgName); err != nil {
-						return 0, err
-					}
-					cv, ok := c0.rval.Interface().(constant.Value)
-					if !ok {
-						return 0, c0.cfgErrorf("non-constant expression")
-					}
-					r = constToInt(cv)
-				}
-			}
-		} else {
+
+		if c.kind != keyValueExpr {
 			r = max + 1
+			max = r
+			continue
 		}
+
+		c0 := c.child[0]
+		v := c0.rval
+		if v.IsValid() {
+			r = int(v.Int())
+		} else {
+			// Resolve array key value as a constant.
+			if c0.kind == identExpr {
+				// Key is defined by a symbol which must be a constant integer.
+				sym, _, ok := sc.lookup(c0.ident)
+				if !ok {
+					return 0, c0.cfgErrorf("undefined: %s", c0.ident)
+				}
+				if sym.kind != constSym {
+					return 0, c0.cfgErrorf("non-constant array bound %q", c0.ident)
+				}
+				r = int(vInt(sym.rval))
+			} else {
+				// Key is defined by a numeric constant expression.
+				if _, err := c0.interp.cfg(c0, sc, sc.pkgID, sc.pkgName); err != nil {
+					return 0, err
+				}
+				cv, ok := c0.rval.Interface().(constant.Value)
+				if !ok {
+					return 0, c0.cfgErrorf("non-constant expression")
+				}
+				r = constToInt(cv)
+			}
+		}
+
 		if r > max {
 			max = r
 		}
