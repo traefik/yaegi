@@ -438,7 +438,10 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 			}
 		case c0.kind == ellipsisExpr:
 			// [...]T expression, get size from the length of composite array.
-			length = arrayTypeLen(n.anc)
+			length, err = arrayTypeLen(n.anc, sc)
+			if err != nil {
+				incomplete = true
+			}
 		case c0.kind == identExpr:
 			sym, _, ok := sc.lookup(c0.ident)
 			if !ok {
