@@ -1728,8 +1728,12 @@ func TestPassArgs(t *testing.T) {
 }
 
 func TestRestrictedEnv(t *testing.T) {
-	os.Unsetenv("YAEGI_UNRESTRICTED")
-	os.Unsetenv("foo")
+	if err := os.Unsetenv("YAEGI_UNRESTRICTED"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Unsetenv("foo"); err != nil {
+		t.Fatal(err)
+	}
 	i := interp.New(interp.Options{Env: []string{"foo=bar"}})
 	if err := i.Use(stdlib.Symbols); err != nil {
 		t.Fatal(err)
@@ -1742,6 +1746,7 @@ func TestRestrictedEnv(t *testing.T) {
 		{src: `s, ok := os.LookupEnv("PATH"); s`, res: ""},
 		{src: `s, ok := os.LookupEnv("PATH"); ok`, res: "false"},
 		{src: `os.Setenv("foo", "baz"); os.Environ()`, res: "[foo=baz]"},
+		{src: `os.ExpandEnv("foo is ${foo}")`, res: "foo is baz"},
 		{src: `os.Unsetenv("foo"); os.Environ()`, res: "[]"},
 		{src: `os.Setenv("foo", "baz"); os.Environ()`, res: "[foo=baz]"},
 		{src: `os.Clearenv(); os.Environ()`, res: "[]"},
