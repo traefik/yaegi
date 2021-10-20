@@ -1726,3 +1726,28 @@ func TestPassArgs(t *testing.T) {
 		{src: "os.Args", res: "[arg0 arg1]"},
 	})
 }
+
+func TestRestrictedEnv(t *testing.T) {
+	os.Unsetenv("YAEGI_UNRESTRICTED")
+	os.Unsetenv("foo")
+	i := interp.New(interp.Options{Env: []string{"foo=bar"}})
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
+	i.ImportUsed()
+	runTests(t, i, []testCase{
+		{src: `os.Getenv("foo")`, res: "bar"},
+		{src: `s, ok := os.LookupEnv("foo"); s`, res: "bar"},
+		{src: `s, ok := os.LookupEnv("foo"); ok`, res: "true"},
+		{src: `s, ok := os.LookupEnv("PATH"); s`, res: ""},
+		{src: `s, ok := os.LookupEnv("PATH"); ok`, res: "false"},
+		{src: `os.Setenv("foo", "baz"); os.Environ()`, res: "[foo=baz]"},
+		{src: `os.Unsetenv("foo"); os.Environ()`, res: "[]"},
+		{src: `os.Setenv("foo", "baz"); os.Environ()`, res: "[foo=baz]"},
+		{src: `os.Clearenv(); os.Environ()`, res: "[]"},
+		{src: `os.Setenv("foo", "baz"); os.Environ()`, res: "[foo=baz]"},
+	})
+	if s, ok := os.LookupEnv("foo"); ok {
+		t.Fatal("expected \"\", got " + s)
+	}
+}
