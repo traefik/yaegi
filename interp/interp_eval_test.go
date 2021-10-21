@@ -418,6 +418,8 @@ func TestEvalComparison(t *testing.T) {
 		{src: `2 > 1`, res: "true"},
 		{src: `1.2 > 1.1`, res: "true"},
 		{src: `"hhh" > "ggg"`, res: "true"},
+		{src: `a, b, c := 1, 1, false; if a == b { c = true }; c`, res: "true"},
+		{src: `a, b, c := 1, 2, false; if a != b { c = true }; c`, res: "true"},
 		{
 			desc: "mismatched types",
 			src: `

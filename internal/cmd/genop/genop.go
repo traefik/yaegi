@@ -557,7 +557,7 @@ func {{$name}}(n *node) {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
 					i1 := v1(f).Interface()
-					if i0 != i1 {
+					if i0 {{$op.Name}} i1 {
 						dest(f).SetBool(true)
 						return tnext
 					}
@@ -579,7 +579,7 @@ func {{$name}}(n *node) {
 				fnext := getExec(n.fnext)
 				n.exec = func(f *frame) bltn {
 					i0 := v0(f).Interface()
-					if i0 != i1 {
+					if i0 {{$op.Name}} i1 {
 						dest(f).SetBool(true)
 						return tnext
 					}
@@ -602,7 +602,7 @@ func {{$name}}(n *node) {
 				n.exec = func(f *frame) bltn {
 					i0 := v0(f).Interface()
 					i1 := v1(f).Interface()
-					if i0 != i1 {
+					if i0 {{$op.Name}} i1 {
 						dest(f).SetBool(true)
 						return tnext
 					}
