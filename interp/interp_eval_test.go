@@ -1728,12 +1728,6 @@ func TestPassArgs(t *testing.T) {
 }
 
 func TestRestrictedEnv(t *testing.T) {
-	if err := os.Unsetenv("YAEGI_UNRESTRICTED"); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Unsetenv("foo"); err != nil {
-		t.Fatal(err)
-	}
 	i := interp.New(interp.Options{Env: []string{"foo=bar"}})
 	if err := i.Use(stdlib.Symbols); err != nil {
 		t.Fatal(err)

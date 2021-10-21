@@ -317,6 +317,9 @@ type Options struct {
 	// It can be any fs.FS compliant filesystem (e.g. embed.FS, or fstest.MapFS for testing)
 	// See example/fs/fs_test.go for an example.
 	SourcecodeFilesystem fs.FS
+
+	// Unrestricted allows to run non sandboxed stdlib symbols such as os/exec and environment
+	Unrestricted bool
 }
 
 // New returns a new interpreter.
@@ -350,12 +353,17 @@ func New(options Options) *Interpreter {
 		i.opt.args = os.Args
 	}
 
-	for _, e := range options.Env {
-		a := strings.SplitN(e, "=", 2)
-		if len(a) == 2 {
-			i.opt.env[a[0]] = a[1]
-		} else {
-			i.opt.env[a[0]] = ""
+	// unrestricted allows to use non sandboxed stdlib symbols and env.
+	if options.Unrestricted {
+		i.opt.unrestricted = true
+	} else {
+		for _, e := range options.Env {
+			a := strings.SplitN(e, "=", 2)
+			if len(a) == 2 {
+				i.opt.env[a[0]] = a[1]
+			} else {
+				i.opt.env[a[0]] = ""
+			}
 		}
 	}
 
@@ -388,9 +396,6 @@ func New(options Options) *Interpreter {
 	// specialStdio allows to assign directly io.Writer and io.Reader to os.Stdxxx,
 	// even if they are not file descriptors.
 	i.opt.specialStdio, _ = strconv.ParseBool(os.Getenv("YAEGI_SPECIAL_STDIO"))
-
-	// unrestricted allows to use non sandboxed stdlib symbols.
-	i.opt.unrestricted, _ = strconv.ParseBool(os.Getenv("YAEGI_UNRESTRICTED"))
 
 	return &i
 }

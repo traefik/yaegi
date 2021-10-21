@@ -47,7 +47,12 @@ func run(arg []string) error {
 	}
 	args := rflag.Args()
 
-	i := interp.New(interp.Options{GoPath: build.Default.GOPATH, BuildTags: strings.Split(tags, ","), Env: os.Environ()})
+	i := interp.New(interp.Options{
+		GoPath:       build.Default.GOPATH,
+		BuildTags:    strings.Split(tags, ","),
+		Env:          os.Environ(),
+		Unrestricted: useUnrestricted,
+	})
 	if err := i.Use(stdlib.Symbols); err != nil {
 		return err
 	}
