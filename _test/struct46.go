@@ -8,6 +8,7 @@ type A struct {
 }
 
 type D struct {
+	F *A
 	E *A
 }
 

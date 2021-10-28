@@ -596,7 +596,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						// Skip optimisation for assigned interface.
 						break
 					}
-					if dest.action == aGetIndex {
+					if dest.action == aGetIndex || dest.action == aStar {
 						// Skip optimization, as it does not work when assigning to a struct field.
 						break
 					}

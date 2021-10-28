@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/traefik/yaegi/internal/unsafe2"
@@ -1632,12 +1633,58 @@ type fieldRebuild struct {
 type refTypeContext struct {
 	defined    map[string]*itype
 	refs       map[string][]fieldRebuild
+	rect       *itype
 	rebuilding bool
 }
 
 // Clone creates a copy of the ref type context.
 func (c *refTypeContext) Clone() *refTypeContext {
 	return &refTypeContext{defined: c.defined, refs: c.refs, rebuilding: c.rebuilding}
+}
+
+func (c *refTypeContext) isComplete() bool {
+	for _, t := range c.defined {
+		if t.rtype == nil {
+			return false
+		}
+	}
+	return true
+}
+
+func (t *itype) fixDummy(typ reflect.Type) reflect.Type {
+	if typ == unsafe2.DummyType {
+		return t.rtype
+	}
+	switch typ.Kind() {
+	case reflect.Array:
+		return reflect.ArrayOf(typ.Len(), t.fixDummy(typ.Elem()))
+	case reflect.Chan:
+		return reflect.ChanOf(typ.ChanDir(), t.fixDummy(typ.Elem()))
+	case reflect.Func:
+		in := make([]reflect.Type, typ.NumIn())
+		for i := range in {
+			in[i] = t.fixDummy(typ.In(i))
+		}
+		out := make([]reflect.Type, typ.NumOut())
+		for i := range out {
+			out[i] = t.fixDummy(typ.Out(i))
+		}
+		return reflect.FuncOf(in, out, typ.IsVariadic())
+	case reflect.Map:
+		return reflect.MapOf(t.fixDummy(typ.Key()), t.fixDummy(typ.Elem()))
+	case reflect.Ptr:
+		return reflect.PtrTo(t.fixDummy(typ.Elem()))
+	case reflect.Slice:
+		return reflect.SliceOf(t.fixDummy(typ.Elem()))
+	case reflect.Struct:
+		fields := make([]reflect.StructField, typ.NumField())
+		for i := range fields {
+			fields[i] = typ.Field(i)
+			fields[i].Type = t.fixDummy(fields[i].Type)
+		}
+		return reflect.StructOf(fields)
+	}
+	return typ
 }
 
 // RefType returns a reflect.Type representation from an interpreter type.
@@ -1675,6 +1722,7 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 		// To indicate that a rebuild is needed on the nearest struct
 		// field, create an entry with a nil type.
 		flds := ctx.refs[name]
+		ctx.rect = dt
 		ctx.refs[name] = append(flds, fieldRebuild{})
 		return unsafe2.DummyType
 	}
@@ -1717,9 +1765,8 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 		}
 		var fields []reflect.StructField
 		for i, f := range t.field {
-			fctx := ctx.Clone()
 			field := reflect.StructField{
-				Name: exportName(f.name), Type: f.typ.refType(fctx),
+				Name: exportName(f.name), Type: f.typ.refType(ctx),
 				Tag: reflect.StructTag(f.tag), Anonymous: f.embed,
 			}
 			fields = append(fields, field)
@@ -1733,6 +1780,16 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 			}
 		}
 		t.rtype = reflect.StructOf(fields)
+		if ctx.isComplete() {
+			for _, s := range ctx.defined {
+				for i := 0; i < s.rtype.NumField(); i++ {
+					f := s.rtype.Field(i)
+					if strings.HasSuffix(f.Type.String(), "unsafe2.dummy") {
+						unsafe2.SwapFieldType(s.rtype, i, ctx.rect.fixDummy(s.rtype.Field(i).Type))
+					}
+				}
+			}
+		}
 
 		// The rtype has now been built, we can go back and rebuild
 		// all the recursive types that relied on this type.

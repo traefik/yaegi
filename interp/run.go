@@ -2981,13 +2981,13 @@ func _append(n *node) {
 		l := len(args)
 		values := make([]func(*frame) reflect.Value, l)
 		for i, arg := range args {
-			switch {
-			case isEmptyInterface(n.typ.val):
+			switch elem := n.typ.elem(); {
+			case isEmptyInterface(elem):
 				values[i] = genValue(arg)
-			case isInterfaceSrc(n.typ.val):
+			case isInterfaceSrc(elem):
 				values[i] = genValueInterface(arg)
-			case isInterfaceBin(n.typ.val):
-				values[i] = genInterfaceWrapper(arg, n.typ.val.rtype)
+			case isInterfaceBin(elem):
+				values[i] = genInterfaceWrapper(arg, elem.rtype)
 			case arg.typ.untyped:
 				values[i] = genValueAs(arg, n.child[1].typ.TypeOf().Elem())
 			default:
