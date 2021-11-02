@@ -46,7 +46,7 @@ func init() {
 //go:generate ../internal/cmd/extract/extract net/mail net/rpc net/rpc/jsonrpc net/smtp net/textproto net/url
 //go:generate ../internal/cmd/extract/extract os os/signal os/user
 //go:generate ../internal/cmd/extract/extract path path/filepath reflect regexp regexp/syntax
-//go:generate ../internal/cmd/extract/extract runtime runtime/debug runtime/pprof runtime/trace
+//go:generate ../internal/cmd/extract/extract runtime runtime/debug runtime/metrics runtime/pprof runtime/trace
 //go:generate ../internal/cmd/extract/extract sort strconv strings sync sync/atomic
 //go:generate ../internal/cmd/extract/extract testing testing/fstest testing/iotest testing/quick
 //go:generate ../internal/cmd/extract/extract text/scanner text/tabwriter text/template text/template/parse
