@@ -597,7 +597,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						break
 					}
 					if dest.action == aGetIndex || dest.action == aStar {
-						// Skip optimization, as it does not work when assigning to a struct field.
+						// Skip optimization, as it does not work when assigning to a struct field or a dereferenced pointer.
 						break
 					}
 					n.gen = nop
