@@ -1713,8 +1713,8 @@ func (t *itype) fixDummy(typ reflect.Type) reflect.Type {
 // In simple cases, reflect types are directly mapped from the interpreter
 // counterpart.
 // For recursive named struct or interfaces, as reflect does not permit to
-// create a recursive named struct, a nil type is set temporarily for each recursive
-// field. When done, the nil type fields are updated with the original reflect type
+// create a recursive named struct, a dummy type is set temporarily for each recursive
+// field. When done, the dummy type fields are updated with the original reflect type
 // pointer using unsafe. We thus obtain a usable recursive type definition, except
 // for string representation, as created reflect types are still unnamed.
 func (t *itype) refType(ctx *refTypeContext) reflect.Type {
@@ -1741,8 +1741,8 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 			return dt.rtype
 		}
 
-		// To indicate that a rebuild is needed on the nearest struct
-		// field, create an entry with a nil type.
+		// To indicate that a rebuild is needed on the englobing struct,
+		// return a dummy field type and create an entry with an empty fieldRebuild.
 		flds := ctx.refs[name]
 		ctx.rect = dt
 		ctx.refs[name] = append(flds, fieldRebuild{})
@@ -1807,7 +1807,7 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 				for i := 0; i < s.rtype.NumField(); i++ {
 					f := s.rtype.Field(i)
 					if strings.HasSuffix(f.Type.String(), "unsafe2.dummy") {
-						unsafe2.SwapFieldType(s.rtype, i, ctx.rect.fixDummy(s.rtype.Field(i).Type))
+						unsafe2.SetFieldType(s.rtype, i, ctx.rect.fixDummy(s.rtype.Field(i).Type))
 					}
 				}
 			}
@@ -1817,7 +1817,7 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 		// all the recursive types that relied on this type.
 		for _, f := range ctx.refs[name] {
 			ftyp := f.typ.field[f.idx].typ.refType(&refTypeContext{defined: ctx.defined, rebuilding: true})
-			unsafe2.SwapFieldType(f.typ.rtype, f.idx, ftyp)
+			unsafe2.SetFieldType(f.typ.rtype, f.idx, ftyp)
 		}
 	default:
 		if z, _ := t.zero(); z.IsValid() {
