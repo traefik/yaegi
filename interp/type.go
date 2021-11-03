@@ -1529,22 +1529,33 @@ func (t *itype) getMethod(name string) *node {
 // LookupMethod returns a pointer to method definition associated to type t
 // and the list of indices to access the right struct field, in case of an embedded method.
 func (t *itype) lookupMethod(name string) (*node, []int) {
+	return t.lookupMethod2(name, nil)
+}
+
+func (t *itype) lookupMethod2(name string, seen map[*itype]bool) (*node, []int) {
+	if seen == nil {
+		seen = map[*itype]bool{}
+	}
+	if seen[t] {
+		return nil, nil
+	}
+	seen[t] = true
 	if t.cat == ptrT {
-		return t.val.lookupMethod(name)
+		return t.val.lookupMethod2(name, seen)
 	}
 	var index []int
 	m := t.getMethod(name)
 	if m == nil {
 		for i, f := range t.field {
 			if f.embed {
-				if n, index2 := f.typ.lookupMethod(name); n != nil {
+				if n, index2 := f.typ.lookupMethod2(name, seen); n != nil {
 					index = append([]int{i}, index2...)
 					return n, index
 				}
 			}
 		}
 		if t.cat == aliasT || isInterfaceSrc(t) && t.val != nil {
-			return t.val.lookupMethod(name)
+			return t.val.lookupMethod2(name, seen)
 		}
 	}
 	return m, index
@@ -1563,12 +1574,23 @@ func (t *itype) methodDepth(name string) int {
 
 // LookupBinMethod returns a method and a path to access a field in a struct object (the receiver).
 func (t *itype) lookupBinMethod(name string) (m reflect.Method, index []int, isPtr, ok bool) {
+	return t.lookupBinMethod2(name, nil)
+}
+
+func (t *itype) lookupBinMethod2(name string, seen map[*itype]bool) (m reflect.Method, index []int, isPtr, ok bool) {
+	if seen == nil {
+		seen = map[*itype]bool{}
+	}
+	if seen[t] {
+		return
+	}
+	seen[t] = true
 	if t.cat == ptrT {
-		return t.val.lookupBinMethod(name)
+		return t.val.lookupBinMethod2(name, seen)
 	}
 	for i, f := range t.field {
 		if f.embed {
-			if m2, index2, isPtr2, ok2 := f.typ.lookupBinMethod(name); ok2 {
+			if m2, index2, isPtr2, ok2 := f.typ.lookupBinMethod2(name, seen); ok2 {
 				index = append([]int{i}, index2...)
 				return m2, index, isPtr2, ok2
 			}
