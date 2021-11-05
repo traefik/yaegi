@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"go/constant"
-	"log"
 	"reflect"
 	"regexp"
 	"strings"
@@ -2608,7 +2607,6 @@ func doComposite(n *node, hasType bool, keyed bool) {
 		a := reflect.New(typ.TypeOf()).Elem()
 		typ.mu.Unlock()
 		for i, v := range values {
-			log.Println(n.cfgErrorf("composite"), i, a.Field(i).Type())
 			a.Field(i).Set(v(f))
 		}
 		d := value(f)
