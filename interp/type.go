@@ -1662,7 +1662,7 @@ type refTypeContext struct {
 	refs map[string][]fieldRebuild
 
 	// When we detect for the first time that we are in a recursive type (thanks to
-	// defined), we keep track of the first occurence of the type where the recursion
+	// defined), we keep track of the first occurrence of the type where the recursion
 	// started, so we can restart the last step that fixes all the types from the same
 	// "top-level" point.
 	rect       *itype
