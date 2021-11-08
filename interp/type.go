@@ -1653,8 +1653,18 @@ type fieldRebuild struct {
 }
 
 type refTypeContext struct {
-	defined    map[string]*itype
-	refs       map[string][]fieldRebuild
+	defined map[string]*itype
+
+	// refs keeps track of all the places (in the same type recursion) where the
+	// type name (as key) is used as a field of another (or possibly the same) struct
+	// type. Each of these fields will then live as an unsafe2.dummy type until the
+	// whole recursion is fully resolved, and the type is fixed.
+	refs map[string][]fieldRebuild
+
+	// When we detect for the first time that we are in a recursive type (thanks to
+	// defined), we keep track of the first occurence of the type where the recursion
+	// started, so we can restart the last step that fixes all the types from the same
+	// "top-level" point.
 	rect       *itype
 	rebuilding bool
 }
@@ -1736,15 +1746,23 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 		return t.rtype
 	}
 	if dt := ctx.defined[name]; dt != nil {
+		// We get here when we are a struct field, and our type name has already been
+		// seen at least once in one of our englobing structs. i.e. there's at least one
+		// level of type recursion.
 		if dt.rtype != nil {
 			t.rtype = dt.rtype
 			return dt.rtype
 		}
 
+		// The recursion has not been fully resolved yet.
 		// To indicate that a rebuild is needed on the englobing struct,
 		// return a dummy field type and create an entry with an empty fieldRebuild.
 		flds := ctx.refs[name]
 		ctx.rect = dt
+
+		// We know we are used as a field by someone, but we don't know by who
+		// at this point in the code, so we just mark it as an empty fieldRebuild for now.
+		// We'll complete the fieldRebuild in the caller.
 		ctx.refs[name] = append(flds, fieldRebuild{})
 		return unsafe2.DummyType
 	}
@@ -1815,6 +1833,11 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 
 		// The rtype has now been built, we can go back and rebuild
 		// all the recursive types that relied on this type.
+		// However, as we are keyed by type name, if two or more (recursive) fields at
+		// the same depth level are of the same type, they "mask" each other, and only one
+		// of them is in ctx.refs, which means this pass below does not fully do the job.
+		// Which is why we have the pass above that is done one last time, for all fields,
+		// one the recursion has been fully resolved.
 		for _, f := range ctx.refs[name] {
 			ftyp := f.typ.field[f.idx].typ.refType(&refTypeContext{defined: ctx.defined, rebuilding: true})
 			unsafe2.SetFieldType(f.typ.rtype, f.idx, ftyp)

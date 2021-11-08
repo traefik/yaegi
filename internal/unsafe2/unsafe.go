@@ -40,7 +40,7 @@ type structType struct {
 	fields []structField
 }
 
-// SetFieldType swaps the type of the struct field with the given type.
+// SetFieldType sets the type of the struct field at the given index, to the given type.
 //
 // The struct type must have been created at runtime. This is very unsafe.
 func SetFieldType(s reflect.Type, idx int, t reflect.Type) {
