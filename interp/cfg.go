@@ -412,11 +412,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			sc.loop = n
 
 		case importSpec:
-			// already all done in gta
+			// Already all done in GTA.
 			return false
 
 		case typeSpec:
-			// processing already done in GTA pass for global types, only parses inlined types
+			// Processing already done in GTA pass for global types, only parses inlined types.
 			if sc.def == nil {
 				return false
 			}
@@ -426,8 +426,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				return false
 			}
 			if typ.incomplete {
-				err = n.cfgErrorf("invalid type declaration")
-				return false
+				// Type may still be incomplete in case of a local recursive struct declaration.
+				if typ, err = typ.finalize(); err != nil {
+					err = n.cfgErrorf("invalid type declaration")
+					return false
+				}
 			}
 
 			switch n.child[1].kind {

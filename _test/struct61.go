@@ -4,18 +4,18 @@ import "fmt"
 
 type A struct {
 	B string
-	C D
+	D
 }
 
 type D struct {
-	F *A
+	*A
 	E *A
 }
 
 func main() {
 	a := &A{B: "b"}
-	a.C = D{E: a}
-	fmt.Println(a.C.E.B)
+	a.D = D{E: a}
+	fmt.Println(a.D.E.B)
 }
 
 // Output:

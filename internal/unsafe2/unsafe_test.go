@@ -25,7 +25,7 @@ func TestSwapFieldType(t *testing.T) {
 	typ := reflect.StructOf(f)
 	ntyp := reflect.PtrTo(typ)
 
-	unsafe2.SwapFieldType(typ, 1, ntyp)
+	unsafe2.SetFieldType(typ, 1, ntyp)
 
 	if typ.Field(1).Type != ntyp {
 		t.Fatalf("unexpected field type: want %s; got %s", ntyp, typ.Field(1).Type)
