@@ -2013,7 +2013,7 @@ func compDefineX(sc *scope, n *node) error {
 		} else {
 			types = funtype.ret
 		}
-		if n.child[l-1].isType(sc) {
+		if n.anc.kind == varDecl && n.child[l-1].isType(sc) {
 			l--
 		}
 		if len(types) != l {
