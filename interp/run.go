@@ -2588,7 +2588,7 @@ func doComposite(n *node, hasType bool, keyed bool) {
 			values[fieldIndex] = func(*frame) reflect.Value { return reflect.New(rft).Elem() }
 		case isFuncSrc(val.typ):
 			values[fieldIndex] = genValueAsFunctionWrapper(val)
-		case isArray(val.typ) && val.typ.val != nil && isInterfaceSrc(val.typ.val):
+		case isArray(val.typ) && val.typ.val != nil && isInterfaceSrc(val.typ.val) && !isEmptyInterface(val.typ.val):
 			values[fieldIndex] = genValueInterfaceArray(val)
 		case isInterfaceSrc(ft) && !isEmptyInterface(ft):
 			values[fieldIndex] = genValueInterface(val)
