@@ -147,7 +147,7 @@ func genValueAsFunctionWrapper(n *node) func(*frame) reflect.Value {
 			return reflect.New(typ).Elem()
 		}
 		vn, ok := v.Interface().(*node)
-		if ok && vn.rval.IsValid() && vn.rval.Type().Kind() == reflect.Func {
+		if ok && vn.rval.Kind() == reflect.Func {
 			// The node value is already a callable func, no need to wrap it.
 			return vn.rval
 		}
@@ -160,7 +160,7 @@ func genValueAs(n *node, t reflect.Type) func(*frame) reflect.Value {
 
 	return func(f *frame) reflect.Value {
 		v := value(f)
-		switch v.Type().Kind() {
+		switch v.Kind() {
 		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Ptr, reflect.Map, reflect.Slice, reflect.UnsafePointer:
 			if v.IsNil() {
 				return reflect.New(t).Elem()
@@ -338,13 +338,13 @@ func getConcreteValue(val reflect.Value) reflect.Value {
 	if v.NumMethod() > 0 {
 		return v
 	}
-	if v.Type().Kind() != reflect.Struct {
+	if v.Kind() != reflect.Struct {
 		return v
 	}
 	// Search a concrete value in fields of an emulated interface.
 	for i := v.NumField() - 1; i >= 0; i-- {
 		vv := v.Field(i)
-		if vv.Type().Kind() == reflect.Interface {
+		if vv.Kind() == reflect.Interface {
 			vv = vv.Elem()
 		}
 		if vv.IsValid() {
@@ -430,7 +430,7 @@ func vInt(v reflect.Value) (i int64) {
 		i, _ = constant.Int64Val(constant.ToInt(c))
 		return i
 	}
-	switch v.Type().Kind() {
+	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		i = v.Int()
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -448,7 +448,7 @@ func vUint(v reflect.Value) (i uint64) {
 		i, _ = constant.Uint64Val(constant.ToInt(c))
 		return i
 	}
-	switch v.Type().Kind() {
+	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		i = uint64(v.Int())
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -468,7 +468,7 @@ func vComplex(v reflect.Value) (c complex128) {
 		img, _ := constant.Float64Val(constant.Imag(c))
 		return complex(rel, img)
 	}
-	switch v.Type().Kind() {
+	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		c = complex(float64(v.Int()), 0)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -486,7 +486,7 @@ func vFloat(v reflect.Value) (i float64) {
 		i, _ = constant.Float64Val(constant.ToFloat(c))
 		return i
 	}
-	switch v.Type().Kind() {
+	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		i = float64(v.Int())
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -519,14 +519,50 @@ func genValueInt(n *node) func(*frame) (reflect.Value, int64) {
 
 	switch n.typ.TypeOf().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return func(f *frame) (reflect.Value, int64) { v := value(f); return v, v.Int() }
+		return func(f *frame) (reflect.Value, int64) {
+			v := value(f)
+			if v.Kind() == reflect.Interface {
+				if v.IsNil() {
+					return v, 0
+				}
+				return v, v.Elem().Int()
+			}
+			return v, v.Int()
+		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return func(f *frame) (reflect.Value, int64) { v := value(f); return v, int64(v.Uint()) }
+		return func(f *frame) (reflect.Value, int64) {
+			v := value(f)
+			if v.Kind() == reflect.Interface {
+				if v.IsNil() {
+					return v, 0
+				}
+				return v, int64(v.Elem().Uint())
+			}
+			return v, int64(v.Uint())
+		}
 	case reflect.Float32, reflect.Float64:
-		return func(f *frame) (reflect.Value, int64) { v := value(f); return v, int64(v.Float()) }
+		return func(f *frame) (reflect.Value, int64) {
+			v := value(f)
+			if v.Kind() == reflect.Interface {
+				if v.IsNil() {
+					return v, 0
+				}
+				return v, int64(v.Elem().Float())
+			}
+			return v, int64(v.Float())
+		}
 	case reflect.Complex64, reflect.Complex128:
 		if n.typ.untyped && n.rval.IsValid() && imag(n.rval.Complex()) == 0 {
-			return func(f *frame) (reflect.Value, int64) { v := value(f); return v, int64(real(v.Complex())) }
+			return func(f *frame) (reflect.Value, int64) {
+				v := value(f)
+				if v.Kind() == reflect.Interface {
+					if v.IsNil() {
+						return v, 0
+					}
+					return v, int64(real(v.Elem().Complex()))
+				}
+				return v, int64(real(v.Complex()))
+			}
 		}
 	}
 	return nil
@@ -537,14 +573,50 @@ func genValueUint(n *node) func(*frame) (reflect.Value, uint64) {
 
 	switch n.typ.TypeOf().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return func(f *frame) (reflect.Value, uint64) { v := value(f); return v, uint64(v.Int()) }
+		return func(f *frame) (reflect.Value, uint64) {
+			v := value(f)
+			if v.Kind() == reflect.Interface {
+				if v.IsNil() {
+					return v, 0
+				}
+				return v, uint64(v.Elem().Int())
+			}
+			return v, uint64(v.Int())
+		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return func(f *frame) (reflect.Value, uint64) { v := value(f); return v, v.Uint() }
+		return func(f *frame) (reflect.Value, uint64) {
+			v := value(f)
+			if v.Kind() == reflect.Interface {
+				if v.IsNil() {
+					return v, 0
+				}
+				return v, v.Elem().Uint()
+			}
+			return v, v.Uint()
+		}
 	case reflect.Float32, reflect.Float64:
-		return func(f *frame) (reflect.Value, uint64) { v := value(f); return v, uint64(v.Float()) }
+		return func(f *frame) (reflect.Value, uint64) {
+			v := value(f)
+			if v.Kind() == reflect.Interface {
+				if v.IsNil() {
+					return v, 0
+				}
+				return v, uint64(v.Elem().Float())
+			}
+			return v, uint64(v.Float())
+		}
 	case reflect.Complex64, reflect.Complex128:
 		if n.typ.untyped && n.rval.IsValid() && imag(n.rval.Complex()) == 0 {
-			return func(f *frame) (reflect.Value, uint64) { v := value(f); return v, uint64(real(v.Complex())) }
+			return func(f *frame) (reflect.Value, uint64) {
+				v := value(f)
+				if v.Kind() == reflect.Interface {
+					if v.IsNil() {
+						return v, 0
+					}
+					return v, uint64(real(v.Elem().Complex()))
+				}
+				return v, uint64(real(v.Complex()))
+			}
 		}
 	}
 	return nil
@@ -555,14 +627,50 @@ func genValueFloat(n *node) func(*frame) (reflect.Value, float64) {
 
 	switch n.typ.TypeOf().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return func(f *frame) (reflect.Value, float64) { v := value(f); return v, float64(v.Int()) }
+		return func(f *frame) (reflect.Value, float64) {
+			v := value(f)
+			if v.Kind() == reflect.Interface {
+				if v.IsNil() {
+					return v, 0
+				}
+				return v, float64(v.Elem().Int())
+			}
+			return v, float64(v.Int())
+		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return func(f *frame) (reflect.Value, float64) { v := value(f); return v, float64(v.Uint()) }
+		return func(f *frame) (reflect.Value, float64) {
+			v := value(f)
+			if v.Kind() == reflect.Interface {
+				if v.IsNil() {
+					return v, 0
+				}
+				return v, float64(v.Elem().Uint())
+			}
+			return v, float64(v.Uint())
+		}
 	case reflect.Float32, reflect.Float64:
-		return func(f *frame) (reflect.Value, float64) { v := value(f); return v, v.Float() }
+		return func(f *frame) (reflect.Value, float64) {
+			v := value(f)
+			if v.Kind() == reflect.Interface {
+				if v.IsNil() {
+					return v, 0
+				}
+				return v, v.Elem().Float()
+			}
+			return v, v.Float()
+		}
 	case reflect.Complex64, reflect.Complex128:
 		if n.typ.untyped && n.rval.IsValid() && imag(n.rval.Complex()) == 0 {
-			return func(f *frame) (reflect.Value, float64) { v := value(f); return v, real(v.Complex()) }
+			return func(f *frame) (reflect.Value, float64) {
+				v := value(f)
+				if v.Kind() == reflect.Interface {
+					if v.IsNil() {
+						return v, 0
+					}
+					return v, real(v.Elem().Complex())
+				}
+				return v, real(v.Complex())
+			}
 		}
 	}
 	return nil
@@ -578,18 +686,63 @@ func genComplex(n *node) func(*frame) complex128 {
 
 	switch n.typ.TypeOf().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return func(f *frame) complex128 { return complex(float64(value(f).Int()), 0) }
+		return func(f *frame) complex128 {
+			v := value(f)
+			if v.Kind() == reflect.Interface {
+				if v.IsNil() {
+					return 0
+				}
+				return complex(float64(v.Elem().Int()), 0)
+			}
+			return complex(float64(v.Int()), 0)
+		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return func(f *frame) complex128 { return complex(float64(value(f).Uint()), 0) }
+		return func(f *frame) complex128 {
+			v := value(f)
+			if v.Kind() == reflect.Interface {
+				if v.IsNil() {
+					return 0
+				}
+				return complex(float64(v.Elem().Uint()), 0)
+			}
+			return complex(float64(v.Uint()), 0)
+		}
 	case reflect.Float32, reflect.Float64:
-		return func(f *frame) complex128 { return complex(value(f).Float(), 0) }
+		return func(f *frame) complex128 {
+			v := value(f)
+			if v.Kind() == reflect.Interface {
+				if v.IsNil() {
+					return 0
+				}
+				return complex(v.Elem().Float(), 0)
+			}
+			return complex(v.Float(), 0)
+		}
 	case reflect.Complex64, reflect.Complex128:
-		return func(f *frame) complex128 { return value(f).Complex() }
+		return func(f *frame) complex128 {
+			v := value(f)
+			if v.Kind() == reflect.Interface {
+				if v.IsNil() {
+					return 0
+				}
+				return v.Elem().Complex()
+			}
+			return v.Complex()
+		}
 	}
 	return nil
 }
 
 func genValueString(n *node) func(*frame) (reflect.Value, string) {
 	value := genValue(n)
-	return func(f *frame) (reflect.Value, string) { v := value(f); return v, v.String() }
+	return func(f *frame) (reflect.Value, string) {
+		v := value(f)
+		if v.Kind() == reflect.Interface {
+			if v.IsNil() {
+				return v, ""
+			}
+			return v, v.Elem().String()
+		}
+		return v, v.String()
+	}
 }

@@ -1505,7 +1505,11 @@ func addAssign(n *node) {
 			v1 := vString(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, s := v0(f)
-				v.SetString(s + v1)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(s + v1).Convert(typ))
+				} else {
+					v.SetString(s + v1)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1516,7 +1520,11 @@ func addAssign(n *node) {
 			j := vInt(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetInt(i + j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i + j).Convert(typ))
+				} else {
+					v.SetInt(i + j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1527,7 +1535,11 @@ func addAssign(n *node) {
 			j := vUint(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetUint(i + j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i + j).Convert(typ))
+				} else {
+					v.SetUint(i + j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1538,7 +1550,11 @@ func addAssign(n *node) {
 			j := vFloat(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetFloat(i + j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i + j).Convert(typ))
+				} else {
+					v.SetFloat(i + j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1549,7 +1565,11 @@ func addAssign(n *node) {
 			v1 := vComplex(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v := v0(f)
-				v.SetComplex(v.Complex() + v1)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(v.Complex() + v1).Convert(typ))
+				} else {
+					v.SetComplex(v.Complex() + v1)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1563,7 +1583,11 @@ func addAssign(n *node) {
 			v1 := genValue(c1)
 			n.exec = func(f *frame) bltn {
 				v, s := v0(f)
-				v.SetString(s + v1(f).String())
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(s + v1(f).String()).Convert(typ))
+				} else {
+					v.SetString(s + v1(f).String())
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1575,7 +1599,11 @@ func addAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetInt(i + j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i + j).Convert(typ))
+				} else {
+					v.SetInt(i + j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1587,7 +1615,11 @@ func addAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetUint(i + j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i + j).Convert(typ))
+				} else {
+					v.SetUint(i + j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1599,7 +1631,11 @@ func addAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetFloat(i + j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i + j).Convert(typ))
+				} else {
+					v.SetFloat(i + j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1610,7 +1646,11 @@ func addAssign(n *node) {
 			v1 := genValue(c1)
 			n.exec = func(f *frame) bltn {
 				v := v0(f)
-				v.SetComplex(v.Complex() + v1(f).Complex())
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(v.Complex() + v1(f).Complex()).Convert(typ))
+				} else {
+					v.SetComplex(v.Complex() + v1(f).Complex())
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1639,7 +1679,11 @@ func andAssign(n *node) {
 			j := vInt(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetInt(i & j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i & j).Convert(typ))
+				} else {
+					v.SetInt(i & j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1650,7 +1694,11 @@ func andAssign(n *node) {
 			j := vUint(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetUint(i & j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i & j).Convert(typ))
+				} else {
+					v.SetUint(i & j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1665,7 +1713,11 @@ func andAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetInt(i & j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i & j).Convert(typ))
+				} else {
+					v.SetInt(i & j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1677,7 +1729,11 @@ func andAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetUint(i & j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i & j).Convert(typ))
+				} else {
+					v.SetUint(i & j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1706,7 +1762,11 @@ func andNotAssign(n *node) {
 			j := vInt(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetInt(i &^ j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i &^ j).Convert(typ))
+				} else {
+					v.SetInt(i &^ j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1717,7 +1777,11 @@ func andNotAssign(n *node) {
 			j := vUint(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetUint(i &^ j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i &^ j).Convert(typ))
+				} else {
+					v.SetUint(i &^ j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1732,7 +1796,11 @@ func andNotAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetInt(i &^ j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i &^ j).Convert(typ))
+				} else {
+					v.SetInt(i &^ j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1744,7 +1812,11 @@ func andNotAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetUint(i &^ j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i &^ j).Convert(typ))
+				} else {
+					v.SetUint(i &^ j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1773,7 +1845,11 @@ func mulAssign(n *node) {
 			j := vInt(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetInt(i * j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i * j).Convert(typ))
+				} else {
+					v.SetInt(i * j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1784,7 +1860,11 @@ func mulAssign(n *node) {
 			j := vUint(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetUint(i * j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i * j).Convert(typ))
+				} else {
+					v.SetUint(i * j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1795,7 +1875,11 @@ func mulAssign(n *node) {
 			j := vFloat(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetFloat(i * j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i * j).Convert(typ))
+				} else {
+					v.SetFloat(i * j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1806,7 +1890,11 @@ func mulAssign(n *node) {
 			v1 := vComplex(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v := v0(f)
-				v.SetComplex(v.Complex() * v1)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(v.Complex() * v1).Convert(typ))
+				} else {
+					v.SetComplex(v.Complex() * v1)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1821,7 +1909,11 @@ func mulAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetInt(i * j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i * j).Convert(typ))
+				} else {
+					v.SetInt(i * j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1833,7 +1925,11 @@ func mulAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetUint(i * j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i * j).Convert(typ))
+				} else {
+					v.SetUint(i * j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1845,7 +1941,11 @@ func mulAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetFloat(i * j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i * j).Convert(typ))
+				} else {
+					v.SetFloat(i * j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1856,7 +1956,11 @@ func mulAssign(n *node) {
 			v1 := genValue(c1)
 			n.exec = func(f *frame) bltn {
 				v := v0(f)
-				v.SetComplex(v.Complex() * v1(f).Complex())
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(v.Complex() * v1(f).Complex()).Convert(typ))
+				} else {
+					v.SetComplex(v.Complex() * v1(f).Complex())
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1885,7 +1989,11 @@ func orAssign(n *node) {
 			j := vInt(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetInt(i | j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i | j).Convert(typ))
+				} else {
+					v.SetInt(i | j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1896,7 +2004,11 @@ func orAssign(n *node) {
 			j := vUint(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetUint(i | j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i | j).Convert(typ))
+				} else {
+					v.SetUint(i | j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1911,7 +2023,11 @@ func orAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetInt(i | j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i | j).Convert(typ))
+				} else {
+					v.SetInt(i | j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1923,7 +2039,11 @@ func orAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetUint(i | j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i | j).Convert(typ))
+				} else {
+					v.SetUint(i | j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1952,7 +2072,11 @@ func quoAssign(n *node) {
 			j := vInt(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetInt(i / j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i / j).Convert(typ))
+				} else {
+					v.SetInt(i / j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1963,7 +2087,11 @@ func quoAssign(n *node) {
 			j := vUint(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetUint(i / j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i / j).Convert(typ))
+				} else {
+					v.SetUint(i / j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1974,7 +2102,11 @@ func quoAssign(n *node) {
 			j := vFloat(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetFloat(i / j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i / j).Convert(typ))
+				} else {
+					v.SetFloat(i / j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -1985,7 +2117,11 @@ func quoAssign(n *node) {
 			v1 := vComplex(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v := v0(f)
-				v.SetComplex(v.Complex() / v1)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(v.Complex() / v1).Convert(typ))
+				} else {
+					v.SetComplex(v.Complex() / v1)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2000,7 +2136,11 @@ func quoAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetInt(i / j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i / j).Convert(typ))
+				} else {
+					v.SetInt(i / j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2012,7 +2152,11 @@ func quoAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetUint(i / j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i / j).Convert(typ))
+				} else {
+					v.SetUint(i / j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2024,7 +2168,11 @@ func quoAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetFloat(i / j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i / j).Convert(typ))
+				} else {
+					v.SetFloat(i / j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2035,7 +2183,11 @@ func quoAssign(n *node) {
 			v1 := genValue(c1)
 			n.exec = func(f *frame) bltn {
 				v := v0(f)
-				v.SetComplex(v.Complex() / v1(f).Complex())
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(v.Complex() / v1(f).Complex()).Convert(typ))
+				} else {
+					v.SetComplex(v.Complex() / v1(f).Complex())
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2064,7 +2216,11 @@ func remAssign(n *node) {
 			j := vInt(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetInt(i % j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i % j).Convert(typ))
+				} else {
+					v.SetInt(i % j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2075,7 +2231,11 @@ func remAssign(n *node) {
 			j := vUint(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetUint(i % j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i % j).Convert(typ))
+				} else {
+					v.SetUint(i % j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2090,7 +2250,11 @@ func remAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetInt(i % j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i % j).Convert(typ))
+				} else {
+					v.SetInt(i % j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2102,7 +2266,11 @@ func remAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetUint(i % j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i % j).Convert(typ))
+				} else {
+					v.SetUint(i % j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2131,7 +2299,11 @@ func shlAssign(n *node) {
 			j := vUint(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetInt(i << j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i << j).Convert(typ))
+				} else {
+					v.SetInt(i << j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2142,7 +2314,11 @@ func shlAssign(n *node) {
 			j := vUint(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetUint(i << j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i << j).Convert(typ))
+				} else {
+					v.SetUint(i << j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2157,7 +2333,11 @@ func shlAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetInt(i << j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i << j).Convert(typ))
+				} else {
+					v.SetInt(i << j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2169,7 +2349,11 @@ func shlAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetUint(i << j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i << j).Convert(typ))
+				} else {
+					v.SetUint(i << j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2198,7 +2382,11 @@ func shrAssign(n *node) {
 			j := vUint(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetInt(i >> j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i >> j).Convert(typ))
+				} else {
+					v.SetInt(i >> j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2209,7 +2397,11 @@ func shrAssign(n *node) {
 			j := vUint(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetUint(i >> j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i >> j).Convert(typ))
+				} else {
+					v.SetUint(i >> j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2224,7 +2416,11 @@ func shrAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetInt(i >> j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i >> j).Convert(typ))
+				} else {
+					v.SetInt(i >> j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2236,7 +2432,11 @@ func shrAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetUint(i >> j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i >> j).Convert(typ))
+				} else {
+					v.SetUint(i >> j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2265,7 +2465,11 @@ func subAssign(n *node) {
 			j := vInt(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetInt(i - j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i - j).Convert(typ))
+				} else {
+					v.SetInt(i - j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2276,7 +2480,11 @@ func subAssign(n *node) {
 			j := vUint(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetUint(i - j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i - j).Convert(typ))
+				} else {
+					v.SetUint(i - j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2287,7 +2495,11 @@ func subAssign(n *node) {
 			j := vFloat(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetFloat(i - j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i - j).Convert(typ))
+				} else {
+					v.SetFloat(i - j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2298,7 +2510,11 @@ func subAssign(n *node) {
 			v1 := vComplex(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v := v0(f)
-				v.SetComplex(v.Complex() - v1)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(v.Complex() - v1).Convert(typ))
+				} else {
+					v.SetComplex(v.Complex() - v1)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2313,7 +2529,11 @@ func subAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetInt(i - j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i - j).Convert(typ))
+				} else {
+					v.SetInt(i - j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2325,7 +2545,11 @@ func subAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetUint(i - j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i - j).Convert(typ))
+				} else {
+					v.SetUint(i - j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2337,7 +2561,11 @@ func subAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetFloat(i - j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i - j).Convert(typ))
+				} else {
+					v.SetFloat(i - j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2348,7 +2576,11 @@ func subAssign(n *node) {
 			v1 := genValue(c1)
 			n.exec = func(f *frame) bltn {
 				v := v0(f)
-				v.SetComplex(v.Complex() - v1(f).Complex())
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(v.Complex() - v1(f).Complex()).Convert(typ))
+				} else {
+					v.SetComplex(v.Complex() - v1(f).Complex())
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2377,7 +2609,11 @@ func xorAssign(n *node) {
 			j := vInt(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetInt(i ^ j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i ^ j).Convert(typ))
+				} else {
+					v.SetInt(i ^ j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2388,7 +2624,11 @@ func xorAssign(n *node) {
 			j := vUint(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetUint(i ^ j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i ^ j).Convert(typ))
+				} else {
+					v.SetUint(i ^ j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2403,7 +2643,11 @@ func xorAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetInt(i ^ j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i ^ j).Convert(typ))
+				} else {
+					v.SetInt(i ^ j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2415,7 +2659,11 @@ func xorAssign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetUint(i ^ j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i ^ j).Convert(typ))
+				} else {
+					v.SetUint(i ^ j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -2442,7 +2690,11 @@ func dec(n *node) {
 		v0 := genValueInt(c0)
 		n.exec = func(f *frame) bltn {
 			v, i := v0(f)
-			v.SetInt(i - 1)
+			if v.Type().Kind() == reflect.Interface {
+				v.Set(reflect.ValueOf(i - 1).Convert(typ))
+			} else {
+				v.SetInt(i - 1)
+			}
 			if setMap {
 				mapValue(f).SetMapIndex(indexValue(f), v)
 			}
@@ -2452,7 +2704,11 @@ func dec(n *node) {
 		v0 := genValueUint(c0)
 		n.exec = func(f *frame) bltn {
 			v, i := v0(f)
-			v.SetUint(i - 1)
+			if v.Type().Kind() == reflect.Interface {
+				v.Set(reflect.ValueOf(i - 1).Convert(typ))
+			} else {
+				v.SetUint(i - 1)
+			}
 			if setMap {
 				mapValue(f).SetMapIndex(indexValue(f), v)
 			}
@@ -2462,7 +2718,11 @@ func dec(n *node) {
 		v0 := genValueFloat(c0)
 		n.exec = func(f *frame) bltn {
 			v, i := v0(f)
-			v.SetFloat(i - 1)
+			if v.Type().Kind() == reflect.Interface {
+				v.Set(reflect.ValueOf(i - 1).Convert(typ))
+			} else {
+				v.SetFloat(i - 1)
+			}
 			if setMap {
 				mapValue(f).SetMapIndex(indexValue(f), v)
 			}
@@ -2472,7 +2732,11 @@ func dec(n *node) {
 		v0 := genValue(c0)
 		n.exec = func(f *frame) bltn {
 			v := v0(f)
-			v.SetComplex(v.Complex() - 1)
+			if v.Type().Kind() == reflect.Interface {
+				v.Set(reflect.ValueOf(v.Complex() - 1).Convert(typ))
+			} else {
+				v.SetComplex(v.Complex() - 1)
+			}
 			if setMap {
 				mapValue(f).SetMapIndex(indexValue(f), v)
 			}
@@ -2498,7 +2762,11 @@ func inc(n *node) {
 		v0 := genValueInt(c0)
 		n.exec = func(f *frame) bltn {
 			v, i := v0(f)
-			v.SetInt(i + 1)
+			if v.Type().Kind() == reflect.Interface {
+				v.Set(reflect.ValueOf(i + 1).Convert(typ))
+			} else {
+				v.SetInt(i + 1)
+			}
 			if setMap {
 				mapValue(f).SetMapIndex(indexValue(f), v)
 			}
@@ -2508,7 +2776,11 @@ func inc(n *node) {
 		v0 := genValueUint(c0)
 		n.exec = func(f *frame) bltn {
 			v, i := v0(f)
-			v.SetUint(i + 1)
+			if v.Type().Kind() == reflect.Interface {
+				v.Set(reflect.ValueOf(i + 1).Convert(typ))
+			} else {
+				v.SetUint(i + 1)
+			}
 			if setMap {
 				mapValue(f).SetMapIndex(indexValue(f), v)
 			}
@@ -2518,7 +2790,11 @@ func inc(n *node) {
 		v0 := genValueFloat(c0)
 		n.exec = func(f *frame) bltn {
 			v, i := v0(f)
-			v.SetFloat(i + 1)
+			if v.Type().Kind() == reflect.Interface {
+				v.Set(reflect.ValueOf(i + 1).Convert(typ))
+			} else {
+				v.SetFloat(i + 1)
+			}
 			if setMap {
 				mapValue(f).SetMapIndex(indexValue(f), v)
 			}
@@ -2528,7 +2804,11 @@ func inc(n *node) {
 		v0 := genValue(c0)
 		n.exec = func(f *frame) bltn {
 			v := v0(f)
-			v.SetComplex(v.Complex() + 1)
+			if v.Type().Kind() == reflect.Interface {
+				v.Set(reflect.ValueOf(v.Complex() + 1).Convert(typ))
+			} else {
+				v.SetComplex(v.Complex() + 1)
+			}
 			if setMap {
 				mapValue(f).SetMapIndex(indexValue(f), v)
 			}

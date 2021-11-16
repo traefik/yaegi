@@ -305,7 +305,11 @@ func {{$name}}Assign(n *node) {
 			v1 := vString(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, s := v0(f)
-				v.SetString(s {{$op.Name}} v1)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(s {{$op.Name}} v1).Convert(typ))
+				} else {
+					v.SetString(s {{$op.Name}} v1)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -321,7 +325,11 @@ func {{$name}}Assign(n *node) {
 			{{end -}}
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetInt(i {{$op.Name}} j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i {{$op.Name}} j).Convert(typ))
+				} else {
+					v.SetInt(i {{$op.Name}} j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -332,7 +340,11 @@ func {{$name}}Assign(n *node) {
 			j := vUint(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetUint(i {{$op.Name}} j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i {{$op.Name}} j).Convert(typ))
+				} else {
+					v.SetUint(i {{$op.Name}} j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -344,7 +356,11 @@ func {{$name}}Assign(n *node) {
 			j := vFloat(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
-				v.SetFloat(i {{$op.Name}} j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i {{$op.Name}} j).Convert(typ))
+				} else {
+					v.SetFloat(i {{$op.Name}} j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -355,7 +371,11 @@ func {{$name}}Assign(n *node) {
 			v1 := vComplex(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v := v0(f)
-				v.SetComplex(v.Complex() {{$op.Name}} v1)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(v.Complex() {{$op.Name}} v1).Convert(typ))
+				} else {
+					v.SetComplex(v.Complex() {{$op.Name}} v1)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -371,7 +391,11 @@ func {{$name}}Assign(n *node) {
 			v1 := genValue(c1)
 			n.exec = func(f *frame) bltn {
 				v, s := v0(f)
-				v.SetString(s {{$op.Name}} v1(f).String())
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(s {{$op.Name}} v1(f).String()).Convert(typ))
+				} else {
+					v.SetString(s {{$op.Name}} v1(f).String())
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -388,7 +412,11 @@ func {{$name}}Assign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetInt(i {{$op.Name}} j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i {{$op.Name}} j).Convert(typ))
+				} else {
+					v.SetInt(i {{$op.Name}} j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -400,7 +428,11 @@ func {{$name}}Assign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetUint(i {{$op.Name}} j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i {{$op.Name}} j).Convert(typ))
+				} else {
+					v.SetUint(i {{$op.Name}} j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -413,7 +445,11 @@ func {{$name}}Assign(n *node) {
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
-				v.SetFloat(i {{$op.Name}} j)
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(i {{$op.Name}} j).Convert(typ))
+				} else {
+					v.SetFloat(i {{$op.Name}} j)
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -424,7 +460,11 @@ func {{$name}}Assign(n *node) {
 			v1 := genValue(c1)
 			n.exec = func(f *frame) bltn {
 				v := v0(f)
-				v.SetComplex(v.Complex() {{$op.Name}} v1(f).Complex())
+				if v.Type().Kind() == reflect.Interface {
+					v.Set(reflect.ValueOf(v.Complex() {{$op.Name}} v1(f).Complex()).Convert(typ))
+				} else {
+					v.SetComplex(v.Complex() {{$op.Name}} v1(f).Complex())
+				}
 				if setMap {
 					mapValue(f).SetMapIndex(indexValue(f), v)
 				}
@@ -453,7 +493,11 @@ func {{$name}}(n *node) {
 		v0 := genValueInt(c0)
 		n.exec = func(f *frame) bltn {
 			v, i := v0(f)
-			v.SetInt(i {{$op.Name}} 1)
+			if v.Type().Kind() == reflect.Interface {
+				v.Set(reflect.ValueOf(i {{$op.Name}} 1).Convert(typ))
+			} else {
+				v.SetInt(i {{$op.Name}} 1)
+			}
 			if setMap {
                 mapValue(f).SetMapIndex(indexValue(f), v)
             }
@@ -463,7 +507,11 @@ func {{$name}}(n *node) {
 		v0 := genValueUint(c0)
 		n.exec = func(f *frame) bltn {
 			v, i := v0(f)
-			v.SetUint(i {{$op.Name}} 1)
+			if v.Type().Kind() == reflect.Interface {
+				v.Set(reflect.ValueOf(i {{$op.Name}} 1).Convert(typ))
+			} else {
+				v.SetUint(i {{$op.Name}} 1)
+			}
 			if setMap {
                 mapValue(f).SetMapIndex(indexValue(f), v)
             }
@@ -473,7 +521,11 @@ func {{$name}}(n *node) {
 		v0 := genValueFloat(c0)
 		n.exec = func(f *frame) bltn {
 			v, i := v0(f)
-			v.SetFloat(i {{$op.Name}} 1)
+			if v.Type().Kind() == reflect.Interface {
+				v.Set(reflect.ValueOf(i {{$op.Name}} 1).Convert(typ))
+			} else {
+				v.SetFloat(i {{$op.Name}} 1)
+			}
 			if setMap {
                 mapValue(f).SetMapIndex(indexValue(f), v)
             }
@@ -483,7 +535,11 @@ func {{$name}}(n *node) {
 		v0 := genValue(c0)
 		n.exec = func(f *frame) bltn {
 			v := v0(f)
-			v.SetComplex(v.Complex() {{$op.Name}} 1)
+			if v.Type().Kind() == reflect.Interface {
+				v.Set(reflect.ValueOf(v.Complex() {{$op.Name}} 1).Convert(typ))
+			} else {
+				v.SetComplex(v.Complex() {{$op.Name}} 1)
+			}
 			if setMap {
                 mapValue(f).SetMapIndex(indexValue(f), v)
             }

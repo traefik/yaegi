@@ -128,6 +128,7 @@ func TestEvalAssign(t *testing.T) {
 		{src: "i := 1; j := &i; (*j) = 2", res: "2"},
 		{src: "i64 := testpkg.val; i64 == 11", res: "true"},
 		{pre: func() { eval(t, i, "k := 1") }, src: `k := "Hello world"`, res: "Hello world"}, // allow reassignment in subsequent evaluations
+		{src: "f1 := func() (r int) { r++; return }; var t interface{}; t = f1()", res: "1"},
 	})
 }
 
