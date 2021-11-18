@@ -616,6 +616,34 @@ func convert(n *node) {
 	}
 }
 
+// assignFromCall assigns values from a function call.
+func assignFromCall(n *node) {
+	ncall := n.lastChild()
+	l := len(n.child) - 1
+	if n.anc.kind == varDecl && n.child[l-1].isType(n.scope) {
+		// Ignore the type in the assignment if it is part of a variable declaration.
+		l--
+	}
+	dvalue := make([]func(*frame) reflect.Value, l)
+	for i := range dvalue {
+		if n.child[i].ident == "_" {
+			continue
+		}
+		dvalue[i] = genValue(n.child[i])
+	}
+	next := getExec(n.tnext)
+	n.exec = func(f *frame) bltn {
+		for i, v := range dvalue {
+			if v == nil {
+				continue
+			}
+			s := f.data[ncall.findex+i]
+			v(f).Set(s)
+		}
+		return next
+	}
+}
+
 func assign(n *node) {
 	next := getExec(n.tnext)
 	dvalue := make([]func(*frame) reflect.Value, n.nleft)
@@ -1126,7 +1154,7 @@ func call(n *node) {
 	// Compute input argument value functions.
 	for i, c := range child {
 		switch {
-		case isBinCall(c):
+		case isBinCall(c, c.scope):
 			// Handle nested function calls: pass returned values as arguments.
 			numOut := c.child[0].typ.rtype.NumOut()
 			for j := 0; j < numOut; j++ {
@@ -1169,6 +1197,7 @@ func call(n *node) {
 	rvalues := make([]func(*frame) reflect.Value, len(rtypes))
 	switch n.anc.kind {
 	case defineXStmt, assignXStmt:
+		l := n.level
 		for i := range rvalues {
 			c := n.anc.child[i]
 			switch {
@@ -1177,7 +1206,8 @@ func call(n *node) {
 			case isInterfaceSrc(c.typ) && !isEmptyInterface(c.typ) && !isInterfaceSrc(rtypes[i]):
 				rvalues[i] = genValueInterfaceValue(c)
 			default:
-				rvalues[i] = genValue(c)
+				j := n.findex + i
+				rvalues[i] = func(f *frame) reflect.Value { return getFrame(f, l).data[j] }
 			}
 		}
 	case returnStmt:
@@ -1404,7 +1434,7 @@ func callBin(n *node) {
 		}
 
 		switch {
-		case isBinCall(c):
+		case isBinCall(c, c.scope):
 			// Handle nested function calls: pass returned values as arguments
 			numOut := c.child[0].typ.rtype.NumOut()
 			for j := 0; j < numOut; j++ {
