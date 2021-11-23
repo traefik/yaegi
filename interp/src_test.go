@@ -1,7 +1,6 @@
 package interp
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -50,7 +49,7 @@ func Test_effectivePkg(t *testing.T) {
 
 func Test_pkgDir(t *testing.T) {
 	// create GOPATH
-	goPath, err := ioutil.TempDir("", "pkdir")
+	goPath, err := os.MkdirTemp("", "pkdir")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,8 +3,8 @@ package main
 import (
 	"bytes"
 	"go/format"
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"text/template"
 )
@@ -1183,7 +1183,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err = ioutil.WriteFile("op.go", source, 0o666); err != nil {
+	if err = os.WriteFile("op.go", source, 0o666); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 )
 
 func main() {
-	_, err := ioutil.ReadFile("__NotExisting__")
+	_, err := os.ReadFile("__NotExisting__")
 	if err != nil {
 		fmt.Println(err.Error())
 	}

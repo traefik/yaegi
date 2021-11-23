@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,7 +37,7 @@ func applyCIMultiplier(timeout time.Duration) time.Duration {
 }
 
 func TestYaegiCmdCancel(t *testing.T) {
-	tmp, err := ioutil.TempDir("", "yaegi-")
+	tmp, err := os.MkdirTemp("", "yaegi-")
 	if err != nil {
 		t.Fatalf("failed to create tmp directory: %v", err)
 	}

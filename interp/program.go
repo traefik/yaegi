@@ -3,7 +3,7 @@ package interp
 import (
 	"context"
 	"go/ast"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"runtime"
 	"runtime/debug"
@@ -28,7 +28,7 @@ func (interp *Interpreter) CompilePath(path string) (*Program, error) {
 		return nil, err
 	}
 
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

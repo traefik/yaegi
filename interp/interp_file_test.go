@@ -5,7 +5,6 @@ import (
 	"go/build"
 	"go/parser"
 	"go/token"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,7 +25,7 @@ func TestFile(t *testing.T) {
 	_ = os.Setenv("YAEGI_SPECIAL_STDIO", "1")
 
 	baseDir := filepath.Join("..", "_test")
-	files, err := ioutil.ReadDir(baseDir)
+	files, err := os.ReadDir(baseDir)
 	if err != nil {
 		t.Fatal(err)
 	}
