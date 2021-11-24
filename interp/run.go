@@ -1125,27 +1125,28 @@ func methodByName(value reflect.Value, name string) reflect.Value {
 func call(n *node) {
 	goroutine := n.anc.kind == goStmt
 	var method bool
-	value := genValue(n.child[0])
+	c0 := n.child[0]
+	value := genValue(c0)
 	var values []func(*frame) reflect.Value
 
 	recvIndexLater := false
 	switch {
-	case n.child[0].recv != nil:
+	case c0.recv != nil:
 		// Compute method receiver value.
-		values = append(values, genValueRecv(n.child[0]))
+		values = append(values, genValueRecv(c0))
 		method = true
-	case len(n.child[0].child) > 0 && n.child[0].child[0].typ != nil && isInterfaceSrc(n.child[0].child[0].typ):
+	case len(c0.child) > 0 && c0.child[0].typ != nil && isInterfaceSrc(c0.child[0].typ):
 		recvIndexLater = true
-		values = append(values, genValueBinRecv(n.child[0], &receiver{node: n.child[0].child[0]}))
+		values = append(values, genValueBinRecv(c0, &receiver{node: c0.child[0]}))
 		value = genValueBinMethodOnInterface(n, value)
 		method = true
-	case n.child[0].action == aMethod:
+	case c0.action == aMethod:
 		// Add a place holder for interface method receiver.
 		values = append(values, nil)
 		method = true
 	}
 
-	numRet := len(n.child[0].typ.ret)
+	numRet := len(c0.typ.ret)
 	variadic := variadicPos(n)
 	child := n.child[1:]
 	tnext := getExec(n.tnext)
@@ -1153,27 +1154,40 @@ func call(n *node) {
 
 	// Compute input argument value functions.
 	for i, c := range child {
+		var arg *itype
+		if variadic >= 0 && i >= variadic {
+			arg = c0.typ.arg[variadic].val
+		} else {
+			arg = c0.typ.arg[i]
+		}
 		switch {
 		case isBinCall(c, c.scope):
 			// Handle nested function calls: pass returned values as arguments.
 			numOut := c.child[0].typ.rtype.NumOut()
 			for j := 0; j < numOut; j++ {
 				ind := c.findex + j
-				values = append(values, func(f *frame) reflect.Value { return f.data[ind] })
+				if !isInterfaceSrc(arg) || isEmptyInterface(arg) {
+					values = append(values, func(f *frame) reflect.Value { return f.data[ind] })
+					continue
+				}
+				values = append(values, func(f *frame) reflect.Value {
+					return reflect.ValueOf(valueInterface{value: f.data[ind]})
+				})
 			}
 		case isRegularCall(c):
 			// Arguments are return values of a nested function call.
-			for j := range c.child[0].typ.ret {
+			cc0 := c.child[0]
+			for j := range cc0.typ.ret {
 				ind := c.findex + j
-				values = append(values, func(f *frame) reflect.Value { return f.data[ind] })
+				if !isInterfaceSrc(arg) || isEmptyInterface(arg) {
+					values = append(values, func(f *frame) reflect.Value { return f.data[ind] })
+					continue
+				}
+				values = append(values, func(f *frame) reflect.Value {
+					return reflect.ValueOf(valueInterface{value: f.data[ind]})
+				})
 			}
 		default:
-			var arg *itype
-			if variadic >= 0 && i >= variadic {
-				arg = n.child[0].typ.arg[variadic].val
-			} else {
-				arg = n.child[0].typ.arg[i]
-			}
 			if c.kind == basicLit || c.rval.IsValid() {
 				argType := arg.TypeOf()
 				convertLiteralValue(c, argType)
@@ -1193,7 +1207,7 @@ func call(n *node) {
 	}
 
 	// Compute output argument value functions.
-	rtypes := n.child[0].typ.ret
+	rtypes := c0.typ.ret
 	rvalues := make([]func(*frame) reflect.Value, len(rtypes))
 	switch n.anc.kind {
 	case defineXStmt, assignXStmt:
@@ -1228,7 +1242,7 @@ func call(n *node) {
 
 	if n.anc.kind == deferStmt {
 		// Store function call in frame for deferred execution.
-		value = genFunctionWrapper(n.child[0])
+		value = genFunctionWrapper(c0)
 		if method {
 			// The receiver is already passed in the function wrapper, skip it.
 			values = values[1:]
