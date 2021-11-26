@@ -985,7 +985,7 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 			} else {
 				// Copy method receiver as first argument.
 				src, dest := rcvr(f), d[numRet]
-				sk, dk := src.Type().Kind(), dest.Type().Kind()
+				sk, dk := src.Kind(), dest.Kind()
 				switch {
 				case sk == reflect.Ptr && dk != reflect.Ptr:
 					dest.Set(src.Elem())
@@ -1358,7 +1358,7 @@ func call(n *node) {
 					// The !val.IsZero is to work around a recursive struct zero interface
 					// issue. Once there is a better way to handle this case, the dest
 					// can just be set.
-					if !val.IsZero() || dest[i].Type().Kind() == reflect.Interface {
+					if !val.IsZero() || dest[i].Kind() == reflect.Interface {
 						dest[i].Set(val)
 					}
 				}
@@ -1596,7 +1596,7 @@ func callBin(n *node) {
 				}
 				out := callFn(value(f), in)
 				for i := 0; i < len(out); i++ {
-					if out[i].Type().Kind() == reflect.Func {
+					if out[i].Kind() == reflect.Func {
 						getFrame(f, n.level).data[n.findex+i] = out[i]
 					} else {
 						getFrame(f, n.level).data[n.findex+i].Set(out[i])
@@ -2563,7 +2563,7 @@ func doCompositeBinStruct(n *node, hasType bool) {
 		}
 		d := value(f)
 		switch {
-		case d.Type().Kind() == reflect.Ptr:
+		case d.Kind() == reflect.Ptr:
 			d.Set(s.Addr())
 		default:
 			d.Set(s)
@@ -2641,7 +2641,7 @@ func doComposite(n *node, hasType bool, keyed bool) {
 		}
 		d := value(f)
 		switch {
-		case d.Type().Kind() == reflect.Ptr:
+		case d.Kind() == reflect.Ptr:
 			d.Set(a.Addr())
 		case destInterface:
 			if len(destType(n).field) > 0 {
@@ -3199,7 +3199,7 @@ func _len(n *node) {
 		val := value
 		value = func(f *frame) reflect.Value {
 			v := val(f).Elem()
-			for v.Type().Kind() == reflect.Ptr {
+			for v.Kind() == reflect.Ptr {
 				v = v.Elem()
 			}
 			return v

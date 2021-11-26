@@ -31,7 +31,7 @@ func slice(i interface{}, l int) interface{} {
 	}
 
 	v := reflect.ValueOf(i)
-	if v.Type().Kind() != reflect.Ptr {
+	if v.Kind() != reflect.Ptr {
 		panic(errors.New("first argument to unsafe.Slice must be pointer"))
 	}
 	if v.IsNil() {

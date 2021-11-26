@@ -147,7 +147,7 @@ func genValueAsFunctionWrapper(n *node) func(*frame) reflect.Value {
 			return reflect.New(typ).Elem()
 		}
 		vn, ok := v.Interface().(*node)
-		if ok && vn.rval.IsValid() && vn.rval.Type().Kind() == reflect.Func {
+		if ok && vn.rval.Kind() == reflect.Func {
 			// The node value is already a callable func, no need to wrap it.
 			return vn.rval
 		}
@@ -160,7 +160,7 @@ func genValueAs(n *node, t reflect.Type) func(*frame) reflect.Value {
 
 	return func(f *frame) reflect.Value {
 		v := value(f)
-		switch v.Type().Kind() {
+		switch v.Kind() {
 		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Ptr, reflect.Map, reflect.Slice, reflect.UnsafePointer:
 			if v.IsNil() {
 				return reflect.New(t).Elem()
@@ -338,13 +338,13 @@ func getConcreteValue(val reflect.Value) reflect.Value {
 	if v.NumMethod() > 0 {
 		return v
 	}
-	if v.Type().Kind() != reflect.Struct {
+	if v.Kind() != reflect.Struct {
 		return v
 	}
 	// Search a concrete value in fields of an emulated interface.
 	for i := v.NumField() - 1; i >= 0; i-- {
 		vv := v.Field(i)
-		if vv.Type().Kind() == reflect.Interface {
+		if vv.Kind() == reflect.Interface {
 			vv = vv.Elem()
 		}
 		if vv.IsValid() {
@@ -430,7 +430,7 @@ func vInt(v reflect.Value) (i int64) {
 		i, _ = constant.Int64Val(constant.ToInt(c))
 		return i
 	}
-	switch v.Type().Kind() {
+	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		i = v.Int()
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -448,7 +448,7 @@ func vUint(v reflect.Value) (i uint64) {
 		i, _ = constant.Uint64Val(constant.ToInt(c))
 		return i
 	}
-	switch v.Type().Kind() {
+	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		i = uint64(v.Int())
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -468,7 +468,7 @@ func vComplex(v reflect.Value) (c complex128) {
 		img, _ := constant.Float64Val(constant.Imag(c))
 		return complex(rel, img)
 	}
-	switch v.Type().Kind() {
+	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		c = complex(float64(v.Int()), 0)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -486,7 +486,7 @@ func vFloat(v reflect.Value) (i float64) {
 		i, _ = constant.Float64Val(constant.ToFloat(c))
 		return i
 	}
-	switch v.Type().Kind() {
+	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		i = float64(v.Int())
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
