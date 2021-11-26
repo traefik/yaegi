@@ -2,7 +2,7 @@ package interp_test
 
 import (
 	"go/build"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,7 +26,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 	}
 
 	baseDir := filepath.Join("..", "_test")
-	files, err := ioutil.ReadDir(baseDir)
+	files, err := os.ReadDir(baseDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +145,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			if err = w.Close(); err != nil {
 				t.Fatal(err)
 			}
-			outInterp, err := ioutil.ReadAll(r)
+			outInterp, err := io.ReadAll(r)
 			if err != nil {
 				t.Fatal(err)
 			}

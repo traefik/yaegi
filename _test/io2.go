@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"strings"
 )
@@ -10,7 +10,7 @@ import (
 func main() {
 	r := strings.NewReader("Go is a general-purpose language designed with systems programming in mind.")
 
-	b, err := ioutil.ReadAll(r)
+	b, err := io.ReadAll(r)
 	if err != nil {
 		log.Fatal(err)
 	}

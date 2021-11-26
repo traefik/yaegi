@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 )
 
@@ -37,7 +36,7 @@ func (s *Sink2) Close() error                { println("in Close", s.name); retu
 func newS2(name string) Sink                 { return Sink1{name} }
 
 func main() {
-	tmpfile, err := ioutil.TempFile("", "xxx")
+	tmpfile, err := os.CreateTemp("", "xxx")
 	if err != nil {
 		panic(err)
 	}

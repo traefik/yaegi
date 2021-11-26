@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -885,7 +884,7 @@ func TestMultiEval(t *testing.T) {
 	if err = w.Close(); err != nil {
 		t.Fatal(err)
 	}
-	outInterp, err := ioutil.ReadAll(r)
+	outInterp, err := io.ReadAll(r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -916,7 +915,7 @@ func TestMultiEvalNoName(t *testing.T) {
 		t.Fatal(err)
 	}
 	for k, v := range names {
-		data, err := ioutil.ReadFile(filepath.Join(f.Name(), v))
+		data, err := os.ReadFile(filepath.Join(f.Name(), v))
 		if err != nil {
 			t.Fatal(err)
 		}

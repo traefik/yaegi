@@ -2,12 +2,11 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 )
 
 func main() {
-	file, err := ioutil.TempFile("", "yeagibench")
+	file, err := os.CreateTemp("", "yeagibench")
 	if err != nil {
 		panic(err)
 	}
@@ -23,7 +22,7 @@ func main() {
 		panic(err)
 	}
 
-	b, err := ioutil.ReadFile(file.Name())
+	b, err := os.ReadFile(file.Name())
 	if err != nil {
 		panic(err)
 	}

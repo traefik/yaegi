@@ -2,7 +2,6 @@ package main
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 )
 
@@ -13,7 +12,7 @@ type sink interface {
 
 func newSink() sink {
 	// return os.Stdout	// Stdout is special in yaegi tests
-	file, err := ioutil.TempFile("", "yaegi-test.*")
+	file, err := os.CreateTemp("", "yaegi-test.*")
 	if err != nil {
 		panic(err)
 	}
