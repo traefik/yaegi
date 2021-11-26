@@ -2897,12 +2897,13 @@ func _case(n *node) {
 					if typ.cat == nilT && v.IsNil() {
 						return tnext
 					}
-					if typ.TypeOf().String() == t.String() {
+					rtyp := typ.TypeOf()
+					if rtyp != nil && rtyp.String() == t.String() && implementsInterface(v, typ) {
 						destValue(f).Set(v.Elem())
 						return tnext
 					}
 					ival := v.Interface()
-					if ival != nil && typ.TypeOf().String() == reflect.TypeOf(ival).String() {
+					if ival != nil && rtyp != nil && rtyp.String() == reflect.TypeOf(ival).String() {
 						destValue(f).Set(v.Elem())
 						return tnext
 					}
@@ -2963,6 +2964,22 @@ func _case(n *node) {
 			return fnext
 		}
 	}
+}
+
+func implementsInterface(v reflect.Value, t *itype) bool {
+	rt := v.Type()
+	if t.cat == valueT {
+		return rt.Implements(t.rtype)
+	}
+	vt := &itype{cat: valueT, rtype: rt}
+	if vt.methods().contains(t.methods()) {
+		return true
+	}
+	vi, ok := v.Interface().(valueInterface)
+	if !ok {
+		return false
+	}
+	return vi.node != nil && vi.node.typ.methods().contains(t.methods())
 }
 
 func appendSlice(n *node) {
