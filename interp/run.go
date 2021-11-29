@@ -1184,7 +1184,7 @@ func call(n *node) {
 					continue
 				}
 				values = append(values, func(f *frame) reflect.Value {
-					return reflect.ValueOf(valueInterface{value: f.data[ind]})
+					return reflect.ValueOf(valueInterface{node: cc0.typ.ret[j].node, value: f.data[ind]})
 				})
 			}
 		default:
