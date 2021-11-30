@@ -850,7 +850,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 			return params[0].nod.cfgErrorf("first argument to delete must be map; have %s", typ.id())
 		}
 		ktyp := params[1].Type()
-		if !ktyp.assignableTo(typ.key) {
+		if typ.key != nil && !ktyp.assignableTo(typ.key) {
 			return params[1].nod.cfgErrorf("cannot use %s as type %s in delete", ktyp.id(), typ.key.id())
 		}
 	case bltnMake:
