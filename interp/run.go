@@ -1151,6 +1151,7 @@ func call(n *node) {
 	child := n.child[1:]
 	tnext := getExec(n.tnext)
 	fnext := getExec(n.fnext)
+	hasVariadicArgs := n.action == aCallSlice // callSlice implies variadic call with ellipsis.
 
 	// Compute input argument value functions.
 	for i, c := range child {
@@ -1166,7 +1167,7 @@ func call(n *node) {
 			numOut := c.child[0].typ.rtype.NumOut()
 			for j := 0; j < numOut; j++ {
 				ind := c.findex + j
-				if !isInterfaceSrc(arg) || isEmptyInterface(arg) {
+				if hasVariadicArgs || !isInterfaceSrc(arg) || isEmptyInterface(arg) {
 					values = append(values, func(f *frame) reflect.Value { return f.data[ind] })
 					continue
 				}
@@ -1179,7 +1180,7 @@ func call(n *node) {
 			cc0 := c.child[0]
 			for j := range cc0.typ.ret {
 				ind := c.findex + j
-				if !isInterfaceSrc(arg) || isEmptyInterface(arg) {
+				if hasVariadicArgs || !isInterfaceSrc(arg) || isEmptyInterface(arg) {
 					values = append(values, func(f *frame) reflect.Value { return f.data[ind] })
 					continue
 				}
@@ -1195,8 +1196,7 @@ func call(n *node) {
 			switch {
 			case isEmptyInterface(arg):
 				values = append(values, genValue(c))
-			case isInterfaceSrc(arg) && n.action != aCallSlice:
-				// callSlice implies variadic call with ellipsis, do not wrap in valueInterface.
+			case isInterfaceSrc(arg) && !hasVariadicArgs:
 				values = append(values, genValueInterface(c))
 			case isInterfaceBin(arg):
 				values = append(values, genInterfaceWrapper(c, arg.rtype))
@@ -1926,7 +1926,7 @@ func getMethodByName(n *node) {
 			}
 			return next
 		}
-		m, li := val.node.typ.lookupMethod(name)
+		m, li := typ.lookupMethod(name)
 		if m == nil {
 			panic(n.cfgErrorf("method not found: %s", name))
 		}
