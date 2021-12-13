@@ -3,6 +3,7 @@ package interp
 import (
 	"fmt"
 	"go/constant"
+	"log"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -857,12 +858,14 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		switch t.cat {
 		case ptrT:
 			t = t.val
-		case arrayT:
+		case valueT:
+			log.Println(n.cfgErrorf("nodeType sliceExpr"), t.rtype, t.rtype.Kind())
+			t = valueTOf(reflect.SliceOf(t.rtype.Elem()), withScope(sc))
+		}
+		if t.cat == arrayT {
 			incomplete := t.incomplete
 			t = sliceOf(t.val, withNode(n), withScope(sc))
 			t.incomplete = incomplete
-		case valueT:
-			t = valueTOf(reflect.SliceOf(t.rtype.Elem()), withScope(sc))
 		}
 
 	case structType:
