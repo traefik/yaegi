@@ -52,6 +52,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "io0.go" || // use random number
 			file.Name() == "issue-1093.go" || // expect error
 			file.Name() == "issue-1276.go" || // expect error
+			file.Name() == "issue-1330.go" || // expect error
 			file.Name() == "op1.go" || // expect error
 			file.Name() == "op7.go" || // expect error
 			file.Name() == "op9.go" || // expect error
