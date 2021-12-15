@@ -1111,15 +1111,26 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 	}
 }
 
-// methodByName return the method corresponding to name on value, or nil if not found.
+// methodByName returns the method corresponding to name on value, or nil if not found.
 // The search is extended on valueInterface wrapper if present.
-func methodByName(value reflect.Value, name string) reflect.Value {
+// If valid, the returned value is a method function with the receiver already set
+// (no need to pass it at call).
+func methodByName(value reflect.Value, name string) (v reflect.Value) {
 	if vi, ok := value.Interface().(valueInterface); ok {
-		if v := getConcreteValue(vi.value).MethodByName(name); v.IsValid() {
-			return v
+		if v = getConcreteValue(vi.value).MethodByName(name); v.IsValid() {
+			return
 		}
 	}
-	return value.MethodByName(name)
+	if v = value.MethodByName(name); v.IsValid() {
+		return
+	}
+	for value.Kind() == reflect.Ptr {
+		value = value.Elem()
+		if v = value.MethodByName(name); v.IsValid() {
+			return
+		}
+	}
+	return
 }
 
 func call(n *node) {
@@ -1610,11 +1621,16 @@ func callBin(n *node) {
 				}
 				out := callFn(value(f), in)
 				for i := 0; i < len(out); i++ {
-					if out[i].Kind() == reflect.Func {
-						getFrame(f, n.level).data[n.findex+i] = out[i]
-					} else {
-						getFrame(f, n.level).data[n.findex+i].Set(out[i])
+					r := out[i]
+					if r.Kind() == reflect.Func {
+						getFrame(f, n.level).data[n.findex+i] = r
+						continue
 					}
+					dest := getFrame(f, n.level).data[n.findex+i]
+					if _, ok := dest.Interface().(valueInterface); ok {
+						r = reflect.ValueOf(valueInterface{value: r})
+					}
+					dest.Set(r)
 				}
 				return tnext
 			}
