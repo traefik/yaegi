@@ -1086,7 +1086,7 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 		for i, m := range methods {
 			if m == nil {
 				// First direct method lookup on field.
-				if r := methodByName(v, names[i]); r.IsValid() {
+				if r := methodByName(v, names[i], indexes[i]); r.IsValid() {
 					w.Field(i + 1).Set(r)
 					continue
 				}
@@ -1115,7 +1115,7 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 // The search is extended on valueInterface wrapper if present.
 // If valid, the returned value is a method function with the receiver already set
 // (no need to pass it at call).
-func methodByName(value reflect.Value, name string) (v reflect.Value) {
+func methodByName(value reflect.Value, name string, index []int) (v reflect.Value) {
 	if vi, ok := value.Interface().(valueInterface); ok {
 		if v = getConcreteValue(vi.value).MethodByName(name); v.IsValid() {
 			return
@@ -1126,7 +1126,8 @@ func methodByName(value reflect.Value, name string) (v reflect.Value) {
 	}
 	for value.Kind() == reflect.Ptr {
 		value = value.Elem()
-		if v = value.MethodByName(name); v.IsValid() {
+		o := value.FieldByIndex(index)
+		if v = o.MethodByName(name); v.IsValid() {
 			return
 		}
 	}
