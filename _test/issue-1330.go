@@ -11,16 +11,10 @@ type wrappedConn struct {
 }
 
 func main() {
-	listener, err := net.Listen("tcp", "127.0.0.1:49153")
+	_, err := net.Listen("tcp", "127.0.0.1:49153")
 	if err != nil {
 		panic(err)
 	}
-	go func() {
-		_, err := listener.Accept()
-		if err != nil {
-			panic(err)
-		}
-	}()
 
 	dialer := &net.Dialer{
 		LocalAddr: &net.TCPAddr{
@@ -33,11 +27,16 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer conn.Close()
 
 	t := &wrappedConn{conn}
 	var w io.Writer = t
-	fmt.Println(w.Write != nil)
+	if n, err := w.Write([]byte("hello")); err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(n)
+	}
 }
 
 // Output:
-// true
+// 5
