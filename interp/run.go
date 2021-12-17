@@ -1126,12 +1126,35 @@ func methodByName(value reflect.Value, name string, index []int) (v reflect.Valu
 	}
 	for value.Kind() == reflect.Ptr {
 		value = value.Elem()
-		o := value.FieldByIndex(index)
-		if v = o.MethodByName(name); v.IsValid() {
+		if checkFieldIndex(value.Type(), index) {
+			value = value.FieldByIndex(index)
+		}
+		if v = value.MethodByName(name); v.IsValid() {
 			return
 		}
 	}
 	return
+}
+
+func checkFieldIndex(typ reflect.Type, index []int) bool {
+	if len(index) == 0 {
+		return false
+	}
+	t := typ
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return false
+	}
+	i := index[0]
+	if i >= t.NumField() {
+		return false
+	}
+	if len(index) > 1 {
+		return checkFieldIndex(t.Field(i).Type, index[1:])
+	}
+	return true
 }
 
 func call(n *node) {
