@@ -854,14 +854,15 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		if err != nil {
 			return nil, err
 		}
-		switch t.cat {
-		case ptrT:
-			t = t.val
-		case valueT:
+
+		if t.cat == valueT {
 			switch t.rtype.Kind() {
 			case reflect.Array, reflect.Ptr:
 				t = valueTOf(reflect.SliceOf(t.rtype.Elem()), withScope(sc))
 			}
+		}
+		if t.cat == ptrT {
+			t = t.val
 		}
 		if t.cat == arrayT {
 			incomplete := t.incomplete
