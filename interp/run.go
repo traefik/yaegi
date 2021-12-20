@@ -2375,9 +2375,13 @@ func _return(n *node) {
 			}
 			values[i] = genValueInterface(c)
 		case valueT:
-			if t.rtype.Kind() == reflect.Interface {
+			switch t.rtype.Kind() {
+			case reflect.Interface:
 				values[i] = genInterfaceWrapper(c, t.rtype)
-				break
+				continue
+			case reflect.Func:
+				values[i] = genFunctionWrapper(c)
+				continue
 			}
 			fallthrough
 		default:
