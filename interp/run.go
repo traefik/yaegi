@@ -1086,7 +1086,7 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 		for i, m := range methods {
 			if m == nil {
 				// First direct method lookup on field.
-				if r := methodByName(v, names[i]); r.IsValid() {
+				if r := methodByName(v, names[i], indexes[i]); r.IsValid() {
 					w.Field(i + 1).Set(r)
 					continue
 				}
@@ -1111,15 +1111,50 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 	}
 }
 
-// methodByName return the method corresponding to name on value, or nil if not found.
+// methodByName returns the method corresponding to name on value, or nil if not found.
 // The search is extended on valueInterface wrapper if present.
-func methodByName(value reflect.Value, name string) reflect.Value {
+// If valid, the returned value is a method function with the receiver already set
+// (no need to pass it at call).
+func methodByName(value reflect.Value, name string, index []int) (v reflect.Value) {
 	if vi, ok := value.Interface().(valueInterface); ok {
-		if v := getConcreteValue(vi.value).MethodByName(name); v.IsValid() {
-			return v
+		if v = getConcreteValue(vi.value).MethodByName(name); v.IsValid() {
+			return
 		}
 	}
-	return value.MethodByName(name)
+	if v = value.MethodByName(name); v.IsValid() {
+		return
+	}
+	for value.Kind() == reflect.Ptr {
+		value = value.Elem()
+		if checkFieldIndex(value.Type(), index) {
+			value = value.FieldByIndex(index)
+		}
+		if v = value.MethodByName(name); v.IsValid() {
+			return
+		}
+	}
+	return
+}
+
+func checkFieldIndex(typ reflect.Type, index []int) bool {
+	if len(index) == 0 {
+		return false
+	}
+	t := typ
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return false
+	}
+	i := index[0]
+	if i >= t.NumField() {
+		return false
+	}
+	if len(index) > 1 {
+		return checkFieldIndex(t.Field(i).Type, index[1:])
+	}
+	return true
 }
 
 func call(n *node) {
@@ -1610,11 +1645,16 @@ func callBin(n *node) {
 				}
 				out := callFn(value(f), in)
 				for i := 0; i < len(out); i++ {
-					if out[i].Kind() == reflect.Func {
-						getFrame(f, n.level).data[n.findex+i] = out[i]
-					} else {
-						getFrame(f, n.level).data[n.findex+i].Set(out[i])
+					r := out[i]
+					if r.Kind() == reflect.Func {
+						getFrame(f, n.level).data[n.findex+i] = r
+						continue
 					}
+					dest := getFrame(f, n.level).data[n.findex+i]
+					if _, ok := dest.Interface().(valueInterface); ok {
+						r = reflect.ValueOf(valueInterface{value: r})
+					}
+					dest.Set(r)
 				}
 				return tnext
 			}
