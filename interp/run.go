@@ -2956,13 +2956,21 @@ func _case(n *node) {
 						return tnext
 					}
 					rtyp := typ.TypeOf()
-					if rtyp != nil && rtyp.String() == t.String() && implementsInterface(v, typ) {
-						destValue(f).Set(v.Elem())
+					if rtyp == nil {
+						return fnext
+					}
+					elem := v.Elem()
+					if rtyp.String() == t.String() && implementsInterface(v, typ) {
+						destValue(f).Set(elem)
 						return tnext
 					}
 					ival := v.Interface()
-					if ival != nil && rtyp != nil && rtyp.String() == reflect.TypeOf(ival).String() {
-						destValue(f).Set(v.Elem())
+					if ival != nil && rtyp.String() == reflect.TypeOf(ival).String() {
+						destValue(f).Set(elem)
+						return tnext
+					}
+					if typ.cat == valueT && rtyp.Kind() == reflect.Interface && elem.IsValid() && elem.Type().Implements(rtyp) {
+						destValue(f).Set(elem)
 						return tnext
 					}
 					return fnext
@@ -2980,12 +2988,37 @@ func _case(n *node) {
 				}
 				return fnext
 			}
+
 		default:
-			// TODO(mpl): probably needs to be fixed for empty interfaces, like above.
-			// match against multiple types: assign var to interface value
 			n.exec = func(f *frame) bltn {
 				val := srcValue(f)
-				if v := srcValue(f).Interface().(valueInterface).node; v != nil {
+				if t := val.Type(); t.Kind() == reflect.Interface {
+					for _, typ := range types {
+						if typ.cat == nilT && val.IsNil() {
+							return tnext
+						}
+						rtyp := typ.TypeOf()
+						if rtyp == nil {
+							continue
+						}
+						elem := val.Elem()
+						if rtyp.String() == t.String() && implementsInterface(val, typ) {
+							destValue(f).Set(elem)
+							return tnext
+						}
+						ival := val.Interface()
+						if ival != nil && rtyp.String() == reflect.TypeOf(ival).String() {
+							destValue(f).Set(elem)
+							return tnext
+						}
+						if typ.cat == valueT && rtyp.Kind() == reflect.Interface && elem.IsValid() && elem.Type().Implements(rtyp) {
+							destValue(f).Set(elem)
+							return tnext
+						}
+					}
+					return fnext
+				}
+				if v := val.Interface().(valueInterface).node; v != nil {
 					for _, typ := range types {
 						if v.typ.id() == typ.id() {
 							destValue(f).Set(val)
