@@ -717,10 +717,14 @@ func (interp *Interpreter) FilterStackAndCallers(stack []byte, callers []uintptr
 			if callersIndex >= 0 {
 				newCallers = append(newCallers, handle)
 			}
-			f := interp.FuncForCall(handle)
+			n, ok := interp.calls[handle]
+			if !ok || n.kind != callExpr {
+				continue
+			}
+			pos := n.interp.fset.Position(n.pos)
 			newFrames = append(newFrames, []string{
-				f.Name + "()",
-				fmt.Sprintf("\t%s", f.Pos),
+				funcName(n) + "()",
+				fmt.Sprintf("\t%s", pos),
 			})
 		}
 	}
