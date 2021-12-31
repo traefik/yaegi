@@ -19,6 +19,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -220,6 +221,7 @@ type Interpreter struct {
 	hooks *hooks // symbol hooks
 
 	debugger *Debugger
+	calls    map[uintptr]*node // for translating runtime stacktrace, see FilterStack()
 }
 
 const (
@@ -335,6 +337,7 @@ func New(options Options) *Interpreter {
 		pkgNames: map[string]string{},
 		rdir:     map[string]bool{},
 		hooks:    &hooks{},
+		calls:    map[uintptr]*node{},
 	}
 
 	if i.opt.stdin = options.Stdin; i.opt.stdin == nil {
@@ -484,6 +487,261 @@ func (interp *Interpreter) resizeFrame() {
 		data[b+j] = reflect.New(t).Elem()
 	}
 	interp.frame.data = data
+}
+
+// Add a call with handle that we recognize and can filter from the stacktrace
+// Need to make sure this never overlaps with real PCs from runtime.Callers
+func (interp *Interpreter) addCall(n *node) uintptr {
+	handle := reflect.ValueOf(n).Pointer()
+	interp.calls[handle] = n
+	return handle
+}
+
+// Return func name as it appears in go stacktraces
+func funcName(n *node) string {
+	if n.scope == nil || n.scope.def == nil {
+		return ""
+	}
+
+	// Need to search ancestors for both funcDecl and pkgName
+	pkgName := n.scope.pkgName
+	anc := n.scope
+	ancestors := []*scope{}
+	funcDeclFound := false
+	funcDeclIndex := 0
+	for anc != nil && anc != anc.anc {
+		ancestors = append(ancestors, anc)
+		if anc.def != nil && anc.def.kind == funcDecl &&
+			(anc.anc == nil || anc.anc.def != anc.def) {
+			funcDeclFound = true
+			funcDeclIndex = len(ancestors) - 1
+		}
+		if len(anc.pkgName) > 0 {
+			pkgName = anc.pkgName
+		}
+		if len(pkgName) > 0 && funcDeclFound {
+			break
+		}
+		anc = anc.anc
+	}
+
+	if n.scope.def.typ.recv != nil {
+		recv := n.scope.def.typ.recv.str
+		star := ""
+		if recv[0] == '*' {
+			star = "*"
+			recv = recv[1:]
+		}
+		recv = strings.TrimPrefix(recv, pkgName+".")
+		pkgName = fmt.Sprintf("%s.(%s%s)", pkgName, star, recv)
+	}
+
+	funcName := "<unknown>"
+	switch n.scope.def.kind {
+	case funcDecl:
+		funcName = n.scope.def.child[1].ident
+	case funcLit:
+		counts := []int{}
+		count := 0
+		i := funcDeclIndex
+		funcName = ancestors[i].def.child[1].ident
+		for i > 0 {
+			if ancestors[i].dfs(func(s *scope) dfsSignal {
+				if s.def != nil && s.def.kind == funcLit &&
+					(s.anc == nil || s.def != s.anc.def) {
+					count += 1
+				}
+				if s == ancestors[i-1] {
+					if s.def != nil && s.def.kind == funcLit &&
+						(s.anc == nil || s.def != s.anc.def) {
+						counts = append(counts, count)
+						count = 0
+					}
+					i -= 1
+					return dfsAbort
+				}
+				if s.def != nil && s.def.kind == funcLit {
+					return dfsSibling
+				}
+				return dfsNext
+			}) != dfsAbort {
+				// child not found
+				return "<unknown>"
+			}
+		}
+		funcName += fmt.Sprintf(".func%d", counts[0])
+		for _, count := range counts[1:] {
+			funcName += fmt.Sprintf(".%d", count)
+			i += 1
+		}
+	}
+	return fmt.Sprintf("%s.%s", pkgName, funcName)
+}
+
+// by analogy to runtime.FuncForPC()
+type Func struct {
+	Pos   token.Position
+	Name  string
+	Entry uintptr
+}
+
+func (interp *Interpreter) FuncForCall(handle uintptr) *Func {
+	n, ok := interp.calls[handle]
+	if !ok {
+		return nil
+	}
+	pos := n.interp.fset.Position(n.pos)
+	return &Func{
+		pos,
+		funcName(n),
+		handle,
+	}
+}
+
+func (interp *Interpreter) FilterStack(stack []byte) []byte {
+	newStack, _ := interp.FilterStackAndCallers(stack, []uintptr{})
+	return newStack
+}
+
+// Given a runtime stacktrace and callers list, filter out the interpreter runtime
+// and replace it with the interpreted calls. Parses runtime stacktrace to figure
+// out which interp node by placing a magic value in parameters to runCfg and callBin
+func (interp *Interpreter) FilterStackAndCallers(stack []byte, callers []uintptr) ([]byte, []uintptr) {
+	newFrames := [][]string{}
+	newCallers := []uintptr{}
+
+	stackLines := strings.Split(string(stack), "\n")
+	lastFrame := len(stackLines)
+	skipFrame := 0
+
+	const (
+		notSyncedYet = -1
+		dontSync     = -2
+	)
+
+	// index to copy over from callers into newCallers
+	callersIndex := notSyncedYet // to indicate we haven't synced up with stack yet
+	if len(callers) == 0 {
+		callersIndex = dontSync // don't attempt to copy over from callers
+	}
+
+	// Parse stack in reverse order, because sometimes we want to skip frames
+	for i := len(stackLines) - 1; i >= 0; i-- {
+		// Split stack trace into paragraphs (frames)
+		if len(stackLines[i]) == 0 || stackLines[i][0] == '\t' {
+			continue
+		}
+
+		if callersIndex > 0 {
+			callersIndex--
+		}
+
+		if skipFrame > 0 {
+			lastFrame = i
+			skipFrame--
+			continue
+		}
+
+		p := stackLines[i:lastFrame] // all lines in single frame
+		lastFrame = i
+
+		lastSlash := strings.LastIndex(p[0], "/")
+		funcPath := strings.Split(p[0][lastSlash+1:], ".")
+		pkgName := p[0][0:lastSlash+1] + funcPath[0]
+
+		if callersIndex >= 0 {
+			callName := runtime.FuncForPC(callers[callersIndex]).Name()
+			if callName != strings.Split(p[0], "(")[0] {
+				// since we're walking stack and callers at the same time they
+				// should be in sync. If not, we stop messing with callers
+				for ; callersIndex >= 0; callersIndex-- {
+					newCallers = append(newCallers, callers[callersIndex])
+				}
+				callersIndex = dontSync
+			}
+		}
+
+		// Don't touch any stack frames that aren't in the yaegi runtime
+		// Functions called on (*Interpreter) may provide information
+		// on how we entered yaegi, so we pass these through as well
+		if pkgName != selfPrefix+"/interp" || funcPath[1] == "(*Interpreter)" {
+			newFrames = append(newFrames, p)
+			if callersIndex >= 0 {
+				newCallers = append(newCallers, callers[callersIndex])
+			}
+			continue
+		}
+
+		var handle uintptr
+
+		// A runCfg call refers to an interpreter level call
+		// grab callHandle from the first parameter to it
+		if strings.HasPrefix(funcPath[1], "runCfg(") {
+			fmt.Sscanf(funcPath[1], "runCfg(%v,", &handle)
+			// if this is the oldest call to runCfg, sync up with callers array
+			if callersIndex == notSyncedYet {
+				for j, call := range callers {
+					if call == 0 {
+						break
+					}
+
+					callName := runtime.FuncForPC(call).Name()
+					if callName == selfPrefix+"/interp.runCfg" {
+						callersIndex = j
+					}
+				}
+				for j := len(callers) - 1; j > callersIndex; j-- {
+					if callers[j] != 0 {
+						newCallers = append(newCallers, callers[j])
+					}
+				}
+			}
+		}
+
+		// callBin is a call to a binPkg
+		// the callHandle will be on the first or second function literal
+		if funcPath[1] == "callBin" &&
+			(strings.HasPrefix(funcPath[2], "func1(") ||
+				strings.HasPrefix(funcPath[2], "func2(")) {
+			fmt.Sscanf(strings.Split(funcPath[2], "(")[1], "%v,", &handle)
+			// after a binary call, the next two frames will be reflect.Value.Call
+			skipFrame = 2
+		}
+
+		// special case for panic builtin
+		if funcPath[1] == "_panic" && strings.HasPrefix(funcPath[2], "func1(") {
+			fmt.Sscanf(strings.Split(funcPath[2], "(")[1], "%v,", &handle)
+		}
+
+		if handle != 0 {
+			if callersIndex >= 0 {
+				newCallers = append(newCallers, handle)
+			}
+			f := interp.FuncForCall(handle)
+			newFrames = append(newFrames, []string{
+				f.Name + "()",
+				fmt.Sprintf("\t%s", f.Pos),
+			})
+		}
+	}
+
+	// reverse order because we parsed from bottom up, fix that now.
+	newStack := []string{}
+	for i := len(newFrames) - 1; i >= 0; i-- {
+		newStack = append(newStack, newFrames[i]...)
+	}
+	unreversedNewCallers := []uintptr{}
+	for i := len(newCallers) - 1; i >= 0; i-- {
+		unreversedNewCallers = append(unreversedNewCallers, newCallers[i])
+	}
+	if len(unreversedNewCallers) == 0 {
+		unreversedNewCallers = callers // just pass the original through
+	}
+
+	newStackJoined := strings.Join(newStack, "\n")
+	newStackBytes := make([]byte, len(newStackJoined)-1)
+	copy(newStackBytes, newStackJoined)
+	return newStackBytes, unreversedNewCallers
 }
 
 // Eval evaluates Go code represented as a string. Eval returns the last result

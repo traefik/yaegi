@@ -117,7 +117,7 @@ func (interp *Interpreter) run(n *node, cf *frame) {
 	for i, t := range n.types {
 		f.data[i] = reflect.New(t).Elem()
 	}
-	runCfg(n.start, f, n, nil)
+	runCfg(0, n.start, f, n, nil)
 }
 
 func isExecNode(n *node, exec bltn) bool {
@@ -173,9 +173,9 @@ func originalExecNode(n *node, exec bltn) *node {
 }
 
 // Functions set to run during execution of CFG.
-
 // runCfg executes a node AST by walking its CFG and running node builtin at each step.
-func runCfg(n *node, f *frame, funcNode, callNode *node) {
+// callHandle is just to show up in debug.Stack, see interp.FilterStack(), must be first arg
+func runCfg(callHandle uintptr, n *node, f *frame, funcNode, callNode *node) {
 	var exec bltn
 	defer func() {
 		f.mutex.Lock()
@@ -900,9 +900,15 @@ func _recover(n *node) {
 
 func _panic(n *node) {
 	value := genValue(n.child[1])
+	handle := n.interp.addCall(n)
+
+	// callHandle is to identify this call in debug stacktrace, see interp.FilterStack(). Must be first arg.
+	panicF := func(callHandle uintptr, f *frame) bltn {
+		panic(value(f))
+	}
 
 	n.exec = func(f *frame) bltn {
-		panic(value(f))
+		return panicF(handle, f)
 	}
 }
 
@@ -1020,7 +1026,8 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 			}
 
 			// Interpreter code execution.
-			runCfg(start, fr, def, n)
+			callHandle := n.interp.addCall(n)
+			runCfg(callHandle, start, fr, def, n)
 
 			result := fr.data[:numRet]
 			for i, r := range result {
@@ -1414,12 +1421,14 @@ func call(n *node) {
 			}
 		}
 
+		callHandle := n.interp.addCall(n)
+
 		// Execute function body
 		if goroutine {
-			go runCfg(def.child[3].start, nf, def, n)
+			go runCfg(callHandle, def.child[3].start, nf, def, n)
 			return tnext
 		}
-		runCfg(def.child[3].start, nf, def, n)
+		runCfg(callHandle, def.child[3].start, nf, def, n)
 
 		// Handle branching according to boolean result
 		if fnext != nil && !nf.data[0].Bool() {
@@ -1448,6 +1457,7 @@ func getFrame(f *frame, l int) *frame {
 
 // Callbin calls a function from a bin import, accessible through reflect.
 func callBin(n *node) {
+	handle := n.interp.addCall(n)
 	tnext := getExec(n.tnext)
 	fnext := getExec(n.fnext)
 	child := n.child[1:]
@@ -1469,9 +1479,14 @@ func callBin(n *node) {
 	}
 
 	// Determine if we should use `Call` or `CallSlice` on the function Value.
-	callFn := func(v reflect.Value, in []reflect.Value) []reflect.Value { return v.Call(in) }
+	// callHandle is to identify this call in debug stacktrace, see interp.FilterStack(). Must be first arg.
+	callFn := func(callHandle uintptr, v reflect.Value, in []reflect.Value) []reflect.Value {
+		return v.Call(in)
+	}
 	if n.action == aCallSlice {
-		callFn = func(v reflect.Value, in []reflect.Value) []reflect.Value { return v.CallSlice(in) }
+		callFn = func(callHandle uintptr, v reflect.Value, in []reflect.Value) []reflect.Value {
+			return v.CallSlice(in)
+		}
 	}
 
 	for i, c := range child {
@@ -1566,7 +1581,7 @@ func callBin(n *node) {
 			for i, v := range values {
 				in[i] = v(f)
 			}
-			go callFn(value(f), in)
+			go callFn(handle, value(f), in)
 			return tnext
 		}
 	case fnext != nil:
@@ -1578,7 +1593,7 @@ func callBin(n *node) {
 			for i, v := range values {
 				in[i] = v(f)
 			}
-			res := callFn(value(f), in)
+			res := callFn(handle, value(f), in)
 			b := res[0].Bool()
 			getFrame(f, level).data[index].SetBool(b)
 			if b {
@@ -1610,7 +1625,7 @@ func callBin(n *node) {
 				for i, v := range values {
 					in[i] = v(f)
 				}
-				out := callFn(value(f), in)
+				out := callFn(handle, value(f), in)
 				for i, v := range rvalues {
 					if v != nil {
 						v(f).Set(out[i])
@@ -1627,7 +1642,7 @@ func callBin(n *node) {
 				for i, v := range values {
 					in[i] = v(f)
 				}
-				out := callFn(value(f), in)
+				out := callFn(handle, value(f), in)
 				for i, v := range out {
 					dest := f.data[b+i]
 					if _, ok := dest.Interface().(valueInterface); ok {
@@ -1643,7 +1658,7 @@ func callBin(n *node) {
 				for i, v := range values {
 					in[i] = v(f)
 				}
-				out := callFn(value(f), in)
+				out := callFn(handle, value(f), in)
 				for i := 0; i < len(out); i++ {
 					r := out[i]
 					if r.Kind() == reflect.Func {
