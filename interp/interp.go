@@ -581,21 +581,33 @@ func funcName(n *node) string {
 // by analogy to runtime.FuncForPC()
 type Func struct {
 	Pos   token.Position
-	Name  string
-	Entry uintptr
+	name  string
+	entry uintptr
 }
 
-func (interp *Interpreter) FuncForCall(handle uintptr) *Func {
+func (f *Func) Entry() uintptr {
+	return f.entry
+}
+
+func (f *Func) FileLine(pc uintptr) (string, int) {
+	return f.Pos.Filename, f.Pos.Line
+}
+
+func (f *Func) Name() string {
+	return f.name
+}
+
+func (interp *Interpreter) FuncForCall(handle uintptr) (*Func, error) {
 	n, ok := interp.calls[handle]
 	if !ok {
-		return nil
+		return nil, fmt.Errorf("Call not found")
 	}
 	pos := n.interp.fset.Position(n.pos)
 	return &Func{
 		pos,
 		funcName(n),
 		handle,
-	}
+	}, nil
 }
 
 func (interp *Interpreter) FilterStack(stack []byte) []byte {
