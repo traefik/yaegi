@@ -684,30 +684,30 @@ func (interp *Interpreter) FilterStackAndCallers(stack []byte, callers []uintptr
 			continue
 		}
 
+		// This is the first call into the interpreter, so try to sync callers
+		if callersIndex == notSyncedYet {
+			for j, call := range callers {
+				if call == 0 {
+					break
+				}
+				callName := runtime.FuncForPC(call).Name()
+				if callName == strings.Split(p[0], "(")[0] {
+					callersIndex = j
+				}
+			}
+			for j := len(callers) - 1; j > callersIndex; j-- {
+				if callers[j] != 0 {
+					newCallers = append(newCallers, callers[j])
+				}
+			}
+		}
+
 		var handle uintptr
 
 		// A runCfg call refers to an interpreter level call
 		// grab callHandle from the first parameter to it
 		if strings.HasPrefix(funcPath[1], "runCfg(") {
 			fmt.Sscanf(funcPath[1], "runCfg(%v,", &handle)
-			// if this is the oldest call to runCfg, sync up with callers array
-			if callersIndex == notSyncedYet {
-				for j, call := range callers {
-					if call == 0 {
-						break
-					}
-
-					callName := runtime.FuncForPC(call).Name()
-					if callName == selfPrefix+"/interp.runCfg" {
-						callersIndex = j
-					}
-				}
-				for j := len(callers) - 1; j > callersIndex; j-- {
-					if callers[j] != 0 {
-						newCallers = append(newCallers, callers[j])
-					}
-				}
-			}
 		}
 
 		// callBin is a call to a binPkg
