@@ -172,6 +172,12 @@ func originalExecNode(n *node, exec bltn) *node {
 	return originalNode
 }
 
+// callHandle is just to show up in debug.Stack, see interp.FilterStack(), must be first arg
+//go:noinline
+func runCfgPanic(callHandle uintptr, o *node, err interface{}) {
+	o.interp.Panic(err)
+}
+
 // Functions set to run during execution of CFG.
 // runCfg executes a node AST by walking its CFG and running node builtin at each step.
 // callHandle is just to show up in debug.Stack, see interp.FilterStack(), must be first arg
@@ -188,7 +194,9 @@ func runCfg(callHandle uintptr, n *node, f *frame, funcNode, callNode *node) {
 			if oNode == nil {
 				oNode = n
 			}
-			fmt.Fprintln(n.interp.stderr, oNode.cfgErrorf("panic"))
+			// capture node that caused panic
+			handle := oNode.interp.addCall(oNode)
+			runCfgPanic(handle, oNode, f.recovered)
 			f.mutex.Unlock()
 			panic(f.recovered)
 		}
@@ -197,7 +205,7 @@ func runCfg(callHandle uintptr, n *node, f *frame, funcNode, callNode *node) {
 
 	dbg := n.interp.debugger
 	if dbg == nil {
-		for exec := n.exec; exec != nil && f.runid() == n.interp.runid(); {
+		for exec = n.exec; exec != nil && f.runid() == n.interp.runid(); {
 			exec = exec(f)
 		}
 		return
@@ -900,15 +908,9 @@ func _recover(n *node) {
 
 func _panic(n *node) {
 	value := genValue(n.child[1])
-	handle := n.interp.addCall(n)
-
-	// callHandle is to identify this call in debug stacktrace, see interp.FilterStack(). Must be first arg.
-	panicF := func(callHandle uintptr, f *frame) bltn {
-		panic(value(f))
-	}
 
 	n.exec = func(f *frame) bltn {
-		return panicF(handle, f)
+		panic(value(f))
 	}
 }
 
