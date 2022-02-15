@@ -657,8 +657,8 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 	case funcType:
 		var incomplete bool
 		// Handle input parameters
-		args := make([]*itype, 0, len(n.child[0].child))
-		for _, arg := range n.child[0].child {
+		args := make([]*itype, 0, len(n.child[1].child))
+		for _, arg := range n.child[1].child {
 			cl := len(arg.child) - 1
 			typ, err := nodeType2(interp, sc, arg.child[cl], seen)
 			if err != nil {
@@ -673,9 +673,9 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		}
 
 		var rets []*itype
-		if len(n.child) == 2 {
+		if len(n.child) == 3 {
 			// Handle returned values
-			for _, ret := range n.child[1].child {
+			for _, ret := range n.child[2].child {
 				cl := len(ret.child) - 1
 				typ, err := nodeType2(interp, sc, ret.child[cl], seen)
 				if err != nil {

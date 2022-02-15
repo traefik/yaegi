@@ -372,9 +372,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			// Add a frame indirection level as we enter in a func
 			sc = sc.pushFunc()
 			sc.def = n
-			if len(n.child[2].child) == 2 {
+			if len(n.child[2].child) == 3 {
 				// Allocate frame space for return values, define output symbols
-				for _, c := range n.child[2].child[1].child {
+				for _, c := range n.child[2].child[2].child {
 					var typ *itype
 					if typ, err = nodeType(interp, sc, c.lastChild()); err != nil {
 						return false
@@ -404,7 +404,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					sc.sym[fr.child[0].ident] = &symbol{index: index, kind: varSym, typ: typ}
 				}
 			}
-			for _, c := range n.child[2].child[0].child {
+			for _, c := range n.child[2].child[1].child {
 				// define input parameter symbols
 				var typ *itype
 				if typ, err = nodeType(interp, sc, c.lastChild()); err != nil {
@@ -1536,7 +1536,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			n.val = sc.def
 			for i, c := range n.child {
 				var typ *itype
-				typ, err = nodeType(interp, sc.upperLevel(), returnSig.child[1].fieldType(i))
+				typ, err = nodeType(interp, sc.upperLevel(), returnSig.child[2].fieldType(i))
 				if err != nil {
 					return
 				}
@@ -2594,10 +2594,10 @@ func isOffsetof(n *node) bool {
 }
 
 func mustReturnValue(n *node) bool {
-	if len(n.child) < 2 {
+	if len(n.child) < 3 {
 		return false
 	}
-	for _, f := range n.child[1].child {
+	for _, f := range n.child[2].child {
 		if len(f.child) > 1 {
 			return false
 		}

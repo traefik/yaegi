@@ -72,6 +72,7 @@ const (
 	importSpec
 	incDecStmt
 	indexExpr
+	indexListExpr
 	interfaceType
 	keyValueExpr
 	labeledStmt
@@ -155,6 +156,7 @@ var kinds = [...]string{
 	importSpec:        "importSpec",
 	incDecStmt:        "incDecStmt",
 	indexExpr:         "indexExpr",
+	indexListExpr:     "indexListExpr",
 	interfaceType:     "interfaceType",
 	keyValueExpr:      "keyValueExpr",
 	labeledStmt:       "labeledStmt",
@@ -694,7 +696,7 @@ func (interp *Interpreter) ast(f ast.Node) (string, *node, error) {
 			n := addChild(&root, anc, pos, funcDecl, aNop)
 			n.val = n
 			if a.Recv == nil {
-				// function is not a method, create an empty receiver list
+				// Function is not a method, create an empty receiver list.
 				addChild(&root, astNode{n, nod}, pos, fieldList, aNop)
 			}
 			st.push(n, nod)
@@ -706,7 +708,13 @@ func (interp *Interpreter) ast(f ast.Node) (string, *node, error) {
 			st.push(n, nod)
 
 		case *ast.FuncType:
-			st.push(addChild(&root, anc, pos, funcType, aNop), nod)
+			n := addChild(&root, anc, pos, funcType, aNop)
+			n.val = n
+			if a.TypeParams == nil {
+				// Function has no type parameters, create an empty fied list.
+				addChild(&root, astNode{n, nod}, pos, fieldList, aNop)
+			}
+			st.push(n, nod)
 
 		case *ast.GenDecl:
 			var kind nkind
@@ -775,6 +783,9 @@ func (interp *Interpreter) ast(f ast.Node) (string, *node, error) {
 
 		case *ast.IndexExpr:
 			st.push(addChild(&root, anc, pos, indexExpr, aGetIndex), nod)
+
+		case *ast.IndexListExpr:
+			st.push(addChild(&root, anc, pos, indexListExpr, aNop), nod)
 
 		case *ast.InterfaceType:
 			st.push(addChild(&root, anc, pos, interfaceType, aNop), nod)
