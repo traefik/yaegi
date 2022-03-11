@@ -1749,3 +1749,38 @@ func TestRestrictedEnv(t *testing.T) {
 		t.Fatal("expected \"\", got " + s)
 	}
 }
+
+func TestExecFuncWithArgs(t *testing.T) {
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		i := interp.New(interp.Options{})
+		i.Use(stdlib.Symbols)
+		eval(t, i, `
+			import "time"
+			func Bar(msg string) string {
+				for i:=0;;i++ {
+					println(i)
+					time.Sleep(1*time.Second)
+				}
+				return msg
+			}
+		`)
+
+		v := eval(t, i, "Bar")
+		bar := v.Interface().(func(string) string)
+
+		_, err := i.ExecFunc(ctx, bar, "hello")
+		if err != context.DeadlineExceeded {
+			t.Errorf("unexpected error")
+		}
+	}()
+	select {
+	case <-time.After(time.Second):
+		t.Errorf("timeout failed to terminate execution")
+	case <-done:
+	}
+}

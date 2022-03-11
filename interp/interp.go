@@ -19,6 +19,8 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -220,6 +222,7 @@ type Interpreter struct {
 	hooks *hooks // symbol hooks
 
 	debugger *Debugger
+	stopOnce sync.Once
 }
 
 const (
@@ -641,12 +644,60 @@ func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (ref
 	return v, err
 }
 
+func (interp *Interpreter) ExecFunc(ctx context.Context, fn interface{}, args ...interface{}) ([]reflect.Value, error) {
+	var result []reflect.Value
+	var err error
+
+	interp.mutex.Lock()
+	interp.done = make(chan struct{})
+	interp.cancelChan = !interp.opt.fastChan
+	interp.mutex.Unlock()
+
+	done := make(chan struct{})
+	vFn := reflect.Indirect(reflect.ValueOf(fn))
+	if vFn.Kind() != reflect.Func {
+		return nil, fmt.Errorf("fn is not function")
+	}
+	vArgs := make([]reflect.Value, len(args))
+	for i := range args {
+		vArgs[i] = reflect.ValueOf(args[i])
+	}
+	go func() {
+		defer close(done)
+		defer func() {
+			r := recover()
+			if r != nil {
+				var pc [64]uintptr // 64 frames should be enough.
+				n := runtime.Callers(1, pc[:])
+				err = Panic{Value: r, Callers: pc[:n], Stack: debug.Stack()}
+			}
+		}()
+		result = vFn.Call(vArgs)
+	}()
+
+	select {
+	case <-ctx.Done():
+		interp.stop()
+		return nil, ctx.Err()
+	case <-done:
+	}
+	return result, err
+}
+
 // stop sends a semaphore to all running frames and closes the chan
 // operation short circuit channel. stop may only be called once per
 // invocation of EvalWithContext.
 func (interp *Interpreter) stop() {
 	atomic.AddUint64(&interp.id, 1)
 	close(interp.done)
+}
+
+// Stop sends a semaphore to all running frames and closes the chan
+// operation short circuit channel.
+func (interp *Interpreter) Stop() {
+	interp.stopOnce.Do(func() {
+		interp.stop()
+	})
 }
 
 func (interp *Interpreter) runid() uint64 { return atomic.LoadUint64(&interp.id) }
