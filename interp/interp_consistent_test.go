@@ -182,6 +182,9 @@ func TestInterpConsistencyBuild(t *testing.T) {
 
 func TestInterpErrorConsistency(t *testing.T) {
 	if runtime.Version() == "go1.18" {
+		// Error messages have changed a lot between go1.17 and go1.18.
+		// Skip testing on go1.18 while we support go1.17. It can be
+		// re-enabled after dropping go1.17.
 		t.Skip("skip go1.18")
 	}
 	testCases := []struct {
