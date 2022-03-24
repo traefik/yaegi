@@ -1235,6 +1235,8 @@ func call(n *node) {
 				values = append(values, genValueInterface(c))
 			case isInterfaceBin(arg):
 				values = append(values, genInterfaceWrapper(c, arg.rtype))
+			case isFuncSrc(arg):
+				values = append(values, genValueNode(c))
 			default:
 				values = append(values, genValue(c))
 			}
