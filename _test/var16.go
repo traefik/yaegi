@@ -12,3 +12,8 @@ func main() {
 	}
 	println("#3")
 }
+
+// Output:
+// getNum
+// getArray
+// #3
