@@ -1832,6 +1832,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					setFNext(c, clauses[i+1])
 				}
 			}
+			sbn.start = clauses[0].start
 			n.start = n.child[0].start
 			n.child[0].tnext = sbn.start
 
