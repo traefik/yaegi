@@ -9,16 +9,16 @@ type obj struct {
 	num float64
 }
 
-type Func func(o *obj) (r *obj, err error)
+type Fun func(o *obj) (r *obj, err error)
 
-func numFunc(fn func(f float64) float64) Func {
+func numFun(fn func(f float64) float64) Fun {
 	return func(o *obj) (*obj, error) {
 		return &obj{fn(o.num)}, nil
 	}
 }
 
 func main() {
-	f := numFunc(math.Cos)
+	f := numFun(math.Cos)
 	r, err := f(&obj{})
 	fmt.Println(r, err)
 }
