@@ -1850,7 +1850,7 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 		// (slice of, map of, etc), they "mask" each other, and only one
 		// of them is in ctx.refs. That is why the code around here is a bit convoluted,
 		// and we need both the loop above, around all the struct fields, and the loop
-		// below, around the ctx.refs.		
+		// below, around the ctx.refs.
 		for _, f := range ctx.refs[name] {
 			for _, index := range fieldFix {
 				ftyp := f.typ.field[index].typ.refType(&refTypeContext{defined: ctx.defined, rebuilding: true})
