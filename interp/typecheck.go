@@ -3,6 +3,7 @@ package interp
 import (
 	"errors"
 	"go/constant"
+	"go/token"
 	"math"
 	"reflect"
 )
@@ -591,6 +592,12 @@ func (check typecheck) typeAssertionExpr(n *node, typ *itype) error {
 			continue
 		}
 		if tm == nil {
+			// Lookup for non-exported methods is impossible
+			// for bin types, ignore them as they can't be used
+			// directly by the interpreted programs.
+			if !token.IsExported(name) && isBin(typ) {
+				continue
+			}
 			return n.cfgErrorf("impossible type assertion: %s does not implement %s (missing %v method)", typ.id(), n.typ.id(), name)
 		}
 		if tm.recv != nil && tm.recv.TypeOf().Kind() == reflect.Ptr && typ.TypeOf().Kind() != reflect.Ptr {
