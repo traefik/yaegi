@@ -421,7 +421,11 @@ func genValueNode(n *node) func(*frame) reflect.Value {
 	value := genValue(n)
 
 	return func(f *frame) reflect.Value {
-		return reflect.ValueOf(&node{rval: value(f)})
+		v := value(f)
+		if _, ok := v.Interface().(*node); ok {
+			return v
+		}
+		return reflect.ValueOf(&node{rval: v})
 	}
 }
 
