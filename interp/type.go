@@ -1845,6 +1845,12 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 
 		// The rtype has now been built, we can go back and rebuild
 		// all the recursive types that relied on this type.
+		// However, as we are keyed by type name, if two or more (recursive) fields at
+		// the same depth level are of the same type, or a "variation" of the same type
+		// (slice of, map of, etc), they "mask" each other, and only one
+		// of them is in ctx.refs. That is why the code around here is a bit convoluted,
+		// and we need both the loop above, around all the struct fields, and the loop
+		// below, around the ctx.refs.		
 		for _, f := range ctx.refs[name] {
 			for _, index := range fieldFix {
 				ftyp := f.typ.field[index].typ.refType(&refTypeContext{defined: ctx.defined, rebuilding: true})
