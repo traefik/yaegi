@@ -1235,6 +1235,8 @@ func call(n *node) {
 				values = append(values, genValueInterface(c))
 			case isInterfaceBin(arg):
 				values = append(values, genInterfaceWrapper(c, arg.rtype))
+			case isFuncSrc(arg) && !hasVariadicArgs:
+				values = append(values, genValueNode(c))
 			default:
 				values = append(values, genValue(c))
 			}
@@ -1404,12 +1406,22 @@ func call(n *node) {
 					}
 				default:
 					val := v(f)
-					// The !val.IsZero is to work around a recursive struct zero interface
-					// issue. Once there is a better way to handle this case, the dest
-					// can just be set.
-					if !val.IsZero() || dest[i].Kind() == reflect.Interface {
-						dest[i].Set(val)
+					if val.IsZero() && dest[i].Kind() != reflect.Interface {
+						// Work around a recursive struct zero interface issue.
+						// Once there is a better way to handle this case, the dest can just be set.
+						continue
 					}
+					if nod, ok := val.Interface().(*node); ok && nod.recv != nil {
+						// An interpreted method is passed as value in a function call.
+						// It must be wrapped now, otherwise the receiver will be missing
+						// at the method call (#1332).
+						// TODO (marc): wrapping interpreted functions should be always done
+						// everywhere at runtime to simplify the whole code,
+						// but it requires deeper refactoring.
+						dest[i] = genFunctionWrapper(nod)(f)
+						continue
+					}
+					dest[i].Set(val)
 				}
 			}
 		}
