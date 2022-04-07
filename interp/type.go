@@ -1827,7 +1827,7 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 				}
 			}
 		}
-		fieldFix := []int{} // slice of field indices to fix for recursivity
+		fieldFix := []int{} // Slice of field indices to fix for recursivity.
 		t.rtype = reflect.StructOf(fields)
 		if ctx.isComplete() {
 			for _, s := range ctx.defined {
