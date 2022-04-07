@@ -1832,6 +1832,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					setFNext(c, clauses[i+1])
 				}
 			}
+			sbn.start = clauses[0].start
 			n.start = n.child[0].start
 			n.child[0].tnext = sbn.start
 
@@ -2060,12 +2061,18 @@ func compDefineX(sc *scope, n *node) error {
 	}
 
 	for i, t := range types {
-		index := sc.add(t)
-		sc.sym[n.child[i].ident] = &symbol{index: index, kind: varSym, typ: t}
+		var index int
+		id := n.child[i].ident
+		if sym, _, ok := sc.lookup(id); ok && sym.kind == varSym && sym.typ.equals(t) {
+			// Reuse symbol in case of a variable redeclaration with the same type.
+			index = sym.index
+		} else {
+			index = sc.add(t)
+			sc.sym[id] = &symbol{index: index, kind: varSym, typ: t}
+		}
 		n.child[i].typ = t
 		n.child[i].findex = index
 	}
-
 	return nil
 }
 
