@@ -2063,7 +2063,7 @@ func compDefineX(sc *scope, n *node) error {
 	for i, t := range types {
 		var index int
 		id := n.child[i].ident
-		if sym, _, ok := sc.lookup(id); ok && sym.kind == varSym && sym.typ.equals(t) {
+		if sym, level, ok := sc.lookup(id); ok && level == n.child[i].level && sym.kind == varSym && sym.typ.equals(t) {
 			// Reuse symbol in case of a variable redeclaration with the same type.
 			index = sym.index
 		} else {
