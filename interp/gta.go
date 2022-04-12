@@ -208,10 +208,12 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				case ".": // import symbols in current scope
 					for n, v := range pkg {
 						typ := v.Type()
+						kind := binSym
 						if isBinType(v) {
 							typ = typ.Elem()
+							kind = typeSym
 						}
-						sc.sym[n] = &symbol{kind: binSym, typ: valueTOf(typ, withScope(sc)), rval: v}
+						sc.sym[n] = &symbol{kind: kind, typ: valueTOf(typ, withScope(sc)), rval: v}
 					}
 				default: // import symbols in package namespace
 					if name == "" {
