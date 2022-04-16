@@ -1,9 +1,12 @@
 package interp
 
 import (
+	"go/constant"
 	"log"
 	"reflect"
 	"testing"
+
+	"github.com/traefik/yaegi/stdlib"
 )
 
 func init() { log.SetFlags(log.Lshortfile) }
@@ -19,13 +22,13 @@ func TestIsNatural(t *testing.T) {
 			n: &node{
 				typ: &itype{
 					rtype: func() reflect.Type {
-						var x uint = 3
-						return reflect.TypeOf(x)
+						var a uint = 3
+						return reflect.TypeOf(a)
 					}(),
 				},
 				rval: func() reflect.Value {
-					var x uint = 3
-					return reflect.ValueOf(x)
+					var a uint = 3
+					return reflect.ValueOf(a)
 				}(),
 			},
 			expected: true,
@@ -35,13 +38,13 @@ func TestIsNatural(t *testing.T) {
 			n: &node{
 				typ: &itype{
 					rtype: func() reflect.Type {
-						x := 3
-						return reflect.TypeOf(x)
+						a := 3
+						return reflect.TypeOf(a)
 					}(),
 				},
 				rval: func() reflect.Value {
-					x := 3
-					return reflect.ValueOf(x)
+					a := 3
+					return reflect.ValueOf(a)
 				}(),
 			},
 			expected: true,
@@ -51,13 +54,13 @@ func TestIsNatural(t *testing.T) {
 			n: &node{
 				typ: &itype{
 					rtype: func() reflect.Type {
-						var x int = 3
-						return reflect.TypeOf(x)
+						var a int = 3
+						return reflect.TypeOf(a)
 					}(),
 				},
 				rval: func() reflect.Value {
-					var x int = 3
-					return reflect.ValueOf(x)
+					var a int = 3
+					return reflect.ValueOf(a)
 				}(),
 			},
 			expected: true,
@@ -67,13 +70,13 @@ func TestIsNatural(t *testing.T) {
 			n: &node{
 				typ: &itype{
 					rtype: func() reflect.Type {
-						var x float64 = 3.0
-						return reflect.TypeOf(x)
+						var a float64 = 3.0
+						return reflect.TypeOf(a)
 					}(),
 				},
 				rval: func() reflect.Value {
-					var x float64 = 3.0
-					return reflect.ValueOf(x)
+					var a float64 = 3.0
+					return reflect.ValueOf(a)
 				}(),
 			},
 			expected: true,
@@ -83,13 +86,13 @@ func TestIsNatural(t *testing.T) {
 			n: &node{
 				typ: &itype{
 					rtype: func() reflect.Type {
-						var x float64 = 3.14
-						return reflect.TypeOf(x)
+						var a float64 = 3.14
+						return reflect.TypeOf(a)
 					}(),
 				},
 				rval: func() reflect.Value {
-					var x float64 = 3.14
-					return reflect.ValueOf(x)
+					var a float64 = 3.14
+					return reflect.ValueOf(a)
 				}(),
 			},
 			expected: false,
@@ -99,13 +102,13 @@ func TestIsNatural(t *testing.T) {
 			n: &node{
 				typ: &itype{
 					rtype: func() reflect.Type {
-						var x int = -3
-						return reflect.TypeOf(x)
+						var a int = -3
+						return reflect.TypeOf(a)
 					}(),
 				},
 				rval: func() reflect.Value {
-					var x int = -3
-					return reflect.ValueOf(x)
+					var a int = -3
+					return reflect.ValueOf(a)
 				}(),
 			},
 			expected: false,
@@ -186,5 +189,44 @@ func TestIsNatural(t *testing.T) {
 		if test.expected != got {
 			t.Fatalf("%s: got %v, wanted %v", test.desc, got, test.expected)
 		}
+	}
+}
+
+func TestGlobals(t *testing.T) {
+	i := New(Options{})
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := i.Eval("var a = 1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := i.Eval("b := 2"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := i.Eval("const c = 3"); err != nil {
+		t.Fatal(err)
+	}
+
+	g := i.Globals()
+	a := g["a"]
+	if !a.IsValid() {
+		t.Fatal("a not found")
+	}
+	if a := a.Interface(); a != 1 {
+		t.Fatalf("wrong a: want (%[1]T) %[1]v, have (%[2]T) %[2]v", 1, a)
+	}
+	b := g["b"]
+	if !b.IsValid() {
+		t.Fatal("b not found")
+	}
+	if b := b.Interface(); b != 2 {
+		t.Fatalf("wrong b: want (%[1]T) %[1]v, have (%[2]T) %[2]v", 2, b)
+	}
+	c := g["c"]
+	if !c.IsValid() {
+		t.Fatal("c not found")
+	}
+	if cc, ok := c.Interface().(constant.Value); ok && constant.MakeInt64(3) != cc {
+		t.Fatalf("wrong c: want (%[1]T) %[1]v, have (%[2]T) %[2]v", constant.MakeInt64(3), cc)
 	}
 }
