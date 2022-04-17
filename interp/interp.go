@@ -19,6 +19,8 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -220,6 +222,8 @@ type Interpreter struct {
 	hooks *hooks // symbol hooks
 
 	debugger *Debugger
+	calls    map[uintptr]*node // for translating runtime stacktrace, see FilterStack()
+	panics   []*Panic          // list of panics we have had, see GetOldestPanicForErr()
 }
 
 const (
@@ -248,6 +252,7 @@ var Symbols = Exports{
 		"Interpreter": reflect.ValueOf((*Interpreter)(nil)),
 		"Options":     reflect.ValueOf((*Options)(nil)),
 		"Panic":       reflect.ValueOf((*Panic)(nil)),
+		"IFunc":       reflect.ValueOf((*IFunc)(nil)),
 	},
 }
 
@@ -260,24 +265,6 @@ type _error struct {
 }
 
 func (w _error) Error() string { return w.WError() }
-
-// Panic is an error recovered from a panic call in interpreted code.
-type Panic struct {
-	// Value is the recovered value of a call to panic.
-	Value interface{}
-
-	// Callers is the call stack obtained from the recover call.
-	// It may be used as the parameter to runtime.CallersFrames.
-	Callers []uintptr
-
-	// Stack is the call stack buffer for debug.
-	Stack []byte
-}
-
-// TODO: Capture interpreter stack frames also and remove
-// fmt.Fprintln(n.interp.stderr, oNode.cfgErrorf("panic")) in runCfg.
-
-func (e Panic) Error() string { return fmt.Sprint(e.Value) }
 
 // Walk traverses AST n in depth first order, call cbin function
 // at node entry and cbout function at node exit.
@@ -335,6 +322,8 @@ func New(options Options) *Interpreter {
 		pkgNames: map[string]string{},
 		rdir:     map[string]bool{},
 		hooks:    &hooks{},
+		calls:    map[uintptr]*node{},
+		panics:   []*Panic{},
 	}
 
 	if i.opt.stdin = options.Stdin; i.opt.stdin == nil {
@@ -484,6 +473,379 @@ func (interp *Interpreter) resizeFrame() {
 		data[b+j] = reflect.New(t).Elem()
 	}
 	interp.frame.data = data
+}
+
+// Add a call with handle that we recognize and can filter from the stacktrace
+// Need to make sure this never overlaps with real PCs from runtime.Callers
+func (interp *Interpreter) addCall(n *node) uintptr {
+	handle := reflect.ValueOf(n).Pointer()
+	interp.calls[handle] = n
+	return handle
+}
+
+// Return func name as it appears in go stacktraces
+func funcName(n *node) string {
+	if n.scope == nil || n.scope.def == nil {
+		return ""
+	}
+
+	// Need to search ancestors for both funcDecl and pkgName
+	pkgName := n.scope.pkgName
+	anc := n.scope
+	ancestors := []*scope{}
+	funcDeclFound := false
+	funcDeclIndex := 0
+	for anc != nil && anc != anc.anc {
+		ancestors = append(ancestors, anc)
+		if anc.def != nil && anc.def.kind == funcDecl &&
+			(anc.anc == nil || anc.anc.def != anc.def) {
+			funcDeclFound = true
+			funcDeclIndex = len(ancestors) - 1
+		}
+		if len(anc.pkgName) > 0 {
+			pkgName = anc.pkgName
+		}
+		if len(pkgName) > 0 && funcDeclFound {
+			break
+		}
+		anc = anc.anc
+	}
+
+	if n.scope.def.typ.recv != nil {
+		recv := n.scope.def.typ.recv.str
+		star := ""
+		if recv[0] == '*' {
+			star = "*"
+			recv = recv[1:]
+		}
+		recv = strings.TrimPrefix(recv, pkgName+".")
+		pkgName = fmt.Sprintf("%s.(%s%s)", pkgName, star, recv)
+	}
+
+	funcName := "<unknown>"
+	switch n.scope.def.kind {
+	case funcDecl:
+		funcName = n.scope.def.child[1].ident
+	case funcLit:
+		counts := []int{}
+		count := 0
+		i := funcDeclIndex
+		funcName = ancestors[i].def.child[1].ident
+		for i > 0 {
+			if ancestors[i].dfs(func(s *scope) dfsSignal {
+				if s.def != nil && s.def.kind == funcLit &&
+					(s.anc == nil || s.def != s.anc.def) {
+					count += 1
+				}
+				if s == ancestors[i-1] {
+					if s.def != nil && s.def.kind == funcLit &&
+						(s.anc == nil || s.def != s.anc.def) {
+						counts = append(counts, count)
+						count = 0
+					}
+					i -= 1
+					return dfsAbort
+				}
+				if s.def != nil && s.def.kind == funcLit {
+					return dfsSibling
+				}
+				return dfsNext
+			}) != dfsAbort {
+				// child not found
+				return "<unknown>"
+			}
+		}
+		funcName += fmt.Sprintf(".func%d", counts[0])
+		for _, count := range counts[1:] {
+			funcName += fmt.Sprintf(".%d", count)
+			i += 1
+		}
+	}
+	return fmt.Sprintf("%s.%s", pkgName, funcName)
+}
+
+// by analogy to runtime.FuncForPC()
+type Func struct {
+	Pos   token.Position
+	name  string
+	entry uintptr
+}
+
+func (f *Func) Entry() uintptr {
+	return f.entry
+}
+
+func (f *Func) FileLine(pc uintptr) (string, int) {
+	return f.Pos.Filename, f.Pos.Line
+}
+
+func (f *Func) Name() string {
+	return f.name
+}
+
+type IFunc interface {
+	Entry() uintptr
+	FileLine(uintptr) (string, int)
+	Name() string
+}
+
+// return call if we know it, pass to runtime.FuncForPC otherwise
+func (interp *Interpreter) FuncForPC(handle uintptr) IFunc {
+	n, ok := interp.calls[handle]
+	if !ok {
+		return runtime.FuncForPC(handle)
+	}
+	pos := n.interp.fset.Position(n.pos)
+	return &Func{
+		pos,
+		funcName(n),
+		handle,
+	}
+}
+
+func (interp *Interpreter) FilteredStack() []byte {
+	return interp.FilterStack(debug.Stack())
+}
+
+func (interp *Interpreter) FilteredCallers() []uintptr {
+	pc := make([]uintptr, 64)
+	runtime.Callers(0, pc)
+	_, fPc := interp.FilterStackAndCallers(debug.Stack(), pc, 2)
+	return fPc
+}
+
+func (interp *Interpreter) FilterStack(stack []byte) []byte {
+	newStack, _ := interp.FilterStackAndCallers(stack, []uintptr{}, 2)
+	return newStack
+}
+
+// Given a runtime stacktrace and callers list, filter out the interpreter runtime
+// and replace it with the interpreted calls. Parses runtime stacktrace to figure
+// out which interp node by placing a magic value in parameters to runCfg and callBin
+func (interp *Interpreter) FilterStackAndCallers(stack []byte, callers []uintptr, skip int) ([]byte, []uintptr) {
+	newFrames := [][]string{}
+	newCallers := []uintptr{}
+
+	stackLines := strings.Split(string(stack), "\n")
+	lastFrame := len(stackLines)
+	skipFrame := 0
+
+	const (
+		notSyncedYet = -1
+		dontSync     = -2
+	)
+
+	// index to copy over from callers into newCallers
+	callersIndex := notSyncedYet // to indicate we haven't synced up with stack yet
+	if len(callers) == 0 {
+		callersIndex = dontSync // don't attempt to copy over from callers
+	}
+
+	// Parse stack in reverse order, because sometimes we want to skip frames
+	var lastInterpFrame int
+	for i := len(stackLines) - 1; i >= 0; i-- {
+		// Split stack trace into paragraphs (frames)
+		if len(stackLines[i]) == 0 || stackLines[i][0] == '\t' {
+			continue
+		}
+
+		if callersIndex > 0 {
+			callersIndex--
+		}
+
+		if skipFrame > 0 {
+			lastFrame = i
+			skipFrame--
+			continue
+		}
+
+		p := stackLines[i:lastFrame] // all lines in single frame
+		lastFrame = i
+
+		lastSlash := strings.LastIndex(p[0], "/")
+		funcPath := strings.Split(p[0][lastSlash+1:], ".")
+		pkgName := p[0][0:lastSlash+1] + funcPath[0]
+
+		if callersIndex >= 0 {
+			callName := runtime.FuncForPC(callers[callersIndex]).Name()
+			if callName != strings.Split(p[0], "(")[0] {
+				// for some reason runtime.gopanic shows up as panic in stacktrace
+				if callName != "runtime.gopanic" || strings.Split(p[0], "(")[0] != "panic" {
+					// since we're walking stack and callers at the same time they
+					// should be in sync. If not, we stop messing with callers
+					for ; callersIndex >= 0; callersIndex-- {
+						newCallers = append(newCallers, callers[callersIndex])
+					}
+					callersIndex = dontSync
+				}
+			}
+		}
+
+		// Don't touch any stack frames that aren't in the yaegi runtime
+		// Functions called on (*Interpreter) may provide information
+		// on how we entered yaegi, so we pass these through as well
+		if pkgName != selfPrefix+"/interp" || funcPath[1] == "(*Interpreter)" {
+			newFrames = append(newFrames, p)
+			if callersIndex >= 0 {
+				newCallers = append(newCallers, callers[callersIndex])
+			}
+			continue
+		}
+
+		// This is the first call into the interpreter, so try to sync callers
+		if callersIndex == notSyncedYet {
+			for j, call := range callers {
+				if call == 0 {
+					break
+				}
+				callName := runtime.FuncForPC(call).Name()
+				if callName == strings.Split(p[0], "(")[0] {
+					callersIndex = j
+				}
+			}
+			for j := len(callers) - 1; j > callersIndex; j-- {
+				if callers[j] != 0 {
+					newCallers = append(newCallers, callers[j])
+				}
+			}
+		}
+
+		var handle uintptr
+		originalExecNode := false
+
+		// A runCfg call refers to an interpreter level call
+		// grab callHandle from the first parameter to it
+		if strings.HasPrefix(funcPath[1], "runCfg(") {
+			fmt.Sscanf(funcPath[1], "runCfg(%v,", &handle)
+		}
+
+		// capture node that panicked
+		if strings.HasPrefix(funcPath[1], "runCfgPanic(") {
+			fmt.Sscanf(funcPath[1], "runCfgPanic(%v,", &handle)
+			originalExecNode = true
+		}
+
+		// callBin is a call to a binPkg
+		// the callHandle will be on the first or second function literal
+		if funcPath[1] == "callBin" &&
+			(strings.HasPrefix(funcPath[2], "func1(") ||
+				strings.HasPrefix(funcPath[2], "func2(")) {
+			fmt.Sscanf(strings.Split(funcPath[2], "(")[1], "%v,", &handle)
+			// after a binary call, the next two frames will be reflect.Value.Call
+			skipFrame = 2
+		}
+
+		if handle != 0 {
+			if callersIndex >= 0 {
+				newCallers = append(newCallers, handle)
+			}
+			n, ok := interp.calls[handle]
+
+			// Don't print scopes that weren't function calls
+			// (unless they're the node that caused the panic)
+			if !ok || (n.kind != callExpr && !originalExecNode) {
+				continue
+			}
+
+			pos := n.interp.fset.Position(n.pos)
+			newFrame := []string{
+				funcName(n) + "()",
+				fmt.Sprintf("\t%s", pos),
+			}
+
+			// we only find originalExecNode a few frames later
+			// so place it right after the last interpreted frame
+			if originalExecNode && len(newFrames) != lastInterpFrame {
+				newFrames = append(
+					newFrames[:lastInterpFrame+1],
+					newFrames[lastInterpFrame:]...)
+				newFrames[lastInterpFrame] = newFrame
+			} else {
+				newFrames = append(newFrames, newFrame)
+			}
+			lastInterpFrame = len(newFrames)
+		}
+	}
+
+	// reverse order because we parsed from bottom up, fix that now.
+	newStack := []string{}
+	newStack = append(newStack, newFrames[len(newFrames)-1]...) // skip after goroutine id
+	for i := len(newFrames) - 2 - skip; i >= 0; i-- {
+		newStack = append(newStack, newFrames[i]...)
+	}
+	unreversedNewCallers := []uintptr{}
+	if len(newCallers) == 0 {
+		if len(callers) >= skip {
+			unreversedNewCallers = callers[skip:] // just pass the original through
+		}
+	} else {
+		for i := len(newCallers) - 1 - skip; i >= 0; i-- {
+			unreversedNewCallers = append(unreversedNewCallers, newCallers[i])
+		}
+	}
+
+	newStackJoined := strings.Join(newStack, "\n")
+	newStackBytes := make([]byte, len(newStackJoined)-1)
+	copy(newStackBytes, newStackJoined)
+	return newStackBytes, unreversedNewCallers
+}
+
+// Panic is an error recovered from a panic call in interpreted code.
+type Panic struct {
+	// Value is the recovered value of a call to panic.
+	Value interface{}
+
+	// Callers is the call stack obtained from the recover call.
+	// It may be used as the parameter to runtime.CallersFrames.
+	Callers []uintptr
+
+	// Stack is the call stack buffer for debug.
+	Stack []byte
+
+	// Interpreter runtime frames replaced by interpreted code
+	FilteredCallers []uintptr
+	FilteredStack   []byte
+}
+
+func (e Panic) Error() string {
+	return fmt.Sprintf("panic: %s\n%s\n", e.Value, e.FilteredStack)
+}
+
+// Store a panic record if this is an error we have not seen.
+// Not strictly correct: code might recover from err and never
+// call GetOldestPanicForErr(), and we later return the wrong one.
+func (interp *Interpreter) Panic(err interface{}) {
+	if len(interp.panics) > 0 && interp.panics[len(interp.panics)-1].Value == err {
+		return
+	}
+	pc := make([]uintptr, 64)
+	runtime.Callers(0, pc)
+	stack := debug.Stack()
+	fStack, fPc := interp.FilterStackAndCallers(stack, pc, 2)
+	interp.panics = append(interp.panics, &Panic{
+		Value:           err,
+		Callers:         pc,
+		Stack:           stack,
+		FilteredCallers: fPc,
+		FilteredStack:   fStack,
+	})
+}
+
+// We want to capture the full stacktrace from where the panic originated.
+// Return oldest panic that matches err. Then, clear out the list of panics.
+func (interp *Interpreter) GetOldestPanicForErr(err interface{}) *Panic {
+	if _, ok := err.(*Panic); ok {
+		return err.(*Panic)
+	}
+	r := (*Panic)(nil)
+	for i := len(interp.panics) - 1; i >= 0; i-- {
+		if interp.panics[i].Value == err {
+			r = interp.panics[i]
+			break
+		}
+	}
+	interp.panics = []*Panic{}
+	return r
 }
 
 // Eval evaluates Go code represented as a string. Eval returns the last result

@@ -22,6 +22,16 @@ const (
 	varSym         // Variable
 )
 
+// Signals from consumer to the depth first search
+type dfsSignal uint
+
+const (
+	dfsNext dfsSignal = iota
+	dfsAbort
+	dfsSibling
+	dfsDone
+)
+
 var symKinds = [...]string{
 	undefSym: "undefSym",
 	binSym:   "binSym",
@@ -240,4 +250,21 @@ func (interp *Interpreter) initScopePkg(pkgID, pkgName string) *scope {
 	sc.pkgName = pkgName
 	interp.mutex.Unlock()
 	return sc
+}
+
+// depth first search - iterate over scopes in depth first order
+func (s *scope) dfs(f func(*scope) dfsSignal) dfsSignal {
+	for _, child := range s.child {
+		signal := f(child)
+		switch signal {
+		case dfsAbort:
+			return dfsAbort
+		case dfsSibling:
+			continue
+		}
+		if child.dfs(f) == dfsAbort {
+			return dfsAbort
+		}
+	}
+	return dfsDone
 }
