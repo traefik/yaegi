@@ -1749,3 +1749,26 @@ func TestRestrictedEnv(t *testing.T) {
 		t.Fatal("expected \"\", got " + s)
 	}
 }
+
+func TestIssue1388(t *testing.T) {
+	i := interp.New(interp.Options{Env: []string{"foo=bar"}})
+	err := i.Use(stdlib.Symbols)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = i.Eval(`x := errors.New("")`)
+	if err == nil {
+		t.Fatal("Expected an error")
+	}
+
+	_, err = i.Eval(`import "errors"`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = i.Eval(`x := errors.New("")`)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
