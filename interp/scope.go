@@ -241,3 +241,26 @@ func (interp *Interpreter) initScopePkg(pkgID, pkgName string) *scope {
 	interp.mutex.Unlock()
 	return sc
 }
+
+// Globals returns a map of global variables and constants in the main package.
+func (interp *Interpreter) Globals() map[string]reflect.Value {
+	syms := map[string]reflect.Value{}
+	interp.mutex.RLock()
+	defer interp.mutex.RUnlock()
+
+	v, ok := interp.srcPkg["main"]
+	if !ok {
+		return syms
+	}
+
+	for n, s := range v {
+		switch s.kind {
+		case constSym:
+			syms[n] = s.rval
+		case varSym:
+			syms[n] = interp.frame.data[s.index]
+		}
+	}
+
+	return syms
+}
