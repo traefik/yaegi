@@ -128,6 +128,7 @@ func TestEvalAssign(t *testing.T) {
 		{src: "i := 1; j := &i; (*j) = 2", res: "2"},
 		{src: "i64 := testpkg.val; i64 == 11", res: "true"},
 		{pre: func() { eval(t, i, "k := 1") }, src: `k := "Hello world"`, res: "Hello world"}, // allow reassignment in subsequent evaluations
+		{src: "_ = _", err: "1:28: cannot use _ as value"},
 	})
 }
 
@@ -178,6 +179,7 @@ func TestEvalBuiltin(t *testing.T) {
 		{src: `t := map[int]int{}; t[123]--; t`, res: "map[123:-1]"},
 		{src: `t := map[int]int{}; t[123] += 1; t`, res: "map[123:1]"},
 		{src: `t := map[int]int{}; t[123] -= 1; t`, res: "map[123:-1]"},
+		{src: `println("hello", _)`, err: "1:28: cannot use _ as value"},
 	})
 }
 
@@ -432,6 +434,8 @@ func TestEvalComparison(t *testing.T) {
 			`,
 			err: "7:13: invalid operation: mismatched types main.Foo and main.Bar",
 		},
+		{src: `1 > _`, err: "1:28: cannot use _ as value"},
+		{src: `(_) > 1`, err: "1:28: cannot use _ as value"},
 	})
 }
 
@@ -501,6 +505,7 @@ func TestEvalSliceExpression(t *testing.T) {
 		{src: `a := []int{0,1,2,3}[1:3:]`, err: "1:51: 3rd index required in 3-index slice"},
 		{src: `a := []int{0,1,2}[3:1]`, err: "invalid index values, must be low <= high <= max"},
 		{pre: func() { eval(t, i, `type Str = string; var r Str = "truc"`) }, src: `r[1]`, res: "114"},
+		{src: `_[12]`, err: "1:28: cannot use _ as value"},
 	})
 }
 
@@ -511,6 +516,7 @@ func TestEvalConversion(t *testing.T) {
 		{src: `i := 1.1; a := uint64(i)`, res: "1"},
 		{src: `b := string(49)`, res: "1"},
 		{src: `c := uint64(1.1)`, err: "1:40: cannot convert expression of type untyped float to type uint64"},
+		{src: `int(_)`, err: "1:28: cannot use _ as value"},
 	})
 }
 
@@ -520,6 +526,9 @@ func TestEvalUnary(t *testing.T) {
 		{src: "a := -1", res: "-1"},
 		{src: "b := +1", res: "1", skip: "BUG"},
 		{src: "c := !false", res: "true"},
+		{src: "_ = 2; _++", err: "1:35: cannot use _ as value"},
+		{src: "_ = false; !_ == true", err: "1:39: cannot use _ as value"},
+		{src: "!((((_))))", err: "1:28: cannot use _ as value"},
 	})
 }
 

@@ -125,6 +125,8 @@ func (check typecheck) starExpr(n *node) error {
 }
 
 var unaryOpPredicates = opPredicates{
+	aInc:    isNumber,
+	aDec:    isNumber,
 	aPos:    isNumber,
 	aNeg:    isNumber,
 	aBitNot: isInt,
@@ -134,6 +136,9 @@ var unaryOpPredicates = opPredicates{
 // unaryExpr type checks a unary expression.
 func (check typecheck) unaryExpr(n *node) error {
 	c0 := n.child[0]
+	if isBlank(c0) {
+		return n.cfgErrorf("cannot use _ as value")
+	}
 	t0 := c0.typ.TypeOf()
 
 	if n.action == aRecv {
@@ -221,6 +226,10 @@ var binaryOpPredicates = opPredicates{
 // binaryExpr type checks a binary expression.
 func (check typecheck) binaryExpr(n *node) error {
 	c0, c1 := n.child[0], n.child[1]
+
+	if isBlank(c0) || isBlank(c1) {
+		return n.cfgErrorf("cannot use _ as value")
+	}
 
 	a := n.action
 	if isAssignAction(a) {

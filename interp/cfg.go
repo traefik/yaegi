@@ -478,6 +478,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 		switch n.kind {
 		case addressExpr:
+			if isBlank(n.child[0]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			wireChild(n)
 
 			err = check.addressExpr(n)
@@ -513,6 +517,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				updateSym := false
 				var sym *symbol
 				var level int
+
+				if isBlank(src) {
+					err = n.cfgErrorf("cannot use _ as value")
+					break
+				}
 				if n.kind == defineStmt || (n.kind == assignStmt && dest.ident == "_") {
 					if atyp != nil {
 						dest.typ = atyp
@@ -645,6 +654,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case incDecStmt:
+			err = check.unaryExpr(n)
+			if err != nil {
+				break
+			}
 			wireChild(n)
 			n.findex = n.child[0].findex
 			n.level = n.child[0].level
@@ -763,6 +776,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case indexExpr:
+			if isBlank(n.child[0]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			wireChild(n)
 			t := n.child[0].typ
 			switch t.cat {
@@ -877,6 +894,12 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			gotoLabel(n.sym)
 
 		case callExpr:
+			for _, c := range n.child {
+				if isBlank(c) {
+					err = n.cfgErrorf("cannot use _ as value")
+					return
+				}
+			}
 			wireChild(n)
 			switch {
 			case isBuiltinCall(n, sc):
@@ -1742,6 +1765,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case starExpr:
+			if isBlank(n.child[0]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			switch {
 			case n.anc.kind == defineStmt && len(n.anc.child) == 3 && n.anc.child[1] == n:
 				// pointer type expression in a var definition
@@ -2734,4 +2761,11 @@ func isBoolAction(n *node) bool {
 		return true
 	}
 	return false
+}
+
+func isBlank(n *node) bool {
+	if n.kind == parenExpr && len(n.child) > 0 {
+		return isBlank(n.child[0])
+	}
+	return n.ident == "_"
 }
