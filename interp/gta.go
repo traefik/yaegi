@@ -59,6 +59,9 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 
 			for i := 0; i < n.nleft; i++ {
 				dest, src := n.child[i], n.child[sbase+i]
+				if isBlank(src) {
+					err = n.cfgErrorf("cannot use _ as value")
+				}
 				val := src.rval
 				if n.anc.kind == constDecl {
 					if _, err2 := interp.cfg(n, sc, importPath, pkgName); err2 != nil {
