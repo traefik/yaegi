@@ -1769,7 +1769,7 @@ func TestIssue1388(t *testing.T) {
 	}
 
 	_, err = i.Eval(`x := errors.New("")`)
-  	if err != nil {
+	if err != nil {
 		t.Fatal(err)
 	}
 }
