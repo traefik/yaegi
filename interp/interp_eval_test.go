@@ -481,6 +481,8 @@ func TestEvalCompositeStruct(t *testing.T) {
 		{src: `a := struct{A,B,C int}{A:1,A:2,C:3}`, err: "1:55: duplicate field name A in struct literal"},
 		{src: `a := struct{A,B,C int}{A:1,B:2.2,C:3}`, err: "1:57: 11/5 truncated to int"},
 		{src: `a := struct{A,B,C int}{A:1,2,C:3}`, err: "1:55: mixture of field:value and value elements in struct literal"},
+		{src: `a := struct{A,B,C int}{1,2,_}`, err: "1:33: cannot use _ as value"},
+		{src: `a := struct{A,B,C int}{B: _}`, err: "1:51: cannot use _ as value"},
 	})
 }
 

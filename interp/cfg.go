@@ -319,6 +319,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 			// Propagate type to children, to handle implicit types
 			for _, c := range child {
+				if isBlank(c) {
+					err = n.cfgErrorf("cannot use _ as value")
+					return false
+				}
 				switch c.kind {
 				case binaryExpr, unaryExpr, compositeLitExpr:
 					// Do not attempt to propagate composite type to operator expressions,
@@ -1415,6 +1419,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			sc = sc.pop()
 
 		case keyValueExpr:
+			if isBlank(n.child[1]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			wireChild(n)
 
 		case landExpr:
