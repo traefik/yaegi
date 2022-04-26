@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"go/parser"
 	"io"
 	"log"
 	"net/http"
@@ -1768,6 +1769,39 @@ func TestIssue1388(t *testing.T) {
 	}
 
 	_, err = i.Eval(`x := errors.New("")`)
+  	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestIssue1383(t *testing.T) {
+	const src = `
+			package main
+
+			func main() {
+				fmt.Println("Hello")
+			}
+		`
+
+	interp := interp.New(interp.Options{})
+	err := interp.Use(stdlib.Symbols)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = interp.Eval(`import "fmt"`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ast, err := parser.ParseFile(interp.FileSet(), "_.go", src, parser.DeclarationErrors)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, err := interp.CompileAST(ast)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = interp.Execute(prog)
 	if err != nil {
 		t.Fatal(err)
 	}
