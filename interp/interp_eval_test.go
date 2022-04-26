@@ -207,6 +207,14 @@ func TestEvalDeclWithExpr(t *testing.T) {
 	})
 }
 
+func TestEvalTypeSpec(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `type _ struct{}`, err: "1:19: cannot use _ as value"},
+		{src: `a := struct{a, _ int}{32, 0}`, res: "{32 0}"},
+	})
+}
+
 func TestEvalFunc(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{

@@ -275,6 +275,10 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 			}
 
 		case typeSpec, typeSpecAssign:
+			if isBlank(n.child[0]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				return false
+			}
 			typeName := n.child[0].ident
 			var typ *itype
 			if typ, err = nodeType(interp, sc, n.child[1]); err != nil {
