@@ -129,6 +129,9 @@ func TestEvalAssign(t *testing.T) {
 		{src: "i64 := testpkg.val; i64 == 11", res: "true"},
 		{pre: func() { eval(t, i, "k := 1") }, src: `k := "Hello world"`, res: "Hello world"}, // allow reassignment in subsequent evaluations
 		{src: "_ = _", err: "1:28: cannot use _ as value"},
+		{src: "j := true || _", err: "1:33: cannot use _ as value"},
+		{src: "j := true && _", err: "1:33: cannot use _ as value"},
+		{src: "j := interface{}(int(1)); j.(_)", err: "1:54: cannot use _ as value"},
 	})
 }
 
@@ -212,6 +215,8 @@ func TestEvalFunc(t *testing.T) {
 		{src: `(func () int {f := func() (a, b int) {a, b = 3, 4; return}; x, y := f(); return x+y})()`, res: "7"},
 		{src: `(func () int {f := func() (a int, b, c int) {a, b, c = 3, 4, 5; return}; x, y, z := f(); return x+y+z})()`, res: "12"},
 		{src: `(func () int {f := func() (a, b, c int) {a, b, c = 3, 4, 5; return}; x, y, z := f(); return x+y+z})()`, res: "12"},
+		{src: `func f() int { return _ }`, err: "1:29: cannot use _ as value"},
+		{src: `(func (x int) {})(_)`, err: "1:28: cannot use _ as value"},
 	})
 }
 
@@ -508,6 +513,7 @@ func TestEvalSliceExpression(t *testing.T) {
 		{src: `a := []int{0,1,2}[3:1]`, err: "invalid index values, must be low <= high <= max"},
 		{pre: func() { eval(t, i, `type Str = string; var r Str = "truc"`) }, src: `r[1]`, res: "114"},
 		{src: `_[12]`, err: "1:28: cannot use _ as value"},
+		{src: `b := []int{0,1,2}[_:4]`, err: "1:33: cannot use _ as value"},
 	})
 }
 

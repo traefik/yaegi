@@ -486,6 +486,12 @@ func (check typecheck) structBinLitExpr(child []*node, typ reflect.Type) error {
 
 // sliceExpr type checks a slice expression.
 func (check typecheck) sliceExpr(n *node) error {
+	for _, c := range n.child {
+		if isBlank(c) {
+			return n.cfgErrorf("cannot use _ as value")
+		}
+	}
+
 	c, child := n.child[0], n.child[1:]
 
 	t := c.typ.TypeOf()

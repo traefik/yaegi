@@ -1426,6 +1426,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			wireChild(n)
 
 		case landExpr:
+			if isBlank(n.child[0]) || isBlank(n.child[1]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			n.start = n.child[0].start
 			n.child[0].tnext = n.child[1].start
 			setFNext(n.child[0], n)
@@ -1437,6 +1441,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case lorExpr:
+			if isBlank(n.child[0]) || isBlank(n.child[1]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			n.start = n.child[0].start
 			n.child[0].tnext = n
 			setFNext(n.child[0], n.child[1].start)
@@ -1481,6 +1489,12 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			if len(n.child) > sc.def.typ.numOut() {
 				err = n.cfgErrorf("too many arguments to return")
 				break
+			}
+			for _, c := range n.child {
+				if isBlank(c) {
+					err = n.cfgErrorf("cannot use _ as value")
+					return
+				}
 			}
 			returnSig := sc.def.child[2]
 			if mustReturnValue(returnSig) {
@@ -1922,6 +1936,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 			wireChild(n)
 			c0, c1 := n.child[0], n.child[1]
+			if isBlank(c0) || isBlank(c1) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			if c1.typ == nil {
 				if c1.typ, err = nodeType(interp, sc, c1); err != nil {
 					return
