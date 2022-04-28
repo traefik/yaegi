@@ -202,9 +202,22 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					}
 				}
 			}
+
 			n.findex = -1
 			n.val = nil
 			sc = sc.pushBloc()
+			// Pre-define symbols for labels defined in this block, so we are sure that
+			// they are already defined when met.
+			// TODO(marc): labels must be stored outside of symbols to avoid collisions.
+			for _, c := range n.child {
+				if c.kind != labeledStmt {
+					continue
+				}
+				label := c.child[0].ident
+				sym := &symbol{kind: labelSym, node: c, index: -1}
+				sc.sym[label] = sym
+				c.sym = sym
+			}
 
 		case breakStmt, continueStmt, gotoStmt:
 			if len(n.child) > 0 {
@@ -222,18 +235,6 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					sc.sym[label] = n.sym
 				}
 			}
-
-		case labeledStmt:
-			label := n.child[0].ident
-			// TODO(marc): labels must be stored outside of symbols to avoid collisions
-			// Used labels are searched in current and sub scopes, not upper ones.
-			if sym, ok := sc.lookdown(label); ok {
-				sym.node = n
-				n.sym = sym
-			} else {
-				n.sym = &symbol{kind: labelSym, node: n, index: -1}
-			}
-			sc.sym[label] = n.sym
 
 		case caseClause:
 			sc = sc.pushBloc()
@@ -854,7 +855,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 		case breakStmt:
 			if len(n.child) > 0 {
-				gotoLabel(n.sym)
+				breakLabel(n.sym)
 			} else {
 				n.tnext = sc.loop
 			}
@@ -874,7 +875,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			if len(n.child) > 1 {
 				n.start = n.child[1].start
 			}
-			gotoLabel(n.sym)
+			for _, c := range n.sym.from {
+				if c.kind == gotoStmt {
+					c.tnext = n.start
+				}
+			}
 
 		case callExpr:
 			wireChild(n)
@@ -2592,14 +2597,21 @@ func typeSwichAssign(n *node) bool {
 	return ts.kind == typeSwitch && ts.child[1].action == aAssign
 }
 
+func breakLabel(s *symbol) {
+	if s.node == nil {
+		return
+	}
+	for _, c := range s.from {
+		c.tnext = s.node
+	}
+}
+
 func gotoLabel(s *symbol) {
 	if s.node == nil {
 		return
 	}
 	for _, c := range s.from {
-		if c.tnext == nil {
-			c.tnext = s.node.start
-		}
+		c.tnext = s.node.start
 	}
 }
 
