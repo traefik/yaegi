@@ -2598,9 +2598,6 @@ func typeSwichAssign(n *node) bool {
 }
 
 func breakLabel(s *symbol) {
-	if s.node == nil {
-		return
-	}
 	for _, c := range s.from {
 		c.tnext = s.node
 	}
