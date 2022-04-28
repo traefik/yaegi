@@ -144,20 +144,6 @@ func (s *scope) lookup(ident string) (*symbol, int, bool) {
 	return nil, 0, false
 }
 
-// lookdown searches for a symbol in the current scope and included ones, recursively.
-// It returns the first found symbol and true, or nil and false.
-func (s *scope) lookdown(ident string) (*symbol, bool) {
-	if sym, ok := s.sym[ident]; ok {
-		return sym, true
-	}
-	for _, c := range s.child {
-		if sym, ok := c.lookdown(ident); ok {
-			return sym, true
-		}
-	}
-	return nil, false
-}
-
 func (s *scope) rangeChanType(n *node) *itype {
 	if sym, _, found := s.lookup(n.child[1].ident); found {
 		if t := sym.typ; len(n.child) == 3 && t != nil && (t.cat == chanT || t.cat == chanRecvT) {
