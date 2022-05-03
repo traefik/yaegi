@@ -219,7 +219,7 @@ func genValue(n *node) func(*frame) reflect.Value {
 func genDestValue(typ *itype, n *node) func(*frame) reflect.Value {
 	convertLiteralValue(n, typ.TypeOf())
 	switch {
-	case isInterfaceSrc(typ) && !isEmptyInterface(typ):
+	case isInterfaceSrc(typ) && (!isEmptyInterface(typ) || len(n.typ.method) > 0):
 		return genValueInterface(n)
 	case isFuncSrc(typ) && (n.typ.cat == valueT || n.typ.cat == nilT):
 		return genValueNode(n)
