@@ -219,6 +219,12 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 					if name == "" {
 						name = interp.pkgNames[ipath]
 					}
+
+					// If an incomplete type exists, delete it
+					if sym, exists := sc.sym[name]; exists && sym.kind == typeSym && sym.typ.incomplete {
+						delete(sc.sym, name)
+					}
+
 					// Imports of a same package are all mapped in the same scope, so we cannot just
 					// map them by their names, otherwise we could have collisions from same-name
 					// imports in different source files of the same package. Therefore, we suffix

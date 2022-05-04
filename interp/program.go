@@ -3,6 +3,7 @@ package interp
 import (
 	"context"
 	"go/ast"
+	"go/token"
 	"os"
 	"reflect"
 	"runtime"
@@ -14,6 +15,12 @@ type Program struct {
 	pkgName string
 	root    *node
 	init    []*node
+}
+
+// FileSet is the fileset that must be used for parsing Go that will be passed
+// to interp.CompileAST().
+func (interp *Interpreter) FileSet() *token.FileSet {
+	return interp.fset
 }
 
 // Compile parses and compiles a Go code represented as a string.
@@ -55,6 +62,9 @@ func (interp *Interpreter) compileSrc(src, name string, inc bool) (*Program, err
 // CompileAST builds a Program for the given Go code AST. Files and block
 // statements can be compiled, as can most expressions. Var declaration nodes
 // cannot be compiled.
+//
+// WARNING: The node must have been parsed using interp.FileSet(). Results are
+// unpredictable otherwise.
 func (interp *Interpreter) CompileAST(n ast.Node) (*Program, error) {
 	// Convert AST.
 	pkgName, root, err := interp.ast(n)

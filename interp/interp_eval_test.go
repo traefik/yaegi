@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"go/parser"
 	"io"
 	"log"
 	"net/http"
@@ -1747,5 +1748,61 @@ func TestRestrictedEnv(t *testing.T) {
 	})
 	if s, ok := os.LookupEnv("foo"); ok {
 		t.Fatal("expected \"\", got " + s)
+	}
+}
+
+func TestIssue1388(t *testing.T) {
+	i := interp.New(interp.Options{Env: []string{"foo=bar"}})
+	err := i.Use(stdlib.Symbols)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = i.Eval(`x := errors.New("")`)
+	if err == nil {
+		t.Fatal("Expected an error")
+	}
+
+	_, err = i.Eval(`import "errors"`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = i.Eval(`x := errors.New("")`)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestIssue1383(t *testing.T) {
+	const src = `
+			package main
+
+			func main() {
+				fmt.Println("Hello")
+			}
+		`
+
+	interp := interp.New(interp.Options{})
+	err := interp.Use(stdlib.Symbols)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = interp.Eval(`import "fmt"`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ast, err := parser.ParseFile(interp.FileSet(), "_.go", src, parser.DeclarationErrors)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, err := interp.CompileAST(ast)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = interp.Execute(prog)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
