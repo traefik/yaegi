@@ -319,6 +319,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 			// Propagate type to children, to handle implicit types
 			for _, c := range child {
+				if isBlank(c) {
+					err = n.cfgErrorf("cannot use _ as value")
+					return false
+				}
 				switch c.kind {
 				case binaryExpr, unaryExpr, compositeLitExpr:
 					// Do not attempt to propagate composite type to operator expressions,
@@ -478,6 +482,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 		switch n.kind {
 		case addressExpr:
+			if isBlank(n.child[0]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			wireChild(n)
 
 			err = check.addressExpr(n)
@@ -513,6 +521,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				updateSym := false
 				var sym *symbol
 				var level int
+
+				if isBlank(src) {
+					err = n.cfgErrorf("cannot use _ as value")
+					break
+				}
 				if n.kind == defineStmt || (n.kind == assignStmt && dest.ident == "_") {
 					if atyp != nil {
 						dest.typ = atyp
@@ -645,6 +658,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case incDecStmt:
+			err = check.unaryExpr(n)
+			if err != nil {
+				break
+			}
 			wireChild(n)
 			n.findex = n.child[0].findex
 			n.level = n.child[0].level
@@ -763,6 +780,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case indexExpr:
+			if isBlank(n.child[0]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			wireChild(n)
 			t := n.child[0].typ
 			switch t.cat {
@@ -877,6 +898,12 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			gotoLabel(n.sym)
 
 		case callExpr:
+			for _, c := range n.child {
+				if isBlank(c) {
+					err = n.cfgErrorf("cannot use _ as value")
+					return
+				}
+			}
 			wireChild(n)
 			switch {
 			case isBuiltinCall(n, sc):
@@ -1392,9 +1419,17 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			sc = sc.pop()
 
 		case keyValueExpr:
+			if isBlank(n.child[1]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			wireChild(n)
 
 		case landExpr:
+			if isBlank(n.child[0]) || isBlank(n.child[1]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			n.start = n.child[0].start
 			n.child[0].tnext = n.child[1].start
 			setFNext(n.child[0], n)
@@ -1406,6 +1441,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case lorExpr:
+			if isBlank(n.child[0]) || isBlank(n.child[1]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			n.start = n.child[0].start
 			n.child[0].tnext = n
 			setFNext(n.child[0], n.child[1].start)
@@ -1450,6 +1489,12 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			if len(n.child) > sc.def.typ.numOut() {
 				err = n.cfgErrorf("too many arguments to return")
 				break
+			}
+			for _, c := range n.child {
+				if isBlank(c) {
+					err = n.cfgErrorf("cannot use _ as value")
+					return
+				}
 			}
 			returnSig := sc.def.child[2]
 			if mustReturnValue(returnSig) {
@@ -1742,6 +1787,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case starExpr:
+			if isBlank(n.child[0]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			switch {
 			case n.anc.kind == defineStmt && len(n.anc.child) == 3 && n.anc.child[1] == n:
 				// pointer type expression in a var definition
@@ -1887,6 +1936,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 			wireChild(n)
 			c0, c1 := n.child[0], n.child[1]
+			if isBlank(c0) || isBlank(c1) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			if c1.typ == nil {
 				if c1.typ, err = nodeType(interp, sc, c1); err != nil {
 					return
@@ -2734,4 +2787,11 @@ func isBoolAction(n *node) bool {
 		return true
 	}
 	return false
+}
+
+func isBlank(n *node) bool {
+	if n.kind == parenExpr && len(n.child) > 0 {
+		return isBlank(n.child[0])
+	}
+	return n.ident == "_"
 }
