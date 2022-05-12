@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"go/build"
 	"go/parser"
 	"io"
 	"log"
@@ -1649,6 +1650,16 @@ func TestStdio(t *testing.T) {
 	if _, ok := v.Interface().(*os.File); !ok {
 		t.Fatalf("%v not *os.file", v.Interface())
 	}
+}
+
+func TestNoGoFiles(t *testing.T) {
+	i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
+	_, err := i.Eval(`import "github.com/traefik/yaegi/_test/p3"`)
+	if strings.Contains(err.Error(), "no Go files in") {
+		return
+	}
+
+	t.Fatalf("failed to detect no Go files: %v", err)
 }
 
 func TestIssue1142(t *testing.T) {
