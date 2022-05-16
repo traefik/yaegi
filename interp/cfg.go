@@ -854,21 +854,38 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			n.rval = l.rval
 
 		case breakStmt:
-			if len(n.child) > 0 {
-				breakLabel(n.sym)
-			} else {
+			if len(n.child) == 0 {
 				n.tnext = sc.loop
+				break
+			}
+			if !n.hasAnc(n.sym.node) {
+				err = n.cfgErrorf("invalid break label %s", n.child[0].ident)
+				break
+			}
+			for _, c := range n.sym.from {
+				c.tnext = n.sym.node
 			}
 
 		case continueStmt:
-			if len(n.child) > 0 {
-				gotoLabel(n.sym)
-			} else {
+			if len(n.child) == 0 {
 				n.tnext = sc.loopRestart
+				break
+			}
+			if !n.hasAnc(n.sym.node) {
+				err = n.cfgErrorf("invalid continue label %s", n.child[0].ident)
+				break
+			}
+			for _, c := range n.sym.from {
+				c.tnext = n.sym.node.child[1].lastChild().start
 			}
 
 		case gotoStmt:
-			gotoLabel(n.sym)
+			if n.sym.node == nil {
+				break
+			}
+			for _, c := range n.sym.from {
+				c.tnext = n.sym.node.start
+			}
 
 		case labeledStmt:
 			wireChild(n)
@@ -2431,6 +2448,15 @@ func (n *node) fieldType(m int) *node {
 // lastChild returns the last child of a node.
 func (n *node) lastChild() *node { return n.child[len(n.child)-1] }
 
+func (n *node) hasAnc(nod *node) bool {
+	for a := n.anc; a != nil; a = a.anc {
+		if a == nod {
+			return true
+		}
+	}
+	return false
+}
+
 func isKey(n *node) bool {
 	return n.anc.kind == fileStmt ||
 		(n.anc.kind == selectorExpr && n.anc.child[0] != n) ||
@@ -2595,21 +2621,6 @@ func setExec(n *node) {
 func typeSwichAssign(n *node) bool {
 	ts := n.anc.anc.anc
 	return ts.kind == typeSwitch && ts.child[1].action == aAssign
-}
-
-func breakLabel(s *symbol) {
-	for _, c := range s.from {
-		c.tnext = s.node
-	}
-}
-
-func gotoLabel(s *symbol) {
-	if s.node == nil {
-		return
-	}
-	for _, c := range s.from {
-		c.tnext = s.node.start
-	}
 }
 
 func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerator) {

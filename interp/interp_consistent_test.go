@@ -37,6 +37,8 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "assign12.go" || // expect error
 			file.Name() == "assign15.go" || // expect error
 			file.Name() == "bad0.go" || // expect error
+			file.Name() == "break0.go" || // expect error
+			file.Name() == "cont3.go" || // expect error
 			file.Name() == "const9.go" || // expect error
 			file.Name() == "export1.go" || // non-main package
 			file.Name() == "export0.go" || // non-main package
@@ -197,6 +199,16 @@ func TestInterpErrorConsistency(t *testing.T) {
 			fileName:       "bad0.go",
 			expectedInterp: "1:1: expected 'package', found println",
 			expectedExec:   "1:1: expected 'package', found println",
+		},
+		{
+			fileName:       "break0.go",
+			expectedInterp: "15:5: invalid break label OuterLoop",
+			expectedExec:   "15:11: invalid break label OuterLoop",
+		},
+		{
+			fileName:       "cont3.go",
+			expectedInterp: "15:5: invalid continue label OuterLoop",
+			expectedExec:   "15:14: invalid continue label OuterLoop",
 		},
 		{
 			fileName:       "const9.go",
