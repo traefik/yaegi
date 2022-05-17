@@ -1766,9 +1766,6 @@ func getIndexArray(n *node) {
 	}
 }
 
-// valueInterfaceType is the reflection type of valueInterface.
-var valueInterfaceType = reflect.TypeOf((*valueInterface)(nil)).Elem()
-
 // getIndexMap retrieves map value from index.
 func getIndexMap(n *node) {
 	dest := genValue(n)
