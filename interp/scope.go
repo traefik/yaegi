@@ -47,7 +47,7 @@ type symbol struct {
 	kind    sKind
 	typ     *itype        // Type of value
 	node    *node         // Node value if index is negative
-	from    []*node       // list of nodes jumping to node if kind is label, or nil
+	from    []*node       // list of goto nodes jumping to this label node, or nil
 	recv    *receiver     // receiver node value, if sym refers to a method
 	index   int           // index of value in frame or -1
 	rval    reflect.Value // default value (used for constants)
