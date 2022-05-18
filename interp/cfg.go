@@ -220,20 +220,23 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case breakStmt, continueStmt, gotoStmt:
-			if len(n.child) > 0 {
-				// Handle labeled statements.
-				label := n.child[0].ident
-				if sym, _, ok := sc.lookup(label); ok {
-					if sym.kind != labelSym {
-						err = n.child[0].cfgErrorf("label %s not defined", label)
-						break
-					}
-					sym.from = append(sym.from, n)
-					n.sym = sym
-				} else {
-					n.sym = &symbol{kind: labelSym, from: []*node{n}, index: -1}
-					sc.sym[label] = n.sym
+			if len(n.child) == 0 {
+				break
+			}
+			// Handle labeled statements.
+			label := n.child[0].ident
+			if sym, _, ok := sc.lookup(label); ok {
+				if sym.kind != labelSym {
+					err = n.child[0].cfgErrorf("label %s not defined", label)
+					break
 				}
+				n.sym = sym
+			} else {
+				n.sym = &symbol{kind: labelSym, index: -1}
+				sc.sym[label] = n.sym
+			}
+			if n.kind == gotoStmt {
+				n.sym.from = append(n.sym.from, n) // To allow forward goto statements.
 			}
 
 		case caseClause:
@@ -862,9 +865,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				err = n.cfgErrorf("invalid break label %s", n.child[0].ident)
 				break
 			}
-			for _, c := range n.sym.from {
-				c.tnext = n.sym.node
-			}
+			n.tnext = n.sym.node
 
 		case continueStmt:
 			if len(n.child) == 0 {
@@ -875,17 +876,15 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				err = n.cfgErrorf("invalid continue label %s", n.child[0].ident)
 				break
 			}
-			for _, c := range n.sym.from {
-				c.tnext = n.sym.node.child[1].lastChild().start
-			}
+			n.tnext = n.sym.node.child[1].lastChild().start
 
 		case gotoStmt:
 			if n.sym.node == nil {
+				// It can be only due to a forward goto, to be resolved at labeledStmt.
+				// Invalid goto labels are catched at AST parsing.
 				break
 			}
-			for _, c := range n.sym.from {
-				c.tnext = n.sym.node.start
-			}
+			n.tnext = n.sym.node.start
 
 		case labeledStmt:
 			wireChild(n)
@@ -893,9 +892,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				n.start = n.child[1].start
 			}
 			for _, c := range n.sym.from {
-				if c.kind == gotoStmt {
-					c.tnext = n.start
-				}
+				c.tnext = n.start // Resolve forward goto.
 			}
 
 		case callExpr:
