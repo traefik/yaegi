@@ -2710,6 +2710,9 @@ func equal(n *node) {
 		return
 	}
 
+	// Do not attempt to optimize '==' or '!=' if an operand is an interface.
+	// This will preserve proper dynamic type checking at runtime. For static types,
+	// type checks are already performed, so bypass them if possible.
 	if t0.Kind() == reflect.Interface || t1.Kind() == reflect.Interface {
 		v0 := genValue(c0)
 		v1 := genValue(c1)
@@ -4619,6 +4622,9 @@ func notEqual(n *node) {
 		return
 	}
 
+	// Do not attempt to optimize '==' or '!=' if an operand is an interface.
+	// This will preserve proper dynamic type checking at runtime. For static types,
+	// type checks are already performed, so bypass them if possible.
 	if t0.Kind() == reflect.Interface || t1.Kind() == reflect.Interface {
 		v0 := genValue(c0)
 		v1 := genValue(c1)
