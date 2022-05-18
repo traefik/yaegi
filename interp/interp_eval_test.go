@@ -449,6 +449,14 @@ func TestEvalComparison(t *testing.T) {
 		},
 		{src: `1 > _`, err: "1:28: cannot use _ as value"},
 		{src: `(_) > 1`, err: "1:28: cannot use _ as value"},
+		{src: `v := interface{}(2); v == 2`, res: "true"},
+		{src: `v := interface{}(2); v > 1`, err: "1:49: invalid operation: operator > not defined on interface{}"},
+		{src: `v := interface{}(int64(2)); v == 2`, res: "false"},
+		{src: `v := interface{}(int64(2)); v != 2`, res: "true"},
+		{src: `v := interface{}(2.3); v == 2.3`, res: "true"},
+		{src: `v := interface{}(float32(2.3)); v != 2.3`, res: "true"},
+		{src: `v := interface{}("hello"); v == "hello"`, res: "true"},
+		{src: `v := interface{}("hello"); v < "hellp"`, err: "1:55: invalid operation: operator < not defined on interface{}"},
 	})
 }
 

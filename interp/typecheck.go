@@ -202,7 +202,7 @@ func (check typecheck) comparison(n *node) error {
 		if typ.isNil() {
 			typ = c1.typ
 		}
-		return n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, typ.id(), ".")
+		return n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, typ.id())
 	}
 	return nil
 }

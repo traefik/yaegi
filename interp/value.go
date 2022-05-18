@@ -532,6 +532,24 @@ func genValueInt(n *node) func(*frame) (reflect.Value, int64) {
 		if n.typ.untyped && n.rval.IsValid() && imag(n.rval.Complex()) == 0 {
 			return func(f *frame) (reflect.Value, int64) { v := value(f); return v, int64(real(v.Complex())) }
 		}
+	case reflect.Interface:
+		return func(f *frame) (reflect.Value, int64) {
+			v := value(f)
+			vv := v.Elem()
+
+			switch vv.Type().Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				return v, vv.Int()
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+				return v, int64(vv.Uint())
+			case reflect.Float32, reflect.Float64:
+				return v, int64(vv.Float())
+			case reflect.Complex64, reflect.Complex128:
+				return v, int64(real(vv.Complex()))
+			default:
+				return v, 0
+			}
+		}
 	}
 	return nil
 }
@@ -550,6 +568,24 @@ func genValueUint(n *node) func(*frame) (reflect.Value, uint64) {
 		if n.typ.untyped && n.rval.IsValid() && imag(n.rval.Complex()) == 0 {
 			return func(f *frame) (reflect.Value, uint64) { v := value(f); return v, uint64(real(v.Complex())) }
 		}
+	case reflect.Interface:
+		return func(f *frame) (reflect.Value, uint64) {
+			v := value(f)
+			vv := v.Elem()
+
+			switch vv.Type().Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				return v, uint64(vv.Int())
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+				return v, vv.Uint()
+			case reflect.Float32, reflect.Float64:
+				return v, uint64(vv.Float())
+			case reflect.Complex64, reflect.Complex128:
+				return v, uint64(real(vv.Complex()))
+			default:
+				return v, 0
+			}
+		}
 	}
 	return nil
 }
@@ -567,6 +603,27 @@ func genValueFloat(n *node) func(*frame) (reflect.Value, float64) {
 	case reflect.Complex64, reflect.Complex128:
 		if n.typ.untyped && n.rval.IsValid() && imag(n.rval.Complex()) == 0 {
 			return func(f *frame) (reflect.Value, float64) { v := value(f); return v, real(v.Complex()) }
+		}
+	case reflect.Interface:
+		return func(f *frame) (reflect.Value, float64) {
+			v := value(f).Elem()
+			vv := v.Elem()
+
+			switch vv.Type().Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				return v, float64(vv.Int())
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+				return v, float64(vv.Uint())
+			case reflect.Float32, reflect.Float64:
+				return v, vv.Float()
+			case reflect.Complex64, reflect.Complex128:
+				if imag(vv.Complex()) == 0 {
+					return v, real(vv.Complex())
+				}
+				return v, 0
+			default:
+				return v, 0
+			}
 		}
 	}
 	return nil
@@ -589,11 +646,33 @@ func genComplex(n *node) func(*frame) complex128 {
 		return func(f *frame) complex128 { return complex(value(f).Float(), 0) }
 	case reflect.Complex64, reflect.Complex128:
 		return func(f *frame) complex128 { return value(f).Complex() }
+	case reflect.Interface:
+		return func(f *frame) complex128 {
+			v := value(f).Elem()
+
+			switch v.Type().Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				return complex(float64(v.Int()), 0)
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+				return complex(float64(v.Uint()), 0)
+			case reflect.Float32, reflect.Float64:
+				return complex(v.Float(), 0)
+			case reflect.Complex64, reflect.Complex128:
+				return v.Complex()
+			default:
+				return 0
+			}
+		}
 	}
 	return nil
 }
 
 func genValueString(n *node) func(*frame) (reflect.Value, string) {
 	value := genValue(n)
+
+	if n.typ.TypeOf().Kind() == reflect.Interface {
+		return func(f *frame) (reflect.Value, string) { v := value(f); return v, v.Elem().String() }
+	}
+
 	return func(f *frame) (reflect.Value, string) { v := value(f); return v, v.String() }
 }
