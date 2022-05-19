@@ -47,7 +47,7 @@ type symbol struct {
 	kind    sKind
 	typ     *itype        // Type of value
 	node    *node         // Node value if index is negative
-	from    []*node       // list of nodes jumping to node if kind is label, or nil
+	from    []*node       // list of goto nodes jumping to this label node, or nil
 	recv    *receiver     // receiver node value, if sym refers to a method
 	index   int           // index of value in frame or -1
 	rval    reflect.Value // default value (used for constants)
@@ -142,20 +142,6 @@ func (s *scope) lookup(ident string) (*symbol, int, bool) {
 		s = s.anc
 	}
 	return nil, 0, false
-}
-
-// lookdown searches for a symbol in the current scope and included ones, recursively.
-// It returns the first found symbol and true, or nil and false.
-func (s *scope) lookdown(ident string) (*symbol, bool) {
-	if sym, ok := s.sym[ident]; ok {
-		return sym, true
-	}
-	for _, c := range s.child {
-		if sym, ok := c.lookdown(ident); ok {
-			return sym, true
-		}
-	}
-	return nil, false
 }
 
 func (s *scope) rangeChanType(n *node) *itype {

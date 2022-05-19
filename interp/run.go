@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
-	"sync"
 )
 
 // bltn type defines functions which run at CFG execution.
@@ -2626,6 +2625,9 @@ func doCompositeBinStruct(n *node, hasType bool) {
 		}
 	}
 
+	frameIndex := n.findex
+	l := n.level
+
 	n.exec = func(f *frame) bltn {
 		s := reflect.New(typ).Elem()
 		for i, v := range values {
@@ -2636,7 +2638,7 @@ func doCompositeBinStruct(n *node, hasType bool) {
 		case d.Kind() == reflect.Ptr:
 			d.Set(s.Addr())
 		default:
-			d.Set(s)
+			getFrame(f, l).data[frameIndex] = s
 		}
 		return next
 	}
@@ -2661,8 +2663,6 @@ func doComposite(n *node, hasType bool, keyed bool) {
 	if typ.cat == ptrT || typ.cat == aliasT {
 		typ = typ.val
 	}
-	var mu sync.Mutex
-	typ.mu = &mu
 	child := n.child
 	if hasType {
 		child = n.child[1:]
@@ -2701,11 +2701,10 @@ func doComposite(n *node, hasType bool, keyed bool) {
 
 	frameIndex := n.findex
 	l := n.level
+	rt := typ.TypeOf()
+
 	n.exec = func(f *frame) bltn {
-		typ.mu.Lock()
-		// No need to call zero() as doComposite is only called for a structT.
-		a := reflect.New(typ.TypeOf()).Elem()
-		typ.mu.Unlock()
+		a := reflect.New(rt).Elem()
 		for i, v := range values {
 			a.Field(i).Set(v(f))
 		}

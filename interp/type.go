@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/traefik/yaegi/internal/unsafe2"
 )
@@ -110,7 +109,6 @@ type structField struct {
 
 // itype defines the internal representation of types in the interpreter.
 type itype struct {
-	mu          *sync.Mutex
 	cat         tcat          // Type category
 	field       []structField // Array of struct fields if structT or interfaceT
 	key         *itype        // Type of key element if MapT or nil

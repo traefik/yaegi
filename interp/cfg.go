@@ -202,38 +202,42 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					}
 				}
 			}
+
 			n.findex = -1
 			n.val = nil
 			sc = sc.pushBloc()
+			// Pre-define symbols for labels defined in this block, so we are sure that
+			// they are already defined when met.
+			// TODO(marc): labels must be stored outside of symbols to avoid collisions.
+			for _, c := range n.child {
+				if c.kind != labeledStmt {
+					continue
+				}
+				label := c.child[0].ident
+				sym := &symbol{kind: labelSym, node: c, index: -1}
+				sc.sym[label] = sym
+				c.sym = sym
+			}
 
 		case breakStmt, continueStmt, gotoStmt:
-			if len(n.child) > 0 {
-				// Handle labeled statements.
-				label := n.child[0].ident
-				if sym, _, ok := sc.lookup(label); ok {
-					if sym.kind != labelSym {
-						err = n.child[0].cfgErrorf("label %s not defined", label)
-						break
-					}
-					sym.from = append(sym.from, n)
-					n.sym = sym
-				} else {
-					n.sym = &symbol{kind: labelSym, from: []*node{n}, index: -1}
-					sc.sym[label] = n.sym
-				}
+			if len(n.child) == 0 {
+				break
 			}
-
-		case labeledStmt:
+			// Handle labeled statements.
 			label := n.child[0].ident
-			// TODO(marc): labels must be stored outside of symbols to avoid collisions
-			// Used labels are searched in current and sub scopes, not upper ones.
-			if sym, ok := sc.lookdown(label); ok {
-				sym.node = n
+			if sym, _, ok := sc.lookup(label); ok {
+				if sym.kind != labelSym {
+					err = n.child[0].cfgErrorf("label %s not defined", label)
+					break
+				}
 				n.sym = sym
 			} else {
-				n.sym = &symbol{kind: labelSym, node: n, index: -1}
+				n.sym = &symbol{kind: labelSym, index: -1}
+				sc.sym[label] = n.sym
 			}
-			sc.sym[label] = n.sym
+			if n.kind == gotoStmt {
+				n.sym.from = append(n.sym.from, n) // To allow forward goto statements.
+			}
 
 		case caseClause:
 			sc = sc.pushBloc()
@@ -319,6 +323,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 			// Propagate type to children, to handle implicit types
 			for _, c := range child {
+				if isBlank(c) {
+					err = n.cfgErrorf("cannot use _ as value")
+					return false
+				}
 				switch c.kind {
 				case binaryExpr, unaryExpr, compositeLitExpr:
 					// Do not attempt to propagate composite type to operator expressions,
@@ -478,6 +486,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 		switch n.kind {
 		case addressExpr:
+			if isBlank(n.child[0]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			wireChild(n)
 
 			err = check.addressExpr(n)
@@ -513,6 +525,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				updateSym := false
 				var sym *symbol
 				var level int
+
+				if isBlank(src) {
+					err = n.cfgErrorf("cannot use _ as value")
+					break
+				}
 				if n.kind == defineStmt || (n.kind == assignStmt && dest.ident == "_") {
 					if atyp != nil {
 						dest.typ = atyp
@@ -645,6 +662,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case incDecStmt:
+			err = check.unaryExpr(n)
+			if err != nil {
+				break
+			}
 			wireChild(n)
 			n.findex = n.child[0].findex
 			n.level = n.child[0].level
@@ -763,6 +784,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case indexExpr:
+			if isBlank(n.child[0]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			wireChild(n)
 			t := n.child[0].typ
 			switch t.cat {
@@ -853,30 +878,51 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			n.rval = l.rval
 
 		case breakStmt:
-			if len(n.child) > 0 {
-				gotoLabel(n.sym)
-			} else {
+			if len(n.child) == 0 {
 				n.tnext = sc.loop
+				break
 			}
+			if !n.hasAnc(n.sym.node) {
+				err = n.cfgErrorf("invalid break label %s", n.child[0].ident)
+				break
+			}
+			n.tnext = n.sym.node
 
 		case continueStmt:
-			if len(n.child) > 0 {
-				gotoLabel(n.sym)
-			} else {
+			if len(n.child) == 0 {
 				n.tnext = sc.loopRestart
+				break
 			}
+			if !n.hasAnc(n.sym.node) {
+				err = n.cfgErrorf("invalid continue label %s", n.child[0].ident)
+				break
+			}
+			n.tnext = n.sym.node.child[1].lastChild().start
 
 		case gotoStmt:
-			gotoLabel(n.sym)
+			if n.sym.node == nil {
+				// It can be only due to a forward goto, to be resolved at labeledStmt.
+				// Invalid goto labels are catched at AST parsing.
+				break
+			}
+			n.tnext = n.sym.node.start
 
 		case labeledStmt:
 			wireChild(n)
 			if len(n.child) > 1 {
 				n.start = n.child[1].start
 			}
-			gotoLabel(n.sym)
+			for _, c := range n.sym.from {
+				c.tnext = n.start // Resolve forward goto.
+			}
 
 		case callExpr:
+			for _, c := range n.child {
+				if isBlank(c) {
+					err = n.cfgErrorf("cannot use _ as value")
+					return
+				}
+			}
 			wireChild(n)
 			switch {
 			case isBuiltinCall(n, sc):
@@ -1392,9 +1438,17 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			sc = sc.pop()
 
 		case keyValueExpr:
+			if isBlank(n.child[1]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			wireChild(n)
 
 		case landExpr:
+			if isBlank(n.child[0]) || isBlank(n.child[1]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			n.start = n.child[0].start
 			n.child[0].tnext = n.child[1].start
 			setFNext(n.child[0], n)
@@ -1406,6 +1460,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case lorExpr:
+			if isBlank(n.child[0]) || isBlank(n.child[1]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			n.start = n.child[0].start
 			n.child[0].tnext = n
 			setFNext(n.child[0], n.child[1].start)
@@ -1450,6 +1508,12 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			if len(n.child) > sc.def.typ.numOut() {
 				err = n.cfgErrorf("too many arguments to return")
 				break
+			}
+			for _, c := range n.child {
+				if isBlank(c) {
+					err = n.cfgErrorf("cannot use _ as value")
+					return
+				}
 			}
 			returnSig := sc.def.child[2]
 			if mustReturnValue(returnSig) {
@@ -1742,6 +1806,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case starExpr:
+			if isBlank(n.child[0]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			switch {
 			case n.anc.kind == defineStmt && len(n.anc.child) == 3 && n.anc.child[1] == n:
 				// pointer type expression in a var definition
@@ -1887,6 +1955,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 			wireChild(n)
 			c0, c1 := n.child[0], n.child[1]
+			if isBlank(c0) || isBlank(c1) {
+				err = n.cfgErrorf("cannot use _ as value")
+				break
+			}
 			if c1.typ == nil {
 				if c1.typ, err = nodeType(interp, sc, c1); err != nil {
 					return
@@ -2426,6 +2498,15 @@ func (n *node) fieldType(m int) *node {
 // lastChild returns the last child of a node.
 func (n *node) lastChild() *node { return n.child[len(n.child)-1] }
 
+func (n *node) hasAnc(nod *node) bool {
+	for a := n.anc; a != nil; a = a.anc {
+		if a == nod {
+			return true
+		}
+	}
+	return false
+}
+
 func isKey(n *node) bool {
 	return n.anc.kind == fileStmt ||
 		(n.anc.kind == selectorExpr && n.anc.child[0] != n) ||
@@ -2592,17 +2673,6 @@ func typeSwichAssign(n *node) bool {
 	return ts.kind == typeSwitch && ts.child[1].action == aAssign
 }
 
-func gotoLabel(s *symbol) {
-	if s.node == nil {
-		return
-	}
-	for _, c := range s.from {
-		if c.tnext == nil {
-			c.tnext = s.node.start
-		}
-	}
-}
-
 func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerator) {
 	switch typ.cat {
 	case aliasT, ptrT:
@@ -2734,4 +2804,11 @@ func isBoolAction(n *node) bool {
 		return true
 	}
 	return false
+}
+
+func isBlank(n *node) bool {
+	if n.kind == parenExpr && len(n.child) > 0 {
+		return isBlank(n.child[0])
+	}
+	return n.ident == "_"
 }
