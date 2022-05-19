@@ -1766,9 +1766,6 @@ func getIndexArray(n *node) {
 	}
 }
 
-// valueInterfaceType is the reflection type of valueInterface.
-var valueInterfaceType = reflect.TypeOf((*valueInterface)(nil)).Elem()
-
 // getIndexMap retrieves map value from index.
 func getIndexMap(n *node) {
 	dest := genValue(n)
@@ -1833,7 +1830,6 @@ func getIndexMap2(n *node) {
 	value0 := genValue(n.child[0])     // map
 	value2 := genValue(n.anc.child[1]) // status
 	next := getExec(n.tnext)
-	typ := n.anc.child[0].typ
 	doValue := n.anc.child[0].ident != "_"
 	doStatus := n.anc.child[1].ident != "_"
 
@@ -1848,21 +1844,6 @@ func getIndexMap2(n *node) {
 			n.exec = func(f *frame) bltn {
 				v := value0(f).MapIndex(mi)
 				value2(f).SetBool(v.IsValid())
-				return next
-			}
-		case isInterfaceSrc(typ):
-			n.exec = func(f *frame) bltn {
-				v := value0(f).MapIndex(mi)
-				if v.IsValid() {
-					if e := v.Elem(); e.Type().AssignableTo(valueInterfaceType) {
-						dest(f).Set(e)
-					} else {
-						dest(f).Set(reflect.ValueOf(valueInterface{n, e}))
-					}
-				}
-				if doStatus {
-					value2(f).SetBool(v.IsValid())
-				}
 				return next
 			}
 		default:
@@ -1884,21 +1865,6 @@ func getIndexMap2(n *node) {
 			n.exec = func(f *frame) bltn {
 				v := value0(f).MapIndex(value1(f))
 				value2(f).SetBool(v.IsValid())
-				return next
-			}
-		case isInterfaceSrc(typ):
-			n.exec = func(f *frame) bltn {
-				v := value0(f).MapIndex(value1(f))
-				if v.IsValid() {
-					if e := v.Elem(); e.Type().AssignableTo(valueInterfaceType) {
-						dest(f).Set(e)
-					} else {
-						dest(f).Set(reflect.ValueOf(valueInterface{n, e}))
-					}
-				}
-				if doStatus {
-					value2(f).SetBool(v.IsValid())
-				}
 				return next
 			}
 		default:
