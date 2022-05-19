@@ -202,38 +202,42 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					}
 				}
 			}
+
 			n.findex = -1
 			n.val = nil
 			sc = sc.pushBloc()
+			// Pre-define symbols for labels defined in this block, so we are sure that
+			// they are already defined when met.
+			// TODO(marc): labels must be stored outside of symbols to avoid collisions.
+			for _, c := range n.child {
+				if c.kind != labeledStmt {
+					continue
+				}
+				label := c.child[0].ident
+				sym := &symbol{kind: labelSym, node: c, index: -1}
+				sc.sym[label] = sym
+				c.sym = sym
+			}
 
 		case breakStmt, continueStmt, gotoStmt:
-			if len(n.child) > 0 {
-				// Handle labeled statements.
-				label := n.child[0].ident
-				if sym, _, ok := sc.lookup(label); ok {
-					if sym.kind != labelSym {
-						err = n.child[0].cfgErrorf("label %s not defined", label)
-						break
-					}
-					sym.from = append(sym.from, n)
-					n.sym = sym
-				} else {
-					n.sym = &symbol{kind: labelSym, from: []*node{n}, index: -1}
-					sc.sym[label] = n.sym
-				}
+			if len(n.child) == 0 {
+				break
 			}
-
-		case labeledStmt:
+			// Handle labeled statements.
 			label := n.child[0].ident
-			// TODO(marc): labels must be stored outside of symbols to avoid collisions
-			// Used labels are searched in current and sub scopes, not upper ones.
-			if sym, ok := sc.lookdown(label); ok {
-				sym.node = n
+			if sym, _, ok := sc.lookup(label); ok {
+				if sym.kind != labelSym {
+					err = n.child[0].cfgErrorf("label %s not defined", label)
+					break
+				}
 				n.sym = sym
 			} else {
-				n.sym = &symbol{kind: labelSym, node: n, index: -1}
+				n.sym = &symbol{kind: labelSym, index: -1}
+				sc.sym[label] = n.sym
 			}
-			sc.sym[label] = n.sym
+			if n.kind == gotoStmt {
+				n.sym.from = append(n.sym.from, n) // To allow forward goto statements.
+			}
 
 		case caseClause:
 			sc = sc.pushBloc()
@@ -874,28 +878,43 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			n.rval = l.rval
 
 		case breakStmt:
-			if len(n.child) > 0 {
-				gotoLabel(n.sym)
-			} else {
+			if len(n.child) == 0 {
 				n.tnext = sc.loop
+				break
 			}
+			if !n.hasAnc(n.sym.node) {
+				err = n.cfgErrorf("invalid break label %s", n.child[0].ident)
+				break
+			}
+			n.tnext = n.sym.node
 
 		case continueStmt:
-			if len(n.child) > 0 {
-				gotoLabel(n.sym)
-			} else {
+			if len(n.child) == 0 {
 				n.tnext = sc.loopRestart
+				break
 			}
+			if !n.hasAnc(n.sym.node) {
+				err = n.cfgErrorf("invalid continue label %s", n.child[0].ident)
+				break
+			}
+			n.tnext = n.sym.node.child[1].lastChild().start
 
 		case gotoStmt:
-			gotoLabel(n.sym)
+			if n.sym.node == nil {
+				// It can be only due to a forward goto, to be resolved at labeledStmt.
+				// Invalid goto labels are catched at AST parsing.
+				break
+			}
+			n.tnext = n.sym.node.start
 
 		case labeledStmt:
 			wireChild(n)
 			if len(n.child) > 1 {
 				n.start = n.child[1].start
 			}
-			gotoLabel(n.sym)
+			for _, c := range n.sym.from {
+				c.tnext = n.start // Resolve forward goto.
+			}
 
 		case callExpr:
 			for _, c := range n.child {
@@ -2479,6 +2498,15 @@ func (n *node) fieldType(m int) *node {
 // lastChild returns the last child of a node.
 func (n *node) lastChild() *node { return n.child[len(n.child)-1] }
 
+func (n *node) hasAnc(nod *node) bool {
+	for a := n.anc; a != nil; a = a.anc {
+		if a == nod {
+			return true
+		}
+	}
+	return false
+}
+
 func isKey(n *node) bool {
 	return n.anc.kind == fileStmt ||
 		(n.anc.kind == selectorExpr && n.anc.child[0] != n) ||
@@ -2643,17 +2671,6 @@ func setExec(n *node) {
 func typeSwichAssign(n *node) bool {
 	ts := n.anc.anc.anc
 	return ts.kind == typeSwitch && ts.child[1].action == aAssign
-}
-
-func gotoLabel(s *symbol) {
-	if s.node == nil {
-		return
-	}
-	for _, c := range s.from {
-		if c.tnext == nil {
-			c.tnext = s.node.start
-		}
-	}
 }
 
 func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerator) {
