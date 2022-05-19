@@ -59,6 +59,9 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 
 			for i := 0; i < n.nleft; i++ {
 				dest, src := n.child[i], n.child[sbase+i]
+				if isBlank(src) {
+					err = n.cfgErrorf("cannot use _ as value")
+				}
 				val := src.rval
 				if n.anc.kind == constDecl {
 					if _, err2 := interp.cfg(n, sc, importPath, pkgName); err2 != nil {
@@ -208,10 +211,12 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				case ".": // import symbols in current scope
 					for n, v := range pkg {
 						typ := v.Type()
+						kind := binSym
 						if isBinType(v) {
 							typ = typ.Elem()
+							kind = typeSym
 						}
-						sc.sym[n] = &symbol{kind: binSym, typ: valueTOf(typ, withScope(sc)), rval: v}
+						sc.sym[n] = &symbol{kind: kind, typ: valueTOf(typ, withScope(sc)), rval: v}
 					}
 				default: // import symbols in package namespace
 					if name == "" {
@@ -272,6 +277,10 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 			}
 
 		case typeSpec, typeSpecAssign:
+			if isBlank(n.child[0]) {
+				err = n.cfgErrorf("cannot use _ as value")
+				return false
+			}
 			typeName := n.child[0].ident
 			var typ *itype
 			if typ, err = nodeType(interp, sc, n.child[1]); err != nil {

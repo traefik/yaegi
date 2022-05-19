@@ -128,6 +128,10 @@ func TestEvalAssign(t *testing.T) {
 		{src: "i := 1; j := &i; (*j) = 2", res: "2"},
 		{src: "i64 := testpkg.val; i64 == 11", res: "true"},
 		{pre: func() { eval(t, i, "k := 1") }, src: `k := "Hello world"`, res: "Hello world"}, // allow reassignment in subsequent evaluations
+		{src: "_ = _", err: "1:28: cannot use _ as value"},
+		{src: "j := true || _", err: "1:33: cannot use _ as value"},
+		{src: "j := true && _", err: "1:33: cannot use _ as value"},
+		{src: "j := interface{}(int(1)); j.(_)", err: "1:54: cannot use _ as value"},
 	})
 }
 
@@ -178,6 +182,7 @@ func TestEvalBuiltin(t *testing.T) {
 		{src: `t := map[int]int{}; t[123]--; t`, res: "map[123:-1]"},
 		{src: `t := map[int]int{}; t[123] += 1; t`, res: "map[123:1]"},
 		{src: `t := map[int]int{}; t[123] -= 1; t`, res: "map[123:-1]"},
+		{src: `println("hello", _)`, err: "1:28: cannot use _ as value"},
 	})
 }
 
@@ -202,6 +207,14 @@ func TestEvalDeclWithExpr(t *testing.T) {
 	})
 }
 
+func TestEvalTypeSpec(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{src: `type _ struct{}`, err: "1:19: cannot use _ as value"},
+		{src: `a := struct{a, _ int}{32, 0}`, res: "{32 0}"},
+	})
+}
+
 func TestEvalFunc(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
@@ -210,6 +223,8 @@ func TestEvalFunc(t *testing.T) {
 		{src: `(func () int {f := func() (a, b int) {a, b = 3, 4; return}; x, y := f(); return x+y})()`, res: "7"},
 		{src: `(func () int {f := func() (a int, b, c int) {a, b, c = 3, 4, 5; return}; x, y, z := f(); return x+y+z})()`, res: "12"},
 		{src: `(func () int {f := func() (a, b, c int) {a, b, c = 3, 4, 5; return}; x, y, z := f(); return x+y+z})()`, res: "12"},
+		{src: `func f() int { return _ }`, err: "1:29: cannot use _ as value"},
+		{src: `(func (x int) {})(_)`, err: "1:28: cannot use _ as value"},
 	})
 }
 
@@ -432,6 +447,8 @@ func TestEvalComparison(t *testing.T) {
 			`,
 			err: "7:13: invalid operation: mismatched types main.Foo and main.Bar",
 		},
+		{src: `1 > _`, err: "1:28: cannot use _ as value"},
+		{src: `(_) > 1`, err: "1:28: cannot use _ as value"},
 	})
 }
 
@@ -477,6 +494,8 @@ func TestEvalCompositeStruct(t *testing.T) {
 		{src: `a := struct{A,B,C int}{A:1,A:2,C:3}`, err: "1:55: duplicate field name A in struct literal"},
 		{src: `a := struct{A,B,C int}{A:1,B:2.2,C:3}`, err: "1:57: 11/5 truncated to int"},
 		{src: `a := struct{A,B,C int}{A:1,2,C:3}`, err: "1:55: mixture of field:value and value elements in struct literal"},
+		{src: `a := struct{A,B,C int}{1,2,_}`, err: "1:33: cannot use _ as value"},
+		{src: `a := struct{A,B,C int}{B: _}`, err: "1:51: cannot use _ as value"},
 	})
 }
 
@@ -501,6 +520,8 @@ func TestEvalSliceExpression(t *testing.T) {
 		{src: `a := []int{0,1,2,3}[1:3:]`, err: "1:51: 3rd index required in 3-index slice"},
 		{src: `a := []int{0,1,2}[3:1]`, err: "invalid index values, must be low <= high <= max"},
 		{pre: func() { eval(t, i, `type Str = string; var r Str = "truc"`) }, src: `r[1]`, res: "114"},
+		{src: `_[12]`, err: "1:28: cannot use _ as value"},
+		{src: `b := []int{0,1,2}[_:4]`, err: "1:33: cannot use _ as value"},
 	})
 }
 
@@ -511,6 +532,7 @@ func TestEvalConversion(t *testing.T) {
 		{src: `i := 1.1; a := uint64(i)`, res: "1"},
 		{src: `b := string(49)`, res: "1"},
 		{src: `c := uint64(1.1)`, err: "1:40: cannot convert expression of type untyped float to type uint64"},
+		{src: `int(_)`, err: "1:28: cannot use _ as value"},
 	})
 }
 
@@ -520,6 +542,9 @@ func TestEvalUnary(t *testing.T) {
 		{src: "a := -1", res: "-1"},
 		{src: "b := +1", res: "1", skip: "BUG"},
 		{src: "c := !false", res: "true"},
+		{src: "_ = 2; _++", err: "1:35: cannot use _ as value"},
+		{src: "_ = false; !_ == true", err: "1:39: cannot use _ as value"},
+		{src: "!((((_))))", err: "1:28: cannot use _ as value"},
 	})
 }
 
