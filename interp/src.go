@@ -132,6 +132,10 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 	// the global symbols in the package scope.
 	interp.mutex.Lock()
 	gs := interp.scopes[importPath]
+	if gs == nil {
+		// A nil scope means that no even an empty package is created from source.
+		return "", fmt.Errorf("no Go files in %s", dir)
+	}
 	interp.srcPkg[importPath] = gs.sym
 	interp.pkgNames[importPath] = pkgName
 
