@@ -19,6 +19,8 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -628,7 +630,14 @@ func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (ref
 
 	done := make(chan struct{})
 	go func() {
-		defer close(done)
+		defer func() {
+			if r := recover(); r != nil {
+				var pc [64]uintptr
+				n := runtime.Callers(1, pc[:])
+				err = Panic{Value: r, Callers: pc[:n], Stack: debug.Stack()}
+			}
+			close(done)
+		}()
 		v, err = interp.Eval(src)
 	}()
 
