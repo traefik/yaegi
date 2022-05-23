@@ -535,6 +535,7 @@ func {{$name}}(n *node) {
 	typ := n.typ.concrete().TypeOf()
 	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	c0, c1 := n.child[0], n.child[1]
+	t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 
 	{{- if or (eq $op.Name "==") (eq $op.Name "!=") }}
 
@@ -621,9 +622,39 @@ func {{$name}}(n *node) {
 		}
 		return
 	}
+
+	// Do not attempt to optimize '==' or '!=' if an operand is an interface.
+	// This will preserve proper dynamic type checking at runtime. For static types,
+	// type checks are already performed, so bypass them if possible.
+	if t0.Kind() == reflect.Interface || t1.Kind() == reflect.Interface {
+		v0 := genValue(c0)
+		v1 := genValue(c1)
+		if n.fnext != nil {
+			fnext := getExec(n.fnext)
+			n.exec = func(f *frame) bltn {
+				i0 := v0(f).Interface()
+				i1 := v1(f).Interface()
+				if i0 {{$op.Name}} i1 {
+					dest(f).SetBool(true)
+					return tnext
+				}
+				dest(f).SetBool(false)
+				return fnext
+			}
+		} else {
+			dest := genValue(n)
+			n.exec = func(f *frame) bltn {
+				i0 := v0(f).Interface()
+				i1 := v1(f).Interface()
+				dest(f).SetBool(i0 {{$op.Name}} i1)
+				return tnext
+			}
+		}
+		return
+	}
 	{{- end}}
 
-	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
+	switch {
 	case isString(t0) || isString(t1):
 		switch {
 		case isInterface:

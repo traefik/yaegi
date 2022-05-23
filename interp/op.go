@@ -2624,6 +2624,7 @@ func equal(n *node) {
 	typ := n.typ.concrete().TypeOf()
 	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	c0, c1 := n.child[0], n.child[1]
+	t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 
 	if c0.typ.cat == aliasT || c1.typ.cat == aliasT {
 		switch {
@@ -2709,7 +2710,37 @@ func equal(n *node) {
 		return
 	}
 
-	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
+	// Do not attempt to optimize '==' or '!=' if an operand is an interface.
+	// This will preserve proper dynamic type checking at runtime. For static types,
+	// type checks are already performed, so bypass them if possible.
+	if t0.Kind() == reflect.Interface || t1.Kind() == reflect.Interface {
+		v0 := genValue(c0)
+		v1 := genValue(c1)
+		if n.fnext != nil {
+			fnext := getExec(n.fnext)
+			n.exec = func(f *frame) bltn {
+				i0 := v0(f).Interface()
+				i1 := v1(f).Interface()
+				if i0 == i1 {
+					dest(f).SetBool(true)
+					return tnext
+				}
+				dest(f).SetBool(false)
+				return fnext
+			}
+		} else {
+			dest := genValue(n)
+			n.exec = func(f *frame) bltn {
+				i0 := v0(f).Interface()
+				i1 := v1(f).Interface()
+				dest(f).SetBool(i0 == i1)
+				return tnext
+			}
+		}
+		return
+	}
+
+	switch {
 	case isString(t0) || isString(t1):
 		switch {
 		case isInterface:
@@ -3193,8 +3224,9 @@ func greater(n *node) {
 	typ := n.typ.concrete().TypeOf()
 	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	c0, c1 := n.child[0], n.child[1]
+	t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 
-	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
+	switch {
 	case isString(t0) || isString(t1):
 		switch {
 		case isInterface:
@@ -3520,8 +3552,9 @@ func greaterEqual(n *node) {
 	typ := n.typ.concrete().TypeOf()
 	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	c0, c1 := n.child[0], n.child[1]
+	t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 
-	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
+	switch {
 	case isString(t0) || isString(t1):
 		switch {
 		case isInterface:
@@ -3847,8 +3880,9 @@ func lower(n *node) {
 	typ := n.typ.concrete().TypeOf()
 	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	c0, c1 := n.child[0], n.child[1]
+	t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 
-	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
+	switch {
 	case isString(t0) || isString(t1):
 		switch {
 		case isInterface:
@@ -4174,8 +4208,9 @@ func lowerEqual(n *node) {
 	typ := n.typ.concrete().TypeOf()
 	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	c0, c1 := n.child[0], n.child[1]
+	t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 
-	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
+	switch {
 	case isString(t0) || isString(t1):
 		switch {
 		case isInterface:
@@ -4501,6 +4536,7 @@ func notEqual(n *node) {
 	typ := n.typ.concrete().TypeOf()
 	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	c0, c1 := n.child[0], n.child[1]
+	t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 
 	if c0.typ.cat == aliasT || c1.typ.cat == aliasT {
 		switch {
@@ -4586,7 +4622,37 @@ func notEqual(n *node) {
 		return
 	}
 
-	switch t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf(); {
+	// Do not attempt to optimize '==' or '!=' if an operand is an interface.
+	// This will preserve proper dynamic type checking at runtime. For static types,
+	// type checks are already performed, so bypass them if possible.
+	if t0.Kind() == reflect.Interface || t1.Kind() == reflect.Interface {
+		v0 := genValue(c0)
+		v1 := genValue(c1)
+		if n.fnext != nil {
+			fnext := getExec(n.fnext)
+			n.exec = func(f *frame) bltn {
+				i0 := v0(f).Interface()
+				i1 := v1(f).Interface()
+				if i0 != i1 {
+					dest(f).SetBool(true)
+					return tnext
+				}
+				dest(f).SetBool(false)
+				return fnext
+			}
+		} else {
+			dest := genValue(n)
+			n.exec = func(f *frame) bltn {
+				i0 := v0(f).Interface()
+				i1 := v1(f).Interface()
+				dest(f).SetBool(i0 != i1)
+				return tnext
+			}
+		}
+		return
+	}
+
+	switch {
 	case isString(t0) || isString(t1):
 		switch {
 		case isInterface:

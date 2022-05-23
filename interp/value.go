@@ -596,9 +596,5 @@ func genComplex(n *node) func(*frame) complex128 {
 func genValueString(n *node) func(*frame) (reflect.Value, string) {
 	value := genValue(n)
 
-	if n.typ.TypeOf().Kind() == reflect.Interface {
-		return func(f *frame) (reflect.Value, string) { v := value(f); return v, v.Elem().String() }
-	}
-
 	return func(f *frame) (reflect.Value, string) { v := value(f); return v, v.String() }
 }
