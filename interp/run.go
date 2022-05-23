@@ -1228,13 +1228,13 @@ func call(n *node) {
 				convertLiteralValue(c, argType)
 			}
 			switch {
-			case isEmptyInterface(arg):
+			case hasVariadicArgs:
 				values = append(values, genValue(c))
-			case isInterfaceSrc(arg) && !hasVariadicArgs:
+			case isInterfaceSrc(arg) && (!isEmptyInterface(arg) || len(c.typ.method) > 0):
 				values = append(values, genValueInterface(c))
 			case isInterfaceBin(arg):
 				values = append(values, genInterfaceWrapper(c, arg.rtype))
-			case isFuncSrc(arg) && !hasVariadicArgs:
+			case isFuncSrc(arg):
 				values = append(values, genValueNode(c))
 			default:
 				values = append(values, genValue(c))
@@ -1766,9 +1766,6 @@ func getIndexArray(n *node) {
 	}
 }
 
-// valueInterfaceType is the reflection type of valueInterface.
-var valueInterfaceType = reflect.TypeOf((*valueInterface)(nil)).Elem()
-
 // getIndexMap retrieves map value from index.
 func getIndexMap(n *node) {
 	dest := genValue(n)
@@ -1833,7 +1830,6 @@ func getIndexMap2(n *node) {
 	value0 := genValue(n.child[0])     // map
 	value2 := genValue(n.anc.child[1]) // status
 	next := getExec(n.tnext)
-	typ := n.anc.child[0].typ
 	doValue := n.anc.child[0].ident != "_"
 	doStatus := n.anc.child[1].ident != "_"
 
@@ -1848,21 +1844,6 @@ func getIndexMap2(n *node) {
 			n.exec = func(f *frame) bltn {
 				v := value0(f).MapIndex(mi)
 				value2(f).SetBool(v.IsValid())
-				return next
-			}
-		case isInterfaceSrc(typ):
-			n.exec = func(f *frame) bltn {
-				v := value0(f).MapIndex(mi)
-				if v.IsValid() {
-					if e := v.Elem(); e.Type().AssignableTo(valueInterfaceType) {
-						dest(f).Set(e)
-					} else {
-						dest(f).Set(reflect.ValueOf(valueInterface{n, e}))
-					}
-				}
-				if doStatus {
-					value2(f).SetBool(v.IsValid())
-				}
 				return next
 			}
 		default:
@@ -1884,21 +1865,6 @@ func getIndexMap2(n *node) {
 			n.exec = func(f *frame) bltn {
 				v := value0(f).MapIndex(value1(f))
 				value2(f).SetBool(v.IsValid())
-				return next
-			}
-		case isInterfaceSrc(typ):
-			n.exec = func(f *frame) bltn {
-				v := value0(f).MapIndex(value1(f))
-				if v.IsValid() {
-					if e := v.Elem(); e.Type().AssignableTo(valueInterfaceType) {
-						dest(f).Set(e)
-					} else {
-						dest(f).Set(reflect.ValueOf(valueInterface{n, e}))
-					}
-				}
-				if doStatus {
-					value2(f).SetBool(v.IsValid())
-				}
 				return next
 			}
 		default:
@@ -2690,7 +2656,7 @@ func doComposite(n *node, hasType bool, keyed bool) {
 			values[fieldIndex] = genValueAsFunctionWrapper(val)
 		case isArray(val.typ) && val.typ.val != nil && isInterfaceSrc(val.typ.val) && !isEmptyInterface(val.typ.val):
 			values[fieldIndex] = genValueInterfaceArray(val)
-		case isInterfaceSrc(ft) && !isEmptyInterface(ft):
+		case isInterfaceSrc(ft) && (!isEmptyInterface(ft) || len(val.typ.method) > 0):
 			values[fieldIndex] = genValueInterface(val)
 		case isInterface(ft):
 			values[fieldIndex] = genInterfaceWrapper(val, rft)
@@ -3131,9 +3097,7 @@ func _append(n *node) {
 		values := make([]func(*frame) reflect.Value, l)
 		for i, arg := range args {
 			switch elem := n.typ.elem(); {
-			case isEmptyInterface(elem):
-				values[i] = genValue(arg)
-			case isInterfaceSrc(elem):
+			case isInterfaceSrc(elem) && (!isEmptyInterface(elem) || len(arg.typ.method) > 0):
 				values[i] = genValueInterface(arg)
 			case isInterfaceBin(elem):
 				values[i] = genInterfaceWrapper(arg, elem.rtype)
@@ -3155,9 +3119,7 @@ func _append(n *node) {
 	default:
 		var value0 func(*frame) reflect.Value
 		switch elem := n.typ.elem(); {
-		case isEmptyInterface(elem):
-			value0 = genValue(n.child[2])
-		case isInterfaceSrc(elem):
+		case isInterfaceSrc(elem) && (!isEmptyInterface(elem) || len(n.child[2].typ.method) > 0):
 			value0 = genValueInterface(n.child[2])
 		case isInterfaceBin(elem):
 			value0 = genInterfaceWrapper(n.child[2], elem.rtype)
