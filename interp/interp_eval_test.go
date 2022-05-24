@@ -176,7 +176,7 @@ func TestEvalBuiltin(t *testing.T) {
 		{src: `m := complex(3, 2); real(m)`, res: "3"},
 		{src: `m := complex(3, 2); imag(m)`, res: "2"},
 		{src: `m := complex("test", 2)`, err: "1:33: invalid types string and int"},
-		{src: `imag("test")`, err: "1:33: cannot convert \"test\" to complex128"},
+		{src: `imag("test")`, err: "1:33: cannot convert untyped string to untyped complex"},
 		{src: `imag(a)`, err: "1:33: invalid argument type []int for imag"},
 		{src: `real(a)`, err: "1:33: invalid argument type []int for real"},
 		{src: `t := map[int]int{}; t[123]++; t`, res: "map[123:1]"},
@@ -184,6 +184,9 @@ func TestEvalBuiltin(t *testing.T) {
 		{src: `t := map[int]int{}; t[123] += 1; t`, res: "map[123:1]"},
 		{src: `t := map[int]int{}; t[123] -= 1; t`, res: "map[123:-1]"},
 		{src: `println("hello", _)`, err: "1:28: cannot use _ as value"},
+		{src: `func() complex64 { return complex(0, 0) }()`, res: "(0+0i)"},
+		{src: `func() float32 { return real(complex(2, 1)) }()`, res: "2"},
+		{src: `func() int8 { return imag(complex(2, 1)) }()`, res: "1"},
 	})
 }
 
