@@ -184,9 +184,9 @@ func TestEvalBuiltin(t *testing.T) {
 		{src: `t := map[int]int{}; t[123] += 1; t`, res: "map[123:1]"},
 		{src: `t := map[int]int{}; t[123] -= 1; t`, res: "map[123:-1]"},
 		{src: `println("hello", _)`, err: "1:28: cannot use _ as value"},
-		{src: `func() complex64 { return complex(0, 0) }()`, res: "(0+0i)"},
-		{src: `func() float32 { return real(complex(2, 1)) }()`, res: "2"},
-		{src: `func() int8 { return imag(complex(2, 1)) }()`, res: "1"},
+		{src: `f := func() complex64 { return complex(0, 0) }()`, res: "(0+0i)"},
+		{src: `f := func() float32 { return real(complex(2, 1)) }()`, res: "2"},
+		{src: `f := func() int8 { return imag(complex(2, 1)) }()`, res: "1"},
 	})
 }
 
