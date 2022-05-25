@@ -193,7 +193,7 @@ func (check typecheck) comparison(n *node) error {
 	ok := false
 	switch n.action {
 	case aEqual, aNotEqual:
-		if !isInterface(t0) && !isInterface(t1) && t0.untyped == t1.untyped && t0.id() != t1.id() {
+		if !isInterface(t0) && !isInterface(t1) && !t0.isNil() && !t1.isNil() && t0.untyped == t1.untyped && t0.id() != t1.id() {
 			// Non interface types must be really equals.
 			return n.cfgErrorf("invalid operation: mismatched types %s and %s", t0.id(), t1.id())
 		}
