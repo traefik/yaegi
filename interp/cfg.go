@@ -2700,11 +2700,7 @@ func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerat
 		}
 	case valueT:
 		if rtyp == nil {
-			rtyp = n.typ.rtype
-		}
-		// TODO(mpl): I do not understand where this side-effect is coming from, and why it happens. quickfix for now.
-		if rtyp == nil {
-			rtyp = n.typ.val.rtype
+			rtyp = n.typ.TypeOf()
 		}
 		switch k := rtyp.Kind(); k {
 		case reflect.Struct:
