@@ -3303,11 +3303,20 @@ func _len(n *node) {
 
 func _new(n *node) {
 	next := getExec(n.tnext)
-	typ := n.child[1].typ.TypeOf()
+	t1 := n.child[1].typ
+	typ := t1.TypeOf()
 	dest := genValueOutput(n, reflect.PtrTo(typ))
 
+	if isInterfaceSrc(t1) && (!isEmptyInterface(t1) || len(t1.method) > 0) {
+		typ = zeroInterfaceValue().Type()
+	}
+
 	n.exec = func(f *frame) bltn {
-		dest(f).Set(reflect.New(typ))
+		v := reflect.New(typ)
+		if vi, ok := v.Interface().(*valueInterface); ok {
+			vi.node = n
+		}
+		dest(f).Set(v)
 		return next
 	}
 }

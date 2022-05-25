@@ -1324,7 +1324,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				// retry with the filename, in case ident is a package name.
 				sym, level, found = sc.lookup(filepath.Join(n.ident, baseName))
 				if !found {
-					err = n.cfgErrorf("undefined: %s %d", n.ident, n.index)
+					err = n.cfgErrorf("undefined: %s", n.ident)
 					break
 				}
 			}
