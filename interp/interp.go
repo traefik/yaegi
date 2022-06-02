@@ -204,11 +204,12 @@ type Interpreter struct {
 
 	name string // name of the input source file (or main)
 
-	opt                        // user settable options
-	cancelChan bool            // enables cancellable chan operations
-	fset       *token.FileSet  // fileset to locate node in source code
-	binPkg     Exports         // binary packages used in interpreter, indexed by path
-	rdir       map[string]bool // for src import cycle detection
+	opt                                         // user settable options
+	cancelChan bool                             // enables cancellable chan operations
+	fset       *token.FileSet                   // fileset to locate node in source code
+	binPkg     Exports                          // binary packages used in interpreter, indexed by path
+	rdir       map[string]bool                  // for src import cycle detection
+	mapTypes   map[reflect.Value][]reflect.Type // special interfaces mapping for wrappers
 
 	mutex    sync.RWMutex
 	frame    *frame            // program data storage during execution
@@ -333,6 +334,7 @@ func New(options Options) *Interpreter {
 		universe: initUniverse(),
 		scopes:   map[string]*scope{},
 		binPkg:   Exports{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
+		mapTypes: map[reflect.Value][]reflect.Type{},
 		srcPkg:   imports{},
 		pkgNames: map[string]string{},
 		rdir:     map[string]bool{},
@@ -675,6 +677,14 @@ func (interp *Interpreter) Use(values Exports) error {
 		importPath := path.Dir(k)
 		packageName := path.Base(k)
 
+		if k == "." && v["MapTypes"].IsValid() {
+			// Use mapping for special interface wrappers.
+			for kk, vv := range v["MapTypes"].Interface().(map[reflect.Value][]reflect.Type) {
+				interp.mapTypes[kk] = vv
+			}
+			continue
+		}
+
 		if importPath == "." {
 			return fmt.Errorf("export path %[1]q is missing a package name; did you mean '%[1]s/%[1]s'?", k)
 		}
@@ -726,6 +736,14 @@ func fixStdlib(interp *Interpreter) {
 	p["Scanf"] = reflect.ValueOf(func(f string, a ...interface{}) (n int, err error) { return fmt.Fscanf(stdin, f, a...) })
 	p["Scanln"] = reflect.ValueOf(func(a ...interface{}) (n int, err error) { return fmt.Fscanln(stdin, a...) })
 
+	// Update mapTypes to virtualized symbols as well.
+	interp.mapTypes[p["Print"]] = interp.mapTypes[reflect.ValueOf(fmt.Print)]
+	interp.mapTypes[p["Printf"]] = interp.mapTypes[reflect.ValueOf(fmt.Printf)]
+	interp.mapTypes[p["Println"]] = interp.mapTypes[reflect.ValueOf(fmt.Println)]
+	interp.mapTypes[p["Scan"]] = interp.mapTypes[reflect.ValueOf(fmt.Scan)]
+	interp.mapTypes[p["Scanf"]] = interp.mapTypes[reflect.ValueOf(fmt.Scanf)]
+	interp.mapTypes[p["Scanln"]] = interp.mapTypes[reflect.ValueOf(fmt.Scanln)]
+
 	if p = interp.binPkg["flag"]; p != nil {
 		c := flag.NewFlagSet(os.Args[0], flag.PanicOnError)
 		c.SetOutput(stderr)
@@ -752,6 +770,14 @@ func fixStdlib(interp *Interpreter) {
 		p["SetOutput"] = reflect.ValueOf(l.SetOutput)
 		p["SetPrefix"] = reflect.ValueOf(l.SetPrefix)
 		p["Writer"] = reflect.ValueOf(l.Writer)
+
+		// Update mapTypes to virtualized symbols as well.
+		interp.mapTypes[p["Print"]] = interp.mapTypes[reflect.ValueOf(log.Print)]
+		interp.mapTypes[p["Printf"]] = interp.mapTypes[reflect.ValueOf(log.Printf)]
+		interp.mapTypes[p["Println"]] = interp.mapTypes[reflect.ValueOf(log.Println)]
+		interp.mapTypes[p["Panic"]] = interp.mapTypes[reflect.ValueOf(log.Panic)]
+		interp.mapTypes[p["Panicf"]] = interp.mapTypes[reflect.ValueOf(log.Panicf)]
+		interp.mapTypes[p["Panicln"]] = interp.mapTypes[reflect.ValueOf(log.Panicln)]
 	}
 
 	if p = interp.binPkg["os"]; p != nil {

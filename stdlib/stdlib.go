@@ -9,9 +9,16 @@ import "reflect"
 // Symbols variable stores the map of stdlib symbols per package.
 var Symbols = map[string]map[string]reflect.Value{}
 
+// MapTypes variable contains a map of functions which have an interface{} as parameter but
+// do something special if the parameter implements a given interface.
+var MapTypes = map[reflect.Value][]reflect.Type{}
+
 func init() {
-	Symbols["github.com/traefik/yaegi/stdlib"] = map[string]reflect.Value{
+	Symbols["github.com/traefik/yaegi/stdlib/stdlib"] = map[string]reflect.Value{
 		"Symbols": reflect.ValueOf(Symbols),
+	}
+	Symbols["."] = map[string]reflect.Value{
+		"MapTypes": reflect.ValueOf(MapTypes),
 	}
 }
 
