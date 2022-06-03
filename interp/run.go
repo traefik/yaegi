@@ -1481,13 +1481,16 @@ func callBin(n *node) {
 
 	// getMapType returns a reflect type suitable for interface wrapper for functions
 	// with some special processing in case of interface{} argument, i.e. fmt.Printf.
-	getMapType := func(typ *itype) reflect.Type {
-		for _, rt := range n.interp.mapTypes[c0.rval] {
-			if typ.implements(&itype{cat: valueT, rtype: rt}) {
-				return rt
+	var getMapType func(*itype) reflect.Type
+	if lr, ok := n.interp.mapTypes[c0.rval]; ok {
+		getMapType = func(typ *itype) reflect.Type {
+			for _, rt := range lr {
+				if typ.implements(&itype{cat: valueT, rtype: rt}) {
+					return rt
+				}
 			}
+			return nil
 		}
-		return nil
 	}
 
 	// Determine if we should use `Call` or `CallSlice` on the function Value.
@@ -1538,8 +1541,10 @@ func callBin(n *node) {
 			} else {
 				defType = funcType.In(rcvrOffset + i)
 			}
-			if rt := getMapType(c.typ); rt != nil {
-				defType = rt
+			if getMapType != nil {
+				if rt := getMapType(c.typ); rt != nil {
+					defType = rt
+				}
 			}
 
 			switch {
@@ -1580,13 +1585,7 @@ func callBin(n *node) {
 			val := make([]reflect.Value, l+1)
 			val[0] = value(f)
 			for i, v := range values {
-				vv := v(f)
-				if vval, ok := vv.Interface().(valueInterface); ok && vval.node != nil {
-					if rt := getMapType(vval.node.typ); rt != nil {
-						vv = genInterfaceWrapper(vval.node, rt)(f)
-					}
-				}
-				val[i+1] = vv
+				val[i+1] = getBinValue(getMapType, v, f)
 			}
 			f.deferred = append([][]reflect.Value{val}, f.deferred...)
 			return tnext
@@ -1596,13 +1595,7 @@ func callBin(n *node) {
 		n.exec = func(f *frame) bltn {
 			in := make([]reflect.Value, l)
 			for i, v := range values {
-				vv := v(f)
-				if val, ok := vv.Interface().(valueInterface); ok && val.node != nil {
-					if rt := getMapType(val.node.typ); rt != nil {
-						vv = genInterfaceWrapper(val.node, rt)(f)
-					}
-				}
-				in[i] = vv
+				in[i] = getBinValue(getMapType, v, f)
 			}
 			go callFn(value(f), in)
 			return tnext
@@ -1614,13 +1607,7 @@ func callBin(n *node) {
 		n.exec = func(f *frame) bltn {
 			in := make([]reflect.Value, l)
 			for i, v := range values {
-				vv := v(f)
-				if val, ok := vv.Interface().(valueInterface); ok && val.node != nil {
-					if rt := getMapType(val.node.typ); rt != nil {
-						vv = genInterfaceWrapper(val.node, rt)(f)
-					}
-				}
-				in[i] = vv
+				in[i] = getBinValue(getMapType, v, f)
 			}
 			res := callFn(value(f), in)
 			b := res[0].Bool()
@@ -1652,13 +1639,7 @@ func callBin(n *node) {
 			n.exec = func(f *frame) bltn {
 				in := make([]reflect.Value, l)
 				for i, v := range values {
-					vv := v(f)
-					if val, ok := vv.Interface().(valueInterface); ok && val.node != nil {
-						if rt := getMapType(val.node.typ); rt != nil {
-							vv = genInterfaceWrapper(val.node, rt)(f)
-						}
-					}
-					in[i] = vv
+					in[i] = getBinValue(getMapType, v, f)
 				}
 				out := callFn(value(f), in)
 				for i, v := range rvalues {
@@ -1675,13 +1656,7 @@ func callBin(n *node) {
 			n.exec = func(f *frame) bltn {
 				in := make([]reflect.Value, l)
 				for i, v := range values {
-					vv := v(f)
-					if val, ok := vv.Interface().(valueInterface); ok && val.node != nil {
-						if rt := getMapType(val.node.typ); rt != nil {
-							vv = genInterfaceWrapper(val.node, rt)(f)
-						}
-					}
-					in[i] = vv
+					in[i] = getBinValue(getMapType, v, f)
 				}
 				out := callFn(value(f), in)
 				for i, v := range out {
@@ -1697,13 +1672,7 @@ func callBin(n *node) {
 			n.exec = func(f *frame) bltn {
 				in := make([]reflect.Value, l)
 				for i, v := range values {
-					vv := v(f)
-					if val, ok := vv.Interface().(valueInterface); ok && val.node != nil {
-						if rt := getMapType(val.node.typ); rt != nil {
-							vv = genInterfaceWrapper(val.node, rt)(f)
-						}
-					}
-					in[i] = vv
+					in[i] = getBinValue(getMapType, v, f)
 				}
 				out := callFn(value(f), in)
 				for i := 0; i < len(out); i++ {
