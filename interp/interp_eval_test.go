@@ -709,6 +709,29 @@ func TestEvalBinCall(t *testing.T) {
 	})
 }
 
+func TestEvalReflect(t *testing.T) {
+	i := interp.New(interp.Options{})
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := i.Eval(`
+		import (
+			"net/url"
+			"reflect"
+		)
+
+		type Encoder interface {
+			EncodeValues(key string, v *url.Values) error
+		}
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	runTests(t, i, []testCase{
+		{src: "reflect.TypeOf(new(Encoder)).Elem()", res: "interp.valueInterface"},
+	})
+}
+
 func TestEvalMissingSymbol(t *testing.T) {
 	defer func() {
 		r := recover()
