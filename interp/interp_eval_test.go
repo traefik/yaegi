@@ -1375,7 +1375,7 @@ func testConcurrentComposite(t *testing.T, filePath string) {
 	}
 }
 
-func TestEvalScanner(t *testing.T) {
+func TestEvalREPL(t *testing.T) {
 	if testing.Short() {
 		return
 	}
@@ -1460,6 +1460,13 @@ func TestEvalScanner(t *testing.T) {
 			src: []string{
 				`type bar string`,
 				`func (b bar) foo() { println(3) }`,
+			},
+			errorLine: -1,
+		},
+		{
+			desc: "define a label",
+			src: []string{
+				`a:`,
 			},
 			errorLine: -1,
 		},
