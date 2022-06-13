@@ -585,12 +585,12 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				}
 				if !t.incomplete {
 					switch k := t.TypeOf().Kind(); {
+					case t.untyped && isNumber(t.TypeOf()):
+						t = untypedFloat()
 					case k == reflect.Complex64:
 						t = sc.getType("float32")
 					case k == reflect.Complex128:
 						t = sc.getType("float64")
-					case t.untyped && isNumber(t.TypeOf()):
-						t = valueTOf(floatType, withUntyped(true), withScope(sc))
 					default:
 						err = n.cfgErrorf("invalid complex type %s", k)
 					}
@@ -1216,6 +1216,11 @@ func (t *itype) assignableTo(o *itype) bool {
 
 	if t.isBinMethod && isFunc(o) {
 		// TODO (marc): check that t without receiver as first parameter is equivalent to o.
+		return true
+	}
+
+	if t.untyped && isNumber(t.TypeOf()) && isNumber(o.TypeOf()) {
+		// Assignability depends on constant numeric value (overflow check), to be tested elsewhere.
 		return true
 	}
 
