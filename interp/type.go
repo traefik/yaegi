@@ -1198,7 +1198,7 @@ func (t *itype) assignableTo(o *itype) bool {
 	if t.equals(o) {
 		return true
 	}
-	if t.cat == aliasT && o.cat == aliasT {
+	if t.cat == aliasT && o.cat == aliasT && t.val.id() != o.val.id() {
 		// If alias types are not identical, it is not assignable.
 		return false
 	}

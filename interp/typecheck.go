@@ -184,23 +184,27 @@ func (check typecheck) shift(n *node) error {
 
 // comparison type checks a comparison binary expression.
 func (check typecheck) comparison(n *node) error {
-	c0, c1 := n.child[0], n.child[1]
+	t0, t1 := n.child[0].typ, n.child[1].typ
 
-	if !c0.typ.assignableTo(c1.typ) && !c1.typ.assignableTo(c0.typ) {
-		return n.cfgErrorf("invalid operation: mismatched types %s and %s", c0.typ.id(), c1.typ.id())
+	if !t0.assignableTo(t1) && !t1.assignableTo(t0) {
+		return n.cfgErrorf("invalid operation: mismatched types %s and %s", t0.id(), t1.id())
 	}
 
 	ok := false
 	switch n.action {
 	case aEqual, aNotEqual:
-		ok = c0.typ.comparable() && c1.typ.comparable() || c0.typ.isNil() && c1.typ.hasNil() || c1.typ.isNil() && c0.typ.hasNil()
+		if !isInterface(t0) && !isInterface(t1) && !t0.isNil() && !t1.isNil() && t0.untyped == t1.untyped && t0.id() != t1.id() {
+			// Non interface types must be really equals.
+			return n.cfgErrorf("invalid operation: mismatched types %s and %s", t0.id(), t1.id())
+		}
+		ok = t0.comparable() && t1.comparable() || t0.isNil() && t1.hasNil() || t1.isNil() && t0.hasNil()
 	case aLower, aLowerEqual, aGreater, aGreaterEqual:
-		ok = c0.typ.ordered() && c1.typ.ordered()
+		ok = t0.ordered() && t1.ordered()
 	}
 	if !ok {
-		typ := c0.typ
+		typ := t0
 		if typ.isNil() {
-			typ = c1.typ
+			typ = t1
 		}
 		return n.cfgErrorf("invalid operation: operator %v not defined on %s", n.action, typ.id())
 	}
