@@ -440,7 +440,7 @@ func TestEvalComparison(t *testing.T) {
 		{src: `a, b, c := 1, 1, false; if a == b { c = true }; c`, res: "true"},
 		{src: `a, b, c := 1, 2, false; if a != b { c = true }; c`, res: "true"},
 		{
-			desc: "mismatched types",
+			desc: "mismatched types equality",
 			src: `
 				type Foo string
 				type Bar string
@@ -448,6 +448,18 @@ func TestEvalComparison(t *testing.T) {
 				var a = Foo("test")
 				var b = Bar("test")
 				var c = a == b
+			`,
+			err: "7:13: invalid operation: mismatched types main.Foo and main.Bar",
+		},
+		{
+			desc: "mismatched types less than",
+			src: `
+				type Foo string
+				type Bar string
+
+				var a = Foo("test")
+				var b = Bar("test")
+				var c = a < b
 			`,
 			err: "7:13: invalid operation: mismatched types main.Foo and main.Bar",
 		},
