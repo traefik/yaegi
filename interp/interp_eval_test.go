@@ -73,7 +73,6 @@ func TestEvalArithmetic(t *testing.T) {
 	})
 }
 
-// TestEvalShift fake commit
 func TestEvalShift(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
