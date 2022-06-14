@@ -1479,6 +1479,20 @@ func callBin(n *node) {
 		}
 	}
 
+	// getMapType returns a reflect type suitable for interface wrapper for functions
+	// with some special processing in case of interface{} argument, i.e. fmt.Printf.
+	var getMapType func(*itype) reflect.Type
+	if lr, ok := n.interp.mapTypes[c0.rval]; ok {
+		getMapType = func(typ *itype) reflect.Type {
+			for _, rt := range lr {
+				if typ.implements(&itype{cat: valueT, rtype: rt}) {
+					return rt
+				}
+			}
+			return nil
+		}
+	}
+
 	// Determine if we should use `Call` or `CallSlice` on the function Value.
 	callFn := func(v reflect.Value, in []reflect.Value) []reflect.Value { return v.Call(in) }
 	if n.action == aCallSlice {
@@ -1486,13 +1500,6 @@ func callBin(n *node) {
 	}
 
 	for i, c := range child {
-		var defType reflect.Type
-		if variadic >= 0 && i+rcvrOffset >= variadic {
-			defType = funcType.In(variadic)
-		} else {
-			defType = funcType.In(rcvrOffset + i)
-		}
-
 		switch {
 		case isBinCall(c, c.scope):
 			// Handle nested function calls: pass returned values as arguments
@@ -1525,6 +1532,19 @@ func callBin(n *node) {
 			if wt != nil && isInterfaceSrc(wt.arg[i]) {
 				values = append(values, genValueInterface(c))
 				break
+			}
+
+			// defType is the target type for a potential interface wrapper.
+			var defType reflect.Type
+			if variadic >= 0 && i+rcvrOffset >= variadic {
+				defType = funcType.In(variadic)
+			} else {
+				defType = funcType.In(rcvrOffset + i)
+			}
+			if getMapType != nil {
+				if rt := getMapType(c.typ); rt != nil {
+					defType = rt
+				}
 			}
 
 			switch {
@@ -1565,7 +1585,7 @@ func callBin(n *node) {
 			val := make([]reflect.Value, l+1)
 			val[0] = value(f)
 			for i, v := range values {
-				val[i+1] = v(f)
+				val[i+1] = getBinValue(getMapType, v, f)
 			}
 			f.deferred = append([][]reflect.Value{val}, f.deferred...)
 			return tnext
@@ -1575,7 +1595,7 @@ func callBin(n *node) {
 		n.exec = func(f *frame) bltn {
 			in := make([]reflect.Value, l)
 			for i, v := range values {
-				in[i] = v(f)
+				in[i] = getBinValue(getMapType, v, f)
 			}
 			go callFn(value(f), in)
 			return tnext
@@ -1587,7 +1607,7 @@ func callBin(n *node) {
 		n.exec = func(f *frame) bltn {
 			in := make([]reflect.Value, l)
 			for i, v := range values {
-				in[i] = v(f)
+				in[i] = getBinValue(getMapType, v, f)
 			}
 			res := callFn(value(f), in)
 			b := res[0].Bool()
@@ -1619,7 +1639,7 @@ func callBin(n *node) {
 			n.exec = func(f *frame) bltn {
 				in := make([]reflect.Value, l)
 				for i, v := range values {
-					in[i] = v(f)
+					in[i] = getBinValue(getMapType, v, f)
 				}
 				out := callFn(value(f), in)
 				for i, v := range rvalues {
@@ -1636,7 +1656,7 @@ func callBin(n *node) {
 			n.exec = func(f *frame) bltn {
 				in := make([]reflect.Value, l)
 				for i, v := range values {
-					in[i] = v(f)
+					in[i] = getBinValue(getMapType, v, f)
 				}
 				out := callFn(value(f), in)
 				for i, v := range out {
@@ -1652,7 +1672,7 @@ func callBin(n *node) {
 			n.exec = func(f *frame) bltn {
 				in := make([]reflect.Value, l)
 				for i, v := range values {
-					in[i] = v(f)
+					in[i] = getBinValue(getMapType, v, f)
 				}
 				out := callFn(value(f), in)
 				for i := 0; i < len(out); i++ {

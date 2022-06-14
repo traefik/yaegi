@@ -392,6 +392,21 @@ func genValueOutput(n *node, t reflect.Type) func(*frame) reflect.Value {
 	return value
 }
 
+func getBinValue(getMapType func(*itype) reflect.Type, value func(*frame) reflect.Value, f *frame) reflect.Value {
+	v := value(f)
+	if getMapType == nil {
+		return v
+	}
+	val, ok := v.Interface().(valueInterface)
+	if !ok || val.node == nil {
+		return v
+	}
+	if rt := getMapType(val.node.typ); rt != nil {
+		return genInterfaceWrapper(val.node, rt)(f)
+	}
+	return v
+}
+
 func valueInterfaceValue(v reflect.Value) reflect.Value {
 	for {
 		vv, ok := v.Interface().(valueInterface)
