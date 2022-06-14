@@ -1123,8 +1123,7 @@ func (t *itype) concrete() *itype {
 }
 
 func (t *itype) underlying() *itype {
-	switch t.cat {
-	case aliasT:
+	if t.cat == aliasT {
 		return t.val.underlying()
 	}
 	return t
