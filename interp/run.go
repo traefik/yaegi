@@ -1534,7 +1534,7 @@ func callBin(n *node) {
 				break
 			}
 
-			// defType is the target type for an eventual interface wrapper.
+			// defType is the target type for a potential interface wrapper.
 			var defType reflect.Type
 			if variadic >= 0 && i+rcvrOffset >= variadic {
 				defType = funcType.In(variadic)
