@@ -366,14 +366,20 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				return false
 			}
 			n.val = n
+			// Add a frame indirection level as we enter in a func.
+			sc = sc.pushFunc()
+			sc.def = n
+
 			// Compute function type before entering local scope to avoid
 			// possible collisions with function argument names.
 			n.child[2].typ, err = nodeType(interp, sc, n.child[2])
-			// Add a frame indirection level as we enter in a func
-			sc = sc.pushFunc()
-			sc.def = n
+
+			if isGeneric(n.child[2].typ) {
+				break
+			}
+
+			// Allocate frame space for return values, define output symbols.
 			if len(n.child[2].child) == 3 {
-				// Allocate frame space for return values, define output symbols
 				for _, c := range n.child[2].child[2].child {
 					var typ *itype
 					if typ, err = nodeType(interp, sc, c.lastChild()); err != nil {
@@ -388,8 +394,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					}
 				}
 			}
+
+			// Define receiver symbol.
 			if len(n.child[0].child) > 0 {
-				// define receiver symbol
 				var typ *itype
 				fr := n.child[0].child[0]
 				recvTypeNode := fr.lastChild()
@@ -404,8 +411,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					sc.sym[fr.child[0].ident] = &symbol{index: index, kind: varSym, typ: typ}
 				}
 			}
+
+			// Define input parameter symbols.
 			for _, c := range n.child[2].child[1].child {
-				// define input parameter symbols
 				var typ *itype
 				if typ, err = nodeType(interp, sc, c.lastChild()); err != nil {
 					return false
@@ -414,6 +422,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					sc.sym[cc.ident] = &symbol{index: sc.add(typ), kind: varSym, typ: typ}
 				}
 			}
+
 			if n.child[1].ident == "init" && len(n.child[0].child) == 0 {
 				initNodes = append(initNodes, n)
 			}

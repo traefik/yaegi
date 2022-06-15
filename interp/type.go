@@ -3,6 +3,7 @@ package interp
 import (
 	"fmt"
 	"go/constant"
+	"log"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -26,6 +27,7 @@ const (
 	chanT
 	chanSendT
 	chanRecvT
+	comparableT
 	complex64T
 	complex128T
 	errorT
@@ -64,6 +66,7 @@ var cats = [...]string{
 	boolT:       "boolT",
 	builtinT:    "builtinT",
 	chanT:       "chanT",
+	comparableT: "comparableT",
 	complex64T:  "complex64T",
 	complex128T: "complex128T",
 	errorT:      "errorT",
@@ -656,7 +659,21 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 
 	case funcType:
 		var incomplete bool
-		// Handle input parameters
+
+		// Handle type parameters.
+		for _, arg := range n.child[0].child {
+			cl := len(arg.child) - 1
+			typ, err := nodeType2(interp, sc, arg.child[cl], seen)
+			if err != nil {
+				return nil, err
+			}
+			for i, c := range arg.child[:cl] {
+				sc.sym[c.ident] = &symbol{index: -1, kind: varTypeSym, typ: typ}
+			}
+			incomplete = incomplete || typ.incomplete
+		}
+
+		// Handle input parameters.
 		args := make([]*itype, 0, len(n.child[1].child))
 		for _, arg := range n.child[1].child {
 			cl := len(arg.child) - 1
@@ -665,16 +682,16 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				return nil, err
 			}
 			args = append(args, typ)
+			// Several arguments may be factorized on the same field type.
 			for i := 1; i < cl; i++ {
-				// Several arguments may be factorized on the same field type
 				args = append(args, typ)
 			}
 			incomplete = incomplete || typ.incomplete
 		}
 
+		// Handle returned values.
 		var rets []*itype
 		if len(n.child) == 3 {
-			// Handle returned values
 			for _, ret := range n.child[2].child {
 				cl := len(ret.child) - 1
 				typ, err := nodeType2(interp, sc, ret.child[cl], seen)
@@ -682,8 +699,8 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 					return nil, err
 				}
 				rets = append(rets, typ)
+				// Several arguments may be factorized on the same field type.
 				for i := 1; i < cl; i++ {
-					// Several arguments may be factorized on the same field type
 					rets = append(rets, typ)
 				}
 				incomplete = incomplete || typ.incomplete
@@ -694,6 +711,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 
 	case identExpr:
 		sym, _, found := sc.lookup(n.ident)
+		log.Println("nodeType2 ident", n.index, n.ident, found)
 		if !found {
 			// retry with the filename, in case ident is a package name.
 			baseName := filepath.Base(interp.fset.Position(n.pos).Filename)
@@ -2058,6 +2076,10 @@ func isPtr(t *itype) bool  { return t.TypeOf().Kind() == reflect.Ptr }
 
 func isEmptyInterface(t *itype) bool {
 	return t.cat == interfaceT && len(t.field) == 0
+}
+
+func isGeneric(t *itype) bool {
+	return t.cat == funcT && len(t.node.child[0].child) > 0
 }
 
 func isFuncSrc(t *itype) bool {

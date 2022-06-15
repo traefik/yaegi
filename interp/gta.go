@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"log"
 	"path"
 	"path/filepath"
 )
@@ -188,6 +189,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				sc.sym[n.child[1].ident] = &symbol{kind: funcSym, typ: n.typ, node: n, index: -1}
 			}
 			if !n.typ.isComplete() {
+				log.Println(n.cfgErrorf("#3 funcDecl failed"), err)
 				revisit = append(revisit, n)
 			}
 			return false

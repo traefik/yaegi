@@ -428,6 +428,7 @@ func initUniverse() *scope {
 		"any":         {kind: typeSym, typ: &itype{cat: interfaceT, str: "any"}},
 		"bool":        {kind: typeSym, typ: &itype{cat: boolT, name: "bool", str: "bool"}},
 		"byte":        {kind: typeSym, typ: &itype{cat: uint8T, name: "uint8", str: "uint8"}},
+		"comparable":  {kind: typeSym, typ: &itype{cat: comparableT, name: "comparable", str: "comparable"}},
 		"complex64":   {kind: typeSym, typ: &itype{cat: complex64T, name: "complex64", str: "complex64"}},
 		"complex128":  {kind: typeSym, typ: &itype{cat: complex128T, name: "complex128", str: "complex128"}},
 		"error":       {kind: typeSym, typ: &itype{cat: errorT, name: "error", str: "error"}},

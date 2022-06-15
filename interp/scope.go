@@ -11,27 +11,29 @@ type sKind uint
 
 // Symbol kinds for the Go interpreter.
 const (
-	undefSym sKind = iota
-	binSym         // Binary from runtime
-	bltnSym        // Builtin
-	constSym       // Constant
-	funcSym        // Function
-	labelSym       // Label
-	pkgSym         // Package
-	typeSym        // Type
-	varSym         // Variable
+	undefSym   sKind = iota
+	binSym           // Binary from runtime
+	bltnSym          // Builtin
+	constSym         // Constant
+	funcSym          // Function
+	labelSym         // Label
+	pkgSym           // Package
+	typeSym          // Type
+	varTypeSym       // Variable type (generic)
+	varSym           // Variable
 )
 
 var symKinds = [...]string{
-	undefSym: "undefSym",
-	binSym:   "binSym",
-	bltnSym:  "bltnSym",
-	constSym: "constSym",
-	funcSym:  "funcSym",
-	labelSym: "labelSym",
-	pkgSym:   "pkgSym",
-	typeSym:  "typeSym",
-	varSym:   "varSym",
+	undefSym:   "undefSym",
+	binSym:     "binSym",
+	bltnSym:    "bltnSym",
+	constSym:   "constSym",
+	funcSym:    "funcSym",
+	labelSym:   "labelSym",
+	pkgSym:     "pkgSym",
+	typeSym:    "typeSym",
+	varTypeSym: "varTypeSym",
+	varSym:     "varSym",
 }
 
 func (k sKind) String() string {
