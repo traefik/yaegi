@@ -3,7 +3,6 @@ package interp
 import (
 	"fmt"
 	"go/constant"
-	"log"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -667,7 +666,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 			if err != nil {
 				return nil, err
 			}
-			for i, c := range arg.child[:cl] {
+			for _, c := range arg.child[:cl] {
 				sc.sym[c.ident] = &symbol{index: -1, kind: varTypeSym, typ: typ}
 			}
 			incomplete = incomplete || typ.incomplete
@@ -711,7 +710,6 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 
 	case identExpr:
 		sym, _, found := sc.lookup(n.ident)
-		log.Println("nodeType2 ident", n.index, n.ident, found)
 		if !found {
 			// retry with the filename, in case ident is a package name.
 			baseName := filepath.Base(interp.fset.Position(n.pos).Filename)

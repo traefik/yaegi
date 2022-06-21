@@ -366,17 +366,23 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				return false
 			}
 			n.val = n
-			// Add a frame indirection level as we enter in a func.
-			sc = sc.pushFunc()
-			sc.def = n
+
+			// Skip substree in case of a generic function.
+			if len(n.child[2].child[0].child) > 0 {
+				return false
+			}
 
 			// Compute function type before entering local scope to avoid
 			// possible collisions with function argument names.
 			n.child[2].typ, err = nodeType(interp, sc, n.child[2])
-
-			if isGeneric(n.child[2].typ) {
-				break
+			if err != nil {
+				return false
 			}
+			n.typ = n.child[2].typ
+
+			// Add a frame indirection level as we enter in a func.
+			sc = sc.pushFunc()
+			sc.def = n
 
 			// Allocate frame space for return values, define output symbols.
 			if len(n.child[2].child) == 3 {
@@ -939,6 +945,35 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 			wireChild(n)
 			switch {
+			case callGeneric(n):
+				// Instantiate a generic function then call it.
+				fun := n.child[0].child[0].sym.node
+				g := genTree(fun, n.child[0].child[1:])
+				_, err = interp.cfg(g, nil, importPath, pkgName)
+				if err != nil {
+					return
+				}
+				err = genRun(g.child[3]) // Generate closures for function body.
+				if err != nil {
+					return
+				}
+				n.child[0] = g
+				wireChild(n)
+				if typ := n.child[0].typ; len(typ.ret) > 0 {
+					n.typ = typ.ret[0]
+					if n.anc.kind == returnStmt && n.typ.id() == sc.def.typ.ret[0].id() {
+						// Store the result directly to the return value area of frame.
+						// It can be done only if no type conversion at return is involved.
+						n.findex = childPos(n)
+					} else {
+						n.findex = sc.add(n.typ)
+						for _, t := range typ.ret[1:] {
+							sc.add(t)
+						}
+					}
+				} else {
+					n.findex = notInFrame
+				}
 			case isBuiltinCall(n, sc):
 				c0 := n.child[0]
 				bname := c0.ident
@@ -1309,7 +1344,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			n.types, n.scope = sc.types, sc
 			sc = sc.pop()
 			funcName := n.child[1].ident
-			if sym := sc.sym[funcName]; !isMethod(n) && sym != nil {
+			if sym := sc.sym[funcName]; !isMethod(n) && sym != nil && !isGeneric(sym.typ) {
 				sym.index = -1 // to force value to n.val
 				sym.typ = n.typ
 				sym.kind = funcSym
@@ -2822,3 +2857,5 @@ func isBlank(n *node) bool {
 	}
 	return n.ident == "_"
 }
+
+func callGeneric(n *node) bool { return n.child[0].kind == indexListExpr }
