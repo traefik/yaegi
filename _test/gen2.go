@@ -29,3 +29,6 @@ func main() {
 		SumIntsOrFloats[string, int64](ints),
 		SumIntsOrFloats[string, float64](floats))
 }
+
+// Output:
+// Generic Sums: 46 and 62.97
