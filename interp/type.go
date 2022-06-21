@@ -29,6 +29,7 @@ const (
 	comparableT
 	complex64T
 	complex128T
+	constraintT
 	errorT
 	float32T
 	float64T
@@ -40,6 +41,7 @@ const (
 	int32T
 	int64T
 	mapT
+	paramT
 	ptrT
 	sliceT
 	srcPkgT
@@ -68,6 +70,7 @@ var cats = [...]string{
 	comparableT: "comparableT",
 	complex64T:  "complex64T",
 	complex128T: "complex128T",
+	constraintT: "constraintT",
 	errorT:      "errorT",
 	float32T:    "float32",
 	float64T:    "float64T",
@@ -79,6 +82,7 @@ var cats = [...]string{
 	int32T:      "int32T",
 	int64T:      "int64T",
 	mapT:        "mapT",
+	paramT:      "paramT",
 	ptrT:        "ptrT",
 	sliceT:      "sliceT",
 	srcPkgT:     "srcPkgT",
@@ -111,25 +115,27 @@ type structField struct {
 
 // itype defines the internal representation of types in the interpreter.
 type itype struct {
-	cat         tcat          // Type category
-	field       []structField // Array of struct fields if structT or interfaceT
-	key         *itype        // Type of key element if MapT or nil
-	val         *itype        // Type of value element if chanT, chanSendT, chanRecvT, mapT, ptrT, aliasT, arrayT, sliceT or variadicT
-	recv        *itype        // Receiver type for funcT or nil
-	arg         []*itype      // Argument types if funcT or nil
-	ret         []*itype      // Return types if funcT or nil
-	ptr         *itype        // Pointer to this type. Might be nil
-	method      []*node       // Associated methods or nil
-	name        string        // name of type within its package for a defined type
-	path        string        // for a defined type, the package import path
-	length      int           // length of array if ArrayT
-	rtype       reflect.Type  // Reflection type if ValueT, or nil
-	node        *node         // root AST node of type definition
-	scope       *scope        // type declaration scope (in case of re-parse incomplete type)
-	str         string        // String representation of the type
-	incomplete  bool          // true if type must be parsed again (out of order declarations)
-	untyped     bool          // true for a literal value (string or number)
-	isBinMethod bool          // true if the type refers to a bin method function
+	cat          tcat          // Type category
+	field        []structField // Array of struct fields if structT or interfaceT
+	key          *itype        // Type of key element if MapT or nil
+	val          *itype        // Type of value element if chanT, chanSendT, chanRecvT, mapT, ptrT, aliasT, arrayT, sliceT or variadicT
+	recv         *itype        // Receiver type for funcT or nil
+	arg          []*itype      // Argument types if funcT or nil
+	ret          []*itype      // Return types if funcT or nil
+	ptr          *itype        // Pointer to this type. Might be nil
+	method       []*node       // Associated methods or nil
+	constraint   []*itype      // For interfaceT: list of types part of interface set
+	ulconstraint []*itype      // For interfaceT: list of underlying types part of interface set
+	name         string        // name of type within its package for a defined type
+	path         string        // for a defined type, the package import path
+	length       int           // length of array if ArrayT
+	rtype        reflect.Type  // Reflection type if ValueT, or nil
+	node         *node         // root AST node of type definition
+	scope        *scope        // type declaration scope (in case of re-parse incomplete type)
+	str          string        // String representation of the type
+	incomplete   bool          // true if type must be parsed again (out of order declarations)
+	untyped      bool          // true for a literal value (string or number)
+	isBinMethod  bool          // true if the type refers to a bin method function
 }
 
 func untypedBool() *itype {
@@ -327,7 +333,7 @@ func mapOf(key, val *itype, opts ...itypeOption) *itype {
 }
 
 // interfaceOf returns an interface type with the given fields.
-func interfaceOf(t *itype, fields []structField, opts ...itypeOption) *itype {
+func interfaceOf(t *itype, fields []structField, constraint, ulconstraint []*itype, opts ...itypeOption) *itype {
 	str := "interface{}"
 	if len(fields) > 0 {
 		str = "interface { " + methodsTypeString(fields) + "}"
@@ -337,6 +343,8 @@ func interfaceOf(t *itype, fields []structField, opts ...itypeOption) *itype {
 	}
 	t.cat = interfaceT
 	t.field = fields
+	t.constraint = constraint
+	t.ulconstraint = ulconstraint
 	t.str = str
 	for _, opt := range opts {
 		opt(t)
@@ -504,9 +512,36 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		}
 
 	case unaryExpr:
+		// In interfaceType, we process an underlying type constraint definition.
+		if isInInterfaceType(n) {
+			t1, err := nodeType2(interp, sc, n.child[0], seen)
+			if err != nil {
+				return nil, err
+			}
+			t = &itype{cat: constraintT, ulconstraint: []*itype{t1}}
+			break
+		}
 		t, err = nodeType2(interp, sc, n.child[0], seen)
 
 	case binaryExpr:
+		// In interfaceType, we process a type constraint union definition.
+		if isInInterfaceType(n) {
+			t = &itype{cat: constraintT, constraint: []*itype{}, ulconstraint: []*itype{}}
+			for _, c := range n.child {
+				t1, err := nodeType2(interp, sc, c, seen)
+				if err != nil {
+					return nil, err
+				}
+				switch t1.cat {
+				case constraintT:
+					t.constraint = append(t.constraint, t1.constraint...)
+					t.ulconstraint = append(t.ulconstraint, t1.ulconstraint...)
+				default:
+					t.constraint = append(t.constraint, t1)
+				}
+			}
+			break
+		}
 		// Get type of first operand.
 		if t, err = nodeType2(interp, sc, n.child[0], seen); err != nil {
 			return nil, err
@@ -754,37 +789,45 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 	case interfaceType:
 		if sname := typeName(n); sname != "" {
 			if sym, _, found := sc.lookup(sname); found && sym.kind == typeSym {
-				t = interfaceOf(sym.typ, sym.typ.field, withNode(n), withScope(sc))
+				t = interfaceOf(sym.typ, sym.typ.field, sym.typ.constraint, sym.typ.ulconstraint, withNode(n), withScope(sc))
 			}
 		}
 		var incomplete bool
-		fields := make([]structField, 0, len(n.child[0].child))
-		for _, field := range n.child[0].child {
-			f0 := field.child[0]
-			if len(field.child) == 1 {
-				if f0.ident == "error" {
+		//fields := make([]structField, 0, len(n.child[0].child))
+		fields := []structField{}
+		constraint := []*itype{}
+		ulconstraint := []*itype{}
+		for _, c := range n.child[0].child {
+			c0 := c.child[0]
+			if len(c.child) == 1 {
+				if c0.ident == "error" {
 					// Unwrap error interface inplace rather than embedding it, because
 					// "error" is lower case which may cause problems with reflect for method lookup.
 					typ := errorMethodType(sc)
 					fields = append(fields, structField{name: "Error", typ: typ})
 					continue
 				}
-				typ, err := nodeType2(interp, sc, f0, seen)
+				typ, err := nodeType2(interp, sc, c0, seen)
 				if err != nil {
 					return nil, err
 				}
-				fields = append(fields, structField{name: fieldName(f0), embed: true, typ: typ})
 				incomplete = incomplete || typ.incomplete
+				if typ.cat == constraintT {
+					constraint = append(constraint, typ.constraint...)
+					ulconstraint = append(ulconstraint, typ.ulconstraint...)
+					continue
+				}
+				fields = append(fields, structField{name: fieldName(c0), embed: true, typ: typ})
 				continue
 			}
-			typ, err := nodeType2(interp, sc, field.child[1], seen)
+			typ, err := nodeType2(interp, sc, c.child[1], seen)
 			if err != nil {
 				return nil, err
 			}
-			fields = append(fields, structField{name: f0.ident, typ: typ})
+			fields = append(fields, structField{name: c0.ident, typ: typ})
 			incomplete = incomplete || typ.incomplete
 		}
-		t = interfaceOf(t, fields, withNode(n), withScope(sc))
+		t = interfaceOf(t, fields, constraint, ulconstraint, withNode(n), withScope(sc))
 		t.incomplete = incomplete
 
 	case landExpr, lorExpr:
@@ -1229,9 +1272,11 @@ func (t *itype) assignableTo(o *itype) bool {
 	if t.equals(o) {
 		return true
 	}
+
 	if t.cat == aliasT && o.cat == aliasT && (t.underlying().id() != o.underlying().id() || !typeDefined(t, o)) {
 		return false
 	}
+
 	if t.isNil() && o.hasNil() || o.isNil() && t.hasNil() {
 		return true
 	}
@@ -1242,6 +1287,10 @@ func (t *itype) assignableTo(o *itype) bool {
 
 	if isInterface(o) && t.implements(o) {
 		return true
+	}
+
+	if t.cat == sliceT && o.cat == sliceT {
+		return t.val.assignableTo(o.val)
 	}
 
 	if t.isBinMethod && isFunc(o) {

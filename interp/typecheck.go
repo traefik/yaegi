@@ -56,7 +56,7 @@ func (check typecheck) assignment(n *node, typ *itype, context string) error {
 
 	if !n.typ.assignableTo(typ) && typ.str != "*unsafe2.dummy" {
 		if context == "" {
-			return n.cfgErrorf("cannot use type %s as type %s", n.typ.id(), typ.id())
+			return n.cfgErrorf("cannot use type %s as type %s %d %d", n.typ.id(), typ.id(), n.index, typ.node.index)
 		}
 		return n.cfgErrorf("cannot use type %s as type %s in %s", n.typ.id(), typ.id(), context)
 	}

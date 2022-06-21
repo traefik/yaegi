@@ -974,6 +974,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				} else {
 					n.findex = notInFrame
 				}
+
 			case isBuiltinCall(n, sc):
 				c0 := n.child[0]
 				bname := c0.ident
@@ -1026,6 +1027,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				if op, ok := constBltn[bname]; ok && n.anc.action != aAssign {
 					op(n) // pre-compute non-assigned constant :
 				}
+
 			case n.child[0].isType(sc):
 				// Type conversion expression
 				c0, c1 := n.child[0], n.child[1]
@@ -1073,6 +1075,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.typ = c0.typ
 					n.findex = sc.add(n.typ)
 				}
+
 			case isBinCall(n, sc):
 				err = check.arguments(n, n.child[1:], n.child[0], n.action == aCallSlice)
 				if err != nil {
@@ -1102,6 +1105,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						}
 					}
 				}
+
 			case isOffsetof(n):
 				if len(n.child) != 2 || n.child[1].kind != selectorExpr || !isStruct(n.child[1].child[0].typ) {
 					err = n.cfgErrorf("Offsetof argument: invalid expression")
@@ -1116,11 +1120,14 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				n.typ = valueTOf(reflect.TypeOf(field.Offset))
 				n.rval = reflect.ValueOf(field.Offset)
 				n.gen = nop
+
 			default:
 				err = check.arguments(n, n.child[1:], n.child[0], n.action == aCallSlice)
 				if err != nil {
 					break
 				}
+
+				log.Println(n.cfgErrorf("call"), n.index)
 
 				if n.child[0].action == aGetFunc {
 					// Allocate a frame entry to store the anonymous function definition.
@@ -2566,6 +2573,17 @@ func isKey(n *node) bool {
 
 func isField(n *node) bool {
 	return n.kind == selectorExpr && len(n.child) > 0 && n.child[0].typ != nil && isStruct(n.child[0].typ)
+}
+
+func isInInterfaceType(n *node) bool {
+	anc := n.anc
+	for anc != nil {
+		if anc.kind == interfaceType {
+			return true
+		}
+		anc = anc.anc
+	}
+	return false
 }
 
 func isInConstOrTypeDecl(n *node) bool {

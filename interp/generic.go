@@ -46,7 +46,7 @@ func genTree(root *node, types []*node) *node {
 	}
 
 	r := gtree(root, root.anc)
-	//r.astDot(dotWriter(root.interp.dotCmd), root.child[1].ident) // For debugging only.
+	//r.astDot(dotWriter(root.interp.dotCmd), root.child[1].ident) // Used for debugging only.
 	return r
 }
 
