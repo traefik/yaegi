@@ -34,6 +34,7 @@ const (
 	float32T
 	float64T
 	funcT
+	genericT
 	interfaceT
 	intT
 	int8T
@@ -41,7 +42,6 @@ const (
 	int32T
 	int64T
 	mapT
-	paramT
 	ptrT
 	sliceT
 	srcPkgT
@@ -82,7 +82,7 @@ var cats = [...]string{
 	int32T:      "int32T",
 	int64T:      "int64T",
 	mapT:        "mapT",
-	paramT:      "paramT",
+	genericT:    "genericT",
 	ptrT:        "ptrT",
 	sliceT:      "sliceT",
 	srcPkgT:     "srcPkgT",
@@ -118,7 +118,7 @@ type itype struct {
 	cat          tcat          // Type category
 	field        []structField // Array of struct fields if structT or interfaceT
 	key          *itype        // Type of key element if MapT or nil
-	val          *itype        // Type of value element if chanT, chanSendT, chanRecvT, mapT, ptrT, aliasT, arrayT, sliceT or variadicT
+	val          *itype        // Type of value element if chanT, chanSendT, chanRecvT, mapT, ptrT, aliasT, arrayT, sliceT, variadicT or genericT
 	recv         *itype        // Receiver type for funcT or nil
 	arg          []*itype      // Argument types if funcT or nil
 	ret          []*itype      // Return types if funcT or nil
@@ -364,6 +364,15 @@ func structOf(t *itype, fields []structField, opts ...itypeOption) *itype {
 	t.cat = structT
 	t.field = fields
 	t.str = str
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
+}
+
+// genericOf returns a generic type.
+func genericOf(val *itype, name string, opts ...itypeOption) *itype {
+	t := &itype{cat: genericT, name: name, str: name, val: val}
 	for _, opt := range opts {
 		opt(t)
 	}
@@ -756,7 +765,11 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				break
 			}
 		}
-		t = sym.typ
+		if sym.kind == varTypeSym {
+			t = genericOf(sym.typ, n.ident, withNode(n), withScope(sc))
+		} else {
+			t = sym.typ
+		}
 		if t.incomplete && t.cat == aliasT && t.val != nil && t.val.cat != nilT {
 			t.incomplete = false
 		}
@@ -2126,7 +2139,7 @@ func isEmptyInterface(t *itype) bool {
 }
 
 func isGeneric(t *itype) bool {
-	return t.cat == funcT && len(t.node.child[0].child) > 0
+	return t.cat == funcT && t.node != nil && len(t.node.child[0].child) > 0
 }
 
 func isFuncSrc(t *itype) bool {

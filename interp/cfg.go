@@ -944,11 +944,14 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				}
 			}
 			wireChild(n)
-			switch {
+			switch c0 := n.child[0]; {
 			case callGeneric(n):
 				// Instantiate a generic function then call it.
-				fun := n.child[0].child[0].sym.node
-				g := genTree(fun, n.child[0].child[1:])
+				fun := c0.child[0].sym.node
+				g, err := genTree(fun, c0.child[1:])
+				if err != nil {
+					return
+				}
 				_, err = interp.cfg(g, nil, importPath, pkgName)
 				if err != nil {
 					return
@@ -958,8 +961,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					return
 				}
 				n.child[0] = g
+				c0 = n.child[0]
 				wireChild(n)
-				if typ := n.child[0].typ; len(typ.ret) > 0 {
+				if typ := c0.typ; len(typ.ret) > 0 {
 					n.typ = typ.ret[0]
 					if n.anc.kind == returnStmt && n.typ.id() == sc.def.typ.ret[0].id() {
 						// Store the result directly to the return value area of frame.
@@ -976,7 +980,6 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				}
 
 			case isBuiltinCall(n, sc):
-				c0 := n.child[0]
 				bname := c0.ident
 				err = check.builtin(bname, n, n.child[1:], n.action == aCallSlice)
 				if err != nil {
@@ -1028,9 +1031,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					op(n) // pre-compute non-assigned constant :
 				}
 
-			case n.child[0].isType(sc):
+			case c0.isType(sc):
 				// Type conversion expression
-				c0, c1 := n.child[0], n.child[1]
+				c1 := n.child[1]
 				switch len(n.child) {
 				case 1:
 					err = n.cfgErrorf("missing argument in conversion to %s", c0.typ.id())
@@ -1077,15 +1080,15 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				}
 
 			case isBinCall(n, sc):
-				err = check.arguments(n, n.child[1:], n.child[0], n.action == aCallSlice)
+				err = check.arguments(n, n.child[1:], c0, n.action == aCallSlice)
 				if err != nil {
 					break
 				}
 
 				n.gen = callBin
-				typ := n.child[0].typ.rtype
+				typ := c0.typ.rtype
 				if typ.NumOut() > 0 {
-					if funcType := n.child[0].typ.val; funcType != nil {
+					if funcType := c0.typ.val; funcType != nil {
 						// Use the original unwrapped function type, to allow future field and
 						// methods resolutions, otherwise impossible on the opaque bin type.
 						n.typ = funcType.ret[0]
@@ -1122,18 +1125,42 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				n.gen = nop
 
 			default:
-				err = check.arguments(n, n.child[1:], n.child[0], n.action == aCallSlice)
+				// Handle call to a generic function.
+				if isGeneric(c0.typ) {
+					fun := c0.typ.node.anc
+
+					// Infer parameter types from function call arguments
+					types, err := inferTypesFromCall(fun, n.child[1:])
+					if err != nil {
+						return
+					}
+					// Generate an instantiated AST from the generic function one.
+					g, err := genTree(fun, types)
+					if err != nil {
+						return
+					}
+					// Compiles the generated function AST, so it becomes part of scope.
+					if _, err = interp.cfg(g, nil, importPath, pkgName); err != nil {
+						return
+					}
+					// AST compilation part 2: Generate closures for function body.
+					if err = genRun(g.child[3]); err != nil {
+						return
+					}
+					n.child[0] = g
+					c0 = n.child[0]
+				}
+
+				err = check.arguments(n, n.child[1:], c0, n.action == aCallSlice)
 				if err != nil {
 					break
 				}
 
-				log.Println(n.cfgErrorf("call"), n.index)
-
-				if n.child[0].action == aGetFunc {
+				if c0.action == aGetFunc {
 					// Allocate a frame entry to store the anonymous function definition.
-					sc.add(n.child[0].typ)
+					sc.add(c0.typ)
 				}
-				if typ := n.child[0].typ; len(typ.ret) > 0 {
+				if typ := c0.typ; len(typ.ret) > 0 {
 					n.typ = typ.ret[0]
 					if n.anc.kind == returnStmt && n.typ.id() == sc.def.typ.ret[0].id() {
 						// Store the result directly to the return value area of frame.

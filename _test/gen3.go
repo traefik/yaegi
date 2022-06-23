@@ -1,7 +1,7 @@
 package main
 
 type Number interface {
-	int8 | int | int64 | ~float64
+	int | int64 | ~float64
 }
 
 func Sum[T Number](numbers []T) T {
@@ -17,3 +17,6 @@ func main() {
 	total := Sum(xs)
 	println(total)
 }
+
+// Output:
+// 18

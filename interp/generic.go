@@ -5,7 +5,7 @@ import (
 )
 
 // genTree returns a new AST where generic types are replaced by instantiated types.
-func genTree(root *node, types []*node) *node {
+func genTree(root *node, types []*node) (*node, error) {
 	var gtree func(*node, *node) *node
 	typeParam := map[string]*node{}
 	pindex := 0
@@ -47,7 +47,7 @@ func genTree(root *node, types []*node) *node {
 
 	r := gtree(root, root.anc)
 	//r.astDot(dotWriter(root.interp.dotCmd), root.child[1].ident) // Used for debugging only.
-	return r
+	return r, nil
 }
 
 func copyNode(n, anc *node) *node {
@@ -72,4 +72,51 @@ func copyNode(n, anc *node) *node {
 	}
 	nod.start = nod
 	return nod
+}
+
+func inferTypesFromCall(fun *node, args []*node) ([]*node, error) {
+	ftn := fun.typ.node
+	// Fill the map of parameter types, indexed by type param ident.
+	types := map[string]*itype{}
+	for _, c := range ftn.child[0].child {
+		typ, err := nodeType(fun.interp, fun.scope, c.lastChild())
+		if err != nil {
+			return nil, err
+		}
+		for _, cc := range c.child[:len(c.child)-1] {
+			types[cc.ident] = typ
+		}
+	}
+
+	var inferType func(*itype, *itype) *itype
+	inferType = func(param, input *itype) *itype {
+		switch param.cat {
+		case chanT, ptrT, sliceT:
+			return inferType(param.val, input.val)
+		case mapT:
+			// TODO
+		case structT:
+			// TODO
+		case funcT:
+			// TODO
+		case genericT:
+			return input
+		}
+		return nil
+	}
+
+	nodes := []*node{}
+	for _, c := range ftn.child[1].child {
+		typ, err := nodeType(fun.interp, fun.scope, c.lastChild())
+		if err != nil {
+			return nil, err
+		}
+		t := inferType(typ, args[0].typ)
+		if t == nil {
+			continue
+		}
+		nodes = append(nodes, t.node)
+	}
+
+	return nodes, nil
 }
