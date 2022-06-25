@@ -145,8 +145,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					}
 
 					switch o.typ.cat {
-					case valueT:
+					case valueT, aliasT:
 						typ := o.typ.rtype
+						if o.typ.cat == aliasT {
+							typ = o.typ.val.rtype
+						}
 						switch typ.Kind() {
 						case reflect.Map:
 							n.anc.gen = rangeMap
