@@ -797,6 +797,30 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		switch lt.cat {
 		case arrayT, mapT, sliceT, variadicT:
 			t = lt.val
+		case genericT:
+			t1, err := nodeType2(interp, sc, n.child[1], seen)
+			if err != nil {
+				return nil, err
+			}
+			if t1.cat == genericT {
+				t = lt
+				break
+			}
+			name := lt.id() + "[" + t1.id() + "]"
+			if sym, _, found := sc.lookup(name); found {
+				t = sym.typ
+				break
+			}
+			// A generic type is being instantiated. Generate it.
+			g, err := genAST(lt.node.anc, []*node{t1.node})
+			if err != nil {
+				return nil, err
+			}
+			t, err = nodeType2(interp, sc, g.lastChild(), seen)
+			if err != nil {
+				return nil, err
+			}
+			sc.sym[name] = &symbol{index: -1, kind: typeSym, typ: t, node: g}
 		}
 
 	case interfaceType:
@@ -1045,7 +1069,7 @@ func isBuiltinCall(n *node, sc *scope) bool {
 
 // struct name returns the name of a struct type.
 func typeName(n *node) string {
-	if n.anc.kind == typeSpec {
+	if n.anc.kind == typeSpec && len(n.anc.child) == 2 {
 		return n.anc.child[0].ident
 	}
 	return ""

@@ -303,7 +303,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				// Indicate that the first child is the type.
 				n.nleft = 1
 			} else {
-				// Get type from ancestor (implicit type)
+				// Get type from ancestor (implicit type).
 				if n.anc.kind == keyValueExpr && n == n.anc.child[0] {
 					n.typ = n.anc.typ.key
 				} else if atyp := n.anc.typ; atyp != nil {
@@ -370,6 +370,18 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			// Skip substree in case of a generic function.
 			if len(n.child[2].child[0].child) > 0 {
 				return false
+			}
+
+			// Skip subtree if the function is a method with a generic receiver.
+			if len(n.child[0].child) > 0 {
+				recvTypeNode := n.child[0].child[0].lastChild()
+				typ, err := nodeType(interp, sc, recvTypeNode)
+				if err != nil {
+					return false
+				}
+				if typ.cat == genericT || (typ.val != nil && typ.val.cat == genericT) {
+					return false
+				}
 			}
 
 			// Compute function type before entering local scope to avoid
@@ -832,6 +844,38 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				} else {
 					n.typ = valueTOf(t.rtype.Elem())
 				}
+			case funcT:
+				// A function indexed by a type means an instantiated generic function.
+				c1 := n.child[1]
+				if !c1.isType(sc) {
+					n.typ = t
+					return
+				}
+				g, err := genAST(t.node.anc, []*node{c1})
+				if err != nil {
+					return
+				}
+				if _, err = interp.cfg(g, nil, importPath, pkgName); err != nil {
+					return
+				}
+				// Generate closures for function body.
+				if err = genRun(g.child[3]); err != nil {
+					return
+				}
+				// Replace generic func node by instantiated one.
+				n.anc.child[childPos(n)] = g
+				n.typ = g.typ
+				return
+			case genericT:
+				name := t.id() + "[" + n.child[1].typ.id() + "]"
+				sym, _, ok := sc.lookup(name)
+				if !ok {
+					err = n.cfgErrorf("type not found: %s", name)
+					return
+				}
+				n.gen = nop
+				n.typ = sym.typ
+				return
 			default:
 				n.typ = t.val
 			}
@@ -945,10 +989,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 			wireChild(n)
 			switch c0 := n.child[0]; {
-			case callGeneric(n):
+			case c0.kind == indexListExpr:
 				// Instantiate a generic function then call it.
 				fun := c0.child[0].sym.node
-				g, err := genTree(fun, c0.child[1:])
+				g, err := genAST(fun, c0.child[1:])
 				if err != nil {
 					return
 				}
@@ -1109,7 +1153,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					}
 				}
 
-			case isOffsetof(n):
+			case isOffsetof(c0):
 				if len(n.child) != 2 || n.child[1].kind != selectorExpr || !isStruct(n.child[1].child[0].typ) {
 					err = n.cfgErrorf("Offsetof argument: invalid expression")
 					break
@@ -1125,21 +1169,22 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				n.gen = nop
 
 			default:
-				// Handle call to a generic function.
+				// The call may be on a generic function. In that case, replace the
+				// generic function AST by an instantiated one before going further.
 				if isGeneric(c0.typ) {
 					fun := c0.typ.node.anc
 
-					// Infer parameter types from function call arguments
+					// Infer type parameter from function call arguments
 					types, err := inferTypesFromCall(fun, n.child[1:])
 					if err != nil {
 						return
 					}
 					// Generate an instantiated AST from the generic function one.
-					g, err := genTree(fun, types)
+					g, err := genAST(fun, types)
 					if err != nil {
 						return
 					}
-					// Compiles the generated function AST, so it becomes part of scope.
+					// Compile the generated function AST, so it becomes part of the scope.
 					if _, err = interp.cfg(g, nil, importPath, pkgName); err != nil {
 						return
 					}
@@ -2431,6 +2476,10 @@ func (n *node) isType(sc *scope) bool {
 		}
 	case identExpr:
 		return sc.getType(n.ident) != nil
+	case indexExpr:
+		// Maybe a generic type.
+		sym, _, ok := sc.lookup(n.child[0].ident)
+		return ok && sym.kind == typeSym
 	}
 	return false
 }
@@ -2679,7 +2728,7 @@ func isBinCall(n *node, sc *scope) bool {
 }
 
 func isOffsetof(n *node) bool {
-	return isCall(n) && n.child[0].typ.cat == valueT && n.child[0].rval.String() == "Offsetof"
+	return n.typ != nil && n.typ.cat == valueT && n.rval.String() == "Offsetof"
 }
 
 func mustReturnValue(n *node) bool {

@@ -282,6 +282,15 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				return false
 			}
 			typeName := n.child[0].ident
+			if len(n.child) > 2 {
+				// Handle a generic type: skip definition as parameter is not instantiated yet.
+				n.typ = genericOf(nil, typeName, withNode(n.child[0]), withScope(sc))
+				if _, exists := sc.sym[typeName]; !exists {
+					sc.sym[typeName] = &symbol{kind: typeSym, node: n}
+				}
+				sc.sym[typeName].typ = n.typ
+				return false
+			}
 			var typ *itype
 			if typ, err = nodeType(interp, sc, n.child[1]); err != nil {
 				err = nil

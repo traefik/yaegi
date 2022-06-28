@@ -4,8 +4,8 @@ import (
 	"sync/atomic"
 )
 
-// genTree returns a new AST where generic types are replaced by instantiated types.
-func genTree(root *node, types []*node) (*node, error) {
+// genAST returns a new AST where generic types are replaced by instantiated types.
+func genAST(root *node, types []*node) (*node, error) {
 	var gtree func(*node, *node) *node
 	typeParam := map[string]*node{}
 	pindex := 0
@@ -25,19 +25,29 @@ func genTree(root *node, types []*node) (*node, error) {
 			nod = copyNode(nt, anc)
 
 		case fieldList:
-			//  Just ignore if node is not the type parameters list of the generic function.
-			if n.anc != root.child[2] || childPos(n) != 0 {
-				break
-			}
-			// Fill the types lookup table used for type substitution.
-			for _, c := range n.child {
-				for _, cc := range c.child[:len(c.child)-1] {
-					typeParam[cc.ident] = types[pindex]
-					pindex++
+			//  Node is the type parameters list of a generic function.
+			if root.kind == funcDecl && n.anc == root.child[2] && childPos(n) == 0 {
+				// Fill the types lookup table used for type substitution.
+				for _, c := range n.child {
+					for _, cc := range c.child[:len(c.child)-1] {
+						typeParam[cc.ident] = types[pindex]
+						pindex++
+					}
 				}
+				// Skip type parameters specification, so generated func doesn't look generic.
+				return nod
 			}
-			// Skip type parameters specification, so generated func doesn't look generic.
-			return nod
+			// Node is the type parameters list of a generic type.
+			if root.kind == typeSpec && n.anc == root && childPos(n) == 1 {
+				// Fill the types lookup table used for type substitution.
+				for _, c := range n.child {
+					for _, cc := range c.child[:len(c.child)-1] {
+						typeParam[cc.ident] = types[pindex]
+						pindex++
+					}
+				}
+				return nod
+			}
 		}
 		for _, c := range n.child {
 			nod.child = append(nod.child, gtree(c, nod))
