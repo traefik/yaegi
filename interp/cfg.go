@@ -851,7 +851,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.typ = t
 					return
 				}
-				g, err := genAST(t.node.anc, []*node{c1})
+				g, err := genAST(sc, t.node.anc, []*node{c1})
 				if err != nil {
 					return
 				}
@@ -992,7 +992,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			case c0.kind == indexListExpr:
 				// Instantiate a generic function then call it.
 				fun := c0.child[0].sym.node
-				g, err := genAST(fun, c0.child[1:])
+				g, err := genAST(sc, fun, c0.child[1:])
 				if err != nil {
 					return
 				}
@@ -1174,13 +1174,13 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				if isGeneric(c0.typ) {
 					fun := c0.typ.node.anc
 
-					// Infer type parameter from function call arguments
+					// Infer type parameter from function call arguments.
 					types, err := inferTypesFromCall(fun, n.child[1:])
 					if err != nil {
 						return
 					}
 					// Generate an instantiated AST from the generic function one.
-					g, err := genAST(fun, types)
+					g, err := genAST(sc, fun, types)
 					if err != nil {
 						return
 					}

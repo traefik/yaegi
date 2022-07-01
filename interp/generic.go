@@ -5,7 +5,7 @@ import (
 )
 
 // genAST returns a new AST where generic types are replaced by instantiated types.
-func genAST(root *node, types []*node) (*node, error) {
+func genAST(sc *scope, root *node, types []*node) (*node, error) {
 	var gtree func(*node, *node) *node
 	typeParam := map[string]*node{}
 	pindex := 0
@@ -37,6 +37,25 @@ func genAST(root *node, types []*node) (*node, error) {
 				// Skip type parameters specification, so generated func doesn't look generic.
 				return nod
 			}
+
+			// Node is the receiver of a generic method.
+			if root.kind == funcDecl && n.anc == root && childPos(n) == 0 && len(n.child) > 0 {
+				rtn := n.child[0].child[1]
+				if rtn.kind == indexExpr {
+					it, err := nodeType(n.interp, sc, types[pindex])
+					if err != nil {
+						return nil
+					}
+					typeParam[rtn.child[1].ident] = types[pindex]
+					rid := rtn.child[0].ident + "[" + it.id() + "]"
+					sym, _, ok := sc.lookup(rid)
+					if !ok {
+						return nil
+					}
+					rtn.typ = sym.typ
+				}
+			}
+
 			// Node is the type parameters list of a generic type.
 			if root.kind == typeSpec && n.anc == root && childPos(n) == 1 {
 				// Fill the types lookup table used for type substitution.

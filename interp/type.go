@@ -812,7 +812,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				break
 			}
 			// A generic type is being instantiated. Generate it.
-			g, err := genAST(lt.node.anc, []*node{t1.node})
+			g, err := genAST(sc, lt.node.anc, []*node{t1.node})
 			if err != nil {
 				return nil, err
 			}
@@ -821,6 +821,24 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				return nil, err
 			}
 			sc.sym[name] = &symbol{index: -1, kind: typeSym, typ: t, node: g}
+			// Instantiate type methods (if any).
+			for _, nod := range lt.method {
+				gm, err := genAST(sc, nod, []*node{t1.node})
+				if err != nil {
+					return nil, err
+				}
+				if gm.typ, err = nodeType(interp, sc, gm.child[2]); err != nil {
+					return nil, err
+				}
+				if _, err = interp.cfg(gm, sc, sc.pkgID, sc.pkgName); err != nil {
+					return nil, err
+				}
+				// Generate closures for function body.
+				if err = genRun(gm); err != nil {
+					return nil, err
+				}
+				t.method = append(t.method, gm)
+			}
 		}
 
 	case interfaceType:
