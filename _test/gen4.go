@@ -42,11 +42,9 @@ func main() {
 
 	fmt.Println("keys m:", MapKeys(m))
 
-	_ = MapKeys[int, string](m)
-
-	lst := List[int]{}
-	lst.Push(10)
-	lst.Push(13)
-	lst.Push(23)
-	fmt.Println("list:", lst.GetAll())
+	//lst := List[int]{}
+	//lst.Push(10)
+	//lst.Push(13)
+	//lst.Push(23)
+	//fmt.Println("list:", lst.GetAll())
 }

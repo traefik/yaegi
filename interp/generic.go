@@ -117,21 +117,56 @@ func inferTypesFromCall(fun *node, args []*node) ([]*node, error) {
 		}
 	}
 
-	var inferType func(*itype, *itype) *itype
-	inferType = func(param, input *itype) *itype {
+	var inferTypes func(*itype, *itype) ([]*node, error)
+	inferTypes = func(param, input *itype) ([]*node, error) {
 		switch param.cat {
 		case chanT, ptrT, sliceT:
-			return inferType(param.val, input.val)
+			return inferTypes(param.val, input.val)
+
 		case mapT:
-			// TODO
+			k, err := inferTypes(param.key, input.key)
+			if err != nil {
+				return nil, err
+			}
+			v, err := inferTypes(param.val, input.val)
+			if err != nil {
+				return nil, err
+			}
+			return append(k, v...), nil
+
 		case structT:
-			// TODO
+			nods := []*node{}
+			for i, f := range param.field {
+				nl, err := inferTypes(f.typ, input.field[i].typ)
+				if err != nil {
+					return nil, err
+				}
+				nods = append(nods, nl...)
+			}
+			return nods, nil
+
 		case funcT:
-			// TODO
+			nods := []*node{}
+			for i, t := range param.arg {
+				nl, err := inferTypes(t, input.arg[i])
+				if err != nil {
+					return nil, err
+				}
+				nods = append(nods, nl...)
+			}
+			for i, t := range param.ret {
+				nl, err := inferTypes(t, input.ret[i])
+				if err != nil {
+					return nil, err
+				}
+				nods = append(nods, nl...)
+			}
+			return nods, nil
+
 		case genericT:
-			return input
+			return []*node{input.node}, nil
 		}
-		return nil
+		return nil, nil
 	}
 
 	nodes := []*node{}
@@ -140,11 +175,11 @@ func inferTypesFromCall(fun *node, args []*node) ([]*node, error) {
 		if err != nil {
 			return nil, err
 		}
-		t := inferType(typ, args[0].typ)
-		if t == nil {
-			continue
+		nods, err := inferTypes(typ, args[0].typ)
+		if err != nil {
+			return nil, err
 		}
-		nodes = append(nodes, t.node)
+		nodes = append(nodes, nods...)
 	}
 
 	return nodes, nil

@@ -1852,7 +1852,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
 					n.action = aGetMethod
 					if n.child[0].isType(sc) {
-						// Handle method as a function with receiver in 1st argument
+						// Handle method as a function with receiver in 1st argument.
 						n.val = m
 						n.findex = notInFrame
 						n.gen = nop
@@ -1860,7 +1860,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						*n.typ = *m.typ
 						n.typ.arg = append([]*itype{n.child[0].typ}, m.typ.arg...)
 					} else {
-						// Handle method with receiver
+						// Handle method with receiver.
 						n.gen = getMethod
 						n.val = m
 						n.typ = m.typ

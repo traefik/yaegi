@@ -802,7 +802,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 			if err != nil {
 				return nil, err
 			}
-			if t1.cat == genericT {
+			if t1.cat == genericT || t1.incomplete {
 				t = lt
 				break
 			}
