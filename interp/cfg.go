@@ -145,8 +145,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					}
 
 					switch o.typ.cat {
-					case valueT:
+					case valueT, aliasT:
 						typ := o.typ.rtype
+						if o.typ.cat == aliasT {
+							typ = o.typ.val.TypeOf()
+						}
 						switch typ.Kind() {
 						case reflect.Map:
 							n.anc.gen = rangeMap
@@ -790,13 +793,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 			wireChild(n)
 			t := n.child[0].typ
+			for t.cat == aliasT {
+				t = t.val
+			}
 			switch t.cat {
-			case aliasT:
-				if isString(t.val.TypeOf()) {
-					n.typ = sc.getType("byte")
-					break
-				}
-				fallthrough
 			case ptrT:
 				n.typ = t.val
 				if t.val.cat == valueT {
