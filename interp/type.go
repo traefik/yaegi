@@ -981,10 +981,18 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		}
 
 	case structType:
-		if sname := typeName(n); sname != "" {
-			if sym, _, found := sc.lookup(sname); found && sym.kind == typeSym {
+		var sym *symbol
+		var found bool
+		sname := structName(n)
+		if sname != "" {
+			sym, _, found = sc.lookup(sname)
+			if found && sym.kind == typeSym {
 				t = structOf(sym.typ, sym.typ.field, withNode(n), withScope(sc))
+			} else {
+				t = structOf(nil, nil, withNode(n), withScope(sc))
+				sc.sym[sname] = &symbol{index: -1, kind: typeSym, typ: t, node: n}
 			}
+
 		}
 		var incomplete bool
 		fields := make([]structField, 0, len(n.child[0].child))
@@ -1024,6 +1032,9 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		}
 		t = structOf(t, fields, withNode(n), withScope(sc))
 		t.incomplete = incomplete
+		if sname != "" {
+			sc.sym[sname].typ = t
+		}
 
 	default:
 		err = n.cfgErrorf("type definition not implemented: %s", n.kind)
@@ -1088,6 +1099,13 @@ func isBuiltinCall(n *node, sc *scope) bool {
 // struct name returns the name of a struct type.
 func typeName(n *node) string {
 	if n.anc.kind == typeSpec && len(n.anc.child) == 2 {
+		return n.anc.child[0].ident
+	}
+	return ""
+}
+
+func structName(n *node) string {
+	if n.anc.kind == typeSpec {
 		return n.anc.child[0].ident
 	}
 	return ""

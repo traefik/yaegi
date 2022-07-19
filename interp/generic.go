@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"strings"
 	"sync/atomic"
 )
 
@@ -9,6 +10,8 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 	var gtree func(*node, *node) *node
 	typeParam := map[string]*node{}
 	pindex := 0
+	tname := ""
+	fixNodes := []*node{}
 
 	gtree = func(n, anc *node) *node {
 		nod := copyNode(n, anc)
@@ -23,6 +26,18 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 				break
 			}
 			nod = copyNode(nt, anc)
+
+		case indexExpr:
+			// Catch a possible recursive generic type definition
+			if root.kind != typeSpec {
+				break
+			}
+			if root.child[0].ident != n.child[0].ident {
+				break
+			}
+			nod := copyNode(n.child[0], anc)
+			fixNodes = append(fixNodes, nod)
+			return nod
 
 		case fieldList:
 			//  Node is the type parameters list of a generic function.
@@ -53,18 +68,39 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 						return nil
 					}
 					rtn.typ = sym.typ
+				} else if rtn.kind == starExpr && rtn.child[0].kind == indexExpr {
+					// Method receiver is a pointer on a generic type.
+					rtpn := rtn.child[0]
+					it, err := nodeType(n.interp, sc, types[pindex])
+					if err != nil {
+						return nil
+					}
+					typeParam[rtpn.child[1].ident] = types[pindex]
+					rid := rtpn.child[0].ident + "[" + it.id() + "]"
+					sym, _, ok := sc.lookup(rid)
+					if !ok {
+						return nil
+					}
+					rtpn.typ = sym.typ
 				}
 			}
 
 			// Node is the type parameters list of a generic type.
 			if root.kind == typeSpec && n.anc == root && childPos(n) == 1 {
 				// Fill the types lookup table used for type substitution.
+				tname = n.anc.child[0].ident + "["
 				for _, c := range n.child {
 					for _, cc := range c.child[:len(c.child)-1] {
+						it, err := nodeType(n.interp, sc, types[pindex])
+						if err != nil {
+							return nil
+						}
 						typeParam[cc.ident] = types[pindex]
+						tname += it.id() + ","
 						pindex++
 					}
 				}
+				tname = strings.TrimSuffix(tname, ",") + "]"
 				return nod
 			}
 		}
@@ -75,6 +111,12 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 	}
 
 	r := gtree(root, root.anc)
+	if tname != "" {
+		for _, nod := range fixNodes {
+			nod.ident = tname
+		}
+		r.child[0].ident = tname
+	}
 	//r.astDot(dotWriter(root.interp.dotCmd), root.child[1].ident) // Used for debugging only.
 	return r, nil
 }

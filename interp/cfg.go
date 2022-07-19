@@ -382,6 +382,16 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				if typ.cat == genericT || (typ.val != nil && typ.val.cat == genericT) {
 					return false
 				}
+				if typ.cat == ptrT {
+					rc0 := recvTypeNode.child[0]
+					rt0, err := nodeType(interp, sc, rc0)
+					if err != nil {
+						return false
+					}
+					if rc0.kind == indexExpr && rt0.cat == structT {
+						return false
+					}
+				}
 			}
 
 			// Compute function type before entering local scope to avoid
@@ -876,6 +886,17 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				n.gen = nop
 				n.typ = sym.typ
 				return
+			case structT:
+				// A struct indexed by a Type means an instantiated generic struct.
+				name := t.name + "[" + n.child[1].ident + "]"
+				sym, _, ok := sc.lookup(name)
+				if ok {
+					n.typ = sym.typ
+					n.findex = sc.add(n.typ)
+					n.gen = nop
+					return
+				}
+
 			default:
 				n.typ = t.val
 			}
