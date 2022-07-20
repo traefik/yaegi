@@ -27,6 +27,7 @@
     "scopelint", # deprecated
     "interfacer", # deprecated
     "maligned", # deprecated
+    "exhaustivestruct", # deprecated
     "lll",
     "gas",
     "dupl",
@@ -49,10 +50,15 @@
     "wrapcheck",
     "nestif",
     "exhaustive",
-    "exhaustivestruct",
+    "exhaustruct",
     "forbidigo",
     "ifshort",
     "forcetypeassert",
+    "varnamelen",
+    "nosnakecase",
+    "nonamedreturns",
+    "nilnil",
+    "maintidx",
     "errorlint", # TODO: must be reactivate before fixes
   ]
 
@@ -81,3 +87,6 @@
   [[issues.exclude-rules]]
     path = "interp/interp_eval_test.go"
     linters = ["thelper"]
+  [[issues.exclude-rules]]
+    path = "interp/debugger.go"
+    linters = ["containedctx"]

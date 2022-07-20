@@ -7,8 +7,8 @@ on:
   pull_request:
 
 env:
-  GO_VERSION: 1.17
-  GOLANGCI_LINT_VERSION: v1.42.1
+  GO_VERSION: 1.18
+  GOLANGCI_LINT_VERSION: v1.47.1
 
 jobs:
 
@@ -45,12 +45,13 @@ jobs:
     needs: linting
     strategy:
       matrix:
-        go-version: [ 1.16, 1.17 ]
+        go-version: [ 1.18, 1.19.0-rc2 ]
     steps:
       - name: Set up Go ${{ matrix.go-version }}
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
+          stable: false
 
       - name: Check out code
         uses: actions/checkout@v2
@@ -75,13 +76,14 @@ jobs:
         working-directory: ${{ github.workspace }}/go/src/github.com/traefik/yaegi
     strategy:
       matrix:
-        go-version: [ 1.16, 1.17 ]
+        go-version: [ 1.18, 1.19.0-rc2 ]
 
     steps:
       - name: Set up Go ${{ matrix.go-version }}
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
+          stable: false
 
       - name: Check out code
         uses: actions/checkout@v2

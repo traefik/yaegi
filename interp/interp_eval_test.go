@@ -1010,7 +1010,7 @@ const goMinorVersionTest = 16
 
 func TestHasIOFS(t *testing.T) {
 	code := `
-// +build go1.16
+// +build go1.18
 
 package main
 
@@ -1048,6 +1048,8 @@ func main() {
 	var minor int
 	var err error
 	version := runtime.Version()
+	version = strings.Replace(version, "beta", ".", 1)
+	version = strings.Replace(version, "rc", ".", 1)
 	fields := strings.Fields(version)
 	// Go stable
 	if len(fields) == 1 {
@@ -1597,10 +1599,8 @@ func TestREPLCommands(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	_ = os.Setenv("YAEGI_PROMPT", "1") // To force prompts over non-tty streams
-	defer func() {
-		_ = os.Setenv("YAEGI_PROMPT", "0")
-	}()
+	t.Setenv("YAEGI_PROMPT", "1") // To force prompts over non-tty streams
+
 	allDone := make(chan bool)
 	runREPL := func() {
 		done := make(chan error)
