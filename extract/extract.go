@@ -194,6 +194,11 @@ func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, err
 		case *types.Var:
 			val[name] = Val{pname, true}
 		case *types.TypeName:
+			// Skip type if it is generic.
+			if t, ok := o.Type().(*types.Named); ok && t.TypeParams().Len() > 0 {
+				continue
+			}
+
 			typ[name] = pname
 			if t, ok := o.Type().Underlying().(*types.Interface); ok {
 				var methods []Method
@@ -463,7 +468,7 @@ func GetMinor(part string) string {
 	return minor
 }
 
-const defaultMinorVersion = 17
+const defaultMinorVersion = 19
 
 func genBuildTags() (string, error) {
 	version := runtime.Version()

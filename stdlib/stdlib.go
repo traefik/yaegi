@@ -1,5 +1,5 @@
-//go:build go1.16
-// +build go1.16
+//go:build go1.18
+// +build go1.18
 
 // Package stdlib provides wrappers of standard library packages to be imported natively in Yaegi.
 package stdlib
@@ -34,7 +34,7 @@ func init() {
 //go:generate ../internal/cmd/extract/extract crypto/rc4 crypto/rsa crypto/sha1 crypto/sha256 crypto/sha512
 //go:generate ../internal/cmd/extract/extract crypto/subtle crypto/tls crypto/x509 crypto/x509/pkix
 //go:generate ../internal/cmd/extract/extract database/sql database/sql/driver
-//go:generate ../internal/cmd/extract/extract debug/dwarf debug/elf debug/gosym debug/macho debug/pe debug/plan9obj
+//go:generate ../internal/cmd/extract/extract debug/buildinfo debug/dwarf debug/elf debug/gosym debug/macho debug/pe debug/plan9obj
 //go:generate ../internal/cmd/extract/extract embed encoding encoding/ascii85 encoding/asn1 encoding/base32
 //go:generate ../internal/cmd/extract/extract encoding/base64 encoding/binary encoding/csv encoding/gob
 //go:generate ../internal/cmd/extract/extract encoding/hex encoding/json encoding/pem encoding/xml
@@ -50,7 +50,7 @@ func init() {
 //go:generate ../internal/cmd/extract/extract mime mime/multipart mime/quotedprintable
 //go:generate ../internal/cmd/extract/extract net net/http net/http/cgi net/http/cookiejar net/http/fcgi
 //go:generate ../internal/cmd/extract/extract net/http/httptest net/http/httptrace net/http/httputil net/http/pprof
-//go:generate ../internal/cmd/extract/extract net/mail net/rpc net/rpc/jsonrpc net/smtp net/textproto net/url
+//go:generate ../internal/cmd/extract/extract net/mail net/netip net/rpc net/rpc/jsonrpc net/smtp net/textproto net/url
 //go:generate ../internal/cmd/extract/extract os os/signal os/user
 //go:generate ../internal/cmd/extract/extract path path/filepath reflect regexp regexp/syntax
 //go:generate ../internal/cmd/extract/extract runtime runtime/debug runtime/metrics runtime/pprof runtime/trace

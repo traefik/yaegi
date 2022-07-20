@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -181,12 +180,6 @@ func TestInterpConsistencyBuild(t *testing.T) {
 }
 
 func TestInterpErrorConsistency(t *testing.T) {
-	if runtime.Version() >= "go1.18" {
-		// Error messages have changed a lot between go1.17 and go1.18.
-		// Skip testing on go1.18 and beyond while we support go1.17.
-		// It can be re-enabled after dropping go1.17.
-		t.Skip("skip go1.18+")
-	}
 	testCases := []struct {
 		fileName       string
 		expectedInterp string
@@ -195,12 +188,12 @@ func TestInterpErrorConsistency(t *testing.T) {
 		{
 			fileName:       "assign11.go",
 			expectedInterp: "6:2: assignment mismatch: 3 variables but fmt.Println returns 2 values",
-			expectedExec:   "6:10: assignment mismatch: 3 variables but fmt.Println returns 2 values",
+			expectedExec:   "6:12: assignment mismatch: 3 variables but fmt.Println returns 2 values",
 		},
 		{
 			fileName:       "assign12.go",
 			expectedInterp: "6:2: assignment mismatch: 3 variables but fmt.Println returns 2 values",
-			expectedExec:   "6:10: assignment mismatch: 3 variables but fmt.Println returns 2 values",
+			expectedExec:   "6:13: assignment mismatch: 3 variables but fmt.Println returns 2 values",
 		},
 		{
 			fileName:       "bad0.go",
@@ -220,46 +213,47 @@ func TestInterpErrorConsistency(t *testing.T) {
 		{
 			fileName:       "const9.go",
 			expectedInterp: "5:2: constant definition loop",
-			expectedExec:   "5:2: constant definition loop",
+			expectedExec:   "5:2: initialization loop for b",
 		},
 		{
 			fileName:       "if2.go",
 			expectedInterp: "7:5: non-bool used as if condition",
-			expectedExec:   "7:2: non-bool i % 1000000 (type int) used as if condition",
+			expectedExec:   "7:5: non-boolean condition in if statement",
 		},
 		{
 			fileName:       "for7.go",
 			expectedInterp: "4:14: non-bool used as for condition",
-			expectedExec:   "4:2: non-bool i (type int) used as for condition",
+			expectedExec:   "4:14: non-boolean condition in for statement",
 		},
 		{
 			fileName:       "fun21.go",
 			expectedInterp: "4:2: not enough arguments to return",
-			expectedExec:   "4:2: not enough arguments to return",
+			expectedExec:   "4:2: not enough return values",
 		},
 		{
 			fileName:       "fun22.go",
 			expectedInterp: "6:2: not enough arguments in call to time.Date",
-			expectedExec:   "6:11: not enough arguments in call to time.Date",
+			expectedExec:   "6:2: not enough arguments in call to time.Date",
 		},
 		{
 			fileName:       "fun23.go",
 			expectedInterp: "3:17: too many arguments to return",
-			expectedExec:   "3:17: too many arguments to return",
+			expectedExec:   "3:24: too many return values",
 		},
 		{
 			fileName:       "issue-1093.go",
 			expectedInterp: "9:6: cannot use type untyped string as type int in assignment",
-			expectedExec:   `9:4: cannot use "a" + b() (type string) as type int in assignment`,
+			expectedExec:   `9:6: cannot use "a" + b() (value of type string) as type int in assignment`,
 		},
 		{
 			fileName:       "op1.go",
 			expectedInterp: "5:2: invalid operation: mismatched types int and untyped float",
-			expectedExec:   "5:4: constant 1.3 truncated to integer",
+			expectedExec:   "5:7: 1.3 (untyped float constant) truncated to int",
 		},
 		{
 			fileName:       "bltn0.go",
 			expectedInterp: "4:7: use of builtin println not in function call",
+			expectedExec:   "4:7: println (built-in) must be called",
 		},
 		{
 			fileName:       "import6.go",
@@ -274,17 +268,17 @@ func TestInterpErrorConsistency(t *testing.T) {
 		{
 			fileName:       "switch9.go",
 			expectedInterp: "9:3: cannot fallthrough in type switch",
-			expectedExec:   "9:3: cannot fallthrough in type switch",
+			expectedExec:   "fallthrough",
 		},
 		{
 			fileName:       "switch13.go",
 			expectedInterp: "9:2: i is not a type",
-			expectedExec:   "9:2: i (type interface {}) is not a type",
+			expectedExec:   "9:7: i (variable of type interface{}) is not a type",
 		},
 		{
 			fileName:       "switch19.go",
 			expectedInterp: "37:2: duplicate case Bir in type switch",
-			expectedExec:   "37:2: duplicate case Bir in type switch",
+			expectedExec:   "37:7: duplicate case Bir in type switch",
 		},
 	}
 

@@ -1048,6 +1048,8 @@ func main() {
 	var minor int
 	var err error
 	version := runtime.Version()
+	version = strings.Replace(version, "beta", ".", 1)
+	version = strings.Replace(version, "rc", ".", 1)
 	fields := strings.Fields(version)
 	// Go stable
 	if len(fields) == 1 {
