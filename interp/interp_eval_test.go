@@ -1599,10 +1599,8 @@ func TestREPLCommands(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	_ = os.Setenv("YAEGI_PROMPT", "1") // To force prompts over non-tty streams
-	defer func() {
-		_ = os.Setenv("YAEGI_PROMPT", "0")
-	}()
+	t.Setenv("YAEGI_PROMPT", "1") // To force prompts over non-tty streams
+
 	allDone := make(chan bool)
 	runREPL := func() {
 		done := make(chan error)

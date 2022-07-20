@@ -2,9 +2,7 @@ package fs1
 
 import (
 	"testing"
-
-	// only available from 1.16.
-	"testing/fstest"
+	"testing/fstest" // only available from 1.16.
 
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
