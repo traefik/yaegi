@@ -1010,7 +1010,7 @@ const goMinorVersionTest = 16
 
 func TestHasIOFS(t *testing.T) {
 	code := `
-// +build go1.16
+// +build go1.18
 
 package main
 
