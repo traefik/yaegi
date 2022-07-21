@@ -7,13 +7,13 @@ import (
 
 // genAST returns a new AST where generic types are replaced by instantiated types.
 func genAST(sc *scope, root *node, types []*node) (*node, error) {
-	var gtree func(*node, *node) *node
 	typeParam := map[string]*node{}
 	pindex := 0
 	tname := ""
 	fixNodes := []*node{}
+	var gtree func(*node, *node) (*node, error)
 
-	gtree = func(n, anc *node) *node {
+	gtree = func(n, anc *node) (*node, error) {
 		nod := copyNode(n, anc)
 		switch n.kind {
 		case funcDecl, funcType:
@@ -37,7 +37,7 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 			}
 			nod := copyNode(n.child[0], anc)
 			fixNodes = append(fixNodes, nod)
-			return nod
+			return nod, nil
 
 		case fieldList:
 			//  Node is the type parameters list of a generic function.
@@ -50,7 +50,7 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 					}
 				}
 				// Skip type parameters specification, so generated func doesn't look generic.
-				return nod
+				return nod, nil
 			}
 
 			// Node is the receiver of a generic method.
@@ -59,13 +59,13 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 				if rtn.kind == indexExpr {
 					it, err := nodeType(n.interp, sc, types[pindex])
 					if err != nil {
-						return nil
+						return nil, err
 					}
 					typeParam[rtn.child[1].ident] = types[pindex]
 					rid := rtn.child[0].ident + "[" + it.id() + "]"
 					sym, _, ok := sc.lookup(rid)
 					if !ok {
-						return nil
+						return nil, nil
 					}
 					rtn.typ = sym.typ
 				} else if rtn.kind == starExpr && rtn.child[0].kind == indexExpr {
@@ -73,13 +73,13 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 					rtpn := rtn.child[0]
 					it, err := nodeType(n.interp, sc, types[pindex])
 					if err != nil {
-						return nil
+						return nil, err
 					}
 					typeParam[rtpn.child[1].ident] = types[pindex]
 					rid := rtpn.child[0].ident + "[" + it.id() + "]"
 					sym, _, ok := sc.lookup(rid)
 					if !ok {
-						return nil
+						return nil, nil
 					}
 					rtpn.typ = sym.typ
 				}
@@ -93,7 +93,7 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 					for _, cc := range c.child[:len(c.child)-1] {
 						it, err := nodeType(n.interp, sc, types[pindex])
 						if err != nil {
-							return nil
+							return nil, err
 						}
 						typeParam[cc.ident] = types[pindex]
 						tname += it.id() + ","
@@ -101,23 +101,30 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 					}
 				}
 				tname = strings.TrimSuffix(tname, ",") + "]"
-				return nod
+				return nod, nil
 			}
 		}
 		for _, c := range n.child {
-			nod.child = append(nod.child, gtree(c, nod))
+			gn, err := gtree(c, nod)
+			if err != nil {
+				return nil, err
+			}
+			nod.child = append(nod.child, gn)
 		}
-		return nod
+		return nod, nil
 	}
 
-	r := gtree(root, root.anc)
+	r, err := gtree(root, root.anc)
+	if err != nil {
+		return nil, err
+	}
 	if tname != "" {
 		for _, nod := range fixNodes {
 			nod.ident = tname
 		}
 		r.child[0].ident = tname
 	}
-	//r.astDot(dotWriter(root.interp.dotCmd), root.child[1].ident) // Used for debugging only.
+	// r.astDot(dotWriter(root.interp.dotCmd), root.child[1].ident) // Used for debugging only.
 	return r, nil
 }
 

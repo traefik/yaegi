@@ -2972,5 +2972,3 @@ func isBlank(n *node) bool {
 	}
 	return n.ident == "_"
 }
-
-func callGeneric(n *node) bool { return n.child[0].kind == indexListExpr }

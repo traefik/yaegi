@@ -848,7 +848,6 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 			}
 		}
 		var incomplete bool
-		//fields := make([]structField, 0, len(n.child[0].child))
 		fields := []structField{}
 		constraint := []*itype{}
 		ulconstraint := []*itype{}
@@ -992,7 +991,6 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				t = structOf(nil, nil, withNode(n), withScope(sc))
 				sc.sym[sname] = &symbol{index: -1, kind: typeSym, typ: t, node: n}
 			}
-
 		}
 		var incomplete bool
 		fields := make([]structField, 0, len(n.child[0].child))
