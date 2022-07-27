@@ -47,6 +47,9 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 				// Fill the types lookup table used for type substitution.
 				for _, c := range n.child {
 					for _, cc := range c.child[:len(c.child)-1] {
+						if pindex >= len(types) {
+							return nil, cc.cfgErrorf("undefined type for %s", cc.ident)
+						}
 						typeParam[cc.ident] = types[pindex]
 						pindex++
 					}
@@ -65,12 +68,20 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 						rtn = rtn.child[0]
 						recvrPtr = true
 					}
-					typeParam[rtn.child[1].ident] = types[pindex]
-					it, err := nodeType(n.interp, sc, types[pindex])
-					if err != nil {
-						return nil, err
+					rtname = rtn.child[0].ident + "["
+					for _, cc := range rtn.child[1:] {
+						if pindex >= len(types) {
+							return nil, cc.cfgErrorf("undefined type for %s", cc.ident)
+						}
+						it, err := nodeType(n.interp, sc, types[pindex])
+						if err != nil {
+							return nil, err
+						}
+						typeParam[cc.ident] = types[pindex]
+						rtname += it.id() + ","
+						pindex++
 					}
-					rtname = rtn.child[0].ident + "[" + it.id() + "]"
+					rtname = strings.TrimSuffix(rtname, ",") + "]"
 				}
 			}
 
@@ -80,6 +91,9 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 				tname = n.anc.child[0].ident + "["
 				for _, c := range n.child {
 					for _, cc := range c.child[:len(c.child)-1] {
+						if pindex >= len(types) {
+							return nil, cc.cfgErrorf("undefined type for %s", cc.ident)
+						}
 						it, err := nodeType(n.interp, sc, types[pindex])
 						if err != nil {
 							return nil, err
