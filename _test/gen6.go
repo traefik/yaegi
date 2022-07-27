@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 func MapKeys[K comparable, V any](m map[K]V) []K {
 	r := make([]K, 0, len(m))
 	for k := range m {
@@ -14,8 +12,8 @@ func main() {
 	var m = map[int]string{1: "2", 2: "4", 4: "8"}
 
 	// Test type inference
-	fmt.Println("keys m:", MapKeys(m))
+	println(len(MapKeys(m)), m[2])
 }
 
 // Output:
-// keys m: [1 2 4]
+// 3 4

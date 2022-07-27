@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 type List[T any] struct {
 	head, tail *element[T]
 }
@@ -35,5 +33,8 @@ func main() {
 	lst.Push(10)
 	lst.Push(13)
 	lst.Push(23)
-	fmt.Println("list:", lst.GetAll())
+	lst.GetAll()
 }
+
+// Output:
+// list: [10 13 23]
