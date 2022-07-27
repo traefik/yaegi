@@ -821,7 +821,12 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				return nil, err
 			}
 			sc.sym[name] = &symbol{index: -1, kind: typeSym, typ: t, node: g}
+
 			// Instantiate type methods (if any).
+			var pt *itype
+			if len(lt.method) > 0 {
+				pt = ptrOf(t, withNode(g), withScope(sc))
+			}
 			for _, nod := range lt.method {
 				gm, err := genAST(sc, nod, []*node{t1.node})
 				if err != nil {
@@ -830,6 +835,13 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				if gm.typ, err = nodeType(interp, sc, gm.child[2]); err != nil {
 					return nil, err
 				}
+				t.addMethod(gm)
+				if rtn := gm.child[0].child[0].lastChild(); rtn.kind == starExpr {
+					// The receiver is a pointer on a generic type.
+					pt.addMethod(gm)
+					rtn.typ = pt
+				}
+				// Compile method CFG.
 				if _, err = interp.cfg(gm, sc, sc.pkgID, sc.pkgName); err != nil {
 					return nil, err
 				}
@@ -837,7 +849,6 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				if err = genRun(gm); err != nil {
 					return nil, err
 				}
-				t.method = append(t.method, gm)
 			}
 		}
 

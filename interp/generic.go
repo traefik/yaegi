@@ -10,6 +10,8 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 	typeParam := map[string]*node{}
 	pindex := 0
 	tname := ""
+	rtname := ""
+	recvrPtr := false
 	fixNodes := []*node{}
 	var gtree func(*node, *node) (*node, error)
 
@@ -56,32 +58,19 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 			// Node is the receiver of a generic method.
 			if root.kind == funcDecl && n.anc == root && childPos(n) == 0 && len(n.child) > 0 {
 				rtn := n.child[0].child[1]
-				if rtn.kind == indexExpr {
-					it, err := nodeType(n.interp, sc, types[pindex])
-					if err != nil {
-						return nil, err
+				if rtn.kind == indexExpr || (rtn.kind == starExpr && rtn.child[0].kind == indexExpr) {
+					// Method receiver is a generic type.
+					if rtn.kind == starExpr && rtn.child[0].kind == indexExpr {
+						// Method receiver is a pointer on a generic type.
+						rtn = rtn.child[0]
+						recvrPtr = true
 					}
 					typeParam[rtn.child[1].ident] = types[pindex]
-					rid := rtn.child[0].ident + "[" + it.id() + "]"
-					sym, _, ok := sc.lookup(rid)
-					if !ok {
-						return nil, nil
-					}
-					rtn.typ = sym.typ
-				} else if rtn.kind == starExpr && rtn.child[0].kind == indexExpr {
-					// Method receiver is a pointer on a generic type.
-					rtpn := rtn.child[0]
 					it, err := nodeType(n.interp, sc, types[pindex])
 					if err != nil {
 						return nil, err
 					}
-					typeParam[rtpn.child[1].ident] = types[pindex]
-					rid := rtpn.child[0].ident + "[" + it.id() + "]"
-					sym, _, ok := sc.lookup(rid)
-					if !ok {
-						return nil, nil
-					}
-					rtpn.typ = sym.typ
+					rtname = rtn.child[0].ident + "[" + it.id() + "]"
 				}
 			}
 
@@ -123,6 +112,16 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 			nod.ident = tname
 		}
 		r.child[0].ident = tname
+	}
+	if rtname != "" {
+		// Replace method receiver type by synthetized ident.
+		nod := r.child[0].child[0].child[1]
+		if recvrPtr {
+			nod = nod.child[0]
+		}
+		nod.kind = identExpr
+		nod.ident = rtname
+		nod.child = nil
 	}
 	// r.astDot(dotWriter(root.interp.dotCmd), root.child[1].ident) // Used for debugging only.
 	return r, nil

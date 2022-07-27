@@ -1811,7 +1811,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				if n.typ.cat == valueT || n.typ.cat == errorT {
 					switch method, ok := n.typ.rtype.MethodByName(n.child[1].ident); {
 					case ok:
-						hasRecvType := n.typ.rtype.Kind() != reflect.Interface
+						hasRecvType := n.typ.TypeOf().Kind() != reflect.Interface
 						n.val = method.Index
 						n.gen = getIndexBinMethod
 						n.action = aGetMethod
@@ -1820,7 +1820,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						if hasRecvType {
 							n.typ.recv = n.typ
 						}
-					case n.typ.rtype.Kind() == reflect.Ptr:
+					case n.typ.TypeOf().Kind() == reflect.Ptr:
 						if field, ok := n.typ.rtype.Elem().FieldByName(n.child[1].ident); ok {
 							n.typ = valueTOf(field.Type)
 							n.val = field.Index
@@ -1828,7 +1828,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 							break
 						}
 						err = n.cfgErrorf("undefined field or method: %s", n.child[1].ident)
-					case n.typ.rtype.Kind() == reflect.Struct:
+					case n.typ.TypeOf().Kind() == reflect.Struct:
 						if field, ok := n.typ.rtype.FieldByName(n.child[1].ident); ok {
 							n.typ = valueTOf(field.Type)
 							n.val = field.Index

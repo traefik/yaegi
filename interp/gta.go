@@ -187,7 +187,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 					elementType.addMethod(n)
 				}
 				rcvrtype.addMethod(n)
-				n.child[0].child[0].lastChild().typ = rcvrtype
+				rtn.typ = rcvrtype
 			case ident == "init":
 				// init functions do not get declared as per the Go spec.
 			default:
