@@ -12,8 +12,8 @@ func main() {
 	var m = map[int]string{1: "2", 2: "4", 4: "8"}
 
 	// Test type inference
-	println(len(MapKeys(m)))
+	println(len(MapKeys))
 }
 
-// Output:
-// 3
+// Error:
+// invalid argument for len

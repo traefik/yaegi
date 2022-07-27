@@ -138,6 +138,8 @@ type itype struct {
 	isBinMethod  bool          // true if the type refers to a bin method function
 }
 
+type generic struct{}
+
 func untypedBool() *itype {
 	return &itype{cat: boolT, name: "bool", untyped: true, str: "untyped bool"}
 }
@@ -1937,6 +1939,9 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 		// We'll complete the fieldRebuild in the caller.
 		ctx.refs[name] = append(flds, fieldRebuild{})
 		return unsafe2.DummyType
+	}
+	if isGeneric(t) {
+		return reflect.TypeOf((*generic)(nil)).Elem()
 	}
 	switch t.cat {
 	case aliasT:
