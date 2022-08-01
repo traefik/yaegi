@@ -701,6 +701,7 @@ func TestEvalCall(t *testing.T) {
 		{src: ` test := func(a, b int) int { return a }
 				blah := func() (int, float64) { return 1, 1.1 }
 				a := test(blah())`, err: "3:15: cannot use func() (int,float64) as type (int,int)"},
+		{src: "func f()", err: "function declaration without body is unsupported"},
 	})
 }
 

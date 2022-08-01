@@ -360,6 +360,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			fallthrough
 
 		case funcDecl:
+			// Do not allow function declarations without body.
+			if len(n.child) < 4 {
+				err = n.cfgErrorf("function declaration without body is unsupported (linkname or assembly can not be interperted).")
+				return false
+			}
 			n.val = n
 			// Compute function type before entering local scope to avoid
 			// possible collisions with function argument names.
