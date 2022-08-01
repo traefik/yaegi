@@ -49,6 +49,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "fun24.go" || // expect error
 			file.Name() == "fun25.go" || // expect error
 			file.Name() == "gen7.go" || // expect error
+			file.Name() == "gen8.go" || // expect error
 			file.Name() == "if2.go" || // expect error
 			file.Name() == "import6.go" || // expect error
 			file.Name() == "init1.go" || // expect error
