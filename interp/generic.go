@@ -46,9 +46,13 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 			if root.kind == funcDecl && n.anc == root.child[2] && childPos(n) == 0 {
 				// Fill the types lookup table used for type substitution.
 				for _, c := range n.child {
-					for _, cc := range c.child[:len(c.child)-1] {
+					l := len(c.child) - 1
+					for _, cc := range c.child[:l] {
 						if pindex >= len(types) {
 							return nil, cc.cfgErrorf("undefined type for %s", cc.ident)
+						}
+						if err := checkConstraint(sc, types[pindex], c.child[l]); err != nil {
+							return nil, err
 						}
 						typeParam[cc.ident] = types[pindex]
 						pindex++
@@ -90,12 +94,16 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 				// Fill the types lookup table used for type substitution.
 				tname = n.anc.child[0].ident + "["
 				for _, c := range n.child {
-					for _, cc := range c.child[:len(c.child)-1] {
+					l := len(c.child) - 1
+					for _, cc := range c.child[:l] {
 						if pindex >= len(types) {
 							return nil, cc.cfgErrorf("undefined type for %s", cc.ident)
 						}
 						it, err := nodeType(n.interp, sc, types[pindex])
 						if err != nil {
+							return nil, err
+						}
+						if err := checkConstraint(sc, types[pindex], c.child[l]); err != nil {
 							return nil, err
 						}
 						typeParam[cc.ident] = types[pindex]
@@ -245,4 +253,29 @@ func inferTypesFromCall(fun *node, args []*node) ([]*node, error) {
 	}
 
 	return nodes, nil
+}
+
+func checkConstraint(sc *scope, input, constraint *node) error {
+	ct, err := nodeType(constraint.interp, sc, constraint)
+	if err != nil {
+		return err
+	}
+	it, err := nodeType(input.interp, sc, input)
+	if err != nil {
+		return err
+	}
+	if len(ct.constraint) == 0 && len(ct.ulconstraint) == 0 {
+		return nil
+	}
+	for _, c := range ct.constraint {
+		if it.equals(c) {
+			return nil
+		}
+	}
+	for _, c := range ct.ulconstraint {
+		if it.underlying().equals(c) {
+			return nil
+		}
+	}
+	return input.cfgErrorf("%s does not implement %s", input.typ.id(), ct.id())
 }

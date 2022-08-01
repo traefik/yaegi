@@ -1194,24 +1194,24 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				// generic function AST by an instantiated one before going further.
 				if isGeneric(c0.typ) {
 					fun := c0.typ.node.anc
+					var g *node
+					var types []*node
 
 					// Infer type parameter from function call arguments.
-					types, err := inferTypesFromCall(fun, n.child[1:])
-					if err != nil {
-						return
+					if types, err = inferTypesFromCall(fun, n.child[1:]); err != nil {
+						break
 					}
 					// Generate an instantiated AST from the generic function one.
-					g, err := genAST(sc, fun, types)
-					if err != nil {
-						return
+					if g, err = genAST(sc, fun, types); err != nil {
+						break
 					}
 					// Compile the generated function AST, so it becomes part of the scope.
 					if _, err = interp.cfg(g, nil, importPath, pkgName); err != nil {
-						return
+						break
 					}
 					// AST compilation part 2: Generate closures for function body.
 					if err = genRun(g.child[3]); err != nil {
-						return
+						break
 					}
 					n.child[0] = g
 					c0 = n.child[0]
