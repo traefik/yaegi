@@ -1198,7 +1198,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					var types []*node
 
 					// Infer type parameter from function call arguments.
-					if types, err = inferTypesFromCall(fun, n.child[1:]); err != nil {
+					if types, err = inferTypesFromCall(sc, fun, n.child[1:]); err != nil {
 						break
 					}
 					// Generate an instantiated AST from the generic function one.

@@ -173,12 +173,12 @@ func copyNode(n, anc *node) *node {
 	return nod
 }
 
-func inferTypesFromCall(fun *node, args []*node) ([]*node, error) {
+func inferTypesFromCall(sc *scope, fun *node, args []*node) ([]*node, error) {
 	ftn := fun.typ.node
 	// Fill the map of parameter types, indexed by type param ident.
 	types := map[string]*itype{}
 	for _, c := range ftn.child[0].child {
-		typ, err := nodeType(fun.interp, fun.scope, c.lastChild())
+		typ, err := nodeType(fun.interp, sc, c.lastChild())
 		if err != nil {
 			return nil, err
 		}
@@ -240,12 +240,12 @@ func inferTypesFromCall(fun *node, args []*node) ([]*node, error) {
 	}
 
 	nodes := []*node{}
-	for _, c := range ftn.child[1].child {
-		typ, err := nodeType(fun.interp, fun.scope, c.lastChild())
+	for i, c := range ftn.child[1].child {
+		typ, err := nodeType(fun.interp, sc, c.lastChild())
 		if err != nil {
 			return nil, err
 		}
-		nods, err := inferTypes(typ, args[0].typ)
+		nods, err := inferTypes(typ, args[i].typ)
 		if err != nil {
 			return nil, err
 		}
