@@ -12,4 +12,4 @@ func main() {
 }
 
 // Error:
-// 10:11: int does not implement main.Float
+// int does not implement main.Float
