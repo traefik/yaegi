@@ -303,7 +303,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				// Indicate that the first child is the type.
 				n.nleft = 1
 			} else {
-				// Get type from ancestor (implicit type)
+				// Get type from ancestor (implicit type).
 				if n.anc.kind == keyValueExpr && n == n.anc.child[0] {
 					n.typ = n.anc.typ.key
 				} else if atyp := n.anc.typ; atyp != nil {
@@ -366,15 +366,49 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				return false
 			}
 			n.val = n
+
+			// Skip substree in case of a generic function.
+			if len(n.child[2].child[0].child) > 0 {
+				return false
+			}
+
+			// Skip subtree if the function is a method with a generic receiver.
+			if len(n.child[0].child) > 0 {
+				recvTypeNode := n.child[0].child[0].lastChild()
+				typ, err := nodeType(interp, sc, recvTypeNode)
+				if err != nil {
+					return false
+				}
+				if typ.cat == genericT || (typ.val != nil && typ.val.cat == genericT) {
+					return false
+				}
+				if typ.cat == ptrT {
+					rc0 := recvTypeNode.child[0]
+					rt0, err := nodeType(interp, sc, rc0)
+					if err != nil {
+						return false
+					}
+					if rc0.kind == indexExpr && rt0.cat == structT {
+						return false
+					}
+				}
+			}
+
 			// Compute function type before entering local scope to avoid
 			// possible collisions with function argument names.
 			n.child[2].typ, err = nodeType(interp, sc, n.child[2])
-			// Add a frame indirection level as we enter in a func
+			if err != nil {
+				return false
+			}
+			n.typ = n.child[2].typ
+
+			// Add a frame indirection level as we enter in a func.
 			sc = sc.pushFunc()
 			sc.def = n
-			if len(n.child[2].child) == 2 {
-				// Allocate frame space for return values, define output symbols
-				for _, c := range n.child[2].child[1].child {
+
+			// Allocate frame space for return values, define output symbols.
+			if len(n.child[2].child) == 3 {
+				for _, c := range n.child[2].child[2].child {
 					var typ *itype
 					if typ, err = nodeType(interp, sc, c.lastChild()); err != nil {
 						return false
@@ -388,8 +422,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					}
 				}
 			}
+
+			// Define receiver symbol.
 			if len(n.child[0].child) > 0 {
-				// define receiver symbol
 				var typ *itype
 				fr := n.child[0].child[0]
 				recvTypeNode := fr.lastChild()
@@ -404,8 +439,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					sc.sym[fr.child[0].ident] = &symbol{index: index, kind: varSym, typ: typ}
 				}
 			}
-			for _, c := range n.child[2].child[0].child {
-				// define input parameter symbols
+
+			// Define input parameter symbols.
+			for _, c := range n.child[2].child[1].child {
 				var typ *itype
 				if typ, err = nodeType(interp, sc, c.lastChild()); err != nil {
 					return false
@@ -414,6 +450,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					sc.sym[cc.ident] = &symbol{index: sc.add(typ), kind: varSym, typ: typ}
 				}
 			}
+
 			if n.child[1].ident == "init" && len(n.child[0].child) == 0 {
 				initNodes = append(initNodes, n)
 			}
@@ -817,6 +854,49 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				} else {
 					n.typ = valueTOf(t.rtype.Elem())
 				}
+			case funcT:
+				// A function indexed by a type means an instantiated generic function.
+				c1 := n.child[1]
+				if !c1.isType(sc) {
+					n.typ = t
+					return
+				}
+				g, err := genAST(sc, t.node.anc, []*node{c1})
+				if err != nil {
+					return
+				}
+				if _, err = interp.cfg(g, nil, importPath, pkgName); err != nil {
+					return
+				}
+				// Generate closures for function body.
+				if err = genRun(g.child[3]); err != nil {
+					return
+				}
+				// Replace generic func node by instantiated one.
+				n.anc.child[childPos(n)] = g
+				n.typ = g.typ
+				return
+			case genericT:
+				name := t.id() + "[" + n.child[1].typ.id() + "]"
+				sym, _, ok := sc.lookup(name)
+				if !ok {
+					err = n.cfgErrorf("type not found: %s", name)
+					return
+				}
+				n.gen = nop
+				n.typ = sym.typ
+				return
+			case structT:
+				// A struct indexed by a Type means an instantiated generic struct.
+				name := t.name + "[" + n.child[1].ident + "]"
+				sym, _, ok := sc.lookup(name)
+				if ok {
+					n.typ = sym.typ
+					n.findex = sc.add(n.typ)
+					n.gen = nop
+					return
+				}
+
 			default:
 				n.typ = t.val
 			}
@@ -929,9 +1009,42 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				}
 			}
 			wireChild(n)
-			switch {
+			switch c0 := n.child[0]; {
+			case c0.kind == indexListExpr:
+				// Instantiate a generic function then call it.
+				fun := c0.child[0].sym.node
+				g, err := genAST(sc, fun, c0.child[1:])
+				if err != nil {
+					return
+				}
+				_, err = interp.cfg(g, nil, importPath, pkgName)
+				if err != nil {
+					return
+				}
+				err = genRun(g.child[3]) // Generate closures for function body.
+				if err != nil {
+					return
+				}
+				n.child[0] = g
+				c0 = n.child[0]
+				wireChild(n)
+				if typ := c0.typ; len(typ.ret) > 0 {
+					n.typ = typ.ret[0]
+					if n.anc.kind == returnStmt && n.typ.id() == sc.def.typ.ret[0].id() {
+						// Store the result directly to the return value area of frame.
+						// It can be done only if no type conversion at return is involved.
+						n.findex = childPos(n)
+					} else {
+						n.findex = sc.add(n.typ)
+						for _, t := range typ.ret[1:] {
+							sc.add(t)
+						}
+					}
+				} else {
+					n.findex = notInFrame
+				}
+
 			case isBuiltinCall(n, sc):
-				c0 := n.child[0]
 				bname := c0.ident
 				err = check.builtin(bname, n, n.child[1:], n.action == aCallSlice)
 				if err != nil {
@@ -982,9 +1095,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				if op, ok := constBltn[bname]; ok && n.anc.action != aAssign {
 					op(n) // pre-compute non-assigned constant :
 				}
-			case n.child[0].isType(sc):
+
+			case c0.isType(sc):
 				// Type conversion expression
-				c0, c1 := n.child[0], n.child[1]
+				c1 := n.child[1]
 				switch len(n.child) {
 				case 1:
 					err = n.cfgErrorf("missing argument in conversion to %s", c0.typ.id())
@@ -1029,16 +1143,17 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.typ = c0.typ
 					n.findex = sc.add(n.typ)
 				}
+
 			case isBinCall(n, sc):
-				err = check.arguments(n, n.child[1:], n.child[0], n.action == aCallSlice)
+				err = check.arguments(n, n.child[1:], c0, n.action == aCallSlice)
 				if err != nil {
 					break
 				}
 
 				n.gen = callBin
-				typ := n.child[0].typ.rtype
+				typ := c0.typ.rtype
 				if typ.NumOut() > 0 {
-					if funcType := n.child[0].typ.val; funcType != nil {
+					if funcType := c0.typ.val; funcType != nil {
 						// Use the original unwrapped function type, to allow future field and
 						// methods resolutions, otherwise impossible on the opaque bin type.
 						n.typ = funcType.ret[0]
@@ -1058,7 +1173,8 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						}
 					}
 				}
-			case isOffsetof(n):
+
+			case isOffsetof(c0):
 				if len(n.child) != 2 || n.child[1].kind != selectorExpr || !isStruct(n.child[1].child[0].typ) {
 					err = n.cfgErrorf("Offsetof argument: invalid expression")
 					break
@@ -1072,17 +1188,45 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				n.typ = valueTOf(reflect.TypeOf(field.Offset))
 				n.rval = reflect.ValueOf(field.Offset)
 				n.gen = nop
+
 			default:
-				err = check.arguments(n, n.child[1:], n.child[0], n.action == aCallSlice)
+				// The call may be on a generic function. In that case, replace the
+				// generic function AST by an instantiated one before going further.
+				if isGeneric(c0.typ) {
+					fun := c0.typ.node.anc
+					var g *node
+					var types []*node
+
+					// Infer type parameter from function call arguments.
+					if types, err = inferTypesFromCall(sc, fun, n.child[1:]); err != nil {
+						break
+					}
+					// Generate an instantiated AST from the generic function one.
+					if g, err = genAST(sc, fun, types); err != nil {
+						break
+					}
+					// Compile the generated function AST, so it becomes part of the scope.
+					if _, err = interp.cfg(g, nil, importPath, pkgName); err != nil {
+						break
+					}
+					// AST compilation part 2: Generate closures for function body.
+					if err = genRun(g.child[3]); err != nil {
+						break
+					}
+					n.child[0] = g
+					c0 = n.child[0]
+				}
+
+				err = check.arguments(n, n.child[1:], c0, n.action == aCallSlice)
 				if err != nil {
 					break
 				}
 
-				if n.child[0].action == aGetFunc {
+				if c0.action == aGetFunc {
 					// Allocate a frame entry to store the anonymous function definition.
-					sc.add(n.child[0].typ)
+					sc.add(c0.typ)
 				}
-				if typ := n.child[0].typ; len(typ.ret) > 0 {
+				if typ := c0.typ; len(typ.ret) > 0 {
 					n.typ = typ.ret[0]
 					if n.anc.kind == returnStmt && n.typ.id() == sc.def.typ.ret[0].id() {
 						// Store the result directly to the return value area of frame.
@@ -1300,7 +1444,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			n.types, n.scope = sc.types, sc
 			sc = sc.pop()
 			funcName := n.child[1].ident
-			if sym := sc.sym[funcName]; !isMethod(n) && sym != nil {
+			if sym := sc.sym[funcName]; !isMethod(n) && sym != nil && !isGeneric(sym.typ) {
 				sym.index = -1 // to force value to n.val
 				sym.typ = n.typ
 				sym.kind = funcSym
@@ -1536,7 +1680,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			n.val = sc.def
 			for i, c := range n.child {
 				var typ *itype
-				typ, err = nodeType(interp, sc.upperLevel(), returnSig.child[1].fieldType(i))
+				typ, err = nodeType(interp, sc.upperLevel(), returnSig.child[2].fieldType(i))
 				if err != nil {
 					return
 				}
@@ -1667,7 +1811,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				if n.typ.cat == valueT || n.typ.cat == errorT {
 					switch method, ok := n.typ.rtype.MethodByName(n.child[1].ident); {
 					case ok:
-						hasRecvType := n.typ.rtype.Kind() != reflect.Interface
+						hasRecvType := n.typ.TypeOf().Kind() != reflect.Interface
 						n.val = method.Index
 						n.gen = getIndexBinMethod
 						n.action = aGetMethod
@@ -1676,7 +1820,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						if hasRecvType {
 							n.typ.recv = n.typ
 						}
-					case n.typ.rtype.Kind() == reflect.Ptr:
+					case n.typ.TypeOf().Kind() == reflect.Ptr:
 						if field, ok := n.typ.rtype.Elem().FieldByName(n.child[1].ident); ok {
 							n.typ = valueTOf(field.Type)
 							n.val = field.Index
@@ -1684,7 +1828,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 							break
 						}
 						err = n.cfgErrorf("undefined field or method: %s", n.child[1].ident)
-					case n.typ.rtype.Kind() == reflect.Struct:
+					case n.typ.TypeOf().Kind() == reflect.Struct:
 						if field, ok := n.typ.rtype.FieldByName(n.child[1].ident); ok {
 							n.typ = valueTOf(field.Type)
 							n.val = field.Index
@@ -1729,7 +1873,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
 					n.action = aGetMethod
 					if n.child[0].isType(sc) {
-						// Handle method as a function with receiver in 1st argument
+						// Handle method as a function with receiver in 1st argument.
 						n.val = m
 						n.findex = notInFrame
 						n.gen = nop
@@ -1737,7 +1881,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						*n.typ = *m.typ
 						n.typ.arg = append([]*itype{n.child[0].typ}, m.typ.arg...)
 					} else {
-						// Handle method with receiver
+						// Handle method with receiver.
 						n.gen = getMethod
 						n.val = m
 						n.typ = m.typ
@@ -2353,6 +2497,10 @@ func (n *node) isType(sc *scope) bool {
 		}
 	case identExpr:
 		return sc.getType(n.ident) != nil
+	case indexExpr:
+		// Maybe a generic type.
+		sym, _, ok := sc.lookup(n.child[0].ident)
+		return ok && sym.kind == typeSym
 	}
 	return false
 }
@@ -2524,6 +2672,17 @@ func isField(n *node) bool {
 	return n.kind == selectorExpr && len(n.child) > 0 && n.child[0].typ != nil && isStruct(n.child[0].typ)
 }
 
+func isInInterfaceType(n *node) bool {
+	anc := n.anc
+	for anc != nil {
+		if anc.kind == interfaceType {
+			return true
+		}
+		anc = anc.anc
+	}
+	return false
+}
+
 func isInConstOrTypeDecl(n *node) bool {
 	anc := n.anc
 	for anc != nil {
@@ -2590,14 +2749,14 @@ func isBinCall(n *node, sc *scope) bool {
 }
 
 func isOffsetof(n *node) bool {
-	return isCall(n) && n.child[0].typ.cat == valueT && n.child[0].rval.String() == "Offsetof"
+	return n.typ != nil && n.typ.cat == valueT && n.rval.String() == "Offsetof"
 }
 
 func mustReturnValue(n *node) bool {
-	if len(n.child) < 2 {
+	if len(n.child) < 3 {
 		return false
 	}
-	for _, f := range n.child[1].child {
+	for _, f := range n.child[2].child {
 		if len(f.child) > 1 {
 			return false
 		}

@@ -144,6 +144,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 			if n.typ, err = nodeType(interp, sc, n.child[2]); err != nil {
 				return false
 			}
+			genericMethod := false
 			ident := n.child[1].ident
 			switch {
 			case isMethod(n):
@@ -153,8 +154,20 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				rcvr := n.child[0].child[0]
 				rtn := rcvr.lastChild()
 				typName, typPtr := rtn.ident, false
+				// Identifies the receiver type name. It could be an ident, a
+				// generic type (indexExpr), or a pointer on either lasts.
 				if typName == "" {
-					typName, typPtr = rtn.child[0].ident, true
+					typName = rtn.child[0].ident
+					switch rtn.kind {
+					case starExpr:
+						typPtr = true
+						if rtn.child[0].kind == indexExpr {
+							typName = rtn.child[0].child[0].ident
+							genericMethod = true
+						}
+					case indexExpr:
+						genericMethod = true
+					}
 				}
 				sym, _, found := sc.lookup(typName)
 				if !found {
@@ -174,7 +187,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 					elementType.addMethod(n)
 				}
 				rcvrtype.addMethod(n)
-				n.child[0].child[0].lastChild().typ = rcvrtype
+				rtn.typ = rcvrtype
 			case ident == "init":
 				// init functions do not get declared as per the Go spec.
 			default:
@@ -185,9 +198,9 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 					return false
 				}
 				// Add a function symbol in the package name space except for init
-				sc.sym[n.child[1].ident] = &symbol{kind: funcSym, typ: n.typ, node: n, index: -1}
+				sc.sym[ident] = &symbol{kind: funcSym, typ: n.typ, node: n, index: -1}
 			}
-			if !n.typ.isComplete() {
+			if !n.typ.isComplete() && !genericMethod {
 				revisit = append(revisit, n)
 			}
 			return false
@@ -282,6 +295,15 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				return false
 			}
 			typeName := n.child[0].ident
+			if len(n.child) > 2 {
+				// Handle a generic type: skip definition as parameter is not instantiated yet.
+				n.typ = genericOf(nil, typeName, withNode(n.child[0]), withScope(sc))
+				if _, exists := sc.sym[typeName]; !exists {
+					sc.sym[typeName] = &symbol{kind: typeSym, node: n}
+				}
+				sc.sym[typeName].typ = n.typ
+				return false
+			}
 			var typ *itype
 			if typ, err = nodeType(interp, sc, n.child[1]); err != nil {
 				err = nil

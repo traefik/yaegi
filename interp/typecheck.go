@@ -821,7 +821,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 		case !typ0.untyped && typ1.untyped:
 			err = check.convertUntyped(p1.nod, typ0)
 		case typ0.untyped && typ1.untyped:
-			fltType := untypedFloat()
+			fltType := untypedFloat(nil)
 			err = check.convertUntyped(p0.nod, fltType)
 			if err != nil {
 				break
@@ -844,7 +844,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 		p := params[0]
 		typ := p.Type()
 		if typ.untyped {
-			if err := check.convertUntyped(p.nod, untypedComplex()); err != nil {
+			if err := check.convertUntyped(p.nod, untypedComplex(nil)); err != nil {
 				return err
 			}
 		}

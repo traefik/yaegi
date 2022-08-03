@@ -428,6 +428,7 @@ func initUniverse() *scope {
 		"any":         {kind: typeSym, typ: &itype{cat: interfaceT, str: "any"}},
 		"bool":        {kind: typeSym, typ: &itype{cat: boolT, name: "bool", str: "bool"}},
 		"byte":        {kind: typeSym, typ: &itype{cat: uint8T, name: "uint8", str: "uint8"}},
+		"comparable":  {kind: typeSym, typ: &itype{cat: comparableT, name: "comparable", str: "comparable"}},
 		"complex64":   {kind: typeSym, typ: &itype{cat: complex64T, name: "complex64", str: "complex64"}},
 		"complex128":  {kind: typeSym, typ: &itype{cat: complex128T, name: "complex128", str: "complex128"}},
 		"error":       {kind: typeSym, typ: &itype{cat: errorT, name: "error", str: "error"}},
@@ -449,9 +450,9 @@ func initUniverse() *scope {
 		"uintptr":     {kind: typeSym, typ: &itype{cat: uintptrT, name: "uintptr", str: "uintptr"}},
 
 		// predefined Go constants
-		"false": {kind: constSym, typ: untypedBool(), rval: reflect.ValueOf(false)},
-		"true":  {kind: constSym, typ: untypedBool(), rval: reflect.ValueOf(true)},
-		"iota":  {kind: constSym, typ: untypedInt()},
+		"false": {kind: constSym, typ: untypedBool(nil), rval: reflect.ValueOf(false)},
+		"true":  {kind: constSym, typ: untypedBool(nil), rval: reflect.ValueOf(true)},
+		"iota":  {kind: constSym, typ: untypedInt(nil)},
 
 		// predefined Go zero value
 		"nil": {typ: &itype{cat: nilT, untyped: true, str: "nil"}},
