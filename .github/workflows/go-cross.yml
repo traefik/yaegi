@@ -17,7 +17,7 @@ jobs:
 
     strategy:
       matrix:
-        go-version: [ 1.18, 1.19.0-rc2 ]
+        go-version: [ 1.18, 1.19 ]
         os: [ubuntu-latest, macos-latest, windows-latest]
 
         include:
@@ -34,7 +34,7 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
-          stable: false
+          stable: true
 
       # https://github.com/marketplace/actions/checkout
       - name: Checkout code

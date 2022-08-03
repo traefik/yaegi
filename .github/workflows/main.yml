@@ -45,13 +45,13 @@ jobs:
     needs: linting
     strategy:
       matrix:
-        go-version: [ 1.18, 1.19.0-rc2 ]
+        go-version: [ 1.18, 1.19 ]
     steps:
       - name: Set up Go ${{ matrix.go-version }}
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
-          stable: false
+          stable: true
 
       - name: Check out code
         uses: actions/checkout@v2
@@ -76,14 +76,14 @@ jobs:
         working-directory: ${{ github.workspace }}/go/src/github.com/traefik/yaegi
     strategy:
       matrix:
-        go-version: [ 1.18, 1.19.0-rc2 ]
+        go-version: [ 1.18, 1.19 ]
 
     steps:
       - name: Set up Go ${{ matrix.go-version }}
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
-          stable: false
+          stable: true
 
       - name: Check out code
         uses: actions/checkout@v2
