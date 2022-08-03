@@ -34,7 +34,7 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
-          stable: false
+          stable: true
 
       # https://github.com/marketplace/actions/checkout
       - name: Checkout code

@@ -51,7 +51,7 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
-          stable: false
+          stable: true
 
       - name: Check out code
         uses: actions/checkout@v2
@@ -83,7 +83,7 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
-          stable: false
+          stable: true
 
       - name: Check out code
         uses: actions/checkout@v2
