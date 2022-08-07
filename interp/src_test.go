@@ -183,7 +183,7 @@ func Test_pkgDir(t *testing.T) {
 				}
 			}
 
-			dir, rPath, err := interp.pkgDir(goPath, test.root, test.path)
+			dir, err := interp.getPackageDir(test.path)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -192,71 +192,8 @@ func Test_pkgDir(t *testing.T) {
 				t.Errorf("[dir] got: %s, want: %s", dir, test.expected.dir)
 			}
 
-			if rPath != test.expected.rpath {
-				t.Errorf(" [rpath] got: %s, want: %s", rPath, test.expected.rpath)
-			}
-		})
-	}
-}
-
-func Test_previousRoot(t *testing.T) {
-	testCases := []struct {
-		desc           string
-		root           string
-		rootPathSuffix string
-		expected       string
-	}{
-		{
-			desc:     "GOPATH",
-			root:     "github.com/foo/pkg/",
-			expected: "",
-		},
-		{
-			desc:     "vendor level 1",
-			root:     "github.com/foo/pkg/vendor/guthib.com/traefik/fromage",
-			expected: "github.com/foo/pkg",
-		},
-		{
-			desc:     "vendor level 2",
-			root:     "github.com/foo/pkg/vendor/guthib.com/traefik/fromage/vendor/guthib.com/traefik/fuu",
-			expected: "github.com/foo/pkg/vendor/guthib.com/traefik/fromage",
-		},
-		{
-			desc:           "vendor is sibling",
-			root:           "github.com/foo/bar",
-			rootPathSuffix: "testdata/src/github.com/foo/bar",
-			expected:       "github.com/foo",
-		},
-		{
-			desc:           "vendor is uncle",
-			root:           "github.com/foo/bar/baz",
-			rootPathSuffix: "testdata/src/github.com/foo/bar/baz",
-			expected:       "github.com/foo",
-		},
-	}
-
-	for _, test := range testCases {
-		test := test
-		t.Run(test.desc, func(t *testing.T) {
-			t.Parallel()
-
-			var rootPath string
-			if test.rootPathSuffix != "" {
-				wd, err := os.Getwd()
-				if err != nil {
-					t.Fatal(err)
-				}
-				rootPath = filepath.Join(wd, test.rootPathSuffix)
-			} else {
-				rootPath = vendor
-			}
-			p, err := previousRoot(&realFS{}, rootPath, test.root)
-			if err != nil {
-				t.Error(err)
-			}
-
-			if p != test.expected {
-				t.Errorf("got: %s, want: %s", p, test.expected)
+			if test.root != test.expected.rpath {
+				t.Errorf(" [rpath] got: %s, want: %s", test.root, test.expected.rpath)
 			}
 		})
 	}
