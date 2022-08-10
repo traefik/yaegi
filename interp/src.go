@@ -159,16 +159,24 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 
 // getPackageDir uses the provided Go module environment variables to find the absolute path of an import path.
 func (interp *Interpreter) getPackageDir(importPath string) (string, error) {
+	// ensure that an absolute import path is used.
 	absImportPath, err := filepath.Abs(importPath)
 	if err != nil {
-		return "", fmt.Errorf("an error occurred determining the absolute path of import path %v: %w", importPath, err)
+		return "", fmt.Errorf("an error occurred determining the absolute path of import path %q: %w", importPath, err)
 	}
 
+	// ensure that an absolute GOPATH is used.
+	absGoPath, err := filepath.Abs(interp.context.GOPATH)
+	if err != nil {
+		return "", fmt.Errorf("an error occurred determining the absolute path of a GOPATH %q: %w", interp.context.GOPATH, err)
+	}
+
+	// load the package.
 	config := packages.Config{
 		Env: []string{
-			"GOPATH=" + interp.context.GOPATH,
+			"GOPATH=" + absGoPath,
 			"GOCACHE=" + interp.opt.env["GOCACHE"],
-			"GOROOT=" + interp.opt.env["GOROOT"],
+			"GOROOT=" + interp.context.GOROOT,
 			"GOPRIVATE=" + interp.opt.env["GOPRIVATE"],
 			"GOMODCACHE=" + interp.opt.env["GOMODCACHE"],
 			"GO111MODULE=" + interp.opt.env["GO111MODULE"],
