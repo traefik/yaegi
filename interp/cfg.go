@@ -2420,15 +2420,22 @@ func genGlobalVarDecl(nodes []*node, sc *scope) (*node, error) {
 
 func getVarDependencies(nod *node, sc *scope) (deps []*node) {
 	nod.Walk(func(n *node) bool {
-		if n.kind == identExpr {
-			if sym, _, ok := sc.lookup(n.ident); ok {
-				if sym.kind != varSym || !sym.global || sym.node == nod {
-					return false
-				}
-				deps = append(deps, sym.node)
-			}
+		if n.kind != identExpr {
+			return true
 		}
-		return true
+		// Process ident nodes, and avoid false dependencies.
+		if n.anc.kind == selectorExpr && childPos(n) == 1 {
+			return false
+		}
+		sym, _, ok := sc.lookup(n.ident)
+		if !ok {
+			return false
+		}
+		if sym.kind != varSym || !sym.global || sym.node == nod {
+			return false
+		}
+		deps = append(deps, sym.node)
+		return false
 	}, nil)
 	return deps
 }
