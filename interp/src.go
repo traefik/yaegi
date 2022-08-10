@@ -159,12 +159,6 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 
 // getPackageDir uses the provided Go module environment variables to find the absolute path of an import path.
 func (interp *Interpreter) getPackageDir(importPath string) (string, error) {
-	// ensure that an absolute import path is used.
-	absImportPath, err := filepath.Abs(importPath)
-	if err != nil {
-		return "", fmt.Errorf("an error occurred determining the absolute path of import path %q: %w", importPath, err)
-	}
-
 	// ensure that an absolute GOPATH is used.
 	absGoPath, err := filepath.Abs(interp.context.GOPATH)
 	if err != nil {
@@ -183,9 +177,9 @@ func (interp *Interpreter) getPackageDir(importPath string) (string, error) {
 		},
 	}
 
-	pkgs, err := packages.Load(&config, absImportPath)
+	pkgs, err := packages.Load(&config, importPath)
 	if err != nil {
-		return "", fmt.Errorf("an error occurred retrieving a package: %v\n%v\nIf Access is denied, run in administrator", absImportPath, err)
+		return "", fmt.Errorf("an error occurred retrieving a package: %v\n%v\nIf Access is denied, run in administrator", importPath, err)
 	}
 
 	// confirm the import path is found.
@@ -197,7 +191,7 @@ func (interp *Interpreter) getPackageDir(importPath string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("an import source could not be found: %q. Did you set the required environment variable in the Interpreter.Options?", absImportPath)
+	return "", fmt.Errorf("an import source could not be found: %q. Did you set the required environment variable in the Interpreter.Options?", importPath)
 }
 
 func effectivePkg(root, path string) string {
