@@ -191,7 +191,7 @@ func (interp *Interpreter) getPackageDir(importPath string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("an import source could not be found: %q. Did you set the required environment variable in the Interpreter.Options?", importPath)
+	return "", fmt.Errorf("an import source could not be found for %q", importPath)
 }
 
 func effectivePkg(root, path string) string {
