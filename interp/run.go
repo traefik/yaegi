@@ -1942,7 +1942,6 @@ func getMethodByName(n *node) {
 	l := n.level
 
 	n.exec = func(f *frame) bltn {
-		var ok bool
 		val := value0(f).Interface().(valueInterface)
 		for {
 			v, ok := val.value.Interface().(valueInterface)
@@ -1961,7 +1960,7 @@ func getMethodByName(n *node) {
 		if typ.node == nil && typ.cat == valueT {
 			// happens with a var of empty interface type, that has value of concrete type
 			// from runtime, being asserted to "user-defined" interface.
-			if _, ok = typ.rtype.MethodByName(name); !ok {
+			if _, ok := typ.rtype.MethodByName(name); !ok {
 				panic(n.cfgErrorf("method not found: %s", name))
 			}
 			return next
@@ -1970,6 +1969,7 @@ func getMethodByName(n *node) {
 		m, li := typ.lookupMethod(name)
 
 		// Try harder to find a matching embedded valueInterface.
+		// TODO (marc): make sure it works for arbitrary depth and breadth.
 		if m == nil && isStruct(val.node.typ) {
 			v := val.value
 			for v.Type().Kind() == reflect.Ptr {
@@ -1977,6 +1977,7 @@ func getMethodByName(n *node) {
 			}
 			nf := v.NumField()
 			for i := 0; i < nf; i++ {
+				var ok bool
 				if val, ok = v.Field(i).Interface().(valueInterface); !ok {
 					continue
 				}
