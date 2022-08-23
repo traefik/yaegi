@@ -1050,19 +1050,23 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 			return value
 		}
 	}
-	mn := typ.NumMethod()
+
+	// Retrieve methods from the interface wrapper, which is a struct where all fields
+	// except the first define the methods to implement.
+	// The first character of the field name must always be ignored.
+	wrap := getWrapper(n, typ)
+	mn := wrap.NumField() - 1
 	names := make([]string, mn)
 	methods := make([]*node, mn)
 	indexes := make([][]int, mn)
 	for i := 0; i < mn; i++ {
-		names[i] = typ.Method(i).Name
+		names[i] = wrap.Field(i + 1).Name[1:]
 		methods[i], indexes[i] = n.typ.lookupMethod(names[i])
 		if methods[i] == nil && n.typ.cat != nilT {
 			// interpreted method not found, look for binary method, possibly embedded
 			_, indexes[i], _, _ = n.typ.lookupBinMethod(names[i])
 		}
 	}
-	wrap := n.interp.getWrapper(typ)
 
 	return func(f *frame) reflect.Value {
 		v := value(f)
