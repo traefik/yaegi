@@ -11,7 +11,7 @@ Output files are written in the current directory, and prefixed with the go vers
 
 Usage:
 
-    extract package...
+	extract package...
 
 The same program is used for all target operating systems and architectures.
 The GOOS and GOARCH environment variables set the desired target.

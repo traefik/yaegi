@@ -4,7 +4,7 @@ Package interp provides a complete Go interpreter.
 For the Go language itself, refer to the official Go specification
 https://golang.org/ref/spec.
 
-Importing packages
+# Importing packages
 
 Packages can be imported in source or binary form, using the standard
 Go import statement. In source form, packages are searched first in the
@@ -16,7 +16,7 @@ Binary form packages are compiled and linked with the interpreter
 executable, and exposed to scripts with the Use method. The extract
 subcommand of yaegi can be used to generate package wrappers.
 
-Custom build tags
+# Custom build tags
 
 Custom build tags allow to control which files in imported source
 packages are interpreted, in the same way as the "-tags" option of the
