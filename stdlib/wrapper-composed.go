@@ -56,11 +56,31 @@ func (w _ioReaderWriteTo) WriteTo(wr io.Writer) (n int64, err error) {
 	return w.WWriteTo(wr)
 }
 
+// In io, a Writer may implement ReadFrom, used by io.Copy().
+
+type _ioWriterReadFrom struct {
+	IValue interface{}
+	WWrite func(p []byte) (n int, err error)
+
+	WReadFrom func(r io.Reader) (n int64, err error)
+}
+
+func (W _ioWriterReadFrom) Write(p []byte) (n int, err error) {
+	return W.WWrite(p)
+}
+
+func (W _ioWriterReadFrom) ReadFrom(r io.Reader) (n int64, err error) {
+	return W.WReadFrom(r)
+}
+
 func init() {
 	MapTypes[reflect.ValueOf((*_net_http_ResponseWriter)(nil))] = []reflect.Type{
 		reflect.ValueOf((*_netHTTPResponseWriterHijacker)(nil)).Type().Elem(),
 	}
 	MapTypes[reflect.ValueOf((*_io_Reader)(nil))] = []reflect.Type{
 		reflect.ValueOf((*_ioReaderWriteTo)(nil)).Type().Elem(),
+	}
+	MapTypes[reflect.ValueOf((*_io_Writer)(nil))] = []reflect.Type{
+		reflect.ValueOf((*_ioWriterReadFrom)(nil)).Type().Elem(),
 	}
 }
