@@ -65,12 +65,12 @@ type _ioWriterReadFrom struct {
 	WReadFrom func(r io.Reader) (n int64, err error)
 }
 
-func (W _ioWriterReadFrom) Write(p []byte) (n int, err error) {
-	return W.WWrite(p)
+func (w _ioWriterReadFrom) Write(p []byte) (n int, err error) {
+	return w.WWrite(p)
 }
 
-func (W _ioWriterReadFrom) ReadFrom(r io.Reader) (n int64, err error) {
-	return W.WReadFrom(r)
+func (w _ioWriterReadFrom) ReadFrom(r io.Reader) (n int64, err error) {
+	return w.WReadFrom(r)
 }
 
 func init() {
