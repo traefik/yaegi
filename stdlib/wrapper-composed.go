@@ -73,6 +73,8 @@ func (w _ioWriterReadFrom) ReadFrom(r io.Reader) (n int64, err error) {
 	return w.WReadFrom(r)
 }
 
+// Each MapType value (each slice) must be sorted by complexity, i.e. by number
+// of interface methods.
 func init() {
 	MapTypes[reflect.ValueOf((*_net_http_ResponseWriter)(nil))] = []reflect.Type{
 		reflect.ValueOf((*_netHTTPResponseWriterHijacker)(nil)).Type().Elem(),
