@@ -72,7 +72,6 @@ type symbol struct {
 //
 // In symbols, the index value corresponds to the index in scope.types, and at
 // execution to the index in frame, created exactly from the types layout.
-//
 type scope struct {
 	anc         *scope             // ancestor upper scope
 	child       []*scope           // included scopes
