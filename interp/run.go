@@ -1053,7 +1053,8 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 
 	// Retrieve methods from the interface wrapper, which is a struct where all fields
 	// except the first define the methods to implement.
-	// The first character of the field name must always be ignored.
+	// As the field name was generated with a prefixed first character (in order to avoid
+	// collisions with method names), this first character is ignored in comparisons.
 	wrap := getWrapper(n, typ)
 	mn := wrap.NumField() - 1
 	names := make([]string, mn)
