@@ -67,7 +67,8 @@ func (interp *Interpreter) Symbols(importPath string) Exports {
 	return m
 }
 
-// getWrapper returns the wrapper type of the corresponding interface, or nil if not found.
+// getWrapper returns the wrapper type of the corresponding interface, trying
+// first the composed ones, or nil if not found.
 func getWrapper(n *node, t reflect.Type) reflect.Type {
 	p, ok := n.interp.binPkg[t.PkgPath()]
 	if !ok {
