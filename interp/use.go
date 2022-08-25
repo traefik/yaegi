@@ -93,6 +93,7 @@ func getWrapper(n *node, t reflect.Type) reflect.Type {
 		}
 	}
 
+	// Otherwise return the direct "non-composed" interface.
 	return w.Type().Elem()
 }
 
