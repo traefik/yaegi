@@ -77,7 +77,8 @@ func getWrapper(n *node, t reflect.Type) reflect.Type {
 	lm := n.typ.methods()
 
 	// mapTypes may contain composed interfaces wrappers to test against, from
-	// most complex to simplest. Return the first match, or the default.
+	// most complex to simplest (guaranteed by construction of mapTypes). Find the
+	// first for which the interpreter type has all the methods.
 	for _, rt := range n.interp.mapTypes[w] {
 		match := true
 		for i := 1; i < rt.NumField(); i++ {
