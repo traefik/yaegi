@@ -2051,7 +2051,14 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 			sbn.start = clauses[0].start
 			n.start = n.child[0].start
-			n.child[0].tnext = sbn.start
+			if n.kind == typeSwitch {
+				// Handle the typeSwitch init (the type assert expression).
+				init := n.child[1].lastChild().child[0]
+				init.tnext = sbn.start
+				n.child[0].tnext = init.start
+			} else {
+				n.child[0].tnext = sbn.start
+			}
 
 		case switchIfStmt: // like an if-else chain
 			sc = sc.pop()
