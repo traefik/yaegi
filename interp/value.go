@@ -287,19 +287,6 @@ func genValueRangeArray(n *node) func(*frame) reflect.Value {
 	}
 }
 
-func genValueInterfaceArray(n *node) func(*frame) reflect.Value {
-	value := genValue(n)
-	return func(f *frame) reflect.Value {
-		vi := value(f).Interface().([]valueInterface)
-		v := reflect.MakeSlice(reflect.TypeOf([]interface{}{}), len(vi), len(vi))
-		for i, vv := range vi {
-			v.Index(i).Set(vv.value)
-		}
-
-		return v
-	}
-}
-
 func genValueInterface(n *node) func(*frame) reflect.Value {
 	value := genValue(n)
 
