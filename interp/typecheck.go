@@ -590,7 +590,7 @@ func (check typecheck) typeAssertionExpr(n *node, typ *itype) error {
 	// https://github.com/golang/go/issues/39717 lands. It is currently impractical to
 	// type check Named types as they cannot be asserted.
 
-	if n.typ.TypeOf().Kind() != reflect.Interface {
+	if rt := n.typ.TypeOf(); rt.Kind() != reflect.Interface && rt != valueInterfaceType {
 		return n.cfgErrorf("invalid type assertion: non-interface type %s on left", n.typ.id())
 	}
 	ims := n.typ.methods()

@@ -5,8 +5,8 @@ import (
 	"sync"
 )
 
-// Defined an interface of stringBuilder that compatible with
-// strings.Builder(go 1.10) and bytes.Buffer(< go 1.10)
+// Define an interface of stringBuilder that is compatible with
+// strings.Builder(go 1.10) and bytes.Buffer(< go 1.10).
 type stringBuilder interface {
 	WriteRune(r rune) (n int, err error)
 	WriteString(s string) (int, error)

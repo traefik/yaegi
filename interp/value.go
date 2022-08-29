@@ -176,7 +176,7 @@ func genValue(n *node) func(*frame) reflect.Value {
 		convertConstantValue(n)
 		v := n.rval
 		if !v.IsValid() {
-			v = reflect.New(interf).Elem()
+			v = reflect.New(emptyInterfaceType).Elem()
 		}
 		return func(f *frame) reflect.Value { return v }
 	case funcDecl:
@@ -356,7 +356,7 @@ func getConcreteValue(val reflect.Value) reflect.Value {
 
 func zeroInterfaceValue() reflect.Value {
 	n := &node{kind: basicLit, typ: &itype{cat: nilT, untyped: true, str: "nil"}}
-	v := reflect.New(interf).Elem()
+	v := reflect.New(emptyInterfaceType).Elem()
 	return reflect.ValueOf(valueInterface{n, v})
 }
 
