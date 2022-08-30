@@ -2288,10 +2288,24 @@ func compDefineX(sc *scope, n *node) error {
 		return n.cfgErrorf("unsupported assign expression")
 	}
 
+	// Redeclarations: reuse an existing symbol only if there is a new defined one.
+	hasNewSymbol := false
+	for i := range types {
+		id := n.child[i].ident
+		if id == "_" {
+			continue
+		}
+		if _, _, ok := sc.lookup(id); !ok {
+			hasNewSymbol = true
+			break
+		}
+	}
+
 	for i, t := range types {
 		var index int
 		id := n.child[i].ident
-		if sym, level, ok := sc.lookup(id); ok && level == n.child[i].level && sym.kind == varSym && sym.typ.id() == t.id() {
+		sym, level, ok := sc.lookup(id)
+		if hasNewSymbol && ok && level == n.child[i].level && sym.kind == varSym && sym.typ.id() == t.id() {
 			// Reuse symbol in case of a variable redeclaration with the same type.
 			index = sym.index
 		} else {
