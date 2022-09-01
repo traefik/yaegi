@@ -221,6 +221,12 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				sc.sym[label] = sym
 				c.sym = sym
 			}
+			// If block is the body of a function, get declared variables in current scope.
+			if n.anc != nil && n.anc.kind == funcDecl {
+				for k, v := range sc.anc.sym {
+					sc.sym[k] = v
+				}
+			}
 
 		case breakStmt, continueStmt, gotoStmt:
 			if len(n.child) == 0 {
@@ -2288,25 +2294,36 @@ func compDefineX(sc *scope, n *node) error {
 		return n.cfgErrorf("unsupported assign expression")
 	}
 
-	// Redeclarations: reuse an existing symbol only if there is a new defined one.
+	// Handle redeclarations: find out new symbols vs existing ones.
+	symIsNew := map[string]bool{}
 	hasNewSymbol := false
 	for i := range types {
 		id := n.child[i].ident
-		if id == "_" {
+		if id == "_" || id == "" {
 			continue
 		}
-		if _, _, ok := sc.lookup(id); !ok {
+		if _, found := symIsNew[id]; found {
+			return n.cfgErrorf("%s repeated on left side of :=", id)
+		}
+		// A new symbol doesn't exist in current scope. Upper scopes are not
+		// taken into accout here, as a new symbol can shadow an existing one.
+		if _, found := sc.sym[id]; found {
+			symIsNew[id] = false
+		} else {
+			symIsNew[id] = true
 			hasNewSymbol = true
-			break
 		}
 	}
 
 	for i, t := range types {
 		var index int
 		id := n.child[i].ident
+		// A variable can be redeclared if at least one none blank another variable is created.
+		// The redeclared variable must be of same type (it is reassigned, not created).
+		// Careful to not reuse a variable which has been shadowed (it must not be a newSym).
 		sym, level, ok := sc.lookup(id)
-		if hasNewSymbol && ok && level == n.child[i].level && sym.kind == varSym && sym.typ.id() == t.id() {
-			// Reuse symbol in case of a variable redeclaration with the same type.
+		canRedeclare := hasNewSymbol && len(symIsNew) > 1 && !symIsNew[id] && ok
+		if canRedeclare && level == n.child[i].level && sym.kind == varSym && sym.typ.id() == t.id() {
 			index = sym.index
 		} else {
 			index = sc.add(t)
