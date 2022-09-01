@@ -2078,6 +2078,11 @@ func (t *itype) frameType() (r reflect.Type) {
 
 func (t *itype) implements(it *itype) bool {
 	if isBin(t) {
+		// Note: in case of a valueInterfaceType, we
+		// miss required data which will be available
+		// later, so we optimistically return true to progress,
+		// and additional checks will be hopefully performed at
+		// runtime.
 		if rt := it.TypeOf(); rt == valueInterfaceType {
 			return true
 		}
