@@ -553,7 +553,7 @@ func convert(n *node) {
 	if c.isNil() { // convert nil to type
 		// TODO(mpl): Try to completely remove, as maybe frameType already does the job for interfaces.
 		if isInterfaceSrc(n.child[0].typ) && !isEmptyInterface(n.child[0].typ) {
-			typ = reflect.TypeOf((*valueInterface)(nil)).Elem()
+			typ = valueInterfaceType
 		}
 		n.exec = func(f *frame) bltn {
 			dest(f).Set(reflect.New(typ).Elem())
@@ -713,7 +713,7 @@ func assign(n *node) {
 		case isFuncSrc(typ):
 			t = reflect.TypeOf((*node)(nil))
 		case isInterfaceSrc(typ):
-			t = reflect.TypeOf((*valueInterface)(nil)).Elem()
+			t = valueInterfaceType
 		default:
 			t = typ.TypeOf()
 		}
@@ -1007,7 +1007,7 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 				}
 				typ := def.typ.arg[i]
 				switch {
-				case isEmptyInterface(typ):
+				case isEmptyInterface(typ) || typ.TypeOf() == valueInterfaceType:
 					d[i].Set(arg)
 				case isInterfaceSrc(typ):
 					d[i].Set(reflect.ValueOf(valueInterface{value: arg.Elem()}))
@@ -1560,12 +1560,9 @@ func callBin(n *node) {
 			case isInterfaceSrc(c.typ):
 				values = append(values, genValueInterfaceValue(c))
 			case c.typ.cat == arrayT || c.typ.cat == variadicT:
-				switch {
-				case isEmptyInterface(c.typ.val):
+				if isEmptyInterface(c.typ.val) {
 					values = append(values, genValueArray(c))
-				case isInterfaceSrc(c.typ.val):
-					values = append(values, genValueInterfaceArray(c))
-				default:
+				} else {
 					values = append(values, genInterfaceWrapper(c, defType))
 				}
 			case isPtrSrc(c.typ):
@@ -2703,8 +2700,6 @@ func doComposite(n *node, hasType bool, keyed bool) {
 			values[fieldIndex] = func(*frame) reflect.Value { return reflect.New(rft).Elem() }
 		case isFuncSrc(val.typ):
 			values[fieldIndex] = genValueAsFunctionWrapper(val)
-		case isArray(val.typ) && val.typ.val != nil && isInterfaceSrc(val.typ.val) && !isEmptyInterface(val.typ.val):
-			values[fieldIndex] = genValueInterfaceArray(val)
 		case isInterfaceSrc(ft) && (!isEmptyInterface(ft) || len(val.typ.method) > 0):
 			values[fieldIndex] = genValueInterface(val)
 		case isInterface(ft):
@@ -3585,7 +3580,7 @@ func convertLiteralValue(n *node, t reflect.Type) {
 	case n.typ.cat == nilT:
 		// Create a zero value of target type.
 		n.rval = reflect.New(t).Elem()
-	case !(n.kind == basicLit || n.rval.IsValid()) || t == nil || t.Kind() == reflect.Interface || t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Interface:
+	case !(n.kind == basicLit || n.rval.IsValid()) || t == nil || t.Kind() == reflect.Interface || t == valueInterfaceType || t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Interface:
 		// Skip non-constant values, undefined target type or interface target type.
 	case n.rval.IsValid():
 		// Convert constant value to target type.
@@ -3946,7 +3941,7 @@ func isNotNil(n *node) {
 	dest := genValue(n)
 
 	if n.fnext == nil {
-		if isInterfaceSrc(c0.typ) {
+		if isInterfaceSrc(c0.typ) && c0.typ.TypeOf() != valueInterfaceType {
 			if isInterface {
 				n.exec = func(f *frame) bltn {
 					dest(f).Set(reflect.ValueOf(!value(f).IsNil()).Convert(typ))
@@ -3991,7 +3986,7 @@ func isNotNil(n *node) {
 
 	fnext := getExec(n.fnext)
 
-	if isInterfaceSrc(c0.typ) {
+	if isInterfaceSrc(c0.typ) && c0.typ.TypeOf() != valueInterfaceType {
 		n.exec = func(f *frame) bltn {
 			if value(f).IsNil() {
 				dest(f).SetBool(false)

@@ -1817,8 +1817,9 @@ func exportName(s string) string {
 
 var (
 	// TODO(mpl): generators.
-	interf   = reflect.TypeOf((*interface{})(nil)).Elem()
-	constVal = reflect.TypeOf((*constant.Value)(nil)).Elem()
+	emptyInterfaceType = reflect.TypeOf((*interface{})(nil)).Elem()
+	valueInterfaceType = reflect.TypeOf((*valueInterface)(nil)).Elem()
+	constVal           = reflect.TypeOf((*constant.Value)(nil)).Elem()
 )
 
 type fieldRebuild struct {
@@ -1971,7 +1972,12 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 		}
 		t.rtype = reflect.FuncOf(in, out, variadic)
 	case interfaceT:
-		t.rtype = interf
+		if len(t.field) == 0 {
+			// empty interface, do not wrap it
+			t.rtype = emptyInterfaceType
+			break
+		}
+		t.rtype = valueInterfaceType
 	case mapT:
 		t.rtype = reflect.MapOf(t.key.refType(ctx), t.val.refType(ctx))
 	case ptrT:
@@ -2056,10 +2062,10 @@ func (t *itype) frameType() (r reflect.Type) {
 	case interfaceT:
 		if len(t.field) == 0 {
 			// empty interface, do not wrap it
-			r = reflect.TypeOf((*interface{})(nil)).Elem()
+			r = emptyInterfaceType
 			break
 		}
-		r = reflect.TypeOf((*valueInterface)(nil)).Elem()
+		r = valueInterfaceType
 	case mapT:
 		r = reflect.MapOf(t.key.frameType(), t.val.frameType())
 	case ptrT:
@@ -2072,6 +2078,14 @@ func (t *itype) frameType() (r reflect.Type) {
 
 func (t *itype) implements(it *itype) bool {
 	if isBin(t) {
+		// Note: in case of a valueInterfaceType, we
+		// miss required data which will be available
+		// later, so we optimistically return true to progress,
+		// and additional checks will be hopefully performed at
+		// runtime.
+		if rt := it.TypeOf(); rt == valueInterfaceType {
+			return true
+		}
 		return t.TypeOf().Implements(it.TypeOf())
 	}
 	return t.methods().contains(it.methods())
@@ -2127,11 +2141,15 @@ func (t *itype) defaultType(v reflect.Value, sc *scope) *itype {
 func (t *itype) isNil() bool { return t.cat == nilT }
 
 func (t *itype) hasNil() bool {
-	switch t.TypeOf().Kind() {
+	switch rt := t.TypeOf(); rt.Kind() {
 	case reflect.UnsafePointer:
 		return true
 	case reflect.Slice, reflect.Ptr, reflect.Func, reflect.Interface, reflect.Map, reflect.Chan:
 		return true
+	case reflect.Struct:
+		if rt == valueInterfaceType {
+			return true
+		}
 	}
 	return false
 }
@@ -2246,7 +2264,7 @@ func isInterfaceBin(t *itype) bool {
 }
 
 func isInterface(t *itype) bool {
-	return isInterfaceSrc(t) || t.TypeOf() != nil && t.TypeOf().Kind() == reflect.Interface
+	return isInterfaceSrc(t) || t.TypeOf() == valueInterfaceType || t.TypeOf() != nil && t.TypeOf().Kind() == reflect.Interface
 }
 
 func isBin(t *itype) bool {

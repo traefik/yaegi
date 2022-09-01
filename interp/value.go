@@ -176,7 +176,7 @@ func genValue(n *node) func(*frame) reflect.Value {
 		convertConstantValue(n)
 		v := n.rval
 		if !v.IsValid() {
-			v = reflect.New(interf).Elem()
+			v = reflect.New(emptyInterfaceType).Elem()
 		}
 		return func(f *frame) reflect.Value { return v }
 	case funcDecl:
@@ -287,19 +287,6 @@ func genValueRangeArray(n *node) func(*frame) reflect.Value {
 	}
 }
 
-func genValueInterfaceArray(n *node) func(*frame) reflect.Value {
-	value := genValue(n)
-	return func(f *frame) reflect.Value {
-		vi := value(f).Interface().([]valueInterface)
-		v := reflect.MakeSlice(reflect.TypeOf([]interface{}{}), len(vi), len(vi))
-		for i, vv := range vi {
-			v.Index(i).Set(vv.value)
-		}
-
-		return v
-	}
-}
-
 func genValueInterface(n *node) func(*frame) reflect.Value {
 	value := genValue(n)
 
@@ -356,7 +343,7 @@ func getConcreteValue(val reflect.Value) reflect.Value {
 
 func zeroInterfaceValue() reflect.Value {
 	n := &node{kind: basicLit, typ: &itype{cat: nilT, untyped: true, str: "nil"}}
-	v := reflect.New(interf).Elem()
+	v := reflect.New(emptyInterfaceType).Elem()
 	return reflect.ValueOf(valueInterface{n, v})
 }
 
