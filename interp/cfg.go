@@ -2320,7 +2320,7 @@ func compDefineX(sc *scope, n *node) error {
 	for i, t := range types {
 		var index int
 		id := n.child[i].ident
-		// A variable can be redeclared if at least one none blank another variable is created.
+		// A variable can be redeclared if at least one other not blank variable is created.
 		// The redeclared variable must be of same type (it is reassigned, not created).
 		// Careful to not reuse a variable which has been shadowed (it must not be a newSym).
 		sym, level, ok := sc.lookup(id)
