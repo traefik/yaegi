@@ -222,6 +222,8 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				c.sym = sym
 			}
 			// If block is the body of a function, get declared variables in current scope.
+			// This is done in order to add the func signature symbols into sc.sym,
+			// as we will need them in post-processing.
 			if n.anc != nil && n.anc.kind == funcDecl {
 				for k, v := range sc.anc.sym {
 					sc.sym[k] = v
