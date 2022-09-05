@@ -1923,6 +1923,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			// Chain channel init actions in commClauses prior to invoke select.
 			var cur *node
 			for _, c := range n.child[0].child {
+				if c.kind == commClauseDefault {
+					// No channel init in this case.
+					continue
+				}
 				var an, pn *node // channel init action nodes
 				if len(c.child) > 0 {
 					switch c0 := c.child[0]; {
