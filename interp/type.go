@@ -451,7 +451,18 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				c := v.Interface().(constant.Value)
 				length = constToInt(c)
 			} else {
-				length = int(v.Int())
+				switch v.Type().Kind() {
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+					length = int(v.Int())
+				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+					length = int(v.Uint())
+				case reflect.Float32, reflect.Float64:
+					length = int(v.Float())
+				case reflect.Complex64, reflect.Complex128:
+					length = int(real(v.Complex()))
+				default:
+					return nil, c0.cfgErrorf("non integer constant %v", v)
+				}
 			}
 		case c0.kind == ellipsisExpr:
 			// [...]T expression, get size from the length of composite array.
