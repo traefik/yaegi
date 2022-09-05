@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	period    = 100 * time.Millisecond
-	precision = 7 * time.Millisecond
+	period    = 300 * time.Millisecond
+	precision = 30 * time.Millisecond
 )
 
 func main() {
