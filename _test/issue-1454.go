@@ -17,3 +17,6 @@ func main() {
 	_, ok := i.(*S)
 	println(ok)
 }
+
+// Output:
+// false
