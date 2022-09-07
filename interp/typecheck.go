@@ -625,6 +625,11 @@ func (check typecheck) typeAssertionExpr(n *node, typ *itype) error {
 			return n.cfgErrorf("impossible type assertion: %s does not implement %s as %q method has a pointer receiver", typ.id(), n.typ.id(), name)
 		}
 
+		if im.cat != funcT || tm.cat != funcT {
+			// It only makes sense to compare in/out parameter types if both types are functions.
+			continue
+		}
+
 		err := n.cfgErrorf("impossible type assertion: %s does not implement %s", typ.id(), n.typ.id())
 		if im.numIn() != tm.numIn() || im.numOut() != tm.numOut() {
 			return err
