@@ -446,7 +446,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		)
 		switch v := c0.rval; {
 		case v.IsValid():
-			// Size if defined by a constant litteral value.
+			// Size if defined by a constant literal value.
 			if isConstantValue(v.Type()) {
 				c := v.Interface().(constant.Value)
 				length = constToInt(c)
