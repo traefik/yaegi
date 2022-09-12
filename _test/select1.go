@@ -10,11 +10,11 @@ func main() {
 	c2 := make(chan string)
 
 	go func() {
-		time.Sleep(1e7)
+		time.Sleep(1e8)
 		c1 <- "one"
 	}()
 	go func() {
-		time.Sleep(2e7)
+		time.Sleep(2e8)
 		c2 <- "two"
 	}()
 

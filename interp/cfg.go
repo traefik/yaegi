@@ -1920,9 +1920,13 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			wireChild(n)
 			// Move action to block statement, so select node can be an exit point.
 			n.child[0].gen = _select
-			// Chain channel init actions in commClauses prior to invoke select.
+			// Chain channel init actions in commClauses prior to invoking select.
 			var cur *node
 			for _, c := range n.child[0].child {
+				if c.kind == commClauseDefault {
+					// No channel init in this case.
+					continue
+				}
 				var an, pn *node // channel init action nodes
 				if len(c.child) > 0 {
 					switch c0 := c.child[0]; {
