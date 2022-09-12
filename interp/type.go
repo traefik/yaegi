@@ -1249,8 +1249,13 @@ func (t *itype) numOut() int {
 		if t.rtype.Kind() == reflect.Func {
 			return t.rtype.NumOut()
 		}
+	case builtinT:
+		switch t.name {
+		case "append", "cap", "complex", "copy", "imag", "len", "make", "new", "real", "recover":
+			return 1
+		}
 	}
-	return 1
+	return 0
 }
 
 func (t *itype) out(i int) *itype {

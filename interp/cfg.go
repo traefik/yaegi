@@ -1060,7 +1060,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				}
 
 				n.gen = c0.sym.builtin
-				c0.typ = &itype{cat: builtinT}
+				c0.typ = &itype{cat: builtinT, name: bname}
 				if n.typ, err = nodeType(interp, sc, n); err != nil {
 					return
 				}
