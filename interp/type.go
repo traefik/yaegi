@@ -822,6 +822,9 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 			}
 			// A generic type is being instantiated. Generate it.
 			t, err = genType(interp, sc, name, lt, []*node{t1.node}, seen)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 	case indexListExpr:
