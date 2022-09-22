@@ -821,45 +821,49 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				break
 			}
 			// A generic type is being instantiated. Generate it.
-			g, err := genAST(sc, lt.node.anc, []*node{t1.node})
+			t, err = genType(interp, sc, name, lt, []*node{t1.node}, seen)
 			if err != nil {
 				return nil, err
-			}
-			t, err = nodeType2(interp, sc, g.lastChild(), seen)
-			if err != nil {
-				return nil, err
-			}
-			sc.sym[name] = &symbol{index: -1, kind: typeSym, typ: t, node: g}
-
-			// Instantiate type methods (if any).
-			var pt *itype
-			if len(lt.method) > 0 {
-				pt = ptrOf(t, withNode(g), withScope(sc))
-			}
-			for _, nod := range lt.method {
-				gm, err := genAST(sc, nod, []*node{t1.node})
-				if err != nil {
-					return nil, err
-				}
-				if gm.typ, err = nodeType(interp, sc, gm.child[2]); err != nil {
-					return nil, err
-				}
-				t.addMethod(gm)
-				if rtn := gm.child[0].child[0].lastChild(); rtn.kind == starExpr {
-					// The receiver is a pointer on a generic type.
-					pt.addMethod(gm)
-					rtn.typ = pt
-				}
-				// Compile method CFG.
-				if _, err = interp.cfg(gm, sc, sc.pkgID, sc.pkgName); err != nil {
-					return nil, err
-				}
-				// Generate closures for function body.
-				if err = genRun(gm); err != nil {
-					return nil, err
-				}
 			}
 		}
+
+	case indexListExpr:
+		// Similar to above indexExpr for generic types, but handle multiple type parameters.
+		var lt *itype
+		if lt, err = nodeType2(interp, sc, n.child[0], seen); err != nil {
+			return nil, err
+		}
+		// Index list expressions can be used only in context of generic types.
+		if lt.cat != genericT {
+			err = n.cfgErrorf("not a generic type: %s", lt.id())
+			return nil, err
+		}
+		name := lt.id() + "["
+		out := false
+		tnodes := []*node{}
+		for _, c := range n.child[1:] {
+			t1, err := nodeType2(interp, sc, c, seen)
+			if err != nil {
+				return nil, err
+			}
+			if t1.cat == genericT || t1.incomplete {
+				t = lt
+				out = true
+				break
+			}
+			tnodes = append(tnodes, t1.node)
+			name += t1.id() + ","
+		}
+		if out {
+			break
+		}
+		name += "]"
+		if sym, _, found := sc.lookup(name); found {
+			t = sym.typ
+			break
+		}
+		// A generic type is being instantiated. Generate it.
+		t, err = genType(interp, sc, name, lt, tnodes, seen)
 
 	case interfaceType:
 		if sname := typeName(n); sname != "" {
@@ -1080,6 +1084,49 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		t.str = "nil"
 	}
 
+	return t, err
+}
+
+func genType(interp *Interpreter, sc *scope, name string, lt *itype, tnodes, seen []*node) (t *itype, err error) {
+	// A generic type is being instantiated. Generate it.
+	g, err := genAST(sc, lt.node.anc, tnodes)
+	if err != nil {
+		return nil, err
+	}
+	t, err = nodeType2(interp, sc, g.lastChild(), seen)
+	if err != nil {
+		return nil, err
+	}
+	sc.sym[name] = &symbol{index: -1, kind: typeSym, typ: t, node: g}
+
+	// Instantiate type methods (if any).
+	var pt *itype
+	if len(lt.method) > 0 {
+		pt = ptrOf(t, withNode(g), withScope(sc))
+	}
+	for _, nod := range lt.method {
+		gm, err := genAST(sc, nod, tnodes)
+		if err != nil {
+			return nil, err
+		}
+		if gm.typ, err = nodeType(interp, sc, gm.child[2]); err != nil {
+			return nil, err
+		}
+		t.addMethod(gm)
+		if rtn := gm.child[0].child[0].lastChild(); rtn.kind == starExpr {
+			// The receiver is a pointer on a generic type.
+			pt.addMethod(gm)
+			rtn.typ = pt
+		}
+		// Compile method CFG.
+		if _, err = interp.cfg(gm, sc, sc.pkgID, sc.pkgName); err != nil {
+			return nil, err
+		}
+		// Generate closures for function body.
+		if err = genRun(gm); err != nil {
+			return nil, err
+		}
+	}
 	return t, err
 }
 

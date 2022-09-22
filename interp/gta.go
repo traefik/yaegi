@@ -161,8 +161,9 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 					switch rtn.kind {
 					case starExpr:
 						typPtr = true
-						if rtn.child[0].kind == indexExpr {
-							typName = rtn.child[0].child[0].ident
+						switch c := rtn.child[0]; c.kind {
+						case indexExpr, indexListExpr:
+							typName = c.child[0].ident
 							genericMethod = true
 						}
 					case indexExpr:
