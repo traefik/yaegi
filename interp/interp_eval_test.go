@@ -642,6 +642,8 @@ func TestEvalChan(t *testing.T) {
 				return ok && msg == "ping"
 			})()`, res: "true",
 		},
+		{src: `a :=5; a <- 4`, err: "cannot send to non-channel int"},
+		{src: `a :=5; b := <-a`, err: "cannot receive from non-channel int"},
 	})
 }
 

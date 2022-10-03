@@ -960,7 +960,14 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 			wireChild(n)
 
-		case declStmt, exprStmt, sendStmt:
+		case sendStmt:
+			if !isChan(n.child[0].typ) {
+				err = n.cfgErrorf("cannot send to non-channel %s", n.child[0].typ.id())
+				break
+			}
+			fallthrough
+
+		case declStmt, exprStmt:
 			wireChild(n)
 			l := n.lastChild()
 			n.findex = l.findex
