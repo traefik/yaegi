@@ -962,7 +962,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 		case sendStmt:
 			if !isChan(n.child[0].typ) {
-				err = n.cfgErrorf("cannot send to non-channel %s", n.child[0].typ.id())
+				err = n.cfgErrorf("invalid operation: cannot send to non-channel %s", n.child[0].typ.id())
 				break
 			}
 			fallthrough
