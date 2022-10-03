@@ -13,7 +13,6 @@ type T struct {
 }
 
 type mw1 struct {
-	next http.Handler
 }
 
 var obj = map[string]interface{}{}
