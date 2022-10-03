@@ -53,4 +53,4 @@ func client(uri string) {
 }
 
 // Output:
-// Welcome to my website!map[] &{<nil>}
+// Welcome to my website!map[] &{}
