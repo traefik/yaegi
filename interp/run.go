@@ -401,7 +401,7 @@ func typeAssert(n *node, withResult, withOk bool) {
 			ok = v.IsValid()
 			if !ok {
 				if !withOk {
-					panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", rtype.String()))
+					panic(n.cfgErrorf("interface conversion: interface {} is nil, not %s", rtype.String()))
 				}
 				return next
 			}
@@ -409,7 +409,7 @@ func typeAssert(n *node, withResult, withOk bool) {
 			if !ok {
 				if !withOk {
 					method := firstMissingMethod(leftType, rtype)
-					panic(fmt.Sprintf("interface conversion: %s is not %s: missing method %s", leftType.String(), rtype.String(), method))
+					panic(n.cfgErrorf("interface conversion: %s is not %s: missing method %s", leftType.String(), rtype.String(), method))
 				}
 				return next
 			}
@@ -430,14 +430,18 @@ func typeAssert(n *node, withResult, withOk bool) {
 			concrete := val.Interface()
 			ctyp := reflect.TypeOf(concrete)
 
+			if vv, ok := concrete.(valueInterface); ok {
+				ctyp = vv.value.Type()
+				concrete = vv.value.Interface()
+			}
 			ok = canAssertTypes(ctyp, rtype)
 			if !ok {
 				if !withOk {
 					// TODO(mpl): think about whether this should ever happen.
 					if ctyp == nil {
-						panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", rtype.String()))
+						panic(n.cfgErrorf("interface conversion: interface {} is nil, not %s", rtype.String()))
 					}
-					panic(fmt.Sprintf("interface conversion: interface {} is %s, not %s", ctyp.String(), rtype.String()))
+					panic(n.cfgErrorf("interface conversion: interface {} is %s, not %s", ctyp.String(), rtype.String()))
 				}
 				return next
 			}
@@ -462,7 +466,7 @@ func typeAssert(n *node, withResult, withOk bool) {
 			}
 			if !ok {
 				if !withOk {
-					panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", rtype.String()))
+					panic(n.cfgErrorf("interface conversion: interface {} is nil, not %s", rtype.String()))
 				}
 				return next
 			}
@@ -475,7 +479,7 @@ func typeAssert(n *node, withResult, withOk bool) {
 			if !ok {
 				if !withOk {
 					method := firstMissingMethod(v.Type(), rtype)
-					panic(fmt.Sprintf("interface conversion: %s is not %s: missing method %s", v.Type().String(), rtype.String(), method))
+					panic(n.cfgErrorf("interface conversion: %s is not %s: missing method %s", v.Type().String(), rtype.String(), method))
 				}
 				return next
 			}
@@ -495,7 +499,7 @@ func typeAssert(n *node, withResult, withOk bool) {
 			if !ok || !v.value.IsValid() {
 				ok = false
 				if !withOk {
-					panic(fmt.Sprintf("interface conversion: interface {} is nil, not %s", rtype.String()))
+					panic(n.cfgErrorf("interface conversion: interface {} is nil, not %s", rtype.String()))
 				}
 				return next
 			}
@@ -503,7 +507,7 @@ func typeAssert(n *node, withResult, withOk bool) {
 			ok = canAssertTypes(v.value.Type(), rtype)
 			if !ok {
 				if !withOk {
-					panic(fmt.Sprintf("interface conversion: interface {} is %s, not %s", v.value.Type().String(), rtype.String()))
+					panic(n.cfgErrorf("interface conversion: interface {} is %s, not %s", v.value.Type().String(), rtype.String()))
 				}
 				return next
 			}
@@ -567,7 +571,7 @@ func convert(n *node) {
 		n.exec = func(f *frame) bltn {
 			n, ok := value(f).Interface().(*node)
 			if !ok || !n.typ.convertibleTo(c.typ) {
-				panic("cannot convert")
+				panic(n.cfgErrorf("cannot convert to %s", c.typ.id()))
 			}
 			n1 := *n
 			n1.typ = c.typ
@@ -3611,7 +3615,7 @@ func convertConstantValue(n *node) {
 	case constant.Int:
 		i, x := constant.Int64Val(c)
 		if !x {
-			panic(fmt.Sprintf("constant %s overflows int64", c.ExactString()))
+			panic(n.cfgErrorf("constant %s overflows int64", c.ExactString()))
 		}
 		v = reflect.ValueOf(int(i))
 	case constant.Float:
