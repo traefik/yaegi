@@ -43,6 +43,6 @@ func assertValue() {
 }
 
 // Output:
-// interface conversion: interface {} is int, not string
-// interface conversion: interface {} is nil, not string
-// interface conversion: *httptest.ResponseRecorder is not http.Pusher: missing method Push
+// 22:10: interface conversion: interface {} is int, not string
+// 32:10: interface conversion: interface {} is nil, not string
+// 42:10: interface conversion: *httptest.ResponseRecorder is not http.Pusher: missing method Push

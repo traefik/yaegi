@@ -109,6 +109,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "range9.go" || // expect error
 			file.Name() == "unsafe6.go" || // needs go.mod to be 1.17
 			file.Name() == "unsafe7.go" || // needs go.mod to be 1.17
+			file.Name() == "type24.go" || // expect error
 			file.Name() == "type27.go" || // expect error
 			file.Name() == "type28.go" || // expect error
 			file.Name() == "type29.go" || // expect error
