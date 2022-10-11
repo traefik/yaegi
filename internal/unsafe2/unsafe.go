@@ -1,3 +1,4 @@
+// Package unsafe2 provides helpers to generate recursive struct types.
 package unsafe2
 
 import (
