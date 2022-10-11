@@ -1887,7 +1887,8 @@ const fork = true // Duplicate frame in frame.clone().
 
 // getFunc compiles a closure function generator for anonymous functions.
 func getFunc(n *node) {
-	dest := genValue(n)
+	i := n.findex
+	l := n.level
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
@@ -1897,7 +1898,8 @@ func getFunc(n *node) {
 		nod.frame = fr
 		def := &nod
 		numRet := len(def.typ.ret)
-		dest(f).Set(reflect.MakeFunc(nod.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
+
+		fct := reflect.MakeFunc(nod.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
 			// Allocate and init local frame. All values to be settable and addressable.
 			fr2 := newFrame(fr, len(def.types), fr.runid())
 			d := fr2.data
@@ -1927,7 +1929,9 @@ func getFunc(n *node) {
 			runCfg(def.child[3].start, fr2, def, n)
 
 			return fr2.data[:numRet]
-		}))
+		})
+
+		getFrame(f, l).data[i] = fct
 		return next
 	}
 }
@@ -1943,7 +1947,7 @@ func getMethod(n *node) {
 		nod.val = &nod
 		nod.recv = n.recv
 		nod.frame = fr
-		getFrame(f, l).data[i].Set(genFuncValue(&nod)(f))
+		getFrame(f, l).data[i] = genFuncValue(&nod)(f)
 		return next
 	}
 }
@@ -2010,7 +2014,7 @@ func getMethodByName(n *node) {
 		nod.val = &nod
 		nod.recv = &receiver{nil, val.value, li}
 		nod.frame = fr
-		getFrame(f, l).data[i].Set(genFuncValue(&nod)(f))
+		getFrame(f, l).data[i] = genFuncValue(&nod)(f)
 		return next
 	}
 }
