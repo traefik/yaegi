@@ -3010,15 +3010,21 @@ func _case(n *node) {
 					}
 					return fnext
 				}
-				vi := v.Interface().(valueInterface)
-				if vi.node == nil {
-					if typ.cat == nilT {
+				if vi, ok := v.Interface().(valueInterface); ok {
+					if vi.node == nil {
+						if typ.cat == nilT {
+							return tnext
+						}
+						return fnext
+					}
+					if vi.node.typ.id() == typ.id() {
+						destValue(f).Set(vi.value)
 						return tnext
 					}
 					return fnext
 				}
-				if vi.node.typ.id() == typ.id() {
-					destValue(f).Set(vi.value)
+				if v.Type() == typ.TypeOf() {
+					destValue(f).Set(v)
 					return tnext
 				}
 				return fnext
@@ -3053,12 +3059,22 @@ func _case(n *node) {
 					}
 					return fnext
 				}
-				if v := val.Interface().(valueInterface).node; v != nil {
-					for _, typ := range types {
-						if v.typ.id() == typ.id() {
-							destValue(f).Set(val)
-							return tnext
+				if vi, ok := val.Interface().(valueInterface); ok {
+					if v := vi.node; v != nil {
+						for _, typ := range types {
+							if v.typ.id() == typ.id() {
+								destValue(f).Set(val)
+								return tnext
+							}
 						}
+					}
+					return fnext
+				}
+				vt := val.Type()
+				for _, typ := range types {
+					if vt == typ.TypeOf() {
+						destValue(f).Set(val)
+						return tnext
 					}
 				}
 				return fnext
