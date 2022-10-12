@@ -483,7 +483,11 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 			length = int(vInt(sym.rval))
 		default:
 			// Size is defined by a numeric constant expression.
-			if _, err = interp.cfg(c0, sc, sc.pkgID, sc.pkgName); err != nil {
+			if _, err := interp.cfg(c0, sc, sc.pkgID, sc.pkgName); err != nil {
+				if strings.Contains(err.Error(), " undefined: ") {
+					incomplete = true
+					break
+				}
 				return nil, err
 			}
 			v, ok := c0.rval.Interface().(constant.Value)
