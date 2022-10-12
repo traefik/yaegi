@@ -147,10 +147,17 @@ func skipFile(ctx *build.Context, p string, skipTest bool) bool {
 	}
 	a := strings.Split(p[i+1:], "_")
 	last := len(a) - 1
-	if last1 := last - 1; last1 >= 0 && a[last1] == ctx.GOOS && a[last] == ctx.GOARCH {
-		return false
+	if last-1 >= 0 {
+		switch x, y := a[last-1], a[last]; {
+		case x == ctx.GOOS:
+			return y != ctx.GOARCH
+		case knownOs[x] && knownArch[y]:
+			return true
+		default:
+			return false
+		}
 	}
-	if s := a[last]; s != ctx.GOOS && s != ctx.GOARCH && knownOs[s] || knownArch[s] {
+	if x := a[last]; knownOs[x] && x != ctx.GOOS || knownArch[x] && x != ctx.GOARCH {
 		return true
 	}
 	return false

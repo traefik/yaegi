@@ -69,6 +69,8 @@ func TestBuildFile(t *testing.T) {
 		{"bar_aix_s390x.go", true},
 		{"bar_aix_amd64.go", true},
 		{"bar_linux_arm.go", true},
+		{"bar_amd64.go", false},
+		{"bar_arm.go", true},
 	}
 
 	for _, test := range tests {
