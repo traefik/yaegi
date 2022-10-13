@@ -598,7 +598,10 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		}
 
 		if isInterfaceSrc(dt) {
-			dt.val = t
+			// Set a new interface type preserving the concrete type (.val field).
+			t2 := *dt
+			t2.val = t
+			dt = &t2
 		}
 		t = dt
 
