@@ -1707,12 +1707,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				}
 				if c.typ.cat == nilT {
 					// nil: Set node value to zero of return type
-					if typ.cat == funcT {
-						// Wrap the typed nil value in a node, as per other interpreter functions
-						c.rval = reflect.ValueOf(&node{kind: basicLit, rval: reflect.New(typ.TypeOf()).Elem()})
-					} else {
-						c.rval = reflect.New(typ.TypeOf()).Elem()
-					}
+					c.rval = reflect.New(typ.TypeOf()).Elem()
 				}
 			}
 

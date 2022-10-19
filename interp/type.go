@@ -1901,6 +1901,7 @@ type refTypeContext struct {
 	// "top-level" point.
 	rect       *itype
 	rebuilding bool
+	slevel     int
 }
 
 // Clone creates a copy of the ref type context.
@@ -2040,11 +2041,19 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 	case mapT:
 		t.rtype = reflect.MapOf(t.key.refType(ctx), t.val.refType(ctx))
 	case ptrT:
-		t.rtype = reflect.PtrTo(t.val.refType(ctx))
+		rt := t.val.refType(ctx)
+		if rt == unsafe2.DummyType && ctx.slevel > 1 {
+			// We have a pointer to a recursive struct which is not yet fully computed.
+			// Return it but do not yet store it in rtype, so the complete version can
+			// be stored in future.
+			return reflect.PtrTo(rt)
+		}
+		t.rtype = reflect.PtrTo(rt)
 	case structT:
 		if t.name != "" {
 			ctx.defined[name] = t
 		}
+		ctx.slevel++
 		var fields []reflect.StructField
 		for i, f := range t.field {
 			field := reflect.StructField{
@@ -2061,6 +2070,7 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 				}
 			}
 		}
+		ctx.slevel--
 		fieldFix := []int{} // Slice of field indices to fix for recursivity.
 		t.rtype = reflect.StructOf(fields)
 		if ctx.isComplete() {
@@ -2116,8 +2126,6 @@ func (t *itype) frameType() (r reflect.Type) {
 		r = reflect.ArrayOf(t.length, t.val.frameType())
 	case sliceT, variadicT:
 		r = reflect.SliceOf(t.val.frameType())
-	case funcT:
-		r = reflect.TypeOf((*node)(nil))
 	case interfaceT:
 		if len(t.field) == 0 {
 			// empty interface, do not wrap it
@@ -2241,16 +2249,6 @@ func constToString(v reflect.Value) string {
 	return constant.StringVal(c)
 }
 
-func defRecvType(n *node) *itype {
-	if n.kind != funcDecl || len(n.child[0].child) == 0 {
-		return nil
-	}
-	if r := n.child[0].child[0].lastChild(); r != nil {
-		return r.typ
-	}
-	return nil
-}
-
 func wrappedType(n *node) *itype {
 	if n.typ.cat != valueT {
 		return nil
@@ -2291,6 +2289,10 @@ func isEmptyInterface(t *itype) bool {
 
 func isGeneric(t *itype) bool {
 	return t.cat == funcT && t.node != nil && len(t.node.child) > 0 && len(t.node.child[0].child) > 0
+}
+
+func isNamedFuncSrc(t *itype) bool {
+	return isFuncSrc(t) && t.node.anc.kind == funcDecl
 }
 
 func isFuncSrc(t *itype) bool {
