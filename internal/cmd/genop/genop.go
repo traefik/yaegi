@@ -539,7 +539,7 @@ func {{$name}}(n *node) {
 
 	{{- if or (eq $op.Name "==") (eq $op.Name "!=") }}
 
-	if c0.typ.cat == aliasT || c1.typ.cat == aliasT {
+	if c0.typ.cat == namedT || c1.typ.cat == namedT {
 		switch {
 		case isInterface:
 			v0 := genValue(c0)

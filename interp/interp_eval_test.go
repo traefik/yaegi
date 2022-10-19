@@ -218,6 +218,8 @@ func TestEvalTypeSpec(t *testing.T) {
 	runTests(t, i, []testCase{
 		{src: `type _ struct{}`, err: "1:19: cannot use _ as value"},
 		{src: `a := struct{a, _ int}{32, 0}`, res: "{32 0}"},
+		{src: "type A int; type A = string", err: "1:31: A redeclared in this block"},
+		{src: "type B int; type B string", err: "1:31: B redeclared in this block"},
 	})
 }
 

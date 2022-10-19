@@ -1,4 +1,4 @@
-package alias3
+package named3
 
 import (
 	"fmt"

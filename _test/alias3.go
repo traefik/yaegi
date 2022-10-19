@@ -1,22 +1,31 @@
-package main
+package alias3
 
-import "github.com/traefik/yaegi/_test/alias3"
+import (
+	"fmt"
+	"net/http"
+)
 
-var globalT *T
-
-func init() {
-	globalT = &T{A: "test"}
+type T struct {
+	A string
 }
 
-type T alias3.T
-
-func (t *T) PrintT() {
-	(*alias3.T)(t).Print()
+func (t *T) Print() {
+	println(t.A)
 }
 
-func main() {
-	globalT.PrintT()
+type A http.Header
+
+func (a A) ForeachKey() error {
+	for k, vals := range a {
+		for _, v := range vals {
+			fmt.Println(k, v)
+		}
+
+	}
+
+	return nil
 }
 
-// Output:
-// test
+func (a A) Set(k string, v []string) {
+	a[k] = v
+}

@@ -2626,7 +2626,7 @@ func equal(n *node) {
 	c0, c1 := n.child[0], n.child[1]
 	t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 
-	if c0.typ.cat == aliasT || c1.typ.cat == aliasT {
+	if c0.typ.cat == namedT || c1.typ.cat == namedT {
 		switch {
 		case isInterface:
 			v0 := genValue(c0)
@@ -4538,7 +4538,7 @@ func notEqual(n *node) {
 	c0, c1 := n.child[0], n.child[1]
 	t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 
-	if c0.typ.cat == aliasT || c1.typ.cat == aliasT {
+	if c0.typ.cat == namedT || c1.typ.cat == namedT {
 		switch {
 		case isInterface:
 			v0 := genValue(c0)

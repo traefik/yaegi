@@ -145,9 +145,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					}
 
 					switch o.typ.cat {
-					case valueT, aliasT:
+					case valueT, namedT:
 						typ := o.typ.rtype
-						if o.typ.cat == aliasT {
+						if o.typ.cat == namedT {
 							typ = o.typ.val.TypeOf()
 						}
 						switch typ.Kind() {
@@ -843,7 +843,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 			wireChild(n)
 			t := n.child[0].typ
-			for t.cat == aliasT {
+			for t.cat == namedT {
 				t = t.val
 			}
 			switch t.cat {
@@ -2897,7 +2897,7 @@ func typeSwichAssign(n *node) bool {
 
 func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerator) {
 	switch typ.cat {
-	case aliasT, ptrT:
+	case namedT, ptrT:
 		gen = compositeGenerator(n, typ.val, rtyp)
 	case arrayT, sliceT:
 		gen = arrayLit
