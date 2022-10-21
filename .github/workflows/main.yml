@@ -93,7 +93,7 @@ jobs:
 
       # https://github.com/marketplace/actions/cache
       - name: Cache Go modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ./_test/tmp
           key: ${{ runner.os }}-yaegi-${{ hashFiles('**//_test/tmp/') }}
