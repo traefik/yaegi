@@ -150,8 +150,13 @@ func skipFile(ctx *build.Context, p string, skipTest bool) bool {
 	if last-1 >= 0 {
 		switch x, y := a[last-1], a[last]; {
 		case x == ctx.GOOS:
-			return y != ctx.GOARCH
+			if knownArch[y] {
+				return y != ctx.GOARCH
+			}
+			return false
 		case knownOs[x] && knownArch[y]:
+			return true
+		case knownArch[y] && y != ctx.GOARCH:
 			return true
 		default:
 			return false
