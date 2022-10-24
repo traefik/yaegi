@@ -3011,15 +3011,11 @@ func _case(n *node) {
 					return fnext
 				}
 				if vi, ok := v.Interface().(valueInterface); ok {
-					if vi.node == nil {
-						if typ.cat == nilT {
+					if vi.node != nil {
+						if vi.node.typ.id() == typ.id() {
+							destValue(f).Set(vi.value)
 							return tnext
 						}
-						return fnext
-					}
-					if vi.node.typ.id() == typ.id() {
-						destValue(f).Set(vi.value)
-						return tnext
 					}
 					return fnext
 				}
