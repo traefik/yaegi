@@ -25,7 +25,7 @@ func main() {
 	}
 	s.ts["test"] = append(s.ts["test"], &T{s: s})
 
-	t , ok:= s.getT("test")
+	t, ok := s.getT("test")
 	println(t != nil, ok)
 }
 

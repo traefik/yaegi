@@ -679,7 +679,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.gen = nop
 					src.findex = dest.findex
 					src.level = level
-				case len(n.child) < 4 && isArithmeticAction(src):
+				case len(n.child) < 4 && isArithmeticAction(src) && !isInterface(dest.typ):
 					// Optimize single assignments from some arithmetic operations.
 					src.typ = dest.typ
 					src.findex = dest.findex
@@ -828,9 +828,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			case n.anc.kind == returnStmt:
 				// To avoid a copy in frame, if the result is to be returned, store it directly
 				// at the frame location reserved for output arguments.
-				pos := childPos(n)
-				n.typ = sc.def.typ.ret[pos]
-				n.findex = pos
+				n.findex = childPos(n)
 			default:
 				// Allocate a new location in frame, and store the result here.
 				n.findex = sc.add(n.typ)
@@ -1707,12 +1705,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				}
 				if c.typ.cat == nilT {
 					// nil: Set node value to zero of return type
-					if typ.cat == funcT {
-						// Wrap the typed nil value in a node, as per other interpreter functions
-						c.rval = reflect.ValueOf(&node{kind: basicLit, rval: reflect.New(typ.TypeOf()).Elem()})
-					} else {
-						c.rval = reflect.New(typ.TypeOf()).Elem()
-					}
+					c.rval = reflect.New(typ.TypeOf()).Elem()
 				}
 			}
 
