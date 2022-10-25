@@ -2396,25 +2396,12 @@ func _return(n *node) {
 		switch t := def.typ.ret[i]; t.cat {
 		case errorT:
 			values[i] = genInterfaceWrapper(c, t.TypeOf())
-		case aliasT:
-			if isInterfaceSrc(t) {
-				values[i] = genValueInterface(c)
-			} else {
-				values[i] = genValue(c)
-			}
-		case interfaceT:
-			if len(t.field) == 0 {
-				// empty interface case.
-				// we can't let genValueInterface deal with it, because we call on c,
-				// not on n, which means that the interfaceT knowledge is lost.
-				values[i] = genValue(c)
-				break
-			}
-			values[i] = genValueInterface(c)
+		case funcT:
+			values[i] = genValue(c)
 		case valueT:
 			switch t.rtype.Kind() {
 			case reflect.Interface:
-				values[i] = genInterfaceWrapper(c, t.rtype)
+				values[i] = genInterfaceWrapper(c, t.TypeOf())
 				continue
 			case reflect.Func:
 				values[i] = genFunctionWrapper(c)
@@ -2422,9 +2409,19 @@ func _return(n *node) {
 			}
 			fallthrough
 		default:
-			if c.typ.untyped {
-				values[i] = genValueAs(c, def.typ.ret[i].TypeOf())
-			} else {
+			switch {
+			case isInterfaceSrc(t):
+				if len(t.field) == 0 {
+					// empty interface case.
+					// we can't let genValueInterface deal with it, because we call on c,
+					// not on n, which means that the interfaceT knowledge is lost.
+					values[i] = genValue(c)
+					break
+				}
+				values[i] = genValueInterface(c)
+			case c.typ.untyped:
+				values[i] = genValueAs(c, t.TypeOf())
+			default:
 				values[i] = genValue(c)
 			}
 		}
