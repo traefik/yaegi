@@ -2384,7 +2384,7 @@ func _return(n *node) {
 		switch t := def.typ.ret[i]; t.cat {
 		case errorT:
 			values[i] = genInterfaceWrapper(c, t.TypeOf())
-		case namedT:
+		case linkedT:
 			if isInterfaceSrc(t) {
 				values[i] = genValueInterface(c)
 			} else {
@@ -2609,7 +2609,7 @@ func doCompositeBinStruct(n *node, hasType bool) {
 	next := getExec(n.tnext)
 	value := valueGenerator(n, n.findex)
 	typ := n.typ.rtype
-	if n.typ.cat == ptrT || n.typ.cat == namedT {
+	if n.typ.cat == ptrT || n.typ.cat == linkedT {
 		typ = n.typ.val.rtype
 	}
 	child := n.child
@@ -2676,7 +2676,7 @@ func doComposite(n *node, hasType bool, keyed bool) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	typ := n.typ
-	if typ.cat == ptrT || typ.cat == namedT {
+	if typ.cat == ptrT || typ.cat == linkedT {
 		typ = typ.val
 	}
 	child := n.child

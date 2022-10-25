@@ -385,7 +385,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 func baseType(t *itype) *itype {
 	for {
 		switch t.cat {
-		case ptrT, namedT:
+		case ptrT, linkedT:
 			t = t.val
 		default:
 			return t
@@ -457,7 +457,7 @@ func definedType(typ *itype) error {
 			return err
 		}
 		fallthrough
-	case namedT, arrayT, chanT, chanSendT, chanRecvT, ptrT, variadicT:
+	case linkedT, arrayT, chanT, chanSendT, chanRecvT, ptrT, variadicT:
 		if err := definedType(typ.val); err != nil {
 			return err
 		}
