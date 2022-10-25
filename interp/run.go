@@ -2386,15 +2386,6 @@ func _return(n *node) {
 			values[i] = genInterfaceWrapper(c, t.TypeOf())
 		case funcT:
 			values[i] = genValue(c)
-		case interfaceT:
-			if len(t.field) == 0 {
-				// empty interface case.
-				// we can't let genValueInterface deal with it, because we call on c,
-				// not on n, which means that the interfaceT knowledge is lost.
-				values[i] = genValue(c)
-				break
-			}
-			values[i] = genValueInterface(c)
 		case valueT:
 			switch t.rtype.Kind() {
 			case reflect.Interface:
@@ -2408,6 +2399,13 @@ func _return(n *node) {
 		default:
 			switch {
 			case isInterfaceSrc(t):
+				if len(t.field) == 0 {
+					// empty interface case.
+					// we can't let genValueInterface deal with it, because we call on c,
+					// not on n, which means that the interfaceT knowledge is lost.
+					values[i] = genValue(c)
+					break
+				}
 				values[i] = genValueInterface(c)
 			case c.typ.untyped:
 				values[i] = genValueAs(c, t.TypeOf())
