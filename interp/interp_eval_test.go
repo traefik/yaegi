@@ -135,6 +135,7 @@ func TestEvalAssign(t *testing.T) {
 		{src: "j := interface{}(int(1)); j.(_)", err: "1:54: cannot use _ as value"},
 		{src: "ff := func() (a, b, c int) {return 1, 2, 3}; x, y, x := ff()", err: "1:73: x repeated on left side of :="},
 		{src: "xx := 1; xx, _ := 2, 3", err: "1:37: no new variables on left side of :="},
+		{src: "1 = 2", err: "1:28: cannot assign to 1 (untyped int constant)"},
 	})
 }
 

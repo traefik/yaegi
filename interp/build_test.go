@@ -51,7 +51,7 @@ func TestBuildTag(t *testing.T) {
 	}
 }
 
-func TestBuildFile(t *testing.T) {
+func TestSkipFile(t *testing.T) {
 	// Assume a specific OS, arch and go pattern no matter the real underlying system
 	ctx := build.Context{
 		GOARCH: "amd64",
@@ -65,10 +65,18 @@ func TestBuildFile(t *testing.T) {
 		{"bar_linux.go", false},
 		{"bar_maix.go", false},
 		{"bar_mlinux.go", false},
+
 		{"bar_aix_foo.go", false},
+		{"bar_linux_foo.go", false},
+		{"bar_foo_amd64.go", false},
+		{"bar_foo_arm.go", true},
+
 		{"bar_aix_s390x.go", true},
 		{"bar_aix_amd64.go", true},
 		{"bar_linux_arm.go", true},
+
+		{"bar_amd64.go", false},
+		{"bar_arm.go", true},
 	}
 
 	for _, test := range tests {

@@ -566,29 +566,11 @@ func convert(n *node) {
 		return
 	}
 
-	if isFuncSrc(n.child[0].typ) && isFuncSrc(c.typ) {
-		value := genValue(c)
-		n.exec = func(f *frame) bltn {
-			n, ok := value(f).Interface().(*node)
-			if !ok || !n.typ.convertibleTo(c.typ) {
-				panic(n.cfgErrorf("cannot convert to %s", c.typ.id()))
-			}
-			n1 := *n
-			n1.typ = c.typ
-			dest(f).Set(reflect.ValueOf(&n1))
-			return next
-		}
-		return
-	}
-
 	doConvert := true
 	var value func(*frame) reflect.Value
 	switch {
 	case isFuncSrc(c.typ):
 		value = genFunctionWrapper(c)
-	case isFuncSrc(n.child[0].typ) && c.typ.cat == valueT:
-		doConvert = false
-		value = genValueNode(c)
 	default:
 		value = genValue(c)
 	}
@@ -659,8 +641,8 @@ func assign(n *node) {
 
 	for i := 0; i < n.nleft; i++ {
 		dest, src := n.child[i], n.child[sbase+i]
-		if isFuncSrc(src.typ) && isField(dest) {
-			svalue[i] = genFunctionWrapper(src)
+		if isNamedFuncSrc(src.typ) {
+			svalue[i] = genFuncValue(src)
 		} else {
 			svalue[i] = genDestValue(dest.typ, src)
 		}
@@ -714,8 +696,6 @@ func assign(n *node) {
 	for i := range types {
 		var t reflect.Type
 		switch typ := n.child[sbase+i].typ; {
-		case isFuncSrc(typ):
-			t = reflect.TypeOf((*node)(nil))
 		case isInterfaceSrc(typ):
 			t = valueInterfaceType
 		default:
@@ -952,9 +932,6 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 	var def *node
 	var ok bool
 
-	if n.kind == basicLit {
-		return func(f *frame) reflect.Value { return n.rval }
-	}
 	if def, ok = n.val.(*node); !ok {
 		return genValueAsFunctionWrapper(n)
 	}
@@ -963,11 +940,7 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 	var rcvr func(*frame) reflect.Value
 
 	if n.recv != nil {
-		if n.recv.node.typ.cat != defRecvType(def).cat {
-			rcvr = genValueRecvIndirect(n)
-		} else {
-			rcvr = genValueRecv(n)
-		}
+		rcvr = genValueRecv(n)
 	}
 	funcType := n.typ.TypeOf()
 
@@ -989,15 +962,20 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 				// Copy method receiver as first argument.
 				src, dest := rcvr(f), d[numRet]
 				sk, dk := src.Kind(), dest.Kind()
+				for {
+					vs, ok := src.Interface().(valueInterface)
+					if !ok {
+						break
+					}
+					src = vs.value
+					sk = src.Kind()
+				}
 				switch {
 				case sk == reflect.Ptr && dk != reflect.Ptr:
 					dest.Set(src.Elem())
 				case sk != reflect.Ptr && dk == reflect.Ptr:
 					dest.Set(src.Addr())
 				default:
-					if wrappedSrc, ok := src.Interface().(valueInterface); ok {
-						src = wrappedSrc.value
-					}
 					dest.Set(src)
 				}
 				d = d[numRet+1:]
@@ -1015,8 +993,6 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 					d[i].Set(arg)
 				case isInterfaceSrc(typ):
 					d[i].Set(reflect.ValueOf(valueInterface{value: arg.Elem()}))
-				case isFuncSrc(typ) && arg.Kind() == reflect.Func:
-					d[i].Set(reflect.ValueOf(genFunctionNode(arg)))
 				default:
 					d[i].Set(arg)
 				}
@@ -1025,19 +1001,9 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 			// Interpreter code execution.
 			runCfg(start, fr, def, n)
 
-			result := fr.data[:numRet]
-			for i, r := range result {
-				if v, ok := r.Interface().(*node); ok {
-					result[i] = genFunctionWrapper(v)(f)
-				}
-			}
-			return result
+			return fr.data[:numRet]
 		})
 	}
-}
-
-func genFunctionNode(v reflect.Value) *node {
-	return &node{kind: funcType, action: aNop, rval: v, typ: valueTOf(v.Type())}
 }
 
 func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
@@ -1178,11 +1144,6 @@ func call(n *node) {
 		// Compute method receiver value.
 		values = append(values, genValueRecv(c0))
 		method = true
-	case len(c0.child) > 0 && c0.child[0].typ != nil && isInterfaceSrc(c0.child[0].typ):
-		recvIndexLater = true
-		values = append(values, genValueBinRecv(c0, &receiver{node: c0.child[0]}))
-		value = genValueBinMethodOnInterface(n, value)
-		method = true
 	case c0.action == aMethod:
 		// Add a place holder for interface method receiver.
 		values = append(values, nil)
@@ -1244,7 +1205,7 @@ func call(n *node) {
 			case isInterfaceBin(arg):
 				values = append(values, genInterfaceWrapper(c, arg.rtype))
 			case isFuncSrc(arg):
-				values = append(values, genValueNode(c))
+				values = append(values, genFuncValue(c))
 			default:
 				values = append(values, genValue(c))
 			}
@@ -1309,21 +1270,37 @@ func call(n *node) {
 		var ok bool
 
 		bf := value(f)
+
 		if def, ok = bf.Interface().(*node); ok {
 			bf = def.rval
 		}
 
 		// Call bin func if defined
 		if bf.IsValid() {
+			var callf func([]reflect.Value) []reflect.Value
+
+			// Lambda definitions are necessary here. Due to reflect internals,
+			// having `callf = bf.Call` or `callf = bf.CallSlice` does not work.
+			//nolint:gocritic
+			if hasVariadicArgs {
+				callf = func(in []reflect.Value) []reflect.Value { return bf.CallSlice(in) }
+			} else {
+				callf = func(in []reflect.Value) []reflect.Value { return bf.Call(in) }
+			}
+
+			if method && len(values) > bf.Type().NumIn() {
+				// The receiver is already passed in the function wrapper, skip it.
+				values = values[1:]
+			}
 			in := make([]reflect.Value, len(values))
 			for i, v := range values {
 				in[i] = v(f)
 			}
 			if goroutine {
-				go bf.Call(in)
+				go callf(in)
 				return tnext
 			}
-			out := bf.Call(in)
+			out := callf(in)
 			for i, v := range rvalues {
 				if v != nil {
 					v(f).Set(out[i])
@@ -1557,8 +1534,6 @@ func callBin(n *node) {
 			}
 
 			switch {
-			case isFuncSrc(c.typ):
-				values = append(values, genFunctionWrapper(c))
 			case isEmptyInterface(c.typ):
 				values = append(values, genValue(c))
 			case isInterfaceSrc(c.typ):
@@ -1910,8 +1885,10 @@ func getIndexMap2(n *node) {
 
 const fork = true // Duplicate frame in frame.clone().
 
+// getFunc compiles a closure function generator for anonymous functions.
 func getFunc(n *node) {
-	dest := genValue(n)
+	i := n.findex
+	l := n.level
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
@@ -1919,7 +1896,42 @@ func getFunc(n *node) {
 		nod := *n
 		nod.val = &nod
 		nod.frame = fr
-		dest(f).Set(reflect.ValueOf(&nod))
+		def := &nod
+		numRet := len(def.typ.ret)
+
+		fct := reflect.MakeFunc(nod.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
+			// Allocate and init local frame. All values to be settable and addressable.
+			fr2 := newFrame(fr, len(def.types), fr.runid())
+			d := fr2.data
+			for i, t := range def.types {
+				d[i] = reflect.New(t).Elem()
+			}
+			d = d[numRet:]
+
+			// Copy function input arguments in local frame.
+			for i, arg := range in {
+				if i >= len(d) {
+					// In case of unused arg, there may be not even a frame entry allocated, just skip.
+					break
+				}
+				typ := def.typ.arg[i]
+				switch {
+				case isEmptyInterface(typ) || typ.TypeOf() == valueInterfaceType:
+					d[i].Set(arg)
+				case isInterfaceSrc(typ):
+					d[i].Set(reflect.ValueOf(valueInterface{value: arg.Elem()}))
+				default:
+					d[i].Set(arg)
+				}
+			}
+
+			// Interpreter code execution.
+			runCfg(def.child[3].start, fr2, def, n)
+
+			return fr2.data[:numRet]
+		})
+
+		getFrame(f, l).data[i] = fct
 		return next
 	}
 }
@@ -1935,7 +1947,7 @@ func getMethod(n *node) {
 		nod.val = &nod
 		nod.recv = n.recv
 		nod.frame = fr
-		getFrame(f, l).data[i] = reflect.ValueOf(&nod)
+		getFrame(f, l).data[i] = genFuncValue(&nod)(f)
 		return next
 	}
 }
@@ -2002,7 +2014,7 @@ func getMethodByName(n *node) {
 		nod.val = &nod
 		nod.recv = &receiver{nil, val.value, li}
 		nod.frame = fr
-		getFrame(f, l).data[i] = reflect.ValueOf(&nod)
+		getFrame(f, l).data[i] = genFuncValue(&nod)(f)
 		return next
 	}
 }
@@ -2384,27 +2396,12 @@ func _return(n *node) {
 		switch t := def.typ.ret[i]; t.cat {
 		case errorT:
 			values[i] = genInterfaceWrapper(c, t.TypeOf())
-		case linkedT:
-			if isInterfaceSrc(t) {
-				values[i] = genValueInterface(c)
-			} else {
-				values[i] = genValue(c)
-			}
 		case funcT:
 			values[i] = genValue(c)
-		case interfaceT:
-			if len(t.field) == 0 {
-				// empty interface case.
-				// we can't let genValueInterface deal with it, because we call on c,
-				// not on n, which means that the interfaceT knowledge is lost.
-				values[i] = genValue(c)
-				break
-			}
-			values[i] = genValueInterface(c)
 		case valueT:
 			switch t.rtype.Kind() {
 			case reflect.Interface:
-				values[i] = genInterfaceWrapper(c, t.rtype)
+				values[i] = genInterfaceWrapper(c, t.TypeOf())
 				continue
 			case reflect.Func:
 				values[i] = genFunctionWrapper(c)
@@ -2412,9 +2409,19 @@ func _return(n *node) {
 			}
 			fallthrough
 		default:
-			if c.typ.untyped {
-				values[i] = genValueAs(c, def.typ.ret[i].TypeOf())
-			} else {
+			switch {
+			case isInterfaceSrc(t):
+				if len(t.field) == 0 {
+					// empty interface case.
+					// we can't let genValueInterface deal with it, because we call on c,
+					// not on n, which means that the interfaceT knowledge is lost.
+					values[i] = genValue(c)
+					break
+				}
+				values[i] = genValueInterface(c)
+			case c.typ.untyped:
+				values[i] = genValueAs(c, t.TypeOf())
+			default:
 				values[i] = genValue(c)
 			}
 		}
@@ -2702,7 +2709,7 @@ func doComposite(n *node, hasType bool, keyed bool) {
 		switch {
 		case val.typ.cat == nilT:
 			values[fieldIndex] = func(*frame) reflect.Value { return reflect.New(rft).Elem() }
-		case isFuncSrc(val.typ):
+		case isNamedFuncSrc(val.typ):
 			values[fieldIndex] = genValueAsFunctionWrapper(val)
 		case isInterfaceSrc(ft) && (!isEmptyInterface(ft) || len(val.typ.method) > 0):
 			values[fieldIndex] = genValueInterface(val)
@@ -3000,15 +3007,17 @@ func _case(n *node) {
 					}
 					return fnext
 				}
-				vi := v.Interface().(valueInterface)
-				if vi.node == nil {
-					if typ.cat == nilT {
-						return tnext
+				if vi, ok := v.Interface().(valueInterface); ok {
+					if vi.node != nil {
+						if vi.node.typ.id() == typ.id() {
+							destValue(f).Set(vi.value)
+							return tnext
+						}
 					}
 					return fnext
 				}
-				if vi.node.typ.id() == typ.id() {
-					destValue(f).Set(vi.value)
+				if v.Type() == typ.TypeOf() {
+					destValue(f).Set(v)
 					return tnext
 				}
 				return fnext
@@ -3043,12 +3052,22 @@ func _case(n *node) {
 					}
 					return fnext
 				}
-				if v := val.Interface().(valueInterface).node; v != nil {
-					for _, typ := range types {
-						if v.typ.id() == typ.id() {
-							destValue(f).Set(val)
-							return tnext
+				if vi, ok := val.Interface().(valueInterface); ok {
+					if v := vi.node; v != nil {
+						for _, typ := range types {
+							if v.typ.id() == typ.id() {
+								destValue(f).Set(val)
+								return tnext
+							}
 						}
+					}
+					return fnext
+				}
+				vt := val.Type()
+				for _, typ := range types {
+					if vt == typ.TypeOf() {
+						destValue(f).Set(val)
+						return tnext
 					}
 				}
 				return fnext
@@ -3845,11 +3864,7 @@ func slice0(n *node) {
 func isNil(n *node) {
 	var value func(*frame) reflect.Value
 	c0 := n.child[0]
-	if isFuncSrc(c0.typ) {
-		value = genValueAsFunctionWrapper(c0)
-	} else {
-		value = genValue(c0)
-	}
+	value = genValue(c0)
 	typ := n.typ.concrete().TypeOf()
 	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	tnext := getExec(n.tnext)
@@ -3934,11 +3949,7 @@ func isNil(n *node) {
 func isNotNil(n *node) {
 	var value func(*frame) reflect.Value
 	c0 := n.child[0]
-	if isFuncSrc(c0.typ) {
-		value = genValueAsFunctionWrapper(c0)
-	} else {
-		value = genValue(c0)
-	}
+	value = genValue(c0)
 	typ := n.typ.concrete().TypeOf()
 	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	tnext := getExec(n.tnext)
