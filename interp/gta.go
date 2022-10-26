@@ -344,11 +344,12 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 			if !exists {
 				sym = &symbol{kind: typeSym, node: n}
 				sc.sym[typeName] = sym
-			}
-			if sym.typ != nil && (len(sym.typ.method) > 0) {
-				// Type has already been seen as a receiver in a method function
-				for _, m := range sym.typ.method {
-					n.typ.addMethod(m)
+			} else {
+				if sym.typ != nil && (len(sym.typ.method) > 0) {
+					// Type has already been seen as a receiver in a method function
+					for _, m := range sym.typ.method {
+						n.typ.addMethod(m)
+					}
 				}
 			}
 			sym.typ = n.typ
