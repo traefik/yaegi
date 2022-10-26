@@ -2616,7 +2616,7 @@ func doCompositeBinStruct(n *node, hasType bool) {
 	next := getExec(n.tnext)
 	value := valueGenerator(n, n.findex)
 	typ := n.typ.rtype
-	if n.typ.cat == ptrT || n.typ.cat == aliasT {
+	if n.typ.cat == ptrT || n.typ.cat == linkedT {
 		typ = n.typ.val.rtype
 	}
 	child := n.child
@@ -2683,7 +2683,7 @@ func doComposite(n *node, hasType bool, keyed bool) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	typ := n.typ
-	if typ.cat == ptrT || typ.cat == aliasT {
+	if typ.cat == ptrT || typ.cat == linkedT {
 		typ = typ.val
 	}
 	child := n.child

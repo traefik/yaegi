@@ -17,7 +17,6 @@ type tcat uint
 // Types for go language.
 const (
 	nilT tcat = iota
-	aliasT
 	arrayT
 	binT
 	binPkgT
@@ -41,6 +40,7 @@ const (
 	int16T
 	int32T
 	int64T
+	linkedT
 	mapT
 	ptrT
 	sliceT
@@ -60,7 +60,6 @@ const (
 
 var cats = [...]string{
 	nilT:        "nilT",
-	aliasT:      "aliasT",
 	arrayT:      "arrayT",
 	binT:        "binT",
 	binPkgT:     "binPkgT",
@@ -75,14 +74,15 @@ var cats = [...]string{
 	float32T:    "float32",
 	float64T:    "float64T",
 	funcT:       "funcT",
+	genericT:    "genericT",
 	interfaceT:  "interfaceT",
 	intT:        "intT",
 	int8T:       "int8T",
 	int16T:      "int16T",
 	int32T:      "int32T",
 	int64T:      "int64T",
+	linkedT:     "linkedT",
 	mapT:        "mapT",
-	genericT:    "genericT",
 	ptrT:        "ptrT",
 	sliceT:      "sliceT",
 	srcPkgT:     "srcPkgT",
@@ -118,7 +118,7 @@ type itype struct {
 	cat          tcat          // Type category
 	field        []structField // Array of struct fields if structT or interfaceT
 	key          *itype        // Type of key element if MapT or nil
-	val          *itype        // Type of value element if chanT, chanSendT, chanRecvT, mapT, ptrT, aliasT, arrayT, sliceT, variadicT or genericT
+	val          *itype        // Type of value element if chanT, chanSendT, chanRecvT, mapT, ptrT, linkedT, arrayT, sliceT, variadicT or genericT
 	recv         *itype        // Receiver type for funcT or nil
 	arg          []*itype      // Argument types if funcT or nil
 	ret          []*itype      // Return types if funcT or nil
@@ -248,7 +248,7 @@ func namedOf(val *itype, path, name string, opts ...itypeOption) *itype {
 	if path != "" {
 		str = path + "." + name
 	}
-	t := &itype{cat: aliasT, val: val, path: path, name: name, str: str}
+	t := &itype{cat: linkedT, val: val, path: path, name: name, str: str}
 	for _, opt := range opts {
 		opt(t)
 	}
@@ -373,8 +373,8 @@ func structOf(t *itype, fields []structField, opts ...itypeOption) *itype {
 }
 
 // genericOf returns a generic type.
-func genericOf(val *itype, name string, opts ...itypeOption) *itype {
-	t := &itype{cat: genericT, name: name, str: name, val: val}
+func genericOf(val *itype, name, path string, opts ...itypeOption) *itype {
+	t := &itype{cat: genericT, name: name, path: path, str: name, val: val}
 	for _, opt := range opts {
 		opt(t)
 	}
@@ -782,11 +782,11 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 			}
 		}
 		if sym.kind == varTypeSym {
-			t = genericOf(sym.typ, n.ident, withNode(n), withScope(sc))
+			t = genericOf(sym.typ, n.ident, sc.pkgName, withNode(n), withScope(sc))
 		} else {
 			t = sym.typ
 		}
-		if t.incomplete && t.cat == aliasT && t.val != nil && t.val.cat != nilT {
+		if t.incomplete && t.cat == linkedT && t.val != nil && t.val.cat != nilT {
 			t.incomplete = false
 		}
 		if t.incomplete && t.node != n {
@@ -1332,7 +1332,7 @@ func (t *itype) concrete() *itype {
 }
 
 func (t *itype) underlying() *itype {
-	if t.cat == aliasT {
+	if t.cat == linkedT {
 		return t.val.underlying()
 	}
 	return t
@@ -1340,10 +1340,10 @@ func (t *itype) underlying() *itype {
 
 // typeDefined returns true if type t1 is defined from type t2 or t2 from t1.
 func typeDefined(t1, t2 *itype) bool {
-	if t1.cat == aliasT && t1.val == t2 {
+	if t1.cat == linkedT && t1.val == t2 {
 		return true
 	}
-	if t2.cat == aliasT && t2.val == t1 {
+	if t2.cat == linkedT && t2.val == t1 {
 		return true
 	}
 	return false
@@ -1379,7 +1379,7 @@ func isComplete(t *itype, visited map[string]bool) bool {
 		visited[name] = true
 	}
 	switch t.cat {
-	case aliasT:
+	case linkedT:
 		if t.val != nil && t.val.cat != nilT {
 			// A type aliased to a partially defined type is considered complete, to allow recursivity.
 			return true
@@ -1423,7 +1423,7 @@ func (t *itype) assignableTo(o *itype) bool {
 		return true
 	}
 
-	if t.cat == aliasT && o.cat == aliasT && (t.underlying().id() != o.underlying().id() || !typeDefined(t, o)) {
+	if t.cat == linkedT && o.cat == linkedT && (t.underlying().id() != o.underlying().id() || !typeDefined(t, o)) {
 		return false
 	}
 
@@ -1538,7 +1538,7 @@ func (t *itype) methods() methodSet {
 		seen[typ] = true
 
 		switch typ.cat {
-		case aliasT:
+		case linkedT:
 			for k, v := range getMethods(typ.val) {
 				res[k] = v
 			}
@@ -1629,7 +1629,7 @@ func (t *itype) zero() (v reflect.Value, err error) {
 		return v, err
 	}
 	switch t.cat {
-	case aliasT:
+	case linkedT:
 		v, err = t.val.zero()
 
 	case arrayT, ptrT, structT, sliceT:
@@ -1647,7 +1647,7 @@ func (t *itype) zero() (v reflect.Value, err error) {
 // fieldIndex returns the field index from name in a struct, or -1 if not found.
 func (t *itype) fieldIndex(name string) int {
 	switch t.cat {
-	case aliasT, ptrT:
+	case linkedT, ptrT:
 		return t.val.fieldIndex(name)
 	}
 	for i, field := range t.field {
@@ -1682,7 +1682,7 @@ func (t *itype) lookupField(name string) []int {
 		seen[typ] = true
 
 		switch typ.cat {
-		case aliasT, ptrT:
+		case linkedT, ptrT:
 			return lookup(typ.val)
 		}
 		if fi := typ.fieldIndex(name); fi >= 0 {
@@ -1691,7 +1691,7 @@ func (t *itype) lookupField(name string) []int {
 
 		for i, f := range typ.field {
 			switch f.typ.cat {
-			case ptrT, structT, interfaceT, aliasT:
+			case ptrT, structT, interfaceT, linkedT:
 				if index2 := lookup(f.typ); len(index2) > 0 {
 					return append([]int{i}, index2...)
 				}
@@ -1750,7 +1750,7 @@ func (t *itype) methodCallType() reflect.Type {
 }
 
 func (t *itype) resolveAlias() *itype {
-	for t.cat == aliasT {
+	for t.cat == linkedT {
 		t = t.val
 	}
 	return t
@@ -1794,7 +1794,7 @@ func (t *itype) lookupMethod2(name string, seen map[*itype]bool) (*node, []int) 
 				}
 			}
 		}
-		if t.cat == aliasT || isInterfaceSrc(t) && t.val != nil {
+		if t.cat == linkedT || isInterfaceSrc(t) && t.val != nil {
 			return t.val.lookupMethod2(name, seen)
 		}
 	}
@@ -2012,7 +2012,7 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 		return reflect.TypeOf((*generic)(nil)).Elem()
 	}
 	switch t.cat {
-	case aliasT:
+	case linkedT:
 		t.rtype = t.val.refType(ctx)
 	case arrayT:
 		t.rtype = reflect.ArrayOf(t.length, t.val.refType(ctx))
@@ -2127,7 +2127,7 @@ func (t *itype) frameType() (r reflect.Type) {
 		panic(err)
 	}
 	switch t.cat {
-	case aliasT:
+	case linkedT:
 		r = t.val.frameType()
 	case arrayT:
 		r = reflect.ArrayOf(t.length, t.val.frameType())
@@ -2274,7 +2274,7 @@ func isShiftNode(n *node) bool {
 // chanElement returns the channel element type.
 func chanElement(t *itype) *itype {
 	switch t.cat {
-	case aliasT:
+	case linkedT:
 		return chanElement(t.val)
 	case chanT, chanSendT, chanRecvT:
 		return t.val
@@ -2303,11 +2303,11 @@ func isNamedFuncSrc(t *itype) bool {
 }
 
 func isFuncSrc(t *itype) bool {
-	return t.cat == funcT || (t.cat == aliasT && isFuncSrc(t.val))
+	return t.cat == funcT || (t.cat == linkedT && isFuncSrc(t.val))
 }
 
 func isPtrSrc(t *itype) bool {
-	return t.cat == ptrT || (t.cat == aliasT && isPtrSrc(t.val))
+	return t.cat == ptrT || (t.cat == linkedT && isPtrSrc(t.val))
 }
 
 func isSendChan(t *itype) bool {
@@ -2324,7 +2324,7 @@ func isArray(t *itype) bool {
 }
 
 func isInterfaceSrc(t *itype) bool {
-	return t.cat == interfaceT || (t.cat == aliasT && isInterfaceSrc(t.val))
+	return t.cat == interfaceT || (t.cat == linkedT && isInterfaceSrc(t.val))
 }
 
 func isInterfaceBin(t *itype) bool {
@@ -2339,7 +2339,7 @@ func isBin(t *itype) bool {
 	switch t.cat {
 	case valueT:
 		return true
-	case aliasT, ptrT:
+	case linkedT, ptrT:
 		return isBin(t.val)
 	default:
 		return false
@@ -2352,7 +2352,7 @@ func isStruct(t *itype) bool {
 	switch t.cat {
 	case structT:
 		return true
-	case aliasT, ptrT:
+	case linkedT, ptrT:
 		return isStruct(t.val)
 	case valueT:
 		k := t.rtype.Kind()
