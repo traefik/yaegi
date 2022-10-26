@@ -290,7 +290,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				err = n.cfgErrorf("import %q error: %v", ipath, err)
 			}
 
-		case typeSpecAssign:
+		case typeSpec, typeSpecAssign:
 			if isBlank(n.child[0]) {
 				err = n.cfgErrorf("cannot use _ as value")
 				return false
@@ -311,31 +311,15 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				revisit = append(revisit, n)
 				return false
 			}
-			// Create an aliased type in the current scope
-			sc.sym[typeName] = &symbol{kind: typeSym, node: n, typ: typ}
-			n.typ = typ
 
-		case typeSpec:
-			if isBlank(n.child[0]) {
-				err = n.cfgErrorf("cannot use _ as value")
-				return false
+			if n.kind == typeSpecAssign {
+				// Create an aliased type in the current scope
+				sc.sym[typeName] = &symbol{kind: typeSym, node: n, typ: typ}
+				n.typ = typ
+				break
 			}
-			typeName := n.child[0].ident
-			if len(n.child) > 2 {
-				// Handle a generic type: skip definition as parameter is not instantiated yet.
-				n.typ = genericOf(nil, typeName, pkgName, withNode(n.child[0]), withScope(sc))
-				if _, exists := sc.sym[typeName]; !exists {
-					sc.sym[typeName] = &symbol{kind: typeSym, node: n}
-				}
-				sc.sym[typeName].typ = n.typ
-				return false
-			}
-			var typ *itype
-			if typ, err = nodeType(interp, sc, n.child[1]); err != nil {
-				err = nil
-				revisit = append(revisit, n)
-				return false
-			}
+
+			// else we are not an alias (typeSpec)
 
 			switch n.child[1].kind {
 			case identExpr, selectorExpr:
