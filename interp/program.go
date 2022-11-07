@@ -17,6 +17,11 @@ type Program struct {
 	init    []*node
 }
 
+// PackageName returns name used in a package clause.
+func (p *Program) PackageName() string {
+	return p.pkgName
+}
+
 // FileSet is the fileset that must be used for parsing Go that will be passed
 // to interp.CompileAST().
 func (interp *Interpreter) FileSet() *token.FileSet {
