@@ -807,7 +807,11 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 			return nil, err
 		}
 		if lt.incomplete {
-			t.incomplete = true
+			if t == nil {
+				t = lt
+			} else {
+				t.incomplete = true
+			}
 			break
 		}
 		switch lt.cat {
@@ -840,6 +844,15 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		if lt, err = nodeType2(interp, sc, n.child[0], seen); err != nil {
 			return nil, err
 		}
+		if lt.incomplete {
+			if t == nil {
+				t = lt
+			} else {
+				t.incomplete = true
+			}
+			break
+		}
+
 		// Index list expressions can be used only in context of generic types.
 		if lt.cat != genericT {
 			err = n.cfgErrorf("not a generic type: %s", lt.id())

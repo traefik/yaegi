@@ -16,7 +16,7 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 	var gtree func(*node, *node) (*node, error)
 
 	gtree = func(n, anc *node) (*node, error) {
-		nod := copyNode(n, anc)
+		nod := copyNode(n, anc, false)
 		switch n.kind {
 		case funcDecl, funcType:
 			nod.val = nod
@@ -27,7 +27,7 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 			if !ok {
 				break
 			}
-			nod = copyNode(nt, anc)
+			nod = copyNode(nt, anc, true)
 
 		case indexExpr:
 			// Catch a possible recursive generic type definition
@@ -37,7 +37,7 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 			if root.child[0].ident != n.child[0].ident {
 				break
 			}
-			nod := copyNode(n.child[0], anc)
+			nod := copyNode(n.child[0], anc, false)
 			fixNodes = append(fixNodes, nod)
 			return nod, nil
 
@@ -149,7 +149,7 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 	return r, nil
 }
 
-func copyNode(n, anc *node) *node {
+func copyNode(n, anc *node, recursive bool) *node {
 	var i interface{}
 	nindex := atomic.AddInt64(&n.interp.nindex, 1)
 	nod := &node{
@@ -170,6 +170,11 @@ func copyNode(n, anc *node) *node {
 		meta:   n.meta,
 	}
 	nod.start = nod
+	if recursive {
+		for _, c := range n.child {
+			nod.child = append(nod.child, copyNode(c, nod, true))
+		}
+	}
 	return nod
 }
 
