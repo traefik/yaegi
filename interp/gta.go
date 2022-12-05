@@ -189,6 +189,15 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				}
 				rcvrtype.addMethod(n)
 				rtn.typ = rcvrtype
+				if rcvrtype.cat == genericT {
+					// generate methods for already instantiated receivers
+					for _, it := range rcvrtype.instance {
+						err = genMethod(interp, sc, it, n, it.node.anc.param)
+						if err != nil {
+							return false
+						}
+					}
+				}
 			case ident == "init":
 				// init functions do not get declared as per the Go spec.
 			default:

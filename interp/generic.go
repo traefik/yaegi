@@ -129,6 +129,7 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 	if err != nil {
 		return nil, err
 	}
+	r.param = append(r.param, types...)
 	if tname != "" {
 		for _, nod := range fixNodes {
 			nod.ident = tname

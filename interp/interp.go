@@ -28,6 +28,7 @@ type node struct {
 	debug  *nodeDebugData // debug info
 	child  []*node        // child subtrees (AST)
 	anc    *node          // ancestor (AST)
+	param  []*node        // generic parameter nodes (AST)
 	start  *node          // entry point in subtree (CFG)
 	tnext  *node          // true branch successor (CFG)
 	fnext  *node          // false branch successor (CFG)

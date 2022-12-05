@@ -126,6 +126,7 @@ type itype struct {
 	method       []*node       // Associated methods or nil
 	constraint   []*itype      // For interfaceT: list of types part of interface set
 	ulconstraint []*itype      // For interfaceT: list of underlying types part of interface set
+	instance     []*itype      // For genericT: list of instantiated types
 	name         string        // name of type within its package for a defined type
 	path         string        // for a defined type, the package import path
 	length       int           // length of array if ArrayT
@@ -1117,37 +1118,38 @@ func genType(interp *Interpreter, sc *scope, name string, lt *itype, tnodes, see
 	if err != nil {
 		return nil, err
 	}
+	lt.instance = append(lt.instance, t)
 	sc.sym[name] = &symbol{index: -1, kind: typeSym, typ: t, node: g}
 
-	// Instantiate type methods (if any).
-	var pt *itype
-	if len(lt.method) > 0 {
-		pt = ptrOf(t, withNode(g), withScope(sc))
-	}
 	for _, nod := range lt.method {
-		gm, err := genAST(sc, nod, tnodes)
-		if err != nil {
-			return nil, err
-		}
-		if gm.typ, err = nodeType(interp, sc, gm.child[2]); err != nil {
-			return nil, err
-		}
-		t.addMethod(gm)
-		if rtn := gm.child[0].child[0].lastChild(); rtn.kind == starExpr {
-			// The receiver is a pointer on a generic type.
-			pt.addMethod(gm)
-			rtn.typ = pt
-		}
-		// Compile method CFG.
-		if _, err = interp.cfg(gm, sc, sc.pkgID, sc.pkgName); err != nil {
-			return nil, err
-		}
-		// Generate closures for function body.
-		if err = genRun(gm); err != nil {
+		if err := genMethod(interp, sc, t, nod, tnodes); err != nil {
 			return nil, err
 		}
 	}
 	return t, err
+}
+
+func genMethod(interp *Interpreter, sc *scope, t *itype, nod *node, tnodes []*node) error {
+	gm, err := genAST(sc, nod, tnodes)
+	if err != nil {
+		return err
+	}
+	if gm.typ, err = nodeType(interp, sc, gm.child[2]); err != nil {
+		return err
+	}
+	t.addMethod(gm)
+	if rtn := gm.child[0].child[0].lastChild(); rtn.kind == starExpr {
+		// The receiver is a pointer on a generic type.
+		pt := ptrOf(t, withNode(t.node), withScope(sc))
+		pt.addMethod(gm)
+		rtn.typ = pt
+	}
+	// Compile method CFG.
+	if _, err = interp.cfg(gm, sc, sc.pkgID, sc.pkgName); err != nil {
+		return err
+	}
+	// Generate closures for function body.
+	return genRun(gm)
 }
 
 // findPackageType searches the top level scope for a package type.
