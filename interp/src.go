@@ -133,6 +133,7 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 	interp.mutex.Lock()
 	gs := interp.scopes[importPath]
 	if gs == nil {
+		interp.mutex.Unlock()
 		// A nil scope means that no even an empty package is created from source.
 		return "", fmt.Errorf("no Go files in %s", dir)
 	}
