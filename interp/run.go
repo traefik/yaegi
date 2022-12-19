@@ -171,6 +171,11 @@ func originalExecNode(n *node, exec bltn) *node {
 	return originalNode
 }
 
+// cloned from net/http/server.go , so we can enforce a similar behaviour:
+// this error is used as sentinel in panic triggered e.g. on request cancellation,
+// in order to catch it and suppress it in a following defer.
+var errAbortHandler = errors.New("net/http: abort Handler")
+
 // Functions set to run during execution of CFG.
 
 // runCfg executes a node AST by walking its CFG and running node builtin at each step.
@@ -187,7 +192,12 @@ func runCfg(n *node, f *frame, funcNode, callNode *node) {
 			if oNode == nil {
 				oNode = n
 			}
-			fmt.Fprintln(n.interp.stderr, oNode.cfgErrorf("panic"))
+			// mimic stdlib's behaviour wrt to the errAbortHandler sentinel error,
+			// i.e. catch the panic with this error and suppress it.
+			errorer, ok := f.recovered.(error)
+			if !ok || errorer.Error() != errAbortHandler.Error() {
+				fmt.Fprintln(n.interp.stderr, oNode.cfgErrorf("panic"))
+			}
 			f.mutex.Unlock()
 			panic(f.recovered)
 		}
