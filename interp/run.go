@@ -171,7 +171,7 @@ func originalExecNode(n *node, exec bltn) *node {
 	return originalNode
 }
 
-// cloned from net/http/server.go , so we can enforce a similar behaviour:
+// cloned from net/http/server.go , so we can enforce a similar behavior:
 // this error is used as sentinel in panic triggered e.g. on request cancellation,
 // in order to catch it and suppress it in a following defer.
 var errAbortHandler = errors.New("net/http: abort Handler")
@@ -192,7 +192,7 @@ func runCfg(n *node, f *frame, funcNode, callNode *node) {
 			if oNode == nil {
 				oNode = n
 			}
-			// mimic stdlib's behaviour wrt to the errAbortHandler sentinel error,
+			// mimic stdlib's behavior wrt to the errAbortHandler sentinel error,
 			// i.e. catch the panic with this error and suppress it.
 			errorer, ok := f.recovered.(error)
 			if !ok || errorer.Error() != errAbortHandler.Error() {
