@@ -15,7 +15,8 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 	fixNodes := []*node{}
 	var gtree func(*node, *node) (*node, error)
 
-	// Input type parameters must be resolved prior AST generation, so they can be forwarded.
+	// Input type parameters must be resolved prior AST generation, as compilation
+	// of generated AST may occur in a different scope.
 	for _, nt := range types {
 		if nt == nil || nt.typ != nil {
 			continue
@@ -158,7 +159,7 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 		nod.ident = rtname
 		nod.child = nil
 	}
-	//r.adot() // Used for debugging only.
+	// r.astDot(dotWriter(r.interp.dotCmd), r.ident) // Used for debugging only.
 	return r, nil
 }
 

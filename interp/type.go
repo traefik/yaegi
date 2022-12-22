@@ -1126,14 +1126,14 @@ func genType(interp *Interpreter, sc *scope, name string, lt *itype, tnodes, see
 	}
 
 	for _, nod := range lt.method {
-		if err := genMethod(interp, name, sc, t, nod, tnodes); err != nil {
+		if err := genMethod(interp, sc, t, nod, tnodes); err != nil {
 			return nil, err
 		}
 	}
 	return t, err
 }
 
-func genMethod(interp *Interpreter, name string, sc *scope, t *itype, nod *node, tnodes []*node) error {
+func genMethod(interp *Interpreter, sc *scope, t *itype, nod *node, tnodes []*node) error {
 	gm, err := genAST(sc, nod, tnodes)
 	if err != nil {
 		return err
