@@ -833,7 +833,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				break
 			}
 			// A generic type is being instantiated. Generate it.
-			t, err = genType(interp, sc, name, lt, []*node{t1.node}, seen)
+			t, err = genType(interp, sc, name, lt, []*node{n.child[1]}, seen)
 			if err != nil {
 				return nil, err
 			}
@@ -1119,17 +1119,21 @@ func genType(interp *Interpreter, sc *scope, name string, lt *itype, tnodes, see
 		return nil, err
 	}
 	lt.instance = append(lt.instance, t)
+	// Add generated symbol in the scope of generic source and user.
 	sc.sym[name] = &symbol{index: -1, kind: typeSym, typ: t, node: g}
+	if lt.scope.sym[name] == nil {
+		lt.scope.sym[name] = sc.sym[name]
+	}
 
 	for _, nod := range lt.method {
-		if err := genMethod(interp, sc, t, nod, tnodes); err != nil {
+		if err := genMethod(interp, name, sc, t, nod, tnodes); err != nil {
 			return nil, err
 		}
 	}
 	return t, err
 }
 
-func genMethod(interp *Interpreter, sc *scope, t *itype, nod *node, tnodes []*node) error {
+func genMethod(interp *Interpreter, name string, sc *scope, t *itype, nod *node, tnodes []*node) error {
 	gm, err := genAST(sc, nod, tnodes)
 	if err != nil {
 		return err
@@ -1144,8 +1148,9 @@ func genMethod(interp *Interpreter, sc *scope, t *itype, nod *node, tnodes []*no
 		pt.addMethod(gm)
 		rtn.typ = pt
 	}
-	// Compile method CFG.
-	if _, err = interp.cfg(gm, sc, sc.pkgID, sc.pkgName); err != nil {
+	// Compile the method AST in the scope of the generic type.
+	scop := nod.typ.scope
+	if _, err = interp.cfg(gm, scop, scop.pkgID, scop.pkgName); err != nil {
 		return err
 	}
 	// Generate closures for function body.

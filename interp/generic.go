@@ -15,6 +15,17 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 	fixNodes := []*node{}
 	var gtree func(*node, *node) (*node, error)
 
+	// Input type parameters must be resolved prior AST generation, so they can be forwarded.
+	for _, nt := range types {
+		if nt == nil || nt.typ != nil {
+			continue
+		}
+		var err error
+		if nt.typ, err = nodeType(root.interp, sc, nt); err != nil {
+			return nil, err
+		}
+	}
+
 	gtree = func(n, anc *node) (*node, error) {
 		nod := copyNode(n, anc, false)
 		switch n.kind {
@@ -28,6 +39,7 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 				break
 			}
 			nod = copyNode(nt, anc, true)
+			nod.typ = nt.typ
 
 		case indexExpr:
 			// Catch a possible recursive generic type definition
@@ -146,7 +158,7 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 		nod.ident = rtname
 		nod.child = nil
 	}
-	// r.astDot(dotWriter(root.interp.dotCmd), root.child[1].ident) // Used for debugging only.
+	//r.adot() // Used for debugging only.
 	return r, nil
 }
 

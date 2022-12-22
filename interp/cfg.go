@@ -439,6 +439,19 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				if typ, err = nodeType(interp, sc, recvTypeNode); err != nil {
 					return false
 				}
+				if typ.cat == nilT {
+					// This may happen when instantiating generic methods.
+					s2, _, ok := sc.lookup(typ.id())
+					if !ok {
+						err = n.cfgErrorf("type not found: %s", typ.id())
+						break
+					}
+					typ = s2.typ
+					if typ.cat == nilT {
+						err = n.cfgErrorf("nil type: %s", typ.id())
+						break
+					}
+				}
 				recvTypeNode.typ = typ
 				n.child[2].typ.recv = typ
 				n.typ.recv = typ
@@ -1916,7 +1929,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
 				}
 			}
-			if err == nil && n.findex != -1 {
+			if err == nil && n.findex != -1 && n.typ.cat != genericT {
 				n.findex = sc.add(n.typ)
 			}
 

@@ -35,6 +35,10 @@ func (n *node) astDot(out io.Writer, name string) {
 	fmt.Fprintf(out, "}\n")
 }
 
+func (n *node) adot() {
+	n.astDot(dotWriter(n.interp.dotCmd), n.ident)
+}
+
 // cfgDot displays a CFG in graphviz dot(1) format using dotty(1) co-process.
 func (n *node) cfgDot(out io.Writer) {
 	fmt.Fprintf(out, "digraph cfg {\n")
