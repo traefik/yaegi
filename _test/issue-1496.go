@@ -1,17 +1,8 @@
 package main
 
-func ByteEqualsNil() bool {
-	return []byte{} == nil
-}
-
-func NilEqualsByte() bool {
-	return nil == []byte{}
-}
-
 func main() {
-	a := ByteEqualsNil()
-	b := NilEqualsByte()
-
+	a := []byte{} == nil
+	b := nil == []byte{}
 	println(a == false, b == false, a == b)
 }
 
