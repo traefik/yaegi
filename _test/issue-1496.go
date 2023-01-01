@@ -14,4 +14,4 @@ func main() {
 
 // Output:
 // --
-// false false false false true
+// false false false true true
