@@ -6,9 +6,12 @@ func main() {
 	c := nil == &struct{}{}
 	i := 100
 	d := nil == &i
-	println(a, b, c, d)
+	var v interface{}
+	f := nil == v
+	g := v == nil
+	println(a, b, c, d, f, g)
 }
 
 // Output:
 // --
-// false false false false
+// false false false false true

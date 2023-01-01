@@ -797,9 +797,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				if c0.sym == nilSym || c1.sym == nilSym {
 					if n.action == aEqual {
 						if c1.sym == nilSym {
-							n.gen = isNil
+							n.gen = isNilChild(0)
 						} else {
-							n.gen = isNotNil
+							n.gen = isNilChild(1)
 						}
 					} else {
 						n.gen = isNotNil
