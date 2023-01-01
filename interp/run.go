@@ -3869,7 +3869,6 @@ func isNil(n *node) {
 	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	tnext := getExec(n.tnext)
 	dest := genValue(n)
-
 	if n.fnext == nil {
 		if !isInterfaceSrc(c0.typ) {
 			if isInterface {

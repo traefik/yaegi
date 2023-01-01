@@ -2625,7 +2625,6 @@ func equal(n *node) {
 	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
 	c0, c1 := n.child[0], n.child[1]
 	t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
-
 	if c0.typ.cat == linkedT || c1.typ.cat == linkedT {
 		switch {
 		case isInterface:
