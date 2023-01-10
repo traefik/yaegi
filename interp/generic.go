@@ -6,7 +6,7 @@ import (
 )
 
 // genAST returns a new AST where generic types are replaced by instantiated types.
-func genAST(sc *scope, root *node, types []*node) (*node, error) {
+func genAST(sc *scope, root *node, types []*node) (*node, bool, error) {
 	typeParam := map[string]*node{}
 	pindex := 0
 	tname := ""
@@ -14,18 +14,24 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 	recvrPtr := false
 	fixNodes := []*node{}
 	var gtree func(*node, *node) (*node, error)
+	sname := root.child[0].ident + "["
+	if root.kind == funcDecl {
+		sname = root.child[1].ident + "["
+	}
 
 	// Input type parameters must be resolved prior AST generation, as compilation
 	// of generated AST may occur in a different scope.
 	for _, nt := range types {
-		if nt == nil || nt.typ != nil {
+		if nt == nil {
 			continue
 		}
 		var err error
 		if nt.typ, err = nodeType(root.interp, sc, nt); err != nil {
-			return nil, err
+			return nil, false, err
 		}
+		sname += nt.typ.id() + ","
 	}
+	sname = strings.TrimSuffix(sname, ",") + "]"
 
 	gtree = func(n, anc *node) (*node, error) {
 		nod := copyNode(n, anc, false)
@@ -138,10 +144,15 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 		return nod, nil
 	}
 
+	if nod, found := root.interp.generic[sname]; found {
+		return nod, true, nil
+	}
+
 	r, err := gtree(root, root.anc)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
+	root.interp.generic[sname] = r
 	r.param = append(r.param, types...)
 	if tname != "" {
 		for _, nod := range fixNodes {
@@ -160,7 +171,7 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 		nod.child = nil
 	}
 	// r.astDot(dotWriter(r.interp.dotCmd), r.ident) // Used for debugging only.
-	return r, nil
+	return r, false, nil
 }
 
 func copyNode(n, anc *node, recursive bool) *node {
@@ -237,6 +248,9 @@ func inferTypesFromCall(sc *scope, fun *node, args []*node) ([]*node, error) {
 		case funcT:
 			nods := []*node{}
 			for i, t := range param.arg {
+				if i >= len(input.arg) {
+					break
+				}
 				nl, err := inferTypes(t, input.arg[i])
 				if err != nil {
 					return nil, err
@@ -244,6 +258,9 @@ func inferTypesFromCall(sc *scope, fun *node, args []*node) ([]*node, error) {
 				nods = append(nods, nl...)
 			}
 			for i, t := range param.ret {
+				if i >= len(input.ret) {
+					break
+				}
 				nl, err := inferTypes(t, input.ret[i])
 				if err != nil {
 					return nil, err
@@ -251,6 +268,11 @@ func inferTypesFromCall(sc *scope, fun *node, args []*node) ([]*node, error) {
 				nods = append(nods, nl...)
 			}
 			return nods, nil
+
+		case nilT:
+			if types[param.name] != nil {
+				return []*node{input.node}, nil
+			}
 
 		case genericT:
 			return []*node{input.node}, nil

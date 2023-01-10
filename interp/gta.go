@@ -21,6 +21,9 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 		if err != nil {
 			return false
 		}
+		if n.scope == nil {
+			n.scope = sc
+		}
 		switch n.kind {
 		case constDecl:
 			// Early parse of constDecl subtree, to compute all constant

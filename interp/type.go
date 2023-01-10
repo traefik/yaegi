@@ -787,6 +787,11 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		} else {
 			t = sym.typ
 		}
+		if t == nil {
+			if t, err = nodeType2(interp, sc, sym.node, seen); err != nil {
+				return nil, err
+			}
+		}
 		if t.incomplete && t.cat == linkedT && t.val != nil && t.val.cat != nilT {
 			t.incomplete = false
 		}
@@ -1030,7 +1035,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		sname := structName(n)
 		if sname != "" {
 			sym, _, found = sc.lookup(sname)
-			if found && sym.kind == typeSym {
+			if found && sym.kind == typeSym && sym.typ != nil {
 				t = structOf(sym.typ, sym.typ.field, withNode(n), withScope(sc))
 			} else {
 				t = structOf(nil, nil, withNode(n), withScope(sc))
@@ -1110,7 +1115,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 
 func genType(interp *Interpreter, sc *scope, name string, lt *itype, tnodes, seen []*node) (t *itype, err error) {
 	// A generic type is being instantiated. Generate it.
-	g, err := genAST(sc, lt.node.anc, tnodes)
+	g, _, err := genAST(sc, lt.node.anc, tnodes)
 	if err != nil {
 		return nil, err
 	}
@@ -1134,7 +1139,7 @@ func genType(interp *Interpreter, sc *scope, name string, lt *itype, tnodes, see
 }
 
 func genMethod(interp *Interpreter, sc *scope, t *itype, nod *node, tnodes []*node) error {
-	gm, err := genAST(sc, nod, tnodes)
+	gm, _, err := genAST(sc, nod, tnodes)
 	if err != nil {
 		return err
 	}
