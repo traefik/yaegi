@@ -197,7 +197,7 @@ func runCfg(n *node, f *frame, funcNode, callNode *node) {
 			errorer, ok := f.recovered.(error)
 			// in this specific case, the stdlib would/will suppress the panic, so we
 			// suppress the logging here accordingly, to get a similar and consistent
-			// behaviour.
+			// behavior.
 			if !ok || errorer.Error() != errAbortHandler.Error() {
 				fmt.Fprintln(n.interp.stderr, oNode.cfgErrorf("panic"))
 			}
