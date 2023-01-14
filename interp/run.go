@@ -1227,9 +1227,7 @@ func call(n *node) {
 				rvalues[i] = genValueInterfaceValue(c)
 			default:
 				j := n.findex + i
-				rvalues[i] = func(f *frame) reflect.Value {
-					return getFrame(f, l).data[j]
-				}
+				rvalues[i] = func(f *frame) reflect.Value { return getFrame(f, l).data[j] }
 			}
 		}
 	case returnStmt:
