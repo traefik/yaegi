@@ -1227,7 +1227,9 @@ func call(n *node) {
 				rvalues[i] = genValueInterfaceValue(c)
 			default:
 				j := n.findex + i
-				rvalues[i] = func(f *frame) reflect.Value { return getFrame(f, l).data[j] }
+				rvalues[i] = func(f *frame) reflect.Value {
+					return getFrame(f, l).data[j]
+				}
 			}
 		}
 	case returnStmt:
@@ -1292,13 +1294,23 @@ func call(n *node) {
 				// The receiver is already passed in the function wrapper, skip it.
 				values = values[1:]
 			}
+
+			if goroutine {
+				// Goroutine's arguments should be copied.
+				in := make([]reflect.Value, len(values))
+				for i, v := range values {
+					value := v(f)
+					in[i] = reflect.New(value.Type()).Elem()
+					in[i].Set(value)
+				}
+
+				go callf(in)
+				return tnext
+			}
+
 			in := make([]reflect.Value, len(values))
 			for i, v := range values {
 				in[i] = v(f)
-			}
-			if goroutine {
-				go callf(in)
-				return tnext
 			}
 			out := callf(in)
 			for i, v := range rvalues {
