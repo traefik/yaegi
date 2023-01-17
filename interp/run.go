@@ -171,6 +171,13 @@ func originalExecNode(n *node, exec bltn) *node {
 	return originalNode
 }
 
+// cloned from net/http/server.go , so we can enforce a similar behavior:
+// in the stdlib, this error is used as sentinel in panic triggered e.g. on
+// request cancellation, in order to catch it and suppress it in a following defer.
+// in yaegi, we use it to suppress a "panic" log message that happens in the
+// same circumstances.
+var errAbortHandler = errors.New("net/http: abort Handler")
+
 // Functions set to run during execution of CFG.
 
 // runCfg executes a node AST by walking its CFG and running node builtin at each step.
@@ -187,7 +194,13 @@ func runCfg(n *node, f *frame, funcNode, callNode *node) {
 			if oNode == nil {
 				oNode = n
 			}
-			fmt.Fprintln(n.interp.stderr, oNode.cfgErrorf("panic"))
+			errorer, ok := f.recovered.(error)
+			// in this specific case, the stdlib would/will suppress the panic, so we
+			// suppress the logging here accordingly, to get a similar and consistent
+			// behavior.
+			if !ok || errorer.Error() != errAbortHandler.Error() {
+				fmt.Fprintln(n.interp.stderr, oNode.cfgErrorf("panic"))
+			}
 			f.mutex.Unlock()
 			panic(f.recovered)
 		}
