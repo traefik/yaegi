@@ -884,7 +884,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.typ = t
 					return
 				}
-				g, found, err := genAST(sc, t.node.anc, []*node{c1})
+				g, found, err := genAST(sc, t.node.anc, []*itype{c1.typ})
 				if err != nil {
 					return
 				}
@@ -1045,7 +1045,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			case c0.kind == indexListExpr:
 				// Instantiate a generic function then call it.
 				fun := c0.child[0].sym.node
-				g, found, err := genAST(sc, fun, c0.child[1:])
+				lt := []*itype{}
+				for _, c := range c0.child[1:] {
+					lt = append(lt, c.typ)
+				}
+				g, found, err := genAST(sc, fun, lt)
 				if err != nil {
 					return
 				}
@@ -1229,7 +1233,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				if isGeneric(c0.typ) {
 					fun := c0.typ.node.anc
 					var g *node
-					var types []*node
+					var types []*itype
 					var found bool
 
 					// Infer type parameter from function call arguments.

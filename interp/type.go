@@ -838,7 +838,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				break
 			}
 			// A generic type is being instantiated. Generate it.
-			t, err = genType(interp, sc, name, lt, []*node{n.child[1]}, seen)
+			t, err = genType(interp, sc, name, lt, []*itype{t1}, seen)
 			if err != nil {
 				return nil, err
 			}
@@ -866,7 +866,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		}
 		name := lt.id() + "["
 		out := false
-		tnodes := []*node{}
+		types := []*itype{}
 		for _, c := range n.child[1:] {
 			t1, err := nodeType2(interp, sc, c, seen)
 			if err != nil {
@@ -877,7 +877,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				out = true
 				break
 			}
-			tnodes = append(tnodes, t1.node)
+			types = append(types, t1)
 			name += t1.id() + ","
 		}
 		if out {
@@ -889,7 +889,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 			break
 		}
 		// A generic type is being instantiated. Generate it.
-		t, err = genType(interp, sc, name, lt, tnodes, seen)
+		t, err = genType(interp, sc, name, lt, types, seen)
 
 	case interfaceType:
 		if sname := typeName(n); sname != "" {
@@ -1113,9 +1113,9 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 	return t, err
 }
 
-func genType(interp *Interpreter, sc *scope, name string, lt *itype, tnodes, seen []*node) (t *itype, err error) {
+func genType(interp *Interpreter, sc *scope, name string, lt *itype, types []*itype, seen []*node) (t *itype, err error) {
 	// A generic type is being instantiated. Generate it.
-	g, _, err := genAST(sc, lt.node.anc, tnodes)
+	g, _, err := genAST(sc, lt.node.anc, types)
 	if err != nil {
 		return nil, err
 	}
@@ -1131,15 +1131,15 @@ func genType(interp *Interpreter, sc *scope, name string, lt *itype, tnodes, see
 	}
 
 	for _, nod := range lt.method {
-		if err := genMethod(interp, sc, t, nod, tnodes); err != nil {
+		if err := genMethod(interp, sc, t, nod, types); err != nil {
 			return nil, err
 		}
 	}
 	return t, err
 }
 
-func genMethod(interp *Interpreter, sc *scope, t *itype, nod *node, tnodes []*node) error {
-	gm, _, err := genAST(sc, nod, tnodes)
+func genMethod(interp *Interpreter, sc *scope, t *itype, nod *node, types []*itype) error {
+	gm, _, err := genAST(sc, nod, types)
 	if err != nil {
 		return err
 	}
