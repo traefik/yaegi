@@ -1511,6 +1511,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 			sym, level, found := sc.lookup(n.ident)
 			if !found {
+				if n.typ != nil {
+					// Node is a generic instance with an already populated type.
+					break
+				}
 				// retry with the filename, in case ident is a package name.
 				sym, level, found = sc.lookup(filepath.Join(n.ident, baseName))
 				if !found {

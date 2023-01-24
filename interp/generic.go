@@ -6,7 +6,7 @@ import (
 )
 
 // adot produces an AST dot(1) directed acyclic graph for the given node. For debugging only.
-// func (n *node) adot() { n.astDot(dotWriter(n.interp.dotCmd), n.ident); }
+//func (n *node) adot() { n.astDot(dotWriter(n.interp.dotCmd), n.ident) }
 
 // genAST returns a new AST where generic types are replaced by instantiated types.
 func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
@@ -73,13 +73,9 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 						if err := checkConstraint(sc, types[pindex], t); err != nil {
 							return nil, err
 						}
-						if types[pindex].node == nil {
-							typeParam[cc.ident] = copyNode(cc, cc.anc, false)
-							typeParam[cc.ident].ident = types[pindex].id()
-							typeParam[cc.ident].typ = types[pindex]
-						} else {
-							typeParam[cc.ident] = types[pindex].node
-						}
+						typeParam[cc.ident] = copyNode(cc, cc.anc, false)
+						typeParam[cc.ident].ident = types[pindex].id()
+						typeParam[cc.ident].typ = types[pindex]
 						pindex++
 					}
 				}
@@ -103,13 +99,9 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 							return nil, cc.cfgErrorf("undefined type for %s", cc.ident)
 						}
 						it := types[pindex]
-						if types[pindex].node == nil {
-							typeParam[cc.ident] = copyNode(cc, cc.anc, false)
-							typeParam[cc.ident].ident = types[pindex].id()
-							typeParam[cc.ident].typ = types[pindex]
-						} else {
-							typeParam[cc.ident] = types[pindex].node
-						}
+						typeParam[cc.ident] = copyNode(cc, cc.anc, false)
+						typeParam[cc.ident].ident = it.id()
+						typeParam[cc.ident].typ = it
 						rtname += it.id() + ","
 						pindex++
 					}
@@ -135,13 +127,9 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 						if err := checkConstraint(sc, types[pindex], t); err != nil {
 							return nil, err
 						}
-						if types[pindex].node == nil {
-							typeParam[cc.ident] = copyNode(cc, cc.anc, false)
-							typeParam[cc.ident].ident = types[pindex].id()
-							typeParam[cc.ident].typ = types[pindex]
-						} else {
-							typeParam[cc.ident] = types[pindex].node
-						}
+						typeParam[cc.ident] = copyNode(cc, cc.anc, false)
+						typeParam[cc.ident].ident = it.id()
+						typeParam[cc.ident].typ = it
 						tname += it.id() + ","
 						pindex++
 					}
@@ -149,7 +137,29 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 				tname = strings.TrimSuffix(tname, ",") + "]"
 				return nod, nil
 			}
+
+		case indexListExpr:
+			// This generic node should be substituted by instance.
+			tname2 := ""
+			for i, c := range n.child {
+				gn, err := gtree(c, nod)
+				if err != nil {
+					return nil, err
+				}
+				if i == 0 {
+					tname2 = gn.ident + "["
+				} else {
+					tname2 += gn.ident + ","
+				}
+			}
+			tname2 = strings.TrimSuffix(tname2, ",") + "]"
+			n2 := n.interp.generic[tname2]
+			if n2 != nil && n2.kind == typeSpec {
+				return n2.lastChild(), nil
+			}
+			return n2, nil
 		}
+
 		for _, c := range n.child {
 			gn, err := gtree(c, nod)
 			if err != nil {

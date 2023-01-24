@@ -1081,6 +1081,9 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		t = structOf(t, fields, withNode(n), withScope(sc))
 		t.incomplete = incomplete
 		if sname != "" {
+			if sc.sym[sname] == nil {
+				sc.sym[sname] = &symbol{index: -1, kind: typeSym, node: n}
+			}
 			sc.sym[sname].typ = t
 		}
 
