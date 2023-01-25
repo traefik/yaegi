@@ -169,7 +169,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 							typName = c.child[0].ident
 							genericMethod = true
 						}
-					case indexExpr:
+					case indexExpr, indexListExpr:
 						genericMethod = true
 					}
 				}

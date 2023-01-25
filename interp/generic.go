@@ -6,7 +6,7 @@ import (
 )
 
 // adot produces an AST dot(1) directed acyclic graph for the given node. For debugging only.
-//func (n *node) adot() { n.astDot(dotWriter(n.interp.dotCmd), n.ident) }
+// func (n *node) adot() { n.astDot(dotWriter(n.interp.dotCmd), n.ident) }
 
 // genAST returns a new AST where generic types are replaced by instantiated types.
 func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
@@ -70,7 +70,7 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 						if err != nil {
 							return nil, err
 						}
-						if err := checkConstraint(sc, types[pindex], t); err != nil {
+						if err := checkConstraint(types[pindex], t); err != nil {
 							return nil, err
 						}
 						typeParam[cc.ident] = copyNode(cc, cc.anc, false)
@@ -124,7 +124,7 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 						if err != nil {
 							return nil, err
 						}
-						if err := checkConstraint(sc, types[pindex], t); err != nil {
+						if err := checkConstraint(types[pindex], t); err != nil {
 							return nil, err
 						}
 						typeParam[cc.ident] = copyNode(cc, cc.anc, false)
@@ -322,7 +322,7 @@ func inferTypesFromCall(sc *scope, fun *node, args []*node) ([]*itype, error) {
 	return types, nil
 }
 
-func checkConstraint(sc *scope, it, ct *itype) error {
+func checkConstraint(it, ct *itype) error {
 	if len(ct.constraint) == 0 && len(ct.ulconstraint) == 0 {
 		return nil
 	}
