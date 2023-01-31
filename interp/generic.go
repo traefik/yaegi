@@ -6,7 +6,7 @@ import (
 )
 
 // adot produces an AST dot(1) directed acyclic graph for the given node. For debugging only.
-func (n *node) adot() { n.astDot(dotWriter(n.interp.dotCmd), n.ident) }
+// func (n *node) adot() { n.astDot(dotWriter(n.interp.dotCmd), n.ident) }
 
 // genAST returns a new AST where generic types are replaced by instantiated types.
 func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
