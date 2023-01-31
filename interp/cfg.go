@@ -329,8 +329,8 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						err = n.cfgErrorf("undefined type")
 						return false
 					}
-					t0, err := nodeType(interp, sc, n.child[0].child[0])
-					if err != nil {
+					t0, err1 := nodeType(interp, sc, n.child[0].child[0])
+					if err1 != nil {
 						return false
 					}
 					if t0.cat != genericT {
@@ -342,7 +342,6 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					for _, n1 := range n.child[0].child[1:] {
 						t1, err1 := nodeType(interp, sc, n1)
 						if err1 != nil {
-							err = err1
 							return false
 						}
 						lt = append(lt, t1)
