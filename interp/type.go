@@ -1150,17 +1150,20 @@ func genMethod(interp *Interpreter, sc *scope, t *itype, nod *node, types []*ity
 		return err
 	}
 	t.addMethod(gm)
-	if rtn := gm.child[0].child[0].lastChild(); rtn.kind == starExpr {
-		// The receiver is a pointer on a generic type.
+
+	// If the receiver is a pointer to a generic type, generate also the pointer type.
+	if rtn := gm.child[0].child[0].lastChild(); rtn != nil && rtn.kind == starExpr {
 		pt := ptrOf(t, withNode(t.node), withScope(sc))
 		pt.addMethod(gm)
 		rtn.typ = pt
 	}
+
 	// Compile the method AST in the scope of the generic type.
 	scop := nod.typ.scope
 	if _, err = interp.cfg(gm, scop, scop.pkgID, scop.pkgName); err != nil {
 		return err
 	}
+
 	// Generate closures for function body.
 	return genRun(gm)
 }

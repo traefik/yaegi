@@ -6,7 +6,7 @@ import (
 )
 
 // adot produces an AST dot(1) directed acyclic graph for the given node. For debugging only.
-// func (n *node) adot() { n.astDot(dotWriter(n.interp.dotCmd), n.ident) }
+func (n *node) adot() { n.astDot(dotWriter(n.interp.dotCmd), n.ident) }
 
 // genAST returns a new AST where generic types are replaced by instantiated types.
 func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
@@ -86,7 +86,7 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 			// Node is the receiver of a generic method.
 			if root.kind == funcDecl && n.anc == root && childPos(n) == 0 && len(n.child) > 0 {
 				rtn := n.child[0].child[1]
-				if rtn.kind == indexExpr || (rtn.kind == starExpr && rtn.child[0].kind == indexExpr) {
+				if rtn.kind == indexExpr || rtn.kind == indexListExpr || (rtn.kind == starExpr && (rtn.child[0].kind == indexExpr || rtn.child[0].kind == indexListExpr)) {
 					// Method receiver is a generic type.
 					if rtn.kind == starExpr && rtn.child[0].kind == indexExpr {
 						// Method receiver is a pointer on a generic type.
@@ -196,7 +196,7 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 		nod.ident = rtname
 		nod.child = nil
 	}
-	// r.astDot(dotWriter(r.interp.dotCmd), r.ident) // Used for debugging only.
+	// r.adot() // Used for debugging only.
 	return r, false, nil
 }
 

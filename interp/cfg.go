@@ -322,8 +322,61 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					}
 				}
 				if n.typ == nil {
-					err = n.cfgErrorf("undefined type")
-					return false
+					// A nil type indicates either an error or a generic type.
+					// A child indexExpr or indexListExpr is used for type parameters,
+					// it indicates an instanciated generic.
+					if n.child[0].kind != indexExpr && n.child[0].kind != indexListExpr {
+						err = n.cfgErrorf("undefined type")
+						return false
+					}
+					t0, err := nodeType(interp, sc, n.child[0].child[0])
+					if err != nil {
+						return false
+					}
+					if t0.cat != genericT {
+						err = n.cfgErrorf("undefined type")
+						return false
+					}
+					// We have a composite literal of generic type, instantiate it.
+					lt := []*itype{}
+					for _, n1 := range n.child[0].child[1:] {
+						t1, err1 := nodeType(interp, sc, n1)
+						if err1 != nil {
+							err = err1
+							return false
+						}
+						lt = append(lt, t1)
+					}
+					var g *node
+					g, _, err = genAST(sc, t0.node.anc, lt)
+					if err != nil {
+						return false
+					}
+					n.child[0] = g.lastChild()
+					n.typ, err = nodeType(interp, sc, n.child[0])
+					if err != nil {
+						return false
+					}
+					// Generate methods if any.
+					for _, nod := range t0.method {
+						gm, _, err2 := genAST(nod.scope, nod, lt)
+						if err2 != nil {
+							err = err2
+							return false
+						}
+						gm.typ, err = nodeType(interp, nod.scope, gm.child[2])
+						if err != nil {
+							return false
+						}
+						if _, err = interp.cfg(gm, sc, sc.pkgID, sc.pkgName); err != nil {
+							return false
+						}
+						if err = genRun(gm); err != nil {
+							return false
+						}
+						n.typ.addMethod(gm)
+					}
+					n.nleft = 1 // Indictate the type of composite literal.
 				}
 			}
 
