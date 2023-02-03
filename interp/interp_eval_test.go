@@ -545,7 +545,6 @@ func TestEvalSliceExpression(t *testing.T) {
 		{src: `a := (&[]int{0,1,2,3})[1:3]`, err: "1:33: cannot slice type *[]int"},
 		{src: `a := "hello"[1:3:4]`, err: "1:45: invalid operation: 3-index slice of string"},
 		{src: `ar := [3]int{0,1,2}; a := ar[:4]`, err: "1:58: index int is out of bounds"},
-		//{src: `a := []int{0,1,2,3}[1::4]`, err: "1:49: 2nd index required in 3-index slice"},
 		{src: `a := []int{0,1,2,3}[1::4]`, err: "index required in 3-index slice"},
 		{src: `a := []int{0,1,2,3}[1:3:]`, err: "index required in 3-index slice"},
 		{src: `a := []int{0,1,2}[3:1]`, err: "invalid index values, must be low <= high <= max"},
