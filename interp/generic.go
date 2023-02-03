@@ -86,9 +86,9 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 			// Node is the receiver of a generic method.
 			if root.kind == funcDecl && n.anc == root && childPos(n) == 0 && len(n.child) > 0 {
 				rtn := n.child[0].child[1]
+				// Method receiver is a generic type if it takes some type parameters.
 				if rtn.kind == indexExpr || rtn.kind == indexListExpr || (rtn.kind == starExpr && (rtn.child[0].kind == indexExpr || rtn.child[0].kind == indexListExpr)) {
-					// Method receiver is a generic type.
-					if rtn.kind == starExpr && rtn.child[0].kind == indexExpr {
+					if rtn.kind == starExpr {
 						// Method receiver is a pointer on a generic type.
 						rtn = rtn.child[0]
 						recvrPtr = true
@@ -137,27 +137,6 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 				tname = strings.TrimSuffix(tname, ",") + "]"
 				return nod, nil
 			}
-
-		case indexListExpr:
-			// This generic node should be substituted by instance.
-			tname2 := ""
-			for i, c := range n.child {
-				gn, err := gtree(c, nod)
-				if err != nil {
-					return nil, err
-				}
-				if i == 0 {
-					tname2 = gn.ident + "["
-				} else {
-					tname2 += gn.ident + ","
-				}
-			}
-			tname2 = strings.TrimSuffix(tname2, ",") + "]"
-			n2 := n.interp.generic[tname2]
-			if n2 != nil && n2.kind == typeSpec {
-				return n2.lastChild(), nil
-			}
-			return n2, nil
 		}
 
 		for _, c := range n.child {

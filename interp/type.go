@@ -883,7 +883,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		if out {
 			break
 		}
-		name += "]"
+		name = strings.TrimSuffix(name, ",") + "]"
 		if sym, _, found := sc.lookup(name); found {
 			t = sym.typ
 			break
