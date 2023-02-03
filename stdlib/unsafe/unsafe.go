@@ -1,5 +1,5 @@
-//go:build go1.18
-// +build go1.18
+//go:build go1.19
+// +build go1.19
 
 // Package unsafe provides wrapper of standard library unsafe package to be imported natively in Yaegi.
 package unsafe
