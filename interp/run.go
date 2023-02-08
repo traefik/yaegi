@@ -1561,6 +1561,8 @@ func callBin(n *node) {
 				values = append(values, genValue(c))
 			case isInterfaceSrc(c.typ):
 				values = append(values, genValueInterfaceValue(c))
+			case isFuncSrc(c.typ):
+				values = append(values, genFunctionWrapper(c))
 			case c.typ.cat == arrayT || c.typ.cat == variadicT:
 				if isEmptyInterface(c.typ.val) {
 					values = append(values, genValueArray(c))
