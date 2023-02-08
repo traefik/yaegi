@@ -28,6 +28,7 @@ type node struct {
 	debug  *nodeDebugData // debug info
 	child  []*node        // child subtrees (AST)
 	anc    *node          // ancestor (AST)
+	param  []*itype       // generic parameter nodes (AST)
 	start  *node          // entry point in subtree (CFG)
 	tnext  *node          // true branch successor (CFG)
 	fnext  *node          // false branch successor (CFG)
@@ -215,6 +216,7 @@ type Interpreter struct {
 	pkgNames map[string]string // package names, indexed by import path
 	done     chan struct{}     // for cancellation of channel operations
 	roots    []*node
+	generic  map[string]*node
 
 	hooks *hooks // symbol hooks
 
@@ -335,6 +337,7 @@ func New(options Options) *Interpreter {
 		pkgNames: map[string]string{},
 		rdir:     map[string]bool{},
 		hooks:    &hooks{},
+		generic:  map[string]*node{},
 	}
 
 	if i.opt.stdin = options.Stdin; i.opt.stdin == nil {

@@ -5,8 +5,11 @@ import (
 	"sync/atomic"
 )
 
+// adot produces an AST dot(1) directed acyclic graph for the given node. For debugging only.
+// func (n *node) adot() { n.astDot(dotWriter(n.interp.dotCmd), n.ident) }
+
 // genAST returns a new AST where generic types are replaced by instantiated types.
-func genAST(sc *scope, root *node, types []*node) (*node, error) {
+func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 	typeParam := map[string]*node{}
 	pindex := 0
 	tname := ""
@@ -14,9 +17,20 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 	recvrPtr := false
 	fixNodes := []*node{}
 	var gtree func(*node, *node) (*node, error)
+	sname := root.child[0].ident + "["
+	if root.kind == funcDecl {
+		sname = root.child[1].ident + "["
+	}
+
+	// Input type parameters must be resolved prior AST generation, as compilation
+	// of generated AST may occur in a different scope.
+	for _, t := range types {
+		sname += t.id() + ","
+	}
+	sname = strings.TrimSuffix(sname, ",") + "]"
 
 	gtree = func(n, anc *node) (*node, error) {
-		nod := copyNode(n, anc)
+		nod := copyNode(n, anc, false)
 		switch n.kind {
 		case funcDecl, funcType:
 			nod.val = nod
@@ -27,7 +41,8 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 			if !ok {
 				break
 			}
-			nod = copyNode(nt, anc)
+			nod = copyNode(nt, anc, true)
+			nod.typ = nt.typ
 
 		case indexExpr:
 			// Catch a possible recursive generic type definition
@@ -37,7 +52,7 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 			if root.child[0].ident != n.child[0].ident {
 				break
 			}
-			nod := copyNode(n.child[0], anc)
+			nod := copyNode(n.child[0], anc, false)
 			fixNodes = append(fixNodes, nod)
 			return nod, nil
 
@@ -51,10 +66,16 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 						if pindex >= len(types) {
 							return nil, cc.cfgErrorf("undefined type for %s", cc.ident)
 						}
-						if err := checkConstraint(sc, types[pindex], c.child[l]); err != nil {
+						t, err := nodeType(c.interp, sc, c.child[l])
+						if err != nil {
 							return nil, err
 						}
-						typeParam[cc.ident] = types[pindex]
+						if err := checkConstraint(types[pindex], t); err != nil {
+							return nil, err
+						}
+						typeParam[cc.ident] = copyNode(cc, cc.anc, false)
+						typeParam[cc.ident].ident = types[pindex].id()
+						typeParam[cc.ident].typ = types[pindex]
 						pindex++
 					}
 				}
@@ -65,9 +86,9 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 			// Node is the receiver of a generic method.
 			if root.kind == funcDecl && n.anc == root && childPos(n) == 0 && len(n.child) > 0 {
 				rtn := n.child[0].child[1]
-				if rtn.kind == indexExpr || (rtn.kind == starExpr && rtn.child[0].kind == indexExpr) {
-					// Method receiver is a generic type.
-					if rtn.kind == starExpr && rtn.child[0].kind == indexExpr {
+				// Method receiver is a generic type if it takes some type parameters.
+				if rtn.kind == indexExpr || rtn.kind == indexListExpr || (rtn.kind == starExpr && (rtn.child[0].kind == indexExpr || rtn.child[0].kind == indexListExpr)) {
+					if rtn.kind == starExpr {
 						// Method receiver is a pointer on a generic type.
 						rtn = rtn.child[0]
 						recvrPtr = true
@@ -77,11 +98,10 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 						if pindex >= len(types) {
 							return nil, cc.cfgErrorf("undefined type for %s", cc.ident)
 						}
-						it, err := nodeType(n.interp, sc, types[pindex])
-						if err != nil {
-							return nil, err
-						}
-						typeParam[cc.ident] = types[pindex]
+						it := types[pindex]
+						typeParam[cc.ident] = copyNode(cc, cc.anc, false)
+						typeParam[cc.ident].ident = it.id()
+						typeParam[cc.ident].typ = it
 						rtname += it.id() + ","
 						pindex++
 					}
@@ -99,14 +119,17 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 						if pindex >= len(types) {
 							return nil, cc.cfgErrorf("undefined type for %s", cc.ident)
 						}
-						it, err := nodeType(n.interp, sc, types[pindex])
+						it := types[pindex]
+						t, err := nodeType(c.interp, sc, c.child[l])
 						if err != nil {
 							return nil, err
 						}
-						if err := checkConstraint(sc, types[pindex], c.child[l]); err != nil {
+						if err := checkConstraint(types[pindex], t); err != nil {
 							return nil, err
 						}
-						typeParam[cc.ident] = types[pindex]
+						typeParam[cc.ident] = copyNode(cc, cc.anc, false)
+						typeParam[cc.ident].ident = it.id()
+						typeParam[cc.ident].typ = it
 						tname += it.id() + ","
 						pindex++
 					}
@@ -115,6 +138,7 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 				return nod, nil
 			}
 		}
+
 		for _, c := range n.child {
 			gn, err := gtree(c, nod)
 			if err != nil {
@@ -125,10 +149,16 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 		return nod, nil
 	}
 
+	if nod, found := root.interp.generic[sname]; found {
+		return nod, true, nil
+	}
+
 	r, err := gtree(root, root.anc)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
+	root.interp.generic[sname] = r
+	r.param = append(r.param, types...)
 	if tname != "" {
 		for _, nod := range fixNodes {
 			nod.ident = tname
@@ -145,11 +175,11 @@ func genAST(sc *scope, root *node, types []*node) (*node, error) {
 		nod.ident = rtname
 		nod.child = nil
 	}
-	// r.astDot(dotWriter(root.interp.dotCmd), root.child[1].ident) // Used for debugging only.
-	return r, nil
+	// r.adot() // Used for debugging only.
+	return r, false, nil
 }
 
-func copyNode(n, anc *node) *node {
+func copyNode(n, anc *node, recursive bool) *node {
 	var i interface{}
 	nindex := atomic.AddInt64(&n.interp.nindex, 1)
 	nod := &node{
@@ -170,25 +200,30 @@ func copyNode(n, anc *node) *node {
 		meta:   n.meta,
 	}
 	nod.start = nod
+	if recursive {
+		for _, c := range n.child {
+			nod.child = append(nod.child, copyNode(c, nod, true))
+		}
+	}
 	return nod
 }
 
-func inferTypesFromCall(sc *scope, fun *node, args []*node) ([]*node, error) {
+func inferTypesFromCall(sc *scope, fun *node, args []*node) ([]*itype, error) {
 	ftn := fun.typ.node
 	// Fill the map of parameter types, indexed by type param ident.
-	types := map[string]*itype{}
+	paramTypes := map[string]*itype{}
 	for _, c := range ftn.child[0].child {
 		typ, err := nodeType(fun.interp, sc, c.lastChild())
 		if err != nil {
 			return nil, err
 		}
 		for _, cc := range c.child[:len(c.child)-1] {
-			types[cc.ident] = typ
+			paramTypes[cc.ident] = typ
 		}
 	}
 
-	var inferTypes func(*itype, *itype) ([]*node, error)
-	inferTypes = func(param, input *itype) ([]*node, error) {
+	var inferTypes func(*itype, *itype) ([]*itype, error)
+	inferTypes = func(param, input *itype) ([]*itype, error) {
 		switch param.cat {
 		case chanT, ptrT, sliceT:
 			return inferTypes(param.val, input.val)
@@ -205,65 +240,68 @@ func inferTypesFromCall(sc *scope, fun *node, args []*node) ([]*node, error) {
 			return append(k, v...), nil
 
 		case structT:
-			nods := []*node{}
+			lt := []*itype{}
 			for i, f := range param.field {
 				nl, err := inferTypes(f.typ, input.field[i].typ)
 				if err != nil {
 					return nil, err
 				}
-				nods = append(nods, nl...)
+				lt = append(lt, nl...)
 			}
-			return nods, nil
+			return lt, nil
 
 		case funcT:
-			nods := []*node{}
+			lt := []*itype{}
 			for i, t := range param.arg {
+				if i >= len(input.arg) {
+					break
+				}
 				nl, err := inferTypes(t, input.arg[i])
 				if err != nil {
 					return nil, err
 				}
-				nods = append(nods, nl...)
+				lt = append(lt, nl...)
 			}
 			for i, t := range param.ret {
+				if i >= len(input.ret) {
+					break
+				}
 				nl, err := inferTypes(t, input.ret[i])
 				if err != nil {
 					return nil, err
 				}
-				nods = append(nods, nl...)
+				lt = append(lt, nl...)
 			}
-			return nods, nil
+			return lt, nil
+
+		case nilT:
+			if paramTypes[param.name] != nil {
+				return []*itype{input}, nil
+			}
 
 		case genericT:
-			return []*node{input.node}, nil
+			return []*itype{input}, nil
 		}
 		return nil, nil
 	}
 
-	nodes := []*node{}
+	types := []*itype{}
 	for i, c := range ftn.child[1].child {
 		typ, err := nodeType(fun.interp, sc, c.lastChild())
 		if err != nil {
 			return nil, err
 		}
-		nods, err := inferTypes(typ, args[i].typ)
+		lt, err := inferTypes(typ, args[i].typ)
 		if err != nil {
 			return nil, err
 		}
-		nodes = append(nodes, nods...)
+		types = append(types, lt...)
 	}
 
-	return nodes, nil
+	return types, nil
 }
 
-func checkConstraint(sc *scope, input, constraint *node) error {
-	ct, err := nodeType(constraint.interp, sc, constraint)
-	if err != nil {
-		return err
-	}
-	it, err := nodeType(input.interp, sc, input)
-	if err != nil {
-		return err
-	}
+func checkConstraint(it, ct *itype) error {
 	if len(ct.constraint) == 0 && len(ct.ulconstraint) == 0 {
 		return nil
 	}
@@ -277,5 +315,5 @@ func checkConstraint(sc *scope, input, constraint *node) error {
 			return nil
 		}
 	}
-	return input.cfgErrorf("%s does not implement %s", input.typ.id(), ct.id())
+	return it.node.cfgErrorf("%s does not implement %s", it.id(), ct.id())
 }
