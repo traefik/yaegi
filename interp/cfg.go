@@ -322,8 +322,60 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					}
 				}
 				if n.typ == nil {
-					err = n.cfgErrorf("undefined type")
-					return false
+					// A nil type indicates either an error or a generic type.
+					// A child indexExpr or indexListExpr is used for type parameters,
+					// it indicates an instanciated generic.
+					if n.child[0].kind != indexExpr && n.child[0].kind != indexListExpr {
+						err = n.cfgErrorf("undefined type")
+						return false
+					}
+					t0, err1 := nodeType(interp, sc, n.child[0].child[0])
+					if err1 != nil {
+						return false
+					}
+					if t0.cat != genericT {
+						err = n.cfgErrorf("undefined type")
+						return false
+					}
+					// We have a composite literal of generic type, instantiate it.
+					lt := []*itype{}
+					for _, n1 := range n.child[0].child[1:] {
+						t1, err1 := nodeType(interp, sc, n1)
+						if err1 != nil {
+							return false
+						}
+						lt = append(lt, t1)
+					}
+					var g *node
+					g, _, err = genAST(sc, t0.node.anc, lt)
+					if err != nil {
+						return false
+					}
+					n.child[0] = g.lastChild()
+					n.typ, err = nodeType(interp, sc, n.child[0])
+					if err != nil {
+						return false
+					}
+					// Generate methods if any.
+					for _, nod := range t0.method {
+						gm, _, err2 := genAST(nod.scope, nod, lt)
+						if err2 != nil {
+							err = err2
+							return false
+						}
+						gm.typ, err = nodeType(interp, nod.scope, gm.child[2])
+						if err != nil {
+							return false
+						}
+						if _, err = interp.cfg(gm, sc, sc.pkgID, sc.pkgName); err != nil {
+							return false
+						}
+						if err = genRun(gm); err != nil {
+							return false
+						}
+						n.typ.addMethod(gm)
+					}
+					n.nleft = 1 // Indictate the type of composite literal.
 				}
 			}
 
@@ -438,6 +490,19 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				recvTypeNode := fr.lastChild()
 				if typ, err = nodeType(interp, sc, recvTypeNode); err != nil {
 					return false
+				}
+				if typ.cat == nilT {
+					// This may happen when instantiating generic methods.
+					s2, _, ok := sc.lookup(typ.id())
+					if !ok {
+						err = n.cfgErrorf("type not found: %s", typ.id())
+						break
+					}
+					typ = s2.typ
+					if typ.cat == nilT {
+						err = n.cfgErrorf("nil type: %s", typ.id())
+						break
+					}
 				}
 				recvTypeNode.typ = typ
 				n.child[2].typ.recv = typ
@@ -871,16 +936,18 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.typ = t
 					return
 				}
-				g, err := genAST(sc, t.node.anc, []*node{c1})
+				g, found, err := genAST(sc, t.node.anc, []*itype{c1.typ})
 				if err != nil {
 					return
 				}
-				if _, err = interp.cfg(g, nil, importPath, pkgName); err != nil {
-					return
-				}
-				// Generate closures for function body.
-				if err = genRun(g.child[3]); err != nil {
-					return
+				if !found {
+					if _, err = interp.cfg(g, t.node.anc.scope, importPath, pkgName); err != nil {
+						return
+					}
+					// Generate closures for function body.
+					if err = genRun(g.child[3]); err != nil {
+						return
+					}
 				}
 				// Replace generic func node by instantiated one.
 				n.anc.child[childPos(n)] = g
@@ -1030,17 +1097,23 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			case c0.kind == indexListExpr:
 				// Instantiate a generic function then call it.
 				fun := c0.child[0].sym.node
-				g, err := genAST(sc, fun, c0.child[1:])
+				lt := []*itype{}
+				for _, c := range c0.child[1:] {
+					lt = append(lt, c.typ)
+				}
+				g, found, err := genAST(sc, fun, lt)
 				if err != nil {
 					return
 				}
-				_, err = interp.cfg(g, nil, importPath, pkgName)
-				if err != nil {
-					return
-				}
-				err = genRun(g.child[3]) // Generate closures for function body.
-				if err != nil {
-					return
+				if !found {
+					_, err = interp.cfg(g, fun.scope, importPath, pkgName)
+					if err != nil {
+						return
+					}
+					err = genRun(g.child[3]) // Generate closures for function body.
+					if err != nil {
+						return
+					}
 				}
 				n.child[0] = g
 				c0 = n.child[0]
@@ -1212,23 +1285,26 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				if isGeneric(c0.typ) {
 					fun := c0.typ.node.anc
 					var g *node
-					var types []*node
+					var types []*itype
+					var found bool
 
 					// Infer type parameter from function call arguments.
 					if types, err = inferTypesFromCall(sc, fun, n.child[1:]); err != nil {
 						break
 					}
 					// Generate an instantiated AST from the generic function one.
-					if g, err = genAST(sc, fun, types); err != nil {
+					if g, found, err = genAST(sc, fun, types); err != nil {
 						break
 					}
-					// Compile the generated function AST, so it becomes part of the scope.
-					if _, err = interp.cfg(g, nil, importPath, pkgName); err != nil {
-						break
-					}
-					// AST compilation part 2: Generate closures for function body.
-					if err = genRun(g.child[3]); err != nil {
-						break
+					if !found {
+						// Compile the generated function AST, so it becomes part of the scope.
+						if _, err = interp.cfg(g, fun.scope, importPath, pkgName); err != nil {
+							break
+						}
+						// AST compilation part 2: Generate closures for function body.
+						if err = genRun(g.child[3]); err != nil {
+							break
+						}
 					}
 					n.child[0] = g
 					c0 = n.child[0]
@@ -1487,6 +1563,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 			sym, level, found := sc.lookup(n.ident)
 			if !found {
+				if n.typ != nil {
+					// Node is a generic instance with an already populated type.
+					break
+				}
 				// retry with the filename, in case ident is a package name.
 				sym, level, found = sc.lookup(filepath.Join(n.ident, baseName))
 				if !found {
@@ -1916,7 +1996,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
 				}
 			}
-			if err == nil && n.findex != -1 {
+			if err == nil && n.findex != -1 && n.typ.cat != genericT {
 				n.findex = sc.add(n.typ)
 			}
 
@@ -2375,11 +2455,13 @@ func (n *node) cfgErrorf(format string, a ...interface{}) *cfgError {
 
 func genRun(nod *node) error {
 	var err error
+	seen := map[*node]bool{}
 
 	nod.Walk(func(n *node) bool {
-		if err != nil {
+		if err != nil || seen[n] {
 			return false
 		}
+		seen[n] = true
 		switch n.kind {
 		case funcType:
 			if len(n.anc.child) == 4 {

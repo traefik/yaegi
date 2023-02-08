@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"net/netip"
 	"reflect"
 )
 
@@ -15,6 +16,10 @@ func unmarshalJSON[T any](b []byte, x *[]T) error {
 		return nil
 	}
 	return json.Unmarshal(b, x)
+}
+
+func SliceOfViews[T ViewCloner[T, V], V StructView[T]](x []T) SliceView[T, V] {
+	return SliceView[T, V]{x}
 }
 
 type StructView[T any] interface {
@@ -31,10 +36,6 @@ type ViewCloner[T any, V StructView[T]] interface {
 	Clone() T
 }
 
-func SliceOfViews[T ViewCloner[T, V], V StructView[T]](x []T) SliceView[T, V] {
-	return SliceView[T, V]{x}
-}
-
 func (v SliceView[T, V]) MarshalJSON() ([]byte, error) { return json.Marshal(v.ж) }
 
 func (v *SliceView[T, V]) UnmarshalJSON(b []byte) error { return unmarshalJSON(b, &v.ж) }
@@ -49,6 +50,10 @@ func (v *Slice[T]) UnmarshalJSON(b []byte) error { return unmarshalJSON(b, &v.ж
 
 func SliceOf[T any](x []T) Slice[T] {
 	return Slice[T]{x}
+}
+
+type IPPrefixSlice struct {
+	ж Slice[netip.Prefix]
 }
 
 type viewStruct struct {
