@@ -2970,7 +2970,7 @@ func matchSelectorMethod(sc *scope, n *node, name string) (err error) {
 			}
 			err = n.cfgErrorf("undefined field or method: %s", name)
 		}
-		return
+		return err
 	}
 
 	if n.typ.cat == ptrT && (n.typ.val.cat == valueT || n.typ.val.cat == errorT) {
@@ -2994,7 +2994,7 @@ func matchSelectorMethod(sc *scope, n *node, name string) (err error) {
 		} else {
 			err = n.cfgErrorf("undefined selector: %s", name)
 		}
-		return
+		return err
 	}
 
 	if m, lind := n.typ.lookupMethod(name); m != nil {
@@ -3014,7 +3014,7 @@ func matchSelectorMethod(sc *scope, n *node, name string) (err error) {
 			n.typ = m.typ
 			n.recv = &receiver{node: n.child[0], index: lind}
 		}
-		return
+		return nil
 	}
 
 	if m, lind, isPtr, ok := n.typ.lookupBinMethod(name); ok {
@@ -3030,17 +3030,16 @@ func matchSelectorMethod(sc *scope, n *node, name string) (err error) {
 		n.recv = &receiver{node: n.child[0], index: lind}
 		n.val = append([]int{m.Index}, lind...)
 		n.typ = valueTOf(m.Type, isBinMethod(), withRecv(n.child[0].typ))
-		return
+		return nil
 	}
 
 	if n.typ.hasInterfaceMethod(name) {
 		n.action = aGetMethod
 		n.gen = getMethodByName
-		return
+		return nil
 	}
 
-	err = n.cfgErrorf("undefined selector: %s", name)
-	return
+	return n.cfgErrorf("undefined selector: %s", name)
 }
 
 // arrayTypeLen returns the node's array length. If the expression is an
