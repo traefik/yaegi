@@ -1838,34 +1838,37 @@ func (t *itype) lookupMethod2(name string, seen map[*itype]bool) (*node, []int) 
 	return m, index
 }
 
-// hasInterfaceMethod returns true if type contains an interface method name (not as a concrete method).
-func (t *itype) hasInterfaceMethod(name string) bool {
-	return t.hasInterfaceMethod2(name, nil)
+// interfaceMethod returns type of method matching an interface method name (not as a concrete method).
+func (t *itype) interfaceMethod(name string) *itype {
+	return t.interfaceMethod2(name, nil)
 }
 
-func (t *itype) hasInterfaceMethod2(name string, seen map[*itype]bool) bool {
+func (t *itype) interfaceMethod2(name string, seen map[*itype]bool) *itype {
 	if seen == nil {
 		seen = map[*itype]bool{}
 	}
 	if seen[t] {
-		return false
+		return nil
 	}
 	seen[t] = true
 	if t.cat == ptrT {
-		return t.val.hasInterfaceMethod2(name, seen)
+		return t.val.interfaceMethod2(name, seen)
 	}
 	for _, f := range t.field {
 		if f.name == name && isInterface(t) {
-			return true
+			return f.typ
 		}
-		if f.embed && f.typ.hasInterfaceMethod2(name, seen) {
-			return true
+		if !f.embed {
+			continue
+		}
+		if typ := f.typ.interfaceMethod2(name, seen); typ != nil {
+			return typ
 		}
 	}
 	if t.cat == linkedT || isInterfaceSrc(t) && t.val != nil {
-		return t.val.hasInterfaceMethod2(name, seen)
+		return t.val.interfaceMethod2(name, seen)
 	}
-	return false
+	return nil
 }
 
 // methodDepth returns a depth greater or equal to 0, or -1 if no match.

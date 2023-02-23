@@ -3033,7 +3033,8 @@ func matchSelectorMethod(sc *scope, n *node, name string) (err error) {
 		return nil
 	}
 
-	if n.typ.hasInterfaceMethod(name) {
+	if typ := n.typ.interfaceMethod(name); typ != nil {
+		n.typ = typ
 		n.action = aGetMethod
 		n.gen = getMethodByName
 		return nil
