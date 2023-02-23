@@ -1992,6 +1992,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.recv = &receiver{node: n.child[0], index: lind}
 					n.val = append([]int{m.Index}, lind...)
 					n.typ = valueTOf(m.Type, isBinMethod(), withRecv(n.child[0].typ))
+				} else if n.typ.hasInterfaceMethod(n.child[1].ident) {
+					n.action = aGetMethod
+					n.gen = getMethodByName
 				} else {
 					err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
 				}

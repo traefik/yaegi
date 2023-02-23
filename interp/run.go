@@ -1985,7 +1985,28 @@ func getMethodByName(n *node) {
 	l := n.level
 
 	n.exec = func(f *frame) bltn {
-		val := value0(f).Interface().(valueInterface)
+		// The interface object must be directly accessible, or embedded in a struct (exported anonymous field).
+		val0 := value0(f)
+		val, ok := value0(f).Interface().(valueInterface)
+		if !ok {
+			// Search the first embedded valueInterface.
+			for val0.Kind() == reflect.Ptr {
+				val0 = val0.Elem()
+			}
+			for i := 0; i < val0.NumField(); i++ {
+				fld := val0.Type().Field(i)
+				if !fld.Anonymous || !fld.IsExported() {
+					continue
+				}
+				if val, ok = val0.Field(i).Interface().(valueInterface); ok {
+					break
+				}
+			}
+			if !ok {
+				panic(n.cfgErrorf("invalid interface value %v", val0))
+			}
+		}
+		// Traverse nested interface values to get the concrete value.
 		for {
 			v, ok := val.value.Interface().(valueInterface)
 			if !ok {
@@ -2001,7 +2022,7 @@ func getMethodByName(n *node) {
 
 		typ := val.node.typ
 		if typ.node == nil && typ.cat == valueT {
-			// happens with a var of empty interface type, that has value of concrete type
+			// It happens with a var of empty interface type, that has value of concrete type
 			// from runtime, being asserted to "user-defined" interface.
 			if _, ok := typ.rtype.MethodByName(name); !ok {
 				panic(n.cfgErrorf("method not found: %s", name))
@@ -2009,27 +2030,8 @@ func getMethodByName(n *node) {
 			return next
 		}
 
-		m, li := typ.lookupMethod(name)
-
-		// Try harder to find a matching embedded valueInterface.
-		// TODO (marc): make sure it works for arbitrary depth and breadth.
-		if m == nil && isStruct(val.node.typ) {
-			v := val.value
-			for v.Type().Kind() == reflect.Ptr {
-				v = v.Elem()
-			}
-			nf := v.NumField()
-			for i := 0; i < nf; i++ {
-				var ok bool
-				if val, ok = v.Field(i).Interface().(valueInterface); !ok {
-					continue
-				}
-				if m, li = val.node.typ.lookupMethod(name); m != nil {
-					break
-				}
-			}
-		}
-
+		// Finally search method recursively in embedded valueInterfaces.
+		m, li := lookupMethodValue(val, name)
 		if m == nil {
 			panic(n.cfgErrorf("method not found: %s", name))
 		}
@@ -2042,6 +2044,31 @@ func getMethodByName(n *node) {
 		getFrame(f, l).data[i] = genFuncValue(&nod)(f)
 		return next
 	}
+}
+
+func lookupMethodValue(val valueInterface, name string) (m *node, li []int) {
+	if m, li = val.node.typ.lookupMethod(name); m != nil {
+		return
+	}
+	if !isStruct(val.node.typ) {
+		return
+	}
+	v := val.value
+	for v.Type().Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	nf := v.NumField()
+	for i := 0; i < nf; i++ {
+		vi, ok := v.Field(i).Interface().(valueInterface)
+		if !ok {
+			continue
+		}
+		if m, li = lookupMethodValue(vi, name); m != nil {
+			li = append([]int{i}, li...)
+			return
+		}
+	}
+	return
 }
 
 func getIndexSeq(n *node) {

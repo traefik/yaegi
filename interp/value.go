@@ -55,10 +55,19 @@ func genValueRecv(n *node) func(*frame) reflect.Value {
 
 	return func(f *frame) reflect.Value {
 		r := v(f)
-		if r.Kind() == reflect.Ptr {
-			r = r.Elem()
+		for _, i := range fi {
+			if r.Kind() == reflect.Ptr {
+				r = r.Elem()
+			}
+			// Note that we can't use reflect FieldByIndex method, as we may
+			// traverse valueInterface wrappers to access the embedded receiver.
+			r = r.Field(i)
+			vi, ok := r.Interface().(valueInterface)
+			if ok {
+				r = vi.value
+			}
 		}
-		return r.FieldByIndex(fi)
+		return r
 	}
 }
 
