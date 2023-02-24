@@ -2031,7 +2031,11 @@ func getMethodByName(n *node) {
 		}
 
 		// Finally search method recursively in embedded valueInterfaces.
-		m, li := lookupMethodValue(val, name)
+		r, m, li := lookupMethodValue(val, name)
+		if r.IsValid() {
+			getFrame(f, l).data[i] = r
+			return next
+		}
 		if m == nil {
 			panic(n.cfgErrorf("method not found: %s", name))
 		}
@@ -2046,7 +2050,10 @@ func getMethodByName(n *node) {
 	}
 }
 
-func lookupMethodValue(val valueInterface, name string) (m *node, li []int) {
+func lookupMethodValue(val valueInterface, name string) (r reflect.Value, m *node, li []int) {
+	if r = val.value.MethodByName(name); r.IsValid() {
+		return
+	}
 	if m, li = val.node.typ.lookupMethod(name); m != nil {
 		return
 	}
@@ -2063,7 +2070,7 @@ func lookupMethodValue(val valueInterface, name string) (m *node, li []int) {
 		if !ok {
 			continue
 		}
-		if m, li = lookupMethodValue(vi, name); m != nil {
+		if r, m, li = lookupMethodValue(vi, name); m != nil {
 			li = append([]int{i}, li...)
 			return
 		}
