@@ -1146,22 +1146,9 @@ func checkFieldIndex(typ reflect.Type, index []int) bool {
 
 func call(n *node) {
 	goroutine := n.anc.kind == goStmt
-	var method bool
 	c0 := n.child[0]
 	value := genValue(c0)
 	var values []func(*frame) reflect.Value
-
-	recvIndexLater := false
-	switch {
-	case c0.recv != nil:
-		// Compute method receiver value.
-		values = append(values, genValueRecv(c0))
-		method = true
-	case c0.action == aMethod:
-		// Add a place holder for interface method receiver.
-		values = append(values, nil)
-		method = true
-	}
 
 	numRet := len(c0.typ.ret)
 	variadic := variadicPos(n)
@@ -1262,10 +1249,6 @@ func call(n *node) {
 	if n.anc.kind == deferStmt {
 		// Store function call in frame for deferred execution.
 		value = genFunctionWrapper(c0)
-		if method {
-			// The receiver is already passed in the function wrapper, skip it.
-			values = values[1:]
-		}
 		n.exec = func(f *frame) bltn {
 			val := make([]reflect.Value, len(values)+1)
 			val[0] = value(f)
@@ -1299,11 +1282,6 @@ func call(n *node) {
 				callf = func(in []reflect.Value) []reflect.Value { return bf.CallSlice(in) }
 			} else {
 				callf = func(in []reflect.Value) []reflect.Value { return bf.Call(in) }
-			}
-
-			if method && len(values) > bf.Type().NumIn() {
-				// The receiver is already passed in the function wrapper, skip it.
-				values = values[1:]
 			}
 
 			if goroutine {
@@ -1358,55 +1336,15 @@ func call(n *node) {
 		}
 
 		// Init variadic argument vector
-		varIndex := variadic
 		if variadic >= 0 {
-			if method {
-				vararg = nf.data[numRet+variadic+1]
-				varIndex++
-			} else {
-				vararg = nf.data[numRet+variadic]
-			}
+			vararg = nf.data[numRet+variadic]
 		}
 
 		// Copy input parameters from caller
 		if dest := nf.data[numRet:]; len(dest) > 0 {
 			for i, v := range values {
 				switch {
-				case method && i == 0:
-					// compute receiver
-					var src reflect.Value
-					if v == nil {
-						src = def.recv.val
-					} else {
-						src = v(f)
-						for src.IsValid() {
-							// traverse interface indirections to find out concrete type
-							vi, ok := src.Interface().(valueInterface)
-							if !ok {
-								break
-							}
-							src = vi.value
-						}
-					}
-					if recvIndexLater && def.recv != nil && len(def.recv.index) > 0 {
-						if src.Kind() == reflect.Ptr {
-							src = src.Elem().FieldByIndex(def.recv.index)
-						} else {
-							src = src.FieldByIndex(def.recv.index)
-						}
-					}
-					// Accommodate to receiver type
-					d := dest[0]
-					if ks, kd := src.Kind(), d.Kind(); ks != kd {
-						if kd == reflect.Ptr {
-							d.Set(src.Addr())
-						} else {
-							d.Set(src.Elem())
-						}
-					} else {
-						d.Set(src)
-					}
-				case variadic >= 0 && i >= varIndex:
+				case variadic >= 0 && i >= variadic:
 					if v(f).Type() == vararg.Type() {
 						vararg.Set(v(f))
 					} else {
