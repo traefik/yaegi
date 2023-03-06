@@ -2928,7 +2928,10 @@ func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerat
 	return gen
 }
 
-func matchSelectorMethod(sc *scope, n *node, name string) (err error) {
+// matchSelectorMethod, given that n represents a selector for a method, tries
+// to find the corresponding method, and populates n accordingly.
+func matchSelectorMethod(sc *scope, n *node) (err error) {
+	name := n.child[1].ident
 	if n.typ.cat == valueT || n.typ.cat == errorT {
 		switch method, ok := n.typ.rtype.MethodByName(name); {
 		case ok:
