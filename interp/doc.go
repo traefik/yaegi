@@ -9,8 +9,7 @@ https://golang.org/ref/spec.
 Packages can be imported in source or binary form, using the standard
 Go import statement. In source form, packages are searched first in the
 vendor directory, the preferred way to store source dependencies. If not
-found in vendor, sources modules will be searched in GOPATH. Go modules
-are not supported yet by yaegi.
+found in vendor, sources modules will be searched in GOPATH.
 
 Binary form packages are compiled and linked with the interpreter
 executable, and exposed to scripts with the Use method. The extract

@@ -103,6 +103,9 @@ jobs:
       - name: Setup GOPATH
         run: go env -w GOPATH=${{ github.workspace }}/go
 
+      - name: Setup GOCACHE
+        run: go env -w GOCACHE=${{ github.workspace }}/.cache/go-build
+
       - name: Build
         run: go build -v ./...
 

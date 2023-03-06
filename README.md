@@ -15,6 +15,7 @@ It powers executable Go scripts and plugins, in embedded interpreters or interac
 * Complete support of [Go specification][specs]
 * Written in pure Go, using only the standard library
 * Simple interpreter API: `New()`, `Eval()`, `Use()`
+* Supports Go Modules
 * Works everywhere Go works
 * All Go & runtime resources accessible from script (with control)
 * Security: `unsafe` and `syscall` packages neither used nor exported by default
@@ -113,6 +114,10 @@ func main() {
 ```
 
 [Go Playground](https://play.golang.org/p/WvwH4JqrU-p)
+
+### Use Go Modules
+
+TODO
 
 ### As a command-line interpreter
 
