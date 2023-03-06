@@ -2971,7 +2971,7 @@ func matchSelectorMethod(sc *scope, n *node) (err error) {
 				n.action = aGetMethod
 				break
 			}
-			err = n.cfgErrorf("undefined field or method: %s", name)
+			err = n.cfgErrorf("undefined method: %s", name)
 		}
 		return err
 	}
