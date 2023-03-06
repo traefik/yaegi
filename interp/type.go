@@ -1705,6 +1705,7 @@ func (t *itype) fieldSeq(seq []int) *itype {
 func (t *itype) lookupField(name string) []int {
 	seen := map[*itype]bool{}
 	var lookup func(*itype) []int
+	tias := isStruct(t)
 
 	lookup = func(typ *itype) []int {
 		if seen[typ] {
@@ -1723,6 +1724,11 @@ func (t *itype) lookupField(name string) []int {
 		for i, f := range typ.field {
 			switch f.typ.cat {
 			case ptrT, structT, interfaceT, linkedT:
+				if tias != isStruct(f.typ) {
+					// Interface fields are not valid embedded struct fields.
+					// Struct fields are not valid interface fields.
+					break
+				}
 				if index2 := lookup(f.typ); len(index2) > 0 {
 					return append([]int{i}, index2...)
 				}
@@ -1830,6 +1836,39 @@ func (t *itype) lookupMethod2(name string, seen map[*itype]bool) (*node, []int) 
 		}
 	}
 	return m, index
+}
+
+// interfaceMethod returns type of method matching an interface method name (not as a concrete method).
+func (t *itype) interfaceMethod(name string) *itype {
+	return t.interfaceMethod2(name, nil)
+}
+
+func (t *itype) interfaceMethod2(name string, seen map[*itype]bool) *itype {
+	if seen == nil {
+		seen = map[*itype]bool{}
+	}
+	if seen[t] {
+		return nil
+	}
+	seen[t] = true
+	if t.cat == ptrT {
+		return t.val.interfaceMethod2(name, seen)
+	}
+	for _, f := range t.field {
+		if f.name == name && isInterface(t) {
+			return f.typ
+		}
+		if !f.embed {
+			continue
+		}
+		if typ := f.typ.interfaceMethod2(name, seen); typ != nil {
+			return typ
+		}
+	}
+	if t.cat == linkedT || isInterfaceSrc(t) && t.val != nil {
+		return t.val.interfaceMethod2(name, seen)
+	}
+	return nil
 }
 
 // methodDepth returns a depth greater or equal to 0, or -1 if no match.
