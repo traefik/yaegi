@@ -1990,6 +1990,9 @@ func getMethodByName(n *node) {
 	}
 }
 
+// lookupMethodValue recursively looks within val for the method with the given
+// name. If a runtime value is found, it is returned in r, otherwise it is returned
+// in m, with li as the list of recursive field indexes.
 func lookupMethodValue(val valueInterface, name string) (r reflect.Value, m *node, li []int) {
 	if r = val.value.MethodByName(name); r.IsValid() {
 		return
