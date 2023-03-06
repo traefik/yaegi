@@ -2951,7 +2951,7 @@ func matchSelectorMethod(sc *scope, n *node) (err error) {
 				n.gen = getPtrIndexSeq
 				break
 			}
-			err = n.cfgErrorf("undefined field or method: %s", name)
+			err = n.cfgErrorf("undefined method: %s", name)
 		case n.typ.TypeOf().Kind() == reflect.Struct:
 			if field, ok := n.typ.rtype.FieldByName(name); ok {
 				n.typ = valueTOf(field.Type)
