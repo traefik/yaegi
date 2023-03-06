@@ -1898,7 +1898,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			tryMethods:
 				fallthrough
 			default:
-				err = matchSelectorMethod(sc, n, n.child[1].ident)
+				err = matchSelectorMethod(sc, n)
 			}
 			if err == nil && n.findex != -1 && n.typ.cat != genericT {
 				n.findex = sc.add(n.typ)
