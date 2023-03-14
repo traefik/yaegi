@@ -290,7 +290,7 @@ func typeAssert(n *node, withResult, withOk bool) {
 
 	typ := c1.typ // type to assert or convert to
 	typID := typ.id()
-	rtype := typ.rtype // type to assert
+	rtype := typ.refType(nil) // type to assert
 	next := getExec(n.tnext)
 
 	switch {
