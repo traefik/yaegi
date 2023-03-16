@@ -125,6 +125,12 @@ func TestYaegiCmdCancel(t *testing.T) {
 }
 
 func raceDetectorSupported(goos, goarch string) bool {
+	if strings.Contains(os.GetEnv("GOFLAGS"), "-buildmode=pie") {
+		// The Go race detector is not compatible with position independent code (pie).
+		// We read the conventional GOFLAGS env variable used for example on AlpineLinux
+		// to build packages, as there is no way to get this information from the runtime.
+		return false
+	}
 	switch goos {
 	case "linux":
 		return goarch == "amd64" || goarch == "ppc64le" || goarch == "arm64"
