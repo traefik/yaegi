@@ -37,17 +37,7 @@ func applyCIMultiplier(timeout time.Duration) time.Duration {
 }
 
 func TestYaegiCmdCancel(t *testing.T) {
-	tmp, err := os.MkdirTemp("", "yaegi-")
-	if err != nil {
-		t.Fatalf("failed to create tmp directory: %v", err)
-	}
-	defer func() {
-		err = os.RemoveAll(tmp)
-		if err != nil {
-			t.Errorf("failed to clean up %v: %v", tmp, err)
-		}
-	}()
-
+	tmp := t.TempDir()
 	yaegi := filepath.Join(tmp, "yaegi")
 
 	args := []string{"build"}
