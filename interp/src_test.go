@@ -49,13 +49,7 @@ func Test_effectivePkg(t *testing.T) {
 
 func Test_pkgDir(t *testing.T) {
 	// create GOPATH
-	goPath, err := os.MkdirTemp("", "pkdir")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(goPath)
-	}()
+	goPath := t.TempDir()
 
 	// Create project
 	project := filepath.Join(goPath, "src", "guthib.com", "foo", "root")
