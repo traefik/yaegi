@@ -177,6 +177,8 @@ Beside the known [bugs] which are supposed to be fixed in the short term, there 
 - Representation of types by `reflect` and printing values using %T may give different results between compiled mode and interpreted mode.
 - Interpreting computation intensive code is likely to remain significantly slower than in compiled mode.
 
+Go modules are not supported yet. Until that, it is necessary to install the source into `$GOPATH/src/github.com/traefik/yaegi` to pass all the tests.
+
 ## Contributing
 
 [Contributing guide](CONTRIBUTING.md).
