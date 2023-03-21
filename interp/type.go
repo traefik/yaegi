@@ -2160,7 +2160,7 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 						}
 						continue
 					}
-					if strings.Contains(f.Type.String(), "unsafe2.dummy") && f.Type.Kind() == reflect.Func {
+					if f.Type.Kind() == reflect.Func && strings.Contains(f.Type.String(), "unsafe2.dummy") {
 						fieldFix = append(fieldFix, fixStructField{s.name, i})
 					}
 				}
