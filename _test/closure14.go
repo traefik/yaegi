@@ -13,7 +13,7 @@ func main() {
 
 	var monkeys []*monkey
 
-	for k, v := range input {
+	for k := range input {
 		kong := monkey{}
 		divisor, _ := getk(k)
 		fmt.Print(divisor, " ")

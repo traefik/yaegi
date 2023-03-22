@@ -16,7 +16,7 @@ func main() {
 
 	var monkeys []*monkey
 
-	for k, v := range input {
+	for _, v := range input {
 		kong := monkey{}
 		divisor, err := strconv.Atoi(v)
 		if err != nil {
