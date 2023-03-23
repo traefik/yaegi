@@ -37,17 +37,7 @@ func applyCIMultiplier(timeout time.Duration) time.Duration {
 }
 
 func TestYaegiCmdCancel(t *testing.T) {
-	tmp, err := os.MkdirTemp("", "yaegi-")
-	if err != nil {
-		t.Fatalf("failed to create tmp directory: %v", err)
-	}
-	defer func() {
-		err = os.RemoveAll(tmp)
-		if err != nil {
-			t.Errorf("failed to clean up %v: %v", tmp, err)
-		}
-	}()
-
+	tmp := t.TempDir()
 	yaegi := filepath.Join(tmp, "yaegi")
 
 	args := []string{"build"}
@@ -125,6 +115,12 @@ func TestYaegiCmdCancel(t *testing.T) {
 }
 
 func raceDetectorSupported(goos, goarch string) bool {
+	if strings.Contains(os.Getenv("GOFLAGS"), "-buildmode=pie") {
+		// The Go race detector is not compatible with position independent code (pie).
+		// We read the conventional GOFLAGS env variable used for example on AlpineLinux
+		// to build packages, as there is no way to get this information from the runtime.
+		return false
+	}
 	switch goos {
 	case "linux":
 		return goarch == "amd64" || goarch == "ppc64le" || goarch == "arm64"

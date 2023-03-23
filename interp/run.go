@@ -171,6 +171,13 @@ func originalExecNode(n *node, exec bltn) *node {
 	return originalNode
 }
 
+// cloned from net/http/server.go , so we can enforce a similar behavior:
+// in the stdlib, this error is used as sentinel in panic triggered e.g. on
+// request cancellation, in order to catch it and suppress it in a following defer.
+// in yaegi, we use it to suppress a "panic" log message that happens in the
+// same circumstances.
+var errAbortHandler = errors.New("net/http: abort Handler")
+
 // Functions set to run during execution of CFG.
 
 // runCfg executes a node AST by walking its CFG and running node builtin at each step.
@@ -186,6 +193,13 @@ func runCfg(n *node, f *frame, funcNode, callNode *node) {
 			oNode := originalExecNode(n, exec)
 			if oNode == nil {
 				oNode = n
+			}
+			errorer, ok := f.recovered.(error)
+			// in this specific case, the stdlib would/will suppress the panic, so we
+			// suppress the logging here accordingly, to get a similar and consistent
+			// behavior.
+			if !ok || errorer.Error() != errAbortHandler.Error() {
+				fmt.Fprintln(n.interp.stderr, oNode.cfgErrorf("panic"))
 			}
 			f.mutex.Unlock()
 			panic(f.recovered)
@@ -276,7 +290,7 @@ func typeAssert(n *node, withResult, withOk bool) {
 
 	typ := c1.typ // type to assert or convert to
 	typID := typ.id()
-	rtype := typ.rtype // type to assert
+	rtype := typ.refType(nil) // type to assert
 	next := getExec(n.tnext)
 
 	switch {
@@ -1132,22 +1146,9 @@ func checkFieldIndex(typ reflect.Type, index []int) bool {
 
 func call(n *node) {
 	goroutine := n.anc.kind == goStmt
-	var method bool
 	c0 := n.child[0]
 	value := genValue(c0)
 	var values []func(*frame) reflect.Value
-
-	recvIndexLater := false
-	switch {
-	case c0.recv != nil:
-		// Compute method receiver value.
-		values = append(values, genValueRecv(c0))
-		method = true
-	case c0.action == aMethod:
-		// Add a place holder for interface method receiver.
-		values = append(values, nil)
-		method = true
-	}
 
 	numRet := len(c0.typ.ret)
 	variadic := variadicPos(n)
@@ -1248,10 +1249,6 @@ func call(n *node) {
 	if n.anc.kind == deferStmt {
 		// Store function call in frame for deferred execution.
 		value = genFunctionWrapper(c0)
-		if method {
-			// The receiver is already passed in the function wrapper, skip it.
-			values = values[1:]
-		}
 		n.exec = func(f *frame) bltn {
 			val := make([]reflect.Value, len(values)+1)
 			val[0] = value(f)
@@ -1287,17 +1284,22 @@ func call(n *node) {
 				callf = func(in []reflect.Value) []reflect.Value { return bf.Call(in) }
 			}
 
-			if method && len(values) > bf.Type().NumIn() {
-				// The receiver is already passed in the function wrapper, skip it.
-				values = values[1:]
+			if goroutine {
+				// Goroutine's arguments should be copied.
+				in := make([]reflect.Value, len(values))
+				for i, v := range values {
+					value := v(f)
+					in[i] = reflect.New(value.Type()).Elem()
+					in[i].Set(value)
+				}
+
+				go callf(in)
+				return tnext
 			}
+
 			in := make([]reflect.Value, len(values))
 			for i, v := range values {
 				in[i] = v(f)
-			}
-			if goroutine {
-				go callf(in)
-				return tnext
 			}
 			out := callf(in)
 			for i, v := range rvalues {
@@ -1334,55 +1336,15 @@ func call(n *node) {
 		}
 
 		// Init variadic argument vector
-		varIndex := variadic
 		if variadic >= 0 {
-			if method {
-				vararg = nf.data[numRet+variadic+1]
-				varIndex++
-			} else {
-				vararg = nf.data[numRet+variadic]
-			}
+			vararg = nf.data[numRet+variadic]
 		}
 
 		// Copy input parameters from caller
 		if dest := nf.data[numRet:]; len(dest) > 0 {
 			for i, v := range values {
 				switch {
-				case method && i == 0:
-					// compute receiver
-					var src reflect.Value
-					if v == nil {
-						src = def.recv.val
-					} else {
-						src = v(f)
-						for src.IsValid() {
-							// traverse interface indirections to find out concrete type
-							vi, ok := src.Interface().(valueInterface)
-							if !ok {
-								break
-							}
-							src = vi.value
-						}
-					}
-					if recvIndexLater && def.recv != nil && len(def.recv.index) > 0 {
-						if src.Kind() == reflect.Ptr {
-							src = src.Elem().FieldByIndex(def.recv.index)
-						} else {
-							src = src.FieldByIndex(def.recv.index)
-						}
-					}
-					// Accommodate to receiver type
-					d := dest[0]
-					if ks, kd := src.Kind(), d.Kind(); ks != kd {
-						if kd == reflect.Ptr {
-							d.Set(src.Addr())
-						} else {
-							d.Set(src.Elem())
-						}
-					} else {
-						d.Set(src)
-					}
-				case variadic >= 0 && i >= varIndex:
+				case variadic >= 0 && i >= variadic:
 					if v(f).Type() == vararg.Type() {
 						vararg.Set(v(f))
 					} else {
@@ -1537,6 +1499,8 @@ func callBin(n *node) {
 				values = append(values, genValue(c))
 			case isInterfaceSrc(c.typ):
 				values = append(values, genValueInterfaceValue(c))
+			case isFuncSrc(c.typ):
+				values = append(values, genFunctionWrapper(c))
 			case c.typ.cat == arrayT || c.typ.cat == variadicT:
 				if isEmptyInterface(c.typ.val) {
 					values = append(values, genValueArray(c))
@@ -1959,7 +1923,30 @@ func getMethodByName(n *node) {
 	l := n.level
 
 	n.exec = func(f *frame) bltn {
-		val := value0(f).Interface().(valueInterface)
+		// The interface object must be directly accessible, or embedded in a struct (exported anonymous field).
+		val0 := value0(f)
+		val, ok := value0(f).Interface().(valueInterface)
+		if !ok {
+			// Search the first embedded valueInterface.
+			for val0.Kind() == reflect.Ptr {
+				val0 = val0.Elem()
+			}
+			for i := 0; i < val0.NumField(); i++ {
+				fld := val0.Type().Field(i)
+				if !fld.Anonymous || !fld.IsExported() {
+					continue
+				}
+				if val, ok = val0.Field(i).Interface().(valueInterface); ok {
+					break
+					// TODO: should we keep track of all the the vals that are indeed valueInterface,
+					// so that later on we can call MethodByName on all of them until one matches?
+				}
+			}
+			if !ok {
+				panic(n.cfgErrorf("invalid interface value %v", val0))
+			}
+		}
+		// Traverse nested interface values to get the concrete value.
 		for {
 			v, ok := val.value.Interface().(valueInterface)
 			if !ok {
@@ -1975,7 +1962,7 @@ func getMethodByName(n *node) {
 
 		typ := val.node.typ
 		if typ.node == nil && typ.cat == valueT {
-			// happens with a var of empty interface type, that has value of concrete type
+			// It happens with a var of empty interface type, that has value of concrete type
 			// from runtime, being asserted to "user-defined" interface.
 			if _, ok := typ.rtype.MethodByName(name); !ok {
 				panic(n.cfgErrorf("method not found: %s", name))
@@ -1983,27 +1970,12 @@ func getMethodByName(n *node) {
 			return next
 		}
 
-		m, li := typ.lookupMethod(name)
-
-		// Try harder to find a matching embedded valueInterface.
-		// TODO (marc): make sure it works for arbitrary depth and breadth.
-		if m == nil && isStruct(val.node.typ) {
-			v := val.value
-			for v.Type().Kind() == reflect.Ptr {
-				v = v.Elem()
-			}
-			nf := v.NumField()
-			for i := 0; i < nf; i++ {
-				var ok bool
-				if val, ok = v.Field(i).Interface().(valueInterface); !ok {
-					continue
-				}
-				if m, li = val.node.typ.lookupMethod(name); m != nil {
-					break
-				}
-			}
+		// Finally search method recursively in embedded valueInterfaces.
+		r, m, li := lookupMethodValue(val, name)
+		if r.IsValid() {
+			getFrame(f, l).data[i] = r
+			return next
 		}
-
 		if m == nil {
 			panic(n.cfgErrorf("method not found: %s", name))
 		}
@@ -2016,6 +1988,37 @@ func getMethodByName(n *node) {
 		getFrame(f, l).data[i] = genFuncValue(&nod)(f)
 		return next
 	}
+}
+
+// lookupMethodValue recursively looks within val for the method with the given
+// name. If a runtime value is found, it is returned in r, otherwise it is returned
+// in m, with li as the list of recursive field indexes.
+func lookupMethodValue(val valueInterface, name string) (r reflect.Value, m *node, li []int) {
+	if r = val.value.MethodByName(name); r.IsValid() {
+		return
+	}
+	if m, li = val.node.typ.lookupMethod(name); m != nil {
+		return
+	}
+	if !isStruct(val.node.typ) {
+		return
+	}
+	v := val.value
+	for v.Type().Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	nf := v.NumField()
+	for i := 0; i < nf; i++ {
+		vi, ok := v.Field(i).Interface().(valueInterface)
+		if !ok {
+			continue
+		}
+		if r, m, li = lookupMethodValue(vi, name); m != nil {
+			li = append([]int{i}, li...)
+			return
+		}
+	}
+	return
 }
 
 func getIndexSeq(n *node) {

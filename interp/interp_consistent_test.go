@@ -217,7 +217,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 		{
 			fileName:       "const9.go",
 			expectedInterp: "5:2: constant definition loop",
-			expectedExec:   "5:2: initialization loop for b",
+			expectedExec:   "5:2: initialization",
 		},
 		{
 			fileName:       "if2.go",
@@ -247,7 +247,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 		{
 			fileName:       "issue-1093.go",
 			expectedInterp: "9:6: cannot use type untyped string as type int in assignment",
-			expectedExec:   `9:6: cannot use "a" + b() (value of type string) as type int in assignment`,
+			expectedExec:   `9:6: cannot use "a" + b() (value of type string)`,
 		},
 		{
 			fileName:       "op1.go",

@@ -322,8 +322,60 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					}
 				}
 				if n.typ == nil {
-					err = n.cfgErrorf("undefined type")
-					return false
+					// A nil type indicates either an error or a generic type.
+					// A child indexExpr or indexListExpr is used for type parameters,
+					// it indicates an instanciated generic.
+					if n.child[0].kind != indexExpr && n.child[0].kind != indexListExpr {
+						err = n.cfgErrorf("undefined type")
+						return false
+					}
+					t0, err1 := nodeType(interp, sc, n.child[0].child[0])
+					if err1 != nil {
+						return false
+					}
+					if t0.cat != genericT {
+						err = n.cfgErrorf("undefined type")
+						return false
+					}
+					// We have a composite literal of generic type, instantiate it.
+					lt := []*itype{}
+					for _, n1 := range n.child[0].child[1:] {
+						t1, err1 := nodeType(interp, sc, n1)
+						if err1 != nil {
+							return false
+						}
+						lt = append(lt, t1)
+					}
+					var g *node
+					g, _, err = genAST(sc, t0.node.anc, lt)
+					if err != nil {
+						return false
+					}
+					n.child[0] = g.lastChild()
+					n.typ, err = nodeType(interp, sc, n.child[0])
+					if err != nil {
+						return false
+					}
+					// Generate methods if any.
+					for _, nod := range t0.method {
+						gm, _, err2 := genAST(nod.scope, nod, lt)
+						if err2 != nil {
+							err = err2
+							return false
+						}
+						gm.typ, err = nodeType(interp, nod.scope, gm.child[2])
+						if err != nil {
+							return false
+						}
+						if _, err = interp.cfg(gm, sc, sc.pkgID, sc.pkgName); err != nil {
+							return false
+						}
+						if err = genRun(gm); err != nil {
+							return false
+						}
+						n.typ.addMethod(gm)
+					}
+					n.nleft = 1 // Indictate the type of composite literal.
 				}
 			}
 
@@ -438,6 +490,19 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				recvTypeNode := fr.lastChild()
 				if typ, err = nodeType(interp, sc, recvTypeNode); err != nil {
 					return false
+				}
+				if typ.cat == nilT {
+					// This may happen when instantiating generic methods.
+					s2, _, ok := sc.lookup(typ.id())
+					if !ok {
+						err = n.cfgErrorf("type not found: %s", typ.id())
+						break
+					}
+					typ = s2.typ
+					if typ.cat == nilT {
+						err = n.cfgErrorf("nil type: %s", typ.id())
+						break
+					}
 				}
 				recvTypeNode.typ = typ
 				n.child[2].typ.recv = typ
@@ -875,16 +940,18 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.typ = t
 					return
 				}
-				g, err := genAST(sc, t.node.anc, []*node{c1})
+				g, found, err := genAST(sc, t.node.anc, []*itype{c1.typ})
 				if err != nil {
 					return
 				}
-				if _, err = interp.cfg(g, nil, importPath, pkgName); err != nil {
-					return
-				}
-				// Generate closures for function body.
-				if err = genRun(g.child[3]); err != nil {
-					return
+				if !found {
+					if _, err = interp.cfg(g, t.node.anc.scope, importPath, pkgName); err != nil {
+						return
+					}
+					// Generate closures for function body.
+					if err = genRun(g.child[3]); err != nil {
+						return
+					}
 				}
 				// Replace generic func node by instantiated one.
 				n.anc.child[childPos(n)] = g
@@ -1034,17 +1101,23 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			case c0.kind == indexListExpr:
 				// Instantiate a generic function then call it.
 				fun := c0.child[0].sym.node
-				g, err := genAST(sc, fun, c0.child[1:])
+				lt := []*itype{}
+				for _, c := range c0.child[1:] {
+					lt = append(lt, c.typ)
+				}
+				g, found, err := genAST(sc, fun, lt)
 				if err != nil {
 					return
 				}
-				_, err = interp.cfg(g, nil, importPath, pkgName)
-				if err != nil {
-					return
-				}
-				err = genRun(g.child[3]) // Generate closures for function body.
-				if err != nil {
-					return
+				if !found {
+					_, err = interp.cfg(g, fun.scope, importPath, pkgName)
+					if err != nil {
+						return
+					}
+					err = genRun(g.child[3]) // Generate closures for function body.
+					if err != nil {
+						return
+					}
 				}
 				n.child[0] = g
 				c0 = n.child[0]
@@ -1216,23 +1289,26 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				if isGeneric(c0.typ) {
 					fun := c0.typ.node.anc
 					var g *node
-					var types []*node
+					var types []*itype
+					var found bool
 
 					// Infer type parameter from function call arguments.
 					if types, err = inferTypesFromCall(sc, fun, n.child[1:]); err != nil {
 						break
 					}
 					// Generate an instantiated AST from the generic function one.
-					if g, err = genAST(sc, fun, types); err != nil {
+					if g, found, err = genAST(sc, fun, types); err != nil {
 						break
 					}
-					// Compile the generated function AST, so it becomes part of the scope.
-					if _, err = interp.cfg(g, nil, importPath, pkgName); err != nil {
-						break
-					}
-					// AST compilation part 2: Generate closures for function body.
-					if err = genRun(g.child[3]); err != nil {
-						break
+					if !found {
+						// Compile the generated function AST, so it becomes part of the scope.
+						if _, err = interp.cfg(g, fun.scope, importPath, pkgName); err != nil {
+							break
+						}
+						// AST compilation part 2: Generate closures for function body.
+						if err = genRun(g.child[3]); err != nil {
+							break
+						}
 					}
 					n.child[0] = g
 					c0 = n.child[0]
@@ -1491,6 +1567,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 			sym, level, found := sc.lookup(n.ident)
 			if !found {
+				if n.typ != nil {
+					// Node is a generic instance with an already populated type.
+					break
+				}
 				// retry with the filename, in case ident is a package name.
 				sym, level, found = sc.lookup(filepath.Join(n.ident, baseName))
 				if !found {
@@ -1822,105 +1902,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			tryMethods:
 				fallthrough
 			default:
-				// Find a matching method.
-				// TODO (marc): simplify the following if/elseif blocks.
-				if n.typ.cat == valueT || n.typ.cat == errorT {
-					switch method, ok := n.typ.rtype.MethodByName(n.child[1].ident); {
-					case ok:
-						hasRecvType := n.typ.TypeOf().Kind() != reflect.Interface
-						n.val = method.Index
-						n.gen = getIndexBinMethod
-						n.action = aGetMethod
-						n.recv = &receiver{node: n.child[0]}
-						n.typ = valueTOf(method.Type, isBinMethod())
-						if hasRecvType {
-							n.typ.recv = n.typ
-						}
-					case n.typ.TypeOf().Kind() == reflect.Ptr:
-						if field, ok := n.typ.rtype.Elem().FieldByName(n.child[1].ident); ok {
-							n.typ = valueTOf(field.Type)
-							n.val = field.Index
-							n.gen = getPtrIndexSeq
-							break
-						}
-						err = n.cfgErrorf("undefined field or method: %s", n.child[1].ident)
-					case n.typ.TypeOf().Kind() == reflect.Struct:
-						if field, ok := n.typ.rtype.FieldByName(n.child[1].ident); ok {
-							n.typ = valueTOf(field.Type)
-							n.val = field.Index
-							n.gen = getIndexSeq
-							break
-						}
-						fallthrough
-					default:
-						// method lookup failed on type, now lookup on pointer to type
-						pt := reflect.PtrTo(n.typ.rtype)
-						if m2, ok2 := pt.MethodByName(n.child[1].ident); ok2 {
-							n.val = m2.Index
-							n.gen = getIndexBinPtrMethod
-							n.typ = valueTOf(m2.Type, isBinMethod(), withRecv(valueTOf(pt)))
-							n.recv = &receiver{node: n.child[0]}
-							n.action = aGetMethod
-							break
-						}
-						err = n.cfgErrorf("undefined field or method: %s", n.child[1].ident)
-					}
-				} else if n.typ.cat == ptrT && (n.typ.val.cat == valueT || n.typ.val.cat == errorT) {
-					// Handle pointer on object defined in runtime
-					if method, ok := n.typ.val.rtype.MethodByName(n.child[1].ident); ok {
-						n.val = method.Index
-						n.typ = valueTOf(method.Type, isBinMethod(), withRecv(n.typ))
-						n.recv = &receiver{node: n.child[0]}
-						n.gen = getIndexBinElemMethod
-						n.action = aGetMethod
-					} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(n.child[1].ident); ok {
-						n.val = method.Index
-						n.gen = getIndexBinMethod
-						n.typ = valueTOf(method.Type, withRecv(valueTOf(reflect.PtrTo(n.typ.val.rtype), isBinMethod())))
-						n.recv = &receiver{node: n.child[0]}
-						n.action = aGetMethod
-					} else if field, ok := n.typ.val.rtype.FieldByName(n.child[1].ident); ok {
-						n.typ = valueTOf(field.Type)
-						n.val = field.Index
-						n.gen = getPtrIndexSeq
-					} else {
-						err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
-					}
-				} else if m, lind := n.typ.lookupMethod(n.child[1].ident); m != nil {
-					n.action = aGetMethod
-					if n.child[0].isType(sc) {
-						// Handle method as a function with receiver in 1st argument.
-						n.val = m
-						n.findex = notInFrame
-						n.gen = nop
-						n.typ = &itype{}
-						*n.typ = *m.typ
-						n.typ.arg = append([]*itype{n.child[0].typ}, m.typ.arg...)
-					} else {
-						// Handle method with receiver.
-						n.gen = getMethod
-						n.val = m
-						n.typ = m.typ
-						n.recv = &receiver{node: n.child[0], index: lind}
-					}
-				} else if m, lind, isPtr, ok := n.typ.lookupBinMethod(n.child[1].ident); ok {
-					n.action = aGetMethod
-					switch {
-					case isPtr && n.typ.fieldSeq(lind).cat != ptrT:
-						n.gen = getIndexSeqPtrMethod
-					case isInterfaceSrc(n.typ):
-						n.gen = getMethodByName
-					default:
-						n.gen = getIndexSeqMethod
-					}
-					n.recv = &receiver{node: n.child[0], index: lind}
-					n.val = append([]int{m.Index}, lind...)
-					n.typ = valueTOf(m.Type, isBinMethod(), withRecv(n.child[0].typ))
-				} else {
-					err = n.cfgErrorf("undefined selector: %s", n.child[1].ident)
-				}
+				err = matchSelectorMethod(sc, n)
 			}
-			if err == nil && n.findex != -1 {
+			if err == nil && n.findex != -1 && n.typ.cat != genericT {
 				n.findex = sc.add(n.typ)
 			}
 
@@ -2379,11 +2363,13 @@ func (n *node) cfgErrorf(format string, a ...interface{}) *cfgError {
 
 func genRun(nod *node) error {
 	var err error
+	seen := map[*node]bool{}
 
 	nod.Walk(func(n *node) bool {
-		if err != nil {
+		if err != nil || seen[n] {
 			return false
 		}
+		seen[n] = true
 		switch n.kind {
 		case funcType:
 			if len(n.anc.child) == 4 {
@@ -2944,6 +2930,124 @@ func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerat
 		}
 	}
 	return gen
+}
+
+// matchSelectorMethod, given that n represents a selector for a method, tries
+// to find the corresponding method, and populates n accordingly.
+func matchSelectorMethod(sc *scope, n *node) (err error) {
+	name := n.child[1].ident
+	if n.typ.cat == valueT || n.typ.cat == errorT {
+		switch method, ok := n.typ.rtype.MethodByName(name); {
+		case ok:
+			hasRecvType := n.typ.TypeOf().Kind() != reflect.Interface
+			n.val = method.Index
+			n.gen = getIndexBinMethod
+			n.action = aGetMethod
+			n.recv = &receiver{node: n.child[0]}
+			n.typ = valueTOf(method.Type, isBinMethod())
+			if hasRecvType {
+				n.typ.recv = n.typ
+			}
+		case n.typ.TypeOf().Kind() == reflect.Ptr:
+			if field, ok := n.typ.rtype.Elem().FieldByName(name); ok {
+				n.typ = valueTOf(field.Type)
+				n.val = field.Index
+				n.gen = getPtrIndexSeq
+				break
+			}
+			err = n.cfgErrorf("undefined method: %s", name)
+		case n.typ.TypeOf().Kind() == reflect.Struct:
+			if field, ok := n.typ.rtype.FieldByName(name); ok {
+				n.typ = valueTOf(field.Type)
+				n.val = field.Index
+				n.gen = getIndexSeq
+				break
+			}
+			fallthrough
+		default:
+			// method lookup failed on type, now lookup on pointer to type
+			pt := reflect.PtrTo(n.typ.rtype)
+			if m2, ok2 := pt.MethodByName(name); ok2 {
+				n.val = m2.Index
+				n.gen = getIndexBinPtrMethod
+				n.typ = valueTOf(m2.Type, isBinMethod(), withRecv(valueTOf(pt)))
+				n.recv = &receiver{node: n.child[0]}
+				n.action = aGetMethod
+				break
+			}
+			err = n.cfgErrorf("undefined method: %s", name)
+		}
+		return err
+	}
+
+	if n.typ.cat == ptrT && (n.typ.val.cat == valueT || n.typ.val.cat == errorT) {
+		// Handle pointer on object defined in runtime
+		if method, ok := n.typ.val.rtype.MethodByName(name); ok {
+			n.val = method.Index
+			n.typ = valueTOf(method.Type, isBinMethod(), withRecv(n.typ))
+			n.recv = &receiver{node: n.child[0]}
+			n.gen = getIndexBinElemMethod
+			n.action = aGetMethod
+		} else if method, ok := reflect.PtrTo(n.typ.val.rtype).MethodByName(name); ok {
+			n.val = method.Index
+			n.gen = getIndexBinMethod
+			n.typ = valueTOf(method.Type, withRecv(valueTOf(reflect.PtrTo(n.typ.val.rtype), isBinMethod())))
+			n.recv = &receiver{node: n.child[0]}
+			n.action = aGetMethod
+		} else if field, ok := n.typ.val.rtype.FieldByName(name); ok {
+			n.typ = valueTOf(field.Type)
+			n.val = field.Index
+			n.gen = getPtrIndexSeq
+		} else {
+			err = n.cfgErrorf("undefined selector: %s", name)
+		}
+		return err
+	}
+
+	if m, lind := n.typ.lookupMethod(name); m != nil {
+		n.action = aGetMethod
+		if n.child[0].isType(sc) {
+			// Handle method as a function with receiver in 1st argument.
+			n.val = m
+			n.findex = notInFrame
+			n.gen = nop
+			n.typ = &itype{}
+			*n.typ = *m.typ
+			n.typ.arg = append([]*itype{n.child[0].typ}, m.typ.arg...)
+		} else {
+			// Handle method with receiver.
+			n.gen = getMethod
+			n.val = m
+			n.typ = m.typ
+			n.recv = &receiver{node: n.child[0], index: lind}
+		}
+		return nil
+	}
+
+	if m, lind, isPtr, ok := n.typ.lookupBinMethod(name); ok {
+		n.action = aGetMethod
+		switch {
+		case isPtr && n.typ.fieldSeq(lind).cat != ptrT:
+			n.gen = getIndexSeqPtrMethod
+		case isInterfaceSrc(n.typ):
+			n.gen = getMethodByName
+		default:
+			n.gen = getIndexSeqMethod
+		}
+		n.recv = &receiver{node: n.child[0], index: lind}
+		n.val = append([]int{m.Index}, lind...)
+		n.typ = valueTOf(m.Type, isBinMethod(), withRecv(n.child[0].typ))
+		return nil
+	}
+
+	if typ := n.typ.interfaceMethod(name); typ != nil {
+		n.typ = typ
+		n.action = aGetMethod
+		n.gen = getMethodByName
+		return nil
+	}
+
+	return n.cfgErrorf("undefined selector: %s", name)
 }
 
 // arrayTypeLen returns the node's array length. If the expression is an
