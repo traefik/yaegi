@@ -3863,10 +3863,6 @@ func slice0(n *node) {
 	}
 }
 
-func isNil(n *node) {
-	isNilChild(0)(n)
-}
-
 func isNilChild(child int) func(n *node) {
 	return func(n *node) {
 		var value func(*frame) reflect.Value
