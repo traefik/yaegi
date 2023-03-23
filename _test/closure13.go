@@ -9,8 +9,6 @@ type monkey struct {
 	test func() int
 }
 
-func getk(k int) int { return k }
-
 func main() {
 	input := []string{"1", "2", "3"}
 
