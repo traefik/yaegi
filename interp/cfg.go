@@ -861,7 +861,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				n.typ = sc.getType("bool")
 				if c0.sym == nilSym || c1.sym == nilSym {
 					if n.action == aEqual {
-						n.gen = isNil
+						if c1.sym == nilSym {
+							n.gen = isNilChild(0)
+						} else {
+							n.gen = isNilChild(1)
+						}
 					} else {
 						n.gen = isNotNil
 					}
