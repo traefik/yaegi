@@ -1958,11 +1958,6 @@ var (
 	constVal           = reflect.TypeOf((*constant.Value)(nil)).Elem()
 )
 
-type fieldRebuild struct {
-	typ *itype
-	idx int
-}
-
 type refTypeContext struct {
 	defined map[string]*itype
 
@@ -1970,7 +1965,7 @@ type refTypeContext struct {
 	// type name (as key) is used as a field of another (or possibly the same) struct
 	// type. Each of these fields will then live as an unsafe2.dummy type until the
 	// whole recursion is fully resolved, and the type is fixed.
-	refs map[string][]fieldRebuild
+	refs map[string][]*itype
 
 	// When we detect for the first time that we are in a recursive type (thanks to
 	// defined), we keep track of the first occurrence of the type where the recursion
@@ -2043,7 +2038,7 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 	if ctx == nil {
 		ctx = &refTypeContext{
 			defined: map[string]*itype{},
-			refs:    map[string][]fieldRebuild{},
+			refs:    map[string][]*itype{},
 		}
 	}
 	if t.incomplete || t.cat == nilT {
@@ -2068,14 +2063,14 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 
 		// The recursion has not been fully resolved yet.
 		// To indicate that a rebuild is needed on the englobing struct,
-		// return a dummy field type and create an entry with an empty fieldRebuild.
+		// return a dummy field type and create an empty entry.
 		flds := ctx.refs[name]
 		ctx.rect = dt
 
 		// We know we are used as a field by someone, but we don't know by who
-		// at this point in the code, so we just mark it as an empty fieldRebuild for now.
-		// We'll complete the fieldRebuild in the caller.
-		ctx.refs[name] = append(flds, fieldRebuild{})
+		// at this point in the code, so we just mark it as an empty *itype for now.
+		// We'll complete the *itype in the caller.
+		ctx.refs[name] = append(flds, (*itype)(nil))
 		return unsafe2.DummyType
 	}
 	if isGeneric(t) {
@@ -2132,7 +2127,7 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 		}
 		ctx.slevel++
 		var fields []reflect.StructField
-		for i, f := range t.field {
+		for _, f := range t.field {
 			field := reflect.StructField{
 				Name: exportName(f.name), Type: f.typ.refType(ctx),
 				Tag: reflect.StructTag(f.tag), Anonymous: f.embed,
@@ -2141,14 +2136,18 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 			// Find any nil type refs that indicates a rebuild is needed on this field.
 			for _, flds := range ctx.refs {
 				for j, fld := range flds {
-					if fld.typ == nil {
-						flds[j] = fieldRebuild{typ: t, idx: i}
+					if fld == nil {
+						flds[j] = t
 					}
 				}
 			}
 		}
 		ctx.slevel--
-		fieldFix := []int{} // Slice of field indices to fix for recursivity.
+		type fixStructField struct {
+			name  string
+			index int
+		}
+		fieldFix := []fixStructField{} // Slice of field indices to fix for recursivity.
 		t.rtype = reflect.StructOf(fields)
 		if ctx.isComplete() {
 			for _, s := range ctx.defined {
@@ -2157,8 +2156,12 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 					if strings.HasSuffix(f.Type.String(), "unsafe2.dummy") {
 						unsafe2.SetFieldType(s.rtype, i, ctx.rect.fixDummy(s.rtype.Field(i).Type))
 						if name == s.path+"/"+s.name {
-							fieldFix = append(fieldFix, i)
+							fieldFix = append(fieldFix, fixStructField{s.name, i})
 						}
+						continue
+					}
+					if f.Type.Kind() == reflect.Func && strings.Contains(f.Type.String(), "unsafe2.dummy") {
+						fieldFix = append(fieldFix, fixStructField{s.name, i})
 					}
 				}
 			}
@@ -2173,9 +2176,11 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 		// and we need both the loop above, around all the struct fields, and the loop
 		// below, around the ctx.refs.
 		for _, f := range ctx.refs[name] {
-			for _, index := range fieldFix {
-				ftyp := f.typ.field[index].typ.refType(&refTypeContext{defined: ctx.defined, rebuilding: true})
-				unsafe2.SetFieldType(f.typ.rtype, index, ftyp)
+			for _, ff := range fieldFix {
+				if ff.name == f.name {
+					ftyp := f.field[ff.index].typ.refType(&refTypeContext{defined: ctx.defined, rebuilding: true})
+					unsafe2.SetFieldType(f.rtype, ff.index, ftyp)
+				}
 			}
 		}
 	default:
