@@ -639,7 +639,7 @@ func assignFromCall(n *node) {
 			c := n.child[i]
 			if n.kind == defineXStmt && !c.redeclared {
 				// Recreate destination value in case of define statement,
-				// to preseve previous value possibly in use by a closure.
+				// to preserve previous value possibly in use by a closure.
 				data := getFrame(f, c.level).data
 				data[c.findex] = reflect.New(data[c.findex].Type()).Elem()
 				data[c.findex].Set(s)
