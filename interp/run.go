@@ -3883,31 +3883,44 @@ func slice0(n *node) {
 	}
 }
 
-func isNil(n *node) {
-	var value func(*frame) reflect.Value
-	c0 := n.child[0]
-	value = genValue(c0)
-	typ := n.typ.concrete().TypeOf()
-	isInterface := n.typ.TypeOf().Kind() == reflect.Interface
-	tnext := getExec(n.tnext)
-	dest := genValue(n)
-
-	if n.fnext == nil {
-		if !isInterfaceSrc(c0.typ) {
-			if isInterface {
+func isNilChild(child int) func(n *node) {
+	return func(n *node) {
+		var value func(*frame) reflect.Value
+		child := n.child[child]
+		value = genValue(child)
+		typ := n.typ.concrete().TypeOf()
+		isInterface := n.typ.TypeOf().Kind() == reflect.Interface
+		tnext := getExec(n.tnext)
+		dest := genValue(n)
+		if n.fnext == nil {
+			if !isInterfaceSrc(child.typ) {
+				if isInterface {
+					n.exec = func(f *frame) bltn {
+						dest(f).Set(reflect.ValueOf(value(f).IsNil()).Convert(typ))
+						return tnext
+					}
+					return
+				}
 				n.exec = func(f *frame) bltn {
-					dest(f).Set(reflect.ValueOf(value(f).IsNil()).Convert(typ))
+					dest(f).SetBool(value(f).IsNil())
 					return tnext
 				}
 				return
 			}
-			n.exec = func(f *frame) bltn {
-				dest(f).SetBool(value(f).IsNil())
-				return tnext
+			if isInterface {
+				n.exec = func(f *frame) bltn {
+					v := value(f)
+					var r bool
+					if vi, ok := v.Interface().(valueInterface); ok {
+						r = (vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT)
+					} else {
+						r = v.IsNil()
+					}
+					dest(f).Set(reflect.ValueOf(r).Convert(typ))
+					return tnext
+				}
+				return
 			}
-			return
-		}
-		if isInterface {
 			n.exec = func(f *frame) bltn {
 				v := value(f)
 				var r bool
@@ -3916,55 +3929,43 @@ func isNil(n *node) {
 				} else {
 					r = v.IsNil()
 				}
-				dest(f).Set(reflect.ValueOf(r).Convert(typ))
+				dest(f).SetBool(r)
 				return tnext
 			}
 			return
 		}
+
+		fnext := getExec(n.fnext)
+
+		if !isInterfaceSrc(child.typ) {
+			n.exec = func(f *frame) bltn {
+				if value(f).IsNil() {
+					dest(f).SetBool(true)
+					return tnext
+				}
+				dest(f).SetBool(false)
+				return fnext
+			}
+			return
+		}
+
 		n.exec = func(f *frame) bltn {
 			v := value(f)
-			var r bool
 			if vi, ok := v.Interface().(valueInterface); ok {
-				r = (vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT)
-			} else {
-				r = v.IsNil()
+				if (vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT) {
+					dest(f).SetBool(true)
+					return tnext
+				}
+				dest(f).SetBool(false)
+				return fnext
 			}
-			dest(f).SetBool(r)
-			return tnext
-		}
-		return
-	}
-
-	fnext := getExec(n.fnext)
-
-	if !isInterfaceSrc(c0.typ) {
-		n.exec = func(f *frame) bltn {
-			if value(f).IsNil() {
+			if v.IsNil() {
 				dest(f).SetBool(true)
 				return tnext
 			}
 			dest(f).SetBool(false)
 			return fnext
 		}
-		return
-	}
-
-	n.exec = func(f *frame) bltn {
-		v := value(f)
-		if vi, ok := v.Interface().(valueInterface); ok {
-			if (vi == valueInterface{} || vi.node.kind == basicLit && vi.node.typ.cat == nilT) {
-				dest(f).SetBool(true)
-				return tnext
-			}
-			dest(f).SetBool(false)
-			return fnext
-		}
-		if v.IsNil() {
-			dest(f).SetBool(true)
-			return tnext
-		}
-		dest(f).SetBool(false)
-		return fnext
 	}
 }
 
