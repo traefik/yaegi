@@ -672,7 +672,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						return
 					}
 					if sc.global {
-						// Do not overload existing symbols (defined in GTA) in global scope
+						// Do not overload existing symbols (defined in GTA) in global scope.
 						sym, _, _ = sc.lookup(dest.ident)
 					}
 					if sym == nil {
@@ -2323,6 +2323,7 @@ func compDefineX(sc *scope, n *node) error {
 		canRedeclare := hasNewSymbol && len(symIsNew) > 1 && !symIsNew[id] && ok
 		if canRedeclare && level == n.child[i].level && sym.kind == varSym && sym.typ.id() == t.id() {
 			index = sym.index
+			n.child[i].redeclared = true
 		} else {
 			index = sc.add(t)
 			sc.sym[id] = &symbol{index: index, kind: varSym, typ: t}

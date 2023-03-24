@@ -636,6 +636,15 @@ func assignFromCall(n *node) {
 				continue
 			}
 			s := f.data[ncall.findex+i]
+			c := n.child[i]
+			if n.kind == defineXStmt && !c.redeclared {
+				// Recreate destination value in case of define statement,
+				// to preserve previous value possibly in use by a closure.
+				data := getFrame(f, c.level).data
+				data[c.findex] = reflect.New(data[c.findex].Type()).Elem()
+				data[c.findex].Set(s)
+				continue
+			}
 			v(f).Set(s)
 		}
 		return next
@@ -1587,9 +1596,20 @@ func callBin(n *node) {
 				}
 				out := callFn(value(f), in)
 				for i, v := range rvalues {
-					if v != nil {
-						v(f).Set(out[i])
+					if v == nil {
+						continue // Skip assign "_".
 					}
+					c := n.anc.child[i]
+					if n.anc.kind == defineXStmt && !c.redeclared {
+						// In case of a define statement, the destination value in the frame
+						// must be recreated. This is necessary to preserve the previous value
+						// which may be still used in a separate closure.
+						data := getFrame(f, c.level).data
+						data[c.findex] = reflect.New(data[c.findex].Type()).Elem()
+						data[c.findex].Set(out[i])
+						continue
+					}
+					v(f).Set(out[i])
 				}
 				return tnext
 			}
