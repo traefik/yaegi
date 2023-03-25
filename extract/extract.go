@@ -132,7 +132,7 @@ func matchList(name string, list []string) (match bool, err error) {
 
 func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, error) {
 	prefix := "_" + importPath + "_"
-	prefix = strings.NewReplacer("/", "_", "-", "_", ".", "_").Replace(prefix)
+	prefix = strings.NewReplacer("/", "_", "-", "_", ".", "_", "~", "_").Replace(prefix)
 
 	typ := map[string]string{}
 	val := map[string]Val{}
