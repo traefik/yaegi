@@ -1544,8 +1544,11 @@ type methodSet map[string]string
 
 // Contains returns true if the method set m contains the method set n.
 func (m methodSet) contains(n methodSet) bool {
-	for k, v := range n {
-		if m[k] != v {
+	for k := range n {
+		// Only check the presence of method, not its complete signature,
+		// as the receiver may be part of the arguments, which makes a
+		// robust check complex.
+		if _, ok := m[k]; !ok {
 			return false
 		}
 	}
@@ -2132,8 +2135,14 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 		var fields []reflect.StructField
 		for _, f := range t.field {
 			field := reflect.StructField{
-				Name: exportName(f.name), Type: f.typ.refType(ctx),
-				Tag: reflect.StructTag(f.tag), Anonymous: f.embed,
+				Name: exportName(f.name),
+				Type: f.typ.refType(ctx),
+				Tag:  reflect.StructTag(f.tag),
+			}
+			if len(t.field) == 1 && f.embed {
+				// Mark the field as embedded (anonymous) only if it is the
+				// only one, to avoid a panic due to golang/go#15924 issue.
+				field.Anonymous = true
 			}
 			fields = append(fields, field)
 			// Find any nil type refs that indicates a rebuild is needed on this field.
