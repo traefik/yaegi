@@ -1090,6 +1090,9 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 			sc.sym[sname].typ = t
 		}
 
+	case typeAssertExpr:
+		t, err = nodeType2(interp, sc, n.child[1], seen)
+
 	default:
 		err = n.cfgErrorf("type definition not implemented: %s", n.kind)
 	}
