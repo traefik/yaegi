@@ -21,3 +21,6 @@ func main() {
 
 	fmt.Println(i)
 }
+
+// Output:
+// 5

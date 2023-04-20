@@ -20,10 +20,13 @@ func init() {
 		"convert": reflect.ValueOf(convert),
 	}
 
-	// Add builtin functions to unsafe.
+	Symbols["unsafe/unsafe"]["Add"] = reflect.ValueOf(add)
+
+	// Add builtin functions to unsafe, also implemented in interp/cfg.go.
 	Symbols["unsafe/unsafe"]["Sizeof"] = reflect.ValueOf(sizeof)
 	Symbols["unsafe/unsafe"]["Alignof"] = reflect.ValueOf(alignof)
-	Symbols["unsafe/unsafe"]["Offsetof"] = reflect.ValueOf("Offsetof") // This symbol is handled directly in interpreter.
+	// The following is used only for signature check only.
+	Symbols["unsafe/unsafe"]["Offsetof"] = reflect.ValueOf(func(interface{}) uintptr { return 0 })
 }
 
 func convert(from, to reflect.Type) func(src, dest reflect.Value) {
@@ -48,6 +51,10 @@ func convert(from, to reflect.Type) func(src, dest reflect.Value) {
 	default:
 		return nil
 	}
+}
+
+func add(ptr unsafe.Pointer, l int) unsafe.Pointer {
+	return unsafe.Add(ptr, l)
 }
 
 func sizeof(i interface{}) uintptr {

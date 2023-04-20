@@ -492,6 +492,9 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				}
 				return nil, err
 			}
+			if !c0.rval.IsValid() {
+				return nil, c0.cfgErrorf("undefined array size")
+			}
 			if length, ok = c0.rval.Interface().(int); !ok {
 				v, ok := c0.rval.Interface().(constant.Value)
 				if !ok {
@@ -1339,7 +1342,7 @@ func (t *itype) numOut() int {
 		}
 	case builtinT:
 		switch t.name {
-		case "append", "cap", "complex", "copy", "imag", "len", "make", "new", "real", "recover":
+		case "append", "cap", "complex", "copy", "imag", "len", "make", "new", "real", "recover", "unsafe.Alignof", "unsafe.Offsetof", "unsafe.Sizeof":
 			return 1
 		}
 	}
