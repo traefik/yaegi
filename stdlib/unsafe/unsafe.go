@@ -25,7 +25,7 @@ func init() {
 	// Add builtin functions to unsafe, also implemented in interp/cfg.go.
 	Symbols["unsafe/unsafe"]["Sizeof"] = reflect.ValueOf(sizeof)
 	Symbols["unsafe/unsafe"]["Alignof"] = reflect.ValueOf(alignof)
-	// The following is used only for signature check only.
+	// The following is used for signature check only.
 	Symbols["unsafe/unsafe"]["Offsetof"] = reflect.ValueOf(func(interface{}) uintptr { return 0 })
 }
 
