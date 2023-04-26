@@ -5,7 +5,6 @@
 [![release](https://img.shields.io/github/tag-date/traefik/yaegi.svg?label=alpha)](https://github.com/traefik/yaegi/releases)
 [![Build Status](https://github.com/traefik/yaegi/actions/workflows/main.yml/badge.svg)](https://github.com/traefik/yaegi/actions/workflows/main.yml)
 [![GoDoc](https://godoc.org/github.com/traefik/yaegi?status.svg)](https://pkg.go.dev/mod/github.com/traefik/yaegi)
-[![Discourse status](https://img.shields.io/discourse/https/community.traefik.io/status?label=Community&style=social)](https://community.traefik.io/c/yaegi)
 
 Yaegi is Another Elegant Go Interpreter.
 It powers executable Go scripts and plugins, in embedded interpreters or interactive shells, on top of the Go runtime.

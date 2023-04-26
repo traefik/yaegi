@@ -45,6 +45,13 @@ var constBltn = map[string]func(*node){
 
 const nilIdent = "nil"
 
+func init() {
+	// Use init() to avoid initialization cycles for the following constant builtins.
+	constBltn[bltnAlignof] = alignof
+	constBltn[bltnOffsetof] = offsetof
+	constBltn[bltnSizeof] = sizeof
+}
+
 // cfg generates a control flow graph (CFG) from AST (wiring successors in AST)
 // and pre-compute frame sizes and indexes for all un-named (temporary) and named
 // variables. A list of nodes of init functions is returned.
@@ -422,7 +429,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 		case funcDecl:
 			// Do not allow function declarations without body.
 			if len(n.child) < 4 {
-				err = n.cfgErrorf("function declaration without body is unsupported (linkname or assembly can not be interpreted).")
+				err = n.cfgErrorf("missing function body")
 				return false
 			}
 			n.val = n
@@ -1154,6 +1161,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				case n.typ.cat == builtinT:
 					n.findex = notInFrame
 					n.val = nil
+					switch bname {
+					case "unsafe.alignOf", "unsafe.Offsetof", "unsafe.Sizeof":
+						n.gen = nop
+					}
 				case n.anc.kind == returnStmt:
 					// Store result directly to frame output location, to avoid a frame copy.
 					n.findex = 0
@@ -1186,8 +1197,8 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				default:
 					n.findex = sc.add(n.typ)
 				}
-				if op, ok := constBltn[bname]; ok && n.anc.action != aAssign {
-					op(n) // pre-compute non-assigned constant :
+				if op, ok := constBltn[bname]; ok {
+					op(n)
 				}
 
 			case c0.isType(sc):
@@ -1267,21 +1278,6 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						}
 					}
 				}
-
-			case isOffsetof(c0):
-				if len(n.child) != 2 || n.child[1].kind != selectorExpr || !isStruct(n.child[1].child[0].typ) {
-					err = n.cfgErrorf("Offsetof argument: invalid expression")
-					break
-				}
-				c1 := n.child[1]
-				field, ok := c1.child[0].typ.rtype.FieldByName(c1.child[1].ident)
-				if !ok {
-					err = n.cfgErrorf("struct does not contain field: %s", c1.child[1].ident)
-					break
-				}
-				n.typ = valueTOf(reflect.TypeOf(field.Offset))
-				n.rval = reflect.ValueOf(field.Offset)
-				n.gen = nop
 
 			default:
 				// The call may be on a generic function. In that case, replace the
@@ -1816,6 +1812,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					} else {
 						n.typ = valueTOf(fixPossibleConstType(s.Type()), withUntyped(isValueUntyped(s)))
 						n.rval = s
+						if pkg == "unsafe" && (name == "AlignOf" || name == "Offsetof" || name == "Sizeof") {
+							n.sym = &symbol{kind: bltnSym, node: n, rval: s}
+							n.ident = pkg + "." + name
+						}
 					}
 					n.action = aGetSym
 					n.gen = nop
@@ -2794,10 +2794,6 @@ func isBinCall(n *node, sc *scope) bool {
 	return c0.typ.cat == valueT && c0.typ.rtype.Kind() == reflect.Func
 }
 
-func isOffsetof(n *node) bool {
-	return n.typ != nil && n.typ.cat == valueT && n.rval.String() == "Offsetof"
-}
-
 func mustReturnValue(n *node) bool {
 	if len(n.child) < 3 {
 		return false
@@ -3135,4 +3131,25 @@ func isBlank(n *node) bool {
 		return isBlank(n.child[0])
 	}
 	return n.ident == "_"
+}
+
+func alignof(n *node) {
+	n.gen = nop
+	n.typ = n.scope.getType("uintptr")
+	n.rval = reflect.ValueOf(uintptr(n.child[1].typ.TypeOf().Align()))
+}
+
+func offsetof(n *node) {
+	n.gen = nop
+	n.typ = n.scope.getType("uintptr")
+	c1 := n.child[1]
+	if field, ok := c1.child[0].typ.rtype.FieldByName(c1.child[1].ident); ok {
+		n.rval = reflect.ValueOf(field.Offset)
+	}
+}
+
+func sizeof(n *node) {
+	n.gen = nop
+	n.typ = n.scope.getType("uintptr")
+	n.rval = reflect.ValueOf(n.child[1].typ.TypeOf().Size())
 }
