@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -245,7 +246,7 @@ func previousRoot(filesystem fs.FS, rootPath, root string) (string, error) {
 				vendored = strings.TrimPrefix(strings.TrimPrefix(parent, prefix), string(filepath.Separator))
 				break
 			}
-			if !os.IsNotExist(err) {
+			if !errors.Is(err, fs.ErrNotExist) {
 				return "", err
 			}
 			// stop when we reach GOPATH/src
