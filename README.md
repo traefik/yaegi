@@ -172,6 +172,7 @@ Beside the known [bugs] which are supposed to be fixed in the short term, there 
 
 - Assembly files (`.s`) are not supported.
 - Calling C code is not supported (no virtual "C" package).
+- Directives about the compiler, the linker, or embedding files are not supported.
 - Interfaces to be used from the pre-compiled code can not be added dynamically, as it is required to pre-compile interface wrappers.
 - Representation of types by `reflect` and printing values using %T may give different results between compiled mode and interpreted mode.
 - Interpreting computation intensive code is likely to remain significantly slower than in compiled mode.
