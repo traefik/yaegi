@@ -723,21 +723,24 @@ var builtinFuncs = map[string]struct {
 	args     int
 	variadic bool
 }{
-	bltnAppend:  {args: 1, variadic: true},
-	bltnCap:     {args: 1, variadic: false},
-	bltnClose:   {args: 1, variadic: false},
-	bltnComplex: {args: 2, variadic: false},
-	bltnImag:    {args: 1, variadic: false},
-	bltnCopy:    {args: 2, variadic: false},
-	bltnDelete:  {args: 2, variadic: false},
-	bltnLen:     {args: 1, variadic: false},
-	bltnMake:    {args: 1, variadic: true},
-	bltnNew:     {args: 1, variadic: false},
-	bltnPanic:   {args: 1, variadic: false},
-	bltnPrint:   {args: 0, variadic: true},
-	bltnPrintln: {args: 0, variadic: true},
-	bltnReal:    {args: 1, variadic: false},
-	bltnRecover: {args: 0, variadic: false},
+	bltnAlignof:  {args: 1, variadic: false},
+	bltnAppend:   {args: 1, variadic: true},
+	bltnCap:      {args: 1, variadic: false},
+	bltnClose:    {args: 1, variadic: false},
+	bltnComplex:  {args: 2, variadic: false},
+	bltnImag:     {args: 1, variadic: false},
+	bltnCopy:     {args: 2, variadic: false},
+	bltnDelete:   {args: 2, variadic: false},
+	bltnLen:      {args: 1, variadic: false},
+	bltnMake:     {args: 1, variadic: true},
+	bltnNew:      {args: 1, variadic: false},
+	bltnOffsetof: {args: 1, variadic: false},
+	bltnPanic:    {args: 1, variadic: false},
+	bltnPrint:    {args: 0, variadic: true},
+	bltnPrintln:  {args: 0, variadic: true},
+	bltnReal:     {args: 1, variadic: false},
+	bltnRecover:  {args: 0, variadic: false},
+	bltnSizeof:   {args: 1, variadic: false},
 }
 
 func (check typecheck) builtin(name string, n *node, child []*node, ellipsis bool) error {
@@ -927,7 +930,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 				return err
 			}
 		}
-	case bltnRecover, bltnNew:
+	case bltnRecover, bltnNew, bltnAlignof, bltnOffsetof, bltnSizeof:
 		// Nothing to do.
 	default:
 		return n.cfgErrorf("unsupported builtin %s", name)
@@ -1092,6 +1095,9 @@ func (check typecheck) convertUntyped(n *node, typ *itype) error {
 		if !n.typ.isNil() {
 			return convErr
 		}
+		return nil
+	case n.typ.isNil() && typ.id() == "unsafe.Pointer":
+		n.typ = typ
 		return nil
 	default:
 		return convErr
