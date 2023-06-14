@@ -35,7 +35,7 @@ func init() {
 //go:generate ../internal/cmd/extract/extract crypto/subtle crypto/tls crypto/x509 crypto/x509/pkix
 //go:generate ../internal/cmd/extract/extract database/sql database/sql/driver
 //go:generate ../internal/cmd/extract/extract debug/buildinfo debug/dwarf debug/elf debug/gosym debug/macho debug/pe debug/plan9obj
-//go:generate ../internal/cmd/extract/extract embed encoding encoding/ascii85 encoding/asn1 encoding/base32
+//go:generate ../internal/cmd/extract/extract encoding encoding/ascii85 encoding/asn1 encoding/base32
 //go:generate ../internal/cmd/extract/extract encoding/base64 encoding/binary encoding/csv encoding/gob
 //go:generate ../internal/cmd/extract/extract encoding/hex encoding/json encoding/pem encoding/xml
 //go:generate ../internal/cmd/extract/extract errors expvar flag fmt
