@@ -5,12 +5,12 @@ on:
     branches:
       - master
   pull_request:
-    branches: ["master"]
+    branches:
+      - master
 
   workflow_dispatch:
 
 jobs:
-
   cross:
     name: Go
     runs-on: ${{ matrix.os }}
@@ -20,8 +20,8 @@ jobs:
 
     strategy:
       matrix:
-        go-version: [ '1.18.x', '1.19.x', '1.20.x']
-        arch: [ x64, arm, arm64 ]
+        go-version: ['1.18.x', '1.19.x', '1.20.x']
+        arch: [x64, arm, arm64]
         os: [ubuntu-latest, macos-latest, windows-latest]
 
         include:
@@ -32,8 +32,8 @@ jobs:
           - os: windows-latest
             go-path-suffix: \go
 
-         max-parallel: 3
-         fail-fast: true
+      max-parallel: 3
+      fail-fast: true
 
     steps:
       # https://github.com/marketplace/actions/setup-go-environment
@@ -69,12 +69,6 @@ jobs:
 
       - name: Setup GOPATH
         run: go env -w GOPATH=${{ github.workspace }}${{ matrix.go-path-suffix }}
-
-# TODO fail on windows
-#      - name: Tests
-#        run: go test -v -cover ./...
-#        env:
-#          GOPATH: ${{ github.workspace }}${{ matrix.go-path }}
 
       - name: Build
         run: go build -race -v -ldflags "-s -w" -trimpath
