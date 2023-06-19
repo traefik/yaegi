@@ -30,7 +30,7 @@ import "github.com/traefik/yaegi/interp"
 ### Command-line executable
 
 ```bash
-go get -u github.com/traefik/yaegi/cmd/yaegi
+go install github.com/traefik/yaegi@latest
 ```
 
 Note that you can use [rlwrap](https://github.com/hanslub42/rlwrap) (install with your favorite package manager),
