@@ -29,16 +29,8 @@ import "github.com/traefik/yaegi/interp"
 
 ### Command-line executable
 
-#### Option 1 
-
 ```bash
 go install github.com/traefik/yaegi@latest
-```
-
-#### Option 2
-
-```bash
-go get -u github.com/traefik/yaegi/cmd/yaegi
 ```
 
 Note that you can use [rlwrap](https://github.com/hanslub42/rlwrap) (install with your favorite package manager),
