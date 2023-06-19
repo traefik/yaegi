@@ -27,7 +27,7 @@ It powers executable Go scripts and plugins, in embedded interpreters or interac
 import "github.com/traefik/yaegi/interp"
 ```
 
-### Command-line executable [REPL]
+### Command-line executable
 
 #### Option 1 
 
