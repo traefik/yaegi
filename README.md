@@ -27,7 +27,15 @@ It powers executable Go scripts and plugins, in embedded interpreters or interac
 import "github.com/traefik/yaegi/interp"
 ```
 
-### Command-line executable
+### Command-line executable [REPL]
+
+#### Option 1 
+
+```bash
+go install github.com/traefik/yaegi@latest
+```
+
+#### Option 2
 
 ```bash
 go get -u github.com/traefik/yaegi/cmd/yaegi
@@ -35,6 +43,7 @@ go get -u github.com/traefik/yaegi/cmd/yaegi
 
 Note that you can use [rlwrap](https://github.com/hanslub42/rlwrap) (install with your favorite package manager),
 and alias the `yaegi` command in `alias yaegi='rlwrap yaegi'` in your `~/.bashrc`, to have history and command line edition.
+
 
 ### CI Integration
 
