@@ -40,7 +40,6 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           stable: true
-          check-latest: true
 
       # https://github.com/marketplace/actions/checkout
       - name: Checkout code
