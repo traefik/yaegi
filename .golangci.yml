@@ -1,0 +1,165 @@
+run:
+  timeout: 10m
+  skip-files: []
+
+linters-settings:
+  govet:
+    check-shadowing: false
+  gocyclo:
+    min-complexity: 12
+  maligned:
+    suggest-new: true
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  funlen:
+    lines: -1
+    statements: 50
+  misspell:
+    locale: US
+  depguard:
+    rules:
+      main:
+        files:
+          - $all
+        allow:
+          - $gostd
+          - github.com/traefik/yaegi
+  tagalign:
+    align: false
+    order:
+      - xml
+      - json
+      - yaml
+      - yml
+      - toml
+      - mapstructure
+      - url
+  godox:
+    keywords:
+      - FIXME
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+    disabled-checks:
+      - paramTypeCombine # already handle by gofumpt.extra-rules
+      - whyNoLint # already handle by nonolint
+      - unnamedResult
+      - hugeParam
+      - sloppyReassign
+      - rangeValCopy
+      - octalLiteral
+      - ptrToRefParam
+      - appendAssign
+      - ruleguard
+      - httpNoBody
+      - exposedSyncMutex
+      - importShadow # TODO should be fixed
+      - commentedOutCode # TODO should be fixed
+  revive:
+    rules:
+      - name: struct-tag
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+        disabled: true
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+        disabled: true
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unused-parameter
+        disabled: true
+      - name: unreachable-code
+      - name: redefines-builtin-id
+
+linters:
+  enable-all: true
+  disable:
+    - deadcode # deprecated
+    - exhaustivestruct # deprecated
+    - golint # deprecated
+    - ifshort # deprecated
+    - interfacer # deprecated
+    - maligned # deprecated
+    - nosnakecase # deprecated
+    - scopelint # deprecated
+    - structcheck # deprecated
+    - varcheck # deprecated
+    - cyclop # duplicate of gocyclo
+    - sqlclosecheck # not relevant (SQL)
+    - rowserrcheck # not relevant (SQL)
+    - execinquery # not relevant (SQL)
+    - lll
+    - gas
+    - dupl
+    - prealloc
+    - gocyclo
+    - cyclop
+    - gochecknoinits
+    - gochecknoglobals
+    - wsl
+    - nlreturn
+    - godox
+    - funlen
+    - gocognit
+    - stylecheck
+    - gomnd
+    - testpackage
+    - paralleltest
+    - tparallel
+    - goerr113
+    - wrapcheck
+    - nestif
+    - exhaustive
+    - exhaustruct
+    - forbidigo
+    - ifshort
+    - forcetypeassert
+    - varnamelen
+    - nosnakecase
+    - nonamedreturns
+    - nilnil
+    - maintidx
+    - dupword # false positives
+    - errorlint # TODO: must be reactivate after fixes
+
+issues:
+  exclude-use-default: false
+  max-per-linter: 0
+  max-same-issues: 0
+  exclude: []
+  exclude-rules:
+    - path: .+_test\.go
+      linters:
+        - goconst
+    - path: .+_test\.go
+      text: 'var-declaration:'
+    - path: interp/interp.go
+      text: '`in` can be `io.Reader`'
+    - path: interp/interp.go
+      text: '`out` can be `io.Writer`'
+    - path: interp/interp.go
+      text: '`Panic` should conform to the `XxxError` format'
+    - path: interp/interp_eval_test.go
+      linters:
+        - thelper
+    - path: interp/debugger.go
+      linters:
+        - containedctx

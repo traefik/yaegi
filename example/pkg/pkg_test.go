@@ -128,7 +128,7 @@ func TestPackages(t *testing.T) {
 				if test.topImport != "" {
 					topImport = test.topImport
 				}
-				if _, err = i.Eval(fmt.Sprintf(`import "%s"`, topImport)); err != nil {
+				if _, err = i.Eval(fmt.Sprintf(`import %q`, topImport)); err != nil {
 					t.Fatal(err)
 				}
 				value, err := i.Eval(`pkg.NewSample()`)

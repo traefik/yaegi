@@ -1,6 +1,7 @@
 package interp_test
 
 import (
+	"bytes"
 	"go/build"
 	"io"
 	"os"
@@ -176,7 +177,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if string(outInterp) != string(outRun) {
+			if !bytes.Equal(outInterp, outRun) {
 				t.Errorf("\nGot: %q,\n want: %q", string(outInterp), string(outRun))
 			}
 		})
@@ -288,8 +289,8 @@ func TestInterpErrorConsistency(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.fileName, func(t *testing.T) {
-			if len(test.expectedInterp) == 0 && len(test.expectedExec) == 0 {
-				t.Fatal("at least expectedInterp must be define")
+			if test.expectedInterp == "" && test.expectedExec == "" {
+				t.Fatal("at least expectedInterp must be defined")
 			}
 
 			filePath := filepath.Join("..", "_test", test.fileName)
@@ -315,7 +316,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 				t.Fatal("An error is expected but got none.")
 			}
 
-			if len(test.expectedExec) == 0 && !strings.Contains(string(outRun), test.expectedInterp) {
+			if test.expectedExec == "" && !strings.Contains(string(outRun), test.expectedInterp) {
 				t.Errorf("got %q, want: %q", string(outRun), test.expectedInterp)
 			} else if !strings.Contains(string(outRun), test.expectedExec) {
 				t.Errorf("got %q, want: %q", string(outRun), test.expectedExec)
