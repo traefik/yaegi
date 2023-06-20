@@ -17,7 +17,7 @@ It powers executable Go scripts and plugins, in embedded interpreters or interac
 * Works everywhere Go works
 * All Go & runtime resources accessible from script (with control)
 * Security: `unsafe` and `syscall` packages neither used nor exported by default
-* Support Go 1.18 and Go 1.19 (the latest 2 major releases)
+* Support the latest 2 major releases of Go (Go 1.19 and Go 1.20)
 
 ## Install
 
@@ -30,7 +30,7 @@ import "github.com/traefik/yaegi/interp"
 ### Command-line executable
 
 ```bash
-go get -u github.com/traefik/yaegi/cmd/yaegi
+go install github.com/traefik/yaegi/cmd/yaegi@latest
 ```
 
 Note that you can use [rlwrap](https://github.com/hanslub42/rlwrap) (install with your favorite package manager),
