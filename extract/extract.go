@@ -130,6 +130,15 @@ func matchList(name string, list []string) (match bool, err error) {
 	return
 }
 
+// Extractor creates a package with all the symbols from a dependency package.
+type Extractor struct {
+	Dest    string   // The name of the created package.
+	License string   // License text to be included in the created package, optional.
+	Exclude []string // Comma separated list of regexp matching symbols to exclude.
+	Include []string // Comma separated list of regexp matching symbols to include.
+	Tag     []string // Comma separated of build tags to be added to the created package.
+}
+
 func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, error) {
 	prefix := "_" + importPath + "_"
 	prefix = strings.NewReplacer("/", "_", "-", "_", ".", "_", "~", "_").Replace(prefix)
@@ -283,11 +292,11 @@ func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, err
 	}
 
 	for _, t := range e.Tag {
-		if len(t) != 0 {
+		if t != "" {
 			buildTags += "," + t
 		}
 	}
-	if len(buildTags) != 0 && buildTags[0] == ',' {
+	if buildTags != "" && buildTags[0] == ',' {
 		buildTags = buildTags[1:]
 	}
 
@@ -340,7 +349,7 @@ func fixConst(name string, val constant.Value, imports map[string]bool) string {
 		str = f.Text('g', int(f.Prec()))
 	case constant.Complex:
 		// TODO: not sure how to parse this case
-		fallthrough
+		fallthrough //nolint:gocritic // Empty Fallthrough is expected.
 	default:
 		return name
 	}
@@ -349,15 +358,6 @@ func fixConst(name string, val constant.Value, imports map[string]bool) string {
 	imports["go/token"] = true
 
 	return fmt.Sprintf("constant.MakeFromLiteral(%q, token.%s, 0)", str, tok)
-}
-
-// Extractor creates a package with all the symbols from a dependency package.
-type Extractor struct {
-	Dest    string   // The name of the created package.
-	License string   // License text to be included in the created package, optional.
-	Exclude []string // Comma separated list of regexp matching symbols to exclude.
-	Include []string // Comma separated list of regexp matching symbols to include.
-	Tag     []string // Comma separated of build tags to be added to the created package.
 }
 
 // importPath checks whether pkgIdent is an existing directory relative to

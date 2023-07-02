@@ -1252,10 +1252,9 @@ func TestConcurrentEvals2(t *testing.T) {
 			if hello1 {
 				if l == "hello world2" {
 					break
-				} else {
-					done <- fmt.Errorf("unexpected output: %v", l)
-					return
 				}
+				done <- fmt.Errorf("unexpected output: %v", l)
+				return
 			}
 			if l == "hello world1" {
 				hello1 = true
@@ -1335,7 +1334,7 @@ func TestConcurrentEvals3(t *testing.T) {
 		}()
 
 		for _, v := range input {
-			in := strings.NewReader(fmt.Sprintf("println(\"%s\")\n", v))
+			in := strings.NewReader(fmt.Sprintf("println(%q)\n", v))
 			if _, err := io.Copy(poutin, in); err != nil {
 				t.Fatal(err)
 			}
@@ -1880,25 +1879,25 @@ func TestIssue1383(t *testing.T) {
 			}
 		`
 
-	interp := interp.New(interp.Options{})
-	err := interp.Use(stdlib.Symbols)
+	i := interp.New(interp.Options{})
+	err := i.Use(stdlib.Symbols)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = interp.Eval(`import "fmt"`)
+	_, err = i.Eval(`import "fmt"`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ast, err := parser.ParseFile(interp.FileSet(), "_.go", src, parser.DeclarationErrors)
+	ast, err := parser.ParseFile(i.FileSet(), "_.go", src, parser.DeclarationErrors)
 	if err != nil {
 		t.Fatal(err)
 	}
-	prog, err := interp.CompileAST(ast)
+	prog, err := i.CompileAST(ast)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = interp.Execute(prog)
+	_, err = i.Execute(prog)
 	if err != nil {
 		t.Fatal(err)
 	}

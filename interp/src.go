@@ -209,7 +209,7 @@ func (interp *Interpreter) pkgDir(goPath string, root, importPath string) (strin
 		return dir, root, nil // found!
 	}
 
-	if len(root) == 0 {
+	if root == "" {
 		if interp.context.GOPATH == "" {
 			return "", "", fmt.Errorf("unable to find source related to: %q. Either the GOPATH environment variable, or the Interpreter.Options.GoPath needs to be set", importPath)
 		}

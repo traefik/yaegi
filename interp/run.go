@@ -1958,7 +1958,7 @@ func getMethodByName(n *node) {
 				}
 				if val, ok = val0.Field(i).Interface().(valueInterface); ok {
 					break
-					// TODO: should we keep track of all the the vals that are indeed valueInterface,
+					// TODO: should we keep track of all the vals that are indeed valueInterface,
 					// so that later on we can call MethodByName on all of them until one matches?
 				}
 			}

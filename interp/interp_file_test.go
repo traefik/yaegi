@@ -98,7 +98,7 @@ func wantedFromComment(p string) (res string, goPath string, err bool) {
 		if err != nil {
 			panic(err)
 		}
-		goPath = filepath.Join(wd, "../_test", strings.TrimPrefix(parts[0], "GOPATH:"))
+		goPath = filepath.Join(wd, "..", "_test", strings.TrimPrefix(parts[0], "GOPATH:"))
 	}
 	if strings.HasPrefix(text, "Output:\n") {
 		return strings.TrimPrefix(text, "Output:\n"), goPath, false
