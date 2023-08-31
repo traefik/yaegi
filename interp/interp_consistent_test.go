@@ -90,6 +90,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "redeclaration-global5.go" || // expect error
 			file.Name() == "redeclaration-global6.go" || // expect error
 			file.Name() == "redeclaration-global7.go" || // expect error
+			file.Name() == "panic0.go" || // expect error
 			file.Name() == "pkgname0.go" || // has deps
 			file.Name() == "pkgname1.go" || // expect error
 			file.Name() == "pkgname2.go" || // has deps
@@ -188,6 +189,7 @@ func TestInterpErrorConsistency(t *testing.T) {
 	testCases := []struct {
 		fileName       string
 		expectedInterp string
+		expectedStderr string
 		expectedExec   string
 	}{
 		{
@@ -285,6 +287,16 @@ func TestInterpErrorConsistency(t *testing.T) {
 			expectedInterp: "37:2: duplicate case Bir in type switch",
 			expectedExec:   "37:7: duplicate case Bir in type switch",
 		},
+		{
+			fileName:       "panic0.go",
+			expectedInterp: "stop!",
+			expectedStderr: `
+../_test/panic0.go:16:2: panic: main.baz(...)
+../_test/panic0.go:12:2: panic: main.bar(...)
+../_test/panic0.go:8:2: panic: main.foo(...)
+../_test/panic0.go:4:2: panic: main.main(...)
+`,
+		},
 	}
 
 	for _, test := range testCases {
@@ -295,7 +307,8 @@ func TestInterpErrorConsistency(t *testing.T) {
 
 			filePath := filepath.Join("..", "_test", test.fileName)
 
-			i := interp.New(interp.Options{GoPath: build.Default.GOPATH})
+			var stderr bytes.Buffer
+			i := interp.New(interp.Options{GoPath: build.Default.GOPATH, Stderr: &stderr})
 			if err := i.Use(stdlib.Symbols); err != nil {
 				t.Fatal(err)
 			}
@@ -307,6 +320,12 @@ func TestInterpErrorConsistency(t *testing.T) {
 
 			if !strings.Contains(errEval.Error(), test.expectedInterp) {
 				t.Errorf("got %q, want: %q", errEval.Error(), test.expectedInterp)
+			}
+			if test.expectedStderr != "" {
+				exp, got := strings.TrimSpace(test.expectedStderr), strings.TrimSpace(stderr.String())
+				if exp != got {
+					t.Errorf("got %q, want: %q", got, exp)
+				}
 			}
 
 			cmd := exec.Command("go", "run", filePath)
