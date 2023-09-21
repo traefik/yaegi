@@ -716,6 +716,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				// location in the frame.
 				//
 				switch {
+				case n.kind == defineStmt:
+					// Do not skip assign operation for initializing variables, otherwise
+					// a var in a loop is reused instead of redefined.
 				case n.action != aAssign:
 					// Do not skip assign operation if it is combined with another operator.
 				case src.rval.IsValid():
