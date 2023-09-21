@@ -716,9 +716,6 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				// location in the frame.
 				//
 				switch {
-				case n.kind == defineStmt:
-					// Do not skip assign operation for initializing variables, otherwise
-					// a var in a loop is reused instead of redefined.
 				case n.action != aAssign:
 					// Do not skip assign operation if it is combined with another operator.
 				case src.rval.IsValid():
@@ -758,7 +755,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.gen = nop
 					src.findex = dest.findex
 					src.level = level
-				case len(n.child) < 4 && isArithmeticAction(src) && !isInterface(dest.typ):
+				case len(n.child) < 4 && n.kind != defineStmt && isArithmeticAction(src) && !isInterface(dest.typ):
 					// Optimize single assignments from some arithmetic operations.
 					src.typ = dest.typ
 					src.findex = dest.findex
