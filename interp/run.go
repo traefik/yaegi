@@ -180,6 +180,27 @@ var errAbortHandler = errors.New("net/http: abort Handler")
 
 // Functions set to run during execution of CFG.
 
+func panicFunc(s *scope) string {
+	if s == nil {
+		return ""
+	}
+	def := s.def
+	if def == nil {
+		return s.pkgID
+	}
+	switch def.kind {
+	case funcDecl:
+		if c := def.child[1]; c.kind == identExpr {
+			return s.pkgID + "." + c.ident
+		}
+	case funcLit:
+		if def.anc != nil {
+			return panicFunc(def.anc.scope) + ".func"
+		}
+	}
+	return s.pkgID
+}
+
 // runCfg executes a node AST by walking its CFG and running node builtin at each step.
 func runCfg(n *node, f *frame, funcNode, callNode *node) {
 	var exec bltn
@@ -199,7 +220,7 @@ func runCfg(n *node, f *frame, funcNode, callNode *node) {
 			// suppress the logging here accordingly, to get a similar and consistent
 			// behavior.
 			if !ok || errorer.Error() != errAbortHandler.Error() {
-				fmt.Fprintln(n.interp.stderr, oNode.cfgErrorf("panic"))
+				fmt.Fprintln(n.interp.stderr, oNode.cfgErrorf("panic: %s(...)", panicFunc(oNode.scope)))
 			}
 			f.mutex.Unlock()
 			panic(f.recovered)
