@@ -755,7 +755,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.gen = nop
 					src.findex = dest.findex
 					src.level = level
-				case len(n.child) < 4 && isArithmeticAction(src) && !isInterface(dest.typ):
+				case len(n.child) < 4 && n.kind != defineStmt && isArithmeticAction(src) && !isInterface(dest.typ):
 					// Optimize single assignments from some arithmetic operations.
 					src.typ = dest.typ
 					src.findex = dest.findex
