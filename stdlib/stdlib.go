@@ -1,5 +1,4 @@
-//go:build go1.19
-// +build go1.19
+//go:build go1.20
 
 // Package stdlib provides wrappers of standard library packages to be imported natively in Yaegi.
 package stdlib
@@ -29,7 +28,7 @@ func init() {
 //go:generate ../internal/cmd/extract/extract bufio bytes
 //go:generate ../internal/cmd/extract/extract compress/bzip2 compress/flate compress/gzip compress/lzw compress/zlib
 //go:generate ../internal/cmd/extract/extract container/heap container/list container/ring
-//go:generate ../internal/cmd/extract/extract context crypto crypto/aes crypto/cipher crypto/des crypto/dsa crypto/ecdsa
+//go:generate ../internal/cmd/extract/extract context crypto crypto/aes crypto/cipher crypto/des crypto/dsa crypto/ecdsa crypto/ecdh
 //go:generate ../internal/cmd/extract/extract crypto/ed25519 crypto/elliptic crypto/hmac crypto/md5 crypto/rand
 //go:generate ../internal/cmd/extract/extract crypto/rc4 crypto/rsa crypto/sha1 crypto/sha256 crypto/sha512
 //go:generate ../internal/cmd/extract/extract crypto/subtle crypto/tls crypto/x509 crypto/x509/pkix
