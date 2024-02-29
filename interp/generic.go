@@ -306,12 +306,12 @@ func checkConstraint(it, ct *itype) error {
 		return nil
 	}
 	for _, c := range ct.constraint {
-		if it.equals(c) {
+		if it.equals(c) || it.matchDefault(c) {
 			return nil
 		}
 	}
 	for _, c := range ct.ulconstraint {
-		if it.underlying().equals(c) {
+		if it.underlying().equals(c) || it.matchDefault(c) {
 			return nil
 		}
 	}

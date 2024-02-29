@@ -6,17 +6,9 @@
 package stdlib
 
 import (
-	"maps"
 	"reflect"
 )
 
 func init() {
-	Symbols["maps/maps"] = map[string]reflect.Value{
-		// function, constant and variable definitions
-		"Clone":      reflect.ValueOf(maps.Clone),
-		"Copy":       reflect.ValueOf(maps.Copy),
-		"DeleteFunc": reflect.ValueOf(maps.DeleteFunc),
-		"Equal":      reflect.ValueOf(maps.Equal),
-		"EqualFunc":  reflect.ValueOf(maps.EqualFunc),
-	}
+	Symbols["maps/maps"] = map[string]reflect.Value{}
 }

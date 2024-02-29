@@ -1,0 +1,1651 @@
+// Copyright 2021 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Package slices defines various functions useful with slices of any type.
+package slices
+
+import (
+	"cmp"
+	"math/bits"
+	// "unsafe" // FIXME(marc): better handle special dependencies in generics.
+)
+
+// Equal reports whether two slices are equal: the same length and all
+// elements equal. If the lengths are different, Equal returns false.
+// Otherwise, the elements are compared in increasing index order, and the
+// comparison stops at the first unequal pair.
+// Floating point NaNs are not considered equal.
+func Equal[S ~[]E, E comparable](s1, s2 S) bool {
+	if len(s1) != len(s2) {
+		return false
+	}
+	for i := range s1 {
+		if s1[i] != s2[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// EqualFunc reports whether two slices are equal using an equality
+// function on each pair of elements. If the lengths are different,
+// EqualFunc returns false. Otherwise, the elements are compared in
+// increasing index order, and the comparison stops at the first index
+// for which eq returns false.
+func EqualFunc[S1 ~[]E1, S2 ~[]E2, E1, E2 any](s1 S1, s2 S2, eq func(E1, E2) bool) bool {
+	if len(s1) != len(s2) {
+		return false
+	}
+	for i, v1 := range s1 {
+		v2 := s2[i]
+		if !eq(v1, v2) {
+			return false
+		}
+	}
+	return true
+}
+
+// Compare compares the elements of s1 and s2, using [cmp.Compare] on each pair
+// of elements. The elements are compared sequentially, starting at index 0,
+// until one element is not equal to the other.
+// The result of comparing the first non-matching elements is returned.
+// If both slices are equal until one of them ends, the shorter slice is
+// considered less than the longer one.
+// The result is 0 if s1 == s2, -1 if s1 < s2, and +1 if s1 > s2.
+func Compare[S ~[]E, E cmp.Ordered](s1, s2 S) int {
+	for i, v1 := range s1 {
+		if i >= len(s2) {
+			return +1
+		}
+		v2 := s2[i]
+		if c := cmp.Compare(v1, v2); c != 0 {
+			return c
+		}
+	}
+	if len(s1) < len(s2) {
+		return -1
+	}
+	return 0
+}
+
+// CompareFunc is like [Compare] but uses a custom comparison function on each
+// pair of elements.
+// The result is the first non-zero result of cmp; if cmp always
+// returns 0 the result is 0 if len(s1) == len(s2), -1 if len(s1) < len(s2),
+// and +1 if len(s1) > len(s2).
+func CompareFunc[S1 ~[]E1, S2 ~[]E2, E1, E2 any](s1 S1, s2 S2, cmp func(E1, E2) int) int {
+	for i, v1 := range s1 {
+		if i >= len(s2) {
+			return +1
+		}
+		v2 := s2[i]
+		if c := cmp(v1, v2); c != 0 {
+			return c
+		}
+	}
+	if len(s1) < len(s2) {
+		return -1
+	}
+	return 0
+}
+
+// Index returns the index of the first occurrence of v in s,
+// or -1 if not present.
+func Index[S ~[]E, E comparable](s S, v E) int {
+	for i := range s {
+		if v == s[i] {
+			return i
+		}
+	}
+	return -1
+}
+
+// IndexFunc returns the first index i satisfying f(s[i]),
+// or -1 if none do.
+func IndexFunc[S ~[]E, E any](s S, f func(E) bool) int {
+	for i := range s {
+		if f(s[i]) {
+			return i
+		}
+	}
+	return -1
+}
+
+// Contains reports whether v is present in s.
+func Contains[S ~[]E, E comparable](s S, v E) bool {
+	return Index(s, v) >= 0
+}
+
+// ContainsFunc reports whether at least one
+// element e of s satisfies f(e).
+func ContainsFunc[S ~[]E, E any](s S, f func(E) bool) bool {
+	return IndexFunc(s, f) >= 0
+}
+
+// Insert inserts the values v... into s at index i,
+// returning the modified slice.
+// The elements at s[i:] are shifted up to make room.
+// In the returned slice r, r[i] == v[0],
+// and r[i+len(v)] == value originally at r[i].
+// Insert panics if i is out of range.
+// This function is O(len(s) + len(v)).
+func Insert[S ~[]E, E any](s S, i int, v ...E) S {
+	m := len(v)
+	if m == 0 {
+		return s
+	}
+	n := len(s)
+	if i == n {
+		return append(s, v...)
+	}
+	if n+m > cap(s) {
+		// Use append rather than make so that we bump the size of
+		// the slice up to the next storage class.
+		// This is what Grow does but we don't call Grow because
+		// that might copy the values twice.
+		s2 := append(s[:i], make(S, n+m-i)...)
+		copy(s2[i:], v)
+		copy(s2[i+m:], s[i:])
+		return s2
+	}
+	s = s[:n+m]
+
+	// before:
+	// s: aaaaaaaabbbbccccccccdddd
+	//            ^   ^       ^   ^
+	//            i  i+m      n  n+m
+	// after:
+	// s: aaaaaaaavvvvbbbbcccccccc
+	//            ^   ^       ^   ^
+	//            i  i+m      n  n+m
+	//
+	// a are the values that don't move in s.
+	// v are the values copied in from v.
+	// b and c are the values from s that are shifted up in index.
+	// d are the values that get overwritten, never to be seen again.
+
+	if !overlaps(v, s[i+m:]) {
+		// Easy case - v does not overlap either the c or d regions.
+		// (It might be in some of a or b, or elsewhere entirely.)
+		// The data we copy up doesn't write to v at all, so just do it.
+
+		copy(s[i+m:], s[i:])
+
+		// Now we have
+		// s: aaaaaaaabbbbbbbbcccccccc
+		//            ^   ^       ^   ^
+		//            i  i+m      n  n+m
+		// Note the b values are duplicated.
+
+		copy(s[i:], v)
+
+		// Now we have
+		// s: aaaaaaaavvvvbbbbcccccccc
+		//            ^   ^       ^   ^
+		//            i  i+m      n  n+m
+		// That's the result we want.
+		return s
+	}
+
+	// The hard case - v overlaps c or d. We can't just shift up
+	// the data because we'd move or clobber the values we're trying
+	// to insert.
+	// So instead, write v on top of d, then rotate.
+	copy(s[n:], v)
+
+	// Now we have
+	// s: aaaaaaaabbbbccccccccvvvv
+	//            ^   ^       ^   ^
+	//            i  i+m      n  n+m
+
+	rotateRight(s[i:], m)
+
+	// Now we have
+	// s: aaaaaaaavvvvbbbbcccccccc
+	//            ^   ^       ^   ^
+	//            i  i+m      n  n+m
+	// That's the result we want.
+	return s
+}
+
+// Delete removes the elements s[i:j] from s, returning the modified slice.
+// Delete panics if s[i:j] is not a valid slice of s.
+// Delete is O(len(s)-j), so if many items must be deleted, it is better to
+// make a single call deleting them all together than to delete one at a time.
+// Delete might not modify the elements s[len(s)-(j-i):len(s)]. If those
+// elements contain pointers you might consider zeroing those elements so that
+// objects they reference can be garbage collected.
+func Delete[S ~[]E, E any](s S, i, j int) S {
+	_ = s[i:j] // bounds check
+
+	return append(s[:i], s[j:]...)
+}
+
+// DeleteFunc removes any elements from s for which del returns true,
+// returning the modified slice.
+// When DeleteFunc removes m elements, it might not modify the elements
+// s[len(s)-m:len(s)]. If those elements contain pointers you might consider
+// zeroing those elements so that objects they reference can be garbage
+// collected.
+func DeleteFunc[S ~[]E, E any](s S, del func(E) bool) S {
+	// Don't start copying elements until we find one to delete.
+	for i, v := range s {
+		if del(v) {
+			j := i
+			for i++; i < len(s); i++ {
+				v = s[i]
+				if !del(v) {
+					s[j] = v
+					j++
+				}
+			}
+			return s[:j]
+		}
+	}
+	return s
+}
+
+// Replace replaces the elements s[i:j] by the given v, and returns the
+// modified slice. Replace panics if s[i:j] is not a valid slice of s.
+func Replace[S ~[]E, E any](s S, i, j int, v ...E) S {
+	_ = s[i:j] // verify that i:j is a valid subslice
+
+	if i == j {
+		return Insert(s, i, v...)
+	}
+	if j == len(s) {
+		return append(s[:i], v...)
+	}
+
+	tot := len(s[:i]) + len(v) + len(s[j:])
+	if tot > cap(s) {
+		// Too big to fit, allocate and copy over.
+		s2 := append(s[:i], make(S, tot-i)...) // See Insert
+		copy(s2[i:], v)
+		copy(s2[i+len(v):], s[j:])
+		return s2
+	}
+
+	r := s[:tot]
+
+	if i+len(v) <= j {
+		// Easy, as v fits in the deleted portion.
+		copy(r[i:], v)
+		if i+len(v) != j {
+			copy(r[i+len(v):], s[j:])
+		}
+		return r
+	}
+
+	// We are expanding (v is bigger than j-i).
+	// The situation is something like this:
+	// (example has i=4,j=8,len(s)=16,len(v)=6)
+	// s: aaaaxxxxbbbbbbbbyy
+	//        ^   ^       ^ ^
+	//        i   j  len(s) tot
+	// a: prefix of s
+	// x: deleted range
+	// b: more of s
+	// y: area to expand into
+
+	if !overlaps(r[i+len(v):], v) {
+		// Easy, as v is not clobbered by the first copy.
+		copy(r[i+len(v):], s[j:])
+		copy(r[i:], v)
+		return r
+	}
+
+	// This is a situation where we don't have a single place to which
+	// we can copy v. Parts of it need to go to two different places.
+	// We want to copy the prefix of v into y and the suffix into x, then
+	// rotate |y| spots to the right.
+	//
+	//        v[2:]      v[:2]
+	//         |           |
+	// s: aaaavvvvbbbbbbbbvv
+	//        ^   ^       ^ ^
+	//        i   j  len(s) tot
+	//
+	// If either of those two destinations don't alias v, then we're good.
+	y := len(v) - (j - i) // length of y portion
+
+	if !overlaps(r[i:j], v) {
+		copy(r[i:j], v[y:])
+		copy(r[len(s):], v[:y])
+		rotateRight(r[i:], y)
+		return r
+	}
+	if !overlaps(r[len(s):], v) {
+		copy(r[len(s):], v[:y])
+		copy(r[i:j], v[y:])
+		rotateRight(r[i:], y)
+		return r
+	}
+
+	// Now we know that v overlaps both x and y.
+	// That means that the entirety of b is *inside* v.
+	// So we don't need to preserve b at all; instead we
+	// can copy v first, then copy the b part of v out of
+	// v to the right destination.
+	k := startIdx(v, s[j:])
+	copy(r[i:], v)
+	copy(r[i+len(v):], r[i+k:])
+	return r
+}
+
+// Clone returns a copy of the slice.
+// The elements are copied using assignment, so this is a shallow clone.
+func Clone[S ~[]E, E any](s S) S {
+	// Preserve nil in case it matters.
+	if s == nil {
+		return nil
+	}
+	return append(S([]E{}), s...)
+}
+
+// Compact replaces consecutive runs of equal elements with a single copy.
+// This is like the uniq command found on Unix.
+// Compact modifies the contents of the slice s and returns the modified slice,
+// which may have a smaller length.
+// When Compact discards m elements in total, it might not modify the elements
+// s[len(s)-m:len(s)]. If those elements contain pointers you might consider
+// zeroing those elements so that objects they reference can be garbage collected.
+func Compact[S ~[]E, E comparable](s S) S {
+	if len(s) < 2 {
+		return s
+	}
+	i := 1
+	for k := 1; k < len(s); k++ {
+		if s[k] != s[k-1] {
+			if i != k {
+				s[i] = s[k]
+			}
+			i++
+		}
+	}
+	return s[:i]
+}
+
+// CompactFunc is like [Compact] but uses an equality function to compare elements.
+// For runs of elements that compare equal, CompactFunc keeps the first one.
+func CompactFunc[S ~[]E, E any](s S, eq func(E, E) bool) S {
+	if len(s) < 2 {
+		return s
+	}
+	i := 1
+	for k := 1; k < len(s); k++ {
+		if !eq(s[k], s[k-1]) {
+			if i != k {
+				s[i] = s[k]
+			}
+			i++
+		}
+	}
+	return s[:i]
+}
+
+// Grow increases the slice's capacity, if necessary, to guarantee space for
+// another n elements. After Grow(n), at least n elements can be appended
+// to the slice without another allocation. If n is negative or too large to
+// allocate the memory, Grow panics.
+func Grow[S ~[]E, E any](s S, n int) S {
+	if n < 0 {
+		panic("cannot be negative")
+	}
+	if n -= cap(s) - len(s); n > 0 {
+		s = append(s[:cap(s)], make([]E, n)...)[:len(s)]
+	}
+	return s
+}
+
+// Clip removes unused capacity from the slice, returning s[:len(s):len(s)].
+func Clip[S ~[]E, E any](s S) S {
+	return s[:len(s):len(s)]
+}
+
+// Rotation algorithm explanation:
+//
+// rotate left by 2
+// start with
+//   0123456789
+// split up like this
+//   01 234567 89
+// swap first 2 and last 2
+//   89 234567 01
+// join first parts
+//   89234567 01
+// recursively rotate first left part by 2
+//   23456789 01
+// join at the end
+//   2345678901
+//
+// rotate left by 8
+// start with
+//   0123456789
+// split up like this
+//   01 234567 89
+// swap first 2 and last 2
+//   89 234567 01
+// join last parts
+//   89 23456701
+// recursively rotate second part left by 6
+//   89 01234567
+// join at the end
+//   8901234567
+
+// TODO: There are other rotate algorithms.
+// This algorithm has the desirable property that it moves each element exactly twice.
+// The triple-reverse algorithm is simpler and more cache friendly, but takes more writes.
+// The follow-cycles algorithm can be 1-write but it is not very cache friendly.
+
+// rotateLeft rotates b left by n spaces.
+// s_final[i] = s_orig[i+r], wrapping around.
+func rotateLeft[E any](s []E, r int) {
+	for r != 0 && r != len(s) {
+		if r*2 <= len(s) {
+			swap(s[:r], s[len(s)-r:])
+			s = s[:len(s)-r]
+		} else {
+			swap(s[:len(s)-r], s[r:])
+			s, r = s[len(s)-r:], r*2-len(s)
+		}
+	}
+}
+func rotateRight[E any](s []E, r int) {
+	rotateLeft(s, len(s)-r)
+}
+
+// swap swaps the contents of x and y. x and y must be equal length and disjoint.
+func swap[E any](x, y []E) {
+	for i := 0; i < len(x); i++ {
+		x[i], y[i] = y[i], x[i]
+	}
+}
+
+// overlaps reports whether the memory ranges a[0:len(a)] and b[0:len(b)] overlap.
+func overlaps[E any](a, b []E) bool {
+	if len(a) == 0 || len(b) == 0 {
+		return false
+	}
+	elemSize := unsafe.Sizeof(a[0])
+	if elemSize == 0 {
+		return false
+	}
+	// TODO: use a runtime/unsafe facility once one becomes available. See issue 12445.
+	// Also see crypto/internal/alias/alias.go:AnyOverlap
+	return uintptr(unsafe.Pointer(&a[0])) <= uintptr(unsafe.Pointer(&b[len(b)-1]))+(elemSize-1) &&
+		uintptr(unsafe.Pointer(&b[0])) <= uintptr(unsafe.Pointer(&a[len(a)-1]))+(elemSize-1)
+}
+
+// startIdx returns the index in haystack where the needle starts.
+// prerequisite: the needle must be aliased entirely inside the haystack.
+func startIdx[E any](haystack, needle []E) int {
+	p := &needle[0]
+	for i := range haystack {
+		if p == &haystack[i] {
+			return i
+		}
+	}
+	// TODO: what if the overlap is by a non-integral number of Es?
+	panic("needle not found")
+}
+
+// Reverse reverses the elements of the slice in place.
+func Reverse[S ~[]E, E any](s S) {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+}
+// Copyright 2023 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+//package slices
+
+//import (
+//	"cmp"
+//	"math/bits"
+//)
+
+// Sort sorts a slice of any ordered type in ascending order.
+// When sorting floating-point numbers, NaNs are ordered before other values.
+func Sort[S ~[]E, E cmp.Ordered](x S) {
+	n := len(x)
+	pdqsortOrdered(x, 0, n, bits.Len(uint(n)))
+}
+
+// SortFunc sorts the slice x in ascending order as determined by the cmp
+// function. This sort is not guaranteed to be stable.
+// cmp(a, b) should return a negative number when a < b, a positive number when
+// a > b and zero when a == b.
+//
+// SortFunc requires that cmp is a strict weak ordering.
+// See https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings.
+func SortFunc[S ~[]E, E any](x S, cmp func(a, b E) int) {
+	n := len(x)
+	pdqsortCmpFunc(x, 0, n, bits.Len(uint(n)), cmp)
+}
+
+// SortStableFunc sorts the slice x while keeping the original order of equal
+// elements, using cmp to compare elements in the same way as [SortFunc].
+func SortStableFunc[S ~[]E, E any](x S, cmp func(a, b E) int) {
+	stableCmpFunc(x, len(x), cmp)
+}
+
+// IsSorted reports whether x is sorted in ascending order.
+func IsSorted[S ~[]E, E cmp.Ordered](x S) bool {
+	for i := len(x) - 1; i > 0; i-- {
+		if cmp.Less(x[i], x[i-1]) {
+			return false
+		}
+	}
+	return true
+}
+
+// IsSortedFunc reports whether x is sorted in ascending order, with cmp as the
+// comparison function as defined by [SortFunc].
+func IsSortedFunc[S ~[]E, E any](x S, cmp func(a, b E) int) bool {
+	for i := len(x) - 1; i > 0; i-- {
+		if cmp(x[i], x[i-1]) < 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// Min returns the minimal value in x. It panics if x is empty.
+// For floating-point numbers, Min propagates NaNs (any NaN value in x
+// forces the output to be NaN).
+func Min[S ~[]E, E cmp.Ordered](x S) E {
+	if len(x) < 1 {
+		panic("slices.Min: empty list")
+	}
+	m := x[0]
+	for i := 1; i < len(x); i++ {
+		m = min(m, x[i])
+	}
+	return m
+}
+
+// MinFunc returns the minimal value in x, using cmp to compare elements.
+// It panics if x is empty. If there is more than one minimal element
+// according to the cmp function, MinFunc returns the first one.
+func MinFunc[S ~[]E, E any](x S, cmp func(a, b E) int) E {
+	if len(x) < 1 {
+		panic("slices.MinFunc: empty list")
+	}
+	m := x[0]
+	for i := 1; i < len(x); i++ {
+		if cmp(x[i], m) < 0 {
+			m = x[i]
+		}
+	}
+	return m
+}
+
+// Max returns the maximal value in x. It panics if x is empty.
+// For floating-point E, Max propagates NaNs (any NaN value in x
+// forces the output to be NaN).
+func Max[S ~[]E, E cmp.Ordered](x S) E {
+	if len(x) < 1 {
+		panic("slices.Max: empty list")
+	}
+	m := x[0]
+	for i := 1; i < len(x); i++ {
+		m = max(m, x[i])
+	}
+	return m
+}
+
+// MaxFunc returns the maximal value in x, using cmp to compare elements.
+// It panics if x is empty. If there is more than one maximal element
+// according to the cmp function, MaxFunc returns the first one.
+func MaxFunc[S ~[]E, E any](x S, cmp func(a, b E) int) E {
+	if len(x) < 1 {
+		panic("slices.MaxFunc: empty list")
+	}
+	m := x[0]
+	for i := 1; i < len(x); i++ {
+		if cmp(x[i], m) > 0 {
+			m = x[i]
+		}
+	}
+	return m
+}
+
+// BinarySearch searches for target in a sorted slice and returns the position
+// where target is found, or the position where target would appear in the
+// sort order; it also returns a bool saying whether the target is really found
+// in the slice. The slice must be sorted in increasing order.
+func BinarySearch[S ~[]E, E cmp.Ordered](x S, target E) (int, bool) {
+	// Inlining is faster than calling BinarySearchFunc with a lambda.
+	n := len(x)
+	// Define x[-1] < target and x[n] >= target.
+	// Invariant: x[i-1] < target, x[j] >= target.
+	i, j := 0, n
+	for i < j {
+		h := int(uint(i+j) >> 1) // avoid overflow when computing h
+		// i ≤ h < j
+		if cmp.Less(x[h], target) {
+			i = h + 1 // preserves x[i-1] < target
+		} else {
+			j = h // preserves x[j] >= target
+		}
+	}
+	// i == j, x[i-1] < target, and x[j] (= x[i]) >= target  =>  answer is i.
+	return i, i < n && (x[i] == target || (isNaN(x[i]) && isNaN(target)))
+}
+
+// BinarySearchFunc works like [BinarySearch], but uses a custom comparison
+// function. The slice must be sorted in increasing order, where "increasing"
+// is defined by cmp. cmp should return 0 if the slice element matches
+// the target, a negative number if the slice element precedes the target,
+// or a positive number if the slice element follows the target.
+// cmp must implement the same ordering as the slice, such that if
+// cmp(a, t) < 0 and cmp(b, t) >= 0, then a must precede b in the slice.
+func BinarySearchFunc[S ~[]E, E, T any](x S, target T, cmp func(E, T) int) (int, bool) {
+	n := len(x)
+	// Define cmp(x[-1], target) < 0 and cmp(x[n], target) >= 0 .
+	// Invariant: cmp(x[i - 1], target) < 0, cmp(x[j], target) >= 0.
+	i, j := 0, n
+	for i < j {
+		h := int(uint(i+j) >> 1) // avoid overflow when computing h
+		// i ≤ h < j
+		if cmp(x[h], target) < 0 {
+			i = h + 1 // preserves cmp(x[i - 1], target) < 0
+		} else {
+			j = h // preserves cmp(x[j], target) >= 0
+		}
+	}
+	// i == j, cmp(x[i-1], target) < 0, and cmp(x[j], target) (= cmp(x[i], target)) >= 0  =>  answer is i.
+	return i, i < n && cmp(x[i], target) == 0
+}
+
+type sortedHint int // hint for pdqsort when choosing the pivot
+
+const (
+	unknownHint sortedHint = iota
+	increasingHint
+	decreasingHint
+)
+
+// xorshift paper: https://www.jstatsoft.org/article/view/v008i14/xorshift.pdf
+type xorshift uint64
+
+func (r *xorshift) Next() uint64 {
+	*r ^= *r << 13
+	*r ^= *r >> 17
+	*r ^= *r << 5
+	return uint64(*r)
+}
+
+func nextPowerOfTwo(length int) uint {
+	return 1 << bits.Len(uint(length))
+}
+
+// isNaN reports whether x is a NaN without requiring the math package.
+// This will always return false if T is not floating-point.
+func isNaN[T cmp.Ordered](x T) bool {
+	return x != x
+}
+// Code generated by gen_sort_variants.go; DO NOT EDIT.
+
+// Copyright 2022 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// package slices
+
+// insertionSortCmpFunc sorts data[a:b] using insertion sort.
+func insertionSortCmpFunc[E any](data []E, a, b int, cmp func(a, b E) int) {
+	for i := a + 1; i < b; i++ {
+		for j := i; j > a && (cmp(data[j], data[j-1]) < 0); j-- {
+			data[j], data[j-1] = data[j-1], data[j]
+		}
+	}
+}
+
+// siftDownCmpFunc implements the heap property on data[lo:hi].
+// first is an offset into the array where the root of the heap lies.
+func siftDownCmpFunc[E any](data []E, lo, hi, first int, cmp func(a, b E) int) {
+	root := lo
+	for {
+		child := 2*root + 1
+		if child >= hi {
+			break
+		}
+		if child+1 < hi && (cmp(data[first+child], data[first+child+1]) < 0) {
+			child++
+		}
+		if !(cmp(data[first+root], data[first+child]) < 0) {
+			return
+		}
+		data[first+root], data[first+child] = data[first+child], data[first+root]
+		root = child
+	}
+}
+
+func heapSortCmpFunc[E any](data []E, a, b int, cmp func(a, b E) int) {
+	first := a
+	lo := 0
+	hi := b - a
+
+	// Build heap with greatest element at top.
+	for i := (hi - 1) / 2; i >= 0; i-- {
+		siftDownCmpFunc(data, i, hi, first, cmp)
+	}
+
+	// Pop elements, largest first, into end of data.
+	for i := hi - 1; i >= 0; i-- {
+		data[first], data[first+i] = data[first+i], data[first]
+		siftDownCmpFunc(data, lo, i, first, cmp)
+	}
+}
+
+// pdqsortCmpFunc sorts data[a:b].
+// The algorithm based on pattern-defeating quicksort(pdqsort), but without the optimizations from BlockQuicksort.
+// pdqsort paper: https://arxiv.org/pdf/2106.05123.pdf
+// C++ implementation: https://github.com/orlp/pdqsort
+// Rust implementation: https://docs.rs/pdqsort/latest/pdqsort/
+// limit is the number of allowed bad (very unbalanced) pivots before falling back to heapsort.
+func pdqsortCmpFunc[E any](data []E, a, b, limit int, cmp func(a, b E) int) {
+	const maxInsertion = 12
+
+	var (
+		wasBalanced    = true // whether the last partitioning was reasonably balanced
+		wasPartitioned = true // whether the slice was already partitioned
+	)
+
+	for {
+		length := b - a
+
+		if length <= maxInsertion {
+			insertionSortCmpFunc(data, a, b, cmp)
+			return
+		}
+
+		// Fall back to heapsort if too many bad choices were made.
+		if limit == 0 {
+			heapSortCmpFunc(data, a, b, cmp)
+			return
+		}
+
+		// If the last partitioning was imbalanced, we need to breaking patterns.
+		if !wasBalanced {
+			breakPatternsCmpFunc(data, a, b, cmp)
+			limit--
+		}
+
+		pivot, hint := choosePivotCmpFunc(data, a, b, cmp)
+		if hint == decreasingHint {
+			reverseRangeCmpFunc(data, a, b, cmp)
+			// The chosen pivot was pivot-a elements after the start of the array.
+			// After reversing it is pivot-a elements before the end of the array.
+			// The idea came from Rust's implementation.
+			pivot = (b - 1) - (pivot - a)
+			hint = increasingHint
+		}
+
+		// The slice is likely already sorted.
+		if wasBalanced && wasPartitioned && hint == increasingHint {
+			if partialInsertionSortCmpFunc(data, a, b, cmp) {
+				return
+			}
+		}
+
+		// Probably the slice contains many duplicate elements, partition the slice into
+		// elements equal to and elements greater than the pivot.
+		if a > 0 && !(cmp(data[a-1], data[pivot]) < 0) {
+			mid := partitionEqualCmpFunc(data, a, b, pivot, cmp)
+			a = mid
+			continue
+		}
+
+		mid, alreadyPartitioned := partitionCmpFunc(data, a, b, pivot, cmp)
+		wasPartitioned = alreadyPartitioned
+
+		leftLen, rightLen := mid-a, b-mid
+		balanceThreshold := length / 8
+		if leftLen < rightLen {
+			wasBalanced = leftLen >= balanceThreshold
+			pdqsortCmpFunc(data, a, mid, limit, cmp)
+			a = mid + 1
+		} else {
+			wasBalanced = rightLen >= balanceThreshold
+			pdqsortCmpFunc(data, mid+1, b, limit, cmp)
+			b = mid
+		}
+	}
+}
+
+// partitionCmpFunc does one quicksort partition.
+// Let p = data[pivot]
+// Moves elements in data[a:b] around, so that data[i]<p and data[j]>=p for i<newpivot and j>newpivot.
+// On return, data[newpivot] = p
+func partitionCmpFunc[E any](data []E, a, b, pivot int, cmp func(a, b E) int) (newpivot int, alreadyPartitioned bool) {
+	data[a], data[pivot] = data[pivot], data[a]
+	i, j := a+1, b-1 // i and j are inclusive of the elements remaining to be partitioned
+
+	for i <= j && (cmp(data[i], data[a]) < 0) {
+		i++
+	}
+	for i <= j && !(cmp(data[j], data[a]) < 0) {
+		j--
+	}
+	if i > j {
+		data[j], data[a] = data[a], data[j]
+		return j, true
+	}
+	data[i], data[j] = data[j], data[i]
+	i++
+	j--
+
+	for {
+		for i <= j && (cmp(data[i], data[a]) < 0) {
+			i++
+		}
+		for i <= j && !(cmp(data[j], data[a]) < 0) {
+			j--
+		}
+		if i > j {
+			break
+		}
+		data[i], data[j] = data[j], data[i]
+		i++
+		j--
+	}
+	data[j], data[a] = data[a], data[j]
+	return j, false
+}
+
+// partitionEqualCmpFunc partitions data[a:b] into elements equal to data[pivot] followed by elements greater than data[pivot].
+// It assumed that data[a:b] does not contain elements smaller than the data[pivot].
+func partitionEqualCmpFunc[E any](data []E, a, b, pivot int, cmp func(a, b E) int) (newpivot int) {
+	data[a], data[pivot] = data[pivot], data[a]
+	i, j := a+1, b-1 // i and j are inclusive of the elements remaining to be partitioned
+
+	for {
+		for i <= j && !(cmp(data[a], data[i]) < 0) {
+			i++
+		}
+		for i <= j && (cmp(data[a], data[j]) < 0) {
+			j--
+		}
+		if i > j {
+			break
+		}
+		data[i], data[j] = data[j], data[i]
+		i++
+		j--
+	}
+	return i
+}
+
+// partialInsertionSortCmpFunc partially sorts a slice, returns true if the slice is sorted at the end.
+func partialInsertionSortCmpFunc[E any](data []E, a, b int, cmp func(a, b E) int) bool {
+	const (
+		maxSteps         = 5  // maximum number of adjacent out-of-order pairs that will get shifted
+		shortestShifting = 50 // don't shift any elements on short arrays
+	)
+	i := a + 1
+	for j := 0; j < maxSteps; j++ {
+		for i < b && !(cmp(data[i], data[i-1]) < 0) {
+			i++
+		}
+
+		if i == b {
+			return true
+		}
+
+		if b-a < shortestShifting {
+			return false
+		}
+
+		data[i], data[i-1] = data[i-1], data[i]
+
+		// Shift the smaller one to the left.
+		if i-a >= 2 {
+			for j := i - 1; j >= 1; j-- {
+				if !(cmp(data[j], data[j-1]) < 0) {
+					break
+				}
+				data[j], data[j-1] = data[j-1], data[j]
+			}
+		}
+		// Shift the greater one to the right.
+		if b-i >= 2 {
+			for j := i + 1; j < b; j++ {
+				if !(cmp(data[j], data[j-1]) < 0) {
+					break
+				}
+				data[j], data[j-1] = data[j-1], data[j]
+			}
+		}
+	}
+	return false
+}
+
+// breakPatternsCmpFunc scatters some elements around in an attempt to break some patterns
+// that might cause imbalanced partitions in quicksort.
+func breakPatternsCmpFunc[E any](data []E, a, b int, cmp func(a, b E) int) {
+	length := b - a
+	if length >= 8 {
+		random := xorshift(length)
+		modulus := nextPowerOfTwo(length)
+
+		for idx := a + (length/4)*2 - 1; idx <= a+(length/4)*2+1; idx++ {
+			other := int(uint(random.Next()) & (modulus - 1))
+			if other >= length {
+				other -= length
+			}
+			data[idx], data[a+other] = data[a+other], data[idx]
+		}
+	}
+}
+
+// choosePivotCmpFunc chooses a pivot in data[a:b].
+//
+// [0,8): chooses a static pivot.
+// [8,shortestNinther): uses the simple median-of-three method.
+// [shortestNinther,∞): uses the Tukey ninther method.
+func choosePivotCmpFunc[E any](data []E, a, b int, cmp func(a, b E) int) (pivot int, hint sortedHint) {
+	const (
+		shortestNinther = 50
+		maxSwaps        = 4 * 3
+	)
+
+	l := b - a
+
+	var (
+		swaps int
+		i     = a + l/4*1
+		j     = a + l/4*2
+		k     = a + l/4*3
+	)
+
+	if l >= 8 {
+		if l >= shortestNinther {
+			// Tukey ninther method, the idea came from Rust's implementation.
+			i = medianAdjacentCmpFunc(data, i, &swaps, cmp)
+			j = medianAdjacentCmpFunc(data, j, &swaps, cmp)
+			k = medianAdjacentCmpFunc(data, k, &swaps, cmp)
+		}
+		// Find the median among i, j, k and stores it into j.
+		j = medianCmpFunc(data, i, j, k, &swaps, cmp)
+	}
+
+	switch swaps {
+	case 0:
+		return j, increasingHint
+	case maxSwaps:
+		return j, decreasingHint
+	default:
+		return j, unknownHint
+	}
+}
+
+// order2CmpFunc returns x,y where data[x] <= data[y], where x,y=a,b or x,y=b,a.
+func order2CmpFunc[E any](data []E, a, b int, swaps *int, cmp func(a, b E) int) (int, int) {
+	if cmp(data[b], data[a]) < 0 {
+		*swaps++
+		return b, a
+	}
+	return a, b
+}
+
+// medianCmpFunc returns x where data[x] is the median of data[a],data[b],data[c], where x is a, b, or c.
+func medianCmpFunc[E any](data []E, a, b, c int, swaps *int, cmp func(a, b E) int) int {
+	a, b = order2CmpFunc(data, a, b, swaps, cmp)
+	b, c = order2CmpFunc(data, b, c, swaps, cmp)
+	a, b = order2CmpFunc(data, a, b, swaps, cmp)
+	return b
+}
+
+// medianAdjacentCmpFunc finds the median of data[a - 1], data[a], data[a + 1] and stores the index into a.
+func medianAdjacentCmpFunc[E any](data []E, a int, swaps *int, cmp func(a, b E) int) int {
+	return medianCmpFunc(data, a-1, a, a+1, swaps, cmp)
+}
+
+func reverseRangeCmpFunc[E any](data []E, a, b int, cmp func(a, b E) int) {
+	i := a
+	j := b - 1
+	for i < j {
+		data[i], data[j] = data[j], data[i]
+		i++
+		j--
+	}
+}
+
+func swapRangeCmpFunc[E any](data []E, a, b, n int, cmp func(a, b E) int) {
+	for i := 0; i < n; i++ {
+		data[a+i], data[b+i] = data[b+i], data[a+i]
+	}
+}
+
+func stableCmpFunc[E any](data []E, n int, cmp func(a, b E) int) {
+	blockSize := 20 // must be > 0
+	a, b := 0, blockSize
+	for b <= n {
+		insertionSortCmpFunc(data, a, b, cmp)
+		a = b
+		b += blockSize
+	}
+	insertionSortCmpFunc(data, a, n, cmp)
+
+	for blockSize < n {
+		a, b = 0, 2*blockSize
+		for b <= n {
+			symMergeCmpFunc(data, a, a+blockSize, b, cmp)
+			a = b
+			b += 2 * blockSize
+		}
+		if m := a + blockSize; m < n {
+			symMergeCmpFunc(data, a, m, n, cmp)
+		}
+		blockSize *= 2
+	}
+}
+
+// symMergeCmpFunc merges the two sorted subsequences data[a:m] and data[m:b] using
+// the SymMerge algorithm from Pok-Son Kim and Arne Kutzner, "Stable Minimum
+// Storage Merging by Symmetric Comparisons", in Susanne Albers and Tomasz
+// Radzik, editors, Algorithms - ESA 2004, volume 3221 of Lecture Notes in
+// Computer Science, pages 714-723. Springer, 2004.
+//
+// Let M = m-a and N = b-n. Wolog M < N.
+// The recursion depth is bound by ceil(log(N+M)).
+// The algorithm needs O(M*log(N/M + 1)) calls to data.Less.
+// The algorithm needs O((M+N)*log(M)) calls to data.Swap.
+//
+// The paper gives O((M+N)*log(M)) as the number of assignments assuming a
+// rotation algorithm which uses O(M+N+gcd(M+N)) assignments. The argumentation
+// in the paper carries through for Swap operations, especially as the block
+// swapping rotate uses only O(M+N) Swaps.
+//
+// symMerge assumes non-degenerate arguments: a < m && m < b.
+// Having the caller check this condition eliminates many leaf recursion calls,
+// which improves performance.
+func symMergeCmpFunc[E any](data []E, a, m, b int, cmp func(a, b E) int) {
+	// Avoid unnecessary recursions of symMerge
+	// by direct insertion of data[a] into data[m:b]
+	// if data[a:m] only contains one element.
+	if m-a == 1 {
+		// Use binary search to find the lowest index i
+		// such that data[i] >= data[a] for m <= i < b.
+		// Exit the search loop with i == b in case no such index exists.
+		i := m
+		j := b
+		for i < j {
+			h := int(uint(i+j) >> 1)
+			if cmp(data[h], data[a]) < 0 {
+				i = h + 1
+			} else {
+				j = h
+			}
+		}
+		// Swap values until data[a] reaches the position before i.
+		for k := a; k < i-1; k++ {
+			data[k], data[k+1] = data[k+1], data[k]
+		}
+		return
+	}
+
+	// Avoid unnecessary recursions of symMerge
+	// by direct insertion of data[m] into data[a:m]
+	// if data[m:b] only contains one element.
+	if b-m == 1 {
+		// Use binary search to find the lowest index i
+		// such that data[i] > data[m] for a <= i < m.
+		// Exit the search loop with i == m in case no such index exists.
+		i := a
+		j := m
+		for i < j {
+			h := int(uint(i+j) >> 1)
+			if !(cmp(data[m], data[h]) < 0) {
+				i = h + 1
+			} else {
+				j = h
+			}
+		}
+		// Swap values until data[m] reaches the position i.
+		for k := m; k > i; k-- {
+			data[k], data[k-1] = data[k-1], data[k]
+		}
+		return
+	}
+
+	mid := int(uint(a+b) >> 1)
+	n := mid + m
+	var start, r int
+	if m > mid {
+		start = n - b
+		r = mid
+	} else {
+		start = a
+		r = m
+	}
+	p := n - 1
+
+	for start < r {
+		c := int(uint(start+r) >> 1)
+		if !(cmp(data[p-c], data[c]) < 0) {
+			start = c + 1
+		} else {
+			r = c
+		}
+	}
+
+	end := n - start
+	if start < m && m < end {
+		rotateCmpFunc(data, start, m, end, cmp)
+	}
+	if a < start && start < mid {
+		symMergeCmpFunc(data, a, start, mid, cmp)
+	}
+	if mid < end && end < b {
+		symMergeCmpFunc(data, mid, end, b, cmp)
+	}
+}
+
+// rotateCmpFunc rotates two consecutive blocks u = data[a:m] and v = data[m:b] in data:
+// Data of the form 'x u v y' is changed to 'x v u y'.
+// rotate performs at most b-a many calls to data.Swap,
+// and it assumes non-degenerate arguments: a < m && m < b.
+func rotateCmpFunc[E any](data []E, a, m, b int, cmp func(a, b E) int) {
+	i := m - a
+	j := b - m
+
+	for i != j {
+		if i > j {
+			swapRangeCmpFunc(data, m-i, m, j, cmp)
+			i -= j
+		} else {
+			swapRangeCmpFunc(data, m-i, m+j-i, i, cmp)
+			j -= i
+		}
+	}
+	// i == j
+	swapRangeCmpFunc(data, m-i, m, i, cmp)
+}
+// Code generated by gen_sort_variants.go; DO NOT EDIT.
+
+// Copyright 2022 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// package slices
+
+// import "cmp"
+
+// insertionSortOrdered sorts data[a:b] using insertion sort.
+func insertionSortOrdered[E cmp.Ordered](data []E, a, b int) {
+	for i := a + 1; i < b; i++ {
+		for j := i; j > a && cmp.Less(data[j], data[j-1]); j-- {
+			data[j], data[j-1] = data[j-1], data[j]
+		}
+	}
+}
+
+// siftDownOrdered implements the heap property on data[lo:hi].
+// first is an offset into the array where the root of the heap lies.
+func siftDownOrdered[E cmp.Ordered](data []E, lo, hi, first int) {
+	root := lo
+	for {
+		child := 2*root + 1
+		if child >= hi {
+			break
+		}
+		if child+1 < hi && cmp.Less(data[first+child], data[first+child+1]) {
+			child++
+		}
+		if !cmp.Less(data[first+root], data[first+child]) {
+			return
+		}
+		data[first+root], data[first+child] = data[first+child], data[first+root]
+		root = child
+	}
+}
+
+func heapSortOrdered[E cmp.Ordered](data []E, a, b int) {
+	first := a
+	lo := 0
+	hi := b - a
+
+	// Build heap with greatest element at top.
+	for i := (hi - 1) / 2; i >= 0; i-- {
+		siftDownOrdered(data, i, hi, first)
+	}
+
+	// Pop elements, largest first, into end of data.
+	for i := hi - 1; i >= 0; i-- {
+		data[first], data[first+i] = data[first+i], data[first]
+		siftDownOrdered(data, lo, i, first)
+	}
+}
+
+// pdqsortOrdered sorts data[a:b].
+// The algorithm based on pattern-defeating quicksort(pdqsort), but without the optimizations from BlockQuicksort.
+// pdqsort paper: https://arxiv.org/pdf/2106.05123.pdf
+// C++ implementation: https://github.com/orlp/pdqsort
+// Rust implementation: https://docs.rs/pdqsort/latest/pdqsort/
+// limit is the number of allowed bad (very unbalanced) pivots before falling back to heapsort.
+func pdqsortOrdered[E cmp.Ordered](data []E, a, b, limit int) {
+	const maxInsertion = 12
+
+	var (
+		wasBalanced    = true // whether the last partitioning was reasonably balanced
+		wasPartitioned = true // whether the slice was already partitioned
+	)
+
+	for {
+		length := b - a
+
+		if length <= maxInsertion {
+			insertionSortOrdered(data, a, b)
+			return
+		}
+
+		// Fall back to heapsort if too many bad choices were made.
+		if limit == 0 {
+			heapSortOrdered(data, a, b)
+			return
+		}
+
+		// If the last partitioning was imbalanced, we need to breaking patterns.
+		if !wasBalanced {
+			breakPatternsOrdered(data, a, b)
+			limit--
+		}
+
+		pivot, hint := choosePivotOrdered(data, a, b)
+		if hint == decreasingHint {
+			reverseRangeOrdered(data, a, b)
+			// The chosen pivot was pivot-a elements after the start of the array.
+			// After reversing it is pivot-a elements before the end of the array.
+			// The idea came from Rust's implementation.
+			pivot = (b - 1) - (pivot - a)
+			hint = increasingHint
+		}
+
+		// The slice is likely already sorted.
+		if wasBalanced && wasPartitioned && hint == increasingHint {
+			if partialInsertionSortOrdered(data, a, b) {
+				return
+			}
+		}
+
+		// Probably the slice contains many duplicate elements, partition the slice into
+		// elements equal to and elements greater than the pivot.
+		if a > 0 && !cmp.Less(data[a-1], data[pivot]) {
+			mid := partitionEqualOrdered(data, a, b, pivot)
+			a = mid
+			continue
+		}
+
+		mid, alreadyPartitioned := partitionOrdered(data, a, b, pivot)
+		wasPartitioned = alreadyPartitioned
+
+		leftLen, rightLen := mid-a, b-mid
+		balanceThreshold := length / 8
+		if leftLen < rightLen {
+			wasBalanced = leftLen >= balanceThreshold
+			pdqsortOrdered(data, a, mid, limit)
+			a = mid + 1
+		} else {
+			wasBalanced = rightLen >= balanceThreshold
+			pdqsortOrdered(data, mid+1, b, limit)
+			b = mid
+		}
+	}
+}
+
+// partitionOrdered does one quicksort partition.
+// Let p = data[pivot]
+// Moves elements in data[a:b] around, so that data[i]<p and data[j]>=p for i<newpivot and j>newpivot.
+// On return, data[newpivot] = p
+func partitionOrdered[E cmp.Ordered](data []E, a, b, pivot int) (newpivot int, alreadyPartitioned bool) {
+	data[a], data[pivot] = data[pivot], data[a]
+	i, j := a+1, b-1 // i and j are inclusive of the elements remaining to be partitioned
+
+	for i <= j && cmp.Less(data[i], data[a]) {
+		i++
+	}
+	for i <= j && !cmp.Less(data[j], data[a]) {
+		j--
+	}
+	if i > j {
+		data[j], data[a] = data[a], data[j]
+		return j, true
+	}
+	data[i], data[j] = data[j], data[i]
+	i++
+	j--
+
+	for {
+		for i <= j && cmp.Less(data[i], data[a]) {
+			i++
+		}
+		for i <= j && !cmp.Less(data[j], data[a]) {
+			j--
+		}
+		if i > j {
+			break
+		}
+		data[i], data[j] = data[j], data[i]
+		i++
+		j--
+	}
+	data[j], data[a] = data[a], data[j]
+	return j, false
+}
+
+// partitionEqualOrdered partitions data[a:b] into elements equal to data[pivot] followed by elements greater than data[pivot].
+// It assumed that data[a:b] does not contain elements smaller than the data[pivot].
+func partitionEqualOrdered[E cmp.Ordered](data []E, a, b, pivot int) (newpivot int) {
+	data[a], data[pivot] = data[pivot], data[a]
+	i, j := a+1, b-1 // i and j are inclusive of the elements remaining to be partitioned
+
+	for {
+		for i <= j && !cmp.Less(data[a], data[i]) {
+			i++
+		}
+		for i <= j && cmp.Less(data[a], data[j]) {
+			j--
+		}
+		if i > j {
+			break
+		}
+		data[i], data[j] = data[j], data[i]
+		i++
+		j--
+	}
+	return i
+}
+
+// partialInsertionSortOrdered partially sorts a slice, returns true if the slice is sorted at the end.
+func partialInsertionSortOrdered[E cmp.Ordered](data []E, a, b int) bool {
+	const (
+		maxSteps         = 5  // maximum number of adjacent out-of-order pairs that will get shifted
+		shortestShifting = 50 // don't shift any elements on short arrays
+	)
+	i := a + 1
+	for j := 0; j < maxSteps; j++ {
+		for i < b && !cmp.Less(data[i], data[i-1]) {
+			i++
+		}
+
+		if i == b {
+			return true
+		}
+
+		if b-a < shortestShifting {
+			return false
+		}
+
+		data[i], data[i-1] = data[i-1], data[i]
+
+		// Shift the smaller one to the left.
+		if i-a >= 2 {
+			for j := i - 1; j >= 1; j-- {
+				if !cmp.Less(data[j], data[j-1]) {
+					break
+				}
+				data[j], data[j-1] = data[j-1], data[j]
+			}
+		}
+		// Shift the greater one to the right.
+		if b-i >= 2 {
+			for j := i + 1; j < b; j++ {
+				if !cmp.Less(data[j], data[j-1]) {
+					break
+				}
+				data[j], data[j-1] = data[j-1], data[j]
+			}
+		}
+	}
+	return false
+}
+
+// breakPatternsOrdered scatters some elements around in an attempt to break some patterns
+// that might cause imbalanced partitions in quicksort.
+func breakPatternsOrdered[E cmp.Ordered](data []E, a, b int) {
+	length := b - a
+	if length >= 8 {
+		random := xorshift(length)
+		modulus := nextPowerOfTwo(length)
+
+		for idx := a + (length/4)*2 - 1; idx <= a+(length/4)*2+1; idx++ {
+			other := int(uint(random.Next()) & (modulus - 1))
+			if other >= length {
+				other -= length
+			}
+			data[idx], data[a+other] = data[a+other], data[idx]
+		}
+	}
+}
+
+// choosePivotOrdered chooses a pivot in data[a:b].
+//
+// [0,8): chooses a static pivot.
+// [8,shortestNinther): uses the simple median-of-three method.
+// [shortestNinther,∞): uses the Tukey ninther method.
+func choosePivotOrdered[E cmp.Ordered](data []E, a, b int) (pivot int, hint sortedHint) {
+	const (
+		shortestNinther = 50
+		maxSwaps        = 4 * 3
+	)
+
+	l := b - a
+
+	var (
+		swaps int
+		i     = a + l/4*1
+		j     = a + l/4*2
+		k     = a + l/4*3
+	)
+
+	if l >= 8 {
+		if l >= shortestNinther {
+			// Tukey ninther method, the idea came from Rust's implementation.
+			i = medianAdjacentOrdered(data, i, &swaps)
+			j = medianAdjacentOrdered(data, j, &swaps)
+			k = medianAdjacentOrdered(data, k, &swaps)
+		}
+		// Find the median among i, j, k and stores it into j.
+		j = medianOrdered(data, i, j, k, &swaps)
+	}
+
+	switch swaps {
+	case 0:
+		return j, increasingHint
+	case maxSwaps:
+		return j, decreasingHint
+	default:
+		return j, unknownHint
+	}
+}
+
+// order2Ordered returns x,y where data[x] <= data[y], where x,y=a,b or x,y=b,a.
+func order2Ordered[E cmp.Ordered](data []E, a, b int, swaps *int) (int, int) {
+	if cmp.Less(data[b], data[a]) {
+		*swaps++
+		return b, a
+	}
+	return a, b
+}
+
+// medianOrdered returns x where data[x] is the median of data[a],data[b],data[c], where x is a, b, or c.
+func medianOrdered[E cmp.Ordered](data []E, a, b, c int, swaps *int) int {
+	a, b = order2Ordered(data, a, b, swaps)
+	b, c = order2Ordered(data, b, c, swaps)
+	a, b = order2Ordered(data, a, b, swaps)
+	return b
+}
+
+// medianAdjacentOrdered finds the median of data[a - 1], data[a], data[a + 1] and stores the index into a.
+func medianAdjacentOrdered[E cmp.Ordered](data []E, a int, swaps *int) int {
+	return medianOrdered(data, a-1, a, a+1, swaps)
+}
+
+func reverseRangeOrdered[E cmp.Ordered](data []E, a, b int) {
+	i := a
+	j := b - 1
+	for i < j {
+		data[i], data[j] = data[j], data[i]
+		i++
+		j--
+	}
+}
+
+func swapRangeOrdered[E cmp.Ordered](data []E, a, b, n int) {
+	for i := 0; i < n; i++ {
+		data[a+i], data[b+i] = data[b+i], data[a+i]
+	}
+}
+
+func stableOrdered[E cmp.Ordered](data []E, n int) {
+	blockSize := 20 // must be > 0
+	a, b := 0, blockSize
+	for b <= n {
+		insertionSortOrdered(data, a, b)
+		a = b
+		b += blockSize
+	}
+	insertionSortOrdered(data, a, n)
+
+	for blockSize < n {
+		a, b = 0, 2*blockSize
+		for b <= n {
+			symMergeOrdered(data, a, a+blockSize, b)
+			a = b
+			b += 2 * blockSize
+		}
+		if m := a + blockSize; m < n {
+			symMergeOrdered(data, a, m, n)
+		}
+		blockSize *= 2
+	}
+}
+
+// symMergeOrdered merges the two sorted subsequences data[a:m] and data[m:b] using
+// the SymMerge algorithm from Pok-Son Kim and Arne Kutzner, "Stable Minimum
+// Storage Merging by Symmetric Comparisons", in Susanne Albers and Tomasz
+// Radzik, editors, Algorithms - ESA 2004, volume 3221 of Lecture Notes in
+// Computer Science, pages 714-723. Springer, 2004.
+//
+// Let M = m-a and N = b-n. Wolog M < N.
+// The recursion depth is bound by ceil(log(N+M)).
+// The algorithm needs O(M*log(N/M + 1)) calls to data.Less.
+// The algorithm needs O((M+N)*log(M)) calls to data.Swap.
+//
+// The paper gives O((M+N)*log(M)) as the number of assignments assuming a
+// rotation algorithm which uses O(M+N+gcd(M+N)) assignments. The argumentation
+// in the paper carries through for Swap operations, especially as the block
+// swapping rotate uses only O(M+N) Swaps.
+//
+// symMerge assumes non-degenerate arguments: a < m && m < b.
+// Having the caller check this condition eliminates many leaf recursion calls,
+// which improves performance.
+func symMergeOrdered[E cmp.Ordered](data []E, a, m, b int) {
+	// Avoid unnecessary recursions of symMerge
+	// by direct insertion of data[a] into data[m:b]
+	// if data[a:m] only contains one element.
+	if m-a == 1 {
+		// Use binary search to find the lowest index i
+		// such that data[i] >= data[a] for m <= i < b.
+		// Exit the search loop with i == b in case no such index exists.
+		i := m
+		j := b
+		for i < j {
+			h := int(uint(i+j) >> 1)
+			if cmp.Less(data[h], data[a]) {
+				i = h + 1
+			} else {
+				j = h
+			}
+		}
+		// Swap values until data[a] reaches the position before i.
+		for k := a; k < i-1; k++ {
+			data[k], data[k+1] = data[k+1], data[k]
+		}
+		return
+	}
+
+	// Avoid unnecessary recursions of symMerge
+	// by direct insertion of data[m] into data[a:m]
+	// if data[m:b] only contains one element.
+	if b-m == 1 {
+		// Use binary search to find the lowest index i
+		// such that data[i] > data[m] for a <= i < m.
+		// Exit the search loop with i == m in case no such index exists.
+		i := a
+		j := m
+		for i < j {
+			h := int(uint(i+j) >> 1)
+			if !cmp.Less(data[m], data[h]) {
+				i = h + 1
+			} else {
+				j = h
+			}
+		}
+		// Swap values until data[m] reaches the position i.
+		for k := m; k > i; k-- {
+			data[k], data[k-1] = data[k-1], data[k]
+		}
+		return
+	}
+
+	mid := int(uint(a+b) >> 1)
+	n := mid + m
+	var start, r int
+	if m > mid {
+		start = n - b
+		r = mid
+	} else {
+		start = a
+		r = m
+	}
+	p := n - 1
+
+	for start < r {
+		c := int(uint(start+r) >> 1)
+		if !cmp.Less(data[p-c], data[c]) {
+			start = c + 1
+		} else {
+			r = c
+		}
+	}
+
+	end := n - start
+	if start < m && m < end {
+		rotateOrdered(data, start, m, end)
+	}
+	if a < start && start < mid {
+		symMergeOrdered(data, a, start, mid)
+	}
+	if mid < end && end < b {
+		symMergeOrdered(data, mid, end, b)
+	}
+}
+
+// rotateOrdered rotates two consecutive blocks u = data[a:m] and v = data[m:b] in data:
+// Data of the form 'x u v y' is changed to 'x v u y'.
+// rotate performs at most b-a many calls to data.Swap,
+// and it assumes non-degenerate arguments: a < m && m < b.
+func rotateOrdered[E cmp.Ordered](data []E, a, m, b int) {
+	i := m - a
+	j := b - m
+
+	for i != j {
+		if i > j {
+			swapRangeOrdered(data, m-i, m, j)
+			i -= j
+		} else {
+			swapRangeOrdered(data, m-i, m+j-i, i)
+			j -= i
+		}
+	}
+	// i == j
+	swapRangeOrdered(data, m-i, m, i)
+}

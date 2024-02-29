@@ -39,7 +39,9 @@ import (
 	"{{$key}}"
 	{{- end}}
 {{- end}}
+{{- if or .Val .Typ }}
 	"{{.ImportPath}}"
+{{- end}}
 	"reflect"
 )
 
@@ -199,6 +201,10 @@ func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, err
 				val[name] = Val{pname, false}
 			}
 		case *types.Func:
+			// Skip generic functions and methods.
+			if s := o.Type().(*types.Signature); s.TypeParams().Len() > 0 || s.RecvTypeParams().Len() > 0 {
+				continue
+			}
 			val[name] = Val{pname, false}
 		case *types.Var:
 			val[name] = Val{pname, true}
@@ -207,9 +213,13 @@ func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, err
 			if t, ok := o.Type().(*types.Named); ok && t.TypeParams().Len() > 0 {
 				continue
 			}
-
 			typ[name] = pname
 			if t, ok := o.Type().Underlying().(*types.Interface); ok {
+				if t.NumMethods() == 0 && t.NumEmbeddeds() != 0 {
+					// Skip interfaces used to implement constraints for generics.
+					delete(typ, name)
+					continue
+				}
 				var methods []Method
 				for i := 0; i < t.NumMethods(); i++ {
 					f := t.Method(i)

@@ -13,10 +13,8 @@ import (
 func init() {
 	Symbols["sync/sync"] = map[string]reflect.Value{
 		// function, constant and variable definitions
-		"NewCond":    reflect.ValueOf(sync.NewCond),
-		"OnceFunc":   reflect.ValueOf(sync.OnceFunc),
-		"OnceValue":  reflect.ValueOf(sync.OnceValue),
-		"OnceValues": reflect.ValueOf(sync.OnceValues),
+		"NewCond":  reflect.ValueOf(sync.NewCond),
+		"OnceFunc": reflect.ValueOf(sync.OnceFunc),
 
 		// type definitions
 		"Cond":      reflect.ValueOf((*sync.Cond)(nil)),

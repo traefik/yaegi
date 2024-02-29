@@ -9,6 +9,8 @@ import (
 	"os"
 	"path"
 	"reflect"
+
+	gen "github.com/traefik/yaegi/stdlib/generic"
 )
 
 // Symbols returns a map of interpreter exported symbol values for the given
@@ -128,7 +130,9 @@ func (interp *Interpreter) Use(values Exports) error {
 		}
 
 		for s, sym := range v {
-			interp.binPkg[importPath][s] = sym
+			if !isValueGeneric(sym) {
+				interp.binPkg[importPath][s] = sym
+			}
 		}
 		if k == selfPath {
 			interp.binPkg[importPath]["Self"] = reflect.ValueOf(interp)
@@ -139,6 +143,13 @@ func (interp *Interpreter) Use(values Exports) error {
 	// well known stdlib package path.
 	if _, ok := values["fmt/fmt"]; ok {
 		fixStdlib(interp)
+
+		// Load stdlib generic source.
+		for _, s := range gen.Sources {
+			if _, err := interp.Compile(s); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -250,3 +261,8 @@ func fixStdlib(interp *Interpreter) {
 		p["UintSize"] = reflect.ValueOf(constant.MakeInt64(bits.UintSize))
 	}
 }
+
+var genericValueType = reflect.TypeOf((*gen.Source)(nil)).Elem()
+
+// isValueGeneric returns true if v corresponds to a generic value, imported through Use().
+func isValueGeneric(v reflect.Value) bool { return v.IsValid() && v.Type() == genericValueType }

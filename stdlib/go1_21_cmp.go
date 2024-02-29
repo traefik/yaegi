@@ -6,25 +6,9 @@
 package stdlib
 
 import (
-	"cmp"
 	"reflect"
 )
 
 func init() {
-	Symbols["cmp/cmp"] = map[string]reflect.Value{
-		// function, constant and variable definitions
-		"Compare": reflect.ValueOf(cmp.Compare),
-		"Less":    reflect.ValueOf(cmp.Less),
-
-		// type definitions
-		"Ordered": reflect.ValueOf((*cmp.Ordered)(nil)),
-
-		// interface wrapper definitions
-		"_Ordered": reflect.ValueOf((*_cmp_Ordered)(nil)),
-	}
-}
-
-// _cmp_Ordered is an interface wrapper for Ordered type
-type _cmp_Ordered struct {
-	IValue interface{}
+	Symbols["cmp/cmp"] = map[string]reflect.Value{}
 }

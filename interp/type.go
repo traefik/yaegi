@@ -1533,7 +1533,7 @@ func (t *itype) ordered() bool {
 	return isInt(typ) || isFloat(typ) || isString(typ)
 }
 
-// Equals returns true if the given type is identical to the receiver one.
+// equals returns true if the given type is identical to the receiver one.
 func (t *itype) equals(o *itype) bool {
 	switch ti, oi := isInterface(t), isInterface(o); {
 	case ti && oi:
@@ -1545,6 +1545,11 @@ func (t *itype) equals(o *itype) bool {
 	default:
 		return t.id() == o.id()
 	}
+}
+
+// matchDefault returns true if the receiver default type is the same as the given one.
+func (t *itype) matchDefault(o *itype) bool {
+	return t.untyped && t.id() == "untyped "+o.id()
 }
 
 // MethodSet defines the set of methods signatures as strings, indexed per method name.
