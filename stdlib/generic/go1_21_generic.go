@@ -20,16 +20,6 @@ var syncSource string
 //go:embed go1_21_sync_atomic.go.txt
 var syncAtomicSource string
 
-type Source string
-
-var (
-	Gcmp         = Source(cmpSource)
-	Gmaps        = Source(mapsSource)
-	Gslices      = Source(slicesSource)
-	Gsync_atomic = Source(syncAtomicSource)
-	Gsync        = Source(syncSource)
-)
-
 // Sources contains the list of generic packages source strings.
 var Sources = [...]string{
 	cmpSource,
