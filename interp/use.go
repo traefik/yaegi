@@ -130,9 +130,7 @@ func (interp *Interpreter) Use(values Exports) error {
 		}
 
 		for s, sym := range v {
-			if !isValueGeneric(sym) {
-				interp.binPkg[importPath][s] = sym
-			}
+			interp.binPkg[importPath][s] = sym
 		}
 		if k == selfPath {
 			interp.binPkg[importPath]["Self"] = reflect.ValueOf(interp)
@@ -261,8 +259,3 @@ func fixStdlib(interp *Interpreter) {
 		p["UintSize"] = reflect.ValueOf(constant.MakeInt64(bits.UintSize))
 	}
 }
-
-var genericValueType = reflect.TypeOf((*gen.Source)(nil)).Elem()
-
-// isValueGeneric returns true if v corresponds to a generic value, imported through Use().
-func isValueGeneric(v reflect.Value) bool { return v.IsValid() && v.Type() == genericValueType }
