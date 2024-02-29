@@ -478,7 +478,7 @@ func GetMinor(part string) string {
 	return minor
 }
 
-const defaultMinorVersion = 20
+const defaultMinorVersion = 21
 
 func genBuildTags() (string, error) {
 	version := runtime.Version()
