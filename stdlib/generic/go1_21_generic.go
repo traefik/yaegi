@@ -11,6 +11,7 @@ var cmpSource string
 //go:embed go1_21_maps.go.txt
 var mapsSource string
 
+/*
 //go:embed go1_21_slices.go.txt
 var slicesSource string
 
@@ -19,6 +20,7 @@ var syncSource string
 
 //go:embed go1_21_sync_atomic.go.txt
 var syncAtomicSource string
+*/
 
 // Sources contains the list of generic packages source strings.
 var Sources = [...]string{
