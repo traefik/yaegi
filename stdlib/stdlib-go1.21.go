@@ -2,4 +2,4 @@
 
 package stdlib
 
-//go:generate ../internal/cmd/extract/extract cmp log/slog maps slices
+//go:generate ../internal/cmd/extract/extract cmp log/slog maps slices testing/slogtest
