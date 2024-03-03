@@ -121,6 +121,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "type33.go" { // expect error
 			continue
 		}
+		// Skip some tests which are problematic in go1.21 only.
 		if go121 && testsToSkipGo121[file.Name()] {
 			continue
 		}

@@ -38,8 +38,8 @@ func init() {
 //go:generate ../internal/cmd/extract/extract encoding/base64 encoding/binary encoding/csv encoding/gob
 //go:generate ../internal/cmd/extract/extract encoding/hex encoding/json encoding/pem encoding/xml
 //go:generate ../internal/cmd/extract/extract errors expvar flag fmt
-//go:generate ../internal/cmd/extract/extract go/ast go/build go/build/constraint go/constant go/doc go/format go/importer
-//go:generate ../internal/cmd/extract/extract go/parser go/printer go/scanner go/token go/types
+//go:generate ../internal/cmd/extract/extract go/ast go/build go/build/constraint go/constant go/doc go/doc/comment go/format
+//go:generate ../internal/cmd/extract/extract go/importer go/parser go/printer go/scanner go/token go/types
 //go:generate ../internal/cmd/extract/extract hash hash/adler32 hash/crc32 hash/crc64 hash/fnv hash/maphash
 //go:generate ../internal/cmd/extract/extract html html/template
 //go:generate ../internal/cmd/extract/extract image image/color image/color/palette
