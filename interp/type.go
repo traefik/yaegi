@@ -989,16 +989,18 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 					rtype = rtype.Elem()
 				}
 				t = valueTOf(rtype, withNode(n), withScope(sc))
-			} else {
-				err = n.cfgErrorf("undefined selector %s.%s", lt.path, name)
+				break
 			}
+			// Continue search in source package, as it may exist if package contains generics.
+			fallthrough
 		case srcPkgT:
-			pkg := interp.srcPkg[lt.path]
-			if s, ok := pkg[name]; ok {
-				t = s.typ
-			} else {
-				err = n.cfgErrorf("undefined selector %s.%s", lt.path, name)
+			if pkg, ok := interp.srcPkg[lt.path]; ok {
+				if s, ok := pkg[name]; ok {
+					t = s.typ
+					break
+				}
 			}
+			err = n.cfgErrorf("undefined selector %s.%s", lt.path, name)
 		default:
 			if m, _ := lt.lookupMethod(name); m != nil {
 				t, err = nodeType2(interp, sc, m.child[2], seen)

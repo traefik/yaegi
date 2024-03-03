@@ -11,10 +11,10 @@ var cmpSource string
 //go:embed go1_21_maps.go.txt
 var mapsSource string
 
-/*
 //go:embed go1_21_slices.go.txt
 var slicesSource string
 
+/*
 //go:embed go1_21_sync.go.txt
 var syncSource string
 
@@ -26,8 +26,8 @@ var syncAtomicSource string
 var Sources = [...]string{
 	cmpSource,
 	mapsSource,
+	slicesSource,
 	// FIXME(marc): support the following.
-	// slicesSource,
 	// syncAtomicSource,
 	// syncSource,
 }
