@@ -121,6 +121,9 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "type33.go" { // expect error
 			continue
 		}
+		if go121 && testsToSkipGo121[file.Name()] {
+			continue
+		}
 
 		file := file
 		t.Run(file.Name(), func(t *testing.T) {
