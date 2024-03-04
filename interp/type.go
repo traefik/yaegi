@@ -989,16 +989,18 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 					rtype = rtype.Elem()
 				}
 				t = valueTOf(rtype, withNode(n), withScope(sc))
-			} else {
-				err = n.cfgErrorf("undefined selector %s.%s", lt.path, name)
+				break
 			}
+			// Continue search in source package, as it may exist if package contains generics.
+			fallthrough
 		case srcPkgT:
-			pkg := interp.srcPkg[lt.path]
-			if s, ok := pkg[name]; ok {
-				t = s.typ
-			} else {
-				err = n.cfgErrorf("undefined selector %s.%s", lt.path, name)
+			if pkg, ok := interp.srcPkg[lt.path]; ok {
+				if s, ok := pkg[name]; ok {
+					t = s.typ
+					break
+				}
 			}
+			err = n.cfgErrorf("undefined selector %s.%s", lt.path, name)
 		default:
 			if m, _ := lt.lookupMethod(name); m != nil {
 				t, err = nodeType2(interp, sc, m.child[2], seen)
@@ -1533,7 +1535,7 @@ func (t *itype) ordered() bool {
 	return isInt(typ) || isFloat(typ) || isString(typ)
 }
 
-// Equals returns true if the given type is identical to the receiver one.
+// equals returns true if the given type is identical to the receiver one.
 func (t *itype) equals(o *itype) bool {
 	switch ti, oi := isInterface(t), isInterface(o); {
 	case ti && oi:
@@ -1545,6 +1547,11 @@ func (t *itype) equals(o *itype) bool {
 	default:
 		return t.id() == o.id()
 	}
+}
+
+// matchDefault returns true if the receiver default type is the same as the given one.
+func (t *itype) matchDefault(o *itype) bool {
+	return t.untyped && t.id() == "untyped "+o.id()
 }
 
 // MethodSet defines the set of methods signatures as strings, indexed per method name.
