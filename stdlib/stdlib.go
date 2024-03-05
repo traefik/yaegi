@@ -1,4 +1,4 @@
-//go:build go1.20
+//go:build go1.21
 
 // Package stdlib provides wrappers of standard library packages to be imported natively in Yaegi.
 package stdlib
@@ -25,7 +25,7 @@ func init() {
 // go list std | grep -v internal | grep -v '\.' | grep -v unsafe | grep -v syscall
 
 //go:generate ../internal/cmd/extract/extract archive/tar archive/zip
-//go:generate ../internal/cmd/extract/extract bufio bytes
+//go:generate ../internal/cmd/extract/extract bufio bytes cmp
 //go:generate ../internal/cmd/extract/extract compress/bzip2 compress/flate compress/gzip compress/lzw compress/zlib
 //go:generate ../internal/cmd/extract/extract container/heap container/list container/ring
 //go:generate ../internal/cmd/extract/extract context crypto crypto/aes crypto/cipher crypto/des crypto/dsa crypto/ecdsa crypto/ecdh
@@ -44,8 +44,8 @@ func init() {
 //go:generate ../internal/cmd/extract/extract html html/template
 //go:generate ../internal/cmd/extract/extract image image/color image/color/palette
 //go:generate ../internal/cmd/extract/extract image/draw image/gif image/jpeg image/png index/suffixarray
-//go:generate ../internal/cmd/extract/extract io io/fs io/ioutil log log/syslog
-//go:generate ../internal/cmd/extract/extract math math/big math/bits math/cmplx math/rand
+//go:generate ../internal/cmd/extract/extract io io/fs io/ioutil log log/syslog log/slog
+//go:generate ../internal/cmd/extract/extract maps math math/big math/bits math/cmplx math/rand
 //go:generate ../internal/cmd/extract/extract mime mime/multipart mime/quotedprintable
 //go:generate ../internal/cmd/extract/extract net net/http net/http/cgi net/http/cookiejar net/http/fcgi
 //go:generate ../internal/cmd/extract/extract net/http/httptest net/http/httptrace net/http/httputil net/http/pprof
@@ -53,7 +53,7 @@ func init() {
 //go:generate ../internal/cmd/extract/extract os os/signal os/user
 //go:generate ../internal/cmd/extract/extract path path/filepath reflect regexp regexp/syntax
 //go:generate ../internal/cmd/extract/extract runtime runtime/debug runtime/metrics runtime/pprof runtime/trace
-//go:generate ../internal/cmd/extract/extract sort strconv strings sync sync/atomic
-//go:generate ../internal/cmd/extract/extract testing testing/fstest testing/iotest testing/quick
+//go:generate ../internal/cmd/extract/extract slices sort strconv strings sync sync/atomic
+//go:generate ../internal/cmd/extract/extract testing testing/fstest testing/iotest testing/quick testing/slogtest
 //go:generate ../internal/cmd/extract/extract text/scanner text/tabwriter text/template text/template/parse
 //go:generate ../internal/cmd/extract/extract time unicode unicode/utf16 unicode/utf8

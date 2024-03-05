@@ -15,11 +15,10 @@ func main() {
 	r := extendedRequest{}
 	req := &r.Request
 
-
-	fmt.Println(r)
-	fmt.Println(req)
+	fmt.Printf("%T\n", r.Request)
+	fmt.Printf("%T\n", req)
 }
 
 // Output:
-// {{ <nil>  0 0 map[] <nil> <nil> 0 [] false  map[] map[] <nil> map[]   <nil> <nil> <nil> <nil>} }
-// &{ <nil>  0 0 map[] <nil> <nil> 0 [] false  map[] map[] <nil> map[]   <nil> <nil> <nil> <nil>}
+// http.Request
+// *http.Request

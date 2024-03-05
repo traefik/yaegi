@@ -27,4 +27,15 @@ tests:
 install.sh: .goreleaser.yml
 	godownloader --repo=traefik/yaegi -o install.sh .goreleaser.yml
 
-.PHONY: check gen_all_syscall gen_tests generate_downloader internal/cmd/extract/extract install
+generic_list = cmp/cmp.go slices/slices.go slices/sort.go slices/zsortanyfunc.go maps/maps.go \
+			   sync/oncefunc.go sync/atomic/type.go
+
+# get_generic_src imports stdlib files containing generic symbols definitions
+get_generic_src:
+	eval "`go env`"; echo $$GOROOT; gov=$${GOVERSION#*.}; gov=$${gov%.*}; \
+	for f in ${generic_list}; do \
+		nf=stdlib/generic/go1_$${gov}_`echo $$f | tr / _`.txt; echo "nf: $$nf"; \
+		cat "$$GOROOT/src/$$f" > "$$nf"; \
+	done
+
+.PHONY: check gen_all_syscall internal/cmd/extract/extract get_generic_src install

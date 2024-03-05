@@ -17,7 +17,7 @@ It powers executable Go scripts and plugins, in embedded interpreters or interac
 * Works everywhere Go works
 * All Go & runtime resources accessible from script (with control)
 * Security: `unsafe` and `syscall` packages neither used nor exported by default
-* Support the latest 2 major releases of Go (Go 1.20 and Go 1.21)
+* Support the latest 2 major releases of Go (Go 1.21 and Go 1.22)
 
 ## Install
 
