@@ -47,7 +47,7 @@ archives:
       - LICENSE
 
 brews:
-  - tap:
+  - repository:
       owner: traefik
       name: homebrew-tap
     commit_author:

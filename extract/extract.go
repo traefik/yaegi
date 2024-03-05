@@ -387,7 +387,7 @@ func (e *Extractor) importPath(pkgIdent, importPath string) (string, error) {
 		return "", err
 	}
 	if err != nil {
-		if len(pkgIdent) > 0 && pkgIdent[0] == '.' {
+		if pkgIdent != "" && pkgIdent[0] == '.' {
 			// pkgIdent is definitely a relative path, not a package name, and it does not exist
 			return "", err
 		}
