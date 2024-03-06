@@ -261,7 +261,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 					if sym, exists := sc.sym[name]; !exists {
 						sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath, scope: sc}}
 						break
-					} else if sym.kind == pkgSym && sym.typ.cat == srcPkgT && sym.typ.path == ipath {
+					} else if sym.kind == pkgSym && sym.typ.cat == binPkgT && sym.typ.path == ipath {
 						// ignore re-import of identical package
 						break
 					}
