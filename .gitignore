@@ -1,6 +1,7 @@
 .*.swo
 .*.swp
 *.dot
+*.out
 .idea/
 /yaegi
 internal/cmd/extract/extract
