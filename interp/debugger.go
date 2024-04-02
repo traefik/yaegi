@@ -272,10 +272,6 @@ func (dbg *Debugger) enterCall(nFunc, nCall *node, f *frame) {
 	switch nFunc.kind {
 	case funcLit:
 		f.debug.kind = frameCall
-		if nFunc.frame != nil {
-			nFunc.frame.debug.kind = frameClosure
-			nFunc.frame.debug.node = nFunc
-		}
 
 	case funcDecl:
 		f.debug.kind = frameCall

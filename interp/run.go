@@ -988,9 +988,6 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 	funcType := n.typ.TypeOf()
 
 	return func(f *frame) reflect.Value {
-		if n.frame != nil { // Use closure context if defined.
-			f = n.frame
-		}
 		return reflect.MakeFunc(funcType, func(in []reflect.Value) []reflect.Value {
 			// Allocate and init local frame. All values to be settable and addressable.
 			fr := newFrame(f, len(def.types), f.runid())
@@ -1292,12 +1289,9 @@ func call(n *node) {
 	}
 
 	n.exec = func(f *frame) bltn {
-		var def *node
-		var ok bool
-
 		bf := value(f)
-
-		if def, ok = bf.Interface().(*node); ok {
+		def, ok := bf.Interface().(*node)
+		if ok {
 			bf = def.rval
 		}
 
@@ -1343,12 +1337,7 @@ func call(n *node) {
 			return tnext
 		}
 
-		anc := f
-		// Get closure frame context (if any)
-		if def.frame != nil {
-			anc = def.frame
-		}
-		nf := newFrame(anc, len(def.types), anc.runid())
+		nf := newFrame(f, len(def.types), f.runid())
 		var vararg reflect.Value
 
 		// Init return values
@@ -1887,27 +1876,22 @@ func getIndexMap2(n *node) {
 	}
 }
 
-const fork = true // Duplicate frame in frame.clone().
-
 // getFunc compiles a closure function generator for anonymous functions.
 func getFunc(n *node) {
 	i := n.findex
 	l := n.level
 	next := getExec(n.tnext)
+	numRet := len(n.typ.ret)
 
 	n.exec = func(f *frame) bltn {
-		fr := f.clone(fork)
-		nod := *n
-		nod.val = &nod
-		nod.frame = fr
-		def := &nod
-		numRet := len(def.typ.ret)
+		fr := f.clone()
+		o := getFrame(f, l).data[i]
 
-		fct := reflect.MakeFunc(nod.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
+		fct := reflect.MakeFunc(n.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
 			// Allocate and init local frame. All values to be settable and addressable.
-			fr2 := newFrame(fr, len(def.types), fr.runid())
+			fr2 := newFrame(fr, len(n.types), fr.runid())
 			d := fr2.data
-			for i, t := range def.types {
+			for i, t := range n.types {
 				d[i] = reflect.New(t).Elem()
 			}
 			d = d[numRet:]
@@ -1918,7 +1902,7 @@ func getFunc(n *node) {
 					// In case of unused arg, there may be not even a frame entry allocated, just skip.
 					break
 				}
-				typ := def.typ.arg[i]
+				typ := n.typ.arg[i]
 				switch {
 				case isEmptyInterface(typ) || typ.TypeOf() == valueInterfaceType:
 					d[i].Set(arg)
@@ -1930,8 +1914,8 @@ func getFunc(n *node) {
 			}
 
 			// Interpreter code execution.
-			runCfg(def.child[3].start, fr2, def, n)
-
+			runCfg(n.child[3].start, fr2, n, n)
+			getFrame(f, l).data[i] = o
 			return fr2.data[:numRet]
 		})
 
@@ -1946,11 +1930,9 @@ func getMethod(n *node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		fr := f.clone(!fork)
 		nod := *(n.val.(*node))
 		nod.val = &nod
 		nod.recv = n.recv
-		nod.frame = fr
 		getFrame(f, l).data[i] = genFuncValue(&nod)(f)
 		return next
 	}
@@ -2021,11 +2003,9 @@ func getMethodByName(n *node) {
 			panic(n.cfgErrorf("method not found: %s", name))
 		}
 
-		fr := f.clone(!fork)
 		nod := *m
 		nod.val = &nod
 		nod.recv = &receiver{nil, val.value, li}
-		nod.frame = fr
 		getFrame(f, l).data[i] = genFuncValue(&nod)(f)
 		return next
 	}
