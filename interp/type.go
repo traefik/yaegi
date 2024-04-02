@@ -2393,7 +2393,7 @@ func isMap(t *itype) bool  { return t.TypeOf().Kind() == reflect.Map }
 func isPtr(t *itype) bool  { return t.TypeOf().Kind() == reflect.Ptr }
 
 func isEmptyInterface(t *itype) bool {
-	return t.cat == interfaceT && len(t.field) == 0
+	return t != nil && t.cat == interfaceT && len(t.field) == 0
 }
 
 func isGeneric(t *itype) bool {
