@@ -1289,11 +1289,13 @@ func call(n *node) {
 	}
 
 	n.exec = func(f *frame) bltn {
+		f.mutex.Lock()
 		bf := value(f)
 		def, ok := bf.Interface().(*node)
 		if ok {
 			bf = def.rval
 		}
+		f.mutex.Unlock()
 
 		// Call bin func if defined
 		if bf.IsValid() {
@@ -1915,11 +1917,18 @@ func getFunc(n *node) {
 
 			// Interpreter code execution.
 			runCfg(n.child[3].start, fr2, n, n)
+
+			f.mutex.Lock()
 			getFrame(f, l).data[i] = o
+			f.mutex.Unlock()
+
 			return fr2.data[:numRet]
 		})
 
+		f.mutex.Lock()
 		getFrame(f, l).data[i] = fct
+		f.mutex.Unlock()
+
 		return next
 	}
 }
