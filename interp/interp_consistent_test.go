@@ -72,6 +72,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "time0.go" || // display time (similar to random number)
 			file.Name() == "factor.go" || // bench
 			file.Name() == "fib.go" || // bench
+			file.Name() == "issue-1618.go" || // bench (infinite running)
 
 			file.Name() == "type5.go" || // used to illustrate a limitation with no workaround, related to the fact that the reflect package does not allow the creation of named types
 			file.Name() == "type6.go" || // used to illustrate a limitation with no workaround, related to the fact that the reflect package does not allow the creation of named types
