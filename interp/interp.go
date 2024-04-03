@@ -33,7 +33,6 @@ type node struct {
 	tnext      *node          // true branch successor (CFG)
 	fnext      *node          // false branch successor (CFG)
 	interp     *Interpreter   // interpreter context
-	frame      *frame         // frame pointer used for closures only (TODO: suppress this)
 	index      int64          // node index (dot display)
 	findex     int            // index of value in frame or frame size (func def, type def)
 	level      int            // number of frame indirections to access value
@@ -138,7 +137,7 @@ func newFrame(anc *frame, length int, id uint64) *frame {
 
 func (f *frame) runid() uint64      { return atomic.LoadUint64(&f.id) }
 func (f *frame) setrunid(id uint64) { atomic.StoreUint64(&f.id, id) }
-func (f *frame) clone(fork bool) *frame {
+func (f *frame) clone() *frame {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
 	nf := &frame{
@@ -150,12 +149,8 @@ func (f *frame) clone(fork bool) *frame {
 		done:      f.done,
 		debug:     f.debug,
 	}
-	if fork {
-		nf.data = make([]reflect.Value, len(f.data))
-		copy(nf.data, f.data)
-	} else {
-		nf.data = f.data
-	}
+	nf.data = make([]reflect.Value, len(f.data))
+	copy(nf.data, f.data)
 	return nf
 }
 
