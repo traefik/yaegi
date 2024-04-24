@@ -382,7 +382,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						}
 						n.typ.addMethod(gm)
 					}
-					n.nleft = 1 // Indictate the type of composite literal.
+					n.nleft = 1 // Indicate the type of composite literal.
 				}
 			}
 
@@ -729,7 +729,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				case isCall(src) && !isInterfaceSrc(dest.typ) && n.kind != defineStmt:
 					// Call action may perform the assignment directly.
 					if dest.typ.id() != src.typ.id() {
-						// Skip optimitization if returned type doesn't match assigned one.
+						// Skip optimization if returned type doesn't match assigned one.
 						break
 					}
 					n.gen = nop

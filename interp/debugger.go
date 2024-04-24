@@ -422,7 +422,7 @@ func (dbg *Debugger) Terminate() {
 // BreakpointTarget is the target of a request to set breakpoints.
 type BreakpointTarget func(*Debugger, func(*node))
 
-// PathBreakpointTarget is used to set breapoints on compiled code by path. This
+// PathBreakpointTarget is used to set breakpoints on compiled code by path. This
 // can be used to set breakpoints on code compiled with EvalPath, or source
 // packages loaded by Yaegi.
 func PathBreakpointTarget(path string) BreakpointTarget {
