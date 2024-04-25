@@ -2901,11 +2901,10 @@ func rangeMap(n *node) {
 	index2 := index0 - 1        // iterator for range, always just behind index0
 	fnext := getExec(n.fnext)
 	tnext := getExec(n.tnext)
+	value := genValue(n.child[len(n.child)-2]) // map value
 
-	var value func(*frame) reflect.Value
-	if len(n.child) == 4 {
-		index1 := n.child[1].findex  // map value location in frame
-		value = genValue(n.child[2]) // map
+	if len(n.child) == 4 && n.child[1].ident != "_" {
+		index1 := n.child[1].findex // map value location in frame
 		n.exec = func(f *frame) bltn {
 			iter := f.data[index2].Interface().(*reflect.MapIter)
 			if !iter.Next() {
@@ -2916,7 +2915,6 @@ func rangeMap(n *node) {
 			return tnext
 		}
 	} else {
-		value = genValue(n.child[1]) // map
 		n.exec = func(f *frame) bltn {
 			iter := f.data[index2].Interface().(*reflect.MapIter)
 			if !iter.Next() {
