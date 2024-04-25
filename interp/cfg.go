@@ -147,6 +147,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					var k, v, o *node
 					if len(n.anc.child) == 4 {
 						k, v, o = n.anc.child[0], n.anc.child[1], n.anc.child[2]
+						if v.ident == "_" {
+							v = nil // Do not assign to _ value.
+						}
 					} else {
 						k, o = n.anc.child[0], n.anc.child[1]
 					}
