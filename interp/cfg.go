@@ -654,7 +654,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				var sym *symbol
 				var level int
 
-				if dest.rval.IsValid() && isConstType(dest.typ) {
+				if dest.rval.IsValid() && !dest.rval.CanSet() && isConstType(dest.typ) {
 					err = n.cfgErrorf("cannot assign to %s (%s constant)", dest.rval, dest.typ.str)
 					break
 				}
