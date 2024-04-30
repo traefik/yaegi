@@ -1906,3 +1906,27 @@ func TestIssue1383(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestIssue1623(t *testing.T) {
+	var f float64
+	var j int
+	var s string = "foo"
+
+	i := interp.New(interp.Options{})
+	if err := i.Use(interp.Exports{
+		"pkg/pkg": map[string]reflect.Value{
+			"F": reflect.ValueOf(&f).Elem(),
+			"J": reflect.ValueOf(&j).Elem(),
+			"S": reflect.ValueOf(&s).Elem(),
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	i.ImportUsed()
+
+	runTests(t, i, []testCase{
+		{desc: "pkg.F = 2.0", src: "pkg.F = 2.0; pkg.F", res: "2"},
+		{desc: "pkg.J = 3", src: "pkg.J = 3; pkg.J", res: "3"},
+		{desc: `pkg.S = "bar"`, src: `pkg.S = "bar"; pkg.S`, res: "bar"},
+	})
+}
