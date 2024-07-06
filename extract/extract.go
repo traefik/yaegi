@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"go/constant"
 	"go/format"
+	"go/importer"
+	"go/token"
 	"go/types"
 	"io"
 	"math/big"
@@ -141,7 +143,7 @@ type Extractor struct {
 	Tag     []string // Comma separated of build tags to be added to the created package.
 }
 
-func (e *Extractor) genContent(importPath string, p *packages.Package) ([]byte, error) {
+func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, error) {
 	prefix := "_" + importPath + "_"
 	prefix = strings.NewReplacer("/", "_", "-", "_", ".", "_", "~", "_").Replace(prefix)
 
@@ -149,9 +151,9 @@ func (e *Extractor) genContent(importPath string, p *packages.Package) ([]byte, 
 	val := map[string]Val{}
 	wrap := map[string]Wrap{}
 	imports := map[string]bool{}
-	sc := p.Types.Scope()
+	sc := p.Scope()
 
-	for _, pkg := range p.Types.Imports() {
+	for _, pkg := range p.Imports() {
 		imports[pkg.Path()] = false
 	}
 	qualify := func(pkg *types.Package) string {
@@ -186,8 +188,8 @@ func (e *Extractor) genContent(importPath string, p *packages.Package) ([]byte, 
 			continue
 		}
 
-		pname := p.Name + "." + name
-		if rname := p.Name + name; restricted[rname] {
+		pname := p.Name() + "." + name
+		if rname := p.Name() + name; restricted[rname] {
 			// Restricted symbol, locally provided by stdlib wrapper.
 			pname = rname
 		}
@@ -315,7 +317,7 @@ func (e *Extractor) genContent(importPath string, p *packages.Package) ([]byte, 
 		"Dest":       e.Dest,
 		"Imports":    imports,
 		"ImportPath": importPath,
-		"PkgName":    path.Join(importPath, p.Name),
+		"PkgName":    path.Join(importPath, p.Name()),
 		"Val":        val,
 		"Typ":        typ,
 		"Wrap":       wrap,
@@ -371,8 +373,7 @@ func fixConst(name string, val constant.Value, imports map[string]bool) string {
 }
 
 // importPath checks whether pkgIdent is an existing directory relative to
-// e.WorkingDir. If yes, it changes the current working directory to that
-// directory and returns the actual import path of the Go package
+// e.WorkingDir. If yes, it returns the actual import path of the Go package
 // located in the directory. If it is definitely a relative path, but it does not
 // exist, an error is returned. Otherwise, it is assumed to be an import path, and
 // pkgIdent is returned.
@@ -432,10 +433,6 @@ func (e *Extractor) importPath(pkgIdent, importPath string) (string, error) {
 	if parts[0] != "module" {
 		return "", errors.New(`invalid first line in go.mod, no "module" found`)
 	}
-	err = os.Chdir(dirPath)
-	if err != nil {
-		return "", fmt.Errorf("error changing directory to relative path: %w", err)
-	}
 
 	return parts[1], nil
 }
@@ -452,25 +449,42 @@ func (e *Extractor) Extract(pkgIdent, importPath string, rw io.Writer) (string, 
 		return "", err
 	}
 
-	pkgs, err := packages.Load(&packages.Config{
-		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo,
-	}, pkgIdent)
-	if err != nil {
-		return "", err
-	}
-	if len(pkgs) != 1 {
-		return "", fmt.Errorf("expected one package, got %d", len(pkgs))
-	}
-	pkg := pkgs[0]
-	if len(pkg.Errors) > 0 {
-		return "", pkg.Errors[0]
+	var pkg *types.Package
+	isRelative := strings.HasPrefix(pkgIdent, ".")
+	if importPath != "" && isRelative {
+		pkg, err = importer.ForCompiler(token.NewFileSet(), "source", nil).Import(pkgIdent)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		if isRelative {
+			err := os.Chdir(pkgIdent)
+			if err != nil {
+				return "", err
+			}
+			// path must point back to ourself here
+			pkgIdent = filepath.Join("..", filepath.Base(pkgIdent))
+		}
+		pkgs, err := packages.Load(&packages.Config{
+			Mode: packages.NeedName | packages.NeedFiles | packages.NeedTypes,
+		}, pkgIdent)
+		if err != nil {
+			return "", err
+		}
+		if len(pkgs) != 1 {
+			return "", fmt.Errorf("expected one package, got %d", len(pkgs))
+		}
+		ppkg := pkgs[0]
+		if len(ppkg.Errors) > 0 {
+			return "", ppkg.Errors[0]
+		}
+		pkg = ppkg.Types
 	}
 
 	content, err := e.genContent(ipp, pkg)
 	if err != nil {
 		return "", err
 	}
-
 	if _, err := rw.Write(content); err != nil {
 		return "", err
 	}
