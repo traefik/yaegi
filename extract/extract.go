@@ -451,18 +451,22 @@ func (e *Extractor) Extract(pkgIdent, importPath string, rw io.Writer) (string, 
 
 	var pkg *types.Package
 	isRelative := strings.HasPrefix(pkgIdent, ".")
-	if importPath != "" && isRelative {
+	// If we are relative with a manual import path, we cannot use modules
+	// and must fall back on the standard go/importer loader.
+	if isRelative && importPath != "" {
 		pkg, err = importer.ForCompiler(token.NewFileSet(), "source", nil).Import(pkgIdent)
 		if err != nil {
 			return "", err
 		}
 	} else {
+		// Otherwise, we can use the much faster x/tools/go/packages loader.
 		if isRelative {
+			// We must be in the location of the module for the loader to work correctly.
 			err := os.Chdir(pkgIdent)
 			if err != nil {
 				return "", err
 			}
-			// path must point back to ourself here
+			// Our path must point back to ourself here.
 			pkgIdent = filepath.Join("..", filepath.Base(pkgIdent))
 		}
 		pkgs, err := packages.Load(&packages.Config{
