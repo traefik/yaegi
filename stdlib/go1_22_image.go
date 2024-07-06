@@ -83,15 +83,9 @@ type _image_Image struct {
 	WColorModel func() color.Model
 }
 
-func (W _image_Image) At(x int, y int) color.Color {
-	return W.WAt(x, y)
-}
-func (W _image_Image) Bounds() image.Rectangle {
-	return W.WBounds()
-}
-func (W _image_Image) ColorModel() color.Model {
-	return W.WColorModel()
-}
+func (W _image_Image) At(x int, y int) color.Color { return W.WAt(x, y) }
+func (W _image_Image) Bounds() image.Rectangle     { return W.WBounds() }
+func (W _image_Image) ColorModel() color.Model     { return W.WColorModel() }
 
 // _image_PalettedImage is an interface wrapper for PalettedImage type
 type _image_PalettedImage struct {
@@ -102,18 +96,10 @@ type _image_PalettedImage struct {
 	WColorModel   func() color.Model
 }
 
-func (W _image_PalettedImage) At(x int, y int) color.Color {
-	return W.WAt(x, y)
-}
-func (W _image_PalettedImage) Bounds() image.Rectangle {
-	return W.WBounds()
-}
-func (W _image_PalettedImage) ColorIndexAt(x int, y int) uint8 {
-	return W.WColorIndexAt(x, y)
-}
-func (W _image_PalettedImage) ColorModel() color.Model {
-	return W.WColorModel()
-}
+func (W _image_PalettedImage) At(x int, y int) color.Color     { return W.WAt(x, y) }
+func (W _image_PalettedImage) Bounds() image.Rectangle         { return W.WBounds() }
+func (W _image_PalettedImage) ColorIndexAt(x int, y int) uint8 { return W.WColorIndexAt(x, y) }
+func (W _image_PalettedImage) ColorModel() color.Model         { return W.WColorModel() }
 
 // _image_RGBA64Image is an interface wrapper for RGBA64Image type
 type _image_RGBA64Image struct {
@@ -124,15 +110,7 @@ type _image_RGBA64Image struct {
 	WRGBA64At   func(x int, y int) color.RGBA64
 }
 
-func (W _image_RGBA64Image) At(x int, y int) color.Color {
-	return W.WAt(x, y)
-}
-func (W _image_RGBA64Image) Bounds() image.Rectangle {
-	return W.WBounds()
-}
-func (W _image_RGBA64Image) ColorModel() color.Model {
-	return W.WColorModel()
-}
-func (W _image_RGBA64Image) RGBA64At(x int, y int) color.RGBA64 {
-	return W.WRGBA64At(x, y)
-}
+func (W _image_RGBA64Image) At(x int, y int) color.Color        { return W.WAt(x, y) }
+func (W _image_RGBA64Image) Bounds() image.Rectangle            { return W.WBounds() }
+func (W _image_RGBA64Image) ColorModel() color.Model            { return W.WColorModel() }
+func (W _image_RGBA64Image) RGBA64At(x int, y int) color.RGBA64 { return W.WRGBA64At(x, y) }
