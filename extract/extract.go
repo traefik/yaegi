@@ -151,8 +151,8 @@ func (e *Extractor) genContent(importPath string, p *packages.Package) ([]byte, 
 	imports := map[string]bool{}
 	sc := p.Types.Scope()
 
-	for _, pkg := range p.Imports {
-		imports[pkg.Types.Path()] = false
+	for _, pkg := range p.Types.Imports() {
+		imports[pkg.Path()] = false
 	}
 	qualify := func(pkg *types.Package) string {
 		if pkg.Path() != importPath {
@@ -457,6 +457,9 @@ func (e *Extractor) Extract(pkgIdent, importPath string, rw io.Writer) (string, 
 		return "", fmt.Errorf("expected one package, got %d", len(pkgs))
 	}
 	pkg := pkgs[0]
+	if len(pkg.Errors) > 0 {
+		return "", pkg.Errors[0]
+	}
 
 	content, err := e.genContent(ipp, pkg)
 	if err != nil {
