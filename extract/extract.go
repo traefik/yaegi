@@ -469,9 +469,7 @@ func (e *Extractor) Extract(pkgIdent, importPath string, rw io.Writer) (string, 
 			// Our path must point back to ourself here.
 			pkgIdent = filepath.Join("..", filepath.Base(pkgIdent))
 		}
-		pkgs, err := packages.Load(&packages.Config{
-			Mode: packages.NeedName | packages.NeedFiles | packages.NeedTypes,
-		}, pkgIdent)
+		pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedTypes}, pkgIdent)
 		if err != nil {
 			return "", err
 		}
