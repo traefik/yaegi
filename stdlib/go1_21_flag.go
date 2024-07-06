@@ -74,12 +74,8 @@ type _flag_Getter struct {
 	WString func() string
 }
 
-func (W _flag_Getter) Get() any {
-	return W.WGet()
-}
-func (W _flag_Getter) Set(a0 string) error {
-	return W.WSet(a0)
-}
+func (W _flag_Getter) Get() any            { return W.WGet() }
+func (W _flag_Getter) Set(a0 string) error { return W.WSet(a0) }
 func (W _flag_Getter) String() string {
 	if W.WString == nil {
 		return ""
@@ -94,9 +90,7 @@ type _flag_Value struct {
 	WString func() string
 }
 
-func (W _flag_Value) Set(a0 string) error {
-	return W.WSet(a0)
-}
+func (W _flag_Value) Set(a0 string) error { return W.WSet(a0) }
 func (W _flag_Value) String() string {
 	if W.WString == nil {
 		return ""

@@ -219,9 +219,7 @@ type _net_http_CloseNotifier struct {
 	WCloseNotify func() <-chan bool
 }
 
-func (W _net_http_CloseNotifier) CloseNotify() <-chan bool {
-	return W.WCloseNotify()
-}
+func (W _net_http_CloseNotifier) CloseNotify() <-chan bool { return W.WCloseNotify() }
 
 // _net_http_CookieJar is an interface wrapper for CookieJar type
 type _net_http_CookieJar struct {
@@ -230,9 +228,7 @@ type _net_http_CookieJar struct {
 	WSetCookies func(u *url.URL, cookies []*http.Cookie)
 }
 
-func (W _net_http_CookieJar) Cookies(u *url.URL) []*http.Cookie {
-	return W.WCookies(u)
-}
+func (W _net_http_CookieJar) Cookies(u *url.URL) []*http.Cookie { return W.WCookies(u) }
 func (W _net_http_CookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
 	W.WSetCookies(u, cookies)
 }
@@ -247,21 +243,11 @@ type _net_http_File struct {
 	WStat    func() (fs.FileInfo, error)
 }
 
-func (W _net_http_File) Close() error {
-	return W.WClose()
-}
-func (W _net_http_File) Read(p []byte) (n int, err error) {
-	return W.WRead(p)
-}
-func (W _net_http_File) Readdir(count int) ([]fs.FileInfo, error) {
-	return W.WReaddir(count)
-}
-func (W _net_http_File) Seek(offset int64, whence int) (int64, error) {
-	return W.WSeek(offset, whence)
-}
-func (W _net_http_File) Stat() (fs.FileInfo, error) {
-	return W.WStat()
-}
+func (W _net_http_File) Close() error                                 { return W.WClose() }
+func (W _net_http_File) Read(p []byte) (n int, err error)             { return W.WRead(p) }
+func (W _net_http_File) Readdir(count int) ([]fs.FileInfo, error)     { return W.WReaddir(count) }
+func (W _net_http_File) Seek(offset int64, whence int) (int64, error) { return W.WSeek(offset, whence) }
+func (W _net_http_File) Stat() (fs.FileInfo, error)                   { return W.WStat() }
 
 // _net_http_FileSystem is an interface wrapper for FileSystem type
 type _net_http_FileSystem struct {
@@ -269,9 +255,7 @@ type _net_http_FileSystem struct {
 	WOpen  func(name string) (http.File, error)
 }
 
-func (W _net_http_FileSystem) Open(name string) (http.File, error) {
-	return W.WOpen(name)
-}
+func (W _net_http_FileSystem) Open(name string) (http.File, error) { return W.WOpen(name) }
 
 // _net_http_Flusher is an interface wrapper for Flusher type
 type _net_http_Flusher struct {
@@ -279,9 +263,7 @@ type _net_http_Flusher struct {
 	WFlush func()
 }
 
-func (W _net_http_Flusher) Flush() {
-	W.WFlush()
-}
+func (W _net_http_Flusher) Flush() { W.WFlush() }
 
 // _net_http_Handler is an interface wrapper for Handler type
 type _net_http_Handler struct {
@@ -289,9 +271,7 @@ type _net_http_Handler struct {
 	WServeHTTP func(a0 http.ResponseWriter, a1 *http.Request)
 }
 
-func (W _net_http_Handler) ServeHTTP(a0 http.ResponseWriter, a1 *http.Request) {
-	W.WServeHTTP(a0, a1)
-}
+func (W _net_http_Handler) ServeHTTP(a0 http.ResponseWriter, a1 *http.Request) { W.WServeHTTP(a0, a1) }
 
 // _net_http_Hijacker is an interface wrapper for Hijacker type
 type _net_http_Hijacker struct {
@@ -299,9 +279,7 @@ type _net_http_Hijacker struct {
 	WHijack func() (net.Conn, *bufio.ReadWriter, error)
 }
 
-func (W _net_http_Hijacker) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	return W.WHijack()
-}
+func (W _net_http_Hijacker) Hijack() (net.Conn, *bufio.ReadWriter, error) { return W.WHijack() }
 
 // _net_http_Pusher is an interface wrapper for Pusher type
 type _net_http_Pusher struct {
@@ -321,15 +299,9 @@ type _net_http_ResponseWriter struct {
 	WWriteHeader func(statusCode int)
 }
 
-func (W _net_http_ResponseWriter) Header() http.Header {
-	return W.WHeader()
-}
-func (W _net_http_ResponseWriter) Write(a0 []byte) (int, error) {
-	return W.WWrite(a0)
-}
-func (W _net_http_ResponseWriter) WriteHeader(statusCode int) {
-	W.WWriteHeader(statusCode)
-}
+func (W _net_http_ResponseWriter) Header() http.Header          { return W.WHeader() }
+func (W _net_http_ResponseWriter) Write(a0 []byte) (int, error) { return W.WWrite(a0) }
+func (W _net_http_ResponseWriter) WriteHeader(statusCode int)   { W.WWriteHeader(statusCode) }
 
 // _net_http_RoundTripper is an interface wrapper for RoundTripper type
 type _net_http_RoundTripper struct {
