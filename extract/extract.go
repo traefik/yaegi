@@ -371,7 +371,8 @@ func fixConst(name string, val constant.Value, imports map[string]bool) string {
 }
 
 // importPath checks whether pkgIdent is an existing directory relative to
-// e.WorkingDir. If yes, it returns the actual import path of the Go package
+// e.WorkingDir. If yes, it changes the current working directory to that
+// directory and returns the actual import path of the Go package
 // located in the directory. If it is definitely a relative path, but it does not
 // exist, an error is returned. Otherwise, it is assumed to be an import path, and
 // pkgIdent is returned.
@@ -431,6 +432,10 @@ func (e *Extractor) importPath(pkgIdent, importPath string) (string, error) {
 	if parts[0] != "module" {
 		return "", errors.New(`invalid first line in go.mod, no "module" found`)
 	}
+	err = os.Chdir(dirPath)
+	if err != nil {
+		return "", fmt.Errorf("error changing directory to relative path: %w", err)
+	}
 
 	return parts[1], nil
 }
@@ -449,7 +454,7 @@ func (e *Extractor) Extract(pkgIdent, importPath string, rw io.Writer) (string, 
 
 	pkgs, err := packages.Load(&packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo,
-	}, pkgIdent)
+	}, ipp)
 	if err != nil {
 		return "", err
 	}
