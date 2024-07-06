@@ -454,7 +454,7 @@ func (e *Extractor) Extract(pkgIdent, importPath string, rw io.Writer) (string, 
 
 	pkgs, err := packages.Load(&packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo,
-	}, ipp)
+	}, pkgIdent)
 	if err != nil {
 		return "", err
 	}
