@@ -2873,6 +2873,34 @@ func _range(n *node) {
 	}
 }
 
+func rangeInt(n *node) {
+	index0 := n.child[0].findex // array index location in frame
+	index2 := index0 - 1        // max
+	fnext := getExec(n.fnext)
+	tnext := getExec(n.tnext)
+
+	var value func(*frame) reflect.Value
+	mxn := n.child[1]
+	value = genValue(mxn)
+	n.exec = func(f *frame) bltn {
+		v0 := f.data[index0]
+		v0.SetInt(v0.Int() + 1)
+		if int(v0.Int()) >= int(f.data[index2].Int()) {
+			return fnext
+		}
+		return tnext
+	}
+
+	// Init sequence
+	next := n.exec
+	index := index0
+	n.child[0].exec = func(f *frame) bltn {
+		f.data[index2] = value(f) // set max
+		f.data[index].SetInt(-1)  // assing index value
+		return next
+	}
+}
+
 func rangeChan(n *node) {
 	i := n.child[0].findex        // element index location in frame
 	value := genValue(n.child[1]) // chan

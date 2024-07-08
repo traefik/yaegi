@@ -200,6 +200,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						sc.add(sc.getType("int")) // Add a dummy type to store array shallow copy for range
 						ktyp = sc.getType("int")
 						vtyp = o.typ.val
+					case intT:
+						n.anc.gen = rangeInt
+						sc.add(sc.getType("int"))
+						ktyp = sc.getType("int")
 					}
 
 					kindex := sc.add(ktyp)
