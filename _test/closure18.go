@@ -9,7 +9,7 @@ type T struct {
 func main() {
 	foos := []T{}
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		a := i
 		n := fmt.Sprintf("i=%d", i)
 		foos = append(foos, T{func() { println(i, a, n) }})

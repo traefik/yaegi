@@ -3,7 +3,7 @@ package main
 func main() {
 	foos := []func(){}
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		a, b := i, i
 		foos = append(foos, func() { println(i, a, b) })
 	}
