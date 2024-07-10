@@ -987,7 +987,23 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 	}
 	funcType := n.typ.TypeOf()
 
+	value := genValue(n)
+	isDefer := false
+	if n.anc != nil && n.anc.anc != nil && n.anc.anc.kind == deferStmt {
+		isDefer = true
+	}
+
 	return func(f *frame) reflect.Value {
+		v := value(f)
+		if !isDefer && v.Kind() == reflect.Func {
+			// per #1634, if v is already a func, then don't re-wrap!  critically, the original wrapping
+			// clones the frame, whereas the one here (below) does _not_ clone the frame, so it doesn't
+			// generate the proper closure capture effects!
+			// this path is the same as genValueAsFunctionWrapper which is the path taken above if
+			// the value has an associated node, which happens when you do f := func() ..
+			return v
+		}
+
 		return reflect.MakeFunc(funcType, func(in []reflect.Value) []reflect.Value {
 			// Allocate and init local frame. All values to be settable and addressable.
 			fr := newFrame(f, len(def.types), f.runid())
