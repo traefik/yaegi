@@ -1555,6 +1555,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				err = cond.cfgErrorf("non-bool used as for condition")
 			}
 			n.start = init.start
+			body.start = body.child[0] // loopvar
 			if cond.rval.IsValid() {
 				// Condition is known at compile time, bypass test.
 				if cond.rval.Bool() {
@@ -1566,7 +1567,6 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			} else {
 				init.tnext = cond.start
 				post.tnext = cond.start
-				body.start = body.child[0] // loopvar
 			}
 			cond.tnext = body.start
 			setFNext(cond, n)
