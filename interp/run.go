@@ -428,9 +428,9 @@ func typeAssert(n *node, withResult, withOk bool) {
 				v = val.value
 				leftType = val.node.typ.rtype
 			} else {
-				// v = v.Elem() // note: this turns pointers into base types, which then
-				// fail many interface conversions because they often require the pointer type.
-				// it is unclear why this otherwise needed?
+				if v.IsValid() && !canAssertTypes(v.Type(), rtype) {
+					v = v.Elem()
+				}
 				leftType = v.Type()
 				ok = true
 			}

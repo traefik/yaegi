@@ -142,3 +142,29 @@ func main() {
 		t.Error(err)
 	}
 }
+
+func TestD3(t *testing.T) {
+	i := New(Options{})
+	_, err := i.Eval(`
+type T struct {
+	Name string
+}
+
+func (t *T) F() { println(t.Name) }
+
+func NewT(s string) *T { return &T{s} }
+
+var (
+	X = NewT("test")
+	F = X.F
+)
+
+func main() {
+	f := F
+	f()
+}
+`)
+	if err != nil {
+		t.Error(err)
+	}
+}
