@@ -140,7 +140,7 @@ import (
 func init() {
 	Symbols["guthib.com/generic/generic"] = map[string]reflect.Value{
 		// function, constant and variable definitions
-		"Hello": reflect.ValueOf(interp.GenericFunc("func Hello[T comparable](v T) *T {\n\treturn &v\n}")),
+		"Hello": reflect.ValueOf(interp.GenericFunc("func Hello[T comparable](v T) *T { //yaegi:add\n\treturn &v\n}")),
 	}
 }
 `[1:],

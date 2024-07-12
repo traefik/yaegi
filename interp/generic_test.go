@@ -142,3 +142,20 @@ func main() {
 		t.Error(err)
 	}
 }
+
+func TestD3(t *testing.T) {
+	i := New(Options{})
+	_, err := i.Eval(`
+package main
+
+import "github.com/traefik/yaegi/_test/d2"
+
+func main() {
+	f := d2.F
+	f()
+}
+`)
+	if err != nil {
+		t.Error(err)
+	}
+}
