@@ -143,7 +143,7 @@ type Extractor struct {
 	Tag     []string // Comma separated of build tags to be added to the created package.
 }
 
-func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, error) {
+func (e *Extractor) genContent(importPath string, p *types.Package, fset *token.FileSet) ([]byte, error) {
 	prefix := "_" + importPath + "_"
 	prefix = strings.NewReplacer("/", "_", "-", "_", ".", "_", "~", "_").Replace(prefix)
 
@@ -203,9 +203,31 @@ func (e *Extractor) genContent(importPath string, p *types.Package) ([]byte, err
 				val[name] = Val{pname, false}
 			}
 		case *types.Func:
-			// Skip generic functions and methods.
+			// Generic functions and methods must be extracted as code that
+			// can be interpreted, since they cannot be compiled in.
 			if s := o.Type().(*types.Signature); s.TypeParams().Len() > 0 || s.RecvTypeParams().Len() > 0 {
-				continue
+				scope := o.Scope()
+				start, end := scope.Pos(), scope.End()
+				ff := fset.File(start)
+				base := token.Pos(ff.Base())
+				start -= base
+				end -= base
+
+				f, err := os.Open(ff.Name())
+				if err != nil {
+					return nil, err
+				}
+				b := make([]byte, end-start)
+				_, err = f.ReadAt(b, int64(start))
+				if err != nil {
+					return nil, err
+				}
+				// only add if we have a //yaegi:add directive
+				if !bytes.Contains(b, []byte(`//yaegi:add`)) {
+					continue
+				}
+				val[name] = Val{fmt.Sprintf("interp.GenericFunc(%q)", b), false}
+				imports["github.com/traefik/yaegi/interp"] = true
 			}
 			val[name] = Val{pname, false}
 		case *types.Var:
@@ -451,10 +473,11 @@ func (e *Extractor) Extract(pkgIdent, importPath string, rw io.Writer) (string, 
 
 	var pkg *types.Package
 	isRelative := strings.HasPrefix(pkgIdent, ".")
+	fset := token.NewFileSet()
 	// If we are relative with a manual import path, we cannot use modules
 	// and must fall back on the standard go/importer loader.
 	if isRelative && importPath != "" {
-		pkg, err = importer.ForCompiler(token.NewFileSet(), "source", nil).Import(pkgIdent)
+		pkg, err = importer.ForCompiler(fset, "source", nil).Import(pkgIdent)
 		if err != nil {
 			return "", err
 		}
@@ -469,7 +492,8 @@ func (e *Extractor) Extract(pkgIdent, importPath string, rw io.Writer) (string, 
 			// Our path must point back to ourself here.
 			pkgIdent = filepath.Join("..", filepath.Base(pkgIdent))
 		}
-		pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedTypes}, pkgIdent)
+		// NeedsSyntax is needed for getting the scopes of generic functions.
+		pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedTypes | packages.NeedSyntax}, pkgIdent)
 		if err != nil {
 			return "", err
 		}
@@ -481,9 +505,10 @@ func (e *Extractor) Extract(pkgIdent, importPath string, rw io.Writer) (string, 
 			return "", ppkg.Errors[0]
 		}
 		pkg = ppkg.Types
+		fset = ppkg.Fset
 	}
 
-	content, err := e.genContent(ipp, pkg)
+	content, err := e.genContent(ipp, pkg, fset)
 	if err != nil {
 		return "", err
 	}

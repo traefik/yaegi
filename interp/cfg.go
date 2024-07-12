@@ -1204,7 +1204,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					op(n)
 				}
 
-			case c0.isType(sc):
+			case c0.isType(sc) && len(n.child) > 1:
 				// Type conversion expression
 				c1 := n.child[1]
 				switch len(n.child) {
@@ -1285,7 +1285,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			default:
 				// The call may be on a generic function. In that case, replace the
 				// generic function AST by an instantiated one before going further.
-				if isGeneric(c0.typ) {
+				if c0.typ == nil {
+					err = c0.cfgErrorf("nil type for function call: likely generic type error")
+					break
+				} else if isGeneric(c0.typ) {
 					fun := c0.typ.node.anc
 					var g *node
 					var types []*itype
@@ -2545,7 +2548,17 @@ func (n *node) isType(sc *scope) bool {
 			return true // Imported source type
 		}
 	case identExpr:
-		return sc.getType(n.ident) != nil
+		sym, _, found := sc.lookup(n.ident)
+		if found && sym.kind == typeSym {
+			return true
+		}
+		if n.typ == nil || n.typ.scope == nil {
+			return false
+		}
+		// note: in case of generic functions, the type might not exist within
+		// the scope where the generic function was defined, so we need to be
+		// a bit more flexible.
+		return n.typ.scope.pkgID != sc.pkgID
 	case indexExpr:
 		// Maybe a generic type.
 		sym, _, ok := sc.lookup(n.child[0].ident)
@@ -2870,6 +2883,9 @@ func setExec(n *node) {
 			} else {
 				set(n.fnext)
 			}
+		}
+		if n.gen == nil {
+			n.gen = nop
 		}
 		n.gen(n)
 	}

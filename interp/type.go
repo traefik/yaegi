@@ -2397,7 +2397,10 @@ func isEmptyInterface(t *itype) bool {
 }
 
 func isGeneric(t *itype) bool {
-	return t.cat == funcT && t.node != nil && len(t.node.child) > 0 && len(t.node.child[0].child) > 0
+	if t.cat != funcT || t.node == nil || len(t.node.child) == 0 || t.node.child[0] == nil {
+		return false
+	}
+	return len(t.node.child[0].child) > 0
 }
 
 func isNamedFuncSrc(t *itype) bool {
