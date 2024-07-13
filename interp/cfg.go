@@ -1204,13 +1204,14 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					op(n)
 				}
 
-			case c0.isType(sc) && len(n.child) > 1:
+			case c0.isType(sc):
 				// Type conversion expression
-				c1 := n.child[1]
+				var c1 *node
 				switch len(n.child) {
 				case 1:
 					err = n.cfgErrorf("missing argument in conversion to %s", c0.typ.id())
 				case 2:
+					c1 = n.child[1]
 					err = check.conversion(c1, c0.typ)
 				default:
 					err = n.cfgErrorf("too many arguments in conversion to %s", c0.typ.id())
@@ -2549,15 +2550,16 @@ func (n *node) isType(sc *scope) bool {
 		}
 	case identExpr:
 		sym, _, found := sc.lookup(n.ident)
-		if found && sym.kind == typeSym {
-			return true
+		if found {
+			return sym.kind == typeSym
 		}
+		// note: in case of generic functions, the type might not exist within
+		// the scope where the generic function was defined, so we
+		// fall back on comparing the scopes: anything out of scope is assumed
+		// to be a type.
 		if n.typ == nil || n.typ.scope == nil {
 			return false
 		}
-		// note: in case of generic functions, the type might not exist within
-		// the scope where the generic function was defined, so we need to be
-		// a bit more flexible.
 		return n.typ.scope.pkgID != sc.pkgID
 	case indexExpr:
 		// Maybe a generic type.
