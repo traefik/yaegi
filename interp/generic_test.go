@@ -142,3 +142,58 @@ func main() {
 		t.Error(err)
 	}
 }
+
+type Plan struct{}
+
+// this one failed with valueT included in inferTypes
+func TestGenericFuncInferSecondArg(t *testing.T) {
+	i := New(Options{})
+	err := i.Use(Exports{
+		"guthib.com/generic/generic": map[string]reflect.Value{
+			"Plan": reflect.ValueOf((*Plan)(nil)),
+		},
+	})
+	i.ImportUsed()
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = i.Eval(`
+func Add[T any](p generic.Plan, v T) { }
+func main() {
+	Add(generic.Plan{}, []int{})
+}
+`)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+// this one worked fine with valueT
+func TestGenericFuncInferSecondArgLocal(t *testing.T) {
+	i := New(Options{})
+	_, err := i.Eval(`
+type Plan struct{}
+func Add[T any](p Plan, v T) { }
+func main() {
+	Add(Plan{}, []int{})
+}
+`)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+// this one failed without more robust arg type matching in generic.go:300
+func TestGenericFuncIgnoreError(t *testing.T) {
+	i := New(Options{})
+	_, err := i.Eval(`
+func Ignore[T any](v T, err error) T { return v }
+func Make() (int, error) { return 3, nil }
+func main() {
+	a := Ignore(Make())
+}
+`)
+	if err != nil {
+		t.Error(err)
+	}
+}

@@ -235,9 +235,6 @@ func inferTypesFromCall(sc *scope, fun *node, args []*node) ([]*itype, error) {
 		case chanT, ptrT, sliceT:
 			return inferTypes(param.val, input.val)
 
-		case valueT:
-			return []*itype{input}, nil
-
 		case mapT:
 			k, err := inferTypes(param.key, input.key)
 			if err != nil {
@@ -301,11 +298,15 @@ func inferTypesFromCall(sc *scope, fun *node, args []*node) ([]*itype, error) {
 		if err != nil {
 			return nil, err
 		}
-		lt, err := inferTypes(typ, args[i].typ)
-		if err != nil {
-			return nil, err
+		if i < len(args) {
+			lt, err := inferTypes(typ, args[i].typ)
+			if err != nil {
+				return nil, err
+			}
+			types = append(types, lt...)
+		} else {
+			types = append(types, typ)
 		}
-		types = append(types, lt...)
 	}
 
 	return types, nil
