@@ -278,12 +278,8 @@ type _debug_dwarf_Type struct {
 	WString func() string
 }
 
-func (W _debug_dwarf_Type) Common() *dwarf.CommonType {
-	return W.WCommon()
-}
-func (W _debug_dwarf_Type) Size() int64 {
-	return W.WSize()
-}
+func (W _debug_dwarf_Type) Common() *dwarf.CommonType { return W.WCommon() }
+func (W _debug_dwarf_Type) Size() int64               { return W.WSize() }
 func (W _debug_dwarf_Type) String() string {
 	if W.WString == nil {
 		return ""
