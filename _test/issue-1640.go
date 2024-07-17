@@ -11,7 +11,7 @@ func ShortVariableDeclarations() (i int, err error) {
 }
 
 func main() {
-	i, er := ShortVariableDeclarations()
+	_, er := ShortVariableDeclarations()
 	if er != nil {
 		println("ShortVariableDeclarations ok")
 	} else {
