@@ -1400,6 +1400,13 @@ func call(n *node) {
 		}
 		runCfg(def.child[3].start, nf, def, n)
 
+		// Set return values
+		for i, v := range rvalues {
+			if v != nil {
+				v(f).Set(nf.data[i])
+			}
+		}
+
 		// Handle branching according to boolean result
 		if fnext != nil && !nf.data[0].Bool() {
 			return fnext
