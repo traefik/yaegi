@@ -681,7 +681,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					if dest.typ.incomplete {
 						return
 					}
-					if sc.global {
+					if sc.global || sc.isRedeclared(dest) {
 						// Do not overload existing symbols (defined in GTA) in global scope.
 						sym, _, _ = sc.lookup(dest.ident)
 					}
