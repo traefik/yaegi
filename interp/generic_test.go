@@ -145,7 +145,7 @@ func main() {
 
 type Plan struct{}
 
-// this one failed with valueT included in inferTypes
+// this one failed with valueT included in inferTypes.
 func TestGenericFuncInferSecondArg(t *testing.T) {
 	i := New(Options{})
 	err := i.Use(Exports{
@@ -168,7 +168,7 @@ func main() {
 	}
 }
 
-// this one worked fine with valueT
+// this one worked fine with valueT.
 func TestGenericFuncInferSecondArgLocal(t *testing.T) {
 	i := New(Options{})
 	_, err := i.Eval(`
@@ -183,7 +183,7 @@ func main() {
 	}
 }
 
-// this one failed without more robust arg type matching in generic.go:300
+// this one failed without more robust arg type matching in generic.go:300.
 func TestGenericFuncIgnoreError(t *testing.T) {
 	i := New(Options{})
 	_, err := i.Eval(`
