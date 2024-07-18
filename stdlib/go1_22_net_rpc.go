@@ -58,12 +58,8 @@ type _net_rpc_ClientCodec struct {
 	WWriteRequest       func(a0 *rpc.Request, a1 any) error
 }
 
-func (W _net_rpc_ClientCodec) Close() error {
-	return W.WClose()
-}
-func (W _net_rpc_ClientCodec) ReadResponseBody(a0 any) error {
-	return W.WReadResponseBody(a0)
-}
+func (W _net_rpc_ClientCodec) Close() error                  { return W.WClose() }
+func (W _net_rpc_ClientCodec) ReadResponseBody(a0 any) error { return W.WReadResponseBody(a0) }
 func (W _net_rpc_ClientCodec) ReadResponseHeader(a0 *rpc.Response) error {
 	return W.WReadResponseHeader(a0)
 }
@@ -80,12 +76,8 @@ type _net_rpc_ServerCodec struct {
 	WWriteResponse     func(a0 *rpc.Response, a1 any) error
 }
 
-func (W _net_rpc_ServerCodec) Close() error {
-	return W.WClose()
-}
-func (W _net_rpc_ServerCodec) ReadRequestBody(a0 any) error {
-	return W.WReadRequestBody(a0)
-}
+func (W _net_rpc_ServerCodec) Close() error                 { return W.WClose() }
+func (W _net_rpc_ServerCodec) ReadRequestBody(a0 any) error { return W.WReadRequestBody(a0) }
 func (W _net_rpc_ServerCodec) ReadRequestHeader(a0 *rpc.Request) error {
 	return W.WReadRequestHeader(a0)
 }

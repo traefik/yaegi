@@ -106,18 +106,10 @@ type _log_slog_Handler struct {
 	WWithGroup func(name string) slog.Handler
 }
 
-func (W _log_slog_Handler) Enabled(a0 context.Context, a1 slog.Level) bool {
-	return W.WEnabled(a0, a1)
-}
-func (W _log_slog_Handler) Handle(a0 context.Context, a1 slog.Record) error {
-	return W.WHandle(a0, a1)
-}
-func (W _log_slog_Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	return W.WWithAttrs(attrs)
-}
-func (W _log_slog_Handler) WithGroup(name string) slog.Handler {
-	return W.WWithGroup(name)
-}
+func (W _log_slog_Handler) Enabled(a0 context.Context, a1 slog.Level) bool  { return W.WEnabled(a0, a1) }
+func (W _log_slog_Handler) Handle(a0 context.Context, a1 slog.Record) error { return W.WHandle(a0, a1) }
+func (W _log_slog_Handler) WithAttrs(attrs []slog.Attr) slog.Handler        { return W.WWithAttrs(attrs) }
+func (W _log_slog_Handler) WithGroup(name string) slog.Handler              { return W.WWithGroup(name) }
 
 // _log_slog_Leveler is an interface wrapper for Leveler type
 type _log_slog_Leveler struct {
@@ -125,9 +117,7 @@ type _log_slog_Leveler struct {
 	WLevel func() slog.Level
 }
 
-func (W _log_slog_Leveler) Level() slog.Level {
-	return W.WLevel()
-}
+func (W _log_slog_Leveler) Level() slog.Level { return W.WLevel() }
 
 // _log_slog_LogValuer is an interface wrapper for LogValuer type
 type _log_slog_LogValuer struct {
@@ -135,6 +125,4 @@ type _log_slog_LogValuer struct {
 	WLogValue func() slog.Value
 }
 
-func (W _log_slog_LogValuer) LogValue() slog.Value {
-	return W.WLogValue()
-}
+func (W _log_slog_LogValuer) LogValue() slog.Value { return W.WLogValue() }
