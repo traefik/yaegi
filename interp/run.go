@@ -987,7 +987,20 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 	}
 	funcType := n.typ.TypeOf()
 
+	value := genValue(n)
+	isDefer := false
+	if n.anc != nil && n.anc.anc != nil && n.anc.anc.kind == deferStmt {
+		isDefer = true
+	}
+
 	return func(f *frame) reflect.Value {
+		v := value(f)
+		if !isDefer && v.Kind() == reflect.Func {
+			// fixes #1634, if v is already a func, then don't re-wrap
+			// because original wrapping cloned the frame but this doesn't
+			return v
+		}
+
 		return reflect.MakeFunc(funcType, func(in []reflect.Value) []reflect.Value {
 			// Allocate and init local frame. All values to be settable and addressable.
 			fr := newFrame(f, len(def.types), f.runid())
