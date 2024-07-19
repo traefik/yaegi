@@ -76,6 +76,7 @@ func main() { Hello(3) }
 		t.Error(err)
 	}
 }
+
 func TestGenericFuncComplex(t *testing.T) {
 	i := New(Options{})
 	done := false
