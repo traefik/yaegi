@@ -39,9 +39,7 @@ type _go_build_constraint_Expr struct {
 	WString func() string
 }
 
-func (W _go_build_constraint_Expr) Eval(ok func(tag string) bool) bool {
-	return W.WEval(ok)
-}
+func (W _go_build_constraint_Expr) Eval(ok func(tag string) bool) bool { return W.WEval(ok) }
 func (W _go_build_constraint_Expr) String() string {
 	if W.WString == nil {
 		return ""

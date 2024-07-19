@@ -89,8 +89,8 @@ func init() {
 			if W.WString == nil {
 				return ""
 			}
-			{{end -}}
-			{{$m.Ret}} W.W{{$m.Name}}{{$m.Arg}}
+			{{end}}
+			{{- $m.Ret}} W.W{{$m.Name}}{{$m.Arg -}}
 		}
 	{{end}}
 {{end}}
