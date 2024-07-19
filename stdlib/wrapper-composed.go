@@ -23,17 +23,11 @@ type _netHTTPResponseWriterHijacker struct {
 	WHijack func() (net.Conn, *bufio.ReadWriter, error)
 }
 
-func (w _netHTTPResponseWriterHijacker) Header() http.Header {
-	return w.WHeader()
-}
+func (w _netHTTPResponseWriterHijacker) Header() http.Header { return w.WHeader() }
 
-func (w _netHTTPResponseWriterHijacker) Write(a0 []byte) (int, error) {
-	return w.WWrite(a0)
-}
+func (w _netHTTPResponseWriterHijacker) Write(a0 []byte) (int, error) { return w.WWrite(a0) }
 
-func (w _netHTTPResponseWriterHijacker) WriteHeader(statusCode int) {
-	w.WWriteHeader(statusCode)
-}
+func (w _netHTTPResponseWriterHijacker) WriteHeader(statusCode int) { w.WWriteHeader(statusCode) }
 
 func (w _netHTTPResponseWriterHijacker) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return w.WHijack()
@@ -48,13 +42,9 @@ type _ioReaderWriteTo struct {
 	WWriteTo func(w io.Writer) (n int64, err error)
 }
 
-func (w _ioReaderWriteTo) Read(p []byte) (n int, err error) {
-	return w.WRead(p)
-}
+func (w _ioReaderWriteTo) Read(p []byte) (n int, err error) { return w.WRead(p) }
 
-func (w _ioReaderWriteTo) WriteTo(wr io.Writer) (n int64, err error) {
-	return w.WWriteTo(wr)
-}
+func (w _ioReaderWriteTo) WriteTo(wr io.Writer) (n int64, err error) { return w.WWriteTo(wr) }
 
 // In io, a Writer may implement ReadFrom, used by io.Copy().
 
@@ -65,13 +55,9 @@ type _ioWriterReadFrom struct {
 	WReadFrom func(r io.Reader) (n int64, err error)
 }
 
-func (w _ioWriterReadFrom) Write(p []byte) (n int, err error) {
-	return w.WWrite(p)
-}
+func (w _ioWriterReadFrom) Write(p []byte) (n int, err error) { return w.WWrite(p) }
 
-func (w _ioWriterReadFrom) ReadFrom(r io.Reader) (n int64, err error) {
-	return w.WReadFrom(r)
-}
+func (w _ioWriterReadFrom) ReadFrom(r io.Reader) (n int64, err error) { return w.WReadFrom(r) }
 
 // Each MapType value (each slice) must be sorted by complexity, i.e. by number
 // of interface methods.

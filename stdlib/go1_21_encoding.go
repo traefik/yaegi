@@ -52,9 +52,7 @@ type _encoding_TextMarshaler struct {
 	WMarshalText func() (text []byte, err error)
 }
 
-func (W _encoding_TextMarshaler) MarshalText() (text []byte, err error) {
-	return W.WMarshalText()
-}
+func (W _encoding_TextMarshaler) MarshalText() (text []byte, err error) { return W.WMarshalText() }
 
 // _encoding_TextUnmarshaler is an interface wrapper for TextUnmarshaler type
 type _encoding_TextUnmarshaler struct {
@@ -62,6 +60,4 @@ type _encoding_TextUnmarshaler struct {
 	WUnmarshalText func(text []byte) error
 }
 
-func (W _encoding_TextUnmarshaler) UnmarshalText(text []byte) error {
-	return W.WUnmarshalText(text)
-}
+func (W _encoding_TextUnmarshaler) UnmarshalText(text []byte) error { return W.WUnmarshalText(text) }
