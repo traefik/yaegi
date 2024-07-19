@@ -166,6 +166,8 @@ test
 
 Documentation about Yaegi commands and libraries can be found at usual [godoc.org][docs].
 
+Key documentation of the internal design: https://marc.vertes.org/yaegi-internals/  Also see [interp/trace.go](interp/trace.go) for helpful printing commands to see what is happening under the hood during compilation.
+
 ## Limitations
 
 Beside the known [bugs] which are supposed to be fixed in the short term, there are some limitations not planned to be addressed soon:

@@ -74,6 +74,8 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 		if n.scope == nil {
 			n.scope = sc
 		}
+		tracePrintln(n)
+
 		switch n.kind {
 		case binaryExpr, unaryExpr, parenExpr:
 			if isBoolAction(n) {
