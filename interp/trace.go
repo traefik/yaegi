@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// set trace to true for debugging the cfg and other processes.
+// Set trace to true for debugging the cfg and other processes.
 var trace = false
 
 func traceIndent(n *node) string {
@@ -25,7 +25,7 @@ func tracePrintln(n *node, v ...any) {
 // tracePrintTree is particularly useful in post-order for seeing the full
 // structure of a given code segment of interest.
 //
-//lint:ignore
+//nolint:unused // debugging facility
 func tracePrintTree(n *node, v ...any) {
 	if !trace {
 		return
@@ -45,7 +45,7 @@ func ptrAddr(v any) string {
 
 // valString returns string rep of given value, showing underlying pointers etc.
 //
-//lint:ignore
+//nolint:unused // debugging facility
 func valString(v reflect.Value) string {
 	s := v.String()
 	if v.Kind() == reflect.Func || v.Kind() == reflect.Map || v.Kind() == reflect.Pointer || v.Kind() == reflect.Slice || v.Kind() == reflect.UnsafePointer {
