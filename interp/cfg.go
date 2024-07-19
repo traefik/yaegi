@@ -734,6 +734,22 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						return
 					}
 					if sc.global || sc.isRedeclared(dest) {
+						if n.anc != nil && n.anc.anc != nil && (n.anc.anc.kind == forStmt7 || n.anc.anc.kind == rangeStmt) {
+							// check for redefine of for loop variables, which are now auto-defined in go1.22
+							init := n.anc.anc.child[0]
+							var fi *node // for ident
+							if n.anc.anc.kind == forStmt7 {
+								if init.kind == defineStmt && len(init.child) >= 2 && init.child[0].kind == identExpr {
+									fi = init.child[0]
+								}
+							} else { // range
+								fi = init
+							}
+							if fi != nil && dest.ident == fi.ident {
+								n.gen = nop
+								break
+							}
+						}
 						// Do not overload existing symbols (defined in GTA) in global scope.
 						sym, _, _ = sc.lookup(dest.ident)
 					}
