@@ -19,14 +19,17 @@ func TestExportClosureArg(t *testing.T) {
 	os.Stdout = w
 
 	i := New(Options{})
-	i.Use(Exports{
+	err := i.Use(Exports{
 		"tmp/tmp": map[string]reflect.Value{
 			"Func": reflect.ValueOf(func(s *[]func(), f func()) { *s = append(*s, f) }),
 		},
 	})
+	if err != nil {
+		t.Error(err)
+	}
 	i.ImportUsed()
 
-	_, err := i.Eval(`
+	_, err = i.Eval(`
 func main() {
 	fs := []func(){}
 	
@@ -42,7 +45,6 @@ func main() {
 	if err != nil {
 		t.Error(err)
 	}
-
 	// read stdout
 	if err = w.Close(); err != nil {
 		t.Fatal(err)
@@ -54,5 +56,4 @@ func main() {
 	if !bytes.Equal(outInterp, outExp) {
 		t.Errorf("\nGot: %q,\n want: %q", string(outInterp), string(outExp))
 	}
-
 }
