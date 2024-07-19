@@ -54,9 +54,7 @@ type _encoding_json_Marshaler struct {
 	WMarshalJSON func() ([]byte, error)
 }
 
-func (W _encoding_json_Marshaler) MarshalJSON() ([]byte, error) {
-	return W.WMarshalJSON()
-}
+func (W _encoding_json_Marshaler) MarshalJSON() ([]byte, error) { return W.WMarshalJSON() }
 
 // _encoding_json_Token is an interface wrapper for Token type
 type _encoding_json_Token struct {
@@ -69,6 +67,4 @@ type _encoding_json_Unmarshaler struct {
 	WUnmarshalJSON func(a0 []byte) error
 }
 
-func (W _encoding_json_Unmarshaler) UnmarshalJSON(a0 []byte) error {
-	return W.WUnmarshalJSON(a0)
-}
+func (W _encoding_json_Unmarshaler) UnmarshalJSON(a0 []byte) error { return W.WUnmarshalJSON(a0) }

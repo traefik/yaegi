@@ -53,6 +53,4 @@ type _math_rand_v2_Source struct {
 	WUint64 func() uint64
 }
 
-func (W _math_rand_v2_Source) Uint64() uint64 {
-	return W.WUint64()
-}
+func (W _math_rand_v2_Source) Uint64() uint64 { return W.WUint64() }

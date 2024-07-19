@@ -91,9 +91,7 @@ type _encoding_xml_TokenReader struct {
 	WToken func() (xml.Token, error)
 }
 
-func (W _encoding_xml_TokenReader) Token() (xml.Token, error) {
-	return W.WToken()
-}
+func (W _encoding_xml_TokenReader) Token() (xml.Token, error) { return W.WToken() }
 
 // _encoding_xml_Unmarshaler is an interface wrapper for Unmarshaler type
 type _encoding_xml_Unmarshaler struct {

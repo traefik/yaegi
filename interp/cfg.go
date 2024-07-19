@@ -689,6 +689,14 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				sbase = len(n.child) - n.nright
 			}
 
+			// If len(RHS) > 1, each node must be single-valued, and the nth expression
+			// on the right is assigned to the nth operand on the left, so the number of
+			// nodes on the left and right sides must be equal
+			if n.nright > 1 && n.nright != n.nleft {
+				err = n.cfgErrorf("cannot assign %d values to %d variables", n.nright, n.nleft)
+				return
+			}
+
 			wireChild(n)
 			for i := 0; i < n.nleft; i++ {
 				dest, src := n.child[i], n.child[sbase+i]
@@ -723,7 +731,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					if dest.typ.incomplete {
 						return
 					}
-					if sc.global {
+					if sc.global || sc.isRedeclared(dest) {
 						// Do not overload existing symbols (defined in GTA) in global scope.
 						sym, _, _ = sc.lookup(dest.ident)
 					}

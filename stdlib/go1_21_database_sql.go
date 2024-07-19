@@ -68,12 +68,8 @@ type _database_sql_Result struct {
 	WRowsAffected func() (int64, error)
 }
 
-func (W _database_sql_Result) LastInsertId() (int64, error) {
-	return W.WLastInsertId()
-}
-func (W _database_sql_Result) RowsAffected() (int64, error) {
-	return W.WRowsAffected()
-}
+func (W _database_sql_Result) LastInsertId() (int64, error) { return W.WLastInsertId() }
+func (W _database_sql_Result) RowsAffected() (int64, error) { return W.WRowsAffected() }
 
 // _database_sql_Scanner is an interface wrapper for Scanner type
 type _database_sql_Scanner struct {
@@ -81,6 +77,4 @@ type _database_sql_Scanner struct {
 	WScan  func(src any) error
 }
 
-func (W _database_sql_Scanner) Scan(src any) error {
-	return W.WScan(src)
-}
+func (W _database_sql_Scanner) Scan(src any) error { return W.WScan(src) }
