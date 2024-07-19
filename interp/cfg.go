@@ -147,6 +147,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					var k, v, o *node
 					if len(n.anc.child) == 4 {
 						k, v, o = n.anc.child[0], n.anc.child[1], n.anc.child[2]
+						if v.ident == "_" {
+							v = nil // Do not assign to _ value.
+						}
 					} else {
 						k, o = n.anc.child[0], n.anc.child[1]
 					}
@@ -659,7 +662,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				var sym *symbol
 				var level int
 
-				if dest.rval.IsValid() && isConstType(dest.typ) {
+				if dest.rval.IsValid() && !dest.rval.CanSet() && isConstType(dest.typ) {
 					err = n.cfgErrorf("cannot assign to %s (%s constant)", dest.rval, dest.typ.str)
 					break
 				}
@@ -686,7 +689,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					if dest.typ.incomplete {
 						return
 					}
-					if sc.global {
+					if sc.global || sc.isRedeclared(dest) {
 						// Do not overload existing symbols (defined in GTA) in global scope.
 						sym, _, _ = sc.lookup(dest.ident)
 					}

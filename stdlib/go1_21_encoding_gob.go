@@ -37,9 +37,7 @@ type _encoding_gob_GobDecoder struct {
 	WGobDecode func(a0 []byte) error
 }
 
-func (W _encoding_gob_GobDecoder) GobDecode(a0 []byte) error {
-	return W.WGobDecode(a0)
-}
+func (W _encoding_gob_GobDecoder) GobDecode(a0 []byte) error { return W.WGobDecode(a0) }
 
 // _encoding_gob_GobEncoder is an interface wrapper for GobEncoder type
 type _encoding_gob_GobEncoder struct {
@@ -47,6 +45,4 @@ type _encoding_gob_GobEncoder struct {
 	WGobEncode func() ([]byte, error)
 }
 
-func (W _encoding_gob_GobEncoder) GobEncode() ([]byte, error) {
-	return W.WGobEncode()
-}
+func (W _encoding_gob_GobEncoder) GobEncode() ([]byte, error) { return W.WGobEncode() }

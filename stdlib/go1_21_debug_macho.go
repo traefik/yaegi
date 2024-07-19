@@ -155,6 +155,4 @@ type _debug_macho_Load struct {
 	WRaw   func() []byte
 }
 
-func (W _debug_macho_Load) Raw() []byte {
-	return W.WRaw()
-}
+func (W _debug_macho_Load) Raw() []byte { return W.WRaw() }
