@@ -15,6 +15,10 @@ import (
 	"github.com/traefik/yaegi/stdlib/unsafe"
 )
 
+var testsToSkipGo122 = map[string]bool{}
+
+var go122 = strings.HasPrefix(runtime.Version(), "go1.22")
+
 func TestInterpConsistencyBuild(t *testing.T) {
 	if testing.Short() {
 		t.Skip("short mode")

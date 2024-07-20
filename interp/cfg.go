@@ -121,6 +121,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case blockStmt:
+			var rangek, rangev *node
 			if n.anc != nil && n.anc.kind == rangeStmt {
 				// For range block: ensure that array or map type is propagated to iterators
 				// prior to process block. We cannot perform this at RangeStmt pre-order because
@@ -200,18 +201,24 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						sc.add(sc.getType("int")) // Add a dummy type to store array shallow copy for range
 						ktyp = sc.getType("int")
 						vtyp = o.typ.val
+					case intT:
+						n.anc.gen = rangeInt
+						sc.add(sc.getType("int"))
+						ktyp = sc.getType("int")
 					}
 
 					kindex := sc.add(ktyp)
 					sc.sym[k.ident] = &symbol{index: kindex, kind: varSym, typ: ktyp}
 					k.typ = ktyp
 					k.findex = kindex
+					rangek = k
 
 					if v != nil {
 						vindex := sc.add(vtyp)
 						sc.sym[v.ident] = &symbol{index: vindex, kind: varSym, typ: vtyp}
 						v.typ = vtyp
 						v.findex = vindex
+						rangev = v
 					}
 				}
 			}
@@ -219,6 +226,41 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			n.findex = -1
 			n.val = nil
 			sc = sc.pushBloc()
+
+			if n.anc != nil && n.anc.kind == rangeStmt {
+				lk := n.child[0]
+				if rangek != nil {
+					lk.ident = rangek.ident
+					lk.typ = rangek.typ
+					kindex := sc.add(lk.typ)
+					sc.sym[lk.ident] = &symbol{index: kindex, kind: varSym, typ: lk.typ}
+					lk.findex = kindex
+					lk.gen = loopVarKey
+				}
+				lv := n.child[1]
+				if rangev != nil {
+					lv.ident = rangev.ident
+					lv.typ = rangev.typ
+					vindex := sc.add(lv.typ)
+					sc.sym[lv.ident] = &symbol{index: vindex, kind: varSym, typ: lv.typ}
+					lv.findex = vindex
+					lv.gen = loopVarVal
+				}
+			}
+			if n.anc != nil && n.anc.kind == forStmt7 {
+				lv := n.child[0]
+				init := n.anc.child[0]
+				if init.kind == defineStmt && len(init.child) >= 2 && init.child[0].kind == identExpr {
+					fi := init.child[0]
+					lv.ident = fi.ident
+					lv.typ = fi.typ
+					vindex := sc.add(lv.typ)
+					sc.sym[lv.ident] = &symbol{index: vindex, kind: varSym, typ: lv.typ}
+					lv.findex = vindex
+					lv.gen = loopVarFor
+				}
+			}
+
 			// Pre-define symbols for labels defined in this block, so we are sure that
 			// they are already defined when met.
 			// TODO(marc): labels must be stored outside of symbols to avoid collisions.
@@ -690,6 +732,22 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						return
 					}
 					if sc.global || sc.isRedeclared(dest) {
+						if n.anc != nil && n.anc.anc != nil && (n.anc.anc.kind == forStmt7 || n.anc.anc.kind == rangeStmt) {
+							// check for redefine of for loop variables, which are now auto-defined in go1.22
+							init := n.anc.anc.child[0]
+							var fi *node // for ident
+							if n.anc.anc.kind == forStmt7 {
+								if init.kind == defineStmt && len(init.child) >= 2 && init.child[0].kind == identExpr {
+									fi = init.child[0]
+								}
+							} else { // range
+								fi = init
+							}
+							if fi != nil && dest.ident == fi.ident {
+								n.gen = nop
+								break
+							}
+						}
 						// Do not overload existing symbols (defined in GTA) in global scope.
 						sym, _, _ = sc.lookup(dest.ident)
 					}
@@ -1521,6 +1579,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				err = cond.cfgErrorf("non-bool used as for condition")
 			}
 			n.start = init.start
+			body.start = body.child[0] // loopvar
 			if cond.rval.IsValid() {
 				// Condition is known at compile time, bypass test.
 				if cond.rval.Bool() {
@@ -1753,12 +1812,13 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				} else {
 					k, o, body = n.child[0], n.child[1], n.child[2]
 				}
-				n.start = o.start    // Get array or map object
-				o.tnext = k.start    // then go to iterator init
-				k.tnext = n          // then go to range function
-				n.tnext = body.start // then go to range body
-				body.tnext = n       // then body go to range function (loop)
-				k.gen = empty        // init filled later by generator
+				n.start = o.start          // Get array or map object
+				o.tnext = k.start          // then go to iterator init
+				k.tnext = n                // then go to range function
+				body.start = body.child[0] // loopvar
+				n.tnext = body.start       // then go to range body
+				body.tnext = n             // then body go to range function (loop)
+				k.gen = empty              // init filled later by generator
 			}
 
 		case returnStmt:
