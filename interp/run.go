@@ -2893,6 +2893,71 @@ func _range(n *node) {
 	}
 }
 
+func rangeInt(n *node) {
+	ixn := n.child[0]
+	index0 := ixn.findex // array index location in frame
+	index2 := index0 - 1 // max
+	fnext := getExec(n.fnext)
+	tnext := getExec(n.tnext)
+
+	var value func(*frame) reflect.Value
+	mxn := n.child[1]
+	value = genValue(mxn)
+	n.exec = func(f *frame) bltn {
+		rv := f.data[index0]
+		rv.SetInt(rv.Int() + 1)
+		if int(rv.Int()) >= int(f.data[index2].Int()) {
+			return fnext
+		}
+		return tnext
+	}
+
+	// Init sequence
+	next := n.exec
+	index := index0
+	ixn.exec = func(f *frame) bltn {
+		f.data[index2] = value(f) // set max
+		f.data[index].SetInt(-1)  // assing index value
+		return next
+	}
+}
+
+func loopVarKey(n *node) {
+	ixn := n.anc.anc.child[0]
+	next := getExec(n.tnext)
+	n.exec = func(f *frame) bltn {
+		rv := f.data[ixn.findex]
+		nv := reflect.New(rv.Type()).Elem()
+		nv.Set(rv)
+		f.data[n.findex] = nv
+		return next
+	}
+}
+
+func loopVarVal(n *node) {
+	vln := n.anc.anc.child[1]
+	next := getExec(n.tnext)
+	n.exec = func(f *frame) bltn {
+		rv := f.data[vln.findex]
+		nv := reflect.New(rv.Type()).Elem()
+		nv.Set(rv)
+		f.data[n.findex] = nv
+		return next
+	}
+}
+
+func loopVarFor(n *node) {
+	ixn := n.anc.anc.child[0].child[0]
+	next := getExec(n.tnext)
+	n.exec = func(f *frame) bltn {
+		fv := f.data[ixn.findex]
+		nv := reflect.New(fv.Type()).Elem()
+		nv.Set(fv)
+		f.data[n.findex] = nv
+		return next
+	}
+}
+
 func rangeChan(n *node) {
 	i := n.child[0].findex        // element index location in frame
 	value := genValue(n.child[1]) // chan

@@ -16,10 +16,7 @@ import (
 	"github.com/traefik/yaegi/stdlib/unsafe"
 )
 
-// The following tests depend on an incompatible language change in go1.22, where `for` variables are now
-// defined in body (thus reallocated at each loop). We skip them until both supported versions behave the same.
-// We will remove this in Go1.23.
-var testsToSkipGo122 = map[string]bool{"closure9.go": true, "closure10.go": true, "closure11.go": true, "closure12.go": true}
+var testsToSkipGo122 = map[string]bool{}
 
 var go122 = strings.HasPrefix(runtime.Version(), "go1.22")
 
