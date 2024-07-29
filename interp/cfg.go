@@ -984,6 +984,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				// Allocate a new location in frame, and store the result here.
 				n.findex = sc.add(n.typ)
 			}
+			if n.typ != nil && !n.typ.untyped {
+				fixUntyped(n, sc)
+			}
 
 		case indexExpr:
 			if isBlank(n.child[0]) {
@@ -2300,6 +2303,20 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 		sc.pop()
 	}
 	return initNodes, err
+}
+
+// fixUntyped propagates implicit type conversions for untyped binary expressions.
+func fixUntyped(nod *node, sc *scope) {
+	nod.Walk(func(n *node) bool {
+		if n == nod || (n.kind != binaryExpr && n.kind != parenExpr) || !n.typ.untyped {
+			return true
+		}
+		n.typ = nod.typ
+		if n.findex >= 0 {
+			sc.types[n.findex] = nod.typ.frameType()
+		}
+		return true
+	}, nil)
 }
 
 func compDefineX(sc *scope, n *node) error {
