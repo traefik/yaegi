@@ -987,7 +987,20 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 	}
 	funcType := n.typ.TypeOf()
 
+	value := genValue(n)
+	isDefer := false
+	if n.anc != nil && n.anc.anc != nil && n.anc.anc.kind == deferStmt {
+		isDefer = true
+	}
+
 	return func(f *frame) reflect.Value {
+		v := value(f)
+		if !isDefer && v.Kind() == reflect.Func {
+			// fixes #1634, if v is already a func, then don't re-wrap
+			// because original wrapping cloned the frame but this doesn't
+			return v
+		}
+
 		return reflect.MakeFunc(funcType, func(in []reflect.Value) []reflect.Value {
 			// Allocate and init local frame. All values to be settable and addressable.
 			fr := newFrame(f, len(def.types), f.runid())
@@ -1399,6 +1412,13 @@ func call(n *node) {
 			return tnext
 		}
 		runCfg(def.child[3].start, nf, def, n)
+
+		// Set return values
+		for i, v := range rvalues {
+			if v != nil {
+				v(f).Set(nf.data[i])
+			}
+		}
 
 		// Handle branching according to boolean result
 		if fnext != nil && !nf.data[0].Bool() {
@@ -2869,6 +2889,71 @@ func _range(n *node) {
 	n.child[0].exec = func(f *frame) bltn {
 		f.data[index2] = value(f) // set array shallow copy for range
 		f.data[index].SetInt(-1)  // assing index value
+		return next
+	}
+}
+
+func rangeInt(n *node) {
+	ixn := n.child[0]
+	index0 := ixn.findex // array index location in frame
+	index2 := index0 - 1 // max
+	fnext := getExec(n.fnext)
+	tnext := getExec(n.tnext)
+
+	var value func(*frame) reflect.Value
+	mxn := n.child[1]
+	value = genValue(mxn)
+	n.exec = func(f *frame) bltn {
+		rv := f.data[index0]
+		rv.SetInt(rv.Int() + 1)
+		if int(rv.Int()) >= int(f.data[index2].Int()) {
+			return fnext
+		}
+		return tnext
+	}
+
+	// Init sequence
+	next := n.exec
+	index := index0
+	ixn.exec = func(f *frame) bltn {
+		f.data[index2] = value(f) // set max
+		f.data[index].SetInt(-1)  // assing index value
+		return next
+	}
+}
+
+func loopVarKey(n *node) {
+	ixn := n.anc.anc.child[0]
+	next := getExec(n.tnext)
+	n.exec = func(f *frame) bltn {
+		rv := f.data[ixn.findex]
+		nv := reflect.New(rv.Type()).Elem()
+		nv.Set(rv)
+		f.data[n.findex] = nv
+		return next
+	}
+}
+
+func loopVarVal(n *node) {
+	vln := n.anc.anc.child[1]
+	next := getExec(n.tnext)
+	n.exec = func(f *frame) bltn {
+		rv := f.data[vln.findex]
+		nv := reflect.New(rv.Type()).Elem()
+		nv.Set(rv)
+		f.data[n.findex] = nv
+		return next
+	}
+}
+
+func loopVarFor(n *node) {
+	ixn := n.anc.anc.child[0].child[0]
+	next := getExec(n.tnext)
+	n.exec = func(f *frame) bltn {
+		fv := f.data[ixn.findex]
+		nv := reflect.New(fv.Type()).Elem()
+		nv.Set(fv)
+		f.data[n.findex] = nv
 		return next
 	}
 }

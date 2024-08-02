@@ -145,6 +145,14 @@ func (s *scope) lookup(ident string) (*symbol, int, bool) {
 	return nil, 0, false
 }
 
+func (s *scope) isRedeclared(n *node) bool {
+	if !isNewDefine(n, s) {
+		return false
+	}
+	// Existing symbol in the scope indicates a redeclaration.
+	return s.sym[n.ident] != nil
+}
+
 func (s *scope) rangeChanType(n *node) *itype {
 	if sym, _, found := s.lookup(n.child[1].ident); found {
 		if t := sym.typ; len(n.child) == 3 && t != nil && (t.cat == chanT || t.cat == chanRecvT) {
