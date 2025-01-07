@@ -2667,10 +2667,7 @@ func compositeBinSlice(n *node) {
 func doCompositeBinStruct(n *node, hasType bool) {
 	next := getExec(n.tnext)
 	value := valueGenerator(n, n.findex)
-	typ := n.typ.rtype
-	if n.typ.cat == ptrT || n.typ.cat == linkedT {
-		typ = n.typ.val.rtype
-	}
+	typ := baseType(n.typ).rtype
 	child := n.child
 	if hasType {
 		child = n.child[1:]
@@ -2734,10 +2731,7 @@ func destType(n *node) *itype {
 func doComposite(n *node, hasType bool, keyed bool) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
-	typ := n.typ
-	if typ.cat == ptrT || typ.cat == linkedT {
-		typ = typ.val
-	}
+	typ := baseType(n.typ)
 	child := n.child
 	if hasType {
 		child = n.child[1:]
