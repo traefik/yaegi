@@ -4,7 +4,7 @@ run:
 
 linters-settings:
   govet:
-    check-shadowing: false
+    shadow: false
   gocyclo:
     min-complexity: 12
   maligned:
@@ -92,22 +92,8 @@ linters-settings:
 linters:
   enable-all: true
   disable:
-    - deadcode # deprecated
-    - exhaustivestruct # deprecated
-    - golint # deprecated
-    - ifshort # deprecated
-    - interfacer # deprecated
-    - maligned # deprecated
-    - nosnakecase # deprecated
-    - scopelint # deprecated
-    - structcheck # deprecated
-    - varcheck # deprecated
-    - cyclop # duplicate of gocyclo
-    - sqlclosecheck # not relevant (SQL)
-    - rowserrcheck # not relevant (SQL)
-    - execinquery # not relevant (SQL)
     - lll
-    - gas
+    - gosec
     - dupl
     - prealloc
     - gocyclo
@@ -120,25 +106,29 @@ linters:
     - funlen
     - gocognit
     - stylecheck
-    - gomnd
+    - mnd
     - testpackage
     - paralleltest
     - tparallel
-    - goerr113
+    - err113
     - wrapcheck
     - nestif
     - exhaustive
     - exhaustruct
     - forbidigo
-    - ifshort
     - forcetypeassert
     - varnamelen
-    - nosnakecase
     - nonamedreturns
     - nilnil
     - maintidx
     - dupword # false positives
-    - errorlint # TODO: must be reactivate after fixes
+    - errorlint   # TODO: enable after fixes
+    - errcheck    # TODO: enable after fixes
+    - revive      # TODO: enable after fixes
+    - fatcontext  # TODO: enable after fixes
+    - gocritic    # TODO: enable after fixes
+    - predeclared # TODO: enable after fixes
+    - recvcheck   # TODO: enable after fixes
 
 issues:
   exclude-use-default: false

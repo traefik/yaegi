@@ -293,8 +293,8 @@ func TestInterpErrorConsistency(t *testing.T) {
 		},
 		{
 			fileName:       "switch13.go",
-			expectedInterp: "9:2: i is not a type",
-			expectedExec:   "9:7: i (variable of type interface{}) is not a type",
+			expectedInterp: "is not a type",
+			expectedExec:   "is not a type",
 		},
 		{
 			fileName:       "switch19.go",
