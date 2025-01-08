@@ -1714,10 +1714,7 @@ func (t *itype) fieldIndex(name string) int {
 func (t *itype) fieldSeq(seq []int) *itype {
 	ft := t
 	for _, i := range seq {
-		if ft.cat == ptrT {
-			ft = ft.val
-		}
-		ft = ft.field[i].typ
+		ft = baseType(ft).field[i].typ
 	}
 	return ft
 }
