@@ -5,6 +5,13 @@ import (
 	"sync/atomic"
 )
 
+// GenericFunc contains the code of a generic function.
+// This is used in the `yaegi extract` command to represent generic functions
+// instead of the actual value of the function, since you cannot get the
+// [reflect.Value] of a generic function. This is then used to interpret the
+// function when it is imported in yaegi.
+type GenericFunc string
+
 // adot produces an AST dot(1) directed acyclic graph for the given node. For debugging only.
 // func (n *node) adot() { n.astDot(dotWriter(n.interp.dotCmd), n.ident) }
 
@@ -58,7 +65,7 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 
 		case fieldList:
 			//  Node is the type parameters list of a generic function.
-			if root.kind == funcDecl && n.anc == root.child[2] && childPos(n) == 0 {
+			if root.kind == funcDecl && n.anc == root.child[2] && childPos(n) == 0 && len(types) > 0 {
 				// Fill the types lookup table used for type substitution.
 				for _, c := range n.child {
 					l := len(c.child) - 1
@@ -291,11 +298,15 @@ func inferTypesFromCall(sc *scope, fun *node, args []*node) ([]*itype, error) {
 		if err != nil {
 			return nil, err
 		}
-		lt, err := inferTypes(typ, args[i].typ)
-		if err != nil {
-			return nil, err
+		if i < len(args) {
+			lt, err := inferTypes(typ, args[i].typ)
+			if err != nil {
+				return nil, err
+			}
+			types = append(types, lt...)
+		} else {
+			types = append(types, typ)
 		}
-		types = append(types, lt...)
 	}
 
 	return types, nil
