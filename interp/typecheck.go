@@ -270,6 +270,7 @@ func (check typecheck) binaryExpr(n *node) error {
 		}
 	}
 
+	// Ensure that if values are untyped, both are converted to the same type
 	_ = check.convertUntyped(c0, c1.typ)
 	_ = check.convertUntyped(c1, c0.typ)
 
@@ -1059,7 +1060,7 @@ func (check typecheck) convertUntyped(n *node, typ *itype) error {
 		// Both n and target are untyped.
 		nkind, tkind := ntyp.Kind(), ttyp.Kind()
 		if isNumber(ntyp) && isNumber(ttyp) {
-			if nkind < tkind {
+			if nkind <= tkind {
 				n.typ = typ
 			}
 		} else if nkind != tkind {
