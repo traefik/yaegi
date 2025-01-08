@@ -8,7 +8,7 @@ on:
 
 env:
   GO_VERSION: stable
-  GOLANGCI_LINT_VERSION: v1.56.2
+  GOLANGCI_LINT_VERSION: v1.63.4
 
 jobs:
 

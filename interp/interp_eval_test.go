@@ -900,7 +900,7 @@ func eval(t *testing.T, i *interp.Interpreter, src string) reflect.Value {
 	if err != nil {
 		t.Logf("Error: %v", err)
 		if e, ok := err.(interp.Panic); ok {
-			t.Logf(string(e.Stack))
+			t.Log(string(e.Stack))
 		}
 		t.FailNow()
 	}
@@ -922,7 +922,7 @@ func assertEval(t *testing.T, i *interp.Interpreter, src, expectedError, expecte
 	if err != nil {
 		t.Logf("got an error: %v", err)
 		if e, ok := err.(interp.Panic); ok {
-			t.Logf(string(e.Stack))
+			t.Log(string(e.Stack))
 		}
 		t.FailNow()
 	}
