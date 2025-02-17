@@ -3,6 +3,7 @@ package interp
 import (
 	"errors"
 	"fmt"
+	"go/build"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -34,20 +35,27 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 			rPath = "."
 		}
 		dir = filepath.Join(filepath.Dir(interp.name), rPath, importPath)
-	} else if dir, rPath, err = interp.pkgDir(interp.context.GOPATH, rPath, importPath); err != nil {
-		// Try again, assuming a root dir at the source location.
-		if rPath, err = interp.rootFromSourceLocation(); err != nil {
+	} else {
+		root, err := interp.rootFromSourceLocation(rPath)
+		if err != nil {
 			return "", err
 		}
-		if dir, rPath, err = interp.pkgDir(interp.context.GOPATH, rPath, importPath); err != nil {
+		if dir, rPath, err = interp.pkgDir(interp.context.GOPATH, root, importPath); err != nil {
 			return "", err
 		}
 	}
-
 	if interp.rdir[importPath] {
 		return "", fmt.Errorf("import cycle not allowed\n\timports %s", importPath)
 	}
-	interp.rdir[importPath] = true
+
+	defer func() {
+		if err := recover(); err != nil {
+			panic(err)
+		}
+		if err == nil {
+			interp.rdir[importPath] = true
+		}
+	}()
 
 	files, err := fs.ReadDir(interp.opt.filesystem, dir)
 	if err != nil {
@@ -97,9 +105,15 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 			}
 			root.astDot(dotWriter(dotCmd), name)
 		}
+		if pname == "main" {
+			continue
+		}
 		if pkgName == "" {
 			pkgName = pname
 		} else if pkgName != pname && skipTest {
+			if pkgName == "main" {
+				continue
+			}
 			return "", fmt.Errorf("found packages %s and %s in %s", pkgName, pname, dir)
 		}
 		rootNodes = append(rootNodes, root)
@@ -134,7 +148,6 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 	interp.mutex.Lock()
 	gs := interp.scopes[importPath]
 	if gs == nil {
-		interp.mutex.Unlock()
 		// A nil scope means that no even an empty package is created from source.
 		return "", fmt.Errorf("no Go files in %s", dir)
 	}
@@ -176,10 +189,10 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 // rootFromSourceLocation returns the path to the directory containing the input
 // Go file given to the interpreter, relative to $GOPATH/src.
 // It is meant to be called in the case when the initial input is a main package.
-func (interp *Interpreter) rootFromSourceLocation() (string, error) {
+func (interp *Interpreter) rootFromSourceLocation(rPath string) (string, error) {
 	sourceFile := interp.name
-	if sourceFile == DefaultSourceName {
-		return "", nil
+	if sourceFile == DefaultSourceName || !strings.HasSuffix(sourceFile, ".go") {
+		return rPath, nil
 	}
 	wd, err := os.Getwd()
 	if err != nil {
@@ -187,9 +200,6 @@ func (interp *Interpreter) rootFromSourceLocation() (string, error) {
 	}
 	pkgDir := filepath.Join(wd, filepath.Dir(sourceFile))
 	root := strings.TrimPrefix(pkgDir, filepath.Join(interp.context.GOPATH, "src")+"/")
-	if root == wd {
-		return "", fmt.Errorf("package location %s not in GOPATH", pkgDir)
-	}
 	return root, nil
 }
 
@@ -210,13 +220,14 @@ func (interp *Interpreter) pkgDir(goPath string, root, importPath string) (strin
 	}
 
 	if root == "" {
-		if interp.context.GOPATH == "" {
-			return "", "", fmt.Errorf("unable to find source related to: %q. Either the GOPATH environment variable, or the Interpreter.Options.GoPath needs to be set", importPath)
+		if pkg, err := interp.context.Import(importPath, ".", build.FindOnly); err == nil {
+			return pkg.Dir, pkg.Root, nil
 		}
+
 		return "", "", fmt.Errorf("unable to find source related to: %q", importPath)
 	}
 
-	rootPath := filepath.Join(goPath, "src", root)
+	rootPath := filepath.Join(interp.context.GOPATH, "src", root)
 	prevRoot, err := previousRoot(interp.opt.filesystem, rootPath, root)
 	if err != nil {
 		return "", "", err
