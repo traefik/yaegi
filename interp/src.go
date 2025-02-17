@@ -200,9 +200,6 @@ func (interp *Interpreter) rootFromSourceLocation(rPath string) (string, error) 
 	}
 	pkgDir := filepath.Join(wd, filepath.Dir(sourceFile))
 	root := strings.TrimPrefix(pkgDir, filepath.Join(interp.context.GOPATH, "src")+"/")
-	if root == wd {
-		return "", fmt.Errorf("package location %s not in GOPATH", pkgDir)
-	}
 	return root, nil
 }
 
