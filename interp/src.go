@@ -105,9 +105,15 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 			}
 			root.astDot(dotWriter(dotCmd), name)
 		}
+		if pname == "main" {
+			continue
+		}
 		if pkgName == "" {
 			pkgName = pname
 		} else if pkgName != pname && skipTest {
+			if pkgName == "main" {
+				continue
+			}
 			return "", fmt.Errorf("found packages %s and %s in %s", pkgName, pname, dir)
 		}
 		rootNodes = append(rootNodes, root)
