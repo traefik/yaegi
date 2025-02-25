@@ -2,7 +2,6 @@ package interp
 
 import (
 	"path"
-	"path/filepath"
 )
 
 // gta performs a global types analysis on the AST, registering types,
@@ -15,7 +14,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 	var err error
 	var revisit []*node
 
-	baseName := filepath.Base(interp.fset.Position(root.pos).Filename)
+	baseName := path.Base(interp.fset.Position(root.pos).Filename)
 
 	root.Walk(func(n *node) bool {
 		if err != nil {
@@ -125,7 +124,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				}
 			}
 			for _, c := range n.child[:l] {
-				asImportName := filepath.Join(c.ident, baseName)
+				asImportName := path.Join(c.ident, baseName)
 				sym, exists := sc.sym[asImportName]
 				if !exists {
 					sc.sym[c.ident] = &symbol{index: sc.add(n.typ), kind: varSym, global: true, typ: n.typ, node: n}
@@ -203,7 +202,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 			case ident == "init":
 				// init functions do not get declared as per the Go spec.
 			default:
-				asImportName := filepath.Join(ident, baseName)
+				asImportName := path.Join(ident, baseName)
 				if _, exists := sc.sym[asImportName]; exists {
 					// redeclaration error
 					err = n.cfgErrorf("%s redeclared in this block", ident)
@@ -257,7 +256,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 					// map them by their names, otherwise we could have collisions from same-name
 					// imports in different source files of the same package. Therefore, we suffix
 					// the key with the basename of the source file.
-					name = filepath.Join(name, baseName)
+					name = path.Join(name, baseName)
 					if sym, exists := sc.sym[name]; !exists {
 						sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath, scope: sc}}
 						break
@@ -284,7 +283,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 					if name == "" {
 						name = pkgName
 					}
-					name = filepath.Join(name, baseName)
+					name = path.Join(name, baseName)
 					if sym, exists := sc.sym[name]; !exists {
 						sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: ipath, scope: sc}}
 						break
@@ -345,7 +344,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 			}
 			n.typ.str = n.typ.path + "." + n.typ.name
 
-			asImportName := filepath.Join(typeName, baseName)
+			asImportName := path.Join(typeName, baseName)
 			if _, exists := sc.sym[asImportName]; exists {
 				// redeclaration error
 				err = n.cfgErrorf("%s redeclared in this block", typeName)

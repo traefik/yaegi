@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -33,13 +33,13 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 		if rPath == mainID {
 			rPath = "."
 		}
-		dir = filepath.Join(filepath.Dir(interp.name), rPath, importPath)
-	} else if dir, rPath, err = interp.pkgDir(interp.context.GOPATH, rPath, importPath); err != nil {
+		dir = path.Join(path.Dir(interp.name), rPath, importPath)
+	} else if dir, rPath, err = interp.pkgDir(filepath.ToSlash(interp.context.GOPATH), rPath, importPath); err != nil {
 		// Try again, assuming a root dir at the source location.
 		if rPath, err = interp.rootFromSourceLocation(); err != nil {
 			return "", err
 		}
-		if dir, rPath, err = interp.pkgDir(interp.context.GOPATH, rPath, importPath); err != nil {
+		if dir, rPath, err = interp.pkgDir(filepath.ToSlash(interp.context.GOPATH), rPath, importPath); err != nil {
 			return "", err
 		}
 	}
@@ -68,7 +68,7 @@ func (interp *Interpreter) importSrc(rPath, importPath string, skipTest bool) (s
 			continue
 		}
 
-		name = filepath.Join(dir, name)
+		name = path.Join(dir, name)
 		var buf []byte
 		if buf, err = fs.ReadFile(interp.opt.filesystem, name); err != nil {
 			return "", err
@@ -181,29 +181,36 @@ func (interp *Interpreter) rootFromSourceLocation() (string, error) {
 	if sourceFile == DefaultSourceName {
 		return "", nil
 	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", err
+
+	_, isRealFS := interp.opt.filesystem.(*realFS)
+	if isRealFS {
+		// In the "real" FS, GOPATH will be an absolute path, so we need to convert
+		// the source file to an absolute path to compare them.
+		absPath, err := filepath.Abs(filepath.FromSlash(sourceFile))
+		if err != nil {
+			return "", err
+		}
+		sourceFile = filepath.ToSlash(absPath)
 	}
-	pkgDir := filepath.Join(wd, filepath.Dir(sourceFile))
-	root := strings.TrimPrefix(pkgDir, filepath.Join(interp.context.GOPATH, "src")+"/")
-	if root == wd {
+	pkgDir := path.Dir(sourceFile)
+	goPath := path.Join(filepath.ToSlash(interp.context.GOPATH), "src") + "/"
+	if !strings.HasPrefix(pkgDir, goPath) {
 		return "", fmt.Errorf("package location %s not in GOPATH", pkgDir)
 	}
-	return root, nil
+	return strings.TrimPrefix(pkgDir, goPath), nil
 }
 
 // pkgDir returns the absolute path in filesystem for a package given its import path
 // and the root of the subtree dependencies.
 func (interp *Interpreter) pkgDir(goPath string, root, importPath string) (string, string, error) {
-	rPath := filepath.Join(root, "vendor")
-	dir := filepath.Join(goPath, "src", rPath, importPath)
+	rPath := path.Join(root, "vendor")
+	dir := path.Join(goPath, "src", rPath, importPath)
 
 	if _, err := fs.Stat(interp.opt.filesystem, dir); err == nil {
 		return dir, rPath, nil // found!
 	}
 
-	dir = filepath.Join(goPath, "src", effectivePkg(root, importPath))
+	dir = path.Join(goPath, "src", effectivePkg(root, importPath))
 
 	if _, err := fs.Stat(interp.opt.filesystem, dir); err == nil {
 		return dir, root, nil // found!
@@ -216,7 +223,7 @@ func (interp *Interpreter) pkgDir(goPath string, root, importPath string) (strin
 		return "", "", fmt.Errorf("unable to find source related to: %q", importPath)
 	}
 
-	rootPath := filepath.Join(goPath, "src", root)
+	rootPath := path.Join(goPath, "src", root)
 	prevRoot, err := previousRoot(interp.opt.filesystem, rootPath, root)
 	if err != nil {
 		return "", "", err
@@ -229,21 +236,21 @@ const vendor = "vendor"
 
 // Find the previous source root (vendor > vendor > ... > GOPATH).
 func previousRoot(filesystem fs.FS, rootPath, root string) (string, error) {
-	rootPath = filepath.Clean(rootPath)
-	parent, final := filepath.Split(rootPath)
-	parent = filepath.Clean(parent)
+	rootPath = path.Clean(rootPath)
+	parent, final := path.Split(rootPath)
+	parent = path.Clean(parent)
 
 	// TODO(mpl): maybe it works for the special case main, but can't be bothered for now.
 	if root != mainID && final != vendor {
-		root = strings.TrimSuffix(root, string(filepath.Separator))
-		prefix := strings.TrimSuffix(strings.TrimSuffix(rootPath, root), string(filepath.Separator))
+		root = strings.TrimSuffix(root, "/")
+		prefix := strings.TrimSuffix(strings.TrimSuffix(rootPath, root), "/")
 
 		// look for the closest vendor in one of our direct ancestors, as it takes priority.
 		var vendored string
 		for {
-			fi, err := fs.Stat(filesystem, filepath.Join(parent, vendor))
+			fi, err := fs.Stat(filesystem, path.Join(parent, vendor))
 			if err == nil && fi.IsDir() {
-				vendored = strings.TrimPrefix(strings.TrimPrefix(parent, prefix), string(filepath.Separator))
+				vendored = strings.TrimPrefix(strings.TrimPrefix(parent, prefix), "/")
 				break
 			}
 			if !errors.Is(err, fs.ErrNotExist) {
@@ -255,7 +262,7 @@ func previousRoot(filesystem fs.FS, rootPath, root string) (string, error) {
 			}
 
 			// stop when we reach GOPATH/src/blah
-			parent = filepath.Dir(parent)
+			parent = path.Dir(parent)
 			if parent == prefix {
 				break
 			}
@@ -265,7 +272,7 @@ func previousRoot(filesystem fs.FS, rootPath, root string) (string, error) {
 			// TODO(mpl): It should probably be a critical error actually,
 			// as we shouldn't have gone that high up in the tree.
 			// TODO(dennwc): This partially fails on Windows, since it cannot recognize drive letters as "root".
-			if parent == string(filepath.Separator) || parent == "." || parent == "" {
+			if parent == "/" || parent == "." || parent == "" {
 				break
 			}
 		}
@@ -277,7 +284,7 @@ func previousRoot(filesystem fs.FS, rootPath, root string) (string, error) {
 
 	// TODO(mpl): the algorithm below might be redundant with the one above,
 	// but keeping it for now. Investigate/simplify/remove later.
-	splitRoot := strings.Split(root, string(filepath.Separator))
+	splitRoot := strings.Split(root, "/")
 	var index int
 	for i := len(splitRoot) - 1; i >= 0; i-- {
 		if splitRoot[i] == "vendor" {
@@ -290,12 +297,12 @@ func previousRoot(filesystem fs.FS, rootPath, root string) (string, error) {
 		return "", nil
 	}
 
-	return filepath.Join(splitRoot[:index]...), nil
+	return path.Join(splitRoot[:index]...), nil
 }
 
-func effectivePkg(root, path string) string {
-	splitRoot := strings.Split(root, string(filepath.Separator))
-	splitPath := strings.Split(path, string(filepath.Separator))
+func effectivePkg(root, p string) string {
+	splitRoot := strings.Split(root, "/")
+	splitPath := strings.Split(p, "/")
 
 	var result []string
 
@@ -315,10 +322,10 @@ func effectivePkg(root, path string) string {
 
 	var frag string
 	for i := len(result) - 1; i >= 0; i-- {
-		frag = filepath.Join(frag, result[i])
+		frag = path.Join(frag, result[i])
 	}
 
-	return filepath.Join(root, frag)
+	return path.Join(root, frag)
 }
 
 // isPathRelative returns true if path starts with "./" or "../".

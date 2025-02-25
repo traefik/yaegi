@@ -500,6 +500,7 @@ func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
 // by the interpreter, and a non nil error in case of failure.
 // The main function of the main package is executed if present.
 func (interp *Interpreter) EvalPath(path string) (res reflect.Value, err error) {
+	path = filepath.ToSlash(path) // Ensure path is in Unix format. Since we work with fs.FS, we need to use Unix path.
 	if !isFile(interp.opt.filesystem, path) {
 		_, err := interp.importSrc(mainID, path, NoTest)
 		return res, err
@@ -647,7 +648,7 @@ func (interp *Interpreter) ImportUsed() {
 }
 
 func key2name(name string) string {
-	return filepath.Join(name, DefaultSourceName)
+	return path.Join(name, DefaultSourceName)
 }
 
 func fixKey(k string) string {

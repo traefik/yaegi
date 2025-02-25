@@ -37,6 +37,9 @@ func applyCIMultiplier(timeout time.Duration) time.Duration {
 }
 
 func TestYaegiCmdCancel(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping cancel test since windows has no os.Interrupt signal")
+	}
 	tmp := t.TempDir()
 	yaegi := filepath.Join(tmp, "yaegi")
 

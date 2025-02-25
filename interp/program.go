@@ -4,7 +4,8 @@ import (
 	"context"
 	"go/ast"
 	"go/token"
-	"os"
+	"io/fs"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"runtime/debug"
@@ -35,12 +36,13 @@ func (interp *Interpreter) Compile(src string) (*Program, error) {
 
 // CompilePath parses and compiles a Go code located at the given path.
 func (interp *Interpreter) CompilePath(path string) (*Program, error) {
+	path = filepath.ToSlash(path) // Ensure path is in Unix format. Since we work with fs.FS, we need to use Unix path.
 	if !isFile(interp.filesystem, path) {
 		_, err := interp.importSrc(mainID, path, NoTest)
 		return nil, err
 	}
 
-	b, err := os.ReadFile(path)
+	b, err := fs.ReadFile(interp.filesystem, path)
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,7 @@ import (
 	"go/constant"
 	"log"
 	"math"
-	"path/filepath"
+	"path"
 	"reflect"
 	"strings"
 	"unicode"
@@ -64,7 +64,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 	var initNodes []*node
 	var err error
 
-	baseName := filepath.Base(interp.fset.Position(root.pos).Filename)
+	baseName := path.Base(interp.fset.Position(root.pos).Filename)
 
 	root.Walk(func(n *node) bool {
 		// Pre-order processing
@@ -1643,7 +1643,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					break
 				}
 				// retry with the filename, in case ident is a package name.
-				sym, level, found = sc.lookup(filepath.Join(n.ident, baseName))
+				sym, level, found = sc.lookup(path.Join(n.ident, baseName))
 				if !found {
 					err = n.cfgErrorf("undefined: %s", n.ident)
 					break
@@ -2612,8 +2612,8 @@ func (n *node) isType(sc *scope) bool {
 		}
 	case selectorExpr:
 		pkg, name := n.child[0].ident, n.child[1].ident
-		baseName := filepath.Base(n.interp.fset.Position(n.pos).Filename)
-		suffixedPkg := filepath.Join(pkg, baseName)
+		baseName := path.Base(n.interp.fset.Position(n.pos).Filename)
+		suffixedPkg := path.Join(pkg, baseName)
 		sym, _, ok := sc.lookup(suffixedPkg)
 		if !ok {
 			sym, _, ok = sc.lookup(pkg)

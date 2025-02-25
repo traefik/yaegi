@@ -177,6 +177,9 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			os.Stdout = backupStdout
 
 			bin := filepath.Join(dir, strings.TrimSuffix(file.Name(), ".go"))
+			if runtime.GOOS == "windows" {
+				bin += ".exe"
+			}
 
 			cmdBuild := exec.Command("go", "build", "-tags=dummy", "-o", bin, filePath)
 			outBuild, err := cmdBuild.CombinedOutput()

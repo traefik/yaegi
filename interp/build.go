@@ -5,7 +5,6 @@ import (
 	"go/build"
 	"go/parser"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -135,7 +134,7 @@ func skipFile(ctx *build.Context, p string, skipTest bool) bool {
 		return true
 	}
 	p = strings.TrimSuffix(path.Base(p), ".go")
-	if pp := filepath.Base(p); strings.HasPrefix(pp, "_") || strings.HasPrefix(pp, ".") {
+	if pp := path.Base(p); strings.HasPrefix(pp, "_") || strings.HasPrefix(pp, ".") {
 		return true
 	}
 	if skipTest && strings.HasSuffix(p, "_test") {

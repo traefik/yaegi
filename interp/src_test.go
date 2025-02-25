@@ -2,6 +2,7 @@ package interp
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 )
@@ -84,7 +85,7 @@ func Test_pkgDir(t *testing.T) {
 		{
 			desc: "vendor",
 			path: "guthib.com/foo/bar",
-			root: filepath.Join("guthib.com", "foo", "root"),
+			root: path.Join("guthib.com", "foo", "root"),
 			setup: func() error {
 				return os.MkdirAll(filepath.Join(project, "vendor", "guthib.com", "foo", "bar"), 0o700)
 			},
@@ -96,7 +97,7 @@ func Test_pkgDir(t *testing.T) {
 		{
 			desc: "GOPATH flat",
 			path: "guthib.com/foo/bar",
-			root: filepath.Join("guthib.com", "foo", "root"),
+			root: path.Join("guthib.com", "foo", "root"),
 			setup: func() error {
 				return os.MkdirAll(filepath.Join(goPath, "src", "guthib.com", "foo", "bar"), 0o700)
 			},
@@ -108,7 +109,7 @@ func Test_pkgDir(t *testing.T) {
 		{
 			desc: "vendor flat",
 			path: "guthib.com/foo/bar",
-			root: filepath.Join("guthib.com", "foo", "root", "vendor", "guthib.com", "foo", "bir"),
+			root: path.Join("guthib.com", "foo", "root", "vendor", "guthib.com", "foo", "bir"),
 			setup: func() error {
 				if err := os.MkdirAll(filepath.Join(project, "vendor", "guthib.com", "foo", "bar"), 0o700); err != nil {
 					return err
@@ -123,7 +124,7 @@ func Test_pkgDir(t *testing.T) {
 		{
 			desc: "fallback to GOPATH",
 			path: "guthib.com/foo/bar",
-			root: filepath.Join("guthib.com", "foo", "root", "vendor", "guthib.com", "foo", "bir"),
+			root: path.Join("guthib.com", "foo", "root", "vendor", "guthib.com", "foo", "bir"),
 			setup: func() error {
 				if err := os.MkdirAll(filepath.Join(goPath, "src", "guthib.com", "foo", "bar"), 0o700); err != nil {
 					return err
@@ -138,7 +139,7 @@ func Test_pkgDir(t *testing.T) {
 		{
 			desc: "vendor recursive",
 			path: "guthib.com/foo/bar",
-			root: filepath.Join("guthib.com", "foo", "root", "vendor", "guthib.com", "foo", "bir", "vendor", "guthib.com", "foo", "bur"),
+			root: path.Join("guthib.com", "foo", "root", "vendor", "guthib.com", "foo", "bir", "vendor", "guthib.com", "foo", "bur"),
 			setup: func() error {
 				if err := os.MkdirAll(
 					filepath.Join(goPath, "src", "guthib.com", "foo", "root", "vendor", "guthib.com", "foo", "bir", "vendor", "guthib.com", "foo", "bur"),
@@ -177,17 +178,20 @@ func Test_pkgDir(t *testing.T) {
 				}
 			}
 
+			goPath := filepath.ToSlash(goPath)
 			dir, rPath, err := interp.pkgDir(goPath, test.root, test.path)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if dir != test.expected.dir {
-				t.Errorf("[dir] got: %s, want: %s", dir, test.expected.dir)
+			expectedDir := filepath.ToSlash(test.expected.dir)
+			if dir != expectedDir {
+				t.Errorf("[dir] got: %s, want: %s", dir, expectedDir)
 			}
 
-			if rPath != test.expected.rpath {
-				t.Errorf(" [rpath] got: %s, want: %s", rPath, test.expected.rpath)
+			expectedRpath := filepath.ToSlash(test.expected.rpath)
+			if rPath != expectedRpath {
+				t.Errorf(" [rpath] got: %s, want: %s", rPath, expectedRpath)
 			}
 		})
 	}
@@ -240,7 +244,7 @@ func Test_previousRoot(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				rootPath = filepath.Join(wd, test.rootPathSuffix)
+				rootPath = filepath.ToSlash(filepath.Join(wd, test.rootPathSuffix))
 			} else {
 				rootPath = vendor
 			}
@@ -250,6 +254,7 @@ func Test_previousRoot(t *testing.T) {
 			}
 
 			if p != test.expected {
+				previousRoot(&realFS{}, rootPath, test.root)
 				t.Errorf("got: %s, want: %s", p, test.expected)
 			}
 		})

@@ -3,7 +3,7 @@ package interp
 import (
 	"fmt"
 	"go/constant"
-	"path/filepath"
+	"path"
 	"reflect"
 	"strconv"
 	"strings"
@@ -779,8 +779,8 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		sym, _, found := sc.lookup(n.ident)
 		if !found {
 			// retry with the filename, in case ident is a package name.
-			baseName := filepath.Base(interp.fset.Position(n.pos).Filename)
-			ident := filepath.Join(n.ident, baseName)
+			baseName := path.Base(interp.fset.Position(n.pos).Filename)
+			ident := path.Join(n.ident, baseName)
 			sym, _, found = sc.lookup(ident)
 			if !found {
 				t = &itype{name: n.ident, path: sc.pkgName, node: n, incomplete: true, scope: sc}
@@ -1189,8 +1189,8 @@ func findPackageType(interp *Interpreter, sc *scope, n *node) *itype {
 		sc = sc.anc
 	}
 
-	baseName := filepath.Base(interp.fset.Position(n.pos).Filename)
-	sym, _, found := sc.lookup(filepath.Join(n.ident, baseName))
+	baseName := path.Base(interp.fset.Position(n.pos).Filename)
+	sym, _, found := sc.lookup(path.Join(n.ident, baseName))
 	if !found || sym.typ == nil && sym.typ.cat != srcPkgT && sym.typ.cat != binPkgT {
 		return nil
 	}

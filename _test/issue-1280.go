@@ -16,7 +16,7 @@ type DB struct {
 }
 
 func main() {
-	f, err := os.Open("/dev/null")
+	f, err := os.Open(os.DevNull)
 	if err != nil {
 		log.Fatal(err)
 	}
