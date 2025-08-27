@@ -1182,10 +1182,7 @@ func genMethod(interp *Interpreter, sc *scope, t *itype, nod *node, types []*ity
 // findPackageType searches the top level scope for a package type.
 func findPackageType(interp *Interpreter, sc *scope, n *node) *itype {
 	// Find the root scope, the package symbols will exist there.
-	for {
-		if sc.level == 0 {
-			break
-		}
+	for sc.level != 0 {
 		sc = sc.anc
 	}
 

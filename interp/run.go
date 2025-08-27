@@ -988,7 +988,7 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 	funcType := n.typ.TypeOf()
 
 	value := genValue(n)
-	isDefer := false
+	var isDefer bool
 	if n.anc != nil && n.anc.anc != nil && n.anc.anc.kind == deferStmt {
 		isDefer = true
 	}

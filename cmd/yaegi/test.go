@@ -161,7 +161,7 @@ func test(arg []string) (err error) {
 	tests := []testing.InternalTest{}
 	syms, ok := i.Symbols(path)[path]
 	if !ok {
-		return errors.New("No tests found")
+		return errors.New("no tests found")
 	}
 	for name, sym := range syms {
 		switch fun := sym.Interface().(type) {
