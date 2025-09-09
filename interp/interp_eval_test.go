@@ -669,6 +669,25 @@ func TestEvalFunctionCallWithFunctionParam(t *testing.T) {
 	}
 }
 
+func TestEvalFunctionPartialInference(t *testing.T) {
+	i := interp.New(interp.Options{})
+	eval(t, i, `
+		func indexListExpr[T, U, V any](v V) V { return v }
+	`)
+
+	t.Run("multiple explicit params", func(t *testing.T) {
+		v := eval(t, i, "indexListExpr[string, string](12)")
+		iv, ok := v.Interface().(int)
+		if !ok {
+			t.Fatalf("unexpected return type: got %T, want int", v)
+		}
+		want := 12
+		if iv != want {
+			t.Fatalf("unexpected value: got %v, want %v", i, want)
+		}
+	})
+}
+
 func TestEvalCall(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{

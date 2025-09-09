@@ -1186,6 +1186,12 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				for _, c := range c0.child[1:] {
 					lt = append(lt, c.typ)
 				}
+				types, err := inferTypesFromCall(sc, fun, n.child[1:])
+				if err != nil {
+					return
+				}
+				lt = append(lt, types...)
+
 				g, found, err := genAST(sc, fun, lt)
 				if err != nil {
 					return
