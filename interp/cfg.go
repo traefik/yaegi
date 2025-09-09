@@ -1015,28 +1015,8 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.typ = valueTOf(t.rtype.Elem())
 				}
 			case funcT:
-				// A function indexed by a type means an instantiated generic function.
-				c1 := n.child[1]
-				if !c1.isType(sc) {
-					n.typ = t
-					return
-				}
-				g, found, err := genAST(sc, t.node.anc, []*itype{c1.typ})
-				if err != nil {
-					return
-				}
-				if !found {
-					if _, err = interp.cfg(g, t.node.anc.scope, importPath, pkgName); err != nil {
-						return
-					}
-					// Generate closures for function body.
-					if err = genRun(g.child[3]); err != nil {
-						return
-					}
-				}
-				// Replace generic func node by instantiated one.
-				n.anc.child[childPos(n)] = g
-				n.typ = g.typ
+				// A function indexed by a type. Leave this to the callExpr,
+				// since we may need partial type inference.
 				return
 			case genericT:
 				name := t.id() + "[" + n.child[1].typ.id() + "]"
@@ -1179,6 +1159,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 			wireChild(n)
 			switch c0 := n.child[0]; {
+			case c0.kind == indexExpr && c0.typ == nil:
+				c0.gen = nop
+				fallthrough
 			case c0.kind == indexListExpr:
 				// Instantiate a generic function then call it.
 				fun := c0.child[0].sym.node
