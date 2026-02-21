@@ -1612,6 +1612,34 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			n.types, n.scope = sc.types, sc
 			sc = sc.pop()
 			funcName := n.child[1].ident
+
+			// Pre-calculate pprof label and assign wrapper level for this function
+			pkgName := ""
+			if sc.pkgID != "" {
+				pkgName = sc.pkgID
+			}
+			receiverType := ""
+			if isMethod(n) && len(n.child) > 0 && len(n.child[0].child) > 0 {
+				// Extract receiver type name from AST
+				recvNode := n.child[0].child[0].lastChild()
+				if recvNode.ident != "" {
+					// Simple identifier (e.g., Handler)
+					receiverType = recvNode.ident
+				} else if len(recvNode.child) > 0 && recvNode.child[0].ident != "" {
+					// Pointer receiver (e.g., *Handler)
+					receiverType = "*" + recvNode.child[0].ident
+				}
+			}
+			// Build label: "pkg:receiver:func" or "pkg::func" for top-level functions
+			if receiverType != "" {
+				n.pprofLabel = pkgName + ":" + receiverType + ":" + funcName
+			} else {
+				n.pprofLabel = pkgName + "::" + funcName
+			}
+
+			// Assign wrapper level and cache wrapper function for performance
+			n.wrapperLevel = interp.assignWrapperLevel(n.pprofLabel, n)
+
 			if sym := sc.sym[funcName]; !isMethod(n) && sym != nil && !isGeneric(sym.typ) {
 				sym.index = -1 // to force value to n.val
 				sym.typ = n.typ
