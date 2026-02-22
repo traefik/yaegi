@@ -324,7 +324,58 @@ func typeAssert(n *node, withResult, withOk bool) {
 					value1(f).SetBool(ok)
 				}()
 			}
+
+			// assert `valf`(bin reflect.Value) as `typ`(src interface) then assign to (value0(f), value1(f))
 			if !ok {
+				for valf.Kind() == reflect.Interface {
+					if valf.IsNil() {
+						// like 'var err error', there is no elem the interface pointed to.
+						return next
+					}
+					valf = valf.Elem()
+				}
+
+				m1 := typ.methods()
+				if valf.NumMethod() < len(m1) {
+					if !withOk {
+						panic(n.cfgErrorf("interface conversion: %v is not %v", v.node.typ.id(), typID))
+					}
+					return next
+				}
+
+				ok = true
+				// compare all method by string
+				typf := valf.Type()
+				for i := 0; i < valf.NumMethod(); i++ {
+					method := typf.Method(i)
+					fnDeclare := valf.Method(i).Type().String()
+					if sign, existed := m1[method.Name]; existed {
+						if sign != fnDeclare {
+							if !withOk {
+								panic(n.cfgErrorf("interface conversion: wanted %s but %s", sign, method.Type.String()))
+							}
+							ok = false
+						}
+						delete(m1, method.Name)
+					}
+				}
+				if len(m1) > 0 {
+					if !withOk {
+						panic(n.cfgErrorf("interface conversion: method is not implemented %v", m1))
+					}
+					ok = false
+				}
+				if ok {
+					value0(f).Set(reflect.ValueOf(valueInterface{
+						node:  typ.node,
+						value: valf,
+					}))
+				}
+				return next
+			}
+
+			if !ok {
+				fmt.Printf("assertion from bin interface %s to src interface %s is not allowed\n", valf.Type(), typID)
 				if !withOk {
 					panic(n.cfgErrorf("interface conversion: nil is not %v", typID))
 				}
