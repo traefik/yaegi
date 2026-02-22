@@ -137,6 +137,18 @@ func (interp *Interpreter) Use(values Exports) error {
 		}
 	}
 
+	for k, v := range values {
+		packageName := path.Base(k)
+		for _, sym := range v {
+			if gf, ok := sym.Interface().(GenericFunc); ok {
+				str := fmt.Sprintf("package %s\nimport . %q\n%s", packageName, path.Dir(k), string(gf))
+				if _, err := interp.Compile(str); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	// Checks if input values correspond to stdlib packages by looking for one
 	// well known stdlib package path.
 	if _, ok := values["fmt/fmt"]; ok {

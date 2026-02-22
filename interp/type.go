@@ -975,7 +975,8 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 			}
 		}
 
-		if lt.incomplete {
+		if lt.incomplete { // note: per #1700 this results in a nil type with no err
+			// but TestIssue1388 for #1388 triggers this, so not changing here.
 			break
 		}
 		name := n.child[1].ident
@@ -1118,6 +1119,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 
 	switch {
 	case t == nil:
+		err = n.cfgErrorf("nil type (could be trying to use a generic type constraint interface?): %s", n.kind)
 	case t.name != "" && t.path != "":
 		t.str = t.path + "." + t.name
 	case t.cat == nilT:
@@ -2391,7 +2393,10 @@ func isEmptyInterface(t *itype) bool {
 }
 
 func isGeneric(t *itype) bool {
-	return t.cat == funcT && t.node != nil && len(t.node.child) > 0 && len(t.node.child[0].child) > 0
+	if t.cat != funcT || t.node == nil || len(t.node.child) == 0 || t.node.child[0] == nil {
+		return false
+	}
+	return len(t.node.child[0].child) > 0
 }
 
 func isNamedFuncSrc(t *itype) bool {
