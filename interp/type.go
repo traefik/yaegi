@@ -663,7 +663,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				}
 			case bltnCap, bltnCopy, bltnLen:
 				t = sc.getType("int")
-			case bltnAppend, bltnMake:
+			case bltnAppend, bltnMake, bltnMax, bltnMin:
 				t, err = nodeType2(interp, sc, n.child[1], seen)
 			case bltnNew:
 				t, err = nodeType2(interp, sc, n.child[1], seen)
@@ -2523,3 +2523,7 @@ func isNumber(t reflect.Type) bool {
 func isBoolean(t reflect.Type) bool       { return t != nil && t.Kind() == reflect.Bool }
 func isString(t reflect.Type) bool        { return t != nil && t.Kind() == reflect.String }
 func isConstantValue(t reflect.Type) bool { return t != nil && t.Implements(constVal) }
+
+func isOrdered(t reflect.Type) bool {
+	return isInt(t) || isUint(t) || isFloat(t) || isString(t)
+}

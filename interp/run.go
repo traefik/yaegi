@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"go/constant"
+	"math"
 	"reflect"
 	"regexp"
 	"strings"
@@ -3473,6 +3474,88 @@ func _len(n *node) {
 	}
 	n.exec = func(f *frame) bltn {
 		dest(f).SetInt(int64(value(f).Len()))
+		return next
+	}
+}
+
+func _max(n *node) {
+	next := getExec(n.tnext)
+	typ := n.typ.TypeOf()
+	dest := genValueOutput(n, typ)
+
+	values := make([]func(*frame) reflect.Value, len(n.child)-1)
+	for i, c := range n.child[1:] {
+		values[i] = genValue(c)
+	}
+
+	n.exec = func(f *frame) bltn {
+		result := values[0](f)
+		for _, v := range values[1:] {
+			cur := v(f)
+			switch typ.Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				if cur.Int() > result.Int() {
+					result = cur
+				}
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+				if cur.Uint() > result.Uint() {
+					result = cur
+				}
+			case reflect.Float32, reflect.Float64:
+				a, b := result.Float(), cur.Float()
+				if math.IsNaN(a) {
+					// result already NaN
+				} else if math.IsNaN(b) || b > a {
+					result = cur
+				}
+			case reflect.String:
+				if cur.String() > result.String() {
+					result = cur
+				}
+			}
+		}
+		dest(f).Set(result)
+		return next
+	}
+}
+
+func _min(n *node) {
+	next := getExec(n.tnext)
+	typ := n.typ.TypeOf()
+	dest := genValueOutput(n, typ)
+
+	values := make([]func(*frame) reflect.Value, len(n.child)-1)
+	for i, c := range n.child[1:] {
+		values[i] = genValue(c)
+	}
+
+	n.exec = func(f *frame) bltn {
+		result := values[0](f)
+		for _, v := range values[1:] {
+			cur := v(f)
+			switch typ.Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				if cur.Int() < result.Int() {
+					result = cur
+				}
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+				if cur.Uint() < result.Uint() {
+					result = cur
+				}
+			case reflect.Float32, reflect.Float64:
+				a, b := result.Float(), cur.Float()
+				if math.IsNaN(a) {
+					// result already NaN — keep it
+				} else if math.IsNaN(b) || b < a {
+					result = cur
+				}
+			case reflect.String:
+				if cur.String() < result.String() {
+					result = cur
+				}
+			}
+		}
+		dest(f).Set(result)
 		return next
 	}
 }

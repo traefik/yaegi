@@ -733,6 +733,8 @@ var builtinFuncs = map[string]struct {
 	bltnCopy:     {args: 2, variadic: false},
 	bltnDelete:   {args: 2, variadic: false},
 	bltnLen:      {args: 1, variadic: false},
+	bltnMin:      {args: 1, variadic: true},
+	bltnMax:      {args: 1, variadic: true},
 	bltnMake:     {args: 1, variadic: true},
 	bltnNew:      {args: 1, variadic: false},
 	bltnOffsetof: {args: 1, variadic: false},
@@ -809,6 +811,39 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 		}
 		if !ok {
 			return params[0].nod.cfgErrorf("invalid argument for %s", name)
+		}
+	case bltnMax, bltnMin:
+		var typed *itype
+		for _, p := range params {
+			if !p.Type().untyped {
+				typed = p.Type()
+				break
+			}
+		}
+		if typed != nil {
+			for _, p := range params {
+				if p.Type().untyped {
+					if err := check.convertUntyped(p.nod, typed); err != nil {
+						return err
+					}
+				}
+			}
+		} else {
+			for _, p := range params {
+				def := p.Type().defaultType(p.nod.rval, check.scope)
+				if err := check.convertUntyped(p.nod, def); err != nil {
+					return err
+				}
+			}
+		}
+		first := params[0].Type()
+		if !isOrdered(first.TypeOf()) {
+			return params[0].nod.cfgErrorf("invalid argument: %s for %s", first.id(), name)
+		}
+		for _, p := range params[1:] {
+			if !p.Type().equals(first) {
+				return p.nod.cfgErrorf("mismatched types %s and %s", first.id(), p.Type().id())
+			}
 		}
 	case bltnClose:
 		p := params[0]

@@ -409,6 +409,8 @@ const (
 	bltnCopy     = "copy"
 	bltnDelete   = "delete"
 	bltnLen      = "len"
+	bltnMax      = "max"
+	bltnMin      = "min"
 	bltnMake     = "make"
 	bltnNew      = "new"
 	bltnOffsetof = "unsafe.Offsetof"
@@ -464,6 +466,8 @@ func initUniverse() *scope {
 		bltnCopy:    {kind: bltnSym, builtin: _copy},
 		bltnDelete:  {kind: bltnSym, builtin: _delete},
 		bltnLen:     {kind: bltnSym, builtin: _len},
+		bltnMax:     {kind: bltnSym, builtin: _max},
+		bltnMin:     {kind: bltnSym, builtin: _min},
 		bltnMake:    {kind: bltnSym, builtin: _make},
 		bltnNew:     {kind: bltnSym, builtin: _new},
 		bltnPanic:   {kind: bltnSym, builtin: _panic},
