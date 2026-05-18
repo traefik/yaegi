@@ -10,6 +10,9 @@ env:
   GO_VERSION: stable
   GOLANGCI_LINT_VERSION: v2.4.0
 
+permissions:
+  contents: read
+
 jobs:
 
   linting:
