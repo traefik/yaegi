@@ -62,6 +62,9 @@ func (interp *Interpreter) compileSrc(src, name string, inc bool) (*Program, err
 	if err != nil {
 		return nil, err
 	}
+	if n == nil {
+		return nil, nil
+	}
 
 	return interp.CompileAST(n)
 }
