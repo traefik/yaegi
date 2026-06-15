@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 type test struct {
-	v interface{}
+	v any
 	s string
 }
 
@@ -14,7 +14,7 @@ type T struct {
 func main() {
 	t := []test{
 		{
-			v: []interface{}{
+			v: []any{
 				T{"hello"},
 			},
 			s: "world",

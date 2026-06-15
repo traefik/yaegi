@@ -1,7 +1,7 @@
 package main
 
 func main() {
-	var a interface{}
+	var a any
 	switch a.(type) {
 	}
 	println("bye")

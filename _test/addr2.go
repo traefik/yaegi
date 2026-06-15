@@ -11,13 +11,13 @@ type Email struct {
 	Addr  string
 }
 
-func f(r interface{}) error {
+func f(r any) error {
 	return withPointerAsInterface(&r)
 }
 
-func withPointerAsInterface(r interface{}) error {
-	_ = (r).(*interface{})
-	rp, ok := (r).(*interface{})
+func withPointerAsInterface(r any) error {
+	_ = (r).(*any)
+	rp, ok := (r).(*any)
 	if !ok {
 		return errors.New("cannot assert to *interface{}")
 	}
@@ -30,11 +30,11 @@ func withPointerAsInterface(r interface{}) error {
 	return nil
 }
 
-func ff(s string, r interface{}) error {
+func ff(s string, r any) error {
 	return xml.Unmarshal([]byte(s), r)
 }
 
-func fff(s string, r interface{}) error {
+func fff(s string, r any) error {
 	return xml.Unmarshal([]byte(s), &r)
 }
 

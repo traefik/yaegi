@@ -1,6 +1,6 @@
 package main
 
-func f(params ...interface{}) {
+func f(params ...any) {
 	switch params[0].(type) {
 	case string:
 		println("a string")

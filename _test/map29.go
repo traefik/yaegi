@@ -6,7 +6,7 @@ import (
 )
 
 type Item struct {
-	Object interface{}
+	Object any
 	Expiry time.Duration
 }
 

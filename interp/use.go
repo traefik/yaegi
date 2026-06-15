@@ -165,13 +165,13 @@ func fixStdlib(interp *Interpreter) {
 
 	stdin, stdout, stderr := interp.stdin, interp.stdout, interp.stderr
 
-	p["Print"] = reflect.ValueOf(func(a ...interface{}) (n int, err error) { return fmt.Fprint(stdout, a...) })
-	p["Printf"] = reflect.ValueOf(func(f string, a ...interface{}) (n int, err error) { return fmt.Fprintf(stdout, f, a...) })
-	p["Println"] = reflect.ValueOf(func(a ...interface{}) (n int, err error) { return fmt.Fprintln(stdout, a...) })
+	p["Print"] = reflect.ValueOf(func(a ...any) (n int, err error) { return fmt.Fprint(stdout, a...) })
+	p["Printf"] = reflect.ValueOf(func(f string, a ...any) (n int, err error) { return fmt.Fprintf(stdout, f, a...) })
+	p["Println"] = reflect.ValueOf(func(a ...any) (n int, err error) { return fmt.Fprintln(stdout, a...) })
 
-	p["Scan"] = reflect.ValueOf(func(a ...interface{}) (n int, err error) { return fmt.Fscan(stdin, a...) })
-	p["Scanf"] = reflect.ValueOf(func(f string, a ...interface{}) (n int, err error) { return fmt.Fscanf(stdin, f, a...) })
-	p["Scanln"] = reflect.ValueOf(func(a ...interface{}) (n int, err error) { return fmt.Fscanln(stdin, a...) })
+	p["Scan"] = reflect.ValueOf(func(a ...any) (n int, err error) { return fmt.Fscan(stdin, a...) })
+	p["Scanf"] = reflect.ValueOf(func(f string, a ...any) (n int, err error) { return fmt.Fscanf(stdin, f, a...) })
+	p["Scanln"] = reflect.ValueOf(func(a ...any) (n int, err error) { return fmt.Fscanln(stdin, a...) })
 
 	// Update mapTypes to virtualized symbols as well.
 	interp.mapTypes[p["Print"]] = interp.mapTypes[reflect.ValueOf(fmt.Print)]

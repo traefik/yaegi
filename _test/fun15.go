@@ -1,8 +1,8 @@
 package main
 
-func f1(a int) interface{} { return a + 1 }
+func f1(a int) any { return a + 1 }
 
-func f2(a int64) interface{} { return a + 1 }
+func f2(a int64) any { return a + 1 }
 
 func main() {
 	c := f1(3)

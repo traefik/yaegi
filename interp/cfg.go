@@ -2442,13 +2442,13 @@ func childPos(n *node) int {
 	return -1
 }
 
-func (n *node) cfgErrorf(format string, a ...interface{}) *cfgError {
+func (n *node) cfgErrorf(format string, a ...any) *cfgError {
 	pos := n.interp.fset.Position(n.pos)
 	posString := n.interp.fset.Position(n.pos).String()
 	if pos.Filename == DefaultSourceName {
 		posString = strings.TrimPrefix(posString, DefaultSourceName+":")
 	}
-	a = append([]interface{}{posString}, a...)
+	a = append([]any{posString}, a...)
 	return &cfgError{n, fmt.Errorf("%s: "+format, a...)}
 }
 

@@ -1968,7 +1968,7 @@ func exportName(s string) string {
 
 var (
 	// TODO(mpl): generators.
-	emptyInterfaceType = reflect.TypeOf((*interface{})(nil)).Elem()
+	emptyInterfaceType = reflect.TypeOf((*any)(nil)).Elem()
 	valueInterfaceType = reflect.TypeOf((*valueInterface)(nil)).Elem()
 	constVal           = reflect.TypeOf((*constant.Value)(nil)).Elem()
 )

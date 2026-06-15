@@ -11,7 +11,7 @@ var gzipWriterPools [10]*sync.Pool = [10]*sync.Pool{}
 func main() {
 	level := 9
 	gzipWriterPools[level] = &sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			w, _ := gzip.NewWriterLevel(nil, level)
 			return w
 		},

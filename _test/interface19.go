@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-var I interface{}
+var I any
 
 func main() {
 	fmt.Printf("%T %v\n", I, I)

@@ -11,7 +11,7 @@ func (f Foo) String() string {
 	return "foo-" + strconv.Itoa(int(f))
 }
 
-func print1(arg interface{}) {
+func print1(arg any) {
 	fmt.Println(arg)
 }
 

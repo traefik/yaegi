@@ -5,7 +5,7 @@ type S struct {
 }
 
 func main() {
-	var i interface{} = S{a: 1}
+	var i any = S{a: 1}
 
 	s, ok := i.(S)
 	if !ok {
