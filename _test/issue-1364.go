@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	var value interface{}
+	var value any
 	var err error
 	value, err = strconv.ParseFloat("123", 64)
 	fmt.Println(value, err)

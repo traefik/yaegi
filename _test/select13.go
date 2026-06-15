@@ -1,7 +1,7 @@
 package main
 
 func main() {
-	var c interface{} = int64(1)
+	var c any = int64(1)
 	q := make(chan struct{})
 	select {
 	case q <- struct{}{}:

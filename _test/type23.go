@@ -6,8 +6,8 @@ import (
 )
 
 func main() {
-	var v1 interface{} = 1
-	var v2 interface{}
+	var v1 any = 1
+	var v2 any
 	var v3 http.ResponseWriter = httptest.NewRecorder()
 
 	if r1, ok := v1.(string); ok {

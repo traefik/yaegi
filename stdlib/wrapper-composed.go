@@ -15,7 +15,7 @@ import (
 // In net/http, a ResponseWriter may also implement a Hijacker.
 
 type _netHTTPResponseWriterHijacker struct {
-	IValue       interface{}
+	IValue       any
 	WHeader      func() http.Header
 	WWrite       func(a0 []byte) (int, error)
 	WWriteHeader func(statusCode int)
@@ -36,7 +36,7 @@ func (w _netHTTPResponseWriterHijacker) Hijack() (net.Conn, *bufio.ReadWriter, e
 // In io, a Reader may implement WriteTo, used by io.Copy().
 
 type _ioReaderWriteTo struct {
-	IValue interface{}
+	IValue any
 	WRead  func(p []byte) (n int, err error)
 
 	WWriteTo func(w io.Writer) (n int64, err error)
@@ -49,7 +49,7 @@ func (w _ioReaderWriteTo) WriteTo(wr io.Writer) (n int64, err error) { return w.
 // In io, a Writer may implement ReadFrom, used by io.Copy().
 
 type _ioWriterReadFrom struct {
-	IValue interface{}
+	IValue any
 	WWrite func(p []byte) (n int, err error)
 
 	WReadFrom func(r io.Reader) (n int64, err error)

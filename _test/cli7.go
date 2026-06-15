@@ -15,7 +15,7 @@ type T struct {
 type mw1 struct {
 }
 
-var obj = map[string]interface{}{}
+var obj = map[string]any{}
 
 func (m *mw1) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 	t := &T{

@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 func main() {
-	v := interface{}(nil)
+	v := any(nil)
 
 	fmt.Println(v)
 }

@@ -6,7 +6,7 @@ func main() {
 	c := nil == &struct{}{}
 	i := 100
 	d := nil == &i
-	var v interface{}
+	var v any
 	f := nil == v
 	g := v == nil
 	println(a, b, c, d, f, g)

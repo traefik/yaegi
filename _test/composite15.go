@@ -5,7 +5,7 @@ import (
 )
 
 func interfaceAsInts() {
-	var a interface{}
+	var a any
 	b := 2
 	c := 3
 	a = []int{b, c}
@@ -22,12 +22,12 @@ func interfaceAsInts() {
 }
 
 func interfaceAsInterfaces() {
-	var a, b, c interface{}
+	var a, b, c any
 	b = 2
 	c = 3
-	a = []interface{}{b, c}
+	a = []any{b, c}
 
-	d, ok := a.([]interface{})
+	d, ok := a.([]any)
 	if !ok {
 		println("nope")
 		return

@@ -23,7 +23,7 @@ func init() {
 	Symbols["unsafe/unsafe"]["Sizeof"] = reflect.ValueOf(sizeof)
 	Symbols["unsafe/unsafe"]["Alignof"] = reflect.ValueOf(alignof)
 	// The following is used for signature check only.
-	Symbols["unsafe/unsafe"]["Offsetof"] = reflect.ValueOf(func(interface{}) uintptr { return 0 })
+	Symbols["unsafe/unsafe"]["Offsetof"] = reflect.ValueOf(func(any) uintptr { return 0 })
 }
 
 func convert(from, to reflect.Type) func(src, dest reflect.Value) {
@@ -54,11 +54,11 @@ func add(ptr unsafe.Pointer, l int) unsafe.Pointer {
 	return unsafe.Add(ptr, l)
 }
 
-func sizeof(i interface{}) uintptr {
+func sizeof(i any) uintptr {
 	return reflect.ValueOf(i).Type().Size()
 }
 
-func alignof(i interface{}) uintptr {
+func alignof(i any) uintptr {
 	return uintptr(reflect.ValueOf(i).Type().Align())
 }
 

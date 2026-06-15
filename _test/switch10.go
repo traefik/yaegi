@@ -1,7 +1,7 @@
 package main
 
 func main() {
-	var i interface{} = "truc"
+	var i any = "truc"
 
 	switch a := i.(type) {
 	case string:

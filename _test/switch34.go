@@ -1,7 +1,7 @@
 package main
 
 func main() {
-	var a interface{}
+	var a any
 	a = []int{3}
 	switch a.(type) {
 	case []int:
@@ -10,7 +10,7 @@ func main() {
 		println("a is []string")
 	}
 
-	var b interface{}
+	var b any
 	b = []string{"hello"}
 	switch b.(type) {
 	case []int:

@@ -1,18 +1,18 @@
 package main
 
 type I interface {
-	Get() interface{}
+	Get() any
 }
 
 type T struct{}
 
-func (T) Get() interface{} {
+func (T) Get() any {
 	return nil
 }
 
 func main() {
 	var i I = T{}
-	var ei interface{}
+	var ei any
 
 	println(i != ei)
 }

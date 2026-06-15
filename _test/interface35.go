@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 type T struct {
-	I interface{}
+	I any
 }
 
 func main() {

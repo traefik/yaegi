@@ -5,15 +5,15 @@ import (
 )
 
 func main() {
-	var a interface{}
+	var a any
 	a = 2
 	fmt.Println(a)
 
-	var b *interface{}
+	var b *any
 	b = &a
 	fmt.Println(*b)
 
-	var c **interface{}
+	var c **any
 	c = &b
 	fmt.Println(**c)
 }

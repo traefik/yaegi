@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 func main() {
-	s := [2]interface{}{1: "test", 0: 2}
+	s := [2]any{1: "test", 0: 2}
 	fmt.Println(s[0], s[1])
 }
 

@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func Sprintf(format string, a ...interface{}) string {
+func Sprintf(format string, a ...any) string {
 	return fmt.Sprintf(format, a...)
 }
 

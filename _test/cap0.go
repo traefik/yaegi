@@ -1,6 +1,6 @@
 package main
 
-func f(a []int) interface{} {
+func f(a []int) any {
 	return cap(a)
 }
 

@@ -48,11 +48,11 @@ type node struct {
 	action     action         // action
 	exec       bltn           // generated function to execute
 	gen        bltnGenerator  // generator function to produce above bltn
-	val        interface{}    // static generic value (CFG execution)
+	val        any    // static generic value (CFG execution)
 	rval       reflect.Value  // reflection value to let runtime access interpreter (CFG)
 	ident      string         // set if node is a var or func
 	redeclared bool           // set if node is a redeclared variable (CFG)
-	meta       interface{}    // meta stores meta information between gta runs, like errors
+	meta       any    // meta stores meta information between gta runs, like errors
 }
 
 func (n *node) shouldBreak() bool {
@@ -116,7 +116,7 @@ type frame struct {
 
 	mutex     sync.RWMutex
 	deferred  [][]reflect.Value  // defer stack
-	recovered interface{}        // to handle panic recover
+	recovered any        // to handle panic recover
 	done      reflect.SelectCase // for cancellation of channel operations
 }
 
@@ -252,7 +252,7 @@ func init() { Symbols[selfPath]["Symbols"] = reflect.ValueOf(Symbols) }
 
 // _error is a wrapper of error interface type.
 type _error struct {
-	IValue interface{}
+	IValue any
 	WError func() string
 }
 
@@ -261,7 +261,7 @@ func (w _error) Error() string { return w.WError() }
 // Panic is an error recovered from a panic call in interpreted code.
 type Panic struct {
 	// Value is the recovered value of a call to panic.
-	Value interface{}
+	Value any
 
 	// Callers is the call stack obtained from the recover call.
 	// It may be used as the parameter to runtime.CallersFrames.

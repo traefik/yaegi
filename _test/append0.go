@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func f(a []int, b int) interface{} { return append(a, b) }
+func f(a []int, b int) any { return append(a, b) }
 
 func main() {
 	a := []int{1, 2}
