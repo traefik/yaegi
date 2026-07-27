@@ -49,6 +49,8 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "const9.go" || // expect error
 			file.Name() == "export1.go" || // non-main package
 			file.Name() == "export0.go" || // non-main package
+			file.Name() == "for20.go" || // expect error
+			file.Name() == "for21.go" || // expect error
 			file.Name() == "for7.go" || // expect error
 			file.Name() == "fun21.go" || // expect error
 			file.Name() == "fun22.go" || // expect error
@@ -58,7 +60,10 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "gen7.go" || // expect error
 			file.Name() == "gen8.go" || // expect error
 			file.Name() == "gen9.go" || // expect error
+			file.Name() == "if10.go" || // expect error
 			file.Name() == "if2.go" || // expect error
+			file.Name() == "if8.go" || // expect error
+			file.Name() == "if9.go" || // expect error
 			file.Name() == "import6.go" || // expect error
 			file.Name() == "init1.go" || // expect error
 			file.Name() == "io0.go" || // use random number
@@ -246,6 +251,31 @@ func TestInterpErrorConsistency(t *testing.T) {
 		},
 		{
 			fileName:       "for7.go",
+			expectedInterp: "4:14: non-bool used as for condition",
+			expectedExec:   "4:14: non-boolean condition in for statement",
+		},
+		{
+			fileName:       "if8.go",
+			expectedInterp: "4:5: non-bool used as if condition",
+			expectedExec:   "4:5: non-boolean condition in if statement",
+		},
+		{
+			fileName:       "if9.go",
+			expectedInterp: "4:5: non-bool used as if condition",
+			expectedExec:   "4:5: non-boolean condition in if statement",
+		},
+		{
+			fileName:       "if10.go",
+			expectedInterp: "4:13: non-bool used as if condition",
+			expectedExec:   "4:13: non-boolean condition in if statement",
+		},
+		{
+			fileName:       "for20.go",
+			expectedInterp: "4:6: non-bool used as for condition",
+			expectedExec:   "4:6: non-boolean condition in for statement",
+		},
+		{
+			fileName:       "for21.go",
 			expectedInterp: "4:14: non-bool used as for condition",
 			expectedExec:   "4:14: non-boolean condition in for statement",
 		},
