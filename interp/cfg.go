@@ -1499,6 +1499,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			cond, body := n.child[0], n.child[1]
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as for condition")
+				break
 			}
 			if cond.rval.IsValid() {
 				// Condition is known at compile time, bypass test.
@@ -1518,6 +1519,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			init, cond, body := n.child[0], n.child[1], n.child[2]
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as for condition")
+				break
 			}
 			n.start = init.start
 			if cond.rval.IsValid() {
@@ -1547,6 +1549,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			cond, post, body := n.child[0], n.child[1], n.child[2]
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as for condition")
+				break
 			}
 			if cond.rval.IsValid() {
 				// Condition is known at compile time, bypass test.
@@ -1575,6 +1578,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			init, cond, post, body := n.child[0], n.child[1], n.child[2], n.child[3]
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as for condition")
+				break
 			}
 			n.start = init.start
 			body.start = body.child[0] // loopvar
@@ -1673,6 +1677,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			cond, tbody := n.child[0], n.child[1]
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as if condition")
+				break
 			}
 			if cond.rval.IsValid() {
 				// Condition is known at compile time, bypass test.
@@ -1691,6 +1696,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			cond, tbody, fbody := n.child[0], n.child[1], n.child[2]
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as if condition")
+				break
 			}
 			if cond.rval.IsValid() {
 				// Condition is known at compile time, bypass test and the useless branch.
@@ -1712,6 +1718,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			init, cond, tbody := n.child[0], n.child[1], n.child[2]
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as if condition")
+				break
 			}
 			n.start = init.start
 			if cond.rval.IsValid() {
@@ -1733,6 +1740,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			init, cond, tbody, fbody := n.child[0], n.child[1], n.child[2], n.child[3]
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as if condition")
+				break
 			}
 			n.start = init.start
 			if cond.rval.IsValid() {
