@@ -1651,6 +1651,13 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 			// Found symbol, populate node info
 			n.sym, n.typ, n.findex, n.level = sym, sym.typ, sym.index, level
+			if sym.kind == pkgSym && (n.anc.kind != selectorExpr || n.anc.child[0] != n) {
+				// A package name is only valid as the left operand of a selector.
+				// Its type has no reflect.Type, so letting it flow into the type
+				// checker panics instead of reporting the error.
+				err = n.cfgErrorf("use of package %s not in selector", n.ident)
+				break
+			}
 			if n.findex < 0 {
 				n.val = sym.node
 			} else {
