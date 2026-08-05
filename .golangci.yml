@@ -27,6 +27,9 @@ linters:
       min-occurrences: 3
     misspell:
       locale: US
+    perfsprint:
+      # New in perfsprint v0.10, flags 7 pre-existing loops. Left for a separate change.
+      concat-loop: false
     staticcheck:
       checks: ["all", "-ST1000", "-ST1023", "-QF1001", "-QF1008", "-QF1011"]
   exclusions:
