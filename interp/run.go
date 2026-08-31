@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"go/constant"
+	"go/token"
 	"reflect"
 	"regexp"
 	"strings"
+	"unsafe"
 )
 
 // bltn type defines functions which run at CFG execution.
@@ -16,6 +18,158 @@ type bltn func(f *frame) bltn
 
 // bltnGenerator type defines a builtin generator function.
 type bltnGenerator func(n *node)
+
+type callOwnerBinder struct {
+	f        *frame
+	cancel   <-chan struct{}
+	bindArgs bool
+}
+
+// maxBoundWrapperCache bounds the per-group memoized host-bound wrappers;
+// activations with distinct cancel channels would otherwise accumulate one
+// entry per run on groups that survive sweeps.
+const maxBoundWrapperCache = 1024
+
+func newCallOwnerBinder(f *frame, cancel <-chan struct{}) *callOwnerBinder {
+	return &callOwnerBinder{f: f, cancel: cancel, bindArgs: true}
+}
+
+func (b *callOwnerBinder) value(v reflect.Value) reflect.Value {
+	bound, _ := b.bind(v, false)
+	return bound
+}
+
+func (b *callOwnerBinder) argument(v reflect.Value) reflect.Value {
+	if !b.bindArgs {
+		return v
+	}
+	bound, _ := b.bind(v, true)
+	return bound
+}
+
+func (b *callOwnerBinder) bind(v reflect.Value, hostBoundary bool) (reflect.Value, bool) {
+	if !v.IsValid() {
+		return v, false
+	}
+	switch v.Kind() {
+	case reflect.Func:
+		if v.IsNil() {
+			return v, false
+		}
+		// Argument snapshots are settable reflect values. Canonicalize through
+		// Interface so metadata registered for the original MakeFunc value remains
+		// discoverable after the function value has been copied into a snapshot.
+		target := reflect.ValueOf(v.Interface())
+		target = b.f.interp.activateDirectFuncFromExec(b.f, target, b.cancel)
+		typ := v.Type()
+		targetKey, meta, interpreted := b.f.interp.lookupInterpretedFunc(target)
+		if !interpreted {
+			return v, false
+		}
+		root, cancel := b.f.root, b.cancel
+		var bound reflect.Value
+		cacheKey := boundWrapperKey{target: targetKey, root: root, cancel: cancel, typ: typ, hostBoundary: hostBoundary}
+		if meta.group != nil {
+			b.f.interp.funcMu.RLock()
+			cached, cachedOK := meta.group.bound[cacheKey]
+			b.f.interp.funcMu.RUnlock()
+			if cachedOK {
+				// A sweep may have deleted the alias while the wrapper stayed
+				// cached; registration is idempotent and restores metadata
+				// discoverability for interpreted re-entry.
+				if hostBoundary {
+					b.f.interp.registerInterpretedFuncAlias(cached, meta, b.f)
+				}
+				return cached, true
+			}
+		}
+		bound = reflect.MakeFunc(typ, func(in []reflect.Value) []reflect.Value {
+			if hostBoundary {
+				return invokeInterpretedHostBoundary(b.f.interp, typ, meta.invoke, root, cancel, in, true)
+			}
+			if funcOwnerCanceled(cancel) {
+				return zeroFuncResults(typ)
+			}
+			return meta.invoke(in, root, cancel)
+		})
+		if meta.group != nil {
+			b.f.interp.funcMu.Lock()
+			if meta.group.bound == nil {
+				meta.group.bound = map[boundWrapperKey]reflect.Value{}
+			}
+			if len(meta.group.bound) >= maxBoundWrapperCache {
+				// Bound the cache: activations with distinct cancel channels
+				// would otherwise accumulate one entry per run on groups that
+				// survive sweeps.
+				meta.group.bound = map[boundWrapperKey]reflect.Value{}
+			}
+			meta.group.bound[cacheKey] = bound
+			b.f.interp.funcMu.Unlock()
+		}
+		if hostBoundary {
+			b.f.interp.registerInterpretedFuncAlias(bound, meta, b.f)
+		}
+		return bound, true
+	case reflect.Interface:
+		if v.IsNil() || v.Elem().Kind() != reflect.Func {
+			return v, false
+		}
+		bound, changed := b.bind(v.Elem(), hostBoundary)
+		if !changed {
+			return v, false
+		}
+		out := reflect.New(v.Type()).Elem()
+		out.Set(bound)
+		return out, true
+	default:
+		return v, false
+	}
+}
+
+func markNativeCallOwnedValues(f *frame, binder *callOwnerBinder, target reflect.Value, values []reflect.Value) {
+	if binder.bindArgs && target.IsValid() && (target.Kind() != reflect.Func || !target.IsNil()) {
+		f.interp.markOwnedValuesHostSharedFromExec(values...)
+	}
+}
+
+func setOwnedValueOutput(f *frame, destination, value reflect.Value) {
+	f.interp.markOwnedCellWriteFromExec(destination, value)
+	destination.Set(value)
+}
+
+func activateDirectFuncResultsFromExec(f *frame, values []reflect.Value) []reflect.Value {
+	for index, value := range values {
+		values[index] = activateDirectFuncValueFromExec(f, value)
+	}
+	return values
+}
+
+func activateDirectFuncValueFromExec(f *frame, value reflect.Value) reflect.Value {
+	if !value.IsValid() {
+		return value
+	}
+	if value.Type() == valueInterfaceType && value.CanInterface() {
+		wrapped := value.Interface().(valueInterface)
+		wrapped.value = activateDirectFuncValueFromExec(f, wrapped.value)
+		return reflect.ValueOf(wrapped)
+	}
+	if value.Kind() == reflect.Interface {
+		if value.IsNil() {
+			return value
+		}
+		active := activateDirectFuncValueFromExec(f, value.Elem())
+		if sameFuncvalKey(active, value.Elem()) {
+			return value
+		}
+		out := reflect.New(value.Type()).Elem()
+		out.Set(active)
+		return out
+	}
+	if value.Kind() == reflect.Func {
+		return f.interp.activateDirectFuncFromExec(f, value, f.cancel)
+	}
+	return value
+}
 
 var builtin = [...]bltnGenerator{
 	aNop:          nop,
@@ -101,21 +255,47 @@ func (interp *Interpreter) run(n *node, cf *frame) {
 	}
 	var f *frame
 	if cf == nil {
+		// No in-tree caller passes a nil frame, but read interp.frame under
+		// its mutex so a future caller cannot race prepareExecutionFrame's
+		// root replacement.
+		interp.mutex.RLock()
 		f = interp.frame
+		interp.mutex.RUnlock()
 	} else {
-		f = newFrame(cf, len(n.types), interp.runid())
+		f = newFrame(cf, len(n.types), cf.runid())
 	}
-	interp.mutex.RLock()
-	c := reflect.ValueOf(interp.done)
-	interp.mutex.RUnlock()
+	interp.runOnFrame(n, f)
+}
 
-	f.mutex.Lock()
-	f.done = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: c}
-	f.mutex.Unlock()
-
-	for i, t := range n.types {
-		f.data[i] = reflect.New(t).Elem()
+// runOnFrame executes n using the supplied frame as its exact execution root.
+// Execute uses this to keep a canceled activation separate from the durable
+// interpreter frame used by later evaluations.
+func (interp *Interpreter) runOnFrame(n *node, f *frame) {
+	if n == nil {
+		return
 	}
+	// The fence is held only while the frame is being initialized: execution
+	// re-acquires it per step. Use a scoped release so a panic during setup
+	// cannot leak the read lock and wedge later sweeps.
+	interp.funcSweepMu.RLock()
+	func() {
+		defer interp.funcSweepMu.RUnlock()
+		if !f.done.Chan.IsValid() {
+			interp.mutex.RLock()
+			cancel := interp.done
+			c := reflect.ValueOf(cancel)
+			interp.mutex.RUnlock()
+
+			f.mutex.Lock()
+			f.done = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: c}
+			f.cancel = cancel
+			f.mutex.Unlock()
+		}
+
+		for i, t := range n.types {
+			f.data[i] = reflect.New(t).Elem()
+		}
+	}()
 	runCfg(n.start, f, n, nil)
 }
 
@@ -129,10 +309,22 @@ func isExecNode(n *node, exec bltn) bool {
 	return a1 == a2
 }
 
+// execIdentity returns the funcval address of a builtin closure: the single
+// pointer word of a func variable. Unlike reflect.Value.Pointer(), which
+// returns the shared code pointer for closures created by the same generator,
+// the funcval address is unique per closure instance and identifies the exact
+// node exec.
+func execIdentity(exec bltn) uintptr {
+	if exec == nil {
+		return 0
+	}
+	return *(*uintptr)(unsafe.Pointer(&exec))
+}
+
 // originalExecNode looks in the tree of nodes for the node which has exec,
 // aside from n, in order to know where n "inherited" that exec from.
 func originalExecNode(n *node, exec bltn) *node {
-	execAddr := reflect.ValueOf(exec).Pointer()
+	execAddr := execIdentity(exec)
 	var originalNode *node
 	seen := make(map[int64]struct{})
 	root := n
@@ -156,7 +348,7 @@ func originalExecNode(n *node, exec bltn) *node {
 			if wn.exec == nil {
 				return true
 			}
-			if reflect.ValueOf(wn.exec).Pointer() == execAddr {
+			if execIdentity(wn.exec) == execAddr {
 				originalNode = wn
 				return false
 			}
@@ -202,36 +394,196 @@ func panicFunc(s *scope) string {
 }
 
 // runCfg executes a node AST by walking its CFG and running node builtin at each step.
+//
+// runCfg is the ONLY frame activation site (call sites: runOnFrame, the
+// declared-function wrapper invoke, the go-statement launch, the interpreted
+// call, and the closure-wrapper invoke), so the activeFrames registration
+// below covers every execution that can touch frame cells.
 func runCfg(n *node, f *frame, funcNode, callNode *node) {
 	var exec bltn
+	f.interp.funcMu.Lock()
+	f.funcState = funcFrameActive
+	// Register the activation for the incremental ownership sweep's root set.
+	// Refcounted: a root frame can re-enter runCfg via a reentrant Eval while
+	// an outer activation on the same frame is still live.
+	f.interp.activeFrames[f]++
+	f.interp.funcMu.Unlock()
 	defer func() {
+		recovered := recover()
 		f.mutex.Lock()
-		f.recovered = recover()
-		for _, val := range f.deferred {
-			val[0].Call(val[1:])
+		f.recovered = recovered
+		deferred := f.deferred
+		f.deferred = nil
+		f.mutex.Unlock()
+		// A canceled evaluation's worker unwinds its deferred calls after the
+		// API call has returned and released the execution gate, so its
+		// interpreted writes could overlap a later evaluation. While its
+		// deferred calls run, the funcSweep fence is held exclusively: their
+		// interpreted steps exclude every other execution step, while native
+		// stretches still release the fence. Only the root's own deferred
+		// section toggles the flag; nested frames unwind inside it.
+		zombiePhase := f.root != nil && f.root.canceled()
+		// The counters are incremented under the exclusive fence so an
+		// incremental ownedGC sweep holding the fence reads frameDrains
+		// exactly: a draining frame's remaining deferred call values are
+		// invisible to the sweep's root set, so no sweep may run while any
+		// drain is in progress (the sweep re-checks and stays pending).
+		if len(deferred) > 0 || zombiePhase {
+			f.interp.funcSweepMu.Lock()
+			if zombiePhase {
+				f.interp.zombieDefers.Add(1)
+			}
+			if len(deferred) > 0 {
+				f.interp.frameDrains.Add(1)
+			}
+			f.interp.funcSweepMu.Unlock()
 		}
-		if f.recovered != nil {
+		func() {
+			defer func() {
+				if zombiePhase {
+					f.interp.zombieDefers.Add(-1)
+				}
+				if len(deferred) > 0 {
+					f.interp.frameDrains.Add(-1)
+				}
+			}()
+			for _, deferredCall := range deferred {
+				// Cancellation can land while this drain is parked inside an
+				// earlier deferred host call — after the one-shot zombiePhase
+				// sample above. Re-sample at every deferred-call boundary:
+				// once the root's owner has fired, the remaining interpreted
+				// deferred steps must hold the exclusive fence (zombieDefers)
+				// and the nested gate bypass is refused live via the token's
+				// owner channel.
+				if !zombiePhase && f.root != nil && f.root.canceled() {
+					zombiePhase = true
+					f.interp.funcSweepMu.Lock()
+					f.interp.zombieDefers.Add(1)
+					f.interp.funcSweepMu.Unlock()
+				}
+				val := deferredCall.values
+				func() {
+					defer func() {
+						if deferredPanic := recover(); deferredPanic != nil {
+							f.mutex.RLock()
+							previous := f.recovered
+							f.mutex.RUnlock()
+							if previous != nil {
+								f.interp.rollbackInterpretedFuncPanicEscape(previous)
+							}
+							f.mutex.Lock()
+							f.recovered = deferredPanic
+							f.mutex.Unlock()
+						}
+					}()
+					if invoke, ok := f.interp.interpretedFunc(val[0]); ok {
+						invoke(val[1:], f.root, nil)
+					} else if deferredCall.exclusive {
+						// Only internally generated pure-reflect deferred
+						// closures set exclusive; they cannot re-enter
+						// interpreted code or fence bookkeeping, so this
+						// bracket stays outside the capture protocol.
+						f.interp.funcSweepMu.Lock()
+						func() {
+							defer f.interp.funcSweepMu.Unlock()
+							val[0].Call(val[1:])
+						}()
+					} else {
+						val[0].Call(val[1:])
+					}
+				}()
+			}
+		}()
+		f.mutex.Lock()
+		recovered = f.recovered
+		f.mutex.Unlock()
+		// Revert the function literal slots when this frame exits. This
+		// bracket's own restore is the only frame-cell write the exit code
+		// itself performs (the deferred drain can still reach the closure
+		// invoker's restore in buildClosureWrapper — a second, master-parity
+		// unfenced frame-cell writer this bracket does not cover), so the
+		// restore holds the funcSweep fence (read mode): the incremental
+		// sweep reads capture cells unfenced, trusting the fence for
+		// exclusivity against this write. The fence cannot be held here (the
+		// last step released it and the drain counters are closed), so the
+		// read lock is safe, and it is released by defer like every other
+		// fence bracket. Skipped when another activation shares this frame's
+		// cells through a lexical clone (a goroutine or closure activation
+		// whose cloneOf chain points at this frame): the shared cell may
+		// still be read through the clone, and such an entry simply stays
+		// sweep/purge reclaimable. Frames that executed no literal pay only
+		// the funcSlots check: the unlocked slice-header read below is safe
+		// because a frame's slots are written only by its own executing
+		// goroutine (getFunc runs as a step of the frame's single runCfg
+		// activation, and root frames never record), the same single-writer
+		// property the exec loop relies on for f.data.
+		if len(f.funcSlots) > 0 {
+			f.mutex.RLock()
+			pending := f.funcSlots
+			f.mutex.RUnlock()
+			if len(pending) > 0 {
+				f.interp.funcMu.Lock()
+				lastActivation := f.interp.activeFrames[f] <= 1
+				for active := range f.interp.activeFrames {
+					if active != f && frameSharesSlotsWith(active, f) {
+						lastActivation = false
+						break
+					}
+				}
+				f.interp.funcMu.Unlock()
+				if lastActivation {
+					func() {
+						f.interp.funcSweepMu.RLock()
+						defer f.interp.funcSweepMu.RUnlock()
+						applyFuncSlotRestores(f)
+					}()
+				}
+			}
+		}
+		// Deregister the activation only AFTER the full release sequence and
+		// BEFORE the repanic: while this frame's deferred calls drain —
+		// including a canceled worker's zombie phase, whose interpreted
+		// deferred bodies re-enter runCfg as ordinary activations — the frame
+		// must stay in the incremental sweep's root set, because its cells pin
+		// state the drain can still touch. The defer keeps the registry exact
+		// even if the release sequence itself panics.
+		func() {
+			defer func() {
+				f.interp.funcMu.Lock()
+				if count := f.interp.activeFrames[f]; count <= 1 {
+					delete(f.interp.activeFrames, f)
+				} else {
+					f.interp.activeFrames[f] = count - 1
+				}
+				f.interp.funcMu.Unlock()
+			}()
+			f.interp.releaseUnreachableChannelSends(f, funcNode)
+			f.interp.releaseInterpretedFuncs(f, funcNode, recovered)
+			f.interp.releaseOwnedObjects(f, funcNode)
+		}()
+		if recovered != nil {
 			oNode := originalExecNode(n, exec)
 			if oNode == nil {
 				oNode = n
 			}
-			errorer, ok := f.recovered.(error)
+			panicValue, _ := splitInterpretedPanic(recovered)
+			errorer, ok := panicValue.(error)
 			// in this specific case, the stdlib would/will suppress the panic, so we
 			// suppress the logging here accordingly, to get a similar and consistent
 			// behavior.
 			if !ok || errorer.Error() != errAbortHandler.Error() {
 				fmt.Fprintln(n.interp.stderr, oNode.cfgErrorf("panic: %s(...)", panicFunc(oNode.scope)))
 			}
-			f.mutex.Unlock()
-			panic(f.recovered)
+			panic(recovered)
 		}
-		f.mutex.Unlock()
 	}()
 
 	dbg := n.interp.debugger
 	if dbg == nil {
-		for exec := n.exec; exec != nil && f.runid() == n.interp.runid(); {
-			exec = exec(f)
+		// Assign to the outer exec, not a shadow: the deferred recovery above
+		// reads it to locate the failing node for the panic position.
+		for exec = n.exec; exec != nil && !f.canceled(); {
+			exec = execWithFuncSweepFence(exec, f)
 		}
 		return
 	}
@@ -243,12 +595,12 @@ func runCfg(n *node, f *frame, funcNode, callNode *node) {
 	dbg.enterCall(funcNode, callNode, f)
 	defer dbg.exitCall(funcNode, callNode, f)
 
-	for m, exec := n, n.exec; f.runid() == n.interp.runid(); {
+	for m, exec := n, n.exec; !f.canceled(); {
 		if dbg.exec(m, f) {
 			break
 		}
 
-		exec = exec(f)
+		exec = execWithFuncSweepFence(exec, f)
 		if exec == nil {
 			break
 		}
@@ -267,6 +619,105 @@ func runCfg(n *node, f *frame, funcNode, callNode *node) {
 			m = originalExecNode(m, exec)
 		}
 	}
+}
+
+func execWithFuncSweepFence(exec bltn, f *frame) (next bltn) {
+	// Consume a pending incremental ownership sweep BEFORE any acquisition:
+	// this goroutine holds no locks here, so the sweep can take the fence
+	// exclusively via TryLock and then funcMu — the universal order. A TryLock
+	// loss (a zombie deferred step holds the fence) leaves the request pending
+	// and retries on the next step.
+	f.interp.maybeRunOwnedGCSweep()
+	if f.interp.zombieDefers.Load() > 0 {
+		// A canceled worker's deferred step runs with the fence held
+		// exclusively: its interpreted writes must not overlap another
+		// execution's steps on shared containers. Interpreted panics unwind
+		// through here, so the release must be panic-safe.
+		f.interp.funcSweepMu.Lock()
+		f.interp.funcSweepExclusive.Add(1)
+		previous := f.fenceExclusive.Swap(true)
+		defer func() {
+			f.fenceExclusive.Store(previous)
+			f.interp.funcSweepExclusive.Add(-1)
+			f.interp.funcSweepMu.Unlock()
+		}()
+		return exec(f)
+	}
+	f.interp.funcSweepMu.RLock()
+	previous := f.fenceExclusive.Swap(false)
+	defer func() {
+		f.fenceExclusive.Store(previous)
+		f.interp.funcSweepMu.RUnlock()
+	}()
+	return exec(f)
+}
+
+// The fence release helpers below must unlock in the mode that was acquired
+// for the enclosing step, not in the mode they would re-derive now: the
+// zombieDefers counter can flip mid-step while a canceled worker starts or
+// finishes its deferred unwind on another goroutine, and releasing in a
+// re-derived mode corrupts the RWMutex fatally. The mode acquired by
+// execWithFuncSweepFence is captured in f.fenceExclusive and restored when
+// the same frame nests another acquisition (a reentrant Eval on the paused
+// execution runs its steps on the same global frame).
+//
+// Invariant: the helpers must only be called from exec-step bodies running
+// under an enclosing execWithFuncSweepFence on the same frame. A caller that
+// holds no fence would read a stale mode and unlock an unheld lock.
+
+func callWithFuncSweepFenceReleased(f *frame, call func() []reflect.Value) (out []reflect.Value) {
+	if f.fenceExclusive.Load() {
+		f.interp.funcSweepMu.Unlock()
+		defer f.interp.funcSweepMu.Lock()
+	} else {
+		f.interp.funcSweepMu.RUnlock()
+		defer f.interp.funcSweepMu.RLock()
+	}
+	return call()
+}
+
+func runWithFuncSweepFenceReleased(f *frame, run func()) {
+	if f.fenceExclusive.Load() {
+		f.interp.funcSweepMu.Unlock()
+		defer f.interp.funcSweepMu.Lock()
+	} else {
+		f.interp.funcSweepMu.RUnlock()
+		defer f.interp.funcSweepMu.RLock()
+	}
+	run()
+}
+
+func selectWithFuncSweepFenceReleased(f *frame, cases []reflect.SelectCase) (chosen int, recv reflect.Value, recvOK bool) {
+	if f.fenceExclusive.Load() {
+		f.interp.funcSweepMu.Unlock()
+		defer f.interp.funcSweepMu.Lock()
+	} else {
+		f.interp.funcSweepMu.RUnlock()
+		defer f.interp.funcSweepMu.RLock()
+	}
+	return reflect.Select(cases)
+}
+
+func recvWithFuncSweepFenceReleased(f *frame, channel reflect.Value) (value reflect.Value, ok bool) {
+	if f.fenceExclusive.Load() {
+		f.interp.funcSweepMu.Unlock()
+		defer f.interp.funcSweepMu.Lock()
+	} else {
+		f.interp.funcSweepMu.RUnlock()
+		defer f.interp.funcSweepMu.RLock()
+	}
+	return channel.Recv()
+}
+
+func sendWithFuncSweepFenceReleased(f *frame, channel, value reflect.Value) {
+	if f.fenceExclusive.Load() {
+		f.interp.funcSweepMu.Unlock()
+		defer f.interp.funcSweepMu.Lock()
+	} else {
+		f.interp.funcSweepMu.RUnlock()
+		defer f.interp.funcSweepMu.RLock()
+	}
+	channel.Send(value)
 }
 
 func stripReceiverFromArgs(signature string) (string, error) {
@@ -313,16 +764,30 @@ func typeAssert(n *node, withResult, withOk bool) {
 	typID := typ.id()
 	rtype := typ.refType(nil) // type to assert
 	next := getExec(n.tnext)
+	setResult := func(f *frame, v reflect.Value) {
+		destination := value0(f)
+		f.interp.markOwnedCellWriteFromExec(destination, v)
+		destination.Set(v)
+	}
+	finishStatus := func(f *frame, ok *bool) {
+		if withResult && withOk && !*ok {
+			destination := value0(f)
+			zero := reflect.Zero(destination.Type())
+			f.interp.markOwnedCellWriteFromExec(destination, zero)
+			destination.Set(zero)
+		}
+		if setStatus {
+			value1(f).SetBool(*ok)
+		}
+	}
 
 	switch {
 	case isInterfaceSrc(typ):
 		n.exec = func(f *frame) bltn {
 			valf := value(f)
 			v, ok := valf.Interface().(valueInterface)
-			if setStatus {
-				defer func() {
-					value1(f).SetBool(ok)
-				}()
+			if withOk {
+				defer finishStatus(f, &ok)
 			}
 			if !ok {
 				if !withOk {
@@ -335,7 +800,7 @@ func typeAssert(n *node, withResult, withOk bool) {
 			}
 			if v.node.typ.id() == typID {
 				if withResult {
-					value0(f).Set(valf)
+					setResult(f, valf)
 				}
 				return next
 			}
@@ -383,7 +848,7 @@ func typeAssert(n *node, withResult, withOk bool) {
 			}
 
 			if withResult {
-				value0(f).Set(valf)
+				setResult(f, valf)
 			}
 			return next
 		}
@@ -392,10 +857,8 @@ func typeAssert(n *node, withResult, withOk bool) {
 			var leftType reflect.Type
 			v := value(f)
 			val, ok := v.Interface().(valueInterface)
-			if setStatus {
-				defer func() {
-					value1(f).SetBool(ok)
-				}()
+			if withOk {
+				defer finishStatus(f, &ok)
 			}
 			if ok && val.node.typ.cat != valueT {
 				m0 := val.node.typ.methods()
@@ -418,7 +881,7 @@ func typeAssert(n *node, withResult, withOk bool) {
 				}
 
 				if withResult {
-					value0(f).Set(genInterfaceWrapper(val.node, rtype)(f))
+					setResult(f, genInterfaceWrapper(val.node, rtype)(f))
 				}
 				ok = true
 				return next
@@ -448,17 +911,15 @@ func typeAssert(n *node, withResult, withOk bool) {
 				return next
 			}
 			if withResult {
-				value0(f).Set(v)
+				setResult(f, v)
 			}
 			return next
 		}
 	case isEmptyInterface(n.child[0].typ):
 		n.exec = func(f *frame) bltn {
 			var ok bool
-			if setStatus {
-				defer func() {
-					value1(f).SetBool(ok)
-				}()
+			if withOk {
+				defer finishStatus(f, &ok)
 			}
 			val := value(f)
 			concrete := val.Interface()
@@ -482,9 +943,9 @@ func typeAssert(n *node, withResult, withOk bool) {
 			if withResult {
 				if isInterfaceSrc(typ) {
 					// TODO(mpl): this requires more work. the wrapped node is not complete enough.
-					value0(f).Set(reflect.ValueOf(valueInterface{n.child[0], reflect.ValueOf(concrete)}))
+					setResult(f, reflect.ValueOf(valueInterface{n.child[0], reflect.ValueOf(concrete)}))
 				} else {
-					value0(f).Set(reflect.ValueOf(concrete))
+					setResult(f, reflect.ValueOf(concrete))
 				}
 			}
 			return next
@@ -493,10 +954,8 @@ func typeAssert(n *node, withResult, withOk bool) {
 		n.exec = func(f *frame) bltn {
 			v := value(f).Elem()
 			ok := v.IsValid()
-			if setStatus {
-				defer func() {
-					value1(f).SetBool(ok)
-				}()
+			if withOk {
+				defer finishStatus(f, &ok)
 			}
 			if !ok {
 				if !withOk {
@@ -518,17 +977,15 @@ func typeAssert(n *node, withResult, withOk bool) {
 				return next
 			}
 			if withResult {
-				value0(f).Set(v)
+				setResult(f, v)
 			}
 			return next
 		}
 	default:
 		n.exec = func(f *frame) bltn {
 			v, ok := value(f).Interface().(valueInterface)
-			if setStatus {
-				defer func() {
-					value1(f).SetBool(ok)
-				}()
+			if withOk {
+				defer finishStatus(f, &ok)
 			}
 			if !ok || !v.value.IsValid() {
 				ok = false
@@ -546,7 +1003,7 @@ func typeAssert(n *node, withResult, withOk bool) {
 				return next
 			}
 			if withResult {
-				value0(f).Set(v.value)
+				setResult(f, v.value)
 			}
 			return next
 		}
@@ -594,7 +1051,7 @@ func convert(n *node) {
 			typ = valueInterfaceType
 		}
 		n.exec = func(f *frame) bltn {
-			dest(f).Set(reflect.New(typ).Elem())
+			setOwnedValueOutput(f, dest(f), reflect.New(typ).Elem())
 			return next
 		}
 		return
@@ -609,27 +1066,50 @@ func convert(n *node) {
 		value = genValue(c)
 	}
 
-	for _, con := range n.interp.hooks.convert {
+	for _, hook := range n.interp.hooks.convert {
 		if c.typ.rtype == nil {
 			continue
 		}
 
-		fn := con(c.typ.rtype, typ)
+		fn := hook.fn(c.typ.rtype, typ)
 		if fn == nil {
 			continue
 		}
 		n.exec = func(f *frame) bltn {
-			fn(value(f), dest(f))
+			source := cloneCallArgValue(value(f))
+			source = newCallOwnerBinder(f, f.cancel).argument(source)
+			target := dest(f)
+			converted := reflect.New(target.Type()).Elem()
+			unsafeIdentity := hook.ownedUnsafeIdentity && (source.Kind() == reflect.UnsafePointer || target.Kind() == reflect.UnsafePointer)
+			// unsafe.Pointer conversions are interpreter identity views, not a
+			// native publication boundary. The allocation remains owned until the
+			// converted value itself is returned or passed to native code.
+			if !unsafeIdentity {
+				f.interp.markOwnedValuesHostSharedFromExec(source)
+			}
+			runWithFuncSweepFenceReleased(f, func() { fn(source, converted) })
+			converted = activateDirectFuncValueFromExec(f, converted)
+			if !unsafeIdentity {
+				f.interp.registerNativeResultValuesFromExec(f, converted)
+			}
+			if f.canceled() {
+				return nil
+			}
+			setOwnedValueOutput(f, target, converted)
 			return next
 		}
 		return
 	}
 
 	n.exec = func(f *frame) bltn {
+		destination := dest(f)
 		if doConvert {
-			dest(f).Set(value(f).Convert(typ))
+			source := value(f)
+			converted := source.Convert(typ)
+			f.interp.registerOwnedAppend(converted, source, f)
+			setOwnedValueOutput(f, destination, converted)
 		} else {
-			dest(f).Set(value(f))
+			setOwnedValueOutput(f, destination, value(f))
 		}
 		return next
 	}
@@ -666,7 +1146,9 @@ func assignFromCall(n *node) {
 				data[c.findex].Set(s)
 				continue
 			}
-			v(f).Set(s)
+			destination := v(f)
+			f.interp.markOwnedCellWriteFromExec(destination, s)
+			destination.Set(s)
 		}
 		return next
 	}
@@ -684,18 +1166,33 @@ func assign(n *node) {
 
 	for i := 0; i < n.nleft; i++ {
 		dest, src := n.child[i], n.child[sbase+i]
-		if isNamedFuncSrc(src.typ) {
+		if len(n.assignTmp) == n.nright {
+			index := n.assignTmp[i]
+			svalue[i] = func(f *frame) reflect.Value { return f.data[index] }
+		} else if isNamedFuncSrc(src.typ) {
 			svalue[i] = genFuncValue(src)
 		} else {
 			svalue[i] = genDestValue(dest.typ, src)
 		}
 		if isMapEntry(dest) {
-			if isInterfaceSrc(dest.child[1].typ) { // key
-				ivalue[i] = genValueInterface(dest.child[1])
+			// A snapshotted receiver or key (non-passive operand) is read
+			// from its stable slot; passive ones are read when the
+			// assignment is applied, matching gc.
+			if len(dest.assignTmp) == 2 && dest.assignTmp[0] >= 0 {
+				receiverIndex := dest.assignTmp[0]
+				dvalue[i] = func(f *frame) reflect.Value { return f.data[receiverIndex] }
 			} else {
+				dvalue[i] = genValue(dest.child[0])
+			}
+			switch {
+			case len(dest.assignTmp) == 2 && dest.assignTmp[1] >= 0:
+				keyIndex := dest.assignTmp[1]
+				ivalue[i] = func(f *frame) reflect.Value { return f.data[keyIndex] }
+			case isInterfaceSrc(dest.child[1].typ): // key
+				ivalue[i] = genValueInterface(dest.child[1])
+			default:
 				ivalue[i] = genValue(dest.child[1])
 			}
-			dvalue[i] = genValue(dest.child[0])
 		} else {
 			dvalue[i] = genValue(dest)
 		}
@@ -710,7 +1207,10 @@ func assign(n *node) {
 			}
 		case i != nil:
 			n.exec = func(f *frame) bltn {
-				d(f).SetMapIndex(i(f), s(f))
+				destination, source := d(f), s(f)
+				key := i(f)
+				f.interp.markOwnedWriteFromExec(destination, key, source)
+				destination.SetMapIndex(key, source)
 				return next
 			}
 		case n.kind == defineStmt:
@@ -724,29 +1224,13 @@ func assign(n *node) {
 			}
 		default:
 			n.exec = func(f *frame) bltn {
-				d(f).Set(s(f))
+				destination, source := d(f), s(f)
+				f.interp.markOwnedCellWriteFromExec(destination, source)
+				destination.Set(source)
 				return next
 			}
 		}
 		return
-	}
-
-	// Multi assign operation.
-	types := make([]reflect.Type, n.nright)
-	index := make([]int, n.nright)
-	level := make([]int, n.nright)
-
-	for i := range types {
-		var t reflect.Type
-		switch typ := n.child[sbase+i].typ; {
-		case isInterfaceSrc(typ):
-			t = valueInterfaceType
-		default:
-			t = typ.TypeOf()
-		}
-		types[i] = t
-		index[i] = n.child[i].findex
-		level[i] = n.child[i].level
 	}
 
 	if n.kind == defineStmt {
@@ -756,14 +1240,52 @@ func assign(n *node) {
 				if n.child[i].ident == "_" {
 					continue
 				}
-				data := getFrame(f, level[i]).data
-				j := index[i]
+				data := getFrame(f, n.child[i].level).data
+				j := n.child[i].findex
 				data[j] = reflect.New(data[j].Type()).Elem()
 				data[j].Set(s(f))
 			}
 			return next
 		}
 		return
+	}
+
+	if len(n.assignTmp) == n.nright {
+		// The right-hand sides already live in stable, destination-typed frame
+		// slots. Assign them directly without a second set of temporaries.
+		n.exec = func(f *frame) bltn {
+			for i, d := range dvalue {
+				if n.child[i].ident == "_" {
+					continue
+				}
+				s := svalue[i](f)
+				if j := ivalue[i]; j != nil {
+					destination := d(f)
+					key := j(f)
+					f.interp.markOwnedWriteFromExec(destination, key, s)
+					destination.SetMapIndex(key, s)
+				} else {
+					destination := d(f)
+					f.interp.markOwnedCellWriteFromExec(destination, s)
+					destination.Set(s)
+				}
+			}
+			return next
+		}
+		return
+	}
+
+	// Multi assign operation.
+	types := make([]reflect.Type, n.nright)
+	for i := range types {
+		var t reflect.Type
+		switch typ := n.child[sbase+i].typ; {
+		case isInterfaceSrc(typ):
+			t = valueInterfaceType
+		default:
+			t = typ.TypeOf()
+		}
+		types[i] = t
 	}
 
 	// To handle possible swap in multi-assign:
@@ -783,12 +1305,110 @@ func assign(n *node) {
 				continue
 			}
 			if j := ivalue[i]; j != nil {
-				d(f).SetMapIndex(j(f), t[i]) // Assign a map entry
+				destination := d(f)
+				key := j(f)
+				f.interp.markOwnedWriteFromExec(destination, key, t[i])
+				destination.SetMapIndex(key, t[i]) // Assign a map entry
 			} else {
-				d(f).Set(t[i]) // Assign a var or array/slice entry
+				destination := d(f)
+				f.interp.markOwnedCellWriteFromExec(destination, t[i])
+				destination.Set(t[i]) // Assign a var or array/slice entry
 			}
 		}
 		return next
+	}
+}
+
+// snapshotAssign stores one right-hand-side value of a multi-assignment in a
+// temporary frame slot. The synthetic snapshot nodes are sequenced between
+// operand CFGs, preserving Go's left-to-right evaluation before assign updates
+// any destination.
+func snapshotAssign(n *node) {
+	value := genDestValue(n.typ, n.assignSrc)
+	index := n.findex
+	next := getExec(n.tnext)
+	n.exec = func(f *frame) bltn {
+		f.data[index].Set(value(f))
+		return next
+	}
+}
+
+func snapshotCallArg(n *node) {
+	value := n.callValue
+	next := getExec(n.tnext)
+	if value == nil {
+		// cfg guarantees one snapshot node per call argument; a generator
+		// mismatch must degrade to a direct evaluation instead of calling a
+		// nil value func at runtime.
+		n.exec = func(f *frame) bltn { return next }
+		return
+	}
+	n.exec = func(f *frame) bltn {
+		v := value(f)
+		if v.IsValid() {
+			if wrapped, ok := v.Interface().(valueInterface); ok {
+				wrapped.value = cloneCallArgValue(wrapped.value)
+				v = reflect.ValueOf(wrapped)
+			} else {
+				v = cloneCallArgValue(v)
+			}
+		}
+		f.setCallArg(n, v)
+		return next
+	}
+}
+
+func cloneCallArgValue(v reflect.Value) reflect.Value {
+	if !v.IsValid() {
+		return v
+	}
+	copy := reflect.New(v.Type()).Elem()
+	copy.Set(v)
+	return copy
+}
+
+func snapshotMethodReceiver(src reflect.Value, destType reflect.Type) reflect.Value {
+	for src.IsValid() {
+		wrapped, ok := src.Interface().(valueInterface)
+		if !ok {
+			break
+		}
+		src = wrapped.value
+	}
+	switch {
+	case src.Kind() == reflect.Ptr && destType.Kind() != reflect.Ptr:
+		// A value-receiver method selected through a pointer saves *src now.
+		return cloneCallArgValue(src.Elem())
+	case src.Kind() != reflect.Ptr && destType.Kind() == reflect.Ptr:
+		// A pointer-receiver method selected from an addressable value saves its
+		// address, so later mutations through that value remain visible.
+		return src.Addr()
+	default:
+		return cloneCallArgValue(src)
+	}
+}
+
+func useCallArgSnapshots(n *node, values []func(*frame) reflect.Value) {
+	if len(n.callSnaps) != len(values) {
+		return
+	}
+	for i, snapshot := range n.callSnaps {
+		snapshot.callValue = values[i]
+		snap := snapshot
+		values[i] = func(f *frame) reflect.Value {
+			return f.callArg(snap)
+		}
+	}
+}
+
+func useCallFuncSnapshot(n *node, value *func(*frame) reflect.Value) {
+	if n.callFunc == nil {
+		return
+	}
+	n.callFunc.callValue = *value
+	snapshot := n.callFunc
+	*value = func(f *frame) reflect.Value {
+		return f.callArg(snapshot)
 	}
 }
 
@@ -825,14 +1445,18 @@ func addr(n *node) {
 		i := n.findex
 		l := n.level
 		n.exec = func(f *frame) bltn {
-			getFrame(f, l).data[i] = value(f).Addr()
+			address := value(f).Addr()
+			f.interp.registerOwnedAddress(address, f)
+			getFrame(f, l).data[i] = address
 			return next
 		}
 		return
 	}
 
 	n.exec = func(f *frame) bltn {
-		dest(f).Set(value(f).Addr())
+		address := value(f).Addr()
+		f.interp.registerOwnedAddress(address, f)
+		dest(f).Set(address)
 		return next
 	}
 }
@@ -867,9 +1491,10 @@ func _print(n *node) {
 	for i, c := range child {
 		values[i] = genValue(c)
 	}
+	useCallArgSnapshots(n, values)
 	out := n.interp.stdout
 
-	genBuiltinDeferWrapper(n, values, nil, func(args []reflect.Value) []reflect.Value {
+	genBuiltinDeferWrapper(n, values, true, false, func(args []reflect.Value) []reflect.Value {
 		for i, value := range args {
 			if i > 0 {
 				fmt.Fprintf(out, " ")
@@ -886,9 +1511,10 @@ func _println(n *node) {
 	for i, c := range child {
 		values[i] = genValue(c)
 	}
+	useCallArgSnapshots(n, values)
 	out := n.interp.stdout
 
-	genBuiltinDeferWrapper(n, values, nil, func(args []reflect.Value) []reflect.Value {
+	genBuiltinDeferWrapper(n, values, true, false, func(args []reflect.Value) []reflect.Value {
 		for i, value := range args {
 			if i > 0 {
 				fmt.Fprintf(out, " ")
@@ -913,11 +1539,19 @@ func _recover(n *node) {
 			dest(f).Set(reflect.ValueOf(valueInterface{}))
 			return tnext
 		}
+		recovered, token := splitInterpretedPanic(f.anc.recovered)
+		if value, ok := recovered.(reflect.Value); ok && value.IsValid() && value.CanInterface() {
+			recovered = value.Interface()
+		}
+		recoveredValue := f.interp.adoptInterpretedFuncPanicValue(f, token, reflect.ValueOf(recovered))
+		if recoveredValue.IsValid() && recoveredValue.CanInterface() {
+			recovered = recoveredValue.Interface()
+		}
 
 		if isEmptyInterface(n.typ) {
-			dest(f).Set(reflect.ValueOf(f.anc.recovered))
+			dest(f).Set(reflect.ValueOf(recovered))
 		} else {
-			dest(f).Set(reflect.ValueOf(valueInterface{n, reflect.ValueOf(f.anc.recovered)}))
+			dest(f).Set(reflect.ValueOf(valueInterface{n, reflect.ValueOf(recovered)}))
 		}
 		f.anc.recovered = nil
 		return tnext
@@ -928,11 +1562,12 @@ func _panic(n *node) {
 	value := genValue(n.child[1])
 
 	n.exec = func(f *frame) bltn {
-		panic(value(f))
+		v := value(f)
+		panic(f.interp.beginInterpretedFuncPanic(v))
 	}
 }
 
-func genBuiltinDeferWrapper(n *node, in, out []func(*frame) reflect.Value, fn func([]reflect.Value) []reflect.Value) {
+func genBuiltinDeferWrapper(n *node, in []func(*frame) reflect.Value, releaseFence, exclusive bool, fn func([]reflect.Value) []reflect.Value) {
 	next := getExec(n.tnext)
 
 	if n.anc.kind == deferStmt {
@@ -943,14 +1578,13 @@ func genBuiltinDeferWrapper(n *node, in, out []func(*frame) reflect.Value, fn fu
 				val[i+1] = v(f)
 				inTypes[i] = val[i+1].Type()
 			}
-			outTypes := make([]reflect.Type, len(out))
-			for i, v := range out {
-				outTypes[i] = v(f).Type()
+			if releaseFence {
+				f.interp.markOwnedValuesHostSharedFromExec(val[1:]...)
 			}
 
-			funcType := reflect.FuncOf(inTypes, outTypes, false)
+			funcType := reflect.FuncOf(inTypes, nil, false)
 			val[0] = reflect.MakeFunc(funcType, fn)
-			f.deferred = append([][]reflect.Value{val}, f.deferred...)
+			f.deferred = append([]deferredCall{{values: val, exclusive: exclusive}}, f.deferred...)
 			return next
 		}
 		return
@@ -961,11 +1595,14 @@ func genBuiltinDeferWrapper(n *node, in, out []func(*frame) reflect.Value, fn fu
 		for i, v := range in {
 			val[i] = v(f)
 		}
+		if releaseFence {
+			f.interp.markOwnedValuesHostSharedFromExec(val...)
+		}
 
-		dests := fn(val)
-
-		for i, dest := range dests {
-			out[i](f).Set(dest)
+		if releaseFence {
+			runWithFuncSweepFenceReleased(f, func() { fn(val) })
+		} else {
+			fn(val)
 		}
 		return next
 	}
@@ -978,15 +1615,15 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 	if def, ok = n.val.(*node); !ok {
 		return genValueAsFunctionWrapper(n)
 	}
-	start := def.child[3].start
 	numRet := len(def.typ.ret)
 	var rcvr func(*frame) reflect.Value
 
-	if n.recv != nil {
+	// A receiver with no node and no value marks an unbound receiver (method
+	// expression): the receiver is provided at call time as first argument,
+	// there is nothing to read from the frame.
+	if n.recv != nil && (n.recv.node != nil || n.recv.val.IsValid()) {
 		rcvr = genValueRecv(n)
 	}
-	funcType := n.typ.TypeOf()
-
 	value := genValue(n)
 	var isDefer bool
 	if n.anc != nil && n.anc.anc != nil && n.anc.anc.kind == deferStmt {
@@ -1000,63 +1637,192 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 			// because original wrapping cloned the frame but this doesn't
 			return v
 		}
+		var receiver reflect.Value
+		if rcvr != nil {
+			receiver = snapshotMethodReceiver(rcvr(f), def.types[numRet])
+		}
+		build := buildDeclaredFunctionWrapper(n, def, f, receiver, f.root, f.cancel)
+		n.interp.registerInterpretedFuncWithRebinder(build.value, build.invoke, build.rebind, f, build.captures)
+		return build.value
+	}
+}
 
-		return reflect.MakeFunc(funcType, func(in []reflect.Value) []reflect.Value {
-			// Allocate and init local frame. All values to be settable and addressable.
-			fr := newFrame(f, len(def.types), f.runid())
-			d := fr.data
-			for i, t := range def.types {
-				d[i] = reflect.New(t).Elem()
+func makeInterpretedHostWrapper(interp *Interpreter, typ reflect.Type, invoke interpretedFuncInvoker, root *frame, cancel <-chan struct{}) reflect.Value {
+	return reflect.MakeFunc(typ, func(in []reflect.Value) []reflect.Value {
+		return invokeInterpretedHostBoundary(interp, typ, invoke, root, cancel, in, false)
+	})
+}
+
+func funcOwnerCanceled(cancel <-chan struct{}) bool {
+	if cancel == nil {
+		return false
+	}
+	select {
+	case <-cancel:
+		return true
+	default:
+		return false
+	}
+}
+
+func zeroFuncResults(typ reflect.Type) []reflect.Value {
+	out := make([]reflect.Value, typ.NumOut())
+	for index := range out {
+		out[index] = reflect.Zero(typ.Out(index))
+	}
+	return out
+}
+
+func invokeInterpretedHostBoundary(interp *Interpreter, typ reflect.Type, invoke interpretedFuncInvoker, root *frame, cancel <-chan struct{}, in []reflect.Value, rejectAlreadyCanceled bool) (out []reflect.Value) {
+	canceledAtEntry := funcOwnerCanceled(cancel)
+	if canceledAtEntry && rejectAlreadyCanceled {
+		return zeroFuncResults(typ)
+	}
+	fenceCancellation := !canceledAtEntry
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			if fenceCancellation && funcOwnerCanceled(cancel) {
+				interp.rollbackOwnedPublishedPanic(recovered)
+				out = zeroFuncResults(typ)
+				return
 			}
+			panic(interp.publishHostPanic(recovered))
+		}
+		if fenceCancellation && funcOwnerCanceled(cancel) {
+			out = zeroFuncResults(typ)
+			return
+		}
+		interp.publishHostValues(out...)
+	}()
+	out = invoke(in, root, cancel)
+	return out
+}
 
-			if rcvr == nil {
-				d = d[numRet:]
-			} else {
-				// Copy method receiver as first argument.
-				src, dest := rcvr(f), d[numRet]
-				sk, dk := src.Kind(), dest.Kind()
-				for {
-					vs, ok := src.Interface().(valueInterface)
-					if !ok {
-						break
-					}
-					src = vs.value
-					sk = src.Kind()
-				}
-				switch {
-				case sk == reflect.Ptr && dk != reflect.Ptr:
-					dest.Set(src.Elem())
-				case sk != reflect.Ptr && dk == reflect.Ptr:
-					dest.Set(src.Addr())
-				default:
-					dest.Set(src)
-				}
-				d = d[numRet+1:]
-			}
+func buildDeclaredFunctionWrapper(n, def *node, base *frame, receiver reflect.Value, root *frame, cancel <-chan struct{}) interpretedFuncBuild {
+	numRet := len(def.typ.ret)
+	start := def.child[3].start
+	// An unbound method wrapper (from a method expression) receives the method
+	// receiver as its first call argument, before the method own arguments.
+	unbound := !receiver.IsValid() && def.typ.recv != nil
+	argTypes := def.typ.arg
+	if unbound {
+		argTypes = append([]*itype{def.typ.recv}, def.typ.arg...)
+	}
+	invoke := func(in []reflect.Value, root *frame, cancel <-chan struct{}) []reflect.Value {
+		// Allocate and init local frame. All values to be settable and addressable.
+		fr := newFrame(base, len(def.types), base.runid())
+		if root != nil {
+			fr.root = root
+		}
+		fr.cancel = cancel
+		fr.done = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(cancel)}
+		d := fr.data
+		for i, t := range def.types {
+			d[i] = reflect.New(t).Elem()
+		}
 
-			// Copy function input arguments in local frame.
-			for i, arg := range in {
-				if i >= len(d) {
-					// In case of unused arg, there may be not even a frame entry allocated, just skip.
+		if !receiver.IsValid() {
+			d = d[numRet:]
+		} else {
+			// Copy method receiver as first argument.
+			src, dest := receiver, d[numRet]
+			sk, dk := src.Kind(), dest.Kind()
+			for {
+				vs, ok := src.Interface().(valueInterface)
+				if !ok {
 					break
 				}
-				typ := def.typ.arg[i]
-				switch {
-				case isEmptyInterface(typ) || typ.TypeOf() == valueInterfaceType:
-					d[i].Set(arg)
-				case isInterfaceSrc(typ):
-					d[i].Set(reflect.ValueOf(valueInterface{value: arg.Elem()}))
-				default:
-					d[i].Set(arg)
-				}
+				src = vs.value
+				sk = src.Kind()
 			}
+			switch {
+			case sk == reflect.Ptr && dk != reflect.Ptr:
+				dest.Set(src.Elem())
+			case sk != reflect.Ptr && dk == reflect.Ptr:
+				dest.Set(src.Addr())
+			default:
+				dest.Set(src)
+			}
+			d = d[numRet+1:]
+		}
 
-			// Interpreter code execution.
-			runCfg(start, fr, def, n)
+		// Copy function input arguments in local frame.
+		for i, arg := range in {
+			if i >= len(d) {
+				// In case of unused arg, there may be not even a frame entry allocated, just skip.
+				break
+			}
+			if unbound && i == 0 {
+				// The first argument is the method receiver: project it onto
+				// the embedded receiver of a promoted method if any, and
+				// accommodate a pointer or value base in the expression.
+				arg = unboundMethodReceiver(n, arg, d[i].Kind())
+			}
+			typ := argTypes[i]
+			// Note: for an unbound wrapper, argTypes was built with the
+			// receiver prepended, so argTypes[i] is the type of the same
+			// argument as d[i] (the receiver at position 0).
+			switch {
+			case isEmptyInterface(typ) || typ.TypeOf() == valueInterfaceType:
+				d[i].Set(arg)
+			case isInterfaceSrc(typ):
+				d[i].Set(reflect.ValueOf(valueInterface{value: arg.Elem()}))
+			default:
+				d[i].Set(arg)
+			}
+		}
 
-			return fr.data[:numRet]
-		})
+		// Interpreter code execution.
+		runCfg(start, fr, def, n)
+
+		return fr.data[:numRet]
 	}
+	funcType := n.typ.TypeOf()
+	boundRoot, boundCancel := root, cancel
+	wrapper := makeInterpretedHostWrapper(n.interp, funcType, invoke, boundRoot, boundCancel)
+	rebind := func(c *detachedRootCloner) interpretedFuncBuild {
+		clonedBase := c.cloneFrame(base)
+		clonedReceiver := receiver
+		if receiver.IsValid() {
+			clonedReceiver = c.cloneValue(receiver, false)
+		}
+		return buildDeclaredFunctionWrapper(n, def, clonedBase, clonedReceiver, c.newRoot, c.cancel)
+	}
+	return interpretedFuncBuild{value: wrapper, invoke: invoke, rebind: rebind}
+}
+
+// unboundMethodReceiver adapts the first call argument of an unbound method
+// (a method expression) to the method receiver expected by the method frame:
+// it projects an outer receiver onto the embedded field declaring a promoted
+// method, and accommodates a value or pointer base in the expression.
+func unboundMethodReceiver(n *node, src reflect.Value, destKind reflect.Kind) reflect.Value {
+	if n.recv != nil {
+		for _, i := range n.recv.index {
+			if src.Kind() == reflect.Ptr {
+				src = src.Elem()
+			}
+			src = src.Field(i)
+			if vi, ok := src.Interface().(valueInterface); ok {
+				src = vi.value
+			}
+		}
+	}
+	switch {
+	case src.Kind() == reflect.Ptr && destKind != reflect.Ptr:
+		// A value-receiver method selected through a pointer base: the
+		// receiver is a copy of the pointed value, as in native Go.
+		return src.Elem()
+	case src.Kind() != reflect.Ptr && destKind == reflect.Ptr:
+		// A pointer-receiver method with a value base can only occur on an
+		// addressable projection of the receiver argument.
+		if !src.CanAddr() {
+			c := reflect.New(src.Type()).Elem()
+			c.Set(src)
+			src = c
+		}
+		return src.Addr()
+	}
+	return src
 }
 
 func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
@@ -1107,7 +1873,11 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 		if vi, ok := v.Interface().(valueInterface); ok {
 			n2 = vi.node
 		}
-		v = getConcreteValue(v)
+		// Keep the whole concrete value in the wrapper first field, so it can
+		// be retrieved intact by binary code reflecting over the wrapper (i.e.
+		// for marshalling) or by type assertions. Only valueInterface layers
+		// are unwrapped here.
+		v = valueInterfaceValue(v)
 		w := reflect.New(wrap).Elem()
 		w.Field(0).Set(v)
 		for i, m := range methods {
@@ -1151,16 +1921,44 @@ func methodByName(value reflect.Value, name string, index []int) (v reflect.Valu
 	if v = value.MethodByName(name); v.IsValid() {
 		return
 	}
+	if value.Kind() == reflect.Struct {
+		// The method may be promoted from an embedded struct field: get it
+		// from the field at the index path computed at compile time.
+		if checkFieldIndex(value.Type(), index) {
+			v = methodFromField(value.FieldByIndex(index), name)
+		}
+		return
+	}
 	for value.Kind() == reflect.Ptr {
 		value = value.Elem()
 		if checkFieldIndex(value.Type(), index) {
 			value = value.FieldByIndex(index)
+			// The promoted method may have a pointer receiver: get it from
+			// the address of the embedded field.
+			if v = methodFromField(value, name); v.IsValid() {
+				return
+			}
+			continue
 		}
 		if v = value.MethodByName(name); v.IsValid() {
 			return
 		}
 	}
 	return
+}
+
+// methodFromField returns the method name of a struct field, with either a
+// value receiver or, if the field is addressable, a pointer receiver.
+func methodFromField(field reflect.Value, name string) reflect.Value {
+	if v := field.MethodByName(name); v.IsValid() {
+		return v
+	}
+	if field.CanAddr() {
+		if v := field.Addr().MethodByName(name); v.IsValid() {
+			return v
+		}
+	}
+	return reflect.Value{}
 }
 
 func checkFieldIndex(typ reflect.Type, index []int) bool {
@@ -1188,6 +1986,12 @@ func call(n *node) {
 	goroutine := n.anc.kind == goStmt
 	c0 := n.child[0]
 	value := genValue(c0)
+	if n.anc.kind == deferStmt {
+		// Deferred interpreted calls need a reflected wrapper, but the wrapper is
+		// still the call target and must therefore be evaluated before arguments.
+		value = genFunctionWrapper(c0)
+	}
+	useCallFuncSnapshot(n, &value)
 	var values []func(*frame) reflect.Value
 
 	numRet := len(c0.typ.ret)
@@ -1251,6 +2055,7 @@ func call(n *node) {
 			}
 		}
 	}
+	useCallArgSnapshots(n, values)
 
 	// Compute output argument value functions.
 	rtypes := c0.typ.ret
@@ -1288,27 +2093,45 @@ func call(n *node) {
 
 	if n.anc.kind == deferStmt {
 		// Store function call in frame for deferred execution.
-		value = genFunctionWrapper(c0)
 		n.exec = func(f *frame) bltn {
+			binder := newCallOwnerBinder(f, nil)
 			val := make([]reflect.Value, len(values)+1)
 			val[0] = value(f)
-			for i, v := range values {
-				val[i+1] = v(f)
+			if _, interpreted := f.interp.interpretedFunc(val[0]); interpreted {
+				binder.bindArgs = false
 			}
-			f.deferred = append([][]reflect.Value{val}, f.deferred...)
+			for i, v := range values {
+				val[i+1] = binder.argument(v(f))
+			}
+			markNativeCallOwnedValues(f, binder, val[0], val[1:])
+			f.deferred = append([]deferredCall{{values: val}}, f.deferred...)
 			return tnext
 		}
 		return
 	}
 
 	n.exec = func(f *frame) bltn {
-		f.mutex.Lock()
-		bf := value(f)
+		binder := newCallOwnerBinder(f, f.cancel)
+		var bf reflect.Value
+		if n.callFunc != nil {
+			bf = value(f)
+		} else {
+			f.mutex.Lock()
+			bf = value(f)
+			f.mutex.Unlock()
+		}
 		def, ok := bf.Interface().(*node)
 		if ok {
 			bf = def.rval
 		}
-		f.mutex.Unlock()
+		if _, interpreted := f.interp.interpretedFunc(bf); interpreted {
+			// Raw interpreted wrappers are permanently bound to the owner that
+			// created them, so values which escape through shared Go references
+			// cannot attach to a later Eval. Calls made by interpreted code are
+			// rebound here to the active caller while metadata is available.
+			binder.bindArgs = false
+			bf = binder.value(bf)
+		}
 
 		// Call bin func if defined
 		if bf.IsValid() {
@@ -1327,23 +2150,39 @@ func call(n *node) {
 				// Goroutine's arguments should be copied.
 				in := make([]reflect.Value, len(values))
 				for i, v := range values {
-					value := v(f)
+					value := binder.argument(v(f))
 					in[i] = reflect.New(value.Type()).Elem()
 					in[i].Set(value)
 				}
 
-				go callf(in)
+				markNativeCallOwnedValues(f, binder, bf, in)
+				go func() {
+					callf(in)
+					// Eval may have ended before this discarded call. Sweep once
+					// its native result boundary is complete.
+					f.interp.sweepRootInterpretedFuncs(f.root, reflect.Value{})
+				}()
 				return tnext
 			}
 
 			in := make([]reflect.Value, len(values))
 			for i, v := range values {
-				in[i] = v(f)
+				in[i] = binder.argument(v(f))
 			}
-			out := callf(in)
+			markNativeCallOwnedValues(f, binder, bf, in)
+			out := callWithFuncSweepFenceReleased(f, func() []reflect.Value { return callf(in) })
+			if binder.bindArgs {
+				out = activateDirectFuncResultsFromExec(f, out)
+				f.interp.registerNativeResultValuesFromExec(f, out...)
+			}
+			if f.canceled() {
+				return nil
+			}
 			for i, v := range rvalues {
 				if v != nil {
-					v(f).Set(out[i])
+					destination := v(f)
+					f.interp.markOwnedCellWriteFromExec(destination, out[i])
+					destination.Set(out[i])
 				}
 			}
 			if fnext != nil && !out[0].Bool() {
@@ -1382,7 +2221,10 @@ func call(n *node) {
 					if v(f).Type() == vararg.Type() {
 						vararg.Set(v(f))
 					} else {
-						vararg.Set(reflect.Append(vararg, v(f)))
+						source := vararg
+						appended := reflect.Append(source, v(f))
+						f.interp.registerOwnedAppend(appended, source, nf)
+						vararg.Set(appended)
 					}
 				default:
 					val := v(f)
@@ -1411,12 +2253,17 @@ func call(n *node) {
 			go runCfg(def.child[3].start, nf, def, n)
 			return tnext
 		}
-		runCfg(def.child[3].start, nf, def, n)
+		runWithFuncSweepFenceReleased(f, func() { runCfg(def.child[3].start, nf, def, n) })
+		if f.canceled() {
+			return nil
+		}
 
 		// Set return values
 		for i, v := range rvalues {
 			if v != nil {
-				v(f).Set(nf.data[i])
+				destination, source := v(f), nf.data[i]
+				f.interp.markOwnedCellWriteFromExec(destination, source)
+				destination.Set(source)
 			}
 		}
 
@@ -1452,6 +2299,15 @@ func callBin(n *node) {
 	child := n.child[1:]
 	c0 := n.child[0]
 	value := genValue(c0)
+	useCallFuncSnapshot(n, &value)
+	activeValue := func(f *frame, binder *callOwnerBinder) reflect.Value {
+		v := value(f)
+		if _, interpreted := f.interp.interpretedFunc(v); interpreted {
+			binder.bindArgs = false
+			return binder.value(v)
+		}
+		return v
+	}
 	var values []func(*frame) reflect.Value
 	funcType := c0.typ.rtype
 	wt := wrappedType(c0)
@@ -1529,14 +2385,33 @@ func callBin(n *node) {
 			} else {
 				defType = funcType.In(rcvrOffset + i)
 			}
-			if getMapType != nil {
+			// The interface wrapper substitution is only valid for empty
+			// interface arguments (including elements of a variadic empty
+			// interface parameter): a wrapper type of another interface
+			// would not match a non empty interface parameter at call time.
+			if getMapType != nil && (defType == emptyInterfaceType ||
+				(defType.Kind() == reflect.Slice && defType.Elem() == emptyInterfaceType)) {
 				if rt := getMapType(c.typ); rt != nil {
 					defType = rt
 				}
 			}
 
+			// When the target parameter is an empty interface (and not a
+			// variadic slice of empty interfaces), pass the concrete value to
+			// the binary function rather than an interpreter interface wrapper,
+			// so binary code does not reflect over wrapper structs (see for
+			// example json.Marshal). Wrappers are preserved for non-empty
+			// interface parameters, where method dispatch matters, and for
+			// variadic parameters, where values are still re-wrapped at run
+			// time if necessary (see getBinValue).
+			unwrap := defType.Kind() == reflect.Interface && defType.NumMethod() == 0
+
 			switch {
 			case isEmptyInterface(c.typ):
+				if unwrap {
+					values = append(values, genValueConcrete(getMapType, c))
+					break
+				}
 				values = append(values, genValue(c))
 			case isInterfaceSrc(c.typ):
 				values = append(values, genValueInterfaceValue(c))
@@ -1555,34 +2430,56 @@ func callBin(n *node) {
 					values = append(values, genInterfaceWrapper(c, defType))
 				}
 			case c.typ.cat == valueT:
+				if unwrap {
+					values = append(values, genValueConcrete(getMapType, c))
+					break
+				}
 				values = append(values, genValue(c))
 			default:
+				if unwrap {
+					values = append(values, genValueConcrete(getMapType, c))
+					break
+				}
 				values = append(values, genInterfaceWrapper(c, defType))
 			}
 		}
 	}
+	useCallArgSnapshots(n, values)
 	l := len(values)
 
 	switch {
 	case n.anc.kind == deferStmt:
 		// Store function call in frame for deferred execution.
 		n.exec = func(f *frame) bltn {
+			binder := newCallOwnerBinder(f, nil)
 			val := make([]reflect.Value, l+1)
 			val[0] = value(f)
-			for i, v := range values {
-				val[i+1] = getBinValue(getMapType, v, f)
+			if _, interpreted := f.interp.interpretedFunc(val[0]); interpreted {
+				binder.bindArgs = false
 			}
-			f.deferred = append([][]reflect.Value{val}, f.deferred...)
+			for i, v := range values {
+				val[i+1] = binder.argument(getBinValue(getMapType, v, f))
+			}
+			markNativeCallOwnedValues(f, binder, val[0], val[1:])
+			f.deferred = append([]deferredCall{{values: val}}, f.deferred...)
 			return tnext
 		}
 	case n.anc.kind == goStmt:
 		// Execute function in a goroutine, discard results.
 		n.exec = func(f *frame) bltn {
+			binder := newCallOwnerBinder(f, f.cancel)
 			in := make([]reflect.Value, l)
 			for i, v := range values {
-				in[i] = getBinValue(getMapType, v, f)
+				in[i] = binder.argument(getBinValue(getMapType, v, f))
 			}
-			go callFn(value(f), in)
+			target := activeValue(f, binder)
+			markNativeCallOwnedValues(f, binder, target, in)
+			go func() {
+				callFn(target, in)
+				// Eval may have ended before this discarded call. Sweep once
+				// its native result boundary is complete.
+				f.interp.sweepRootInterpretedFuncs(f.root, reflect.Value{})
+			}()
 			return tnext
 		}
 	case fnext != nil:
@@ -1590,11 +2487,21 @@ func callBin(n *node) {
 		index := n.findex
 		level := n.level
 		n.exec = func(f *frame) bltn {
+			binder := newCallOwnerBinder(f, f.cancel)
 			in := make([]reflect.Value, l)
 			for i, v := range values {
-				in[i] = getBinValue(getMapType, v, f)
+				in[i] = binder.argument(getBinValue(getMapType, v, f))
 			}
-			res := callFn(value(f), in)
+			target := activeValue(f, binder)
+			markNativeCallOwnedValues(f, binder, target, in)
+			res := callWithFuncSweepFenceReleased(f, func() []reflect.Value { return callFn(target, in) })
+			if binder.bindArgs {
+				res = activateDirectFuncResultsFromExec(f, res)
+				f.interp.registerNativeResultValuesFromExec(f, res...)
+			}
+			if f.canceled() {
+				return nil
+			}
 			b := res[0].Bool()
 			getFrame(f, level).data[index].SetBool(b)
 			if b {
@@ -1622,11 +2529,21 @@ func callBin(n *node) {
 				}
 			}
 			n.exec = func(f *frame) bltn {
+				binder := newCallOwnerBinder(f, f.cancel)
 				in := make([]reflect.Value, l)
 				for i, v := range values {
-					in[i] = getBinValue(getMapType, v, f)
+					in[i] = binder.argument(getBinValue(getMapType, v, f))
 				}
-				out := callFn(value(f), in)
+				target := activeValue(f, binder)
+				markNativeCallOwnedValues(f, binder, target, in)
+				out := callWithFuncSweepFenceReleased(f, func() []reflect.Value { return callFn(target, in) })
+				if binder.bindArgs {
+					out = activateDirectFuncResultsFromExec(f, out)
+					f.interp.registerNativeResultValuesFromExec(f, out...)
+				}
+				if f.canceled() {
+					return nil
+				}
 				for i, v := range rvalues {
 					if v == nil {
 						continue // Skip assign "_".
@@ -1641,7 +2558,9 @@ func callBin(n *node) {
 						data[c.findex].Set(out[i])
 						continue
 					}
-					v(f).Set(out[i])
+					destination := v(f)
+					f.interp.markOwnedCellWriteFromExec(destination, out[i])
+					destination.Set(out[i])
 				}
 				return tnext
 			}
@@ -1650,11 +2569,21 @@ func callBin(n *node) {
 			// directly in the frame location of outputs of the current function.
 			b := childPos(n)
 			n.exec = func(f *frame) bltn {
+				binder := newCallOwnerBinder(f, f.cancel)
 				in := make([]reflect.Value, l)
 				for i, v := range values {
-					in[i] = getBinValue(getMapType, v, f)
+					in[i] = binder.argument(getBinValue(getMapType, v, f))
 				}
-				out := callFn(value(f), in)
+				target := activeValue(f, binder)
+				markNativeCallOwnedValues(f, binder, target, in)
+				out := callWithFuncSweepFenceReleased(f, func() []reflect.Value { return callFn(target, in) })
+				if binder.bindArgs {
+					out = activateDirectFuncResultsFromExec(f, out)
+					f.interp.registerNativeResultValuesFromExec(f, out...)
+				}
+				if f.canceled() {
+					return nil
+				}
 				for i, v := range out {
 					dest := f.data[b+i]
 					if _, ok := dest.Interface().(valueInterface); ok {
@@ -1666,11 +2595,21 @@ func callBin(n *node) {
 			}
 		default:
 			n.exec = func(f *frame) bltn {
+				binder := newCallOwnerBinder(f, f.cancel)
 				in := make([]reflect.Value, l)
 				for i, v := range values {
-					in[i] = getBinValue(getMapType, v, f)
+					in[i] = binder.argument(getBinValue(getMapType, v, f))
 				}
-				out := callFn(value(f), in)
+				target := activeValue(f, binder)
+				markNativeCallOwnedValues(f, binder, target, in)
+				out := callWithFuncSweepFenceReleased(f, func() []reflect.Value { return callFn(target, in) })
+				if binder.bindArgs {
+					out = activateDirectFuncResultsFromExec(f, out)
+					f.interp.registerNativeResultValuesFromExec(f, out...)
+				}
+				if f.canceled() {
+					return nil
+				}
 				for i := 0; i < len(out); i++ {
 					r := out[i]
 					if r.Kind() == reflect.Func {
@@ -1681,6 +2620,7 @@ func callBin(n *node) {
 					if _, ok := dest.Interface().(valueInterface); ok {
 						r = reflect.ValueOf(valueInterface{value: r})
 					}
+					f.interp.markOwnedCellWriteFromExec(dest, r)
 					dest.Set(r)
 				}
 				return tnext
@@ -1700,7 +2640,9 @@ func getIndexBinMethod(n *node) {
 	n.exec = func(f *frame) bltn {
 		// Can not use .Set() because dest type contains the receiver and source not
 		// dest(f).Set(value(f).Method(m))
-		getFrame(f, l).data[i] = value(f).Method(m)
+		receiver := cloneCallArgValue(value(f))
+		f.interp.markOwnedValuesHostSharedFromExec(receiver)
+		getFrame(f, l).data[i] = receiver.Method(m)
 		return next
 	}
 }
@@ -1714,7 +2656,9 @@ func getIndexBinElemMethod(n *node) {
 
 	n.exec = func(f *frame) bltn {
 		// Can not use .Set() because dest type contains the receiver and source not
-		getFrame(f, l).data[i] = value(f).Elem().Method(m)
+		receiver := cloneCallArgValue(value(f).Elem())
+		f.interp.markOwnedValuesHostSharedFromExec(receiver)
+		getFrame(f, l).data[i] = receiver.Method(m)
 		return next
 	}
 }
@@ -1728,7 +2672,9 @@ func getIndexBinPtrMethod(n *node) {
 
 	n.exec = func(f *frame) bltn {
 		// Can not use .Set() because dest type contains the receiver and source not
-		getFrame(f, l).data[i] = value(f).Addr().Method(m)
+		receiver := value(f).Addr()
+		f.interp.markOwnedValuesHostSharedFromExec(receiver)
+		getFrame(f, l).data[i] = receiver.Method(m)
 		return next
 	}
 }
@@ -1865,8 +2811,14 @@ func getIndexMap2(n *node) {
 		default:
 			n.exec = func(f *frame) bltn {
 				v := value0(f).MapIndex(mi)
+				destination := dest(f)
 				if v.IsValid() {
-					dest(f).Set(v)
+					f.interp.markOwnedCellWriteFromExec(destination, v)
+					destination.Set(v)
+				} else {
+					zero := reflect.Zero(destination.Type())
+					f.interp.markOwnedCellWriteFromExec(destination, zero)
+					destination.Set(zero)
 				}
 				if doStatus {
 					value2(f).SetBool(v.IsValid())
@@ -1886,8 +2838,14 @@ func getIndexMap2(n *node) {
 		default:
 			n.exec = func(f *frame) bltn {
 				v := value0(f).MapIndex(value1(f))
+				destination := dest(f)
 				if v.IsValid() {
-					dest(f).Set(v)
+					f.interp.markOwnedCellWriteFromExec(destination, v)
+					destination.Set(v)
+				} else {
+					zero := reflect.Zero(destination.Type())
+					f.interp.markOwnedCellWriteFromExec(destination, zero)
+					destination.Set(zero)
 				}
 				if doStatus {
 					value2(f).SetBool(v.IsValid())
@@ -1903,53 +2861,144 @@ func getFunc(n *node) {
 	i := n.findex
 	l := n.level
 	next := getExec(n.tnext)
-	numRet := len(n.typ.ret)
+	captureRefs := interpretedFuncCaptureRefs(n)
 
 	n.exec = func(f *frame) bltn {
 		fr := f.clone()
-		o := getFrame(f, l).data[i]
-
-		fct := reflect.MakeFunc(n.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
-			// Allocate and init local frame. All values to be settable and addressable.
-			fr2 := newFrame(fr, len(n.types), fr.runid())
-			d := fr2.data
-			for i, t := range n.types {
-				d[i] = reflect.New(t).Elem()
-			}
-			d = d[numRet:]
-
-			// Copy function input arguments in local frame.
-			for i, arg := range in {
-				if i >= len(d) {
-					// In case of unused arg, there may be not even a frame entry allocated, just skip.
-					break
-				}
-				typ := n.typ.arg[i]
-				switch {
-				case isEmptyInterface(typ) || typ.TypeOf() == valueInterfaceType:
-					d[i].Set(arg)
-				case isInterfaceSrc(typ):
-					d[i].Set(reflect.ValueOf(valueInterface{value: arg.Elem()}))
-				default:
-					d[i].Set(arg)
-				}
-			}
-
-			// Interpreter code execution.
-			runCfg(n.child[3].start, fr2, n, n)
-
-			f.mutex.Lock()
-			getFrame(f, l).data[i] = o
-			f.mutex.Unlock()
-
-			return fr2.data[:numRet]
-		})
+		slotOwner := getFrame(f, l)
+		o := slotOwner.data[i]
+		build := buildClosureWrapper(n, fr, slotOwner, i, o, f.root, f.cancel, captureRefs)
+		fct := build.value
+		n.interp.registerInterpretedFuncWithRebinder(fct, build.invoke, build.rebind, f, build.captures)
+		if ref, ok := funcvalRefOf(fct); ok {
+			n.interp.funcMu.Lock()
+			fr.funcCarrier = ref.key
+			n.interp.funcMu.Unlock()
+		}
 
 		f.mutex.Lock()
-		getFrame(f, l).data[i] = fct
+		slotOwner.data[i] = fct
+		// Keep the slot's pre-execution value for the exit-time restore, so a
+		// finished frame does not pin the wrapper in its slot. Root-frame slots
+		// are durable REPL storage, never restored.
+		if slotOwner != slotOwner.root {
+			recordFuncSlotRestoreLocked(f, slotOwner, i, o)
+		}
 		f.mutex.Unlock()
 
 		return next
+	}
+}
+
+// frameSharesSlotsWith reports whether the active activation a can reach
+// frames whose cells are shared with f: f itself (through ancestry), or a
+// lexical clone whose header copies f's cells (cloneOf == f). False
+// positives are safe: they only skip a slot restore, leaving the entry to
+// the sweep and purge reclamation paths.
+func frameSharesSlotsWith(a, f *frame) bool {
+	for current := a; current != nil; current = current.anc {
+		if current == f || current.cloneOf == f {
+			return true
+		}
+	}
+	return false
+}
+
+// recordFuncSlotRestoreLocked remembers the restore for a literal slot, once
+// per (slot, frame): later executions of the same literal overwrite the slot
+// but must not displace the original restore value. First-wins is sound
+// because nothing reads a literal slot between a second getFunc execution and
+// frame exit — every later read of the wrapper goes through the value
+// captured at its creation, and the exit restore only serves the registry's
+// weak eviction. The caller holds f.mutex.
+func recordFuncSlotRestoreLocked(f, slotOwner *frame, index int, value reflect.Value) {
+	for _, existing := range f.funcSlots {
+		if existing.owner == slotOwner && existing.index == index {
+			return
+		}
+	}
+	f.funcSlots = append(f.funcSlots, funcSlotRestore{owner: slotOwner, index: index, value: value})
+}
+
+// applyFuncSlotRestores reverts every literal slot recorded by this frame. It
+// runs when the frame's last runCfg activation exits: the frame is done
+// executing, so its slots must no longer pin wrappers against the registry's
+// weak eviction.
+func applyFuncSlotRestores(f *frame) {
+	f.mutex.Lock()
+	restores := f.funcSlots
+	f.funcSlots = nil
+	f.mutex.Unlock()
+	for _, restore := range restores {
+		restore.owner.mutex.Lock()
+		restore.owner.data[restore.index] = restore.value
+		restore.owner.mutex.Unlock()
+	}
+}
+
+func buildClosureWrapper(n *node, captured, slotOwner *frame, slotIndex int, restore reflect.Value, root *frame, cancel <-chan struct{}, captureRefs []funcMetaCaptureRef) interpretedFuncBuild {
+	numRet := len(n.typ.ret)
+	invoke := func(in []reflect.Value, root *frame, cancel <-chan struct{}) []reflect.Value {
+		// Allocate and init local frame. All values to be settable and addressable.
+		fr2 := newFrame(captured, len(n.types), captured.runid())
+		// Preserve captured lexical ancestors, but resolve package globals
+		// against the activation invoking the closure. A canceled activation's
+		// root may have been detached and replaced by a later Eval.
+		if root != nil {
+			fr2.root = root
+		}
+		fr2.cancel = cancel
+		fr2.done = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(cancel)}
+		d := fr2.data
+		for i, t := range n.types {
+			d[i] = reflect.New(t).Elem()
+		}
+		d = d[numRet:]
+
+		// Copy function input arguments in local frame.
+		for i, arg := range in {
+			if i >= len(d) {
+				// In case of unused arg, there may be not even a frame entry allocated, just skip.
+				break
+			}
+			typ := n.typ.arg[i]
+			switch {
+			case isEmptyInterface(typ) || typ.TypeOf() == valueInterfaceType:
+				d[i].Set(arg)
+			case isInterfaceSrc(typ):
+				d[i].Set(reflect.ValueOf(valueInterface{value: arg.Elem()}))
+			default:
+				d[i].Set(arg)
+			}
+		}
+
+		// Interpreter code execution.
+		runCfg(n.child[3].start, fr2, n, n)
+
+		if !fr2.canceled() {
+			slotOwner.mutex.Lock()
+			slotOwner.data[slotIndex] = restore
+			slotOwner.mutex.Unlock()
+		}
+
+		return fr2.data[:numRet]
+	}
+	boundRoot, boundCancel := root, cancel
+	wrapper := makeInterpretedHostWrapper(n.interp, n.typ.TypeOf(), invoke, boundRoot, boundCancel)
+	rebind := func(c *detachedRootCloner) interpretedFuncBuild {
+		clonedCaptured := c.cloneFrame(captured)
+		clonedSlotOwner := c.cloneFrame(slotOwner)
+		clonedRestore := restore
+		if restore.IsValid() {
+			clonedRestore = c.cloneValue(restore, true)
+		}
+		build := buildClosureWrapper(n, clonedCaptured, clonedSlotOwner, slotIndex, clonedRestore, c.newRoot, c.cancel, captureRefs)
+		clonedCaptured.funcCarrier, _ = funcvalKeyOf(build.value)
+		return build
+	}
+	return interpretedFuncBuild{
+		value: wrapper, invoke: invoke, rebind: rebind,
+		captures: resolveInterpretedFuncCaptures(captured, captureRefs),
 	}
 }
 
@@ -1959,8 +3008,29 @@ func getMethod(n *node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		nod := *(n.val.(*node))
+		nod := *n.val.(*node)
 		nod.val = &nod
+		nod.recv = n.recv
+		getFrame(f, l).data[i] = genFuncValue(&nod)(f)
+		return next
+	}
+}
+
+// getMethodExpr generates the func value of a method expression on an
+// interpreted type (for example (*T).M). The value is a func taking the
+// receiver as first argument, not a method bound to a receiver (#1499).
+func getMethodExpr(n *node) {
+	i := n.findex
+	l := n.level
+	next := getExec(n.tnext)
+
+	n.exec = func(f *frame) bltn {
+		nod := *n.val.(*node)
+		nod.val = &nod
+		// Give the method copy the method expression type, where the receiver
+		// is the first argument, and keep the unbound receiver marker, so the
+		// generated wrapper reads the receiver from the first call argument.
+		nod.typ = n.typ
 		nod.recv = n.recv
 		getFrame(f, l).data[i] = genFuncValue(&nod)(f)
 		return next
@@ -2549,13 +3619,14 @@ func arrayLit(n *node) {
 		var a reflect.Value
 		if kind == reflect.Slice {
 			a = reflect.MakeSlice(typ, max, max)
+			f.interp.registerOwnedValue(a, f)
 		} else {
 			a, _ = n.typ.zero()
 		}
 		for i, v := range values {
 			a.Index(index[i]).Set(v(f))
 		}
-		value(f).Set(a)
+		setOwnedValueOutput(f, value(f), a)
 		return next
 	}
 }
@@ -2577,10 +3648,11 @@ func mapLit(n *node) {
 
 	n.exec = func(f *frame) bltn {
 		m := reflect.MakeMap(typ)
+		f.interp.registerOwnedValue(m, f)
 		for i, k := range keys {
 			m.SetMapIndex(k(f), values[i](f))
 		}
-		value(f).Set(m)
+		setOwnedValueOutput(f, value(f), m)
 		return next
 	}
 }
@@ -2609,10 +3681,11 @@ func compositeBinMap(n *node) {
 
 	n.exec = func(f *frame) bltn {
 		m := reflect.MakeMap(typ)
+		f.interp.registerOwnedValue(m, f)
 		for i, k := range keys {
 			m.SetMapIndex(k(f), values[i](f))
 		}
-		value(f).Set(m)
+		setOwnedValueOutput(f, value(f), m)
 		return next
 	}
 }
@@ -2652,13 +3725,14 @@ func compositeBinSlice(n *node) {
 		var a reflect.Value
 		if kind == reflect.Slice {
 			a = reflect.MakeSlice(typ, max, max)
+			f.interp.registerOwnedValue(a, f)
 		} else {
 			a, _ = n.typ.zero()
 		}
 		for i, v := range values {
 			a.Index(index[i]).Set(v(f))
 		}
-		value(f).Set(a)
+		setOwnedValueOutput(f, value(f), a)
 		return next
 	}
 }
@@ -2708,9 +3782,13 @@ func doCompositeBinStruct(n *node, hasType bool) {
 		d := value(f)
 		switch {
 		case d.Kind() == reflect.Ptr:
-			d.Set(s.Addr())
+			setOwnedValueOutput(f, d, s.Addr())
 		default:
-			getFrame(f, l).data[frameIndex] = s
+			if n.anc.kind == assignStmt && n.anc.action == aAssign {
+				setOwnedValueOutput(f, d, s)
+			} else {
+				getFrame(f, l).data[frameIndex] = s
+			}
 		}
 		return next
 	}
@@ -2778,15 +3856,25 @@ func doComposite(n *node, hasType bool, keyed bool) {
 		d := value(f)
 		switch {
 		case d.Kind() == reflect.Ptr:
-			d.Set(a.Addr())
+			setOwnedValueOutput(f, d, a.Addr())
+		case destInterface && len(destType(n).field) > 0 && d.Type() == valueInterfaceType:
+			// The enclosing assignment was inlined into this composite
+			// literal: the destination cell is frame-typed as valueInterface,
+			// so store the interpreted interface representation directly.
+			setOwnedValueOutput(f, d, reflect.ValueOf(valueInterface{n, a}))
 		case destInterface:
-			if len(destType(n).field) > 0 {
-				d.Set(reflect.ValueOf(valueInterface{n, a}))
-				break
-			}
-			d.Set(a)
+			// The composite result goes to its own frame slot (the assignment
+			// was not inlined, i.e. the destination is a struct field, a
+			// dereferenced pointer or a binary interface). Keep the value
+			// concrete: the valueInterface wrapper is added later by the
+			// assignment itself (see genDestValue).
+			setOwnedValueOutput(f, d, a)
 		default:
-			getFrame(f, l).data[frameIndex] = a
+			if n.anc.kind == assignStmt && n.anc.action == aAssign {
+				setOwnedValueOutput(f, d, a)
+			} else {
+				getFrame(f, l).data[frameIndex] = a
+			}
 		}
 		return next
 	}
@@ -2812,6 +3900,122 @@ func empty(n *node) {}
 
 var rat = reflect.ValueOf((*[]rune)(nil)).Type().Elem() // runes array type
 
+func isRangeAssignTarget(target *node) bool {
+	for target != nil && target.anc != nil && target.anc.kind == parenExpr {
+		target = target.anc
+	}
+	return target != nil && target.anc != nil && target.anc.kind == rangeStmt && target.anc.meta == token.ASSIGN
+}
+
+func rangeTargetPreludeStart(target *node) *node {
+	if target == nil {
+		return nil
+	}
+	for _, child := range target.child {
+		switch child.kind {
+		case arrayType, chanType, chanTypeRecv, chanTypeSend, funcDecl, importDecl, mapType, basicLit, identExpr, typeDecl:
+			continue
+		}
+		if child.start != nil {
+			return child.start
+		}
+		return child
+	}
+	return nil
+}
+
+func runRangeTargetPrelude(target *node, f *frame) {
+	start := rangeTargetPreludeStart(target)
+	if start == nil || start == target {
+		return
+	}
+	exec := getExec(start)
+	for exec != nil && !isExecNode(target, exec) {
+		exec = exec(f)
+	}
+}
+
+func genRangeStore(n *node) func(*frame) func(reflect.Value) {
+	if len(n.assignTmp) == 2 {
+		return func(f *frame) func(reflect.Value) {
+			destination := getFrame(f, n.assignTmp[1]).data[n.assignTmp[0]]
+			return func(value reflect.Value) { setOwnedValueOutput(f, destination, value) }
+		}
+	}
+	if isRangeAssignTarget(n) {
+		switch n.kind {
+		case parenExpr:
+			if len(n.child) == 1 {
+				return genRangeStore(n.child[0])
+			}
+		case indexExpr:
+			container := genValue(n.child[0])
+			index := genValue(n.child[1])
+			if isMap(n.child[0].typ) {
+				return func(f *frame) func(reflect.Value) {
+					runRangeTargetPrelude(n, f)
+					m, k := cloneCallArgValue(container(f)), cloneCallArgValue(index(f))
+					return func(value reflect.Value) {
+						f.interp.markOwnedWriteFromExec(m, k, value)
+						m.SetMapIndex(k, value)
+					}
+				}
+			}
+			return func(f *frame) func(reflect.Value) {
+				runRangeTargetPrelude(n, f)
+				sequence := container(f)
+				if sequence.Kind() == reflect.Ptr {
+					sequence = sequence.Elem()
+				}
+				destination := sequence.Index(int(vInt(cloneCallArgValue(index(f)))))
+				return func(value reflect.Value) { setOwnedValueOutput(f, destination, value) }
+			}
+		case starExpr:
+			pointer := genValue(n.child[0])
+			return func(f *frame) func(reflect.Value) {
+				runRangeTargetPrelude(n, f)
+				destination := pointer(f).Elem()
+				return func(value reflect.Value) { setOwnedValueOutput(f, destination, value) }
+			}
+		case selectorExpr:
+			if isBinPkgVar(n) {
+				// The destination is the live host cell exposed as the node
+				// value; the interpreter frame slot is not its storage.
+				return func(f *frame) func(reflect.Value) {
+					runRangeTargetPrelude(n, f)
+					destination := n.val.(reflect.Value)
+					return func(value reflect.Value) { setOwnedValueOutput(f, destination, value) }
+				}
+			}
+			receiver := genValue(n.child[0])
+			index, ok := n.val.([]int)
+			if ok {
+				return func(f *frame) func(reflect.Value) {
+					runRangeTargetPrelude(n, f)
+					destination := receiver(f)
+					for destination.Kind() == reflect.Ptr {
+						destination = destination.Elem()
+					}
+					destination = destination.FieldByIndex(index)
+					return func(value reflect.Value) { setOwnedValueOutput(f, destination, value) }
+				}
+			}
+			fallthrough
+		default:
+			destination := genValue(n)
+			return func(f *frame) func(reflect.Value) {
+				runRangeTargetPrelude(n, f)
+				dest := destination(f)
+				return func(value reflect.Value) { setOwnedValueOutput(f, dest, value) }
+			}
+		}
+	}
+	return func(f *frame) func(reflect.Value) {
+		destination := f.data[n.findex]
+		return func(value reflect.Value) { destination.Set(value) }
+	}
+}
+
 func _range(n *node) {
 	index0 := n.child[0].findex // array index location in frame
 	index2 := index0 - 1        // shallow array for range, always just behind index0
@@ -2821,9 +4025,11 @@ func _range(n *node) {
 
 	var value func(*frame) reflect.Value
 	var an *node
+	storeIndex := genRangeStore(n.child[0])
 	if len(n.child) == 4 {
 		an = n.child[2]
-		index1 := n.child[1].findex // array value location in frame
+		valueNode := n.child[1]
+		storeValue := genRangeStore(valueNode)
 		if isString(an.typ.TypeOf()) {
 			// Special variant of "range" for string, where the index indicates the byte position
 			// of the rune in the string, rather than the index of the rune in array.
@@ -2839,8 +4045,10 @@ func _range(n *node) {
 				}
 				// Compute byte position of the rune in string
 				pos := a.Slice(0, i).Convert(stringType).Len()
-				f.data[index0].SetInt(int64(pos))
-				f.data[index1].Set(a.Index(i))
+				rangeValue := cloneCallArgValue(a.Index(i))
+				setIndex, setValue := storeIndex(f), storeValue(f)
+				setIndex(reflect.ValueOf(pos))
+				setValue(rangeValue)
 				return tnext
 			}
 		} else {
@@ -2853,7 +4061,10 @@ func _range(n *node) {
 				if i >= a.Len() {
 					return fnext
 				}
-				f.data[index1].Set(a.Index(i))
+				rangeValue := cloneCallArgValue(a.Index(i))
+				setIndex, setValue := storeIndex(f), storeValue(f)
+				setIndex(reflect.ValueOf(i))
+				setValue(rangeValue)
 				return tnext
 			}
 		}
@@ -2870,6 +4081,7 @@ func _range(n *node) {
 			if int(v0.Int()) >= f.data[index2].Len() {
 				return fnext
 			}
+			storeIndex(f)(reflect.ValueOf(int(v0.Int())))
 			return tnext
 		}
 	}
@@ -2897,12 +4109,14 @@ func rangeInt(n *node) {
 	var value func(*frame) reflect.Value
 	mxn := n.child[1]
 	value = genValue(mxn)
+	storeIndex := genRangeStore(ixn)
 	n.exec = func(f *frame) bltn {
 		rv := f.data[index0]
 		rv.SetInt(rv.Int() + 1)
 		if int(rv.Int()) >= int(f.data[index2].Int()) {
 			return fnext
 		}
+		storeIndex(f)(reflect.ValueOf(int(rv.Int())))
 		return tnext
 	}
 
@@ -2953,7 +4167,8 @@ func loopVarFor(n *node) {
 }
 
 func rangeChan(n *node) {
-	i := n.child[0].findex        // element index location in frame
+	destNode := n.child[0]
+	store := genRangeStore(destNode)
 	value := genValue(n.child[1]) // chan
 	fnext := getExec(n.fnext)
 	tnext := getExec(n.tnext)
@@ -2963,14 +4178,16 @@ func rangeChan(n *node) {
 		done := f.done
 		f.mutex.RUnlock()
 
-		chosen, v, ok := reflect.Select([]reflect.SelectCase{done, {Dir: reflect.SelectRecv, Chan: value(f)}})
+		channel := value(f)
+		chosen, v, ok := selectWithFuncSweepFenceReleased(f, []reflect.SelectCase{done, {Dir: reflect.SelectRecv, Chan: channel}})
 		if chosen == 0 {
 			return nil
 		}
 		if !ok {
 			return fnext
 		}
-		f.data[i].Set(v)
+		v = f.interp.adoptInterpretedFuncValue(f, channel, v)
+		store(f)(v)
 		return tnext
 	}
 }
@@ -2981,16 +4198,20 @@ func rangeMap(n *node) {
 	fnext := getExec(n.fnext)
 	tnext := getExec(n.tnext)
 	value := genValue(n.child[len(n.child)-2]) // map value
+	storeKey := genRangeStore(n.child[0])
 
 	if len(n.child) == 4 && n.child[1].ident != "_" {
-		index1 := n.child[1].findex // map value location in frame
+		valueNode := n.child[1]
+		storeValue := genRangeStore(valueNode)
 		n.exec = func(f *frame) bltn {
 			iter := f.data[index2].Interface().(*reflect.MapIter)
 			if !iter.Next() {
 				return fnext
 			}
-			f.data[index0].Set(iter.Key())
-			f.data[index1].Set(iter.Value())
+			key, value := cloneCallArgValue(iter.Key()), cloneCallArgValue(iter.Value())
+			setKey, setValue := storeKey(f), storeValue(f)
+			setKey(key)
+			setValue(value)
 			return tnext
 		}
 	} else {
@@ -2999,7 +4220,8 @@ func rangeMap(n *node) {
 			if !iter.Next() {
 				return fnext
 			}
-			f.data[index0].Set(iter.Key())
+			key := iter.Key()
+			storeKey(f)(key)
 			return tnext
 		}
 	}
@@ -3229,25 +4451,44 @@ func implementsInterface(v reflect.Value, t *itype) bool {
 func appendSlice(n *node) {
 	dest := genValueOutput(n, n.typ.rtype)
 	next := getExec(n.tnext)
-	value := genValue(n.child[1])
-	value0 := genValue(n.child[2])
+	values := []func(*frame) reflect.Value{genValue(n.child[1]), genValue(n.child[2])}
+	useCallArgSnapshots(n, values)
+	value, value0 := values[0], values[1]
 
 	if isString(n.child[2].typ.TypeOf()) {
 		typ := reflect.TypeOf([]byte{})
 		n.exec = func(f *frame) bltn {
-			dest(f).Set(reflect.AppendSlice(value(f), value0(f).Convert(typ)))
+			source := value(f)
+			inserted := value0(f).Convert(typ)
+			if source.Len()+inserted.Len() <= source.Cap() {
+				f.interp.markOwnedAppendSliceWriteFromExec(source, inserted)
+			}
+			appended := reflect.AppendSlice(source, inserted)
+			f.interp.registerOwnedAppend(appended, source, f)
+			setOwnedValueOutput(f, dest(f), appended)
 			return next
 		}
 	} else {
 		n.exec = func(f *frame) bltn {
-			dest(f).Set(reflect.AppendSlice(value(f), value0(f)))
+			source := value(f)
+			inserted := value0(f)
+			if source.Len()+inserted.Len() <= source.Cap() {
+				f.interp.markOwnedAppendSliceWriteFromExec(source, inserted)
+			}
+			appended := reflect.AppendSlice(source, inserted)
+			f.interp.registerOwnedAppend(appended, source, f)
+			setOwnedValueOutput(f, dest(f), appended)
 			return next
 		}
 	}
 }
 
 func _append(n *node) {
-	if len(n.child) == 3 {
+	// Slice expansion (appendSlice) is only valid for the ellipsis form
+	// `append(s, e...)`, flagged by aCallSlice. Without ellipsis a slice or
+	// array argument is appended as a single element, even when the element
+	// type of the destination matches the argument type.
+	if len(n.child) == 3 && n.action == aCallSlice {
 		c1, c2 := n.child[1], n.child[2]
 		if (c1.typ.cat == valueT || c2.typ.cat == valueT) && c1.typ.rtype == c2.typ.rtype ||
 			isArray(c2.typ) && c2.typ.elem().id() == n.typ.elem().id() ||
@@ -3263,8 +4504,11 @@ func _append(n *node) {
 
 	switch l := len(n.child); {
 	case l == 2:
+		values := []func(*frame) reflect.Value{value}
+		useCallArgSnapshots(n, values)
+		value = values[0]
 		n.exec = func(f *frame) bltn {
-			dest(f).Set(value(f))
+			setOwnedValueOutput(f, dest(f), value(f))
 			return next
 		}
 	case l > 3:
@@ -3283,13 +4527,22 @@ func _append(n *node) {
 				values[i] = genValue(arg)
 			}
 		}
+		allValues := append([]func(*frame) reflect.Value{value}, values...)
+		useCallArgSnapshots(n, allValues)
+		value, values = allValues[0], allValues[1:]
 
 		n.exec = func(f *frame) bltn {
 			sl := make([]reflect.Value, l)
 			for i, v := range values {
 				sl[i] = v(f)
 			}
-			dest(f).Set(reflect.Append(value(f), sl...))
+			source := value(f)
+			if source.Len()+len(sl) <= source.Cap() {
+				f.interp.markOwnedWriteFromExec(source, sl...)
+			}
+			appended := reflect.Append(source, sl...)
+			f.interp.registerOwnedAppend(appended, source, f)
+			setOwnedValueOutput(f, dest(f), appended)
 			return next
 		}
 	default:
@@ -3304,9 +4557,19 @@ func _append(n *node) {
 		default:
 			value0 = genValue(n.child[2])
 		}
+		values := []func(*frame) reflect.Value{value, value0}
+		useCallArgSnapshots(n, values)
+		value, value0 = values[0], values[1]
 
 		n.exec = func(f *frame) bltn {
-			dest(f).Set(reflect.Append(value(f), value0(f)))
+			source := value(f)
+			inserted := value0(f)
+			if source.Len()+1 <= source.Cap() {
+				f.interp.markOwnedWriteFromExec(source, inserted)
+			}
+			appended := reflect.Append(source, inserted)
+			f.interp.registerOwnedAppend(appended, source, f)
+			setOwnedValueOutput(f, dest(f), appended)
 			return next
 		}
 	}
@@ -3332,18 +4595,36 @@ func _cap(n *node) {
 
 func _copy(n *node) {
 	in := []func(*frame) reflect.Value{genValueArray(n.child[1]), genValue(n.child[2])}
+	useCallArgSnapshots(n, in)
 	out := []func(*frame) reflect.Value{genValueOutput(n, reflect.TypeOf(0))}
+	next := getExec(n.tnext)
 
-	genBuiltinDeferWrapper(n, in, out, func(args []reflect.Value) []reflect.Value {
-		cnt := reflect.Copy(args[0], args[1])
-		return []reflect.Value{reflect.ValueOf(cnt)}
-	})
+	if n.anc.kind == deferStmt {
+		n.exec = func(f *frame) bltn {
+			args := []reflect.Value{in[0](f), in[1](f)}
+			funcType := reflect.FuncOf([]reflect.Type{args[0].Type(), args[1].Type()}, []reflect.Type{reflect.TypeOf(0)}, false)
+			val := []reflect.Value{reflect.MakeFunc(funcType, func(callArgs []reflect.Value) []reflect.Value {
+				f.interp.markOwnedCopyWriteLocked(callArgs[0], callArgs[1])
+				return []reflect.Value{reflect.ValueOf(reflect.Copy(callArgs[0], callArgs[1]))}
+			}), args[0], args[1]}
+			f.deferred = append([]deferredCall{{values: val, exclusive: true}}, f.deferred...)
+			return next
+		}
+		return
+	}
+
+	n.exec = func(f *frame) bltn {
+		args := []reflect.Value{in[0](f), in[1](f)}
+		f.interp.markOwnedCopyWriteFromExec(args[0], args[1])
+		out[0](f).Set(reflect.ValueOf(reflect.Copy(args[0], args[1])))
+		return next
+	}
 }
 
 func _close(n *node) {
 	in := []func(*frame) reflect.Value{genValue(n.child[1])}
 
-	genBuiltinDeferWrapper(n, in, nil, func(args []reflect.Value) []reflect.Value {
+	genBuiltinDeferWrapper(n, in, false, true, func(args []reflect.Value) []reflect.Value {
 		args[0].Close()
 		return nil
 	})
@@ -3356,6 +4637,9 @@ func _complex(n *node) {
 	convertLiteralValue(c2, floatType)
 	value0 := genValue(c1)
 	value1 := genValue(c2)
+	values := []func(*frame) reflect.Value{value0, value1}
+	useCallArgSnapshots(n, values)
+	value0, value1 = values[0], values[1]
 	next := getExec(n.tnext)
 
 	typ := n.typ.TypeOf()
@@ -3422,9 +4706,10 @@ func _delete(n *node) {
 	value0 := genValue(n.child[1]) // map
 	value1 := genValue(n.child[2]) // key
 	in := []func(*frame) reflect.Value{value0, value1}
+	useCallArgSnapshots(n, in)
 	var z reflect.Value
 
-	genBuiltinDeferWrapper(n, in, nil, func(args []reflect.Value) []reflect.Value {
+	genBuiltinDeferWrapper(n, in, false, true, func(args []reflect.Value) []reflect.Value {
 		args[0].SetMapIndex(args[1], z)
 		return nil
 	})
@@ -3477,6 +4762,142 @@ func _len(n *node) {
 	}
 }
 
+func _max(n *node) { genMinMax(n, false) }
+
+func _min(n *node) { genMinMax(n, true) }
+
+// genMinMax compiles the min and max builtins (Go 1.21+). Arguments have been
+// type checked to a single ordered type by check.builtin; values are compared
+// through reflect so numeric kinds of any width and strings are covered.
+func genMinMax(n *node, isMin bool) {
+	dest := genValueOutput(n, n.typ.TypeOf())
+	values := make([]func(*frame) reflect.Value, 0, len(n.child)-1)
+	for _, c := range n.child[1:] {
+		values = append(values, genValue(c))
+	}
+	next := getExec(n.tnext)
+
+	if wantEmptyInterface(n) {
+		n.exec = func(f *frame) bltn {
+			best := values[0](f)
+			for _, value := range values[1:] {
+				if v := value(f); isMin == valueLess(v, best) {
+					best = v
+				}
+			}
+			dest(f).Set(reflect.ValueOf(best.Interface()))
+			return next
+		}
+		return
+	}
+	n.exec = func(f *frame) bltn {
+		best := values[0](f)
+		for _, value := range values[1:] {
+			v := value(f)
+			if valueIsNaN(v) {
+				// Per spec, if any argument is NaN the result is NaN.
+				best = v
+				break
+			}
+			if !valueIsNaN(best) && isMin == valueLess(v, best) {
+				best = v
+			}
+		}
+		d := dest(f)
+		// The destination cell type may be narrower than the untyped
+		// arguments' default type: convert before storing.
+		if !best.Type().AssignableTo(d.Type()) {
+			best = best.Convert(d.Type())
+		}
+		d.Set(best)
+		return next
+	}
+}
+
+// valueLess reports whether a < b for values of the same ordered type.
+// It returns false when either floating point value is NaN, in which case
+// valueNaN reports whether the NaN must be propagated as the result.
+func valueLess(a, b reflect.Value) bool {
+	if a.Kind() == reflect.Interface {
+		a = a.Elem()
+	}
+	if b.Kind() == reflect.Interface {
+		b = b.Elem()
+	}
+	switch a.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return a.Int() < b.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return a.Uint() < b.Uint()
+	case reflect.Float32, reflect.Float64:
+		return a.Float() < b.Float()
+	case reflect.String:
+		return a.String() < b.String()
+	}
+	return false
+}
+
+// valueIsNaN reports whether v is a floating point NaN value.
+func valueIsNaN(v reflect.Value) bool {
+	if v.Kind() == reflect.Interface {
+		v = v.Elem()
+	}
+	switch v.Kind() {
+	case reflect.Float32, reflect.Float64:
+		return v.Float() != v.Float()
+	}
+	return false
+}
+
+// unsafeBuiltin compiles the unsafe.Slice and unsafe.String builtins. The
+// destination type is computed at compile time from the pointer argument
+// type; the runtime slices the memory range without copying it.
+func unsafeBuiltin(n *node) {
+	next := getExec(n.tnext)
+	dest := genValueOutput(n, n.typ.TypeOf())
+	value0 := genValue(n.child[1])
+	value1 := genValue(n.child[2])
+	isStringB := n.child[0].ident == bltnUnsafeString
+	destType := n.typ.TypeOf()
+
+	n.exec = func(f *frame) bltn {
+		p := value0(f)
+		lv := value1(f)
+		var l int
+		switch lv.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			l = int(lv.Int())
+		default:
+			l = int(lv.Uint())
+		}
+		if isStringB {
+			if l < 0 {
+				panic("unsafe.String: length out of range")
+			}
+			s := unsafe.String((*byte)(unsafe.Pointer(p.Pointer())), l)
+			dest(f).Set(reflect.ValueOf(s).Convert(destType))
+			return next
+		}
+		if p.IsNil() {
+			if l != 0 {
+				panic("unsafe.Slice: ptr is nil and len is not zero")
+			}
+			dest(f).Set(reflect.Zero(destType))
+			return next
+		}
+		if l < 0 {
+			panic("unsafe.Slice: len out of range")
+		}
+		s := reflect.New(destType).Elem()
+		h := (*reflect.SliceHeader)(unsafe.Pointer(s.UnsafeAddr())) //nolint:gosec,staticcheck
+		h.Data = p.Pointer()
+		h.Len = l
+		h.Cap = l
+		dest(f).Set(s)
+		return next
+	}
+}
+
 func _new(n *node) {
 	next := getExec(n.tnext)
 	t1 := n.child[1].typ
@@ -3489,10 +4910,11 @@ func _new(n *node) {
 
 	n.exec = func(f *frame) bltn {
 		v := reflect.New(typ)
+		f.interp.registerOwnedValue(v, f)
 		if vi, ok := v.Interface().(*valueInterface); ok {
 			vi.node = n
 		}
-		dest(f).Set(v)
+		setOwnedValueOutput(f, dest(f), v)
 		return next
 	}
 }
@@ -3509,15 +4931,25 @@ func _make(n *node) {
 
 		switch len(n.child) {
 		case 3:
+			values := []func(*frame) reflect.Value{value}
+			useCallArgSnapshots(n, values)
+			value = values[0]
 			n.exec = func(f *frame) bltn {
 				length := int(vInt(value(f)))
-				dest(f).Set(reflect.MakeSlice(typ, length, length))
+				slice := reflect.MakeSlice(typ, length, length)
+				f.interp.registerOwnedValue(slice, f)
+				setOwnedValueOutput(f, dest(f), slice)
 				return next
 			}
 		case 4:
 			value1 := genValue(n.child[3])
+			values := []func(*frame) reflect.Value{value, value1}
+			useCallArgSnapshots(n, values)
+			value, value1 = values[0], values[1]
 			n.exec = func(f *frame) bltn {
-				dest(f).Set(reflect.MakeSlice(typ, int(vInt(value(f))), int(vInt(value1(f)))))
+				slice := reflect.MakeSlice(typ, int(vInt(value(f))), int(vInt(value1(f))))
+				f.interp.registerOwnedValue(slice, f)
+				setOwnedValueOutput(f, dest(f), slice)
 				return next
 			}
 		}
@@ -3526,13 +4958,20 @@ func _make(n *node) {
 		switch len(n.child) {
 		case 2:
 			n.exec = func(f *frame) bltn {
-				dest(f).Set(reflect.MakeChan(typ, 0))
+				channel := reflect.MakeChan(typ, 0)
+				f.interp.registerOwnedChannel(channel, f)
+				setOwnedValueOutput(f, dest(f), channel)
 				return next
 			}
 		case 3:
 			value := genValue(n.child[2])
+			values := []func(*frame) reflect.Value{value}
+			useCallArgSnapshots(n, values)
+			value = values[0]
 			n.exec = func(f *frame) bltn {
-				dest(f).Set(reflect.MakeChan(typ, int(vInt(value(f)))))
+				channel := reflect.MakeChan(typ, int(vInt(value(f))))
+				f.interp.registerOwnedChannel(channel, f)
+				setOwnedValueOutput(f, dest(f), channel)
 				return next
 			}
 		}
@@ -3541,13 +4980,20 @@ func _make(n *node) {
 		switch len(n.child) {
 		case 2:
 			n.exec = func(f *frame) bltn {
-				dest(f).Set(reflect.MakeMap(typ))
+				value := reflect.MakeMap(typ)
+				f.interp.registerOwnedValue(value, f)
+				setOwnedValueOutput(f, dest(f), value)
 				return next
 			}
 		case 3:
 			value := genValue(n.child[2])
+			values := []func(*frame) reflect.Value{value}
+			useCallArgSnapshots(n, values)
+			value = values[0]
 			n.exec = func(f *frame) bltn {
-				dest(f).Set(reflect.MakeMapWithSize(typ, int(vInt(value(f)))))
+				mapped := reflect.MakeMapWithSize(typ, int(vInt(value(f))))
+				f.interp.registerOwnedValue(mapped, f)
+				setOwnedValueOutput(f, dest(f), mapped)
 				return next
 			}
 		}
@@ -3596,6 +5042,21 @@ func recv(n *node) {
 	tnext := getExec(n.tnext)
 	i := n.findex
 	l := n.level
+	store := func(f *frame, v reflect.Value) {
+		owner := getFrame(f, l)
+		if n.anc != nil && n.anc.kind == assignStmt && n.anc.action == aAssign {
+			destination := owner.data[i]
+			f.interp.markOwnedCellWriteFromExec(destination, v)
+			destination.Set(v)
+			return
+		}
+		// The received value is an unaddressable copy; store an addressable
+		// one so later writes into the same frame cell (for example the
+		// regular-return Set) keep working.
+		nv := reflect.New(v.Type()).Elem()
+		nv.Set(v)
+		owner.data[i] = nv
+	}
 
 	if n.interp.cancelChan {
 		// Cancellable channel read
@@ -3605,7 +5066,8 @@ func recv(n *node) {
 				// Fast: channel read doesn't block
 				ch := value(f)
 				if r, ok := ch.TryRecv(); ok {
-					getFrame(f, l).data[i] = r
+					r = f.interp.adoptInterpretedFuncValue(f, ch, r)
+					store(f, r)
 					if r.Bool() {
 						return tnext
 					}
@@ -3616,11 +5078,13 @@ func recv(n *node) {
 				done := f.done
 				f.mutex.RUnlock()
 
-				chosen, v, _ := reflect.Select([]reflect.SelectCase{done, {Dir: reflect.SelectRecv, Chan: ch}})
+				chosen, r, _ := selectWithFuncSweepFenceReleased(f, []reflect.SelectCase{done, {Dir: reflect.SelectRecv, Chan: ch}})
 				if chosen == 0 {
 					return nil
 				}
-				if v.Bool() {
+				r = f.interp.adoptInterpretedFuncValue(f, ch, r)
+				store(f, r)
+				if r.Bool() {
 					return tnext
 				}
 				return fnext
@@ -3630,7 +5094,8 @@ func recv(n *node) {
 				// Fast: channel read doesn't block
 				ch := value(f)
 				if r, ok := ch.TryRecv(); ok {
-					getFrame(f, l).data[i] = r
+					r = f.interp.adoptInterpretedFuncValue(f, ch, r)
+					store(f, r)
 					return tnext
 				}
 				// Slow: channel is blocked, allow cancel
@@ -3638,11 +5103,12 @@ func recv(n *node) {
 				done := f.done
 				f.mutex.RUnlock()
 
-				var chosen int
-				chosen, getFrame(f, l).data[i], _ = reflect.Select([]reflect.SelectCase{done, {Dir: reflect.SelectRecv, Chan: ch}})
+				chosen, r, _ := selectWithFuncSweepFenceReleased(f, []reflect.SelectCase{done, {Dir: reflect.SelectRecv, Chan: ch}})
 				if chosen == 0 {
 					return nil
 				}
+				r = f.interp.adoptInterpretedFuncValue(f, ch, r)
+				store(f, r)
 				return tnext
 			}
 		}
@@ -3651,16 +5117,21 @@ func recv(n *node) {
 		if n.fnext != nil {
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
-				if r, _ := value(f).Recv(); r.Bool() {
-					getFrame(f, l).data[i] = r
+				ch := value(f)
+				r, _ := recvWithFuncSweepFenceReleased(f, ch)
+				r = f.interp.adoptInterpretedFuncValue(f, ch, r)
+				store(f, r)
+				if r.Bool() {
 					return tnext
 				}
 				return fnext
 			}
 		} else {
-			i := n.findex
 			n.exec = func(f *frame) bltn {
-				getFrame(f, l).data[i], _ = value(f).Recv()
+				channel := value(f)
+				r, _ := recvWithFuncSweepFenceReleased(f, channel)
+				r = f.interp.adoptInterpretedFuncValue(f, channel, r)
+				store(f, r)
 				return tnext
 			}
 		}
@@ -3671,6 +5142,7 @@ func recv2(n *node) {
 	vchan := genValue(n.child[0])    // chan
 	vres := genValue(n.anc.child[0]) // result
 	vok := genValue(n.anc.child[1])  // status
+	setStatus := n.anc.child[1].ident != "_"
 	tnext := getExec(n.tnext)
 
 	if n.interp.cancelChan {
@@ -3679,8 +5151,12 @@ func recv2(n *node) {
 			ch, result, status := vchan(f), vres(f), vok(f)
 			//  Fast: channel read doesn't block
 			if v, ok := ch.TryRecv(); ok {
+				v = f.interp.adoptInterpretedFuncValue(f, ch, v)
+				f.interp.markOwnedCellWriteFromExec(result, v)
 				result.Set(v)
-				status.SetBool(true)
+				if setStatus {
+					status.SetBool(true)
+				}
 				return tnext
 			}
 			// Slow: channel is blocked, allow cancel
@@ -3688,20 +5164,30 @@ func recv2(n *node) {
 			done := f.done
 			f.mutex.RUnlock()
 
-			chosen, v, ok := reflect.Select([]reflect.SelectCase{done, {Dir: reflect.SelectRecv, Chan: ch}})
+			chosen, v, ok := selectWithFuncSweepFenceReleased(f, []reflect.SelectCase{done, {Dir: reflect.SelectRecv, Chan: ch}})
 			if chosen == 0 {
 				return nil
 			}
+			v = f.interp.adoptInterpretedFuncValue(f, ch, v)
+			f.interp.markOwnedCellWriteFromExec(result, v)
 			result.Set(v)
-			status.SetBool(ok)
+			if setStatus {
+				status.SetBool(ok)
+			}
 			return tnext
 		}
 	} else {
 		// Blocking channel read (less overhead)
 		n.exec = func(f *frame) bltn {
-			v, ok := vchan(f).Recv()
-			vres(f).Set(v)
-			vok(f).SetBool(ok)
+			channel := vchan(f)
+			v, ok := recvWithFuncSweepFenceReleased(f, channel)
+			v = f.interp.adoptInterpretedFuncValue(f, channel, v)
+			result := vres(f)
+			f.interp.markOwnedCellWriteFromExec(result, v)
+			result.Set(v)
+			if setStatus {
+				vok(f).SetBool(ok)
+			}
 			return tnext
 		}
 	}
@@ -3768,7 +5254,17 @@ func send(n *node) {
 	if !n.interp.cancelChan {
 		// Send is non-cancellable, has the least overhead.
 		n.exec = func(f *frame) bltn {
-			value0(f).Send(value1(f))
+			ch, data := value0(f), value1(f)
+			token := f.interp.markInterpretedFuncChannelSend(f, ch, data)
+			delivered := false
+			defer func() {
+				if !delivered {
+					f.interp.rollbackInterpretedFuncChannelSend(token)
+				}
+			}()
+			sendWithFuncSweepFenceReleased(f, ch, data)
+			delivered = true
+			f.interp.commitInterpretedFuncChannelSend(token)
 			return next
 		}
 		return
@@ -3777,8 +5273,17 @@ func send(n *node) {
 	// Send is cancellable, may have some overhead.
 	n.exec = func(f *frame) bltn {
 		ch, data := value0(f), value1(f)
+		token := f.interp.markInterpretedFuncChannelSend(f, ch, data)
+		delivered := false
+		defer func() {
+			if !delivered {
+				f.interp.rollbackInterpretedFuncChannelSend(token)
+			}
+		}()
 		// Fast: send on channel doesn't block.
 		if ok := ch.TrySend(data); ok {
+			delivered = true
+			f.interp.commitInterpretedFuncChannelSend(token)
 			return next
 		}
 		// Slow: send on channel blocks, allow cancel.
@@ -3786,10 +5291,12 @@ func send(n *node) {
 		done := f.done
 		f.mutex.RUnlock()
 
-		chosen, _, _ := reflect.Select([]reflect.SelectCase{done, {Dir: reflect.SelectSend, Chan: ch, Send: data}})
+		chosen, _, _ := selectWithFuncSweepFenceReleased(f, []reflect.SelectCase{done, {Dir: reflect.SelectSend, Chan: ch, Send: data}})
 		if chosen == 0 {
 			return nil
 		}
+		delivered = true
+		f.interp.commitInterpretedFuncChannelSend(token)
 		return next
 	}
 }
@@ -3864,6 +5371,16 @@ func _select(n *node) {
 			chanValues[i] = genValue(c0.child[0].child[0])
 			cases[i].Dir = reflect.SelectRecv
 			clause[i] = func(*frame) bltn { return next }
+		case c0.action == aAssign || c0.action == aAssignX:
+			chans[i], assigned[i], ok[i], cases[i].Dir = clauseChanDir(c0)
+			chanValues[i] = genValue(chans[i])
+			if assigned[i] != nil {
+				assignedValues[i] = genValue(assigned[i])
+			}
+			if ok[i] != nil {
+				okValues[i] = genValue(ok[i])
+			}
+			clause[i] = func(*frame) bltn { return next }
 		case c0.kind == sendStmt:
 			// The comm clause as an empty body clause after channel send.
 			chanValues[i] = genValue(c0.child[0])
@@ -3878,6 +5395,15 @@ func _select(n *node) {
 		cases[nbClause] = f.done
 		f.mutex.RUnlock()
 
+		pendingSends := make([]*ownedChannelSend, 0, nbClause)
+		settled := false
+		defer func() {
+			if !settled {
+				for _, send := range pendingSends {
+					f.interp.rollbackInterpretedFuncChannelSend(send)
+				}
+			}
+		}()
 		for i := range cases[:nbClause] {
 			switch cases[i].Dir {
 			case reflect.SelectRecv:
@@ -3885,19 +5411,36 @@ func _select(n *node) {
 			case reflect.SelectSend:
 				cases[i].Chan = chanValues[i](f)
 				cases[i].Send = assignedValues[i](f)
+				pendingSends = append(pendingSends, f.interp.markInterpretedFuncChannelSend(f, cases[i].Chan, cases[i].Send))
 			case reflect.SelectDefault:
 				// Keep zero values for comm clause
 			}
 		}
-		j, v, s := reflect.Select(cases)
+		j, v, s := selectWithFuncSweepFenceReleased(f, cases)
+		for i := range cases[:nbClause] {
+			if cases[i].Dir == reflect.SelectSend && i != j {
+				f.interp.rollbackInterpretedFuncChannelSend(pendingSends[0])
+				pendingSends = pendingSends[1:]
+			} else if cases[i].Dir == reflect.SelectSend {
+				f.interp.commitInterpretedFuncChannelSend(pendingSends[0])
+				pendingSends = pendingSends[1:]
+			}
+		}
+		settled = true
 		if j == nbClause {
 			return nil
 		}
 		if cases[j].Dir == reflect.SelectRecv && assignedValues[j] != nil {
-			assignedValues[j](f).Set(v)
+			v = f.interp.adoptInterpretedFuncValue(f, cases[j].Chan, v)
+			destination := assignedValues[j](f)
+			f.interp.markOwnedCellWriteFromExec(destination, v)
+			destination.Set(v)
 			if ok[j] != nil {
 				okValues[j](f).SetBool(s)
 			}
+		}
+		if cases[j].Dir == reflect.SelectRecv && assignedValues[j] == nil {
+			f.interp.adoptInterpretedFuncValue(f, cases[j].Chan, v)
 		}
 		return clause[j]
 	}
@@ -4161,4 +5704,39 @@ func realConst(n *node) {
 		n.rval = reflect.ValueOf(real(v.Complex()))
 		n.gen = nop
 	}
+}
+
+// minMaxConst computes the constant value of a min or max call whose
+// arguments are all constants, in a constant declaration context.
+func minMaxConst(n *node) error {
+	isMin := n.child[0].ident == bltnMin
+	var best constant.Value
+	for _, c := range n.child[1:] {
+		if !c.rval.IsValid() {
+			return c.cfgErrorf("%s argument is not a constant", n.child[0].ident)
+		}
+		cv, ok := c.rval.Interface().(constant.Value)
+		if !ok {
+			if c.rval.Type().Kind() == reflect.Interface {
+				return c.cfgErrorf("%s argument is not a constant", n.child[0].ident)
+			}
+			cv = constant.Make(c.rval.Interface())
+		}
+		if best == nil {
+			best = cv
+			continue
+		}
+		op := token.GTR
+		if isMin {
+			op = token.LSS
+		}
+		if constant.Compare(cv, op, best) {
+			best = cv
+		}
+	}
+	if best == nil {
+		best = constant.MakeInt64(0)
+	}
+	n.rval = reflect.ValueOf(best)
+	return nil
 }

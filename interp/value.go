@@ -3,6 +3,7 @@ package interp
 import (
 	"go/constant"
 	"reflect"
+	"strings"
 )
 
 const (
@@ -156,7 +157,11 @@ func genValue(n *node) func(*frame) reflect.Value {
 func genDestValue(typ *itype, n *node) func(*frame) reflect.Value {
 	convertLiteralValue(n, typ.TypeOf())
 	switch {
-	case isInterfaceSrc(typ) && (!isEmptyInterface(typ) || len(n.typ.method) > 0):
+	case isInterfaceSrc(typ) && (!isEmptyInterface(typ) || len(n.typ.methods()) > 0):
+		// When assigning to an empty interface, wrap as soon as the source
+		// carries any method (directly or promoted through embedding): the
+		// valueInterface wrapper is what keeps the dynamic type available
+		// for further type assertions and interface calls.
 		return genValueInterface(n)
 	case isNamedFuncSrc(n.typ):
 		return genFunctionWrapper(n)
@@ -274,17 +279,117 @@ func getConcreteValue(val reflect.Value) reflect.Value {
 	if v.Kind() != reflect.Struct {
 		return v
 	}
-	// Search a concrete value in fields of an emulated interface.
+	// Search a concrete value in fields of an emulated interface. Only
+	// interface fields are unwrapped: other struct values must be returned
+	// unmodified, as their fields are not a substitute for the value itself.
 	for i := v.NumField() - 1; i >= 0; i-- {
 		vv := v.Field(i)
-		if vv.Kind() == reflect.Interface {
-			vv = vv.Elem()
+		if vv.Kind() != reflect.Interface {
+			continue
 		}
+		vv = vv.Elem()
 		if vv.IsValid() {
 			return vv
 		}
 	}
 	return v
+}
+
+// isInterfaceWrapperType returns true if t is a generated interface wrapper
+// struct type, i.e. a struct with an IValue first field holding the wrapped
+// value, and only func fields beyond it, one per interface method.
+func isInterfaceWrapperType(t reflect.Type) bool {
+	if t.Kind() != reflect.Struct || t.NumField() < 2 ||
+		t.Field(0).Name != "IValue" || t.Field(0).Type.Kind() != reflect.Interface {
+		return false
+	}
+	// Only interpreter generated wrapper types are recognized: they are
+	// anonymous (built at run time via reflect.StructOf) or named by the
+	// extract tool with a leading underscore. A user type with the same
+	// field shape must not be unwrapped.
+	if name := t.Name(); name != "" && !strings.HasPrefix(name, "_") {
+		return false
+	}
+	for i := 1; i < t.NumField(); i++ {
+		if t.Field(i).Type.Kind() != reflect.Func {
+			return false
+		}
+	}
+	return true
+}
+
+// unwrapInterfaceValue returns the concrete value designated by v, removing all
+// interpreter interface indirections: valueInterface wrappers and generated
+// interface wrapper structs. It is used when a value is passed to a binary
+// function taking an empty interface parameter, so the binary code reflects
+// over the concrete value rather than over an interpreter wrapper.
+func unwrapInterfaceValue(v reflect.Value) reflect.Value {
+	for v.IsValid() {
+		if v.Kind() == reflect.Interface {
+			if v.IsNil() {
+				return v
+			}
+			v = v.Elem()
+			continue
+		}
+		if vi, ok := v.Interface().(valueInterface); ok {
+			v = vi.value
+			continue
+		}
+		if !isInterfaceWrapperType(v.Type()) {
+			return v
+		}
+		nv := v.Field(0).Elem()
+		if !nv.IsValid() {
+			return v
+		}
+		v = nv
+	}
+	return v
+}
+
+// isWrappedInterfaceValue returns true if v carries an interpreter interface
+// wrapper (valueInterface or generated interface wrapper struct).
+func isWrappedInterfaceValue(v reflect.Value) bool {
+	for v.IsValid() {
+		if v.Kind() == reflect.Interface {
+			if v.IsNil() {
+				return false
+			}
+			v = v.Elem()
+			continue
+		}
+		if _, ok := v.Interface().(valueInterface); ok {
+			return true
+		}
+		return isInterfaceWrapperType(v.Type())
+	}
+	return false
+}
+
+// genValueConcrete is like genValue, but the value is stripped from interpreter
+// interface wrappers (see unwrapInterfaceValue). It is used for arguments of
+// binary functions taking an empty interface parameter. A value which carries a
+// node matching one of the special interface types of the function (see
+// mapTypes, i.e. json.Marshaler for json.Marshal) is wrapped for that type
+// instead, so binary code can still call interpreted methods.
+func genValueConcrete(getMapType func(*itype) reflect.Type, n *node) func(*frame) reflect.Value {
+	value := genValue(n)
+
+	return func(f *frame) reflect.Value {
+		v := value(f)
+		if !v.IsValid() {
+			return v
+		}
+		if getMapType != nil {
+			if vi, ok := v.Interface().(valueInterface); ok && vi.node != nil {
+				if rt := getMapType(vi.node.typ); rt != nil {
+					return genInterfaceWrapper(vi.node, rt)(f)
+				}
+			}
+		}
+		return unwrapInterfaceValue(v)
+	}
 }
 
 func zeroInterfaceValue() reflect.Value {

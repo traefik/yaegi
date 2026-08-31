@@ -38,6 +38,12 @@ func (check typecheck) assignment(n *node, typ *itype, context string) error {
 	if n.typ == nil {
 		return n.cfgErrorf("invalid type in %s", context)
 	}
+	if n.kind == selectorExpr && n.isType(check.scope) {
+		// A package-level type name used where a value is required
+		// (e.g. u := url.URL). Identifier types are not checked, as a
+		// variable may legitimately shadow a predeclared type name.
+		return n.cfgErrorf("type %s is not an expression", n.typ.id())
+	}
 	if n.typ.untyped {
 		if typ == nil || isInterface(typ) {
 			if typ == nil && n.typ.cat == nilT {
@@ -53,8 +59,26 @@ func (check typecheck) assignment(n *node, typ *itype, context string) error {
 	if typ == nil {
 		return nil
 	}
+	if typ.incomplete || n.typ.incomplete {
+		// An incomplete type has no reflect type yet: checking the
+		// assignment now would force its resolution and panic. The gta
+		// revisit pass retries the declaration once the type is defined.
+		return nil
+	}
 
 	if !n.typ.assignableTo(typ) && typ.str != "*unsafe2.dummy" {
+		// A method value on a binary type carries the receiver as the first
+		// argument of its rtype signature (the reflect.Type.Method form),
+		// while the effective bound signature excludes it. Accept the
+		// assignment when the selector base is not a type (i.e. this is a
+		// bound method value, not a method expression) and the bound
+		// signature matches the destination.
+		if nt := n.typ; n.kind == selectorExpr && !n.child[0].isType(check.scope) &&
+			nt.cat == valueT && nt.recv != nil && !isInterface(nt.recv) && isFunc(nt) && isFunc(typ) {
+			if bound := boundMethodType(nt.TypeOf()); bound != nil && bound.AssignableTo(typ.TypeOf()) {
+				return nil
+			}
+		}
 		if context == "" {
 			return n.cfgErrorf("cannot use type %s as type %s", n.typ.id(), typ.id())
 		}
@@ -651,6 +675,12 @@ func (check typecheck) typeAssertionExpr(n *node, typ *itype) error {
 
 // conversion type checks the conversion of n to typ.
 func (check typecheck) conversion(n *node, typ *itype) error {
+	if typ.incomplete || n.typ.incomplete {
+		// An incomplete type has no reflect type yet: checking the
+		// conversion now would force its resolution and panic. The gta
+		// revisit pass retries the declaration once the type is defined.
+		return nil
+	}
 	var c constant.Value
 	if n.rval.IsValid() {
 		if con, ok := n.rval.Interface().(constant.Value); ok {
@@ -724,24 +754,28 @@ var builtinFuncs = map[string]struct {
 	args     int
 	variadic bool
 }{
-	bltnAlignof:  {args: 1, variadic: false},
-	bltnAppend:   {args: 1, variadic: true},
-	bltnCap:      {args: 1, variadic: false},
-	bltnClose:    {args: 1, variadic: false},
-	bltnComplex:  {args: 2, variadic: false},
-	bltnImag:     {args: 1, variadic: false},
-	bltnCopy:     {args: 2, variadic: false},
-	bltnDelete:   {args: 2, variadic: false},
-	bltnLen:      {args: 1, variadic: false},
-	bltnMake:     {args: 1, variadic: true},
-	bltnNew:      {args: 1, variadic: false},
-	bltnOffsetof: {args: 1, variadic: false},
-	bltnPanic:    {args: 1, variadic: false},
-	bltnPrint:    {args: 0, variadic: true},
-	bltnPrintln:  {args: 0, variadic: true},
-	bltnReal:     {args: 1, variadic: false},
-	bltnRecover:  {args: 0, variadic: false},
-	bltnSizeof:   {args: 1, variadic: false},
+	bltnAlignof:      {args: 1, variadic: false},
+	bltnAppend:       {args: 1, variadic: true},
+	bltnCap:          {args: 1, variadic: false},
+	bltnClose:        {args: 1, variadic: false},
+	bltnComplex:      {args: 2, variadic: false},
+	bltnImag:         {args: 1, variadic: false},
+	bltnCopy:         {args: 2, variadic: false},
+	bltnDelete:       {args: 2, variadic: false},
+	bltnLen:          {args: 1, variadic: false},
+	bltnMake:         {args: 1, variadic: true},
+	bltnMax:          {args: 1, variadic: true},
+	bltnMin:          {args: 1, variadic: true},
+	bltnNew:          {args: 1, variadic: false},
+	bltnOffsetof:     {args: 1, variadic: false},
+	bltnPanic:        {args: 1, variadic: false},
+	bltnPrint:        {args: 0, variadic: true},
+	bltnPrintln:      {args: 0, variadic: true},
+	bltnReal:         {args: 1, variadic: false},
+	bltnRecover:      {args: 0, variadic: false},
+	bltnSizeof:       {args: 1, variadic: false},
+	bltnUnsafeSlice:  {args: 2, variadic: false},
+	bltnUnsafeString: {args: 2, variadic: false},
 }
 
 func (check typecheck) builtin(name string, n *node, child []*node, ellipsis bool) error {
@@ -798,6 +832,49 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 			ident: "append",
 		}
 		return check.arguments(n, child, fun, ellipsis)
+	case bltnMax, bltnMin:
+		// All arguments must be assignable to a single ordered type (Go spec).
+		var typ *itype
+		for _, p := range params {
+			pt := p.Type()
+			if pt == nil || pt.untyped {
+				continue
+			}
+			if typ == nil {
+				typ = pt
+				continue
+			}
+			if !pt.assignableTo(typ) {
+				return p.nod.cfgErrorf("invalid argument: %s is not assignable to %s", pt.id(), typ.id())
+			}
+		}
+		if typ == nil {
+			// All arguments are untyped constants. Per spec the result is an
+			// untyped constant whose default type every argument would assume;
+			// approximate by promoting to untyped float if any argument is
+			// untyped float, else keep the first argument's untyped type.
+			typ = params[0].Type()
+			for _, p := range params {
+				if pt := p.Type(); pt != nil && pt.untyped && pt.cat == float64T {
+					typ = pt
+					break
+				}
+			}
+		}
+		switch typ.TypeOf().Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+			reflect.Float32, reflect.Float64, reflect.String:
+		default:
+			return n.cfgErrorf("invalid argument: %s is not ordered", typ.id())
+		}
+		for _, p := range params {
+			if pt := p.Type(); pt != nil && pt.untyped {
+				if err := check.convertUntyped(p.nod, typ); err != nil {
+					return err
+				}
+			}
+		}
 	case bltnCap, bltnLen:
 		typ := arrayDeref(params[0].Type())
 		ok := false
@@ -933,6 +1010,22 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 		}
 	case bltnRecover, bltnNew, bltnAlignof, bltnOffsetof, bltnSizeof:
 		// Nothing to do.
+	case bltnUnsafeSlice:
+		t0 := params[0].Type().TypeOf()
+		if t0 == nil || t0.Kind() != reflect.Ptr {
+			return params[0].nod.cfgErrorf("invalid argument: unsafe.Slice requires a pointer, have %s", params[0].Type().id())
+		}
+		if t1 := params[1].Type().TypeOf(); !isInt(t1) {
+			return params[1].nod.cfgErrorf("invalid argument: unsafe.Slice length must be an integer, have %s", params[1].Type().id())
+		}
+	case bltnUnsafeString:
+		t0 := params[0].Type().TypeOf()
+		if t0 == nil || t0.Kind() != reflect.Ptr || t0.Elem().Kind() != reflect.Uint8 {
+			return params[0].nod.cfgErrorf("invalid argument: unsafe.String requires a *byte, have %s", params[0].Type().id())
+		}
+		if t1 := params[1].Type().TypeOf(); !isInt(t1) {
+			return params[1].nod.cfgErrorf("invalid argument: unsafe.String length must be an integer, have %s", params[1].Type().id())
+		}
 	default:
 		return n.cfgErrorf("unsupported builtin %s", name)
 	}
@@ -1004,8 +1097,8 @@ func (check typecheck) argument(p param, ftyp *itype, i, l int, ellipsis bool) e
 			return p.nod.cfgErrorf("can only use ... with matching parameter")
 		}
 		t := p.Type().TypeOf()
-		if t.Kind() != reflect.Slice || !(valueTOf(t.Elem())).assignableTo(atyp) {
-			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.typ.id(), (sliceOf(atyp)).id())
+		if t.Kind() != reflect.Slice || !valueTOf(t.Elem()).assignableTo(atyp) {
+			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.typ.id(), sliceOf(atyp).id())
 		}
 		return nil
 	}

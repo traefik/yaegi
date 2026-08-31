@@ -14,7 +14,8 @@ func init() {
 		"Symbols": reflect.ValueOf(Symbols),
 	}
 	Symbols["github.com/traefik/yaegi/yaegi"] = map[string]reflect.Value{
-		"convert": reflect.ValueOf(convert),
+		"convert":                    reflect.ValueOf(convert),
+		"convertOwnedUnsafeIdentity": reflect.ValueOf(true),
 	}
 
 	Symbols["unsafe/unsafe"]["Add"] = reflect.ValueOf(add)
@@ -24,6 +25,8 @@ func init() {
 	Symbols["unsafe/unsafe"]["Alignof"] = reflect.ValueOf(alignof)
 	// The following is used for signature check only.
 	Symbols["unsafe/unsafe"]["Offsetof"] = reflect.ValueOf(func(interface{}) uintptr { return 0 })
+	Symbols["unsafe/unsafe"]["Slice"] = reflect.ValueOf(slicePlaceholder)
+	Symbols["unsafe/unsafe"]["String"] = reflect.ValueOf(stringPlaceholder)
 }
 
 func convert(from, to reflect.Type) func(src, dest reflect.Value) {
@@ -68,3 +71,11 @@ func uintptrToUnsafePtr(src, dest reflect.Value) {
 }
 
 //go:generate ../../internal/cmd/extract/extract unsafe
+
+// Slice and String are placeholders used for signature checks only: the
+// interpreter compiles unsafe.Slice and unsafe.String calls itself (see
+// interp unsafeBuiltin), like the other unsafe builtins above.
+var (
+	slicePlaceholder  = func(ptr interface{}, len int) interface{} { return nil }
+	stringPlaceholder = func(data *byte, len int) string { return "" }
+)

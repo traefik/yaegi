@@ -2,6 +2,8 @@ package interp
 
 import (
 	"path"
+	"reflect"
+	"sort"
 )
 
 // gta performs a global types analysis on the AST, registering types,
@@ -13,6 +15,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 	sc := interp.initScopePkg(importPath, pkgName)
 	var err error
 	var revisit []*node
+	seenBinaryImports := map[string]bool{}
 
 	baseName := path.Base(interp.fset.Position(root.pos).Filename)
 
@@ -27,11 +30,20 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 		case constDecl:
 			// Early parse of constDecl subtree, to compute all constant
 			// values which may be used in further declarations.
-			if _, err = interp.cfg(n, sc, importPath, pkgName); err != nil {
-				// No error processing here, to allow recovery in subtree nodes.
-				// TODO(marc): check for a non recoverable error and return it for better diagnostic.
-				err = nil
-			}
+			func() {
+				defer func() {
+					// A panic here means the constant value is not
+					// computable yet (for example a type declared later in
+					// the file): recover and let the defineStmt pass revisit
+					// the declaration once its dependencies are defined.
+					_ = recover()
+				}()
+				if _, err = interp.cfg(n, sc, importPath, pkgName); err != nil {
+					// No error processing here, to allow recovery in subtree nodes.
+					// TODO(marc): check for a non recoverable error and return it for better diagnostic.
+					err = nil
+				}
+			}()
 
 		case blockStmt:
 			if n != root {
@@ -39,6 +51,13 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 			}
 
 		case defineStmt:
+			if !isRootDefinition(n, root) {
+				// Declarations below a REPL-level control statement are local even
+				// though the synthetic root executes in the global frame. CFG owns
+				// their allocation after entering the nested lexical scope.
+				return false
+			}
+
 			var (
 				atyp *itype
 				err2 error
@@ -59,14 +78,41 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				sbase = len(n.child) - n.nright
 			}
 
+			// Type and evaluate all sources before registering any
+			// destination symbol: in Go, the right-hand side of a
+			// declaration cannot refer to the variables it declares
+			// (toto, titi := 1, toto must be an undefined error).
+			type globalDefine struct {
+				ident     string
+				typ       *itype
+				val       reflect.Value
+				constKind bool
+			}
+			defines := make([]globalDefine, 0, n.nleft)
 			for i := 0; i < n.nleft; i++ {
 				dest, src := n.child[i], n.child[sbase+i]
+				if err2 = interp.compileGenericCalls(sc, src, importPath, pkgName); err2 != nil {
+					n.meta = err2
+					revisit = append(revisit, n)
+					return false
+				}
 				if isBlank(src) {
 					err = n.cfgErrorf("cannot use _ as value")
 				}
 				val := src.rval
 				if n.anc.kind == constDecl {
-					if _, err2 := interp.cfg(n, sc, importPath, pkgName); err2 != nil {
+					if err2 := func() (err error) {
+						defer func() {
+							// A panic means the constant value is not
+							// computable yet (incomplete type or dependency):
+							// convert it to the revisit path below.
+							if r := recover(); r != nil {
+								err = n.cfgErrorf("constant not computable yet")
+							}
+						}()
+						_, err = interp.cfg(n, sc, importPath, pkgName)
+						return err
+					}(); err2 != nil {
 						// Constant value can not be computed yet.
 						// Come back when child dependencies are known.
 						revisit = append(revisit, n)
@@ -96,9 +142,13 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				if typ.isBinMethod {
 					typ = valueTOf(typ.methodCallType(), isBinMethod(), withScope(sc))
 				}
-				sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val, node: n}
-				if n.anc.kind == constDecl {
-					sc.sym[dest.ident].kind = constSym
+				d := globalDefine{ident: dest.ident, typ: typ, val: val, constKind: n.anc.kind == constDecl}
+				defines = append(defines, d)
+			}
+			for _, d := range defines {
+				sc.sym[d.ident] = &symbol{kind: varSym, global: true, index: sc.add(d.typ), typ: d.typ, rval: d.val, node: n}
+				if d.constKind {
+					sc.sym[d.ident].kind = constSym
 					if childPos(n) == len(n.anc.child)-1 {
 						sc.iota = 0
 					} else {
@@ -109,9 +159,20 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 			return false
 
 		case defineXStmt:
+			if !isRootDefinition(n, root) {
+				return false
+			}
+			if err2 := interp.compileGenericCalls(sc, n.lastChild(), importPath, pkgName); err2 != nil {
+				n.meta = err2
+				revisit = append(revisit, n)
+				return false
+			}
 			err = compDefineX(sc, n)
 
 		case valueSpec:
+			if !isRootDefinition(n, root) {
+				return false
+			}
 			l := len(n.child) - 1
 			if n.typ = n.child[l].typ; n.typ == nil {
 				if n.typ, err = nodeType(interp, sc, n.child[l]); err != nil {
@@ -199,7 +260,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 						}
 					}
 				}
-			case ident == "init":
+			case ident == initID:
 				// init functions do not get declared as per the Go spec.
 			default:
 				asImportName := path.Join(ident, baseName)
@@ -230,46 +291,87 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				ipath = packageName
 			}
 			if pkg := interp.binPkg[ipath]; pkg != nil {
+				if name == "" {
+					name = interp.pkgNames[ipath]
+				}
+				// Per the Go spec, an import spec binds one name in the file
+				// block: only reusing that binding name is a redeclaration,
+				// and a repeated dot import re-exports colliding names. The
+				// same package path may legally be imported again under
+				// another name, and blank imports bind nothing.
+				switch name {
+				case "_":
+				case ".":
+					dotKey := "\x00dotimport:" + ipath
+					if seenBinaryImports[dotKey] {
+						// Report a deterministic colliding exported name, in
+						// the spirit of gc's diagnostic for re-exported names.
+						var collisions []string
+						for importedName := range pkg {
+							if _, exists := sc.sym[importedName]; exists {
+								collisions = append(collisions, importedName)
+							}
+						}
+						errName := ipath
+						if len(collisions) > 0 {
+							sort.Strings(collisions)
+							errName = collisions[0]
+						}
+						err = n.cfgErrorf("%s redeclared in this block", errName)
+						return false
+					}
+					seenBinaryImports[dotKey] = true
+				default:
+					if seenBinaryImports[name] {
+						err = n.cfgErrorf("%s redeclared in this block", name)
+						return false
+					}
+					seenBinaryImports[name] = true
+				}
+
+				// Imports from separate incremental Eval cells share a package scope and
+				// source name. Keep an import marker so the same binding can be retried,
+				// while the per-GTA map above still rejects duplicates in one source file.
+				key := path.Join(name, baseName)
+				if name == "." || name == "_" {
+					key = "\x00import:" + name + ":" + ipath + ":" + baseName
+				}
+				if sym, exists := sc.sym[key]; exists {
+					if sym.kind == pkgSym && sym.typ.cat == binPkgT && sym.typ.path == ipath {
+						return false
+					}
+					err = n.cfgErrorf("%s redeclared in this block", name)
+					return false
+				}
+
 				switch name {
 				case "_": // no import of symbols
 				case ".": // import symbols in current scope
-					for n, v := range pkg {
+					// Validate the complete dot import before changing the scope, so a
+					// collision cannot leave a partially imported package behind.
+					for importedName := range pkg {
+						if _, exists := sc.sym[importedName]; exists {
+							err = n.cfgErrorf("%s redeclared in this block", importedName)
+							return false
+						}
+					}
+					for importedName, v := range pkg {
 						typ := v.Type()
 						kind := binSym
 						if isBinType(v) {
 							typ = typ.Elem()
 							kind = typeSym
 						}
-						sc.sym[n] = &symbol{kind: kind, typ: valueTOf(typ, withScope(sc)), rval: v}
+						sc.sym[importedName] = &symbol{kind: kind, typ: valueTOf(typ, withScope(sc)), rval: v}
 					}
 				default: // import symbols in package namespace
-					if name == "" {
-						name = interp.pkgNames[ipath]
-					}
-
-					// If an incomplete type exists, delete it
+					// If an incomplete type exists, delete it.
 					if sym, exists := sc.sym[name]; exists && sym.kind == typeSym && sym.typ.incomplete {
 						delete(sc.sym, name)
 					}
-
-					// Imports of a same package are all mapped in the same scope, so we cannot just
-					// map them by their names, otherwise we could have collisions from same-name
-					// imports in different source files of the same package. Therefore, we suffix
-					// the key with the basename of the source file.
-					name = path.Join(name, baseName)
-					if sym, exists := sc.sym[name]; !exists {
-						sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath, scope: sc}}
-						break
-					} else if sym.kind == pkgSym && sym.typ.cat == srcPkgT && sym.typ.path == ipath {
-						// ignore re-import of identical package
-						break
-					}
-
-					// redeclaration error. Not caught by the parser.
-					err = n.cfgErrorf("%s redeclared in this block", name)
-					return false
 				}
-			} else if pkgName, err = interp.importSrc(rpath, ipath, NoTest); err == nil {
+				sc.sym[key] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath, scope: sc}}
+			} else if pkgName, err = interp.importSrcLocked(rpath, ipath, NoTest); err == nil {
 				sc.types = interp.universe.types
 				switch name {
 				case "_": // no import of symbols
@@ -410,10 +512,15 @@ func (interp *Interpreter) gtaRetry(nodes []*node, importPath, pkgName string) e
 		n := revisit[0]
 		switch n.kind {
 		case typeSpec, typeSpecAssign:
+			if n.typ == nil {
+				// The type never resolved: report it instead of dereferencing
+				// a nil type below.
+				return n.cfgErrorf("undefined type: %s", n.child[0].ident)
+			}
 			if err := definedType(n.typ); err != nil {
 				return err
 			}
-		case defineStmt, funcDecl:
+		case defineStmt, defineXStmt, funcDecl:
 			if err, ok := n.meta.(error); ok {
 				return err
 			}

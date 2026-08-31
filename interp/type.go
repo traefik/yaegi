@@ -663,6 +663,25 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				}
 			case bltnCap, bltnCopy, bltnLen:
 				t = sc.getType("int")
+			case bltnMin, bltnMax:
+				// The result type is the common type of the arguments, already
+				// unified (untyped args converted) by check.builtin.
+				t, err = nodeType2(interp, sc, n.child[1], seen)
+				if err != nil {
+					return nil, err
+				}
+				if t.untyped {
+					// Like binaryExpr, an untyped result takes the
+					// destination type when the context provides one.
+					switch a := n.anc; {
+					case a.kind == defineStmt && len(a.child) > a.nleft+a.nright:
+						if t, err = nodeType2(interp, sc, a.child[a.nleft], seen); err != nil {
+							return nil, err
+						}
+					case a.kind == returnStmt:
+						t = sc.def.typ.ret[childPos(n)]
+					}
+				}
 			case bltnAppend, bltnMake:
 				t, err = nodeType2(interp, sc, n.child[1], seen)
 			case bltnNew:
@@ -672,6 +691,16 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				t.incomplete = incomplete
 			case bltnRecover:
 				t = sc.getType("interface{}")
+			case bltnUnsafeSlice:
+				t, err = nodeType2(interp, sc, n.child[1], seen)
+				if err != nil {
+					return nil, err
+				}
+				if pt := t.TypeOf(); pt != nil && pt.Kind() == reflect.Ptr {
+					t = sliceOf(valueTOf(pt.Elem(), withScope(sc)), withScope(sc))
+				}
+			case bltnUnsafeString:
+				t = sc.getType("string")
 			default:
 				t = &itype{cat: builtinT}
 			}
@@ -829,6 +858,26 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		switch lt.cat {
 		case arrayT, mapT, sliceT, variadicT:
 			t = lt.val
+		case valueT, stringT, linkedT, ptrT:
+			// Indexing a string (yielding byte), an array or slice behind a
+			// value or pointer type, or a defined type with an indexable
+			// underlying type.
+			rt := lt.TypeOf()
+			if rt == nil {
+				t = lt
+				break
+			}
+			for rt.Kind() == reflect.Ptr {
+				rt = rt.Elem()
+			}
+			switch rt.Kind() {
+			case reflect.String:
+				t = sc.getType("byte")
+			case reflect.Array, reflect.Slice, reflect.Map:
+				t = valueTOf(rt.Elem(), withScope(sc))
+			default:
+				err = n.cfgErrorf("invalid operation: %s is not indexable", lt.id())
+			}
 		case genericT:
 			t1, err := nodeType2(interp, sc, n.child[1], seen)
 			if err != nil {
@@ -1052,12 +1101,24 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		}
 		var incomplete bool
 		fields := make([]structField, 0, len(n.child[0].child))
+		fail := func(err error) (*itype, error) {
+			// The partially built struct may already be registered in the
+			// scope symbol: mark it incomplete so a retry rebuilds it instead
+			// of returning the bogus type as complete.
+			if t != nil {
+				t.incomplete = true
+			}
+			if sym != nil && sym.typ != nil {
+				sym.typ.incomplete = true
+			}
+			return nil, err
+		}
 		for _, c := range n.child[0].child {
 			switch {
 			case len(c.child) == 1:
 				typ, err := nodeType2(interp, sc, c.child[0], seen)
 				if err != nil {
-					return nil, err
+					return fail(err)
 				}
 				fields = append(fields, structField{name: fieldName(c.child[0]), embed: true, typ: typ})
 				incomplete = incomplete || typ.incomplete
@@ -1065,7 +1126,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				tag := vString(c.child[1].rval)
 				typ, err := nodeType2(interp, sc, c.child[0], seen)
 				if err != nil {
-					return nil, err
+					return fail(err)
 				}
 				fields = append(fields, structField{name: fieldName(c.child[0]), embed: true, typ: typ, tag: tag})
 				incomplete = incomplete || typ.incomplete
@@ -1078,7 +1139,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 				}
 				typ, err := nodeType2(interp, sc, c.child[l-1], seen)
 				if err != nil {
-					return nil, err
+					return fail(err)
 				}
 				incomplete = incomplete || typ.incomplete
 				for _, d := range c.child[:l-1] {
@@ -1122,6 +1183,13 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		t.str = t.path + "." + t.name
 	case t.cat == nilT:
 		t.str = "nil"
+	}
+
+	if t == nil && err == nil {
+		// An unresolvable type node must carry an error: a nil type with no
+		// error is stored or dereferenced by callers (gta revisit, cfg) as if
+		// it were valid, and panics later.
+		err = n.cfgErrorf("undefined type")
 	}
 
 	return t, err
@@ -1346,7 +1414,7 @@ func (t *itype) numOut() int {
 		}
 	case builtinT:
 		switch t.name {
-		case "append", "cap", "complex", "copy", "imag", "len", "make", "new", "real", "recover", "unsafe.Alignof", "unsafe.Offsetof", "unsafe.Sizeof":
+		case "append", "cap", "complex", "copy", "imag", "len", "make", "max", "min", "new", "real", "recover", "unsafe.Alignof", "unsafe.Offsetof", "unsafe.Sizeof", bltnUnsafeSlice, bltnUnsafeString:
 			return 1
 		}
 	}
@@ -1953,10 +2021,43 @@ func lookupFieldOrMethod(t *itype, name string) *itype {
 	default:
 		n, _ := t.lookupMethod(name)
 		if n == nil {
-			return nil
+			// The method may be promoted through an embedded interface
+			// field, whose methods are not method nodes of t.
+			return t.lookupEmbeddedInterfaceMethod(name, map[*itype]bool{})
 		}
 		return n.typ
 	}
+}
+
+// lookupEmbeddedInterfaceMethod returns the function type of a method
+// promoted through an embedded interface field of a struct type, or nil.
+func (t *itype) lookupEmbeddedInterfaceMethod(name string, seen map[*itype]bool) *itype {
+	if seen[t] {
+		return nil
+	}
+	seen[t] = true
+	if t.cat == ptrT {
+		return t.val.lookupEmbeddedInterfaceMethod(name, seen)
+	}
+	if isInterface(t) {
+		seq := t.lookupField(name)
+		if seq == nil {
+			return nil
+		}
+		return t.fieldSeq(seq)
+	}
+	for _, f := range t.field {
+		if !f.embed {
+			continue
+		}
+		if mt := f.typ.lookupEmbeddedInterfaceMethod(name, seen); mt != nil {
+			return mt
+		}
+	}
+	if t.cat == linkedT {
+		return t.val.lookupEmbeddedInterfaceMethod(name, seen)
+	}
+	return nil
 }
 
 func exportName(s string) string {
@@ -2258,7 +2359,63 @@ func (t *itype) implements(it *itype) bool {
 		}
 		return t.TypeOf().Implements(it.TypeOf())
 	}
-	return t.methods().contains(it.methods())
+	if t.methods().contains(it.methods()) {
+		return true
+	}
+	// The method set of an interpreted type may miss methods promoted from
+	// embedded binary fields, because reflect does not compute the method set
+	// of interpreted struct types (reflect.StructOf does not promote the
+	// methods of embedded fields). Use the same method lookup as for a
+	// selector on t, which traverses embedded fields, so an interpreted struct
+	// embedding a binary type can satisfy a binary interface (see #1480 and
+	// #1502). This mirrors the method lookup performed at runtime by
+	// genInterfaceWrapper.
+	for name := range it.methods() {
+		if m, _ := t.lookupMethod(name); m != nil {
+			continue
+		}
+		if _, _, _, ok := t.lookupBinMethod(name); ok && t.binPromotedMethodInSet(name, t.cat == ptrT) {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+// binPromotedMethodInSet reports whether the method name is in the method set
+// of t, considering promoted methods from embedded binary fields. viaPtr
+// tracks whether the path from the original receiver crossed a pointer
+// (receiver or embedded pointer field), in which case pointer-receiver
+// methods are part of the method set.
+func (t *itype) binPromotedMethodInSet(name string, viaPtr bool) bool {
+	if t.cat == ptrT {
+		return t.val.binPromotedMethodInSet(name, true)
+	}
+	for _, f := range t.field {
+		if !f.embed {
+			continue
+		}
+		if f.typ.cat == ptrT {
+			if f.typ.val.binPromotedMethodInSet(name, true) {
+				return true
+			}
+			continue
+		}
+		if f.typ.binPromotedMethodInSet(name, viaPtr) {
+			return true
+		}
+	}
+	rt := t.TypeOf()
+	if rt == nil {
+		return false
+	}
+	if _, ok := rt.MethodByName(name); ok {
+		return true
+	}
+	if _, ok := reflect.PtrTo(rt).MethodByName(name); ok {
+		return viaPtr
+	}
+	return false
 }
 
 // defaultType returns the default type of an untyped type.
@@ -2383,8 +2540,25 @@ func chanElement(t *itype) *itype {
 func isBool(t *itype) bool { return t.TypeOf().Kind() == reflect.Bool }
 func isChan(t *itype) bool { return t.TypeOf().Kind() == reflect.Chan }
 func isFunc(t *itype) bool { return t.TypeOf().Kind() == reflect.Func }
-func isMap(t *itype) bool  { return t.TypeOf().Kind() == reflect.Map }
-func isPtr(t *itype) bool  { return t.TypeOf().Kind() == reflect.Ptr }
+
+// boundMethodType returns the signature of a bound method value obtained from
+// a reflect.Type.Method signature: the receiver (first input) is removed.
+func boundMethodType(rt reflect.Type) reflect.Type {
+	if rt == nil || rt.Kind() != reflect.Func || rt.NumIn() == 0 {
+		return nil
+	}
+	ins := make([]reflect.Type, rt.NumIn()-1)
+	for i := range ins {
+		ins[i] = rt.In(i + 1)
+	}
+	outs := make([]reflect.Type, rt.NumOut())
+	for i := range outs {
+		outs[i] = rt.Out(i)
+	}
+	return reflect.FuncOf(ins, outs, rt.IsVariadic())
+}
+func isMap(t *itype) bool { return t.TypeOf().Kind() == reflect.Map }
+func isPtr(t *itype) bool { return t.TypeOf().Kind() == reflect.Ptr }
 
 func isEmptyInterface(t *itype) bool {
 	return t != nil && t.cat == interfaceT && len(t.field) == 0
@@ -2428,6 +2602,11 @@ func isInterfaceBin(t *itype) bool {
 }
 
 func isInterface(t *itype) bool {
+	if t.incomplete {
+		// An incomplete type has no reflect type yet: resolving it here
+		// could panic. It is not known to be an interface.
+		return false
+	}
 	return isInterfaceSrc(t) || t.TypeOf() == valueInterfaceType || t.TypeOf() != nil && t.TypeOf().Kind() == reflect.Interface
 }
 
@@ -2459,6 +2638,11 @@ func isStruct(t *itype) bool {
 }
 
 func isConstType(t *itype) bool {
+	if t.incomplete {
+		// Not yet resolvable: report a non constant type rather than
+		// forcing the resolution of a forward declared type.
+		return false
+	}
 	rt := t.TypeOf()
 	return isBoolean(rt) || isString(rt) || isNumber(rt)
 }

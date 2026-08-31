@@ -287,6 +287,9 @@ func inferTypesFromCall(sc *scope, fun *node, args []*node) ([]*itype, error) {
 
 	types := []*itype{}
 	for i, c := range ftn.child[1].child {
+		if i >= len(args) {
+			return nil, fun.cfgErrorf("not enough arguments in call to %s", fun.child[1].ident)
+		}
 		typ, err := nodeType(fun.interp, sc, c.lastChild())
 		if err != nil {
 			return nil, err
@@ -299,6 +302,181 @@ func inferTypesFromCall(sc *scope, fun *node, args []*node) ([]*itype, error) {
 	}
 
 	return types, nil
+}
+
+// compileGenericCalls instantiates generic calls in an expression from the
+// leaves up. Global type analysis needs concrete result types for calls nested
+// inside operators and composite literals, before the regular CFG pass reaches
+// those expressions.
+func (interp *Interpreter) compileGenericCalls(sc *scope, root *node, importPath, pkgName string) error {
+	// Function literal bodies have their own compilation scope and are handled by
+	// the regular CFG pass. They are values here, not part of global initialization.
+	if root.kind == funcLit {
+		return nil
+	}
+	for _, child := range root.child {
+		if err := interp.compileGenericCalls(sc, child, importPath, pkgName); err != nil {
+			return err
+		}
+	}
+
+	g, generic, err := interp.compileGenericCall(sc, root, importPath, pkgName)
+	if err != nil {
+		return err
+	}
+	if generic {
+		// Match the normal CFG generic-call path: subsequent type analysis and the
+		// runtime call both operate on the concrete generated function.
+		root.child[0] = g
+	}
+	return nil
+}
+
+// compileGenericCall instantiates and compiles a generic function used as a
+// call expression. Global type analysis needs the concrete result types before
+// it can allocate package variables, while the regular CFG pass normally does
+// this work later for calls inside function bodies.
+func (interp *Interpreter) compileGenericCall(sc *scope, call *node, importPath, pkgName string) (*node, bool, error) {
+	if call.kind != callExpr || len(call.child) == 0 {
+		return nil, false, nil
+	}
+	if isBuiltinCall(call, sc) {
+		return nil, false, nil
+	}
+
+	callee := call.child[0]
+	if callee.isType(sc) {
+		// The generic pre-pass recursively visits call-shaped arguments before
+		// regular CFG compilation. Mark conversions as conversions now so the
+		// call argument checker does not try to inspect them as multi-result
+		// function calls through an unset callee type.
+		typ, err := nodeType(interp, sc, callee)
+		if err != nil {
+			return nil, false, err
+		}
+		callee.typ = typ
+		call.typ = typ
+		call.action = aConvert
+		switch len(call.child) {
+		case 1:
+			return nil, false, call.cfgErrorf("missing argument in conversion to %s", typ.id())
+		case 2:
+			arg := call.child[1]
+			if untypedNilExpr(arg) {
+				// nodeType deliberately rejects an untyped nil used by itself, but
+				// nil is valid as the operand of a conversion to a nilable type.
+				// The regular CFG pass resolves the nil identifier before checking
+				// the conversion; mirror that ordering in this generic pre-pass.
+				nilSym, _, found := sc.lookup(nilIdent)
+				if !found {
+					return nil, false, arg.cfgErrorf("undefined: %s", nilIdent)
+				}
+				arg.typ = nilSym.typ
+			} else {
+				arg.typ, err = nodeType(interp, sc, arg)
+				if err != nil {
+					return nil, false, err
+				}
+			}
+			if err = (typecheck{scope: sc}).conversion(arg, typ); err != nil {
+				return nil, false, err
+			}
+		default:
+			return nil, false, call.cfgErrorf("too many arguments in conversion to %s", typ.id())
+		}
+		return nil, false, nil
+	}
+	var (
+		fun      *node
+		types    []*itype
+		inferred bool
+		err      error
+	)
+
+	switch callee.kind {
+	case indexExpr, indexListExpr:
+		if len(callee.child) < 2 {
+			return nil, false, nil
+		}
+		ft, err := nodeType(interp, sc, callee.child[0])
+		if err != nil || ft == nil || !isGeneric(ft) {
+			return nil, false, err
+		}
+		fun = ft.node.anc
+		for _, c := range callee.child[1:] {
+			t, err := nodeType(interp, sc, c)
+			if err != nil {
+				return nil, true, err
+			}
+			types = append(types, t)
+		}
+
+	default:
+		ft, err := nodeType(interp, sc, callee)
+		if err != nil || ft == nil || !isGeneric(ft) {
+			return nil, false, err
+		}
+		fun = ft.node.anc
+		inferred = true
+	}
+
+	for _, arg := range call.child[1:] {
+		t, err := nodeType(interp, sc, arg)
+		if err != nil {
+			return nil, true, err
+		}
+		arg.typ = t
+	}
+	if inferred {
+		for _, arg := range call.child[1:] {
+			arg.typ = arg.typ.defaultType(arg.rval, sc)
+		}
+		params := (typecheck{scope: sc}).unpackParams(call.child[1:])
+		minArgs := fun.typ.numIn()
+		if fun.typ.isVariadic() {
+			minArgs--
+		}
+		if len(params) < minArgs {
+			return nil, true, call.cfgErrorf("not enough arguments in call to %s", callee.name())
+		}
+		if !fun.typ.isVariadic() && len(params) > fun.typ.numIn() {
+			return nil, true, params[fun.typ.numIn()].nod.cfgErrorf("too many arguments")
+		}
+		if types, err = inferTypesFromCall(sc, fun, call.child[1:]); err != nil {
+			return nil, true, err
+		}
+	}
+
+	g, found, err := genAST(sc, fun, types)
+	if err != nil {
+		return nil, true, err
+	}
+	if !found {
+		if _, err = interp.cfg(g, fun.scope, importPath, pkgName); err != nil {
+			return nil, true, err
+		}
+		if err = genRun(g.child[3]); err != nil {
+			return nil, true, err
+		}
+	}
+	if err = (typecheck{scope: sc}).arguments(call, call.child[1:], g, call.action == aCallSlice); err != nil {
+		return nil, true, err
+	}
+	// A package variable initializer is hidden below a varDecl when genRun
+	// later walks the complete source tree. Ensure the generated function body
+	// has an execution entry point before that walk skips the declaration.
+	setExec(g.child[3].start)
+	if len(g.typ.ret) == 1 {
+		call.typ = g.typ.ret[0]
+	}
+	return g, true, nil
+}
+
+func untypedNilExpr(n *node) bool {
+	for n != nil && n.kind == parenExpr && len(n.child) == 1 {
+		n = n.child[0]
+	}
+	return n != nil && n.kind == identExpr && n.ident == nilIdent || n != nil && n.kind == basicLit && n.typ != nil && n.typ.cat == nilT
 }
 
 func checkConstraint(it, ct *itype) error {

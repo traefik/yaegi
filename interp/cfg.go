@@ -3,6 +3,7 @@ package interp
 import (
 	"fmt"
 	"go/constant"
+	"go/token"
 	"log"
 	"math"
 	"path"
@@ -105,6 +106,12 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.typ = dest.typ
 				}
 			case binaryExpr, unaryExpr, parenExpr:
+				if isShiftCountOf(n) {
+					// The count operand of a shift does not take the type of
+					// the shift result: it stays any integer type (per spec,
+					// the propagation above must not leak into the count).
+					break
+				}
 				n.typ = n.anc.typ
 			}
 
@@ -124,7 +131,92 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 		case blockStmt:
 			var rangek, rangev *node
+			var rangeAssign bool
 			if n.anc != nil && n.anc.kind == rangeStmt {
+				rangeAssign = n.anc.meta == token.ASSIGN
+				var rangeTargetAddressable func(*node, bool) bool
+				rangeTargetAddressable = func(target *node, allowMapIndex bool) bool {
+					if target == nil {
+						return false
+					}
+					switch target.kind {
+					case parenExpr:
+						return len(target.child) == 1 && rangeTargetAddressable(target.child[0], allowMapIndex)
+					case identExpr:
+						sym, _, found := sc.lookup(target.ident)
+						return found && sym.kind == varSym
+					case starExpr:
+						return true
+					case selectorExpr:
+						if target.action == aGetSym {
+							return target.sym != nil && target.sym.kind == varSym || target.rval.IsValid() && target.rval.CanSet() || isBinPkgVar(target)
+						}
+						if _, ok := target.val.([]int); !ok || len(target.child) == 0 {
+							return false
+						}
+						receiver := target.child[0]
+						return receiver.typ != nil && receiver.typ.TypeOf().Kind() == reflect.Ptr || rangeTargetAddressable(receiver, false)
+					case indexExpr:
+						if len(target.child) == 0 || target.child[0].typ == nil {
+							return false
+						}
+						container := target.child[0]
+						switch container.typ.TypeOf().Kind() {
+						case reflect.Map:
+							return allowMapIndex
+						case reflect.Slice:
+							return true
+						case reflect.Array:
+							return rangeTargetAddressable(container, false)
+						case reflect.Ptr:
+							return container.typ.TypeOf().Elem().Kind() == reflect.Array
+						}
+					}
+					return false
+				}
+				var bindRangeTarget func(target *node, typ *itype) bool
+				bindRangeTarget = func(target *node, typ *itype) bool {
+					index := sc.add(typ)
+					target.findex = index
+					if rangeAssign && target.ident != "_" {
+						if target.kind == parenExpr && len(target.child) == 1 {
+							if !bindRangeTarget(target.child[0], typ) {
+								return false
+							}
+							target.typ = target.child[0].typ
+							return true
+						}
+						if target.kind != identExpr {
+							if !rangeTargetAddressable(target, true) {
+								err = target.cfgErrorf("cannot assign to %s", target.name())
+								return false
+							}
+							if target.typ == nil {
+								target.typ = typ
+							}
+							if !typ.assignableTo(target.typ) {
+								err = target.cfgErrorf("cannot use type %s as type %s in assignment", typ.id(), target.typ.id())
+								return false
+							}
+							return true
+						}
+						sym, level, found := sc.lookup(target.ident)
+						if !found || sym.kind != varSym {
+							err = target.cfgErrorf("undefined: %s", target.ident)
+							return false
+						}
+						target.assignTmp = []int{sym.index, level}
+						target.typ = sym.typ
+						if !typ.assignableTo(target.typ) {
+							err = target.cfgErrorf("cannot use type %s as type %s in assignment", typ.id(), target.typ.id())
+							return false
+						}
+						return true
+					}
+					target.typ = typ
+					sc.sym[target.ident] = &symbol{index: index, kind: varSym, typ: typ}
+					return true
+				}
 				// For range block: ensure that array or map type is propagated to iterators
 				// prior to process block. We cannot perform this at RangeStmt pre-order because
 				// type of array like value is not yet known. This could be fixed in ast structure
@@ -139,10 +231,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				if t := sc.rangeChanType(n.anc); t != nil {
 					// range over channel
 					e := n.anc.child[0]
-					index := sc.add(t.val)
-					sc.sym[e.ident] = &symbol{index: index, kind: varSym, typ: t.val}
-					e.typ = t.val
-					e.findex = index
+					if !bindRangeTarget(e, t.val) {
+						return false
+					}
 					n.anc.gen = rangeChan
 				} else {
 					// range over array or map
@@ -155,6 +246,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						}
 					} else {
 						k, o = n.anc.child[0], n.anc.child[1]
+					}
+					if o.typ != nil && isFunc(o.typ) {
+						err = o.cfgErrorf("cannot range over %s (value of type %s)", o.ident, o.typ.id())
+						return false
 					}
 
 					switch o.typ.cat {
@@ -209,18 +304,20 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						ktyp = sc.getType("int")
 					}
 
-					kindex := sc.add(ktyp)
-					sc.sym[k.ident] = &symbol{index: kindex, kind: varSym, typ: ktyp}
-					k.typ = ktyp
-					k.findex = kindex
-					rangek = k
+					if !bindRangeTarget(k, ktyp) {
+						return false
+					}
+					if !rangeAssign {
+						rangek = k
+					}
 
 					if v != nil {
-						vindex := sc.add(vtyp)
-						sc.sym[v.ident] = &symbol{index: vindex, kind: varSym, typ: vtyp}
-						v.typ = vtyp
-						v.findex = vindex
-						rangev = v
+						if !bindRangeTarget(v, vtyp) {
+							return false
+						}
+						if !rangeAssign {
+							rangev = v
+						}
 					}
 				}
 			}
@@ -238,6 +335,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					sc.sym[lk.ident] = &symbol{index: kindex, kind: varSym, typ: lk.typ}
 					lk.findex = kindex
 					lk.gen = loopVarKey
+				} else if rangeAssign {
+					key := n.anc.child[0]
+					lk.typ = key.typ
+					lk.findex = sc.add(lk.typ)
+					lk.gen = loopVarKey
 				}
 				lv := n.child[1]
 				if rangev != nil {
@@ -246,6 +348,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					vindex := sc.add(lv.typ)
 					sc.sym[lv.ident] = &symbol{index: vindex, kind: varSym, typ: lv.typ}
 					lv.findex = vindex
+					lv.gen = loopVarVal
+				} else if rangeAssign && len(n.anc.child) == 4 && n.anc.child[1].ident != "_" {
+					val := n.anc.child[1]
+					lv.typ = val.typ
+					lv.findex = sc.add(lv.typ)
 					lv.gen = loopVarVal
 				}
 			}
@@ -264,17 +371,26 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 			// Pre-define symbols for labels defined in this block, so we are sure that
-			// they are already defined when met.
+			// they are already defined when met. Labels nested in switch case
+			// bodies are function-scoped in Go, so they must be pre-defined
+			// here as well: case bodies do not bound label visibility.
 			// TODO(marc): labels must be stored outside of symbols to avoid collisions.
-			for _, c := range n.child {
-				if c.kind != labeledStmt {
-					continue
+			var predefineLabels func(sn *node)
+			predefineLabels = func(sn *node) {
+				for _, c := range sn.child {
+					switch c.kind {
+					case labeledStmt:
+						label := c.child[0].ident
+						sym := &symbol{kind: labelSym, node: c, index: -1}
+						sc.sym[label] = sym
+						c.sym = sym
+						predefineLabels(c)
+					case caseBody, caseClause, commClause:
+						predefineLabels(c)
+					}
 				}
-				label := c.child[0].ident
-				sym := &symbol{kind: labelSym, node: c, index: -1}
-				sc.sym[label] = sym
-				c.sym = sym
 			}
+			predefineLabels(n)
 			// If block is the body of a function, get declared variables in current scope.
 			// This is done in order to add the func signature symbols into sc.sym,
 			// as we will need them in post-processing.
@@ -470,7 +586,17 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			if n.typ, err = nodeType(interp, sc, n); err != nil {
 				return false
 			}
-			n.findex = sc.add(n.typ)
+			if isRootImmediateFuncLit(n, sc) {
+				// Immediately-called root-level literal: its call activates the
+				// body directly (the declared-function path of run.go call), so
+				// no persistent global slot is allocated for a wrapper value no
+				// statement can ever read. See LEARNINGS, "func-leading REPL
+				// Eval slot growth".
+				n.findex = notInFrame
+				n.gen = nop
+			} else {
+				n.findex = sc.add(n.typ)
+			}
 			fallthrough
 
 		case funcDecl:
@@ -578,7 +704,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				}
 			}
 
-			if n.child[1].ident == "init" && len(n.child[0].child) == 0 {
+			if n.child[1].ident == initID && len(n.child[0].child) == 0 {
 				initNodes = append(initNodes, n)
 			}
 
@@ -723,6 +849,17 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						}
 						if src.typ.isBinMethod {
 							dest.typ = valueTOf(src.typ.methodCallType())
+						} else if src.typ.cat == valueT && src.typ.recv != nil && !isInterface(src.typ.recv) && isFunc(src.typ) {
+							// A method value on a binary type: the rtype still
+							// carries the receiver as first argument (reflect
+							// Type.Method form), but the value produced at run
+							// time is bound. Type the destination with the
+							// bound signature.
+							if bt := boundMethodType(src.typ.TypeOf()); bt != nil {
+								dest.typ = valueTOf(bt, withScope(sc))
+							} else {
+								dest.typ = sc.fixType(src.typ)
+							}
 						} else {
 							// In a new definition, propagate the source type to the destination
 							// type. If the source is an untyped constant, make sure that the
@@ -733,7 +870,8 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					if dest.typ.incomplete {
 						return
 					}
-					if sc.global || sc.isRedeclared(dest) {
+					reusePackageSymbol := sc.global && isRootDefinition(n, root)
+					if reusePackageSymbol || sc.isRedeclared(dest) {
 						if n.anc != nil && n.anc.anc != nil && (n.anc.anc.kind == forStmt7 || n.anc.anc.kind == rangeStmt) {
 							// check for redefine of for loop variables, which are now auto-defined in go1.22
 							init := n.anc.anc.child[0]
@@ -752,6 +890,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						}
 						// Do not overload existing symbols (defined in GTA) in global scope.
 						sym, _, _ = sc.lookup(dest.ident)
+						if sym != nil && sym.kind == bltnSym {
+							// A definition always shadows a predeclared builtin:
+							// never reuse the universe symbol, define a new one.
+							sym = nil
+						}
 					}
 					if sym == nil {
 						sym = &symbol{index: sc.add(dest.typ), kind: varSym, typ: dest.typ}
@@ -791,30 +934,34 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					// Do not skip assign operation if it is combined with another operator.
 				case src.rval.IsValid():
 					// Do not skip assign operation if setting from a constant value.
+				case isBinPkgVar(dest):
+					// A settable binary package variable is reached through
+					// its live host cell, not an interpreter frame slot: the
+					// assignment must stay an explicit Set, as the source has
+					// no destination location to write to.
 				case isMapEntry(dest):
 					// Setting a map entry requires an additional step, do not optimize.
 					// As we only write, skip the default useless getIndexMap dest action.
 					dest.gen = nop
 				case isFuncField(dest):
 					// Setting a struct field of function type requires an extra step. Do not optimize.
-				case isCall(src) && !isInterfaceSrc(dest.typ) && n.kind != defineStmt:
+				case n.nleft == 1 && n.nright == 1 && isCall(src) && !isInterfaceSrc(dest.typ) && n.kind != defineStmt:
 					// Call action may perform the assignment directly.
 					if dest.typ.id() != src.typ.id() {
 						// Skip optimitization if returned type doesn't match assigned one.
 						break
 					}
 					n.gen = nop
-					src.level = level
-					src.findex = dest.findex
+					src.findex, src.level = frameLocation(dest)
 					if src.typ.untyped && !dest.typ.untyped {
 						src.typ = dest.typ
 					}
-				case src.action == aRecv:
+				case n.nleft == 1 && n.nright == 1 && src.action == aRecv:
 					// Assign by reading from a receiving channel.
 					n.gen = nop
-					src.findex = dest.findex // Set recv address to LHS.
+					src.findex, src.level = frameLocation(dest) // Set recv address to LHS location (global for package variables).
 					dest.typ = src.typ
-				case src.action == aCompositeLit:
+				case n.nleft == 1 && n.nright == 1 && src.action == aCompositeLit:
 					if dest.typ.cat == valueT && dest.typ.rtype.Kind() == reflect.Interface {
 						// Skip optimisation for assigned interface.
 						break
@@ -824,13 +971,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						break
 					}
 					n.gen = nop
-					src.findex = dest.findex
-					src.level = level
+					src.findex, src.level = frameLocation(dest)
 				case len(n.child) < 4 && n.kind != defineStmt && isArithmeticAction(src) && !isInterface(dest.typ):
 					// Optimize single assignments from some arithmetic operations.
 					src.typ = dest.typ
-					src.findex = dest.findex
-					src.level = level
+					src.findex, src.level = frameLocation(dest)
 					n.gen = nop
 				case src.kind == basicLit:
 					// Assign to nil.
@@ -859,6 +1004,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						sc.iota++
 					}
 				}
+			}
+			if err == nil && n.nleft > 1 && n.nright == n.nleft && n.anc.kind != constDecl {
+				wireMultiAssignSnapshots(n, sc)
 			}
 
 		case incDecStmt:
@@ -911,8 +1059,12 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 		case defineXStmt:
 			wireChild(n)
-			if sc.def == nil {
-				// In global scope, type definition already handled by GTA.
+			if isRootDefinition(n, root) {
+				// A package-scope definition is already handled by GTA. Scopes
+				// nested below a REPL-level control statement have no containing
+				// function (sc.def is nil too), but their local bindings still
+				// need to be allocated here. Incremental REPL statements have a
+				// synthetic root block scope, so identify its direct children too.
 				break
 			}
 			err = compDefineX(sc, n)
@@ -973,9 +1125,15 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				// To avoid a copy in frame, if the result is to be assigned, store it directly
 				// at the frame location of destination.
 				dest := n.anc.child[childPos(n)-n.anc.nright]
+				if isBinPkgVar(dest) {
+					// A binary package variable has no interpreter frame
+					// location: allocate a regular temporary, and let the
+					// assignment Set the live destination cell.
+					n.findex = sc.add(n.typ)
+					break
+				}
 				n.typ = dest.typ
-				n.findex = dest.findex
-				n.level = dest.level
+				n.findex, n.level = frameLocation(dest)
 			case n.anc.kind == returnStmt:
 				// To avoid a copy in frame, if the result is to be returned, store it directly
 				// at the frame location reserved for output arguments.
@@ -1171,6 +1329,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case callExpr:
+			snapshotArgs := false
+			snapshotFunc := false
+			snapshotBase := 1
 			for _, c := range n.child {
 				if isBlank(c) {
 					err = n.cfgErrorf("cannot use _ as value")
@@ -1180,6 +1341,8 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			wireChild(n)
 			switch c0 := n.child[0]; {
 			case c0.kind == indexListExpr:
+				snapshotArgs = true
+				snapshotFunc = true
 				// Instantiate a generic function then call it.
 				fun := c0.child[0].sym.node
 				lt := []*itype{}
@@ -1221,12 +1384,25 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 			case isBuiltinCall(n, sc):
 				bname := c0.ident
+				switch bname {
+				case bltnAppend, bltnComplex, bltnCopy, bltnDelete, bltnMax, bltnMin, bltnPrint, bltnPrintln:
+					snapshotArgs = true
+				case bltnMake:
+					snapshotArgs = len(n.child) > 2
+					snapshotBase = 2 // child 1 is a type, not a runtime operand.
+				}
 				err = check.builtin(bname, n, n.child[1:], n.action == aCallSlice)
 				if err != nil {
 					break
 				}
 
 				n.gen = c0.sym.builtin
+				if bname == bltnUnsafeSlice || bname == bltnUnsafeString {
+					// The result type is a slice or string, not builtinT:
+					// set the generator here, the builtinT switch below is
+					// not reached.
+					n.gen = unsafeBuiltin
+				}
 				c0.typ = &itype{cat: builtinT, name: bname}
 				if n.typ, err = nodeType(interp, sc, n); err != nil {
 					return
@@ -1268,6 +1444,14 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					}
 					n.findex = notInFrame
 					n.gen = nop
+				case (bname == bltnMin || bname == bltnMax) && isInConstOrTypeDecl(n):
+					// min and max of constant arguments produce a constant
+					// result; a non constant argument is an error here.
+					if err = minMaxConst(n); err != nil {
+						break
+					}
+					n.findex = notInFrame
+					n.gen = nop
 				default:
 					n.findex = sc.add(n.typ)
 				}
@@ -1277,18 +1461,18 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 			case c0.isType(sc):
 				// Type conversion expression
-				c1 := n.child[1]
 				switch len(n.child) {
 				case 1:
 					err = n.cfgErrorf("missing argument in conversion to %s", c0.typ.id())
 				case 2:
-					err = check.conversion(c1, c0.typ)
+					err = check.conversion(n.child[1], c0.typ)
 				default:
 					err = n.cfgErrorf("too many arguments in conversion to %s", c0.typ.id())
 				}
 				if err != nil {
 					break
 				}
+				c1 := n.child[1]
 
 				n.action = aConvert
 				switch {
@@ -1324,6 +1508,8 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				}
 
 			case isBinCall(n, sc):
+				snapshotArgs = true
+				snapshotFunc = true
 				err = check.arguments(n, n.child[1:], c0, n.action == aCallSlice)
 				if err != nil {
 					break
@@ -1354,6 +1540,8 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				}
 
 			default:
+				snapshotArgs = true
+				snapshotFunc = true
 				// The call may be on a generic function. In that case, replace the
 				// generic function AST by an instantiated one before going further.
 				if isGeneric(c0.typ) {
@@ -1389,7 +1577,13 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					break
 				}
 
-				if c0.action == aGetFunc {
+				if isRootImmediateFuncLit(c0, sc) {
+					// The call activates the literal body directly; there is no
+					// wrapper value to snapshot ahead of the arguments.
+					snapshotFunc = false
+				}
+
+				if c0.action == aGetFunc && !isRootImmediateFuncLit(c0, sc) {
 					// Allocate a frame entry to store the anonymous function definition.
 					sc.add(c0.typ)
 				}
@@ -1408,6 +1602,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				} else {
 					n.findex = notInFrame
 				}
+			}
+			if err == nil && snapshotArgs && !n.rval.IsValid() {
+				wireCallArgSnapshots(n, sc, snapshotFunc, snapshotBase)
 			}
 
 		case caseBody:
@@ -1499,7 +1696,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			init, body := n.child[0], n.child[1]
 			n.start = init.start
 			init.tnext = body.start
-			body.tnext = n.start
+			// Loop back to the body start, not to the for statement start:
+			// the init statement must run exactly once or loop variables
+			// are re-initialized at each iteration.
+			body.tnext = body.start
 			sc = sc.pop()
 
 		case forStmt2: // for cond {}
@@ -1817,8 +2017,12 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				} else {
 					k, o, body = n.child[0], n.child[1], n.child[2]
 				}
-				n.start = o.start          // Get array or map object
-				o.tnext = k.start          // then go to iterator init
+				n.start = o.start // Get array or map object
+				if n.meta == token.ASSIGN {
+					o.tnext = k // assignment target operands are evaluated per iteration
+				} else {
+					o.tnext = k.start // then go to iterator init
+				}
 				k.tnext = n                // then go to range function
 				body.start = body.child[0] // loopvar
 				n.tnext = body.start       // then go to range body
@@ -1885,10 +2089,19 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				if s, ok := interp.binPkg[pkg][name]; ok {
 					if isBinType(s) {
 						n.typ = valueTOf(s.Type().Elem())
+					} else if s.CanSet() {
+						// A settable binary package symbol is mutable
+						// storage, not a constant: expose its live cell so
+						// reads always see the current value and writes
+						// reach the host variable, instead of capturing a
+						// stale snapshot at compile time (issue #1632).
+						n.typ = valueTOf(fixPossibleConstType(s.Type()), withUntyped(isValueUntyped(s)))
+						n.val = s
+						n.findex = notInFrame
 					} else {
 						n.typ = valueTOf(fixPossibleConstType(s.Type()), withUntyped(isValueUntyped(s)))
 						n.rval = s
-						if pkg == "unsafe" && (name == "AlignOf" || name == "Offsetof" || name == "Sizeof") {
+						if pkg == "unsafe" && (name == "Alignof" || name == "Offsetof" || name == "Sizeof" || name == "Slice" || name == "String") {
 							n.sym = &symbol{kind: bltnSym, node: n, rval: s}
 							n.ident = pkg + "." + name
 						}
@@ -2264,6 +2477,12 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			case n.anc.kind == assignStmt && n.anc.action == aAssign && n.anc.nright == 1:
 				dest := n.anc.child[childPos(n)-n.anc.nright]
 				n.typ = dest.typ
+				if isBinPkgVar(dest) {
+					// A binary package variable has no frame location: allocate a
+					// temporary, the assignment will Set the live destination cell.
+					n.findex = sc.add(n.typ)
+					break
+				}
 				n.findex = dest.findex
 				n.level = dest.level
 			case n.anc.kind == returnStmt:
@@ -2285,7 +2504,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 			for _, c := range n.child[:l] {
 				var index int
-				if sc.global {
+				if sc.global && isRootDefinition(n, root) {
 					// Global object allocation is already performed in GTA.
 					index = sc.sym[c.ident].index
 					c.level = globalFrame
@@ -2422,6 +2641,30 @@ func compDefineX(sc *scope, n *node) error {
 		n.child[i].findex = index
 	}
 	return nil
+}
+
+func isRootDefinition(n, root *node) bool {
+	if n == nil || root == nil {
+		return false
+	}
+	if n == root {
+		// GTA retries unresolved declarations by using the declaration itself as
+		// the traversal root. It remains a package definition on that retry.
+		return true
+	}
+	for anc := n.anc; anc != nil; anc = anc.anc {
+		if anc == root {
+			return true
+		}
+		switch anc.kind {
+		case blockStmt, caseClause, commClause, commClauseDefault,
+			forStmt0, forStmt1, forStmt2, forStmt3, forStmt4, forStmt5, forStmt6, forStmt7, forRangeStmt, rangeStmt,
+			ifStmt0, ifStmt1, ifStmt2, ifStmt3, switchStmt, switchIfStmt, typeSwitch,
+			funcDecl, funcLit:
+			return false
+		}
+	}
+	return false
 }
 
 // TODO used for allocation optimization, temporarily disabled
@@ -2641,6 +2884,22 @@ func (n *node) isType(sc *scope) bool {
 	return false
 }
 
+// isRootImmediateFuncLit reports whether n is a function literal sitting in
+// the function position of a call expression, compiled at global frame level,
+// outside a defer statement. Such a literal is activated directly by its call
+// before any later statement can run: no wrapper value is ever read, so
+// allocating its persistent global slot would grow the REPL frame by one to
+// three slots per Eval (see LEARNINGS, "func-leading REPL Eval slot growth").
+func isRootImmediateFuncLit(n *node, sc *scope) bool {
+	if n.kind != funcLit || n.anc == nil || n.anc.kind != callExpr || childPos(n) != 0 {
+		return false
+	}
+	if !sc.global {
+		return false
+	}
+	return n.anc.anc == nil || n.anc.anc.kind != deferStmt
+}
+
 // wireChild wires AST nodes for CFG in subtree.
 func wireChild(n *node, exclude ...nkind) {
 	child := excludeNodeKind(n.child, exclude)
@@ -2682,6 +2941,170 @@ func wireChild(n *node, exclude ...nkind) {
 			child[i].tnext = n
 		}
 		break
+	}
+}
+
+// wireMultiAssignSnapshots inserts explicit sequence points between the
+// operands of an ordinary multi-assignment. Without them, passive operands
+// (identifiers and literals) are read only when the final assignment node runs,
+// after later calls may already have mutated their values.
+func wireMultiAssignSnapshots(n *node, sc *scope) {
+	sbase := len(n.child) - n.nright
+	n.assignTmp = make([]int, n.nright)
+
+	var first, previous *node
+	appendUnit := func(start, end *node) {
+		if first == nil {
+			first = start
+		} else {
+			previous.tnext = start
+		}
+		previous = end
+	}
+	appendSnapshot := func(src *node, typ *itype) int {
+		index := sc.add(typ)
+		snapshot := &node{
+			anc:       n,
+			interp:    n.interp,
+			findex:    index,
+			kind:      undefNode,
+			pos:       src.pos,
+			typ:       typ,
+			scope:     sc,
+			gen:       snapshotAssign,
+			assignSrc: src,
+		}
+		snapshot.start = snapshot
+
+		if passiveAssignOperand(src) {
+			appendUnit(snapshot, snapshot)
+			return index
+		}
+		appendUnit(src.start, snapshot)
+		src.tnext = snapshot
+		return index
+	}
+
+	// Go evaluates the operands of the left-hand side before the right-hand
+	// side, but gc resolves a variable operand when the assignment is
+	// applied: a right-hand-side call that rebinds the map or the key
+	// variable redirects the write to the new binding. Only non-passive
+	// operands need a snapshot, to keep their phase-1 evaluation order and
+	// retain their value for phase 2. A passive slot keeps a -1 sentinel.
+	for _, dest := range n.child[:n.nleft] {
+		if isMapEntry(dest) {
+			receiver := dest.child[0]
+			key := dest.child[1]
+			tmp := []int{-1, -1}
+			if !passiveAssignOperand(receiver) {
+				tmp[0] = appendSnapshot(receiver, receiver.typ)
+			}
+			if !passiveAssignOperand(key) {
+				tmp[1] = appendSnapshot(key, valueTOf(receiver.typ.TypeOf().Key()))
+			}
+			if tmp[0] >= 0 || tmp[1] >= 0 {
+				dest.assignTmp = tmp
+			}
+			continue
+		}
+		if passiveAssignOperand(dest) {
+			continue
+		}
+		appendUnit(dest.start, dest)
+	}
+
+	for i, src := range n.child[sbase:] {
+		dest := n.child[i]
+		n.assignTmp[i] = appendSnapshot(src, dest.typ)
+	}
+
+	if first == nil {
+		n.start = n
+		return
+	}
+	n.start = first
+	previous.tnext = n
+}
+
+// wireCallArgSnapshots inserts a value-copy node immediately after each call
+// argument. Yaegi otherwise reads passive arguments only when the final call
+// node runs, after later argument calls may have mutated their source values.
+func wireCallArgSnapshots(n *node, sc *scope, snapshotFunc bool, argBase int) {
+	args := n.child[argBase:]
+	if len(args) == 0 {
+		return
+	}
+	snapshotArgs := true
+	for _, arg := range args {
+		if isBinCall(arg, arg.scope) && arg.child[0].typ.rtype.NumOut() != 1 {
+			snapshotArgs = false
+		}
+		if isRegularCall(arg) && len(arg.child[0].typ.ret) != 1 {
+			snapshotArgs = false
+		}
+	}
+
+	if snapshotArgs {
+		n.callSnaps = make([]*node, len(args))
+	}
+	var first, previous *node
+	appendUnit := func(start, end *node) {
+		if first == nil {
+			first = start
+		} else {
+			previous.tnext = start
+		}
+		previous = end
+	}
+	appendOperand := func(operand *node) {
+		switch operand.kind {
+		case arrayType, chanType, chanTypeRecv, chanTypeSend, funcDecl, importDecl, mapType, basicLit, identExpr, typeDecl:
+			return
+		}
+		appendUnit(operand.start, operand)
+	}
+	newSnapshot := func(pos token.Pos) *node {
+		snapshot := &node{
+			anc:    n,
+			interp: n.interp,
+			findex: notInFrame,
+			kind:   undefNode,
+			pos:    pos,
+			scope:  sc,
+			gen:    snapshotCallArg,
+		}
+		snapshot.start = snapshot
+		return snapshot
+	}
+
+	// The function expression is evaluated and retained before its arguments.
+	appendOperand(n.child[0])
+	if snapshotFunc {
+		n.callFunc = newSnapshot(n.child[0].pos)
+		appendUnit(n.callFunc, n.callFunc)
+	}
+	for i, arg := range args {
+		appendOperand(arg)
+		if !snapshotArgs {
+			continue
+		}
+		snapshot := newSnapshot(arg.pos)
+		n.callSnaps[i] = snapshot
+		appendUnit(snapshot, snapshot)
+	}
+	if first == nil {
+		return
+	}
+	n.start = first
+	previous.tnext = n
+}
+
+func passiveAssignOperand(n *node) bool {
+	switch n.kind {
+	case basicLit, identExpr:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -2865,6 +3288,32 @@ func isMapEntry(n *node) bool {
 	return n.action == aGetIndex && isMap(n.child[0].typ)
 }
 
+// isBinPkgVar returns true if the node is a selector referring to a settable
+// (mutable) variable of a binary package. Such a variable is reached through
+// its live host cell exposed as the node value, not through an interpreter
+// frame slot.
+func isBinPkgVar(n *node) bool {
+	if n.kind != selectorExpr || len(n.child) < 2 || n.child[0].typ == nil || n.child[0].sym == nil {
+		return false
+	}
+	if n.child[0].typ.cat != binPkgT {
+		return false
+	}
+	s, ok := n.interp.binPkg[n.child[0].sym.typ.path][n.child[1].ident]
+	return ok && s.IsValid() && !isBinType(s) && s.CanSet()
+}
+
+// frameLocation returns the frame index and level where the value of an
+// assignment destination actually lives. For a global variable, the symbol
+// index is the authoritative storage location: the node findex may have been
+// reallocated as a temporary result slot during selector compilation.
+func frameLocation(n *node) (int, int) {
+	if n.sym != nil && n.sym.global && n.sym.index >= 0 {
+		return n.sym.index, globalFrame
+	}
+	return n.findex, n.level
+}
+
 func isCall(n *node) bool {
 	return n.action == aCall || n.action == aCallSlice
 }
@@ -2959,6 +3408,13 @@ func setExec(n *node) {
 			}
 		}
 		n.gen(n)
+		if n.exec != nil && (n.callFunc != nil || len(n.callSnaps) > 0) {
+			exec := n.exec
+			n.exec = func(f *frame) (next bltn) {
+				defer f.clearCallArgs(n)
+				return exec(f)
+			}
+		}
 	}
 
 	set(n)
@@ -3094,13 +3550,31 @@ func matchSelectorMethod(sc *scope, n *node) (err error) {
 	if m, lind := n.typ.lookupMethod(name); m != nil {
 		n.action = aGetMethod
 		if n.child[0].isType(sc) {
+			// A pointer-receiver method can only be referenced through a
+			// pointer type base (native Go: invalid method expression). The
+			// check applies to the declared method itself only: a promoted
+			// method follows the embedding chain rules.
+			if len(lind) == 0 && isPtrRecvMethod(m) && n.child[0].typ != nil && n.child[0].typ.cat != ptrT {
+				return n.cfgErrorf("invalid method expression %s.%s (needs pointer receiver (*%s).%s)",
+					n.child[0].typ.id(), name, n.child[0].typ.id(), name)
+			}
 			// Handle method as a function with receiver in 1st argument.
+			// The method expression is a func value: the receiver is not
+			// bound, it is provided at call time as first argument (#1499).
 			n.val = m
-			n.findex = notInFrame
-			n.gen = nop
+			n.gen = getMethodExpr
+			// The nil receiver node marks an unbound receiver. The embedded
+			// field indexes are kept, so the wrapper can project an outer
+			// receiver onto the embedded receiver of a promoted method.
+			n.recv = &receiver{index: lind}
 			n.typ = &itype{}
 			*n.typ = *m.typ
 			n.typ.arg = append([]*itype{n.child[0].typ}, m.typ.arg...)
+			// The original method type may already have a cached reflect type
+			// and id string, computed without the prepended receiver: reset
+			// them, so they are recomputed for the method expression type.
+			n.typ.rtype = nil
+			n.typ.str = funcOf(n.typ.arg, n.typ.ret).str
 		} else {
 			// Handle method with receiver.
 			n.gen = getMethod
@@ -3242,4 +3716,23 @@ func sizeof(n *node) {
 	n.gen = nop
 	n.typ = n.scope.getType("uintptr")
 	n.rval = reflect.ValueOf(n.child[1].typ.TypeOf().Size())
+}
+
+// isShiftCountOf reports whether n is the count operand of a shift
+// operation, looking through parentheses.
+func isShiftCountOf(n *node) bool {
+	for a := n.anc; a != nil && a.kind == parenExpr; {
+		n = a
+		a = a.anc
+	}
+	return n.anc != nil && isShiftNode(n.anc) && len(n.anc.child) > 1 && n.anc.child[1] == n
+}
+
+// isPtrRecvMethod reports whether the method declaration node m declares a
+// pointer receiver (func (t *T) M(...)).
+func isPtrRecvMethod(m *node) bool {
+	if len(m.child) == 0 || m.child[0].kind != fieldList || len(m.child[0].child) == 0 {
+		return false
+	}
+	return m.child[0].child[0].lastChild().kind == starExpr
 }

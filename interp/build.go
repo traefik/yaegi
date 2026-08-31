@@ -3,6 +3,7 @@ package interp
 import (
 	"go/ast"
 	"go/build"
+	"go/build/constraint"
 	"go/parser"
 	"path"
 	"strconv"
@@ -18,14 +19,41 @@ func (interp *Interpreter) buildOk(ctx *build.Context, name, src string) (bool, 
 	if err != nil {
 		return false, err
 	}
+
+	// A //go:build line, when present, supersedes any legacy // +build line.
+	sawGoBuild := false
 	for _, g := range f.Comments {
-		// in file, evaluate the AND of multiple line build constraints
-		for _, line := range strings.Split(strings.TrimSpace(g.Text()), "\n") {
-			if !buildLineOk(ctx, line) {
+		for _, c := range g.List {
+			if strings.HasPrefix(c.Text, "//go:build") {
+				sawGoBuild = true
+				x, err := constraint.Parse(c.Text)
+				if err != nil {
+					return false, err
+				}
+				if !x.Eval(func(tag string) bool { return buildTagOk(ctx, tag) }) {
+					return false, nil
+				}
+			}
+		}
+	}
+	if sawGoBuild {
+		return true, nil
+	}
+
+	for _, g := range f.Comments {
+		// in file, evaluate the AND of multiple line build constraints.
+		// Note: g.Text() strips comment directives, so legacy // +build
+		// lines are recovered from the raw comment list instead.
+		for _, c := range g.List {
+			line := strings.TrimPrefix(c.Text, "//")
+			if !buildLineOk(ctx, strings.TrimSpace(line)) {
 				return false, nil
 			}
 		}
 	}
+	// Only set yaegi tags for files that pass their own build constraints:
+	// a tag directive in an excluded file must not leak into the shared
+	// build context.
 	setYaegiTags(ctx, f.Comments)
 	return true, nil
 }

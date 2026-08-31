@@ -2,6 +2,7 @@ package interp
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -25,34 +26,39 @@ import (
 
 // Interpreter node structure for AST and CFG.
 type node struct {
-	debug      *nodeDebugData // debug info
-	child      []*node        // child subtrees (AST)
-	anc        *node          // ancestor (AST)
-	param      []*itype       // generic parameter nodes (AST)
-	start      *node          // entry point in subtree (CFG)
-	tnext      *node          // true branch successor (CFG)
-	fnext      *node          // false branch successor (CFG)
-	interp     *Interpreter   // interpreter context
-	index      int64          // node index (dot display)
-	findex     int            // index of value in frame or frame size (func def, type def)
-	level      int            // number of frame indirections to access value
-	nleft      int            // number of children in left part (assign) or indicates preceding type (compositeLit)
-	nright     int            // number of children in right part (assign)
-	kind       nkind          // kind of node
-	pos        token.Pos      // position in source code, relative to fset
-	sym        *symbol        // associated symbol
-	typ        *itype         // type of value in frame, or nil
-	recv       *receiver      // method receiver node for call, or nil
-	types      []reflect.Type // frame types, used by function literals only
-	scope      *scope         // frame scope
-	action     action         // action
-	exec       bltn           // generated function to execute
-	gen        bltnGenerator  // generator function to produce above bltn
-	val        interface{}    // static generic value (CFG execution)
-	rval       reflect.Value  // reflection value to let runtime access interpreter (CFG)
-	ident      string         // set if node is a var or func
-	redeclared bool           // set if node is a redeclared variable (CFG)
-	meta       interface{}    // meta stores meta information between gta runs, like errors
+	debug      *nodeDebugData             // debug info
+	child      []*node                    // child subtrees (AST)
+	anc        *node                      // ancestor (AST)
+	param      []*itype                   // generic parameter nodes (AST)
+	start      *node                      // entry point in subtree (CFG)
+	tnext      *node                      // true branch successor (CFG)
+	fnext      *node                      // false branch successor (CFG)
+	interp     *Interpreter               // interpreter context
+	index      int64                      // node index (dot display)
+	findex     int                        // index of value in frame or frame size (func def, type def)
+	level      int                        // number of frame indirections to access value
+	nleft      int                        // number of children in left part (assign) or indicates preceding type (compositeLit)
+	nright     int                        // number of children in right part (assign)
+	kind       nkind                      // kind of node
+	pos        token.Pos                  // position in source code, relative to fset
+	sym        *symbol                    // associated symbol
+	typ        *itype                     // type of value in frame, or nil
+	recv       *receiver                  // method receiver node for call, or nil
+	types      []reflect.Type             // frame types, used by function literals only
+	scope      *scope                     // frame scope
+	action     action                     // action
+	exec       bltn                       // generated function to execute
+	gen        bltnGenerator              // generator function to produce above bltn
+	val        interface{}                // static generic value (CFG execution)
+	rval       reflect.Value              // reflection value to let runtime access interpreter (CFG)
+	ident      string                     // set if node is a var or func
+	redeclared bool                       // set if node is a redeclared variable (CFG)
+	meta       interface{}                // meta stores meta information between gta runs, like errors
+	assignTmp  []int                      // frame indexes that snapshot multi-assignment operands
+	assignSrc  *node                      // source operand of a synthetic multi-assignment snapshot node
+	callFunc   *node                      // synthetic node that snapshots the called function value
+	callSnaps  []*node                    // synthetic nodes that snapshot call arguments left-to-right
+	callValue  func(*frame) reflect.Value // runtime value copied by a synthetic call snapshot
 }
 
 func (n *node) shouldBreak() bool {
@@ -108,16 +114,227 @@ type frame struct {
 	// Located at start of struct to ensure proper alignment.
 	id uint64
 
-	debug *frameDebugData
+	debug  *frameDebugData
+	interp *Interpreter
 
 	root *frame          // global space
 	anc  *frame          // ancestor frame (caller space)
 	data []reflect.Value // values
 
-	mutex     sync.RWMutex
-	deferred  [][]reflect.Value  // defer stack
-	recovered interface{}        // to handle panic recover
-	done      reflect.SelectCase // for cancellation of channel operations
+	mutex          sync.RWMutex
+	callArgs       map[*node]reflect.Value    // transient left-to-right call argument snapshots
+	deferred       []deferredCall             // defer stack
+	recovered      interface{}                // to handle panic recover
+	done           reflect.SelectCase         // for cancellation of channel operations
+	cancel         <-chan struct{}            // cancellation owner for this execution; the shared root's field is rewritten by prepareExecutionFrame under mutex, so shared-root reads must take the read lock (see canceled). Every other frame's cancel is copied once by newFrame/clone under the parent's lock and frozen, so unlocked reads of f.cancel on non-root frames are race-free.
+	fenceExclusive atomic.Bool                // funcSweep fence mode captured at step acquisition
+	funcMeta       []uintptr                  // interpreted wrappers registered by this activation, as funcval keys
+	funcEscape     funcMetaRetention          // how wrappers crossed an opaque activation boundary
+	funcState      funcFrameState             // lifecycle of metadata owned by this activation
+	cloneOf        *frame                     // live activation whose lexical slots this clone shares
+	funcCarrier    uintptr                    // funcval key of the wrapper whose closure runs this lexical clone; a key, not a value, so the clone does not pin the wrapper against the registry's weak eviction
+	funcGroup      *funcMetaGroup             // wrappers created by this activation
+	funcSlots      []funcSlotRestore          // literal slots to restore when the last activation exits
+	ownedObjects   map[*ownedObject]struct{}  // reference-backed allocations created by this activation
+	ownedChannels  map[*ownedChannel]struct{} // channels created by this activation
+}
+
+// funcSlotRestore reverts a function literal's value slot to the value it held
+// before the literal last executed. Without it, the wrapper registered in the
+// metadata registry would stay pinned by its own entry (the entry's invoker
+// keeps the creating frame alive, and the frame's slot keeps the wrapper), so
+// a dropped wrapper could never be observed unreachable by its finalizer.
+type funcSlotRestore struct {
+	owner *frame
+	index int
+	value reflect.Value
+}
+
+type deferredCall struct {
+	values    []reflect.Value
+	exclusive bool
+}
+
+// interpretedFuncInvoker executes a reflected interpreted function against an
+// explicit global root and cancellation owner. Keeping this metadata separate
+// from the reflect wrapper lets deferred cleanup and host-retained callbacks
+// avoid consulting mutable "latest Eval" state.
+type interpretedFuncInvoker func([]reflect.Value, *frame, <-chan struct{}) []reflect.Value
+
+type interpretedFuncBuild struct {
+	value    reflect.Value
+	invoke   interpretedFuncInvoker
+	rebind   interpretedFuncRebinder
+	captures []funcMetaCapture
+}
+
+// interpretedFuncRebinder rebuilds a wrapper against a detached root and its
+// cloned lexical carrier. The returned wrapper must not retain frames from the
+// canceled root.
+type interpretedFuncRebinder func(*detachedRootCloner) interpretedFuncBuild
+
+// boundWrapperKey identifies a memoized host-bound wrapper: the funcval key
+// of the interpreted value being bound, the activation it is bound to, and
+// the signature the native callee expects. Guarded by funcMu alongside the
+// group's bound map.
+type boundWrapperKey struct {
+	target       uintptr
+	root         *frame
+	cancel       <-chan struct{}
+	typ          reflect.Type
+	hostBoundary bool
+}
+
+// interpretedFuncMeta is the metadata registered for one interpreted wrapper.
+// The registry is keyed by the wrapper's funcval address (see funcvalKeyOf),
+// so the entry must not retain the wrapper itself: the registered signature
+// is kept in typ for the convertible-type fallback, and the generation guard
+// makes a stale finalizer harmless if a new wrapper later reuses the address.
+type interpretedFuncMeta struct {
+	invoke     interpretedFuncInvoker
+	rebind     interpretedFuncRebinder
+	frame      *frame
+	retention  funcMetaRetention
+	group      *funcMetaGroup
+	captures   []funcMetaCapture
+	typ        reflect.Type
+	generation uint64
+}
+
+type directFuncActivationKey struct {
+	source uintptr
+	root   *frame
+}
+
+// directFuncActivation is a cached direct activation: the cloned wrapper plus
+// its funcval key, stored so eviction paths can match the value endpoint
+// without deriving the key (an allocation) under funcMu.
+type directFuncActivation struct {
+	value reflect.Value
+	key   uintptr
+}
+
+func (f *frame) setCallArg(n *node, value reflect.Value) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+	if f.callArgs == nil {
+		f.callArgs = map[*node]reflect.Value{}
+	}
+	f.callArgs[n] = value
+}
+
+func (f *frame) callArg(n *node) reflect.Value {
+	f.mutex.RLock()
+	defer f.mutex.RUnlock()
+	return f.callArgs[n]
+}
+
+func (f *frame) clearCallArgs(call *node) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+	if call.callFunc != nil {
+		delete(f.callArgs, call.callFunc)
+	}
+	for _, snapshot := range call.callSnaps {
+		delete(f.callArgs, snapshot)
+	}
+	if len(f.callArgs) == 0 {
+		f.callArgs = nil
+	}
+}
+
+func canonicalFuncValue(v reflect.Value) (reflect.Value, bool) {
+	if !v.IsValid() || v.Kind() != reflect.Func || v.IsNil() || !v.CanInterface() {
+		return reflect.Value{}, false
+	}
+	return reflect.ValueOf(v.Interface()), true
+}
+
+func (interp *Interpreter) registerInterpretedFuncWithRebinder(v reflect.Value, invoke interpretedFuncInvoker, rebind interpretedFuncRebinder, f *frame, captures []funcMetaCapture) {
+	ref, ok := funcvalRefOf(v)
+	if !ok {
+		return
+	}
+	interp.funcMu.Lock()
+	if _, exists := interp.funcMeta[ref.key]; !exists {
+		owner := f
+		if owner != nil && owner != owner.root && owner.funcState != funcFrameActive {
+			owner = owner.root
+		}
+		var group *funcMetaGroup
+		if owner != nil {
+			if owner.funcGroup == nil {
+				owner.funcGroup = &funcMetaGroup{root: owner.root}
+			}
+			group = owner.funcGroup
+			for _, capture := range captures {
+				found := false
+				for _, existing := range group.captures {
+					if existing == capture {
+						found = true
+						break
+					}
+				}
+				if !found {
+					group.captures = append(group.captures, capture)
+				}
+			}
+			group.version++
+		}
+		interp.insertFuncMetaEntryLocked(ref, interpretedFuncMeta{
+			invoke: invoke, rebind: rebind, frame: owner, group: group,
+			captures: append([]funcMetaCapture(nil), captures...), typ: v.Type(),
+		}, owner)
+	}
+	interp.funcMu.Unlock()
+}
+
+func (interp *Interpreter) registerInterpretedFuncAlias(v reflect.Value, meta interpretedFuncMeta, owner *frame) {
+	ref, ok := funcvalRefOf(v)
+	if !ok || owner == nil {
+		return
+	}
+	interp.funcMu.Lock()
+	defer interp.funcMu.Unlock()
+	if _, exists := interp.funcMeta[ref.key]; exists {
+		return
+	}
+	// The bound wrapper itself keeps the exact invocation owner alive. Metadata
+	// only makes an alias discoverable if it re-enters interpreted state, so let
+	// ordinary root reachability discard aliases retained solely by native code.
+	meta.frame = owner.root
+	meta.retention = funcMetaVisible
+	if meta.group != nil {
+		meta.group.root = owner.root
+	}
+	interp.insertFuncMetaEntryLocked(ref, meta, owner.root)
+}
+
+func (interp *Interpreter) interpretedFunc(v reflect.Value) (interpretedFuncInvoker, bool) {
+	_, meta, ok := interp.lookupInterpretedFunc(v)
+	return meta.invoke, ok
+}
+
+// lookupInterpretedFunc resolves the metadata registered for the wrapper v.
+// The registry is keyed by v's funcval address, so a direct hit covers both
+// the exact registered type and any convertible named type over the same
+// funcval: a funcval is always created under one concrete signature, and func
+// conversions between identical underlying types preserve the funcval. The
+// registered type is still checked (equal or convertible) as a safety net,
+// mirroring the value-keyed registry's canonical-equality plus
+// convertible-fallback semantics at the cost of one type comparison.
+func (interp *Interpreter) lookupInterpretedFunc(v reflect.Value) (uintptr, interpretedFuncMeta, bool) {
+	key, ok := funcvalKeyOf(v)
+	if !ok {
+		return 0, interpretedFuncMeta{}, false
+	}
+	interp.funcMu.RLock()
+	meta, ok := interp.funcMeta[key]
+	if ok && meta.typ != nil && v.Type() != meta.typ && !v.Type().ConvertibleTo(meta.typ) {
+		ok = false
+	}
+	interp.funcMu.RUnlock()
+	return key, meta, ok
 }
 
 func newFrame(anc *frame, length int, id uint64) *frame {
@@ -129,7 +346,15 @@ func newFrame(anc *frame, length int, id uint64) *frame {
 	if anc == nil {
 		f.root = f
 	} else {
+		f.interp = anc.interp
+		// The owner of a shared root can be rewritten by a later evaluation
+		// (prepareExecutionFrame); copy it under the root's lock so a frame
+		// created by an orphaned goroutine (a deferred call unwinding after
+		// cancellation) cannot race that rewrite.
+		anc.mutex.RLock()
 		f.done = anc.done
+		f.cancel = anc.cancel
+		anc.mutex.RUnlock()
 		f.root = anc.root
 	}
 	return f
@@ -137,20 +362,115 @@ func newFrame(anc *frame, length int, id uint64) *frame {
 
 func (f *frame) runid() uint64      { return atomic.LoadUint64(&f.id) }
 func (f *frame) setrunid(id uint64) { atomic.StoreUint64(&f.id, id) }
+func (f *frame) canceled() bool {
+	// The cancellation owner of a shared root is rewritten by
+	// prepareExecutionFrame under f.mutex, while interpreted goroutines that
+	// outlive their evaluation (a `go` statement, a canceled worker draining
+	// its deferred calls) keep reading it without any other synchronization.
+	// Take the read lock so those reads cannot race the rewrite.
+	f.mutex.RLock()
+	cancel := f.cancel
+	f.mutex.RUnlock()
+	if cancel == nil {
+		return false
+	}
+	select {
+	case <-cancel:
+		return true
+	default:
+		return false
+	}
+}
+
 func (f *frame) clone() *frame {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
 	nf := &frame{
 		anc:       f.anc,
 		root:      f.root,
+		interp:    f.interp,
 		deferred:  f.deferred,
 		recovered: f.recovered,
 		id:        f.runid(),
 		done:      f.done,
+		cancel:    f.cancel,
 		debug:     f.debug,
+		cloneOf:   f,
 	}
 	nf.data = make([]reflect.Value, len(f.data))
 	copy(nf.data, f.data)
+	return nf
+}
+
+// cloneDetached creates durable storage for a later execution after the
+// current frame owner was canceled. Unlike clone, which preserves shared slots
+// for lexical closures, this clone must not allow the abandoned activation to
+// write through into the later root.
+func (f *frame) cloneDetached(cancel <-chan struct{}) *frame {
+	// Locking note: this function holds f.mutex.RLock while the cloner takes
+	// funcMu.RLock, the reverse of snapshotFuncMetaCapture's funcMu.RLock ->
+	// capture.frame.mutex.RLock order. Both nestings are read-held today and
+	// no funcMu writer acquires a frame mutex (or vice versa), so no cycle is
+	// reachable; preserve that property when touching either lock section.
+	f.mutex.RLock()
+	nf := &frame{
+		anc:    f.anc,
+		interp: f.interp,
+		id:     f.runid(),
+		debug:  f.debug,
+		cancel: cancel,
+		done:   reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(cancel)},
+	}
+	var cloner *detachedRootCloner
+	if f.root == f && f.interp != nil {
+		cloner = newDetachedRootCloner(f.interp, f, nf, cancel)
+	}
+	nf.data = make([]reflect.Value, len(f.data))
+	sharedCells := make([]bool, len(f.data))
+	for i, v := range f.data {
+		if !v.IsValid() {
+			continue
+		}
+		if cloner != nil && cloner.cellHostShared(v) {
+			nf.data[i] = v
+			sharedCells[i] = true
+			continue
+		}
+		nf.data[i] = reflect.New(v.Type()).Elem()
+	}
+	if f.root == f {
+		nf.root = nf
+	} else {
+		nf.root = f.root
+	}
+	data := append([]reflect.Value(nil), f.data...)
+	f.mutex.RUnlock()
+
+	if f.root != f || f.interp == nil {
+		for i, value := range data {
+			if value.IsValid() {
+				nf.data[i].Set(value)
+			}
+		}
+		return nf
+	}
+
+	for i, value := range data {
+		if value.IsValid() {
+			cloner.seedCell(value, nf.data[i])
+		}
+	}
+	// Pending channel and panic values are the authoritative copies of their
+	// aggregate graphs. Clone them with function rehoming enabled before root
+	// globals can memoize the same aggregate with shallow function values.
+	cloner.snapshotPendingEscapes()
+	for i, value := range data {
+		if value.IsValid() && !sharedCells[i] {
+			nf.data[i].Set(cloner.cloneValue(value, true))
+		}
+	}
+	cloner.cloneDirectFuncLineage()
+	cloner.commit()
 	return nf
 }
 
@@ -204,15 +524,97 @@ type Interpreter struct {
 	rdir       map[string]bool                  // for src import cycle detection
 	mapTypes   map[reflect.Value][]reflect.Type // special interfaces mapping for wrappers
 
-	mutex    sync.RWMutex
-	frame    *frame            // program data storage during execution
-	universe *scope            // interpreter global level scope
-	scopes   map[string]*scope // package level scopes, indexed by import path
-	srcPkg   imports           // source packages used in interpreter, indexed by path
-	pkgNames map[string]string // package names, indexed by import path
-	done     chan struct{}     // for cancellation of channel operations
-	roots    []*node
-	generic  map[string]*node
+	// compileMu serializes compiler mutations with execution-frame setup. A
+	// canceled Eval may leave a worker blocked in native code while a later Eval
+	// proceeds, but its compiler/setup phase must never race a new GTA pass.
+	compileMu sync.Mutex
+	// compileCancel is accessed only while compileMu is held. It propagates the
+	// exact evaluation owner into source-package imports compiled recursively.
+	compileCancel <-chan struct{}
+	// executionGate serializes live executions while allowing a canceled API
+	// call to relinquish ownership before a native call returns. A later run can
+	// then detach the canceled root without sharing its mutable cancel owner.
+	executionGate chan struct{}
+	// gateHolderGoid is the goroutine id of the goroutine that currently
+	// holds executionGate (0 when free). The holder may always re-enter its
+	// own interpreter: a nested Eval from a host callback of an inline
+	// execution — including a source-package init retry whose ambient
+	// cancellation owner already fired — must not block on the gate its own
+	// goroutine holds.
+	gateHolderGoid atomic.Int64
+	// zombieBarrier serializes the deferred phase of a canceled (zombie)
+	// worker against the whole execution of a later evaluation. A canceled
+	// worker's deferred calls still run (they drive ownership publication),
+	// but the evaluation they belonged to has already returned, so the gate
+	// no longer excludes them; the barrier closes that window. Active runs
+	// hold it for their entire execution via their run token; a zombie's
+	// deferred phase no longer matches the current token and must take it.
+	// zombieDefers counts canceled workers currently unwinding their
+	// deferred calls. While it is positive, every interpreted execution step
+	// holds the funcSweep fence exclusively: a zombie's deferred writes must
+	// not overlap a later evaluation's steps on shared containers. Native
+	// stretches still release the fence, so a zombie defer blocked in a host
+	// call never blocks later evaluations.
+	zombieDefers       atomic.Int64
+	funcSweepExclusive atomic.Int64 // depth of exclusive funcSweepMu holders (zombie deferred steps)
+	// ownedGCPending requests one incremental ownership sweep once the
+	// ownership registries cross ownedGCRegistryCap entries; arming happens
+	// under funcMu, consumption under the exclusive funcSweepMu fence.
+	ownedGCPending atomic.Bool
+	// ownedGCInFlight makes sweep consumption one-shot: at most one goroutine
+	// runs the sweep body at a time, and a fence TryLock loss leaves the
+	// request pending for the next execution step.
+	ownedGCInFlight atomic.Bool
+	// frameDrains counts frames currently unwinding deferred calls inside the
+	// runCfg exit path. Incremented under the exclusive funcSweepMu fence so a
+	// sweep holding the fence reads it exactly: a draining frame's remaining
+	// deferred call values are invisible to the sweep's root set, so the
+	// incremental sweep must not run concurrently with any drain.
+	frameDrains atomic.Int64
+	mutex       sync.RWMutex
+	funcMu      sync.RWMutex
+	funcSweepMu sync.RWMutex
+	// funcMeta is keyed by the funcval address of each registered interpreted
+	// wrapper (see funcvalKeyOf). The key is a plain integer, so the registry
+	// does not retain the wrapper: when the host drops the last reference, a
+	// finalizer armed at insertion deletes the entry (guarded by the entry's
+	// generation against funcval address reuse).
+	funcMeta      map[uintptr]interpretedFuncMeta
+	directFuncs   map[directFuncActivationKey]directFuncActivation
+	ownedObjects  map[objectKey]*ownedObject
+	ownedChannels map[uintptr]*ownedChannel
+	panicTokens   map[*ownedPanicToken]struct{}
+	// hostSharedEstimate counts owned objects currently flagged hostShared.
+	// It is maintained exactly under funcMu so the per-write ownership scans
+	// can return in constant time while no object is host-shared.
+	hostSharedEstimate int
+	// ownedRegistrations amortizes sweep arming: one request is raised at most
+	// every ownedGCAmortizeRegistrations registry inserts past the cap. Guarded
+	// by funcMu (all arming sites already hold it).
+	ownedRegistrations int
+	// activeFrames refcounts frames with a live runCfg activation, guarded by
+	// funcMu. Refcounted because a root frame can re-enter runCfg through a
+	// reentrant Eval while an outer activation is still on the stack. The
+	// incremental ownership sweep walks every entry's whole ancestor chain as
+	// its root set; frames of forever-blocked goroutines pin one entry each
+	// (Go-like goroutine retention).
+	activeFrames    map[*frame]int
+	frame           *frame            // program data storage during execution
+	universe        *scope            // interpreter global level scope
+	scopes          map[string]*scope // package level scopes, indexed by import path
+	srcPkg          imports           // source packages used in interpreter, indexed by path
+	publishedSrcPkg imports           // immutable symbol snapshots exposed to host readers
+	pkgNames        map[string]string // package names, indexed by import path
+	srcPkgInit      map[string]*sourcePackageInit
+	srcPkgBuild     map[string]*sourcePackageBuild
+	// globalVarIndexes is an immutable-at-runtime snapshot of durable package
+	// variable slots. Compiler passes refresh it before releasing compileMu so
+	// canceled-worker cleanup never walks symbol maps while a later Eval mutates
+	// them.
+	globalVarIndexes map[int]struct{}
+	done             <-chan struct{} // cancellation owner used by channel operations
+	roots            []*node
+	generic          map[string]*node
 
 	hooks *hooks // symbol hooks
 
@@ -221,12 +623,22 @@ type Interpreter struct {
 
 const (
 	mainID     = "main"
+	initID     = "init"
 	selfPrefix = "github.com/traefik/yaegi"
 	selfPath   = selfPrefix + "/interp/interp"
 	// DefaultSourceName is the name used by default when the name of the input
 	// source file has not been specified for an Eval.
 	// TODO(mpl): something even more special as a name?
 	DefaultSourceName = "_.go"
+
+	// ownedGCRegistryCap is the ownership registry size (owned objects plus
+	// owned channels) above which incremental sweeps are armed. Bounded
+	// retention per interpreter is the goal; workloads whose live set exceeds
+	// the cap pay one O(live+registry) sweep per amortization window.
+	ownedGCRegistryCap = 1 << 16
+	// ownedGCAmortizeRegistrations is the minimum number of registry inserts
+	// between two armed sweeps, so the O(registry) sweep cost stays amortized.
+	ownedGCAmortizeRegistrations = 1 << 12
 
 	// Test is the value to pass to EvalPath to activate evaluation of test functions.
 	Test = false
@@ -322,19 +734,32 @@ type Options struct {
 // New returns a new interpreter.
 func New(options Options) *Interpreter {
 	i := Interpreter{
-		opt:      opt{context: build.Default, filesystem: &realFS{}, env: map[string]string{}},
-		frame:    newFrame(nil, 0, 0),
-		fset:     token.NewFileSet(),
-		universe: initUniverse(),
-		scopes:   map[string]*scope{},
-		binPkg:   Exports{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
-		mapTypes: map[reflect.Value][]reflect.Type{},
-		srcPkg:   imports{},
-		pkgNames: map[string]string{},
-		rdir:     map[string]bool{},
-		hooks:    &hooks{},
-		generic:  map[string]*node{},
+		opt:              opt{context: build.Default, filesystem: &realFS{}, env: map[string]string{}},
+		frame:            newFrame(nil, 0, 0),
+		fset:             token.NewFileSet(),
+		universe:         initUniverse(),
+		scopes:           map[string]*scope{},
+		binPkg:           Exports{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
+		mapTypes:         map[reflect.Value][]reflect.Type{},
+		srcPkg:           imports{},
+		publishedSrcPkg:  imports{},
+		pkgNames:         map[string]string{},
+		srcPkgInit:       map[string]*sourcePackageInit{},
+		srcPkgBuild:      map[string]*sourcePackageBuild{},
+		globalVarIndexes: map[int]struct{}{},
+		rdir:             map[string]bool{},
+		executionGate:    make(chan struct{}, 1),
+		hooks:            &hooks{},
+		generic:          map[string]*node{},
+		funcMeta:         map[uintptr]interpretedFuncMeta{},
+		directFuncs:      map[directFuncActivationKey]directFuncActivation{},
+		ownedObjects:     map[objectKey]*ownedObject{},
+		ownedChannels:    map[uintptr]*ownedChannel{},
+		panicTokens:      map[*ownedPanicToken]struct{}{},
+		activeFrames:     map[*frame]int{},
 	}
+	i.executionGate <- struct{}{}
+	i.frame.interp = &i
 
 	if i.opt.stdin = options.Stdin; i.opt.stdin == nil {
 		i.opt.stdin = os.Stdin
@@ -391,6 +816,7 @@ func New(options Options) *Interpreter {
 
 	// fastChan disables the cancellable version of channel operations in evalWithContext
 	i.opt.fastChan, _ = strconv.ParseBool(os.Getenv("YAEGI_FAST_CHAN"))
+	i.cancelChan = !i.opt.fastChan
 
 	// specialStdio allows to assign directly io.Writer and io.Reader to os.Stdxxx,
 	// even if they are not file descriptors.
@@ -410,6 +836,8 @@ const (
 	bltnDelete   = "delete"
 	bltnLen      = "len"
 	bltnMake     = "make"
+	bltnMax      = "max"
+	bltnMin      = "min"
 	bltnNew      = "new"
 	bltnOffsetof = "unsafe.Offsetof"
 	bltnPanic    = "panic"
@@ -418,6 +846,9 @@ const (
 	bltnReal     = "real"
 	bltnRecover  = "recover"
 	bltnSizeof   = "unsafe.Sizeof"
+
+	bltnUnsafeSlice  = "unsafe.Slice"
+	bltnUnsafeString = "unsafe.String"
 )
 
 func initUniverse() *scope {
@@ -465,6 +896,8 @@ func initUniverse() *scope {
 		bltnDelete:  {kind: bltnSym, builtin: _delete},
 		bltnLen:     {kind: bltnSym, builtin: _len},
 		bltnMake:    {kind: bltnSym, builtin: _make},
+		bltnMax:     {kind: bltnSym, builtin: _max},
+		bltnMin:     {kind: bltnSym, builtin: _min},
 		bltnNew:     {kind: bltnSym, builtin: _new},
 		bltnPanic:   {kind: bltnSym, builtin: _panic},
 		bltnPrint:   {kind: bltnSym, builtin: _print},
@@ -475,24 +908,247 @@ func initUniverse() *scope {
 	return sc
 }
 
-// resizeFrame resizes the global frame of interpreter.
-func (interp *Interpreter) resizeFrame() {
+// resizeFrameTo grows the exact frame selected for an execution. Callers that
+// have captured a root must not re-read interp.frame during preparation.
+func (interp *Interpreter) resizeFrameTo(f *frame) {
 	l := len(interp.universe.types)
-	b := len(interp.frame.data)
+	b := len(f.data)
+	// A retry after a failed source-package init rewinds the type allocator
+	// and recompiles from scratch, so it can reallocate an existing index
+	// with a different type than the cell left behind by the canceled
+	// attempt. Re-align drifted cells to the allocator before execution;
+	// cells whose type matches keep their value, which preserves globals.
+	for i := 0; i < b && i < l; i++ {
+		t := interp.universe.types[i]
+		if f.data[i].IsValid() && f.data[i].Type() == t {
+			continue
+		}
+		if t != nil {
+			f.data[i] = reflect.New(t).Elem()
+		}
+	}
 	if l-b <= 0 {
 		return
 	}
 	data := make([]reflect.Value, l)
-	copy(data, interp.frame.data)
+	copy(data, f.data)
 	for j, t := range interp.universe.types[b:] {
 		data[b+j] = reflect.New(t).Elem()
 	}
-	interp.frame.data = data
+	f.data = data
+}
+
+func (interp *Interpreter) acquireExecution() func() {
+	select {
+	case <-interp.executionGate:
+		id := currentGoroutineID()
+		interp.gateHolderGoid.Store(int64(id))
+		return func() {
+			interp.gateHolderGoid.CompareAndSwap(int64(id), 0)
+			interp.executionGate <- struct{}{}
+		}
+	default:
+		if executionMayReenter(interp) {
+			// Writers, Stringers, and conversion hooks may synchronously call
+			// back into the same interpreter. This goroutine either holds the
+			// gate itself or runs a live (not canceled) execution (it carries
+			// the reentrancy token), so it can inherit the active root and
+			// cancel owner. A canceled worker draining deferred calls after
+			// the API call returned runs outside the gate and must not
+			// bypass: its prepareExecutionFrame would rewrite the live
+			// root's owner concurrently with the gated execution now holding
+			// the gate.
+			return func() {}
+		}
+		<-interp.executionGate
+		id := currentGoroutineID()
+		interp.gateHolderGoid.Store(int64(id))
+		return func() {
+			interp.gateHolderGoid.CompareAndSwap(int64(id), 0)
+			interp.executionGate <- struct{}{}
+		}
+	}
+}
+
+// executionMayReenter decides the gate bypass for the calling goroutine. It
+// holds when the goroutine itself holds the execution gate, or when it runs
+// a token whose execution owner is still live. The owner is read at decision
+// time, not sampled once when the execution unwinds: a cancellation that
+// lands while the goroutine is parked inside a deferred host call must
+// remove the bypass for the rest of the drain, so a sampled flag would be a
+// TOCTOU hole.
+func executionMayReenter(interp *Interpreter) bool {
+	id := currentGoroutineID()
+	if id != 0 && interp.gateHolderGoid.Load() == int64(id) {
+		return true
+	}
+	token, ok := innermostExecutionToken(interp)
+	if !ok {
+		return false
+	}
+	return token.owner == nil || !ownerCanceled(token.owner)
+}
+
+func ownerCanceled(cancel <-chan struct{}) bool {
+	select {
+	case <-cancel:
+		return true
+	default:
+		return false
+	}
+}
+
+func (interp *Interpreter) acquireExecutionWithContext(ctx context.Context) (func(), error) {
+	// Mirror the plain gate: a host callback on the paused execution (a
+	// writer, Stringer, or conversion hook calling back with a context)
+	// must not wait for the gate its own outer evaluation holds. Canceled
+	// (zombie) workers do not bypass — see executionMayReenter.
+	if executionMayReenter(interp) {
+		return func() {}, nil
+	}
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-interp.executionGate:
+		id := currentGoroutineID()
+		interp.gateHolderGoid.Store(int64(id))
+		return func() {
+			interp.gateHolderGoid.CompareAndSwap(int64(id), 0)
+			interp.executionGate <- struct{}{}
+		}, nil
+	}
+}
+
+// executionToken records that a goroutine is running one interpreter
+// execution. The reentrancy bypass for the execution gate is scoped to the
+// goroutine, not probed from the native stack: any goroutine running
+// interpreted code has runCfg on its stack, including goroutines spawned by
+// an interpreted `go` statement, so a stack probe misreads an Eval from such
+// a goroutine as reentrant and lets it run concurrently with the gated
+// execution. With an explicit token, a host callback running synchronously
+// on the execution's goroutine (a writer, Stringer, or conversion hook) is
+// recognized at any native depth, while an Eval from a `go`-statement
+// goroutine waits for the gate like any unrelated goroutine.
+type executionToken struct {
+	interp *Interpreter
+	depth  int
+	// owner is the execution's cancellation channel, read live by
+	// executionMayReenter: once the owner fires, the goroutine is unwinding
+	// outside the gate and must stop bypassing it.
+	owner <-chan struct{}
+}
+
+type executionTokenStack struct {
+	stack []*executionToken
+}
+
+var executionTokens sync.Map // goroutine id (int) -> *executionTokenStack
+
+// currentGoroutineID extracts the running goroutine's id from its own
+// stack dump header ("goroutine N [running]:"). Only execution entry points
+// and the gate's contended path call this, never per-step code.
+func currentGoroutineID() int {
+	var buf [64]byte
+	n := runtime.Stack(buf[:], false)
+	line := buf[:n]
+	const prefix = "goroutine "
+	if !bytes.HasPrefix(line, []byte(prefix)) {
+		return 0
+	}
+	line = line[len(prefix):]
+	i := bytes.IndexByte(line, ' ')
+	if i < 0 {
+		return 0
+	}
+	id, err := strconv.Atoi(string(line[:i]))
+	if err != nil {
+		return 0
+	}
+	return id
+}
+
+// acquireExecutionToken marks the calling goroutine as running an execution
+// of interp. Nested synchronous re-entry of the same interpreter increments
+// the depth; a call crossing to another interpreter pushes a separate token
+// so the outer execution's bypass survives the inner release. A goroutine
+// never pops more than it pushed: every acquisition is released by a defer
+// in the same function of the same goroutine.
+func acquireExecutionToken(interp *Interpreter, owner <-chan struct{}) {
+	id := currentGoroutineID()
+	if id == 0 {
+		return
+	}
+	entry, _ := executionTokens.LoadOrStore(id, &executionTokenStack{})
+	stack := entry.(*executionTokenStack)
+	if n := len(stack.stack); n > 0 && stack.stack[n-1].interp == interp {
+		stack.stack[n-1].depth++
+		return
+	}
+	stack.stack = append(stack.stack, &executionToken{interp: interp, depth: 1, owner: owner})
+}
+
+func releaseExecutionToken(interp *Interpreter) {
+	id := currentGoroutineID()
+	if id == 0 {
+		return
+	}
+	entry, ok := executionTokens.Load(id)
+	if !ok {
+		return
+	}
+	stack := entry.(*executionTokenStack)
+	if n := len(stack.stack); n > 0 && stack.stack[n-1].interp == interp {
+		stack.stack[n-1].depth--
+		if stack.stack[n-1].depth <= 0 {
+			stack.stack = stack.stack[:len(stack.stack)-1]
+		}
+	}
+	// Goroutine ids are never reused, so an empty stack means this
+	// goroutine is done with executions for good: drop the entry entirely
+	// or a long-lived embedding process leaks one map entry per goroutine
+	// that ever ran an evaluation. The entry is only ever touched by its
+	// owning goroutine, so the delete cannot race another user.
+	if len(stack.stack) == 0 {
+		executionTokens.Delete(id)
+	}
+}
+
+// innermostExecutionToken returns the calling goroutine's innermost token
+// for interp, if any.
+func innermostExecutionToken(interp *Interpreter) (*executionToken, bool) {
+	entry, ok := executionTokens.Load(currentGoroutineID())
+	if !ok {
+		return nil, false
+	}
+	stack := entry.(*executionTokenStack)
+	if len(stack.stack) == 0 || stack.stack[len(stack.stack)-1].interp != interp {
+		return nil, false
+	}
+	return stack.stack[len(stack.stack)-1], true
 }
 
 // Eval evaluates Go code represented as a string. Eval returns the last result
 // computed by the interpreter, and a non nil error in case of failure.
+//
+// Evaluations on the same interpreter are serialized: an Eval blocked in
+// interpreted code (for example a channel receive) prevents later Evals from
+// starting until it completes. Use EvalWithContext to bound or cancel a
+// blocking evaluation. An Eval issued from a host callback running
+// synchronously on the paused execution's goroutine (a writer, a Stringer,
+// or a conversion hook) is recognized as reentrant and does not wait, at any
+// native call depth. Goroutines that run interpreted code outside an
+// evaluation's goroutine — goroutines spawned by an interpreted `go`
+// statement, and host goroutines invoking retained interpreted function
+// values — hold no token: an Eval from them waits for the gate like any
+// unrelated goroutine, instead of running concurrently with the gated
+// execution. If the gated evaluation is transitively waiting on such a
+// goroutine (for example through a channel handshake), that wait is a
+// user-level deadlock, exactly like blocking on an already-held mutex in
+// Go; earlier versions bypassed the gate in this situation and raced the
+// running evaluation instead.
 func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
+	release := interp.acquireExecution()
+	defer release()
 	return interp.eval(src, "", true)
 }
 
@@ -500,9 +1156,19 @@ func (interp *Interpreter) Eval(src string) (res reflect.Value, err error) {
 // by the interpreter, and a non nil error in case of failure.
 // The main function of the main package is executed if present.
 func (interp *Interpreter) EvalPath(path string) (res reflect.Value, err error) {
+	release := interp.acquireExecution()
+	defer release()
+	return interp.evalPathWithCancel(path, nil)
+}
+
+func (interp *Interpreter) evalPathWithCancel(path string, cancel <-chan struct{}) (res reflect.Value, err error) {
+	return interp.evalPathWithCancelPublication(path, cancel, nil)
+}
+
+func (interp *Interpreter) evalPathWithCancelPublication(path string, cancel <-chan struct{}, publication *executionPublication) (res reflect.Value, err error) {
 	path = filepath.ToSlash(path) // Ensure path is in Unix format. Since we work with fs.FS, we need to use Unix path.
 	if !isFile(interp.opt.filesystem, path) {
-		_, err := interp.importSrc(mainID, path, NoTest)
+		_, err := interp.importSrcWithCancel(mainID, path, NoTest, cancel)
 		return res, err
 	}
 
@@ -510,29 +1176,50 @@ func (interp *Interpreter) EvalPath(path string) (res reflect.Value, err error) 
 	if err != nil {
 		return res, err
 	}
-	return interp.eval(string(b), path, false)
+	return interp.evalWithCancelPublication(string(b), path, false, cancel, publication)
 }
 
 // EvalPathWithContext evaluates Go code located at path and returns the last
 // result computed by the interpreter, and a non nil error in case of failure.
 // The main function of the main package is executed if present.
 func (interp *Interpreter) EvalPathWithContext(ctx context.Context, path string) (res reflect.Value, err error) {
-	interp.mutex.Lock()
-	interp.done = make(chan struct{})
-	interp.cancelChan = !interp.opt.fastChan
-	interp.mutex.Unlock()
+	if err := ctx.Err(); err != nil {
+		return reflect.Value{}, err
+	}
+	release, err := interp.acquireExecutionWithContext(ctx)
+	if err != nil {
+		return reflect.Value{}, err
+	}
+	defer release()
+	// Keep the execution owner alive after a successful return. Values crossing
+	// this API can contain interpreted functions, and the caller context governs
+	// only the in-flight evaluation, not later calls through those values.
+	runDone := make(chan struct{})
+	publication := newExecutionPublication()
 
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		res, err = interp.EvalPath(path)
+		res, err = interp.evalPathWithCancelPublication(path, runDone, publication)
 	}()
 
 	select {
 	case <-ctx.Done():
-		interp.stop()
+		close(runDone)
+		publication.decision <- false
 		return reflect.Value{}, ctx.Err()
+	case <-publication.ready:
+		if err := ctx.Err(); err != nil {
+			close(runDone)
+			publication.decision <- false
+			return reflect.Value{}, err
+		}
+		publication.decision <- true
+		<-done
 	case <-done:
+		if err := ctx.Err(); err != nil {
+			return reflect.Value{}, err
+		}
 	}
 	return res, err
 }
@@ -541,7 +1228,14 @@ func (interp *Interpreter) EvalPathWithContext(ctx context.Context, path string)
 // A non nil error is returned in case of failure.
 // The main function, test functions and benchmark functions are internally compiled but not
 // executed. Test functions can be retrieved using the Symbol() method.
+//
+// Like Eval, it is serialized with other evaluations: it waits for any
+// in-flight evaluation to complete before running package initialization.
 func (interp *Interpreter) EvalTest(path string) error {
+	// Package-level initialization runs interpreted source, so it must not
+	// overlap an in-flight evaluation: take the execution gate like Eval.
+	release := interp.acquireExecution()
+	defer release()
 	_, err := interp.importSrc(mainID, path, Test)
 	return err
 }
@@ -552,7 +1246,15 @@ func isFile(filesystem fs.FS, path string) bool {
 }
 
 func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, err error) {
-	prog, err := interp.compileSrc(src, name, inc)
+	return interp.evalWithCancel(src, name, inc, nil)
+}
+
+func (interp *Interpreter) evalWithCancel(src, name string, inc bool, cancel <-chan struct{}) (res reflect.Value, err error) {
+	return interp.evalWithCancelPublication(src, name, inc, cancel, nil)
+}
+
+func (interp *Interpreter) evalWithCancelPublication(src, name string, inc bool, cancel <-chan struct{}, publication *executionPublication) (res reflect.Value, err error) {
+	prog, err := interp.compileSrcWithCancel(src, name, inc, cancel)
 	if err != nil {
 		return res, err
 	}
@@ -561,19 +1263,26 @@ func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, 
 		return res, err
 	}
 
-	return interp.Execute(prog)
+	return interp.executeWithPublication(prog, cancel, publication)
 }
 
 // EvalWithContext evaluates Go code represented as a string. It returns
 // a map on current interpreted package exported symbols.
 func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (reflect.Value, error) {
+	if err := ctx.Err(); err != nil {
+		return reflect.Value{}, err
+	}
+	release, err := interp.acquireExecutionWithContext(ctx)
+	if err != nil {
+		return reflect.Value{}, err
+	}
+	defer release()
 	var v reflect.Value
-	var err error
 
-	interp.mutex.Lock()
-	interp.done = make(chan struct{})
-	interp.cancelChan = !interp.opt.fastChan
-	interp.mutex.Unlock()
+	// Do not close the execution owner on success: a returned interpreted
+	// function must remain callable after EvalWithContext itself has returned.
+	runDone := make(chan struct{})
+	publication := newExecutionPublication()
 
 	done := make(chan struct{})
 	go func() {
@@ -585,24 +1294,28 @@ func (interp *Interpreter) EvalWithContext(ctx context.Context, src string) (ref
 			}
 			close(done)
 		}()
-		v, err = interp.Eval(src)
+		v, err = interp.evalWithCancelPublication(src, "", true, runDone, publication)
 	}()
 
 	select {
 	case <-ctx.Done():
-		interp.stop()
+		close(runDone)
+		publication.decision <- false
 		return reflect.Value{}, ctx.Err()
+	case <-publication.ready:
+		if contextErr := ctx.Err(); contextErr != nil {
+			close(runDone)
+			publication.decision <- false
+			return reflect.Value{}, contextErr
+		}
+		publication.decision <- true
+		<-done
 	case <-done:
+		if contextErr := ctx.Err(); contextErr != nil {
+			return reflect.Value{}, contextErr
+		}
 	}
 	return v, err
-}
-
-// stop sends a semaphore to all running frames and closes the chan
-// operation short circuit channel. stop may only be called once per
-// invocation of EvalWithContext.
-func (interp *Interpreter) stop() {
-	atomic.AddUint64(&interp.id, 1)
-	close(interp.done)
 }
 
 func (interp *Interpreter) runid() uint64 { return atomic.LoadUint64(&interp.id) }
@@ -629,19 +1342,47 @@ func ignoreScannerError(e *scanner.Error, s string) bool {
 // constructed by replacing the last "/" by a "_", producing crypto_rand and math_rand.
 // ImportUsed should not be called more than once, and not after a first Eval, as it may
 // rename packages.
+//
+// ImportUsed mutates the interpreter symbol tables, so it is serialized with
+// evaluations on the same interpreter like Eval: it waits for an in-flight
+// evaluation to complete, and a host callback of a paused evaluation is
+// recognized as reentrant.
 func (interp *Interpreter) ImportUsed() {
+	release := interp.acquireExecution()
+	defer release()
 	sc := interp.universe
+	// Count base names first: when several packages share the same base
+	// name, the plain name is ambiguous (and would depend on map iteration
+	// order), so it must not be bound at all. Explicit imports of these
+	// packages bind their own file-level symbol and resolve deterministically.
+	ambiguous := map[string]bool{}
+	count := map[string]int{}
+	for k := range interp.binPkg {
+		base := path.Base(k)
+		count[base]++
+		if count[base] > 1 {
+			ambiguous[base] = true
+		}
+	}
 	for k := range interp.binPkg {
 		// By construction, the package name is the last path element of the key.
 		name := path.Base(k)
-		if sym, ok := sc.sym[name]; ok {
-			// Handle collision by renaming old and new entries.
+		if ambiguous[name] {
+			// Bind only the renamed, path-based symbol for ambiguous names.
+			sc.sym[key2name(fixKey(k))] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: k, scope: sc}}
+			continue
+		}
+		if sym, ok := sc.sym[name]; ok && sym.kind == pkgSym && sym.typ != nil {
+			// Handle collision with a pre-existing symbol by renaming the old
+			// entry, then bind the plain name to the new package.
 			name2 := key2name(fixKey(sym.typ.path))
 			sc.sym[name2] = sym
 			if name2 != name {
 				delete(sc.sym, name)
 			}
 			name = key2name(fixKey(k))
+			sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: k, scope: sc}}
+			continue
 		}
 		sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: k, scope: sc}}
 	}

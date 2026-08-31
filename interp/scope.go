@@ -240,10 +240,12 @@ func (interp *Interpreter) initScopePkg(pkgID, pkgName string) *scope {
 // Globals returns a map of global variables and constants in the main package.
 func (interp *Interpreter) Globals() map[string]reflect.Value {
 	syms := map[string]reflect.Value{}
+	interp.funcSweepMu.Lock()
+	defer interp.funcSweepMu.Unlock()
 	interp.mutex.RLock()
 	defer interp.mutex.RUnlock()
 
-	v, ok := interp.srcPkg["main"]
+	v, ok := interp.publishedSrcPkg["main"]
 	if !ok {
 		return syms
 	}
@@ -253,7 +255,12 @@ func (interp *Interpreter) Globals() map[string]reflect.Value {
 		case constSym:
 			syms[n] = s.rval
 		case varSym:
-			syms[n] = interp.frame.data[s.index]
+			if s.index < 0 || s.index >= len(interp.frame.data) {
+				continue
+			}
+			value := interp.frame.data[s.index]
+			interp.publishHostValueLocked(value, true)
+			syms[n] = value
 		}
 	}
 

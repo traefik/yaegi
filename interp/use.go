@@ -18,10 +18,12 @@ import (
 // returned.
 func (interp *Interpreter) Symbols(importPath string) Exports {
 	m := map[string]map[string]reflect.Value{}
+	interp.funcSweepMu.Lock()
+	defer interp.funcSweepMu.Unlock()
 	interp.mutex.RLock()
 	defer interp.mutex.RUnlock()
 
-	for k, v := range interp.srcPkg {
+	for k, v := range interp.publishedSrcPkg {
 		if importPath != "" && k != importPath {
 			continue
 		}
@@ -35,10 +37,31 @@ func (interp *Interpreter) Symbols(importPath string) Exports {
 			case constSym:
 				syms[n] = s.rval
 			case funcSym:
-				syms[n] = genFunctionWrapper(s.node)(interp.frame)
+				// Generic (uninstantiated) functions have no monomorphic
+				// wrapper: wrapping them would call reflect.MakeFunc on a
+				// non-func type and panic. Skip them.
+				if s.node.typ == nil || isGeneric(s.node.typ) {
+					continue
+				}
+				if rt := s.node.typ.TypeOf(); rt == nil || rt.Kind() != reflect.Func {
+					continue
+				}
+				value := genFunctionWrapper(s.node)(interp.frame)
+				interp.publishHostValueLocked(value, false)
+				syms[n] = value
 			case varSym:
-				syms[n] = interp.frame.data[s.index]
+				if s.index < 0 || s.index >= len(interp.frame.data) {
+					continue
+				}
+				value := interp.frame.data[s.index]
+				interp.publishHostValueLocked(value, true)
+				syms[n] = value
 			case typeSym:
+				// Generic (uninstantiated) types have no reflect type yet:
+				// reflect.New on a nil type would panic.
+				if s.typ == nil || isGeneric(s.typ) || s.typ.TypeOf() == nil {
+					continue
+				}
 				syms[n] = reflect.New(s.typ.TypeOf())
 			}
 		}
@@ -102,7 +125,17 @@ func getWrapper(n *node, t reflect.Type) reflect.Type {
 
 // Use loads binary runtime symbols in the interpreter context so
 // they can be used in interpreted code.
+//
+// Use mutates the interpreter package tables, so it is serialized with
+// evaluations on the same interpreter like Eval: it waits for an in-flight
+// evaluation to complete, and a host callback of a paused evaluation is
+// recognized as reentrant.
 func (interp *Interpreter) Use(values Exports) error {
+	// The gate is held for the whole call; the generic-source compiles below
+	// use the internal compile entry point because the public Compile would
+	// wait for this very gate.
+	release := interp.acquireExecution()
+	defer release()
 	for k, v := range values {
 		importPath := path.Dir(k)
 		packageName := path.Base(k)
@@ -142,9 +175,11 @@ func (interp *Interpreter) Use(values Exports) error {
 	if _, ok := values["fmt/fmt"]; ok {
 		fixStdlib(interp)
 
-		// Load stdlib generic source.
+		// Load stdlib generic source. Use interp.compileSrc, not the public
+		// Compile: the execution gate is already held by this call, and the
+		// public entry point would wait for it.
 		for _, s := range gen.Sources {
-			if _, err := interp.Compile(s); err != nil {
+			if _, err := interp.compileSrc(s, "", true); err != nil {
 				return err
 			}
 		}

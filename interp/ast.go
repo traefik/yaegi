@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/constant"
@@ -365,12 +366,202 @@ func wrapInMain(src string) string {
 	return fmt.Sprintf("package main; func main() {%s\n}", src)
 }
 
+type incrementalSegment struct {
+	text   string
+	decl   bool
+	offset int
+}
+
+var errNotMixedIncremental = errors.New("not mixed incremental source")
+
+// splitIncrementalSource separates declaration and statement runs at top-level
+// semicolons. Scanner-inserted semicolons are boundaries too; semicolons inside
+// parentheses, brackets, and braces remain part of their enclosing construct.
+func splitIncrementalSource(src string) ([]incrementalSegment, bool) {
+	fset := token.NewFileSet()
+	file := fset.AddFile("", -1, len(src))
+	var (
+		scanErr bool
+		s       scanner.Scanner
+	)
+	s.Init(file, []byte(src), func(token.Position, string) { scanErr = true }, 0)
+
+	type scannedToken struct {
+		offset int
+		tok    token.Token
+		lit    string
+	}
+	var tokens []scannedToken
+	for {
+		pos, tok, lit := s.Scan()
+		if tok == token.EOF {
+			break
+		}
+		tokens = append(tokens, scannedToken{fset.Position(pos).Offset, tok, lit})
+	}
+	if scanErr || len(tokens) == 0 {
+		return nil, false
+	}
+
+	isDecl := func(i int) bool {
+		switch tokens[i].tok {
+		case token.CONST, token.IMPORT, token.PACKAGE, token.TYPE, token.VAR:
+			return true
+		case token.FUNC:
+			if i+1 < len(tokens) && tokens[i+1].tok == token.IDENT {
+				return true
+			}
+			if i+1 >= len(tokens) || tokens[i+1].tok != token.LPAREN {
+				return false
+			}
+			depth := 0
+			for j := i + 1; j < len(tokens); j++ {
+				switch tokens[j].tok {
+				case token.LPAREN:
+					depth++
+				case token.RPAREN:
+					depth--
+					if depth == 0 {
+						return j+2 < len(tokens) && tokens[j+1].tok == token.IDENT && tokens[j+2].tok == token.LPAREN
+					}
+				}
+			}
+		}
+		return false
+	}
+
+	var (
+		segments []incrementalSegment
+		depth    int
+		start    int
+		first    = -1
+	)
+	flush := func(end int) {
+		text := src[start:end]
+		if first >= 0 && strings.TrimSpace(text) != "" {
+			decl := isDecl(first)
+			if len(segments) > 0 && segments[len(segments)-1].decl == decl {
+				segments[len(segments)-1].text += text
+			} else {
+				segments = append(segments, incrementalSegment{text: text, decl: decl, offset: start})
+			}
+		} else if strings.Contains(text, ";") {
+			// Preserve an explicit empty statement, including an empty for clause.
+			if len(segments) > 0 && !segments[len(segments)-1].decl {
+				segments[len(segments)-1].text += text
+			} else {
+				segments = append(segments, incrementalSegment{text: text, offset: start})
+			}
+		}
+		start = end
+		first = -1
+	}
+	for i, scanned := range tokens {
+		switch scanned.tok {
+		case token.LPAREN, token.LBRACK, token.LBRACE:
+			depth++
+		case token.RPAREN, token.RBRACK, token.RBRACE:
+			if depth > 0 {
+				depth--
+			}
+		}
+		if first < 0 && scanned.tok != token.SEMICOLON {
+			first = i
+		}
+		if scanned.tok == token.SEMICOLON && depth == 0 {
+			end := scanned.offset
+			if scanned.lit == ";" {
+				end++
+			}
+			flush(end)
+		}
+	}
+	flush(len(src))
+	return segments, len(segments) > 1
+}
+
+func incrementalPosition(src string, offset int) (line, column int) {
+	line, column = 1, 1
+	for i := 0; i < offset; i++ {
+		if src[i] == '\n' {
+			line, column = line+1, 1
+		} else {
+			column++
+		}
+	}
+	return line, column
+}
+
+func incrementalSegmentSource(src, name string, segment incrementalSegment, declaration bool) string {
+	line, column := incrementalPosition(src, segment.offset)
+	directive := fmt.Sprintf("//line %s:%d:%d\n", name, line, column)
+	if declaration {
+		return "package main\n" + directive + segment.text
+	}
+	endLine, endColumn := incrementalPosition(src, segment.offset+len(segment.text))
+	endDirective := fmt.Sprintf("//line %s:%d:%d\n", name, endLine, endColumn)
+	return "package main\nfunc main() {\n" + directive + segment.text + "\n" + endDirective + "}"
+}
+
+// parseMixedIncremental parses declaration and statement runs independently,
+// then restores their lexical order in the same global block used for ordinary
+// incremental statements. A DeclStmt may contain any ast.Decl; accepting
+// package-level declarations here is an interpreter extension for REPL input.
+func (interp *Interpreter) parseMixedIncremental(src, name string, mode parser.Mode) (*ast.BlockStmt, error) {
+	segments, ok := splitIncrementalSource(src)
+	if !ok {
+		return nil, errNotMixedIncremental
+	}
+
+	block := &ast.BlockStmt{}
+	for _, segment := range segments {
+		if segment.decl {
+			f, err := parser.ParseFile(interp.fset, name, incrementalSegmentSource(src, name, segment, true), mode)
+			if err != nil {
+				return nil, err
+			}
+			var entrypoints []ast.Stmt
+			for _, decl := range f.Decls {
+				if fn, ok := decl.(*ast.FuncDecl); ok && fn.Recv == nil {
+					switch fn.Name.Name {
+					case initID:
+						// init has no package binding in Go. Represent it as a
+						// one-shot function literal so the mixed-cell extension
+						// can run it at this lexical phase without exposing a
+						// synthetic persistent symbol or scheduling it again.
+						entrypoints = append(entrypoints, &ast.ExprStmt{X: &ast.CallExpr{Fun: &ast.FuncLit{Type: fn.Type, Body: fn.Body}}})
+						continue
+					case "main":
+						entrypoints = append(entrypoints, &ast.ExprStmt{X: &ast.CallExpr{Fun: &ast.Ident{Name: fn.Name.Name, NamePos: fn.Name.NamePos}}})
+					}
+				}
+				block.List = append(block.List, &ast.DeclStmt{Decl: decl})
+			}
+			block.List = append(block.List, entrypoints...)
+			continue
+		}
+
+		f, err := parser.ParseFile(interp.fset, name, incrementalSegmentSource(src, name, segment, false), mode)
+		if err != nil {
+			return nil, err
+		}
+		block.List = append(block.List, f.Decls[0].(*ast.FuncDecl).Body.List...)
+	}
+	if len(block.List) == 0 {
+		return nil, errors.New("empty mixed incremental source")
+	}
+	block.Lbrace = block.List[0].Pos()
+	block.Rbrace = block.List[len(block.List)-1].End()
+	return block, nil
+}
+
 func (interp *Interpreter) parse(src, name string, inc bool) (node ast.Node, err error) {
 	mode := parser.DeclarationErrors
 
 	// Allow incremental parsing of declarations or statements, by inserting
 	// them in a pseudo file package or function. Those statements or
 	// declarations will be always evaluated in the global scope.
+	originalSrc := src
 	var tok token.Token
 	var inFunc bool
 	if inc {
@@ -394,8 +585,7 @@ func (interp *Interpreter) parse(src, name string, inc bool) (node ast.Node, err
 
 	f, err := parser.ParseFile(interp.fset, name, src, mode)
 	if err != nil {
-		// only retry if we're on an expression/statement about a func
-		if !inc || tok != token.FUNC {
+		if !inc {
 			return nil, err
 		}
 		// do not bother retrying if we know it's an error we're going to ignore later on.
@@ -404,12 +594,29 @@ func (interp *Interpreter) parse(src, name string, inc bool) (node ast.Node, err
 		}
 		// do not lose initial error, in case retrying fails.
 		initialError := err
+		if block, mixedErr := interp.parseMixedIncremental(originalSrc, name, mode); mixedErr == nil {
+			return block, nil
+		} else if mixedErr != errNotMixedIncremental {
+			// Segmentation succeeded, so a parser error from one of the native
+			// declaration/statement fragments is more precise than the whole-file
+			// error that merely points at the first grammar transition.
+			return nil, mixedErr
+		}
+		// only retry if we're on an expression/statement about a func
+		if tok != token.FUNC {
+			return nil, initialError
+		}
 		// retry with default source code "wrapping", in the main function scope.
 		src := wrapInMain(strings.TrimPrefix(src, "package main;"))
 		f, err = parser.ParseFile(interp.fset, name, src, mode)
 		if err != nil {
 			return nil, initialError
 		}
+		// The retry parsed an expression or statement beginning with func (for
+		// example, an immediately invoked function literal), not a persistent
+		// package-level main declaration. Return the wrapper body below so its
+		// synthetic main cannot enter package scope and run again on later Evals.
+		inFunc = true
 	}
 
 	if inFunc {
@@ -821,6 +1028,7 @@ func (interp *Interpreter) ast(f ast.Node) (string, *node, error) {
 			// Insert a missing ForRangeStmt for AST correctness
 			n := addChild(&root, anc, pos, forRangeStmt, aNop)
 			r := addChild(&root, astNode{n, nod}, pos, rangeStmt, aRange)
+			r.meta = a.Tok
 			st.push(r, nod)
 			if a.Key == nil {
 				// range not in an assign expression: insert a "_" key variable to store iteration index
