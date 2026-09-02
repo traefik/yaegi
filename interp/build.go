@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/build"
 	"go/parser"
+	"go/token"
 	"path"
 	"strconv"
 	"strings"
@@ -13,8 +14,9 @@ import (
 // as specified in https://golang.org/pkg/go/build/#hdr-Build_Constraints.
 // An error from parser is returned as well.
 func (interp *Interpreter) buildOk(ctx *build.Context, name, src string) (bool, error) {
-	// Extract comments before the first clause
-	f, err := parser.ParseFile(interp.fset, name, src, parser.PackageClauseOnly|parser.ParseComments)
+	// Extract comments before the first clause. Throwaway file set: only comment
+	// text is read, and adding to interp.fset would grow it on every Eval.
+	f, err := parser.ParseFile(token.NewFileSet(), name, src, parser.PackageClauseOnly|parser.ParseComments)
 	if err != nil {
 		return false, err
 	}

@@ -343,7 +343,9 @@ func isAssignAction(a action) bool {
 
 func (interp *Interpreter) firstToken(src string) token.Token {
 	var s scanner.Scanner
-	file := interp.fset.AddFile("", interp.fset.Base(), len(src))
+	// Use a throwaway file set: the file is only needed to drive the scanner,
+	// and adding it to interp.fset would grow it on every Eval.
+	file := token.NewFileSet().AddFile("", -1, len(src))
 	s.Init(file, []byte(src), nil, 0)
 
 	_, tok, _ := s.Scan()
