@@ -400,34 +400,25 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						}
 						lt = append(lt, t1)
 					}
+					// Resolve the instantiated type in the scope where the generic type is declared.
+					gsc := sc
+					if t0.scope != nil {
+						gsc = t0.scope
+					}
 					var g *node
-					g, _, err = genAST(sc, t0.node.anc, lt)
+					g, _, err = genAST(gsc, t0.node.anc, lt)
 					if err != nil {
 						return false
 					}
 					n.child[0] = g.lastChild()
-					n.typ, err = nodeType(interp, sc, n.child[0])
+					n.typ, err = nodeType(interp, gsc, n.child[0])
 					if err != nil {
 						return false
 					}
+					n.typ.typeArgs = lt
 					// Generate methods if any.
-					for _, nod := range t0.method {
-						gm, _, err2 := genAST(nod.scope, nod, lt)
-						if err2 != nil {
-							err = err2
-							return false
-						}
-						gm.typ, err = nodeType(interp, nod.scope, gm.child[2])
-						if err != nil {
-							return false
-						}
-						if _, err = interp.cfg(gm, sc, sc.pkgID, sc.pkgName); err != nil {
-							return false
-						}
-						if err = genRun(gm); err != nil {
-							return false
-						}
-						n.typ.addMethod(gm)
+					if err = genMethods(interp, sc, n.typ, t0.method, lt); err != nil {
+						return false
 					}
 					n.nleft = 1 // Indictate the type of composite literal.
 				}
@@ -988,6 +979,41 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				fixUntyped(n, sc)
 			}
 
+		case indexListExpr:
+			if n.isType(sc) {
+				// A generic type instantiated with several type parameters, used
+				// as an expression operand (conversion, type assertion, etc).
+				n.gen = nop
+				n.typ, err = nodeType(interp, sc, n)
+				break
+			}
+			if t := n.child[0].typ; t != nil && isGeneric(t) && (n.anc.kind != callExpr || n.anc.child[0] != n) {
+				// A generic function instantiated with several type parameters,
+				// used as a value. Generic function calls are handled in callExpr.
+				lt := make([]*itype, 0, len(n.child)-1)
+				for _, c := range n.child[1:] {
+					lt = append(lt, c.typ)
+				}
+				var g *node
+				var found bool
+				if g, found, err = genAST(sc, t.node.anc, lt); err != nil {
+					return
+				}
+				if !found {
+					if _, err = interp.cfg(g, t.node.anc.scope, importPath, pkgName); err != nil {
+						return
+					}
+					// Generate closures for function body.
+					if err = genRun(g.child[3]); err != nil {
+						return
+					}
+				}
+				// Replace generic func node by instantiated one.
+				n.anc.child[childPos(n)] = g
+				n.typ = g.typ
+				return
+			}
+
 		case indexExpr:
 			if isBlank(n.child[0]) {
 				err = n.cfgErrorf("cannot use _ as value")
@@ -1021,8 +1047,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.typ = t
 					return
 				}
-				g, found, err := genAST(sc, t.node.anc, []*itype{c1.typ})
-				if err != nil {
+				// Do not shadow err, which reports compilation errors of the generated function.
+				var g *node
+				var found bool
+				if g, found, err = genAST(sc, t.node.anc, []*itype{c1.typ}); err != nil {
 					return
 				}
 				if !found {
@@ -1039,14 +1067,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				n.typ = g.typ
 				return
 			case genericT:
-				name := t.id() + "[" + n.child[1].typ.id() + "]"
-				sym, _, ok := sc.lookup(name)
-				if !ok {
-					err = n.cfgErrorf("type not found: %s", name)
-					return
-				}
+				// A generic type instance, generated if not done yet.
 				n.gen = nop
-				n.typ = sym.typ
+				n.typ, err = nodeType(interp, sc, n)
 				return
 			case structT:
 				// A struct indexed by a Type means an instantiated generic struct.
@@ -1179,15 +1202,17 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 			wireChild(n)
 			switch c0 := n.child[0]; {
-			case c0.kind == indexListExpr:
+			case c0.kind == indexListExpr && !c0.isType(sc):
 				// Instantiate a generic function then call it.
 				fun := c0.child[0].sym.node
 				lt := []*itype{}
 				for _, c := range c0.child[1:] {
 					lt = append(lt, c.typ)
 				}
-				g, found, err := genAST(sc, fun, lt)
-				if err != nil {
+				// Do not shadow err, which reports compilation errors of the generated function.
+				var g *node
+				var found bool
+				if g, found, err = genAST(sc, fun, lt); err != nil {
 					return
 				}
 				if !found {
@@ -2632,9 +2657,19 @@ func (n *node) isType(sc *scope) bool {
 			return true // Imported source type
 		}
 	case identExpr:
-		return sc.getType(n.ident) != nil
-	case indexExpr:
+		if sc.getType(n.ident) != nil {
+			return true
+		}
+		// In a generic instance, a type parameter replaced by its type argument
+		// is not in scope, but has its type already populated.
+		_, _, found := sc.lookup(n.ident)
+		return !found && n.typ != nil
+	case indexExpr, indexListExpr:
 		// Maybe a generic type.
+		if n.child[0].kind == selectorExpr {
+			// A generic type of another package.
+			return n.child[0].isType(sc)
+		}
 		sym, _, ok := sc.lookup(n.child[0].ident)
 		return ok && sym.kind == typeSym
 	}

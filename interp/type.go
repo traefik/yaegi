@@ -127,6 +127,7 @@ type itype struct {
 	constraint   []*itype      // For interfaceT: list of types part of interface set
 	ulconstraint []*itype      // For interfaceT: list of underlying types part of interface set
 	instance     []*itype      // For genericT: list of instantiated types
+	typeArgs     []*itype      // For an instance of a generic type: its type arguments
 	name         string        // name of type within its package for a defined type
 	path         string        // for a defined type, the package import path
 	length       int           // length of array if ArrayT
@@ -137,6 +138,8 @@ type itype struct {
 	incomplete   bool          // true if type must be parsed again (out of order declarations)
 	untyped      bool          // true for a literal value (string or number)
 	isBinMethod  bool          // true if the type refers to a bin method function
+	pending      bool          // true for a generic instance placeholder, while its definition is generated
+	recursive    bool          // true if a pending generic instance has been referenced by its own definition
 }
 
 type generic struct{}
@@ -841,6 +844,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 			name := lt.id() + "[" + t1.id() + "]"
 			if sym, _, found := sc.lookup(name); found {
 				t = sym.typ
+				t.recursive = t.recursive || t.pending
 				break
 			}
 			// A generic type is being instantiated. Generate it.
@@ -892,6 +896,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		name = strings.TrimSuffix(name, ",") + "]"
 		if sym, _, found := sc.lookup(name); found {
 			t = sym.typ
+			t.recursive = t.recursive || t.pending
 			break
 		}
 		// A generic type is being instantiated. Generate it.
@@ -1129,14 +1134,60 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 
 func genType(interp *Interpreter, sc *scope, name string, lt *itype, types []*itype, seen []*node) (t *itype, err error) {
 	// A generic type is being instantiated. Generate it.
-	g, _, err := genAST(sc, lt.node.anc, types)
+	// The generated type must be resolved in the scope where the generic type is
+	// declared, not where it is instantiated: identifiers of the generic body (such
+	// as package imports or unexported types) may not exist in the latter.
+	gsc := sc
+	if lt.scope != nil {
+		gsc = lt.scope
+	}
+	g, _, err := genAST(gsc, lt.node.anc, types)
 	if err != nil {
 		return nil, err
 	}
-	t, err = nodeType2(interp, sc, g.lastChild(), seen)
+
+	// Register a struct or interface instance while generating its definition,
+	// so a recursive reference to it through other generic types resolves to it
+	// instead of instantiating it again endlessly. If referenced, the placeholder
+	// is completed in place, so the types already referring to it see the result.
+	// Direct self references are handled by genAST and type finalization.
+	var ph *itype
+	switch g.lastChild().kind {
+	case structType:
+		ph = &itype{cat: structT}
+	case interfaceType:
+		ph = &itype{cat: interfaceT}
+	}
+	if ph != nil {
+		ph.name, ph.path, ph.str, ph.scope, ph.pending = strings.TrimPrefix(name, lt.path+"."), lt.path, name, gsc, true
+		gsc.sym[name] = &symbol{index: -1, kind: typeSym, typ: ph, node: g}
+	}
+
+	interp.genLevel++
+	t, err = nodeType2(interp, gsc, g.lastChild(), seen)
+	interp.genLevel--
+	if ph != nil {
+		delete(gsc.sym, name)
+	}
 	if err != nil {
 		return nil, err
 	}
+	if ph != nil && ph.recursive {
+		gt, pt := t, ph.ptr
+		*ph = *gt
+		if pt != nil {
+			ph.ptr = pt
+		}
+		t = ph
+		if g.lastChild().typ == gt {
+			g.lastChild().typ = t
+		}
+		// The definition may also have been recorded under its short name.
+		if s := gsc.sym[t.name]; s != nil && s.typ == gt {
+			s.typ = t
+		}
+	}
+	t.typeArgs = types
 	lt.instance = append(lt.instance, t)
 	// Add generated symbol in the scope of generic source and user.
 	sc.sym[name] = &symbol{index: -1, kind: typeSym, typ: t, node: g}
@@ -1144,39 +1195,69 @@ func genType(interp *Interpreter, sc *scope, name string, lt *itype, types []*it
 		lt.scope.sym[name] = sc.sym[name]
 	}
 
-	for _, nod := range lt.method {
-		if err := genMethod(interp, sc, t, nod, types); err != nil {
-			return nil, err
-		}
+	if err := genMethods(interp, sc, t, lt.method, types); err != nil {
+		return nil, err
 	}
 	return t, err
 }
 
-func genMethod(interp *Interpreter, sc *scope, t *itype, nod *node, types []*itype) error {
-	gm, _, err := genAST(sc, nod, types)
-	if err != nil {
-		return err
-	}
-	if gm.typ, err = nodeType(interp, sc, gm.child[2]); err != nil {
-		return err
-	}
-	t.addMethod(gm)
+// genMethods generates the methods of an instantiated generic type. All the
+// methods are declared before compiling their bodies, as a method may call
+// another one declared after it.
+func genMethods(interp *Interpreter, sc *scope, t *itype, methods []*node, types []*itype) error {
+	gms := make([]*node, len(methods))
+	for i, nod := range methods {
+		// Resolve the method signature in the scope of the generic type, as for its body below.
+		scop := nod.typ.scope
+		gm, _, err := genAST(scop, nod, types)
+		if err != nil {
+			return err
+		}
+		if gm.typ, err = nodeType(interp, scop, gm.child[2]); err != nil {
+			return err
+		}
+		t.addMethod(gm)
 
-	// If the receiver is a pointer to a generic type, generate also the pointer type.
-	if rtn := gm.child[0].child[0].lastChild(); rtn != nil && rtn.kind == starExpr {
-		pt := ptrOf(t, withNode(t.node), withScope(sc))
-		pt.addMethod(gm)
-		rtn.typ = pt
+		// If the receiver is a pointer to a generic type, generate also the pointer type.
+		if rtn := gm.child[0].child[0].lastChild(); rtn != nil && rtn.kind == starExpr {
+			pt := ptrOf(t, withNode(t.node), withScope(sc))
+			pt.addMethod(gm)
+			rtn.typ = pt
+		}
+		gms[i] = gm
 	}
 
-	// Compile the method AST in the scope of the generic type.
-	scop := nod.typ.scope
-	if _, err = interp.cfg(gm, scop, scop.pkgID, scop.pkgName); err != nil {
-		return err
+	compile := func() error {
+		for i, gm := range gms {
+			// Compile the method AST in the scope of the generic type.
+			scop := methods[i].typ.scope
+			if _, err := interp.cfg(gm, scop, scop.pkgID, scop.pkgName); err != nil {
+				return err
+			}
+			// Generate closures for function body.
+			if err := genRun(gm); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 
-	// Generate closures for function body.
-	return genRun(gm)
+	// When instantiated while generating another generic type, the methods may
+	// refer to methods of that type, not declared yet: defer their compilation
+	// until the outermost instantiation completes.
+	interp.genPending = append(interp.genPending, compile)
+	if interp.genLevel > 0 {
+		return nil
+	}
+	for len(interp.genPending) > 0 {
+		f := interp.genPending[0]
+		interp.genPending = interp.genPending[1:]
+		if err := f(); err != nil {
+			interp.genPending = nil
+			return err
+		}
+	}
+	return nil
 }
 
 // findPackageType searches the top level scope for a package type.
@@ -1229,7 +1310,7 @@ func fieldName(n *node) string {
 		return fieldName(n.child[1])
 	case starExpr:
 		return fieldName(n.child[0])
-	case indexExpr:
+	case indexExpr, indexListExpr:
 		return fieldName(n.child[0])
 	case identExpr:
 		return n.ident
