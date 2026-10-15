@@ -1163,7 +1163,9 @@ func genType(interp *Interpreter, sc *scope, name string, lt *itype, types []*it
 		gsc.sym[name] = &symbol{index: -1, kind: typeSym, typ: ph, node: g}
 	}
 
+	interp.genLevel++
 	t, err = nodeType2(interp, gsc, g.lastChild(), seen)
+	interp.genLevel--
 	if ph != nil {
 		delete(gsc.sym, name)
 	}
@@ -1225,14 +1227,33 @@ func genMethods(interp *Interpreter, sc *scope, t *itype, methods []*node, types
 		gms[i] = gm
 	}
 
-	for i, gm := range gms {
-		// Compile the method AST in the scope of the generic type.
-		scop := methods[i].typ.scope
-		if _, err := interp.cfg(gm, scop, scop.pkgID, scop.pkgName); err != nil {
-			return err
+	compile := func() error {
+		for i, gm := range gms {
+			// Compile the method AST in the scope of the generic type.
+			scop := methods[i].typ.scope
+			if _, err := interp.cfg(gm, scop, scop.pkgID, scop.pkgName); err != nil {
+				return err
+			}
+			// Generate closures for function body.
+			if err := genRun(gm); err != nil {
+				return err
+			}
 		}
-		// Generate closures for function body.
-		if err := genRun(gm); err != nil {
+		return nil
+	}
+
+	// When instantiated while generating another generic type, the methods may
+	// refer to methods of that type, not declared yet: defer their compilation
+	// until the outermost instantiation completes.
+	interp.genPending = append(interp.genPending, compile)
+	if interp.genLevel > 0 {
+		return nil
+	}
+	for len(interp.genPending) > 0 {
+		f := interp.genPending[0]
+		interp.genPending = interp.genPending[1:]
+		if err := f(); err != nil {
+			interp.genPending = nil
 			return err
 		}
 	}
