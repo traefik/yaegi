@@ -103,6 +103,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "pkgname2.go" || // has deps
 			file.Name() == "ipp_as_key.go" || // has deps
 			file.Name() == "gen17.go" || // has deps
+			file.Name() == "gen19.go" || // expect error
 			file.Name() == "restricted0.go" || // expect error
 			file.Name() == "restricted1.go" || // expect error
 			file.Name() == "restricted2.go" || // expect error

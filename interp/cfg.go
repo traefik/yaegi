@@ -1022,8 +1022,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.typ = t
 					return
 				}
-				g, found, err := genAST(sc, t.node.anc, []*itype{c1.typ})
-				if err != nil {
+				// Do not shadow err, which reports compilation errors of the generated function.
+				var g *node
+				var found bool
+				if g, found, err = genAST(sc, t.node.anc, []*itype{c1.typ}); err != nil {
 					return
 				}
 				if !found {
@@ -1187,8 +1189,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				for _, c := range c0.child[1:] {
 					lt = append(lt, c.typ)
 				}
-				g, found, err := genAST(sc, fun, lt)
-				if err != nil {
+				// Do not shadow err, which reports compilation errors of the generated function.
+				var g *node
+				var found bool
+				if g, found, err = genAST(sc, fun, lt); err != nil {
 					return
 				}
 				if !found {
