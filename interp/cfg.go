@@ -980,12 +980,38 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 
 		case indexListExpr:
-			// A generic type instantiated with several type parameters, used
-			// as an expression operand (conversion, type assertion, etc).
-			// Generic function instantiations are handled in callExpr.
 			if n.isType(sc) {
+				// A generic type instantiated with several type parameters, used
+				// as an expression operand (conversion, type assertion, etc).
 				n.gen = nop
 				n.typ, err = nodeType(interp, sc, n)
+				break
+			}
+			if t := n.child[0].typ; t != nil && isGeneric(t) && (n.anc.kind != callExpr || n.anc.child[0] != n) {
+				// A generic function instantiated with several type parameters,
+				// used as a value. Generic function calls are handled in callExpr.
+				lt := make([]*itype, 0, len(n.child)-1)
+				for _, c := range n.child[1:] {
+					lt = append(lt, c.typ)
+				}
+				var g *node
+				var found bool
+				if g, found, err = genAST(sc, t.node.anc, lt); err != nil {
+					return
+				}
+				if !found {
+					if _, err = interp.cfg(g, t.node.anc.scope, importPath, pkgName); err != nil {
+						return
+					}
+					// Generate closures for function body.
+					if err = genRun(g.child[3]); err != nil {
+						return
+					}
+				}
+				// Replace generic func node by instantiated one.
+				n.anc.child[childPos(n)] = g
+				n.typ = g.typ
+				return
 			}
 
 		case indexExpr:
