@@ -1042,14 +1042,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				n.typ = g.typ
 				return
 			case genericT:
-				name := t.id() + "[" + n.child[1].typ.id() + "]"
-				sym, _, ok := sc.lookup(name)
-				if !ok {
-					err = n.cfgErrorf("type not found: %s", name)
-					return
-				}
+				// A generic type instance, generated if not done yet.
 				n.gen = nop
-				n.typ = sym.typ
+				n.typ, err = nodeType(interp, sc, n)
 				return
 			case structT:
 				// A struct indexed by a Type means an instantiated generic struct.
