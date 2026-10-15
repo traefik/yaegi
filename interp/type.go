@@ -1191,40 +1191,50 @@ func genType(interp *Interpreter, sc *scope, name string, lt *itype, types []*it
 		lt.scope.sym[name] = sc.sym[name]
 	}
 
-	for _, nod := range lt.method {
-		if err := genMethod(interp, sc, t, nod, types); err != nil {
-			return nil, err
-		}
+	if err := genMethods(interp, sc, t, lt.method, types); err != nil {
+		return nil, err
 	}
 	return t, err
 }
 
-func genMethod(interp *Interpreter, sc *scope, t *itype, nod *node, types []*itype) error {
-	// Resolve the method signature in the scope of the generic type, as for its body below.
-	scop := nod.typ.scope
-	gm, _, err := genAST(scop, nod, types)
-	if err != nil {
-		return err
-	}
-	if gm.typ, err = nodeType(interp, scop, gm.child[2]); err != nil {
-		return err
-	}
-	t.addMethod(gm)
+// genMethods generates the methods of an instantiated generic type. All the
+// methods are declared before compiling their bodies, as a method may call
+// another one declared after it.
+func genMethods(interp *Interpreter, sc *scope, t *itype, methods []*node, types []*itype) error {
+	gms := make([]*node, len(methods))
+	for i, nod := range methods {
+		// Resolve the method signature in the scope of the generic type, as for its body below.
+		scop := nod.typ.scope
+		gm, _, err := genAST(scop, nod, types)
+		if err != nil {
+			return err
+		}
+		if gm.typ, err = nodeType(interp, scop, gm.child[2]); err != nil {
+			return err
+		}
+		t.addMethod(gm)
 
-	// If the receiver is a pointer to a generic type, generate also the pointer type.
-	if rtn := gm.child[0].child[0].lastChild(); rtn != nil && rtn.kind == starExpr {
-		pt := ptrOf(t, withNode(t.node), withScope(sc))
-		pt.addMethod(gm)
-		rtn.typ = pt
+		// If the receiver is a pointer to a generic type, generate also the pointer type.
+		if rtn := gm.child[0].child[0].lastChild(); rtn != nil && rtn.kind == starExpr {
+			pt := ptrOf(t, withNode(t.node), withScope(sc))
+			pt.addMethod(gm)
+			rtn.typ = pt
+		}
+		gms[i] = gm
 	}
 
-	// Compile the method AST in the scope of the generic type.
-	if _, err = interp.cfg(gm, scop, scop.pkgID, scop.pkgName); err != nil {
-		return err
+	for i, gm := range gms {
+		// Compile the method AST in the scope of the generic type.
+		scop := methods[i].typ.scope
+		if _, err := interp.cfg(gm, scop, scop.pkgID, scop.pkgName); err != nil {
+			return err
+		}
+		// Generate closures for function body.
+		if err := genRun(gm); err != nil {
+			return err
+		}
 	}
-
-	// Generate closures for function body.
-	return genRun(gm)
+	return nil
 }
 
 // findPackageType searches the top level scope for a package type.

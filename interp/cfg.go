@@ -416,10 +416,8 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						return false
 					}
 					// Generate methods if any.
-					for _, nod := range t0.method {
-						if err = genMethod(interp, sc, n.typ, nod, lt); err != nil {
-							return false
-						}
+					if err = genMethods(interp, sc, n.typ, t0.method, lt); err != nil {
+						return false
 					}
 					n.nleft = 1 // Indictate the type of composite literal.
 				}
