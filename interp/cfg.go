@@ -2666,6 +2666,10 @@ func (n *node) isType(sc *scope) bool {
 		return !found && n.typ != nil
 	case indexExpr, indexListExpr:
 		// Maybe a generic type.
+		if n.child[0].kind == selectorExpr {
+			// A generic type of another package.
+			return n.child[0].isType(sc)
+		}
 		sym, _, ok := sc.lookup(n.child[0].ident)
 		return ok && sym.kind == typeSym
 	}
