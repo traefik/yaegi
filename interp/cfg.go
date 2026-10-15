@@ -2631,7 +2631,13 @@ func (n *node) isType(sc *scope) bool {
 			return true // Imported source type
 		}
 	case identExpr:
-		return sc.getType(n.ident) != nil
+		if sc.getType(n.ident) != nil {
+			return true
+		}
+		// In a generic instance, a type parameter replaced by its type argument
+		// is not in scope, but has its type already populated.
+		_, _, found := sc.lookup(n.ident)
+		return !found && n.typ != nil
 	case indexExpr, indexListExpr:
 		// Maybe a generic type.
 		sym, _, ok := sc.lookup(n.child[0].ident)
