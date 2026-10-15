@@ -137,6 +137,8 @@ type itype struct {
 	incomplete   bool          // true if type must be parsed again (out of order declarations)
 	untyped      bool          // true for a literal value (string or number)
 	isBinMethod  bool          // true if the type refers to a bin method function
+	pending      bool          // true for a generic instance placeholder, while its definition is generated
+	recursive    bool          // true if a pending generic instance has been referenced by its own definition
 }
 
 type generic struct{}
@@ -841,6 +843,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 			name := lt.id() + "[" + t1.id() + "]"
 			if sym, _, found := sc.lookup(name); found {
 				t = sym.typ
+				t.recursive = t.recursive || t.pending
 				break
 			}
 			// A generic type is being instantiated. Generate it.
@@ -892,6 +895,7 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 		name = strings.TrimSuffix(name, ",") + "]"
 		if sym, _, found := sc.lookup(name); found {
 			t = sym.typ
+			t.recursive = t.recursive || t.pending
 			break
 		}
 		// A generic type is being instantiated. Generate it.
@@ -1140,9 +1144,45 @@ func genType(interp *Interpreter, sc *scope, name string, lt *itype, types []*it
 	if err != nil {
 		return nil, err
 	}
+
+	// Register a struct or interface instance while generating its definition,
+	// so a recursive reference to it through other generic types resolves to it
+	// instead of instantiating it again endlessly. If referenced, the placeholder
+	// is completed in place, so the types already referring to it see the result.
+	// Direct self references are handled by genAST and type finalization.
+	var ph *itype
+	switch g.lastChild().kind {
+	case structType:
+		ph = &itype{cat: structT}
+	case interfaceType:
+		ph = &itype{cat: interfaceT}
+	}
+	if ph != nil {
+		ph.name, ph.path, ph.str, ph.scope, ph.pending = strings.TrimPrefix(name, lt.path+"."), lt.path, name, gsc, true
+		gsc.sym[name] = &symbol{index: -1, kind: typeSym, typ: ph, node: g}
+	}
+
 	t, err = nodeType2(interp, gsc, g.lastChild(), seen)
+	if ph != nil {
+		delete(gsc.sym, name)
+	}
 	if err != nil {
 		return nil, err
+	}
+	if ph != nil && ph.recursive {
+		gt, pt := t, ph.ptr
+		*ph = *gt
+		if pt != nil {
+			ph.ptr = pt
+		}
+		t = ph
+		if g.lastChild().typ == gt {
+			g.lastChild().typ = t
+		}
+		// The definition may also have been recorded under its short name.
+		if s := gsc.sym[t.name]; s != nil && s.typ == gt {
+			s.typ = t
+		}
 	}
 	lt.instance = append(lt.instance, t)
 	// Add generated symbol in the scope of generic source and user.
