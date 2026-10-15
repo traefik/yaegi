@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"strconv"
 	"strings"
 	"sync/atomic"
 )
@@ -149,7 +150,10 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 		return nod, nil
 	}
 
-	if nod, found := root.interp.generic[sname]; found {
+	// Cache instances per generic declaration, as several declarations may
+	// share the same name, such as methods of different generic types.
+	key := strconv.FormatInt(root.index, 10) + ":" + sname
+	if nod, found := root.interp.generic[key]; found {
 		return nod, true, nil
 	}
 
@@ -157,7 +161,7 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
-	root.interp.generic[sname] = r
+	root.interp.generic[key] = r
 	r.param = append(r.param, types...)
 	if tname != "" {
 		for _, nod := range fixNodes {
