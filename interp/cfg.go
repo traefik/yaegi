@@ -400,34 +400,26 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 						}
 						lt = append(lt, t1)
 					}
+					// Resolve the instantiated type in the scope where the generic type is declared.
+					gsc := sc
+					if t0.scope != nil {
+						gsc = t0.scope
+					}
 					var g *node
-					g, _, err = genAST(sc, t0.node.anc, lt)
+					g, _, err = genAST(gsc, t0.node.anc, lt)
 					if err != nil {
 						return false
 					}
 					n.child[0] = g.lastChild()
-					n.typ, err = nodeType(interp, sc, n.child[0])
+					n.typ, err = nodeType(interp, gsc, n.child[0])
 					if err != nil {
 						return false
 					}
 					// Generate methods if any.
 					for _, nod := range t0.method {
-						gm, _, err2 := genAST(nod.scope, nod, lt)
-						if err2 != nil {
-							err = err2
+						if err = genMethod(interp, sc, n.typ, nod, lt); err != nil {
 							return false
 						}
-						gm.typ, err = nodeType(interp, nod.scope, gm.child[2])
-						if err != nil {
-							return false
-						}
-						if _, err = interp.cfg(gm, sc, sc.pkgID, sc.pkgName); err != nil {
-							return false
-						}
-						if err = genRun(gm); err != nil {
-							return false
-						}
-						n.typ.addMethod(gm)
 					}
 					n.nleft = 1 // Indictate the type of composite literal.
 				}

@@ -1129,11 +1129,18 @@ func nodeType2(interp *Interpreter, sc *scope, n *node, seen []*node) (t *itype,
 
 func genType(interp *Interpreter, sc *scope, name string, lt *itype, types []*itype, seen []*node) (t *itype, err error) {
 	// A generic type is being instantiated. Generate it.
-	g, _, err := genAST(sc, lt.node.anc, types)
+	// The generated type must be resolved in the scope where the generic type is
+	// declared, not where it is instantiated: identifiers of the generic body (such
+	// as package imports or unexported types) may not exist in the latter.
+	gsc := sc
+	if lt.scope != nil {
+		gsc = lt.scope
+	}
+	g, _, err := genAST(gsc, lt.node.anc, types)
 	if err != nil {
 		return nil, err
 	}
-	t, err = nodeType2(interp, sc, g.lastChild(), seen)
+	t, err = nodeType2(interp, gsc, g.lastChild(), seen)
 	if err != nil {
 		return nil, err
 	}
@@ -1153,11 +1160,13 @@ func genType(interp *Interpreter, sc *scope, name string, lt *itype, types []*it
 }
 
 func genMethod(interp *Interpreter, sc *scope, t *itype, nod *node, types []*itype) error {
-	gm, _, err := genAST(sc, nod, types)
+	// Resolve the method signature in the scope of the generic type, as for its body below.
+	scop := nod.typ.scope
+	gm, _, err := genAST(scop, nod, types)
 	if err != nil {
 		return err
 	}
-	if gm.typ, err = nodeType(interp, sc, gm.child[2]); err != nil {
+	if gm.typ, err = nodeType(interp, scop, gm.child[2]); err != nil {
 		return err
 	}
 	t.addMethod(gm)
@@ -1170,7 +1179,6 @@ func genMethod(interp *Interpreter, sc *scope, t *itype, nod *node, types []*ity
 	}
 
 	// Compile the method AST in the scope of the generic type.
-	scop := nod.typ.scope
 	if _, err = interp.cfg(gm, scop, scop.pkgID, scop.pkgName); err != nil {
 		return err
 	}
