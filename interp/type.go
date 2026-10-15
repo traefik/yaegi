@@ -1277,7 +1277,7 @@ func fieldName(n *node) string {
 		return fieldName(n.child[1])
 	case starExpr:
 		return fieldName(n.child[0])
-	case indexExpr:
+	case indexExpr, indexListExpr:
 		return fieldName(n.child[0])
 	case identExpr:
 		return n.ident
