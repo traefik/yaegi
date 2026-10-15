@@ -415,6 +415,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					if err != nil {
 						return false
 					}
+					n.typ.typeArgs = lt
 					// Generate methods if any.
 					if err = genMethods(interp, sc, n.typ, t0.method, lt); err != nil {
 						return false

@@ -127,6 +127,7 @@ type itype struct {
 	constraint   []*itype      // For interfaceT: list of types part of interface set
 	ulconstraint []*itype      // For interfaceT: list of underlying types part of interface set
 	instance     []*itype      // For genericT: list of instantiated types
+	typeArgs     []*itype      // For an instance of a generic type: its type arguments
 	name         string        // name of type within its package for a defined type
 	path         string        // for a defined type, the package import path
 	length       int           // length of array if ArrayT
@@ -1184,6 +1185,7 @@ func genType(interp *Interpreter, sc *scope, name string, lt *itype, types []*it
 			s.typ = t
 		}
 	}
+	t.typeArgs = types
 	lt.instance = append(lt.instance, t)
 	// Add generated symbol in the scope of generic source and user.
 	sc.sym[name] = &symbol{index: -1, kind: typeSym, typ: t, node: g}
