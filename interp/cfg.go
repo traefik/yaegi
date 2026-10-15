@@ -980,6 +980,15 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				fixUntyped(n, sc)
 			}
 
+		case indexListExpr:
+			// A generic type instantiated with several type parameters, used
+			// as an expression operand (conversion, type assertion, etc).
+			// Generic function instantiations are handled in callExpr.
+			if n.isType(sc) {
+				n.gen = nop
+				n.typ, err = nodeType(interp, sc, n)
+			}
+
 		case indexExpr:
 			if isBlank(n.child[0]) {
 				err = n.cfgErrorf("cannot use _ as value")
@@ -1171,7 +1180,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			}
 			wireChild(n)
 			switch c0 := n.child[0]; {
-			case c0.kind == indexListExpr:
+			case c0.kind == indexListExpr && !c0.isType(sc):
 				// Instantiate a generic function then call it.
 				fun := c0.child[0].sym.node
 				lt := []*itype{}
@@ -2625,7 +2634,7 @@ func (n *node) isType(sc *scope) bool {
 		}
 	case identExpr:
 		return sc.getType(n.ident) != nil
-	case indexExpr:
+	case indexExpr, indexListExpr:
 		// Maybe a generic type.
 		sym, _, ok := sc.lookup(n.child[0].ident)
 		return ok && sym.kind == typeSym
