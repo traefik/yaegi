@@ -84,3 +84,56 @@ func Discard() int {
 		})
 	}
 }
+
+type operatorDestinations struct {
+	Rows    [][]interface{}
+	Field   interface{}
+	Map     map[string]interface{}
+	Pointer *interface{}
+}
+
+func TestOperatorAssignmentToBinaryInterfaces(t *testing.T) {
+	for _, target := range []struct{ name, expression string }{
+		{"Field", "b.Field"}, {"Map", `b.Map["cell"]`}, {"Pointer", "*b.Pointer"},
+	} {
+		t.Run(target.name, func(t *testing.T) {
+			i := interp.New(interp.Options{})
+			if err := i.Use(interp.Exports{"repro/repro": {
+				"Batch": reflect.ValueOf((*operatorDestinations)(nil)),
+			}}); err != nil {
+				t.Fatal(err)
+			}
+			source := fmt.Sprintf(`package p
+import "repro"
+func Apply(b *repro.Batch) *repro.Batch {
+ %s = b.Rows[0][0].(int) + 2
+ return b
+}`, target.expression)
+			if _, err := i.Eval(source); err != nil {
+				t.Fatal(err)
+			}
+			value, err := i.Eval("p.Apply")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var cell interface{}
+			batch := &operatorDestinations{Rows: [][]interface{}{{3}}, Map: map[string]interface{}{}, Pointer: &cell}
+			got := value.Interface().(func(*operatorDestinations) *operatorDestinations)(batch)
+			if got != batch {
+				t.Errorf("returned batch = %p, want %p", got, batch)
+			}
+			var actual interface{}
+			switch target.name {
+			case "Field":
+				actual = batch.Field
+			case "Map":
+				actual = batch.Map["cell"]
+			case "Pointer":
+				actual = *batch.Pointer
+			}
+			if actual != 5 {
+				t.Errorf("stored value = %#v, want 5", actual)
+			}
+		})
+	}
+}
