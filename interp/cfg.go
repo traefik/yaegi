@@ -969,7 +969,8 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 				// by constOp and available in n.rval. Nothing else to do at execution.
 				n.gen = nop
 				n.findex = notInFrame
-			case n.anc.kind == assignStmt && n.anc.action == aAssign && n.anc.nleft == 1 && !isInterface(n.anc.child[0].typ):
+			case n.anc.kind == assignStmt && n.anc.action == aAssign && n.anc.nleft == 1 &&
+				!isBlank(n.anc.child[0]) && !isInterface(n.anc.child[0].typ):
 				// To avoid a copy in frame, if the result is to be assigned, store it directly
 				// at the frame location of destination. Interface destinations need
 				// a separate assignment to preserve the concrete operator type.
@@ -2262,7 +2263,8 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			case n.rval.IsValid():
 				n.gen = nop
 				n.findex = notInFrame
-			case n.anc.kind == assignStmt && n.anc.action == aAssign && n.anc.nright == 1 && !isInterface(n.anc.child[0].typ):
+			case n.anc.kind == assignStmt && n.anc.action == aAssign && n.anc.nright == 1 &&
+				!isBlank(n.anc.child[0]) && !isInterface(n.anc.child[0].typ):
 				dest := n.anc.child[childPos(n)-n.anc.nright]
 				n.typ = dest.typ
 				n.findex = dest.findex
