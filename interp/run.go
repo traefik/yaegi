@@ -1962,7 +1962,7 @@ func getMethod(n *node) {
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		nod := *(n.val.(*node))
+		nod := *n.val.(*node)
 		nod.val = &nod
 		nod.recv = n.recv
 		getFrame(f, l).data[i] = genFuncValue(&nod)(f)

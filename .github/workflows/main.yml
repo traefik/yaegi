@@ -7,8 +7,8 @@ on:
   pull_request:
 
 env:
-  GO_VERSION: oldstable
-  GOLANGCI_LINT_VERSION: v2.11.4
+  GO_VERSION: stable
+  GOLANGCI_LINT_VERSION: v2.15.0
 
 jobs:
 
