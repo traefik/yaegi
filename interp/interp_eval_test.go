@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -1929,4 +1930,45 @@ func TestIssue1623(t *testing.T) {
 		{desc: "pkg.J = 3", src: "pkg.J = 3; pkg.J", res: "3"},
 		{desc: `pkg.S = "bar"`, src: `pkg.S = "bar"; pkg.S`, res: "bar"},
 	})
+}
+
+type Issue1734Interface interface{ Foo() string }
+
+func TestMissingInterfaceWrapper(t *testing.T) {
+	iface := reflect.ValueOf((*Issue1734Interface)(nil))
+	pkgPath := iface.Type().Elem().PkgPath()
+
+	tests := []struct {
+		desc    string
+		exports interp.Exports
+	}{
+		{
+			desc: "package of the interface not loaded",
+			exports: interp.Exports{
+				"pkg/pkg": {"I": iface},
+			},
+		},
+		{
+			desc: "wrapper not in the package of the interface",
+			exports: interp.Exports{
+				"pkg/pkg":                          {"I": iface},
+				pkgPath + "/" + path.Base(pkgPath): {"I": iface},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			i := interp.New(interp.Options{})
+			if err := i.Use(test.exports); err != nil {
+				t.Fatal(err)
+			}
+			i.ImportUsed()
+
+			eval(t, i, `type T struct{}`)
+			eval(t, i, `func (T) Foo() string { return "foo" }`)
+
+			assertEval(t, i, `var v pkg.I = T{}`, "no interface wrapper found for "+pkgPath+".Issue1734Interface", "")
+		})
+	}
 }

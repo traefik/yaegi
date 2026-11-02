@@ -1079,6 +1079,9 @@ func genInterfaceWrapper(n *node, typ reflect.Type) func(*frame) reflect.Value {
 	// As the field name was generated with a prefixed first character (in order to avoid
 	// collisions with method names), this first character is ignored in comparisons.
 	wrap := getWrapper(n, typ)
+	if wrap == nil {
+		panic(n.cfgErrorf("no interface wrapper found for %s.%s", typ.PkgPath(), typ.Name()))
+	}
 	mn := wrap.NumField() - 1
 	names := make([]string, mn)
 	methods := make([]*node, mn)

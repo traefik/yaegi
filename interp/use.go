@@ -76,7 +76,10 @@ func getWrapper(n *node, t reflect.Type) reflect.Type {
 	if !ok {
 		return nil
 	}
-	w := p["_"+t.Name()]
+	w, ok := p["_"+t.Name()]
+	if !ok {
+		return nil
+	}
 	lm := n.typ.methods()
 
 	// mapTypes may contain composed interfaces wrappers to test against, from
