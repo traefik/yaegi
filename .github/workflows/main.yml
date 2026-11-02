@@ -7,8 +7,8 @@ on:
   pull_request:
 
 env:
-  GO_VERSION: stable
-  GOLANGCI_LINT_VERSION: v2.4.0
+  GO_VERSION: oldstable
+  GOLANGCI_LINT_VERSION: v2.11.4
 
 jobs:
 
@@ -42,7 +42,6 @@ jobs:
   generate:
     name: Checks code and generated code
     runs-on: ubuntu-latest
-    needs: linting
     strategy:
       matrix:
         go-version: [ oldstable, stable ]
@@ -70,7 +69,6 @@ jobs:
   main:
     name: Build and Test
     runs-on: ubuntu-latest
-    needs: linting
     defaults:
       run:
         working-directory: ${{ github.workspace }}/go/src/github.com/traefik/yaegi

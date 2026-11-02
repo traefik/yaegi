@@ -27,6 +27,8 @@ linters:
       min-occurrences: 3
     misspell:
       locale: US
+    perfsprint:
+      concat-loop: false
     staticcheck:
       checks: ["all", "-ST1000", "-ST1023", "-QF1001", "-QF1008", "-QF1011"]
   exclusions:
