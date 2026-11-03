@@ -2955,6 +2955,20 @@ func loopVarFor(n *node) {
 	}
 }
 
+// loopVarForEnd runs at the end of each iteration of a for loop with a
+// per-iteration variable, before the post statement: as in Go 1.22, the next
+// iteration starts from the value that the body left in the variable (the body
+// can change it, as in "i++" or "i += n").
+func loopVarForEnd(n *node) {
+	lv := n.child[0].findex
+	ixn := n.anc.child[0].child[0].findex
+	next := getExec(n.tnext)
+	n.exec = func(f *frame) bltn {
+		f.data[ixn].Set(f.data[lv])
+		return next
+	}
+}
+
 func rangeChan(n *node) {
 	i := n.child[0].findex        // element index location in frame
 	value := genValue(n.child[1]) // chan

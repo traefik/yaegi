@@ -260,6 +260,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					sc.sym[lv.ident] = &symbol{index: vindex, kind: varSym, typ: lv.typ}
 					lv.findex = vindex
 					lv.gen = loopVarFor
+					// The end of the body (also reached by continue) copies the
+					// per-iteration variable back, before the post statement.
+					n.gen = loopVarForEnd
 				}
 			}
 
@@ -733,23 +736,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					if dest.typ.incomplete {
 						return
 					}
-					if sc.global || sc.isRedeclared(dest) {
-						if n.anc != nil && n.anc.anc != nil && (n.anc.anc.kind == forStmt7 || n.anc.anc.kind == rangeStmt) {
-							// check for redefine of for loop variables, which are now auto-defined in go1.22
-							init := n.anc.anc.child[0]
-							var fi *node // for ident
-							if n.anc.anc.kind == forStmt7 {
-								if init.kind == defineStmt && len(init.child) >= 2 && init.child[0].kind == identExpr {
-									fi = init.child[0]
-								}
-							} else { // range
-								fi = init
-							}
-							if fi != nil && dest.ident == fi.ident {
-								n.gen = nop
-								break
-							}
-						}
+					if (sc.global || sc.isRedeclared(dest)) && !isLoopVarShadow(n, dest.ident) {
 						// Do not overload existing symbols (defined in GTA) in global scope.
 						sym, _, _ = sc.lookup(dest.ident)
 					}
@@ -2319,6 +2306,38 @@ func fixUntyped(nod *node, sc *scope) {
 	}, nil)
 }
 
+// isLoopVarShadow reports whether the declaration n, in the body of a for or
+// range loop, declares a variable named ident while the body already holds
+// the per-iteration copy of a loop variable of that name. In Go the body is a
+// scope of its own, so ident is a new variable that shadows the loop variable.
+func isLoopVarShadow(n *node, ident string) bool {
+	if ident == "_" {
+		return false
+	}
+	body := n.anc
+	for body != nil && (body.kind == varDecl || body.kind == declStmt) {
+		body = body.anc
+	}
+	if body == nil || body.kind != blockStmt || body.anc == nil {
+		return false
+	}
+	var loopVars []*node
+	switch body.anc.kind {
+	case forStmt7:
+		loopVars = body.child[:1]
+	case rangeStmt:
+		loopVars = body.child[:2]
+	default:
+		return false
+	}
+	for _, v := range loopVars {
+		if v.kind == identExpr && v.ident == ident {
+			return true
+		}
+	}
+	return false
+}
+
 func compDefineX(sc *scope, n *node) error {
 	l := len(n.child) - 1
 	types := []*itype{}
@@ -2395,7 +2414,7 @@ func compDefineX(sc *scope, n *node) error {
 		}
 		// A new symbol doesn't exist in current scope. Upper scopes are not
 		// taken into accout here, as a new symbol can shadow an existing one.
-		if _, found := sc.sym[id]; found {
+		if _, found := sc.sym[id]; found && !isLoopVarShadow(n, id) {
 			symIsNew[id] = false
 		} else {
 			symIsNew[id] = true
