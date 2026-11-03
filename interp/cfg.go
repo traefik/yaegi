@@ -235,7 +235,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					lk.ident = rangek.ident
 					lk.typ = rangek.typ
 					kindex := sc.add(lk.typ)
-					sc.sym[lk.ident] = &symbol{index: kindex, kind: varSym, typ: lk.typ}
+					if lk.ident != "_" {
+						// The blank identifier is not a symbol: "_ = x" in the body
+						// must not assign to the loop variable.
+						sc.sym[lk.ident] = &symbol{index: kindex, kind: varSym, typ: lk.typ}
+					}
 					lk.findex = kindex
 					lk.gen = loopVarKey
 				}
@@ -244,7 +248,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					lv.ident = rangev.ident
 					lv.typ = rangev.typ
 					vindex := sc.add(lv.typ)
-					sc.sym[lv.ident] = &symbol{index: vindex, kind: varSym, typ: lv.typ}
+					if lv.ident != "_" {
+						sc.sym[lv.ident] = &symbol{index: vindex, kind: varSym, typ: lv.typ}
+					}
 					lv.findex = vindex
 					lv.gen = loopVarVal
 				}
