@@ -57,3 +57,4 @@ func init() {
 //go:generate ../internal/cmd/extract/extract testing testing/fstest testing/iotest testing/quick testing/slogtest
 //go:generate ../internal/cmd/extract/extract text/scanner text/tabwriter text/template text/template/parse
 //go:generate ../internal/cmd/extract/extract time unicode unicode/utf16 unicode/utf8
+//go:generate ../internal/cmd/extract/extract plugin
