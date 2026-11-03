@@ -2148,9 +2148,13 @@ func (t *itype) refType(ctx *refTypeContext) reflect.Type {
 				Type: f.typ.refType(ctx),
 				Tag:  reflect.StructTag(f.tag),
 			}
-			if len(t.field) == 1 && f.embed {
+			if len(t.field) == 1 && f.embed && field.Type.NumMethod() == 0 {
 				// Mark the field as embedded (anonymous) only if it is the
 				// only one, to avoid a panic due to golang/go#15924 issue.
+				// Do not mark it if its type has methods: reflect.StructOf
+				// copies them to the struct type but not to the pointer type,
+				// and callers like encoding/json in Go 1.27 expect the pointer
+				// to have the same methods.
 				field.Anonymous = true
 			}
 			fields = append(fields, field)
