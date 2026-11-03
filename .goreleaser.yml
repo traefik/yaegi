@@ -1,3 +1,5 @@
+version: 2
+
 project_name: yaegi
 
 builds:
@@ -39,10 +41,10 @@ changelog:
 archives:
   - id: archive
     name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
-    format: tar.gz
+    formats: [tar.gz]
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
     files:
       - LICENSE
 
@@ -53,7 +55,7 @@ brews:
     commit_author:
       name: traefiker
       email: 30906710+traefiker@users.noreply.github.com
-    folder: Formula
+    directory: Formula
     homepage: https://github.com/traefik/yaegi
     description: |
       Yaegi is Another Elegant Go Interpreter.

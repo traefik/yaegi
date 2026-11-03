@@ -25,6 +25,12 @@ linters:
     goconst:
       min-len: 3
       min-occurrences: 3
+      exclude-types:
+        - Call
+        - CompositeLit
+    govet:
+      disable:
+        - inline
     misspell:
       locale: US
     perfsprint:
