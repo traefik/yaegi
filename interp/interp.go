@@ -25,34 +25,37 @@ import (
 
 // Interpreter node structure for AST and CFG.
 type node struct {
-	debug      *nodeDebugData // debug info
-	child      []*node        // child subtrees (AST)
-	anc        *node          // ancestor (AST)
-	param      []*itype       // generic parameter nodes (AST)
-	start      *node          // entry point in subtree (CFG)
-	tnext      *node          // true branch successor (CFG)
-	fnext      *node          // false branch successor (CFG)
-	interp     *Interpreter   // interpreter context
-	index      int64          // node index (dot display)
-	findex     int            // index of value in frame or frame size (func def, type def)
-	level      int            // number of frame indirections to access value
-	nleft      int            // number of children in left part (assign) or indicates preceding type (compositeLit)
-	nright     int            // number of children in right part (assign)
-	kind       nkind          // kind of node
-	pos        token.Pos      // position in source code, relative to fset
-	sym        *symbol        // associated symbol
-	typ        *itype         // type of value in frame, or nil
-	recv       *receiver      // method receiver node for call, or nil
-	types      []reflect.Type // frame types, used by function literals only
-	scope      *scope         // frame scope
-	action     action         // action
-	exec       bltn           // generated function to execute
-	gen        bltnGenerator  // generator function to produce above bltn
-	val        interface{}    // static generic value (CFG execution)
-	rval       reflect.Value  // reflection value to let runtime access interpreter (CFG)
-	ident      string         // set if node is a var or func
-	redeclared bool           // set if node is a redeclared variable (CFG)
-	meta       interface{}    // meta stores meta information between gta runs, like errors
+	debug        *nodeDebugData                    // debug info
+	child        []*node                           // child subtrees (AST)
+	anc          *node                             // ancestor (AST)
+	param        []*itype                          // generic parameter nodes (AST)
+	start        *node                             // entry point in subtree (CFG)
+	tnext        *node                             // true branch successor (CFG)
+	fnext        *node                             // false branch successor (CFG)
+	interp       *Interpreter                      // interpreter context
+	index        int64                             // node index (dot display)
+	findex       int                               // index of value in frame or frame size (func def, type def)
+	level        int                               // number of frame indirections to access value
+	nleft        int                               // number of children in left part (assign) or indicates preceding type (compositeLit)
+	nright       int                               // number of children in right part (assign)
+	kind         nkind                             // kind of node
+	pos          token.Pos                         // position in source code, relative to fset
+	sym          *symbol                           // associated symbol
+	typ          *itype                            // type of value in frame, or nil
+	recv         *receiver                         // method receiver node for call, or nil
+	types        []reflect.Type                    // frame types, used by function literals only
+	scope        *scope                            // frame scope
+	action       action                            // action
+	exec         bltn                              // generated function to execute
+	gen          bltnGenerator                     // generator function to produce above bltn
+	val          interface{}                       // static generic value (CFG execution)
+	rval         reflect.Value                     // reflection value to let runtime access interpreter (CFG)
+	ident        string                            // set if node is a var or func
+	redeclared   bool                              // set if node is a redeclared variable (CFG)
+	meta         interface{}                       // meta stores meta information between gta runs, like errors
+	pprofLabel   string                            // pre-calculated pprof label for this function (e.g., "pkg:receiver:func")
+	wrapperLevel int                               // assigned wrapper level for this function (0-499)
+	wrapperFunc  func(*node, *frame, *node, *node) // pre-assigned wrapper function (cached for performance)
 }
 
 func (n *node) shouldBreak() bool {
@@ -208,11 +211,15 @@ type Interpreter struct {
 	frame    *frame            // program data storage during execution
 	universe *scope            // interpreter global level scope
 	scopes   map[string]*scope // package level scopes, indexed by import path
-	srcPkg   imports           // source packages used in interpreter, indexed by path
-	pkgNames map[string]string // package names, indexed by import path
-	done     chan struct{}     // for cancellation of channel operations
-	roots    []*node
-	generic  map[string]*node
+
+	// Wrapper level assignment for profiling
+	nextWrapperLevel int               // next wrapper level to assign (0-499, wraps around)
+	levelToLabel     map[int][]string  // map from wrapper level to function labels (for GetWrapperMappings)
+	srcPkg           imports           // source packages used in interpreter, indexed by path
+	pkgNames         map[string]string // package names, indexed by import path
+	done             chan struct{}     // for cancellation of channel operations
+	roots            []*node
+	generic          map[string]*node
 
 	hooks *hooks // symbol hooks
 
@@ -322,18 +329,19 @@ type Options struct {
 // New returns a new interpreter.
 func New(options Options) *Interpreter {
 	i := Interpreter{
-		opt:      opt{context: build.Default, filesystem: &realFS{}, env: map[string]string{}},
-		frame:    newFrame(nil, 0, 0),
-		fset:     token.NewFileSet(),
-		universe: initUniverse(),
-		scopes:   map[string]*scope{},
-		binPkg:   Exports{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
-		mapTypes: map[reflect.Value][]reflect.Type{},
-		srcPkg:   imports{},
-		pkgNames: map[string]string{},
-		rdir:     map[string]bool{},
-		hooks:    &hooks{},
-		generic:  map[string]*node{},
+		opt:          opt{context: build.Default, filesystem: &realFS{}, env: map[string]string{}},
+		frame:        newFrame(nil, 0, 0),
+		fset:         token.NewFileSet(),
+		universe:     initUniverse(),
+		scopes:       map[string]*scope{},
+		binPkg:       Exports{"": map[string]reflect.Value{"_error": reflect.ValueOf((*_error)(nil))}},
+		mapTypes:     map[reflect.Value][]reflect.Type{},
+		levelToLabel: map[int][]string{},
+		srcPkg:       imports{},
+		pkgNames:     map[string]string{},
+		rdir:         map[string]bool{},
+		hooks:        &hooks{},
+		generic:      map[string]*node{},
 	}
 
 	if i.opt.stdin = options.Stdin; i.opt.stdin == nil {
@@ -759,4 +767,34 @@ func getPrompt(in io.Reader, out io.Writer) func(reflect.Value) {
 		return doPrompt(out)
 	}
 	return func(reflect.Value) {}
+}
+
+// assignWrapperLevel assigns a wrapper level for the given function.
+// Functions are assigned incrementally (0-499) with wrap-around after 500 functions.
+// Sets the wrapper function reference in the node for optimal performance (no runtime lookup).
+func (interp *Interpreter) assignWrapperLevel(label string, n *node) int {
+	// Assign next available level
+	level := interp.nextWrapperLevel
+	interp.nextWrapperLevel = (interp.nextWrapperLevel + 1) % 500
+
+	// Store mapping for GetWrapperMappings() API
+	interp.levelToLabel[level] = append(interp.levelToLabel[level], label)
+
+	// Cache wrapper function in node for zero-lookup performance
+	n.wrapperFunc = getWrapperByLevel(level)
+
+	return level
+}
+
+// GetWrapperMappings returns the mapping of wrapper levels to function labels.
+// This allows correlation of pprof stack traces (showing wrapperLevelN) to actual function names.
+func (interp *Interpreter) GetWrapperMappings() map[int][]string {
+	interp.mutex.RLock()
+	defer interp.mutex.RUnlock()
+
+	result := make(map[int][]string, len(interp.levelToLabel))
+	for level, labels := range interp.levelToLabel {
+		result[level] = append([]string(nil), labels...)
+	}
+	return result
 }

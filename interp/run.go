@@ -1051,8 +1051,9 @@ func genFunctionWrapper(n *node) func(*frame) reflect.Value {
 				}
 			}
 
-			// Interpreter code execution.
-			runCfg(start, fr, def, n)
+			// Interpreter code execution with wrapper for stack traceability
+			// Use cached wrapper function from node (set during CFG generation for optimal performance)
+			def.wrapperFunc(start, fr, def, n)
 
 			return fr.data[:numRet]
 		})
