@@ -213,6 +213,11 @@ type Interpreter struct {
 	done     chan struct{}     // for cancellation of channel operations
 	roots    []*node
 	generic  map[string]*node
+	// genLevel is the nesting level of generic type instantiations in progress.
+	genLevel int
+	// genPending holds the compilation of generic methods deferred until the
+	// outermost generic type instantiation completes.
+	genPending []func() error
 
 	hooks *hooks // symbol hooks
 

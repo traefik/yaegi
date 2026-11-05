@@ -194,7 +194,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				if rcvrtype.cat == genericT {
 					// generate methods for already instantiated receivers
 					for _, it := range rcvrtype.instance {
-						if err = genMethod(interp, sc, it, n, it.node.anc.param); err != nil {
+						if err = genMethods(interp, sc, it, []*node{n}, it.node.anc.param); err != nil {
 							return false
 						}
 					}

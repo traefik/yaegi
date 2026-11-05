@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"strconv"
 	"strings"
 	"sync/atomic"
 )
@@ -149,7 +150,10 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 		return nod, nil
 	}
 
-	if nod, found := root.interp.generic[sname]; found {
+	// Cache instances per generic declaration, as several declarations may
+	// share the same name, such as methods of different generic types.
+	key := strconv.FormatInt(root.index, 10) + ":" + sname
+	if nod, found := root.interp.generic[key]; found {
 		return nod, true, nil
 	}
 
@@ -157,7 +161,7 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
-	root.interp.generic[sname] = r
+	root.interp.generic[key] = r
 	r.param = append(r.param, types...)
 	if tname != "" {
 		for _, nod := range fixNodes {
@@ -210,94 +214,105 @@ func copyNode(n, anc *node, recursive bool) *node {
 
 func inferTypesFromCall(sc *scope, fun *node, args []*node) ([]*itype, error) {
 	ftn := fun.typ.node
-	// Fill the map of parameter types, indexed by type param ident.
-	paramTypes := map[string]*itype{}
+
+	// Type parameter names, in declaration order.
+	var names []string
 	for _, c := range ftn.child[0].child {
-		typ, err := nodeType(fun.interp, sc, c.lastChild())
-		if err != nil {
-			return nil, err
-		}
 		for _, cc := range c.child[:len(c.child)-1] {
-			paramTypes[cc.ident] = typ
+			names = append(names, cc.ident)
+		}
+	}
+	isParam := func(name string) bool {
+		for _, n := range names {
+			if n == name {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Bind type parameters by matching the parameter type expressions against
+	// the argument types.
+	bound := map[string]*itype{}
+	var unify func(p *node, t *itype)
+	unify = func(p *node, t *itype) {
+		if t == nil {
+			return
+		}
+		switch p.kind {
+		case identExpr:
+			if isParam(p.ident) && bound[p.ident] == nil {
+				bound[p.ident] = t
+			}
+		case parenExpr, ellipsisExpr:
+			unify(p.child[0], t)
+		case starExpr, arrayType, chanType, chanTypeRecv, chanTypeSend:
+			if t.cat == valueT && t.rtype != nil && hasElem(t.rtype) {
+				unify(p.lastChild(), valueTOf(t.rtype.Elem()))
+			} else if t.val != nil {
+				unify(p.lastChild(), t.val)
+			}
+		case mapType:
+			if t.cat == mapT {
+				unify(p.child[0], t.key)
+				unify(p.child[1], t.val)
+			}
+		case funcType:
+			if t.cat != funcT {
+				return
+			}
+			unifyFields := func(fl *node, types []*itype) {
+				i := 0
+				for _, f := range fl.child {
+					l := len(f.child) - 1
+					for k := 0; k < max(l, 1) && i < len(types); k++ {
+						unify(f.child[l], types[i])
+						i++
+					}
+				}
+			}
+			if len(p.child) > 1 {
+				unifyFields(p.child[1], t.arg)
+			}
+			if len(p.child) > 2 {
+				unifyFields(p.child[2], t.ret)
+			}
+		case indexExpr, indexListExpr:
+			// An instance of a generic type: match its type arguments.
+			for i, c := range p.child[1:] {
+				if i < len(t.typeArgs) {
+					unify(c, t.typeArgs[i])
+				}
+			}
 		}
 	}
 
-	var inferTypes func(*itype, *itype) ([]*itype, error)
-	inferTypes = func(param, input *itype) ([]*itype, error) {
-		switch param.cat {
-		case chanT, ptrT, sliceT:
-			return inferTypes(param.val, input.val)
-
-		case mapT:
-			k, err := inferTypes(param.key, input.key)
-			if err != nil {
-				return nil, err
-			}
-			v, err := inferTypes(param.val, input.val)
-			if err != nil {
-				return nil, err
-			}
-			return append(k, v...), nil
-
-		case structT:
-			lt := []*itype{}
-			for i, f := range param.field {
-				nl, err := inferTypes(f.typ, input.field[i].typ)
-				if err != nil {
-					return nil, err
+	i := 0
+	for _, c := range ftn.child[1].child {
+		l := len(c.child) - 1
+		variadic := c.child[l].kind == ellipsisExpr
+		for k := 0; k < max(l, 1) && i < len(args); k++ {
+			if variadic {
+				// Each remaining argument is matched against the element type.
+				for ; i < len(args); i++ {
+					unify(c.child[l].child[0], args[i].typ)
 				}
-				lt = append(lt, nl...)
+				break
 			}
-			return lt, nil
-
-		case funcT:
-			lt := []*itype{}
-			for i, t := range param.arg {
-				if i >= len(input.arg) {
-					break
-				}
-				nl, err := inferTypes(t, input.arg[i])
-				if err != nil {
-					return nil, err
-				}
-				lt = append(lt, nl...)
-			}
-			for i, t := range param.ret {
-				if i >= len(input.ret) {
-					break
-				}
-				nl, err := inferTypes(t, input.ret[i])
-				if err != nil {
-					return nil, err
-				}
-				lt = append(lt, nl...)
-			}
-			return lt, nil
-
-		case nilT:
-			if paramTypes[param.name] != nil {
-				return []*itype{input}, nil
-			}
-
-		case genericT:
-			return []*itype{input}, nil
+			unify(c.child[l], args[i].typ)
+			i++
 		}
-		return nil, nil
 	}
 
-	types := []*itype{}
-	for i, c := range ftn.child[1].child {
-		typ, err := nodeType(fun.interp, sc, c.lastChild())
-		if err != nil {
-			return nil, err
+	types := make([]*itype, 0, len(names))
+	for _, name := range names {
+		t := bound[name]
+		if t == nil {
+			// Missing type parameters are reported when generating the instance.
+			break
 		}
-		lt, err := inferTypes(typ, args[i].typ)
-		if err != nil {
-			return nil, err
-		}
-		types = append(types, lt...)
+		types = append(types, t)
 	}
-
 	return types, nil
 }
 
