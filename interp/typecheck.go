@@ -968,6 +968,10 @@ func (check typecheck) arguments(n *node, child []*node, fun *node, ellipsis boo
 		}
 	}
 
+	if fun.typ == nil {
+		err := fun.cfgErrorf("typecheck arguments: nil function type: likely a syntax error above this point")
+		return err
+	}
 	var cnt int
 	for i, param := range params {
 		ellip := i == l-1 && ellipsis
