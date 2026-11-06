@@ -1972,3 +1972,49 @@ func TestMissingInterfaceWrapper(t *testing.T) {
 		})
 	}
 }
+
+// TestConcurrentClosures checks that function literals started as goroutines
+// from the same frame do not race with each other on the frame slot holding
+// the closure, and that a goroutine terminating does not overwrite the closure
+// created by a later iteration. Run with -race to detect the data race.
+func TestConcurrentClosures(t *testing.T) {
+	i := interp.New(interp.Options{})
+	if err := i.Use(stdlib.Symbols); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := i.Eval(`
+import "sync"
+
+func Run(n int) int {
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	total := 0
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(k int) {
+			defer wg.Done()
+			mu.Lock()
+			total += k
+			mu.Unlock()
+		}(i)
+	}
+	wg.Wait()
+	return total
+}
+`); err != nil {
+		t.Fatal(err)
+	}
+	v, err := i.Eval("Run")
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := v.Interface().(func(int) int)
+
+	const n = 50
+	want := n * (n - 1) / 2
+	for r := 0; r < 20; r++ {
+		if got := run(n); got != want {
+			t.Fatalf("round %d: got %d, want %d", r, got, want)
+		}
+	}
+}

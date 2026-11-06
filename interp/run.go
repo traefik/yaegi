@@ -1910,9 +1910,15 @@ func getFunc(n *node) {
 
 	n.exec = func(f *frame) bltn {
 		fr := f.clone()
-		o := getFrame(f, l).data[i]
 
-		fct := reflect.MakeFunc(n.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
+		// The function literal slot is shared by every goroutine running in
+		// this frame: protect all accesses to it.
+		f.mutex.Lock()
+		o := getFrame(f, l).data[i]
+		f.mutex.Unlock()
+
+		var fct reflect.Value
+		fct = reflect.MakeFunc(n.typ.TypeOf(), func(in []reflect.Value) []reflect.Value {
 			// Allocate and init local frame. All values to be settable and addressable.
 			fr2 := newFrame(fr, len(n.types), fr.runid())
 			d := fr2.data
@@ -1941,8 +1947,15 @@ func getFunc(n *node) {
 			// Interpreter code execution.
 			runCfg(n.child[3].start, fr2, n, n)
 
+			// Release the reference to the closure held by the frame slot, to
+			// avoid a memory leak (see #1618), but only if the slot still holds
+			// this closure. Otherwise a goroutine started from a function literal
+			// has been replaced by another one in the meantime (a loop creating
+			// goroutines), and restoring would clobber the newer value.
 			f.mutex.Lock()
-			getFrame(f, l).data[i] = o
+			if d := getFrame(f, l).data; d[i] == fct {
+				d[i] = o
+			}
 			f.mutex.Unlock()
 
 			return fr2.data[:numRet]
