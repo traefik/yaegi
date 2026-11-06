@@ -3849,13 +3849,13 @@ func _select(n *node) {
 	chanValues := make([]func(*frame) reflect.Value, nbClause)
 	assignedValues := make([]func(*frame) reflect.Value, nbClause)
 	okValues := make([]func(*frame) reflect.Value, nbClause)
-	cases := make([]reflect.SelectCase, nbClause+1)
+	dirs := make([]reflect.SelectDir, nbClause)
 	next := getExec(n.tnext)
 
 	for i := 0; i < nbClause; i++ {
 		cl := n.child[i]
 		if cl.kind == commClauseDefault {
-			cases[i].Dir = reflect.SelectDefault
+			dirs[i] = reflect.SelectDefault
 			if len(cl.child) == 0 {
 				clause[i] = func(*frame) bltn { return next }
 			} else {
@@ -3868,7 +3868,7 @@ func _select(n *node) {
 		case len(cl.child) > 1:
 			// The comm clause contains a channel operation and a clause body.
 			clause[i] = getExec(cl.child[1].start)
-			chans[i], assigned[i], ok[i], cases[i].Dir = clauseChanDir(c0)
+			chans[i], assigned[i], ok[i], dirs[i] = clauseChanDir(c0)
 			chanValues[i] = genValue(chans[i])
 			if assigned[i] != nil {
 				assignedValues[i] = genValue(assigned[i])
@@ -3879,23 +3879,36 @@ func _select(n *node) {
 		case c0.kind == exprStmt && len(c0.child) == 1 && c0.child[0].action == aRecv:
 			// The comm clause has an empty body clause after channel receive.
 			chanValues[i] = genValue(c0.child[0].child[0])
-			cases[i].Dir = reflect.SelectRecv
+			dirs[i] = reflect.SelectRecv
 			clause[i] = func(*frame) bltn { return next }
 		case c0.kind == sendStmt:
 			// The comm clause as an empty body clause after channel send.
 			chanValues[i] = genValue(c0.child[0])
-			cases[i].Dir = reflect.SelectSend
+			dirs[i] = reflect.SelectSend
 			assignedValues[i] = genValue(c0.child[1])
 			clause[i] = func(*frame) bltn { return next }
 		}
 	}
 
 	n.exec = func(f *frame) bltn {
+		// The same select statement can be executed by several goroutines at
+		// the same time, so the cases given to reflect.Select must be local to
+		// this execution and not shared through the closure. Small selects use
+		// a fixed size array, which does not escape to the heap.
+		var buf [4]reflect.SelectCase
+		var cases []reflect.SelectCase
+		if nbClause < len(buf) {
+			cases = buf[:nbClause+1]
+		} else {
+			cases = make([]reflect.SelectCase, nbClause+1)
+		}
+
 		f.mutex.RLock()
 		cases[nbClause] = f.done
 		f.mutex.RUnlock()
 
 		for i := range cases[:nbClause] {
+			cases[i].Dir = dirs[i]
 			switch cases[i].Dir {
 			case reflect.SelectRecv:
 				cases[i].Chan = chanValues[i](f)
