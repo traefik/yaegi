@@ -777,7 +777,9 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 
 				// In the following, we attempt to optimize by skipping the assign
 				// operation and setting the source location directly to the destination
-				// location in the frame.
+				// location in the frame. Skipping the assign operation applies to the
+				// whole statement, so it is only done for a single assignment: in a
+				// multiple assignment, the other destinations would never be set.
 				//
 				switch {
 				case n.action != aAssign:
@@ -790,7 +792,7 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					dest.gen = nop
 				case isFuncField(dest):
 					// Setting a struct field of function type requires an extra step. Do not optimize.
-				case isCall(src) && !isInterfaceSrc(dest.typ) && n.kind != defineStmt:
+				case n.nleft == 1 && isCall(src) && !isInterfaceSrc(dest.typ) && n.kind != defineStmt:
 					// Call action may perform the assignment directly.
 					if dest.typ.id() != src.typ.id() {
 						// Skip optimitization if returned type doesn't match assigned one.
@@ -802,12 +804,12 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					if src.typ.untyped && !dest.typ.untyped {
 						src.typ = dest.typ
 					}
-				case src.action == aRecv:
+				case n.nleft == 1 && src.action == aRecv:
 					// Assign by reading from a receiving channel.
 					n.gen = nop
 					src.findex = dest.findex // Set recv address to LHS.
 					dest.typ = src.typ
-				case src.action == aCompositeLit:
+				case n.nleft == 1 && src.action == aCompositeLit:
 					if dest.typ.cat == valueT && dest.typ.rtype.Kind() == reflect.Interface {
 						// Skip optimisation for assigned interface.
 						break
