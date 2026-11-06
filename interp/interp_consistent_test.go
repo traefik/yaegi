@@ -65,6 +65,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
 			file.Name() == "issue-1093.go" || // expect error
 			file.Name() == "issue-1276.go" || // expect error
 			file.Name() == "issue-1330.go" || // expect error
+			file.Name() == "issue-1593.go" || // expect error
 			file.Name() == "op1.go" || // expect error
 			file.Name() == "op7.go" || // expect error
 			file.Name() == "op9.go" || // expect error
@@ -278,6 +279,10 @@ func TestInterpErrorConsistency(t *testing.T) {
 			fileName:       "bltn0.go",
 			expectedInterp: "4:7: use of builtin println not in function call",
 			expectedExec:   "4:7: println (built-in) must be called",
+		},
+		{
+			fileName:       "issue-1593.go",
+			expectedInterp: "8:12: use of package context not in selector",
 		},
 		{
 			fileName:       "import6.go",
