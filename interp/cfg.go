@@ -802,11 +802,6 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					if src.typ.untyped && !dest.typ.untyped {
 						src.typ = dest.typ
 					}
-				case src.action == aRecv:
-					// Assign by reading from a receiving channel.
-					n.gen = nop
-					src.findex = dest.findex // Set recv address to LHS.
-					dest.typ = src.typ
 				case src.action == aCompositeLit:
 					if dest.typ.cat == valueT && dest.typ.rtype.Kind() == reflect.Interface {
 						// Skip optimisation for assigned interface.
@@ -2254,6 +2249,11 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 			case n.rval.IsValid():
 				n.gen = nop
 				n.findex = notInFrame
+			case n.action == aRecv:
+				// A channel receive replaces the value stored at its frame location with a new,
+				// unaddressable one. Keep it out of the location of a variable or of a result, which
+				// are set afterwards: it must use its own location and be copied by the statement.
+				n.findex = sc.add(n.typ)
 			case n.anc.kind == assignStmt && n.anc.action == aAssign && n.anc.nright == 1:
 				dest := n.anc.child[childPos(n)-n.anc.nright]
 				n.typ = dest.typ
