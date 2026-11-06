@@ -490,6 +490,83 @@ func genValueUint(n *node) func(*frame) (reflect.Value, uint64) {
 	return nil
 }
 
+// genValueShiftCount returns a shift count as uint64. A negative signed count
+// panics with "runtime error: negative shift amount", matching the Go runtime.
+func genValueShiftCount(n *node) func(*frame) (reflect.Value, uint64) {
+	value := genValue(n)
+
+	switch n.typ.TypeOf().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return func(f *frame) (reflect.Value, uint64) {
+			v := value(f)
+			i := v.Int()
+			if i < 0 {
+				panic("runtime error: negative shift amount")
+			}
+			return v, uint64(i)
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return func(f *frame) (reflect.Value, uint64) { v := value(f); return v, v.Uint() }
+	case reflect.Float32, reflect.Float64:
+		return func(f *frame) (reflect.Value, uint64) {
+			v := value(f)
+			f64 := v.Float()
+			if f64 < 0 {
+				panic("runtime error: negative shift amount")
+			}
+			return v, uint64(f64)
+		}
+	case reflect.Complex64, reflect.Complex128:
+		if n.typ.untyped && n.rval.IsValid() && imag(n.rval.Complex()) == 0 {
+			return func(f *frame) (reflect.Value, uint64) {
+				v := value(f)
+				re := real(v.Complex())
+				if re < 0 {
+					panic("runtime error: negative shift amount")
+				}
+				return v, uint64(re)
+			}
+		}
+	}
+	return nil
+}
+
+// vShiftCount converts a reflect value to a shift count, panicking on negative
+// signed values the same way the Go runtime does.
+func vShiftCount(v reflect.Value) uint64 {
+	if c := vConstantValue(v); c != nil {
+		c = constant.ToInt(c)
+		if constant.Sign(c) < 0 {
+			panic("runtime error: negative shift amount")
+		}
+		i, _ := constant.Uint64Val(c)
+		return i
+	}
+	switch v.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		i := v.Int()
+		if i < 0 {
+			panic("runtime error: negative shift amount")
+		}
+		return uint64(i)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint()
+	case reflect.Float32, reflect.Float64:
+		f64 := v.Float()
+		if f64 < 0 {
+			panic("runtime error: negative shift amount")
+		}
+		return uint64(f64)
+	case reflect.Complex64, reflect.Complex128:
+		re := real(v.Complex())
+		if re < 0 {
+			panic("runtime error: negative shift amount")
+		}
+		return uint64(re)
+	}
+	return 0
+}
+
 func genValueFloat(n *node) func(*frame) (reflect.Value, float64) {
 	value := genValue(n)
 

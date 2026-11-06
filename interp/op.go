@@ -1008,7 +1008,7 @@ func shl(n *node) {
 		switch {
 		case isInterface:
 			v0 := genValueInt(c0)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				_, i := v0(f)
 				_, j := v1(f)
@@ -1017,7 +1017,7 @@ func shl(n *node) {
 			}
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				_, j := v1(f)
 				dest(f).SetInt(i << j)
@@ -1025,7 +1025,7 @@ func shl(n *node) {
 			}
 		case c1.rval.IsValid():
 			v0 := genValueInt(c0)
-			j := vUint(c1.rval)
+			j := vShiftCount(c1.rval)
 			n.exec = func(f *frame) bltn {
 				_, i := v0(f)
 				dest(f).SetInt(i << j)
@@ -1033,7 +1033,7 @@ func shl(n *node) {
 			}
 		default:
 			v0 := genValueInt(c0)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				_, i := v0(f)
 				_, j := v1(f)
@@ -1045,7 +1045,7 @@ func shl(n *node) {
 		switch {
 		case isInterface:
 			v0 := genValueUint(c0)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				_, i := v0(f)
 				_, j := v1(f)
@@ -1054,14 +1054,14 @@ func shl(n *node) {
 			}
 		case c0.rval.IsValid():
 			i := vUint(c0.rval)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				_, j := v1(f)
 				dest(f).SetUint(i << j)
 				return next
 			}
 		case c1.rval.IsValid():
-			j := vUint(c1.rval)
+			j := vShiftCount(c1.rval)
 			v0 := genValueUint(c0)
 			n.exec = func(f *frame) bltn {
 				_, i := v0(f)
@@ -1070,7 +1070,7 @@ func shl(n *node) {
 			}
 		default:
 			v0 := genValueUint(c0)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				_, i := v0(f)
 				_, j := v1(f)
@@ -1091,12 +1091,12 @@ func shlConst(n *node) {
 	n.rval = reflect.New(t).Elem()
 	switch {
 	case isConst:
-		v := constant.Shift(vConstantValue(v0), token.SHL, uint(vUint(v1)))
+		v := constant.Shift(vConstantValue(v0), token.SHL, uint(vShiftCount(v1)))
 		n.rval.Set(reflect.ValueOf(v))
 	case isUint(t):
-		n.rval.SetUint(vUint(v0) << vUint(v1))
+		n.rval.SetUint(vUint(v0) << vShiftCount(v1))
 	case isInt(t):
-		n.rval.SetInt(vInt(v0) << vUint(v1))
+		n.rval.SetInt(vInt(v0) << vShiftCount(v1))
 	}
 }
 
@@ -1112,7 +1112,7 @@ func shr(n *node) {
 		switch {
 		case isInterface:
 			v0 := genValueInt(c0)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				_, i := v0(f)
 				_, j := v1(f)
@@ -1121,7 +1121,7 @@ func shr(n *node) {
 			}
 		case c0.rval.IsValid():
 			i := vInt(c0.rval)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				_, j := v1(f)
 				dest(f).SetInt(i >> j)
@@ -1129,7 +1129,7 @@ func shr(n *node) {
 			}
 		case c1.rval.IsValid():
 			v0 := genValueInt(c0)
-			j := vUint(c1.rval)
+			j := vShiftCount(c1.rval)
 			n.exec = func(f *frame) bltn {
 				_, i := v0(f)
 				dest(f).SetInt(i >> j)
@@ -1137,7 +1137,7 @@ func shr(n *node) {
 			}
 		default:
 			v0 := genValueInt(c0)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				_, i := v0(f)
 				_, j := v1(f)
@@ -1149,7 +1149,7 @@ func shr(n *node) {
 		switch {
 		case isInterface:
 			v0 := genValueUint(c0)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				_, i := v0(f)
 				_, j := v1(f)
@@ -1158,14 +1158,14 @@ func shr(n *node) {
 			}
 		case c0.rval.IsValid():
 			i := vUint(c0.rval)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				_, j := v1(f)
 				dest(f).SetUint(i >> j)
 				return next
 			}
 		case c1.rval.IsValid():
-			j := vUint(c1.rval)
+			j := vShiftCount(c1.rval)
 			v0 := genValueUint(c0)
 			n.exec = func(f *frame) bltn {
 				_, i := v0(f)
@@ -1174,7 +1174,7 @@ func shr(n *node) {
 			}
 		default:
 			v0 := genValueUint(c0)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				_, i := v0(f)
 				_, j := v1(f)
@@ -1195,12 +1195,12 @@ func shrConst(n *node) {
 	n.rval = reflect.New(t).Elem()
 	switch {
 	case isConst:
-		v := constant.Shift(vConstantValue(v0), token.SHR, uint(vUint(v1)))
+		v := constant.Shift(vConstantValue(v0), token.SHR, uint(vShiftCount(v1)))
 		n.rval.Set(reflect.ValueOf(v))
 	case isUint(t):
-		n.rval.SetUint(vUint(v0) >> vUint(v1))
+		n.rval.SetUint(vUint(v0) >> vShiftCount(v1))
 	case isInt(t):
-		n.rval.SetInt(vInt(v0) >> vUint(v1))
+		n.rval.SetInt(vInt(v0) >> vShiftCount(v1))
 	}
 }
 
@@ -2128,7 +2128,7 @@ func shlAssign(n *node) {
 		switch typ.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			v0 := genValueInt(c0)
-			j := vUint(c1.rval)
+			j := vShiftCount(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				v.SetInt(i << j)
@@ -2139,7 +2139,7 @@ func shlAssign(n *node) {
 			}
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 			v0 := genValueUint(c0)
-			j := vUint(c1.rval)
+			j := vShiftCount(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				v.SetUint(i << j)
@@ -2153,7 +2153,7 @@ func shlAssign(n *node) {
 		switch typ.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			v0 := genValueInt(c0)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
@@ -2165,7 +2165,7 @@ func shlAssign(n *node) {
 			}
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 			v0 := genValueUint(c0)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
@@ -2195,7 +2195,7 @@ func shrAssign(n *node) {
 		switch typ.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			v0 := genValueInt(c0)
-			j := vUint(c1.rval)
+			j := vShiftCount(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				v.SetInt(i >> j)
@@ -2206,7 +2206,7 @@ func shrAssign(n *node) {
 			}
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 			v0 := genValueUint(c0)
-			j := vUint(c1.rval)
+			j := vShiftCount(c1.rval)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				v.SetUint(i >> j)
@@ -2220,7 +2220,7 @@ func shrAssign(n *node) {
 		switch typ.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			v0 := genValueInt(c0)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
@@ -2232,7 +2232,7 @@ func shrAssign(n *node) {
 			}
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 			v0 := genValueUint(c0)
-			v1 := genValueUint(c1)
+			v1 := genValueShiftCount(c1)
 			n.exec = func(f *frame) bltn {
 				v, i := v0(f)
 				_, j := v1(f)
