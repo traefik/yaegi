@@ -85,6 +85,16 @@ func TestEvalShift(t *testing.T) {
 	})
 }
 
+func TestEvalShiftCountAssignment(t *testing.T) {
+	i := interp.New(interp.Options{})
+	runTests(t, i, []testCase{
+		{desc: "issue1750_shr_expr_count", src: `(func() uint32 { var x, r uint32 = 170, 0; k := uint64(1<<32 | 1); r = x >> (k + 0); return r })()`, res: "0"},
+		{desc: "issue1750_shl_expr_count", src: `(func() int8 { var a, b int8 = 1, 0; n := uint64(256 | 3); b = a << (n + 0); return b })()`, res: "0"},
+		{desc: "issue1750_shr_plain_id", src: `(func() uint32 { var x, r uint32 = 170, 0; k := uint64(1<<32 | 1); r = x >> k; return r })()`, res: "0"},
+		{desc: "issue1750_shr_paren_binary", src: `(func() int16 { var r, s int16 = 0, 64; k := uint64(3); r = s >> ((k - k) ^ k); return r })()`, res: "8"},
+	})
+}
+
 func TestOpVarConst(t *testing.T) {
 	i := interp.New(interp.Options{})
 	runTests(t, i, []testCase{
