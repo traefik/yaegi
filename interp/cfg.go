@@ -105,6 +105,10 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					n.typ = dest.typ
 				}
 			case binaryExpr, unaryExpr, parenExpr:
+				// For shift operations, do not propagate type to the shift count (child[1]).
+				if isShiftNode(n.anc) && childPos(n) == 1 {
+					break
+				}
 				n.typ = n.anc.typ
 			}
 
