@@ -3,6 +3,7 @@ package interp
 import (
 	"go/ast"
 	"go/build"
+	"go/build/constraint"
 	"go/parser"
 	"path"
 	"strconv"
@@ -19,9 +20,13 @@ func (interp *Interpreter) buildOk(ctx *build.Context, name, src string) (bool, 
 		return false, err
 	}
 	for _, g := range f.Comments {
-		// in file, evaluate the AND of multiple line build constraints
-		for _, line := range strings.Split(strings.TrimSpace(g.Text()), "\n") {
-			if !buildLineOk(ctx, line) {
+		// In file, evaluate the AND of multiple line build constraints.
+		for _, line := range commentLines(g) {
+			ok, err := buildLineOk(ctx, line)
+			if err != nil {
+				return false, err
+			}
+			if !ok {
 				return false, nil
 			}
 		}
@@ -32,18 +37,21 @@ func (interp *Interpreter) buildOk(ctx *build.Context, name, src string) (bool, 
 
 // buildLineOk returns true if line is not a build constraint or
 // if build constraint is satisfied.
-func buildLineOk(ctx *build.Context, line string) (ok bool) {
-	if len(line) < 7 || line[:7] != "+build " {
-		return true
+func buildLineOk(ctx *build.Context, line string) (bool, error) {
+	line = strings.TrimSpace(line)
+	comment := "//" + line
+	if !constraint.IsGoBuild(comment) && !constraint.IsPlusBuild(comment) {
+		return true, nil
 	}
-	// In line, evaluate the OR of space-separated options
-	options := strings.Split(strings.TrimSpace(line[6:]), " ")
-	for _, o := range options {
-		if ok = buildOptionOk(ctx, o); ok {
-			break
-		}
+
+	expr, err := constraint.Parse(comment)
+	if err != nil {
+		return false, err
 	}
-	return ok
+
+	return expr.Eval(func(tag string) bool {
+		return buildTagOk(ctx, tag)
+	}), nil
 }
 
 // buildOptionOk return true if all comma separated tags match, false otherwise.
@@ -88,7 +96,7 @@ func buildTagOk(ctx *build.Context, s string) (r bool) {
 // and adds the corresponding tags to the interpreter build tags.
 func setYaegiTags(ctx *build.Context, comments []*ast.CommentGroup) {
 	for _, g := range comments {
-		for _, line := range strings.Split(strings.TrimSpace(g.Text()), "\n") {
+		for _, line := range commentLines(g) {
 			if len(line) < 11 || line[:11] != "yaegi:tags " {
 				continue
 			}
@@ -101,6 +109,20 @@ func setYaegiTags(ctx *build.Context, comments []*ast.CommentGroup) {
 			}
 		}
 	}
+}
+
+func commentLines(g *ast.CommentGroup) []string {
+	var lines []string
+	for _, comment := range g.List {
+		text := strings.TrimSpace(comment.Text)
+		text = strings.TrimPrefix(text, "//")
+		text = strings.TrimPrefix(text, "/*")
+		text = strings.TrimSuffix(text, "*/")
+		for _, line := range strings.Split(strings.TrimSpace(text), "\n") {
+			lines = append(lines, strings.TrimSpace(line))
+		}
+	}
+	return lines
 }
 
 func contains(tags []string, tag string) bool {

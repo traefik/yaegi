@@ -556,6 +556,9 @@ func (interp *Interpreter) eval(src, name string, inc bool) (res reflect.Value, 
 	if err != nil {
 		return res, err
 	}
+	if prog == nil {
+		return res, nil
+	}
 
 	if interp.noRun {
 		return res, err

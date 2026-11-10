@@ -2,6 +2,8 @@ package interp
 
 import (
 	"go/build"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -37,6 +39,12 @@ func TestBuildTag(t *testing.T) {
 		{"// +build foo", true},
 		{"// +build !foo", false},
 		{"// +build bar", false},
+		{"//go:build linux", true},
+		{"//go:build windows", false},
+		{"//go:build linux && amd64", true},
+		{"//go:build linux && arm64", false},
+		{"//go:build foo || bar", true},
+		{"//go:build !foo", false},
 	}
 
 	i := New(Options{})
@@ -46,6 +54,37 @@ func TestBuildTag(t *testing.T) {
 		t.Run(test.src, func(t *testing.T) {
 			if r, _ := i.buildOk(&ctx, "", src); r != test.res {
 				t.Errorf("got %v, want %v", r, test.res)
+			}
+		})
+	}
+}
+
+func TestEvalPathBuildConstraints(t *testing.T) {
+	tests := []struct {
+		name string
+		tag  string
+	}{
+		{name: "legacy", tag: "// +build windows"},
+		{name: "gobuild", tag: "//go:build windows"},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "main.go")
+			src := test.tag + "\n\npackage main\n\nfunc main() { panic(\"should not run\") }\n"
+			if err := os.WriteFile(path, []byte(src), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			i := New(Options{})
+			v, err := i.EvalPath(path)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if v.IsValid() {
+				t.Fatalf("got %v, want invalid zero result", v)
 			}
 		})
 	}
