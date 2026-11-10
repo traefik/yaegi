@@ -428,7 +428,9 @@ func typeAssert(n *node, withResult, withOk bool) {
 				v = val.value
 				leftType = val.node.typ.rtype
 			} else {
-				v = v.Elem()
+				if v.IsValid() && !canAssertTypes(v.Type(), rtype) {
+					v = v.Elem()
+				}
 				leftType = v.Type()
 				ok = true
 			}
