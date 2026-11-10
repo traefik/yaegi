@@ -4,7 +4,7 @@ type T struct {
 	Name string
 }
 
-func f(t interface{}) {
+func f(t any) {
 	switch ext := t.(type) {
 	case *T:
 		println("*T", ext.Name)

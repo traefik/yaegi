@@ -22,11 +22,11 @@ const jsonData3 = `{
 }`
 
 func fromSlice() {
-	var a []interface{}
-	var c, d interface{}
+	var a []any
+	var c, d any
 	c = 2
 	d = 3
-	a = []interface{}{c, d}
+	a = []any{c, d}
 
 	if err := json.Unmarshal([]byte(jsonData), &a); err != nil {
 		log.Fatalln(err)
@@ -38,17 +38,17 @@ func fromSlice() {
 }
 
 func fromEmpty() {
-	var a interface{}
-	var c, d interface{}
+	var a any
+	var c, d any
 	c = 2
 	d = 3
-	a = []interface{}{c, d}
+	a = []any{c, d}
 
 	if err := json.Unmarshal([]byte(jsonData), &a); err != nil {
 		log.Fatalln(err)
 	}
 
-	b := a.([]interface{})
+	b := a.([]any)
 
 	for k, v := range b {
 		fmt.Println(k, ":", v)
@@ -56,13 +56,13 @@ func fromEmpty() {
 }
 
 func sliceOfObjects() {
-	var a interface{}
+	var a any
 
 	if err := json.Unmarshal([]byte(jsonData2), &a); err != nil {
 		log.Fatalln(err)
 	}
 
-	b := a.([]interface{})
+	b := a.([]any)
 
 	for k, v := range b {
 		fmt.Println(k, ":", v)
@@ -70,13 +70,13 @@ func sliceOfObjects() {
 }
 
 func intoMap() {
-	var a interface{}
+	var a any
 
 	if err := json.Unmarshal([]byte(jsonData3), &a); err != nil {
 		log.Fatalln(err)
 	}
 
-	b := a.(map[string]interface{})
+	b := a.(map[string]any)
 
 	seenFoo := false
 	for k, v := range b {

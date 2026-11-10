@@ -1,6 +1,6 @@
 package main
 
-func f() interface{} {
+func f() any {
 	return new(int)
 }
 

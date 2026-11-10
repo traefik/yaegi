@@ -4,7 +4,7 @@ type sample struct {
 	count int
 }
 
-func run(inf interface{}, name string) {
+func run(inf any, name string) {
 	x := inf.(sample)
 	println(x.count, name)
 }

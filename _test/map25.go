@@ -7,7 +7,7 @@ import (
 
 func main() {
 	jb := []byte(`{"num": "2"}`)
-	params := map[string]interface{}{"foo": "1"}
+	params := map[string]any{"foo": "1"}
 	if err := json.Unmarshal(jb, &params); err != nil {
 		panic(err)
 	}

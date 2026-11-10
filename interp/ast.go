@@ -436,7 +436,7 @@ func (interp *Interpreter) ast(f ast.Node) (string, *node, error) {
 	pkgName := "main"
 
 	addChild := func(root **node, anc astNode, pos token.Pos, kind nkind, act action) *node {
-		var i interface{}
+		var i any
 		nindex := atomic.AddInt64(&interp.nindex, 1)
 		n := &node{anc: anc.node, interp: interp, index: nindex, pos: pos, kind: kind, action: act, val: &i, gen: builtin[act]}
 		n.start = n

@@ -148,7 +148,7 @@ func TestPackages(t *testing.T) {
 	}
 }
 
-func fatalStderrf(t *testing.T, format string, args ...interface{}) {
+func fatalStderrf(t *testing.T, format string, args ...any) {
 	t.Helper()
 
 	fmt.Fprintf(os.Stderr, format+"\n", args...)

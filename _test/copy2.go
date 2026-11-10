@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func f(a, b []int) interface{} { return copy(a, b) }
+func f(a, b []int) any { return copy(a, b) }
 
 func main() {
 	a := []int{10, 20, 30}

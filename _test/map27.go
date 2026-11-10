@@ -5,7 +5,7 @@ import (
 	"text/template"
 )
 
-type fm map[string]interface{}
+type fm map[string]any
 
 type foo struct{}
 

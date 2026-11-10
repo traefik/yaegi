@@ -8,7 +8,7 @@ func newT() (T, error) { return T{}, nil }
 
 func main() {
 	var (
-		i   interface{}
+		i   any
 		err error
 	)
 	i, err = newT()

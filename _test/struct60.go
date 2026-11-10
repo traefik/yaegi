@@ -8,7 +8,7 @@ type data struct {
 	S string
 }
 
-func render(v interface{}) {
+func render(v any) {
 	fmt.Println(v)
 }
 

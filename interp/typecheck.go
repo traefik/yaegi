@@ -346,7 +346,7 @@ func (check typecheck) arrayLitExpr(child []*node, typ *itype) error {
 
 // mapLitExpr type checks an map composite literal expression.
 func (check typecheck) mapLitExpr(child []*node, ktyp, vtyp *itype) error {
-	visited := make(map[interface{}]bool, len(child))
+	visited := make(map[any]bool, len(child))
 	for _, c := range child {
 		if c.kind != keyValueExpr {
 			return c.cfgErrorf("missing key in map literal")

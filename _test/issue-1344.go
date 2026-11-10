@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 func main() {
-	var m = map[string]interface{}{"a": "a"}
+	var m = map[string]any{"a": "a"}
 	a, _ := m["a"]
 	b, ok := a.(string)
 	fmt.Println("a:", a, ", b:", b, ", ok:", ok)

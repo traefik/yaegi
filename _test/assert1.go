@@ -19,7 +19,7 @@ type DummyStringer interface{
 func main() {
 	aType := reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
 
-	var t interface{}
+	var t any
 	t = time.Nanosecond
 	s, ok := t.(fmt.Stringer)
 	if !ok {

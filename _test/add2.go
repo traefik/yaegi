@@ -1,6 +1,6 @@
 package main
 
-type iface interface{}
+type iface any
 
 func main() {
 	b := 2

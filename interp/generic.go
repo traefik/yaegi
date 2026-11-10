@@ -180,7 +180,7 @@ func genAST(sc *scope, root *node, types []*itype) (*node, bool, error) {
 }
 
 func copyNode(n, anc *node, recursive bool) *node {
-	var i interface{}
+	var i any
 	nindex := atomic.AddInt64(&n.interp.nindex, 1)
 	nod := &node{
 		debug:  n.debug,

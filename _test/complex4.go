@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func f(a, b float64) interface{} { return complex(a, b) }
+func f(a, b float64) any { return complex(a, b) }
 
 func main() {
 	a := f(3, 2)

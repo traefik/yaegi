@@ -1,7 +1,7 @@
 package main
 
 type T struct {
-	v interface{}
+	v any
 }
 
 func f() (ret int64, err error) {

@@ -18,7 +18,7 @@ func assertInt() {
 		fmt.Println(r)
 	}()
 
-	var v interface{} = 1
+	var v any = 1
 	println(v.(string))
 }
 
@@ -28,7 +28,7 @@ func assertNil() {
 		fmt.Println(r)
 	}()
 
-	var v interface{}
+	var v any
 	println(v.(string))
 }
 

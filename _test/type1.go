@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 func main() {
-	var i interface{} = "hello"
+	var i any = "hello"
 	s := i.(string)
 	fmt.Println(s)
 }

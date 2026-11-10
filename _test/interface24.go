@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 func main() {
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	fmt.Println(m["B"])
 }
 

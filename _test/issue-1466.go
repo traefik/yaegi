@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func SomeFunc(defaultValue interface{}) interface{} {
+func SomeFunc(defaultValue any) any {
 	switch v := defaultValue.(type) {
 	case string:
 		return v + " abc"

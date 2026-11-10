@@ -15,7 +15,7 @@ type stringBuilder interface {
 	String() string
 }
 
-var builderPool = sync.Pool{New: func() interface{} {
+var builderPool = sync.Pool{New: func() any {
 	return newStringBuilder()
 }}
 

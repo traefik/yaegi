@@ -1,9 +1,9 @@
 package main
 
-func use(interface{}) {}
+func use(any) {}
 
 func main() {
-	z := map[string]interface{}{"a": 5}
+	z := map[string]any{"a": 5}
 	use(z)
 	println("bye")
 }

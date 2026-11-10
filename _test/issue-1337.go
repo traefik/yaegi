@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-func f(i interface{}) {
+func f(i any) {
 	switch at := i.(type) {
 	case int, int8:
 		println("integer", at)

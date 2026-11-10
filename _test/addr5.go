@@ -25,7 +25,7 @@ func main() {
 
 	values := url.Values{}
 
-	var rawData map[string]interface{}
+	var rawData map[string]any
 	err := json.Unmarshal(body, &rawData)
 	if err != nil {
 		fmt.Println("can't parse body")
@@ -38,7 +38,7 @@ func main() {
 			values.Add(key, fmt.Sprint(val))
 		case nil:
 			values.Add(key, "")
-		case map[string]interface{}, []interface{}:
+		case map[string]any, []any:
 			jsonVal, err := json.Marshal(val)
 			if err != nil {
 				fmt.Println("can't encode json")

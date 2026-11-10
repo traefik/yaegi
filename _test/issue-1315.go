@@ -10,7 +10,7 @@ type T struct {
 
 func (t *T) M() { println("in M") }
 
-func f(i interface{}) {
+func f(i any) {
 	switch j := i.(type) {
 	case Intf:
 		j.M()
@@ -21,7 +21,7 @@ func f(i interface{}) {
 
 func main() {
 	var i Intf
-	var k interface{} = 1
+	var k any = 1
 	i = &T{"hello"}
 	f(i)
 	f(k)

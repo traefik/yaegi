@@ -9,7 +9,7 @@ type Logger struct {
 	m []*log.Logger
 }
 
-func (l *Logger) Infof(format string, args ...interface{}) {
+func (l *Logger) Infof(format string, args ...any) {
 	l.m[0].Printf(format, args...)
 }
 

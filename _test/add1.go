@@ -9,11 +9,11 @@ func main() {
 	var d int32 = 6 + int32(b)
 	println(d)
 
-	var a interface{} = 7 + b
+	var a any = 7 + b
 	println(a.(int))
 
 	var e int32 = 2
-	var f interface{} = 8 + e
+	var f any = 8 + e
 	println(f.(int32))
 
 	a = 9 + e
@@ -24,7 +24,7 @@ func main() {
 	println(a.(int))
 
 	// multiple assignment
-	var foo interface{}
+	var foo any
 	foo, a = "hello", 11 + g
 	println(a.(int))
 	println(foo.(string))
