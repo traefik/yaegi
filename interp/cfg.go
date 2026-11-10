@@ -742,8 +742,12 @@ func (interp *Interpreter) cfg(root *node, sc *scope, importPath, pkgName string
 					if dest.typ.incomplete {
 						return
 					}
-					if (sc.global || sc.isRedeclared(dest)) && !isLoopVarShadow(n, dest.ident) {
-						// Do not overload existing symbols (defined in GTA) in global scope.
+					// Do not overload existing symbols (defined in GTA) in global scope.
+					// A blank identifier is not a variable and must never reuse an
+					// existing symbol: the blank symbol of a function scope may be a
+					// blank parameter, and updating its type would change the type of
+					// the parameter frame slot.
+					if (sc.global || (dest.ident != "_" && sc.isRedeclared(dest))) && !isLoopVarShadow(n, dest.ident) {
 						sym, _, _ = sc.lookup(dest.ident)
 					}
 					if sym == nil {
