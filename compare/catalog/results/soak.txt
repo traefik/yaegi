@@ -1,0 +1,49 @@
+Traefik plugin catalog, soak, 2026-10-23: 10m0s of traffic, 84 plugins (base scenario ok in every engine) in one process per engine
+  excluded darkweak/go-esi: fatal error under concurrency in the conc scenario (native, native2, yaegi, govm)
+  excluded unsoon/traefik-open-policy-agent: fatal error under concurrency in the conc scenario (native, native2, yaegi, govm, aot)
+
+yaegi (exit 0):
+  phase          s      heap MB  inuse MB  sys MB   rss MB   goroutines  requests
+  loaded            23     335.7     424.7    472.7    487.2         26         0
+  warm (1/4)       204     337.9     431.3    492.9    507.7         88     10820
+  end              630     337.9     430.1    493.2    509.0         66     36880
+  after cancel     632     337.7     429.8    493.2    509.1         51     36880
+  plugin agence-gaya/traefik-plugin-cloudflare: new error
+  plugin Miromani4/traefik-plugin-AdminAPI_WebUI: new error
+  plugin holysoles/bot-wrangler-traefik-plugin: new error
+  plugin Desuuuu/traefik-cloudflare-plugin: new error
+  plugin negasus/traefik-plugin-ip2location: new error
+  plugin JonasSchubert/traefik-allow-countries: new error
+  soak 10m0s, 8 workers, 78 plugins running
+  plugin darkweak/souin: requests 471 panics 0 timeouts 2 status 200:469
+  plugin MarkusJx/traefik-wol: requests 478 panics 0 timeouts 478 status 
+
+govm (exit 0):
+  phase          s      heap MB  inuse MB  sys MB   rss MB   goroutines  requests
+  loaded            25     358.8     454.1    553.5    577.3         26         0
+  warm (1/4)       205     370.0     464.4    553.8    556.6         96     10820
+  end              631     369.0     462.6    824.5    634.8         72     37036
+  after cancel     633     367.6     461.0    824.5    625.5         57     37036
+  plugin agence-gaya/traefik-plugin-cloudflare: new error
+  plugin Miromani4/traefik-plugin-AdminAPI_WebUI: new error
+  plugin holysoles/bot-wrangler-traefik-plugin: new error
+  plugin Desuuuu/traefik-cloudflare-plugin: new error
+  plugin negasus/traefik-plugin-ip2location: new error
+  plugin JonasSchubert/traefik-allow-countries: new error
+  soak 10m0s, 8 workers, 78 plugins running
+  plugin MarkusJx/traefik-wol: requests 480 panics 0 timeouts 480 status 
+
+aot (exit 0):
+  phase          s      heap MB  inuse MB  sys MB   rss MB   goroutines  requests
+  loaded            25     358.6     439.1    516.6    541.8         26         0
+  warm (1/4)       205     368.9     448.7    516.7    544.9         96     10820
+  end              631     368.2     447.5    825.7    570.0         72     37036
+  after cancel     633     367.1     446.4    825.7    561.8         57     37036
+  plugin agence-gaya/traefik-plugin-cloudflare: new error
+  plugin Miromani4/traefik-plugin-AdminAPI_WebUI: new error
+  plugin holysoles/bot-wrangler-traefik-plugin: new error
+  plugin Desuuuu/traefik-cloudflare-plugin: new error
+  plugin negasus/traefik-plugin-ip2location: new error
+  plugin JonasSchubert/traefik-allow-countries: new error
+  soak 10m0s, 8 workers, 78 plugins running
+  plugin MarkusJx/traefik-wol: requests 480 panics 0 timeouts 480 status 

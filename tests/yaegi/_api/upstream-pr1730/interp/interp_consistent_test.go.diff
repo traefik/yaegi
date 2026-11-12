@@ -1,0 +1,23 @@
+diff --git a/interp/interp_consistent_test.go b/interp/interp_consistent_test.go
+index 4e12f4ac..bb6f6897 100644
+--- a/interp/interp_consistent_test.go
++++ b/interp/interp_consistent_test.go
+@@ -65,6 +65,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
+ 			file.Name() == "issue-1093.go" || // expect error
+ 			file.Name() == "issue-1276.go" || // expect error
+ 			file.Name() == "issue-1330.go" || // expect error
++			file.Name() == "issue-1593.go" || // expect error
+ 			file.Name() == "op1.go" || // expect error
+ 			file.Name() == "op7.go" || // expect error
+ 			file.Name() == "op9.go" || // expect error
+@@ -279,6 +280,10 @@ func TestInterpErrorConsistency(t *testing.T) {
+ 			expectedInterp: "4:7: use of builtin println not in function call",
+ 			expectedExec:   "4:7: println (built-in) must be called",
+ 		},
++		{
++			fileName:       "issue-1593.go",
++			expectedInterp: "8:12: use of package context not in selector",
++		},
+ 		{
+ 			fileName:       "import6.go",
+ 			expectedInterp: "import cycle not allowed",

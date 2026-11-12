@@ -1,0 +1,57 @@
+# Causes of the yaegi v2 failures of cmd/stdtests (tests that pass natively and
+# not in a yaegi v2 mode). Columns: package, test, class, causes (short names, or -).
+# Classes:
+#   wrong  - silent wrong result: the test fails on a value
+#   crash  - the test ends with a panic of yaegi v2 or a fatal error ("unsupported", stop)
+#   panic  - a panic with another message or value than in Go
+#   allocs - the test counts allocations (testing.AllocsPerRun): the
+#            interpreter allocates; not a wrong result
+#   frames - the test counts the frames of runtime.Callers through native
+#            code, which yaegi v2 does not show (docs/ARCHITECTURE.md)
+#   slow   - the test does not end before the timeout of the runner
+# cmd/stdtests writes "class issues" at the start of the reason column. A
+# yaegi v2 failure without a line here is written "new".
+fmt	TestPanics	wrong	fmt-boundary
+fmt	TestSprintf	wrong	fmt-boundary
+sort	ExampleReverse	wrong	sort-boundary
+sort	TestReverseSortIntSlice	wrong	sort-boundary
+sort	TestSortFloat64Slice	wrong	sort-boundary
+sort	TestSortFloat64sCompareSlicesSort	wrong	sort-boundary
+sort	TestSortIntSlice	wrong	sort-boundary
+sort	TestSortStringSlice	wrong	sort-boundary
+sort	TestStableInts	wrong	sort-boundary
+slices	TestConcat	allocs	-
+slices	TestGrow	allocs	-
+slices	TestInsert	allocs	-
+io	TestCopyPriority	wrong	io-boundary
+io	TestMultiReaderFlatten	frames	-
+io	TestMultiWriterSingleChainFlatten	frames	-
+io	TestMultiWriter_StringCheckCall	wrong	io-boundary
+io	TestNopCloserWriterToForwarding	wrong	io-boundary
+io	TestMultiWriter_WriteStringSingleAlloc	allocs	-
+io	TestPipeAllocations	allocs	-
+bufio	TestReadStringAllocs	allocs	-
+bufio	TestWriteStringStringWriter	wrong	io-boundary
+bufio	TestWriterReadFromMustSetUnderlyingError	wrong	io-boundary
+bufio	TestWriterReadFromWithBufferedData	wrong	io-boundary
+bytes	TestEqual	allocs	-
+bytes	TestGrow	allocs	-
+bytes	TestNewBufferShallow	allocs	-
+bytes	TestReplace	allocs	-
+bytes	TestWriteAppend	allocs	-
+strings	TestBuilderAllocs	allocs	-
+strings	TestBuilderGrow	allocs	-
+strings	TestBuilderGrowSizeclasses	allocs	-
+strings	TestReplace	allocs	-
+strconv	TestAllocationsFromBytes	allocs	-
+context	TestAllocs	allocs	-
+context	TestValues	wrong	context-string
+math/big	ExampleFloat_Add	wrong	fmt-state
+math/big	ExampleFloat_Cmp	wrong	fmt-state
+math/big	ExampleFloat_Copy	wrong	fmt-state
+math/big	ExampleRoundingMode	wrong	fmt-state
+math/big	Example_sqrt2	wrong	fmt-state
+math/big	ExampleFloat_Scan	wrong	scan-boundary
+math/big	ExampleInt_Scan	wrong	scan-boundary
+math/big	ExampleRat_Scan	wrong	scan-boundary
+math/big	TestAliasing	wrong	func-value

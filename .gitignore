@@ -1,10 +1,51 @@
-.*.swo
-.*.swp
-*.dot
-*.out
-.idea/
+# binaries
+/bin/
+/bench
 /yaegi
-internal/cmd/extract/extract
-example/inception/inception
-_test/tmp/
-/dist
+/runtests
+/stdscan
+/reflscan
+/aotgen
+*.test
+
+# generated results (summaries worth keeping go to docs/)
+/results/
+*.pprof
+*.prof
+*.out
+cpu*.txt
+
+# aotgen: copies that do not build (kept for diagnosis, see aot/go1_NN/REPORT.txt)
+/aot/go1_*/_failed/
+
+# editors / OS
+.DS_Store
+.idea/
+.vscode/
+.claude/
+
+# compare/yaegi: built binaries and per-run outputs (build.sh, run.sh)
+/compare/yaegi/bin/
+/compare/yaegi/out/
+/compare/yaegi/emptygp/
+/compare/yaegi/gp16/
+
+# compare/catalog: clones, native builds, per-plugin outputs (fetch.sh, run)
+/compare/catalog/src/
+/compare/catalog/work/
+/compare/catalog/out/
+/compare/catalog/bin/
+/compare/catalog/run.log
+
+# compare/complex: vendored dependencies of the plugins (vendor.sh)
+/compare/complex/plugins/*/vendor/
+
+# compare/bench: built binary and measurements (run.sh)
+/compare/bench/bin/
+/compare/bench/results/
+
+# compare/gotestdir: Go test suite clone and built binaries (run.sh)
+/compare/gotestdir/out/
+
+# cmd/stdtests: generated test programs and binaries
+/cmd/stdtests/_work/

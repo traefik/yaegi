@@ -1,0 +1,14 @@
+diff --git a/cmd/yaegi/yaegi_test.go b/cmd/yaegi/yaegi_test.go
+index db005d4f..4f9632f8 100644
+--- a/cmd/yaegi/yaegi_test.go
++++ b/cmd/yaegi/yaegi_test.go
+@@ -37,6 +37,9 @@ func applyCIMultiplier(timeout time.Duration) time.Duration {
+ }
+ 
+ func TestYaegiCmdCancel(t *testing.T) {
++	if runtime.GOOS == "windows" {
++		t.Skip("skipping cancel test since windows has no os.Interrupt signal")
++	}
+ 	tmp := t.TempDir()
+ 	yaegi := filepath.Join(tmp, "yaegi")
+ 

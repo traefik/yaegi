@@ -1,0 +1,15 @@
+diff --git a/interp/interp_consistent_test.go b/interp/interp_consistent_test.go
+index 4e12f4ac..72124f24 100644
+--- a/interp/interp_consistent_test.go
++++ b/interp/interp_consistent_test.go
+@@ -69,6 +69,10 @@ func TestInterpConsistencyBuild(t *testing.T) {
+ 			file.Name() == "op7.go" || // expect error
+ 			file.Name() == "op9.go" || // expect error
+ 			file.Name() == "bltn0.go" || // expect error
++			file.Name() == "clear1.go" || // expect error
++			file.Name() == "max1.go" || // expect error
++			file.Name() == "max2.go" || // expect error
++			file.Name() == "min1.go" || // expect error
+ 			file.Name() == "method16.go" || // private struct field
+ 			file.Name() == "method39.go" || // expect error
+ 			file.Name() == "switch8.go" || // expect error

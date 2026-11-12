@@ -1,0 +1,280 @@
+repo	version	scenario	applies	native	yaegi	govm	aot	class	class_aot	flush_native	flush_yaegi	flush_govm	flush_aot	hijack_native	hijack_yaegi	hijack_govm	hijack_aot	races_native	races_yaegi	races_govm	races_aot	govm_error	aot_error	yaegi_error
+darkweak/souin	plugins/beego/v1.7.9	headers	yes	ok	ok	ok	ok	same	same															
+darkweak/souin	plugins/beego/v1.7.9	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+darkweak/souin	plugins/beego/v1.7.9	conc	yes	ok	run	run	run	different	different									2	14	1	1	panic: vm: too many goroutines (MaxGoroutines)	panic: vm: too many goroutines (MaxGoroutines)	Storers initialized.
+maxlerebourg/crowdsec-bouncer-traefik-plugin	v1.7.1	headers	yes	ok	ok	ok	ok	same	same															
+maxlerebourg/crowdsec-bouncer-traefik-plugin	v1.7.1	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+maxlerebourg/crowdsec-bouncer-traefik-plugin	v1.7.1	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+sevensolutions/traefik-oidc-auth	v0.21.0	headers	n/a: native never reaches next	run	ok	ok	ok	same	same															
+sevensolutions/traefik-oidc-auth	v0.21.0	stream	n/a: native does not reach next for sse and ws	run	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+sevensolutions/traefik-oidc-auth	v0.21.0	conc	n/a: native never reaches next	run	ok	ok	ok	same	same									0	0	0	0			
+PascalMinder/geoblock	v0.3.8	headers	yes	ok	ok	ok	ok	same	same															
+PascalMinder/geoblock	v0.3.8	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+PascalMinder/geoblock	v0.3.8	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+tomMoulard/fail2ban	v0.9.0	headers	yes	ok	ok	ok	ok	same	same															
+tomMoulard/fail2ban	v0.9.0	stream	yes	ok	diff	ok	ok	yaegi fails	yaegi fails	yes	no	yes	yes	yes	yes	yes	yes							2026/10/23 10:49:20 http: superfluous response.WriteHeader call from reflect.Value.call (value.go:586)
+tomMoulard/fail2ban	v0.9.0	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+lukaszraczylo/traefikoidc	v1.0.45	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+lukaszraczylo/traefikoidc	v1.0.45	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+lukaszraczylo/traefikoidc	v1.0.45	conc	n/a: native never reaches next	ok	race	ok	ok	yaegi fails	yaegi fails									0	8	0	0			INFO: TraefikOidcPlugin: 2026/10/23 10:50:54 Initializing cache manager with memory-only backend
+acouvreur/traefik-modsecurity-plugin	v1.3.0	headers	n/a: native never reaches next	ok	diff	diff	diff	same	same													2026/10/23 10:50:19 fail to prepare forwarded request: parse "http://waf:80http://example.com/": invalid port ":80http:" after host	2026/10/23 10:50:20 fail to prepare forwarded request: parse "http://waf:80http://example.com/": invalid port ":80http:" after host	2026/10/23 10:50:18 fail to prepare forwarded request: parse "http://waf:80http://example.com/": invalid port ":80http:" after host
+acouvreur/traefik-modsecurity-plugin	v1.3.0	stream	n/a: native does not reach next for sse	ok	ok	ok	ok	same	same	-	-	-	-	yes	yes	yes	yes							
+acouvreur/traefik-modsecurity-plugin	v1.3.0	conc	n/a: native never reaches next	ok	diff	diff	diff	same	same									0	0	0	0	2026/10/23 10:50:40 fail to prepare forwarded request: parse "http://waf:80http://example.com/path/to/page?foo=bar&x=1": invalid port ":80http:" after host	2026/10/23 10:50:42 fail to prepare forwarded request: parse "http://waf:80http://example.com/": invalid port ":80http:" after host	2026/10/23 10:50:37 fail to prepare forwarded request: parse "http://waf:80http://example.com/index.html": invalid port ":80http:" after host
+fosrl/badger	v1.7.0	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+fosrl/badger	v1.7.0	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+fosrl/badger	v1.7.0	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+traefik/plugindemo	v0.2.2	headers	yes	ok	ok	ok	ok	same	same															
+traefik/plugindemo	v0.2.2	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+traefik/plugindemo	v0.2.2	conc	yes	ok	ok	ok	diff	same	yaegi v2 fails									8	8	1	8		==================	
+traefik-plugins/traefik-jwt-plugin	v0.10.0	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+traefik-plugins/traefik-jwt-plugin	v0.10.0	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+traefik-plugins/traefik-jwt-plugin	v0.10.0	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+wiltonsr/ldapAuth	v0.1.12	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+wiltonsr/ldapAuth	v0.1.12	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+wiltonsr/ldapAuth	v0.1.12	conc	n/a: native never reaches next	run	ok	ok	ok	same	same									1	1	1	1			
+tomMoulard/htransformation	v0.4.1	headers	yes	ok	ok	ok	ok	same	same															
+tomMoulard/htransformation	v0.4.1	stream	yes	ok	ok	ok	ok	same	same	no	no	no	no	yes	yes	yes	yes							
+tomMoulard/htransformation	v0.4.1	conc	yes	ok	race	ok	ok	yaegi fails	yaegi fails									0	3	0	0			==================
+BetterCorp/cloudflarewarp	v1.3.3	headers	yes	ok	ok	ok	ok	same	same															
+BetterCorp/cloudflarewarp	v1.3.3	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+BetterCorp/cloudflarewarp	v1.3.3	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+Paxxs/traefik-get-real-ip	v1.0.4	headers	yes	ok	ok	ok	ok	same	same															
+Paxxs/traefik-get-real-ip	v1.0.4	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+Paxxs/traefik-get-real-ip	v1.0.4	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+sablierapp/sablier-traefik-plugin	v1.3.1	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+sablierapp/sablier-traefik-plugin	v1.3.1	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+sablierapp/sablier-traefik-plugin	v1.3.1	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+nscuro/traefik-plugin-geoblock	v0.14.0	headers	yes	ok	ok	ok	ok	same	same															
+nscuro/traefik-plugin-geoblock	v0.14.0	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+nscuro/traefik-plugin-geoblock	v0.14.0	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+traefik/plugin-rewritebody	v0.3.1	headers	yes	ok	ok	ok	ok	same	same															
+traefik/plugin-rewritebody	v0.3.1	stream	yes	ok	diff	ok	ok	yaegi fails	yaegi fails	no	no	no	no	yes	yes	yes	yes							2026/10/23 10:51:24 unable to write rewrited body: http: connection has been hijacked
+traefik/plugin-rewritebody	v0.3.1	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+david-garcia-garcia/traefik-geoblock	v1.2.1	headers	yes	ok	ok	ok	ok	same	same															
+david-garcia-garcia/traefik-geoblock	v1.2.1	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+david-garcia-garcia/traefik-geoblock	v1.2.1	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+traefik/plugin-simplecache	v0.2.1	headers	yes	run	run	run	run	same	same													panic: invalid WriteHeader code 0	panic: invalid WriteHeader code 0	panic: invalid WriteHeader code 0
+traefik/plugin-simplecache	v0.2.1	stream	yes	run	ok	ok	ok	same	same	no	no	no	no	no	no	no	no							
+traefik/plugin-simplecache	v0.2.1	conc	yes	run	ok	ok	ok	same	same									0	0	0	0			
+Gwojda/keycloakopenid	v0.1.36	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+Gwojda/keycloakopenid	v0.1.36	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+Gwojda/keycloakopenid	v0.1.36	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+leonjza/trauth	v1.6.7	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+leonjza/trauth	v1.6.7	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+leonjza/trauth	v1.6.7	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+agilezebra/jwt-middleware	v1.6.0	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+agilezebra/jwt-middleware	v1.6.0	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+agilezebra/jwt-middleware	v1.6.0	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+kvncrw/denyip	v1.3.0	headers	yes	ok	ok	ok	ok	same	same															
+kvncrw/denyip	v1.3.0	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+kvncrw/denyip	v1.3.0	conc	yes	ok	race	ok	ok	yaegi fails	yaegi fails									0	1	0	0			==================
+madebymode/traefik-modsecurity-plugin	v1.6.0	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+madebymode/traefik-modsecurity-plugin	v1.6.0	stream	n/a: native does not reach next for sse	ok	ok	ok	ok	same	same	-	-	-	-	yes	yes	yes	yes							
+madebymode/traefik-modsecurity-plugin	v1.6.0	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+packruler/traefik-themepark	v1.4.2	headers	yes	ok	ok	ok	ok	same	same															
+packruler/traefik-themepark	v1.4.2	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+packruler/traefik-themepark	v1.4.2	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+traefik/plugin-log4shell	v0.1.2	headers	yes	ok	ok	ok	ok	same	same															
+traefik/plugin-log4shell	v0.1.2	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+traefik/plugin-log4shell	v0.1.2	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+astappiev/traefik-umami-feeder	v1.4.1	headers	yes	ok	ok	ok	ok	same	same															
+astappiev/traefik-umami-feeder	v1.4.1	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+astappiev/traefik-umami-feeder	v1.4.1	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+hhftechnology/tailscale-access	v2.0.0	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+hhftechnology/tailscale-access	v2.0.0	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+hhftechnology/tailscale-access	v2.0.0	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+snapt/traefik-nova-plugin	v1.1.2	headers	n/a: native never reaches next	ok	run	run	run	same	same													panic: runtime error: invalid memory address or nil pointer dereference	panic: runtime error: invalid memory address or nil pointer dereference	panic: reflect: call of reflect.Value.Field on zero Value
+snapt/traefik-nova-plugin	v1.1.2	stream	n/a: native does not reach next for sse	ok	ok	ok	ok	same	same	-	-	-	-	yes	yes	yes	yes							
+snapt/traefik-nova-plugin	v1.1.2	conc	n/a: native never reaches next	ok	run	run	run	same	same									0	0	0	0	panic: runtime error: invalid memory address or nil pointer dereference	panic: runtime error: invalid memory address or nil pointer dereference	panic: reflect: call of reflect.Value.Field on zero Value
+packruler/rewrite-body	v1.2.0	headers	yes	ok	ok	ok	ok	same	same															
+packruler/rewrite-body	v1.2.0	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+packruler/rewrite-body	v1.2.0	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+hhftechnology/ipwhitelistshaper	v1.0.8	headers	yes	ok	ok	ok	ok	same	same															
+hhftechnology/ipwhitelistshaper	v1.0.8	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+hhftechnology/ipwhitelistshaper	v1.0.8	conc	yes	ok	race	ok	ok	yaegi fails	yaegi fails									0	1	0	0			[catalog-test] WARNING: Cannot use configured storage path. Using temporary directory for storage: $WORK/compare/catalog/out/hhftechnology_ipwhitelistshaper/conc-yaegi.tmp/ipwhitelistshaper-catalog-test
+hhftechnology/statiq	v1.0.1	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+hhftechnology/statiq	v1.0.1	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+hhftechnology/statiq	v1.0.1	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+andrewkroh/google-oidc-auth-middleware	v0.4.0	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+andrewkroh/google-oidc-auth-middleware	v0.4.0	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+andrewkroh/google-oidc-auth-middleware	v0.4.0	conc	n/a: native never reaches next	ok	race	ok	ok	yaegi fails	yaegi fails									0	1	0	0			==================
+MarkusJx/traefik-wol	v0.1.1	headers	n/a: native never reaches next	run	ok	ok	ok	same	same															
+MarkusJx/traefik-wol	v0.1.1	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+MarkusJx/traefik-wol	v0.1.1	conc	n/a: native never reaches next	run	ok	ok	ok	same	same									0	0	0	0			
+MuXiu1997/traefik-github-oauth-plugin	v0.3.1	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+MuXiu1997/traefik-github-oauth-plugin	v0.3.1	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+MuXiu1997/traefik-github-oauth-plugin	v0.3.1	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+traefik/plugin-blockpath	v0.3.0	headers	yes	ok	ok	ok	ok	same	same															
+traefik/plugin-blockpath	v0.3.0	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+traefik/plugin-blockpath	v0.3.0	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+Septima/traefik-api-key-auth	v0.3.0	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+Septima/traefik-api-key-auth	v0.3.0	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+Septima/traefik-api-key-auth	v0.3.0	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+agence-gaya/traefik-plugin-cloudflare	v1.2.0	headers	n/a: native stops at new	new	ok	ok	ok	same	same															
+agence-gaya/traefik-plugin-cloudflare	v1.2.0	stream	n/a: native stops at new	new	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+agence-gaya/traefik-plugin-cloudflare	v1.2.0	conc	n/a: native stops at new	new	ok	ok	ok	same	same									0	0	0	0			
+darkweak/go-esi	v0.0.6	headers	yes	ok	ok	crash	ok	yaegi v2 fails	same													fatal error: concurrent map writes		
+darkweak/go-esi	v0.0.6	stream	yes	ok	diff	ok	ok	yaegi fails	yaegi fails	yes	no	yes	yes	no	no	no	no							
+darkweak/go-esi	v0.0.6	conc	n/a: native stops at crash	crash	crash	crash	diff	both fail	yaegi fails									12	15	12	13	fatal error: concurrent map writes	==================	fatal error: concurrent map writes
+tomMoulard/traefik-plugin-waeb	v1.0.1	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+tomMoulard/traefik-plugin-waeb	v1.0.1	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+tomMoulard/traefik-plugin-waeb	v1.0.1	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+PseudoResonance/cloudflarewarp	v1.4.2	headers	yes	ok	ok	ok	ok	same	same															
+PseudoResonance/cloudflarewarp	v1.4.2	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+PseudoResonance/cloudflarewarp	v1.4.2	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+libops/captcha-protect	v1.15.1	headers	yes	ok	ok	ok	ok	same	same															
+libops/captcha-protect	v1.15.1	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+libops/captcha-protect	v1.15.1	conc	yes	ok	race	ok	ok	yaegi fails	yaegi fails									0	3	0	0			time=2026-10-23T11:12:11.391+02:00 level=INFO msg="Common Crawl IP check enabled"
+adyanth/traefik-container-manager	v0.1.2	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+adyanth/traefik-container-manager	v0.1.2	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+adyanth/traefik-container-manager	v0.1.2	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+XciD/traefik-plugin-rewrite-headers	v0.0.4	headers	yes	ok	ok	ok	ok	same	same															
+XciD/traefik-plugin-rewrite-headers	v0.0.4	stream	yes	ok	diff	ok	ok	yaegi fails	yaegi fails	yes	no	yes	yes	yes	yes	yes	yes							
+XciD/traefik-plugin-rewrite-headers	v0.0.4	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+jptosso/coraza-traefik	HEAD	headers	yes	ok	load	load	load	both fail	both fail													load: go.uber.org/atomic: import "unsafe" is restricted: the plugin needs Options.UseUnsafe	load: go.uber.org/atomic: import "unsafe" is restricted: the plugin needs Options.UseUnsafe	load: 1:21: import "github.com/jptosso/coraza-traefik" error: $WORK/compare/catalog/out/jptosso_coraza-traefik/headers-yaegi.tmp/yhost-gopath-1749329950/src/github.com/jptosso/coraza-traefik/coraza.go:9:2: import "github.
+jptosso/coraza-traefik	HEAD	stream	yes	run	load	load	load	both fail	both fail	no	-	-	-	no	-	-	-					load: go.uber.org/atomic: import "unsafe" is restricted: the plugin needs Options.UseUnsafe	load: go.uber.org/atomic: import "unsafe" is restricted: the plugin needs Options.UseUnsafe	load: 1:21: import "github.com/jptosso/coraza-traefik" error: $WORK/compare/catalog/out/jptosso_coraza-traefik/stream-yaegi.tmp/yhost-gopath-3575836232/src/github.com/jptosso/coraza-traefik/coraza.go:9:2: import "github.c
+jptosso/coraza-traefik	HEAD	conc	yes	ok	load	load	load	both fail	both fail									0	0	0	0	load: go.uber.org/atomic: import "unsafe" is restricted: the plugin needs Options.UseUnsafe	load: go.uber.org/atomic: import "unsafe" is restricted: the plugin needs Options.UseUnsafe	load: 1:21: import "github.com/jptosso/coraza-traefik" error: $WORK/compare/catalog/out/jptosso_coraza-traefik/conc-yaegi.tmp/yhost-gopath-2180501151/src/github.com/jptosso/coraza-traefik/coraza.go:9:2: import "github.com
+chaitin/traefik-safeline	v1.4.0	headers	yes	ok	ok	ok	ok	same	same															
+chaitin/traefik-safeline	v1.4.0	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+chaitin/traefik-safeline	v1.4.0	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+safing/scanblock	v1.0.0	headers	yes	ok	ok	ok	ok	same	same															
+safing/scanblock	v1.0.0	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+safing/scanblock	v1.0.0	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+zekihan/traefik-real-ip	v0.1.25	headers	yes	ok	ok	ok	ok	same	same															
+zekihan/traefik-real-ip	v0.1.25	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+zekihan/traefik-real-ip	v0.1.25	conc	yes	ok	race	ok	ok	yaegi fails	yaegi fails									0	4	0	0			==================
+1cedsoda/traefik-umami-plugin	v1.0.3	headers	yes	ok	ok	ok	ok	same	same															
+1cedsoda/traefik-umami-plugin	v1.0.3	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+1cedsoda/traefik-umami-plugin	v1.0.3	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+23deg/jwt-middleware	v0.1.3	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+23deg/jwt-middleware	v0.1.3	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+23deg/jwt-middleware	v0.1.3	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+paladium/traefikkeycloak	v1.11	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+paladium/traefikkeycloak	v1.11	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+paladium/traefikkeycloak	v1.11	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+solution-libre/traefik-plugin-robots-txt	v0.2.2	headers	yes	ok	ok	ok	ok	same	same															
+solution-libre/traefik-plugin-robots-txt	v0.2.2	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+solution-libre/traefik-plugin-robots-txt	v0.2.2	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+agence-gaya/traefik-plugin-blockuseragent	v0.1.8	headers	yes	ok	ok	ok	ok	same	same															
+agence-gaya/traefik-plugin-blockuseragent	v0.1.8	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+agence-gaya/traefik-plugin-blockuseragent	v0.1.8	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+taskmedia/ddns-allowlist	v1.7.0	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+taskmedia/ddns-allowlist	v1.7.0	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+taskmedia/ddns-allowlist	v1.7.0	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+TRIMM/traefik-maintenance	v1.0.1	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+TRIMM/traefik-maintenance	v1.0.1	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+TRIMM/traefik-maintenance	v1.0.1	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+Miromani4/traefik-plugin-AdminAPI_WebUI	v1.3.1	headers	n/a: native stops at new	new	new	new	new	different	different													new: vm: runtime error: invalid memory address or nil pointer dereference	new: vm: runtime error: invalid memory address or nil pointer dereference	new: panic: reflect: call of reflect.Value.Field on zero Value
+Miromani4/traefik-plugin-AdminAPI_WebUI	v1.3.1	stream	n/a: native stops at new	new	new	new	new	different	different	-	-	-	-	-	-	-	-					new: vm: runtime error: invalid memory address or nil pointer dereference	new: vm: runtime error: invalid memory address or nil pointer dereference	new: panic: reflect: call of reflect.Value.Field on zero Value
+Miromani4/traefik-plugin-AdminAPI_WebUI	v1.3.1	conc	n/a: native stops at new	new	new	new	new	different	different									0	0	0	0	new: vm: runtime error: invalid memory address or nil pointer dereference	new: vm: runtime error: invalid memory address or nil pointer dereference	new: panic: reflect: call of reflect.Value.Field on zero Value
+hhftechnology/traefik-queue-manager	v1.0.3	headers	yes	ok	ok	ok	ok	same	same															
+hhftechnology/traefik-queue-manager	v1.0.3	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+hhftechnology/traefik-queue-manager	v1.0.3	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+juitde/traefik-plugin-fail2ban	v0.3.0	headers	yes	ok	ok	ok	ok	same	same															
+juitde/traefik-plugin-fail2ban	v0.3.0	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+juitde/traefik-plugin-fail2ban	v0.3.0	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+traefik-plugins/traefikgeoip2	v0.22.0	headers	yes	ok	ok	ok	ok	same	same															
+traefik-plugins/traefikgeoip2	v0.22.0	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+traefik-plugins/traefikgeoip2	v0.22.0	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+dkijkuit/checkheadersplugin	v0.3.1	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+dkijkuit/checkheadersplugin	v0.3.1	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+dkijkuit/checkheadersplugin	v0.3.1	conc	n/a: native never reaches next	ok	race	ok	ok	yaegi fails	yaegi fails									0	2	0	0			==================
+dtomlinson91/traefik-api-key-middleware	v0.1.2	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+dtomlinson91/traefik-api-key-middleware	v0.1.2	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+dtomlinson91/traefik-api-key-middleware	v0.1.2	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+jdel/staticresponse	v0.0.1	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+jdel/staticresponse	v0.0.1	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+jdel/staticresponse	v0.0.1	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+ghnexpress/traefik-ratelimit	v0.0.20	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+ghnexpress/traefik-ratelimit	v0.0.20	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+ghnexpress/traefik-ratelimit	v0.0.20	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									2	2	0	0			
+Aetherinox/traefik-api-token-middleware	v0.1.4	headers	n/a: native stops at build	build	diff	diff	diff	same	different													[31m[Aetherx-apikey]: [0mStarting Plugin [35mcatalog-test[0m	[31m[Aetherx-apikey]: [0mStarting Plugin [35mcatalog-test[0m	[31m[Aetherx-apikey]: [0mStarting Plugin [35mcatalog-test[0m
+Aetherinox/traefik-api-token-middleware	v0.1.4	stream	n/a: native stops at build	build	diff	diff	diff	same	same		-	-	-		-	-	-					[31m[Aetherx-apikey]: [0mStarting Plugin [35mcatalog-test[0m	[31m[Aetherx-apikey]: [0mStarting Plugin [35mcatalog-test[0m	[31m[Aetherx-apikey]: [0mStarting Plugin [35mcatalog-test[0m
+Aetherinox/traefik-api-token-middleware	v0.1.4	conc	n/a: native stops at build	build	diff	diff	diff	different	different										0	0	0	[31m[Aetherx-apikey]: [0mStarting Plugin [35mcatalog-test[0m	[31m[Aetherx-apikey]: [0mStarting Plugin [35mcatalog-test[0m	[31m[Aetherx-apikey]: [0mStarting Plugin [35mcatalog-test[0m
+holysoles/bot-wrangler-traefik-plugin	v0.10.2	headers	n/a: native stops at new	new	ok	ok	ok	same	same															
+holysoles/bot-wrangler-traefik-plugin	v0.10.2	stream	n/a: native stops at new	new	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+holysoles/bot-wrangler-traefik-plugin	v0.10.2	conc	n/a: native stops at new	new	ok	ok	ok	same	same									0	0	0	0			
+hhftechnology/bandwidthlimiter	v1.0.1	headers	yes	ok	ok	ok	ok	same	same															
+hhftechnology/bandwidthlimiter	v1.0.1	stream	yes	ok	ok	ok	ok	same	same	no	no	no	no	no	no	no	no							
+hhftechnology/bandwidthlimiter	v1.0.1	conc	yes	ok	ok	ok	ok	same	same									1	1	1	1			
+luizfonseca/traefik-github-oauth-plugin	v0.7.0	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+luizfonseca/traefik-github-oauth-plugin	v0.7.0	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+luizfonseca/traefik-github-oauth-plugin	v0.7.0	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+jeppestaerk/traefik-xff-to-xrealip	v0.1.3	headers	yes	ok	ok	ok	ok	same	same															
+jeppestaerk/traefik-xff-to-xrealip	v0.1.3	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+jeppestaerk/traefik-xff-to-xrealip	v0.1.3	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+xabinapal/traefik-authentik-forward-plugin	v1.0.1	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+xabinapal/traefik-authentik-forward-plugin	v1.0.1	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+xabinapal/traefik-authentik-forward-plugin	v1.0.1	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+dirtycajunrice/subfilter	v0.5.0	headers	yes	ok	ok	ok	ok	same	same															
+dirtycajunrice/subfilter	v0.5.0	stream	yes	ok	diff	ok	ok	yaegi fails	yaegi fails	no	no	no	no	yes	yes	yes	yes							2026/10/23 10:56:10 unable to write modified response: http: connection has been hijacked
+dirtycajunrice/subfilter	v0.5.0	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+acouvreur/traefik-ondemand-plugin	v1.3.1	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+acouvreur/traefik-ondemand-plugin	v1.3.1	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+acouvreur/traefik-ondemand-plugin	v1.3.1	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+ciaranj/cacheify	v1.0.0	headers	yes	ok	diff	diff	diff	same	same															
+ciaranj/cacheify	v1.0.0	stream	yes	ok	diff	diff	diff	same	same	no	-	-	-	yes	yes	yes	yes							
+ciaranj/cacheify	v1.0.0	conc	yes	ok	race	diff	diff	yaegi fails	yaegi fails									0	6	0	0			==================
+smerschjohann/mtlswhitelist	v0.4.2	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+smerschjohann/mtlswhitelist	v0.4.2	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+smerschjohann/mtlswhitelist	v0.4.2	conc	n/a: native never reaches next	ok	race	ok	ok	yaegi fails	yaegi fails									0	2	0	0			external data: map[]
+jpxd/torblock	v0.1.1	headers	yes	ok	ok	ok	ok	same	same															
+jpxd/torblock	v0.1.1	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+jpxd/torblock	v0.1.1	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+traefik-contrib/noop	v0.1.0	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+traefik-contrib/noop	v0.1.0	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+traefik-contrib/noop	v0.1.0	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+blueshift-labs/traefik-block-regex-urls	v0.0.1	headers	yes	ok	ok	ok	ok	same	same															
+blueshift-labs/traefik-block-regex-urls	v0.0.1	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+blueshift-labs/traefik-block-regex-urls	v0.0.1	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+ZeroGachis/traefik-auth-middleware	v1.1.0	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+ZeroGachis/traefik-auth-middleware	v1.1.0	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+ZeroGachis/traefik-auth-middleware	v1.1.0	conc	n/a: native never reaches next	ok	ok	ok	ok	same	same									0	0	0	0			
+Desuuuu/traefik-cloudflare-plugin	v1.0.0	headers	n/a: native stops at new	new	ok	ok	ok	same	same															
+Desuuuu/traefik-cloudflare-plugin	v1.0.0	stream	n/a: native stops at new	new	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+Desuuuu/traefik-cloudflare-plugin	v1.0.0	conc	n/a: native stops at new	new	ok	ok	ok	same	same									0	0	0	0			
+l4rm4nd/traefik-warp	v1.1.5	headers	yes	ok	ok	ok	ok	same	same															
+l4rm4nd/traefik-warp	v1.1.5	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+l4rm4nd/traefik-warp	v1.1.5	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+negasus/traefik-plugin-ip2location	v0.1.0	headers	yes	ok	ok	ok	ok	same	same															
+negasus/traefik-plugin-ip2location	v0.1.0	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+negasus/traefik-plugin-ip2location	v0.1.0	conc	yes	ok	race	ok	ok	yaegi fails	yaegi fails									0	1	0	0			==================
+nzin/traefik-cluster-ratelimit	v1.2.0	headers	yes	ok	ok	ok	ok	same	same															
+nzin/traefik-cluster-ratelimit	v1.2.0	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+nzin/traefik-cluster-ratelimit	v1.2.0	conc	yes	ok	ok	ok	ok	same	same									3	6	2	2			
+discoverygarden/traefik-ultimate-bad-bot-blocker	v0.4.0	headers	yes	ok	ok	ok	ok	same	same															
+discoverygarden/traefik-ultimate-bad-bot-blocker	v0.4.0	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+discoverygarden/traefik-ultimate-bad-bot-blocker	v0.4.0	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+cookielab/traefik-middleware-request-logger	v0.0.11	headers	yes	ok	ok	ok	ok	same	same															
+cookielab/traefik-middleware-request-logger	v0.0.11	stream	yes	ok	diff	ok	ok	yaegi fails	yaegi fails	yes	no	yes	yes	yes	yes	yes	yes							2026/10/23 11:07:14 http: response.WriteHeader on hijacked connection from reflect.Value.call (value.go:586)
+cookielab/traefik-middleware-request-logger	v0.0.11	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+renanqts/xdpfail2ban	v0.0.1	headers	yes	ok	ok	ok	ok	same	same															
+renanqts/xdpfail2ban	v0.0.1	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+renanqts/xdpfail2ban	v0.0.1	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+Lepkem/traefik-plugin-response-code-override	v0.0.3	headers	yes	ok	ok	ok	ok	same	same															
+Lepkem/traefik-plugin-response-code-override	v0.0.3	stream	yes	ok	ok	ok	ok	same	same	no	no	no	no	no	no	no	no							
+Lepkem/traefik-plugin-response-code-override	v0.0.3	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+JonasSchubert/traefik-allow-countries	v1.2.0	headers	yes	ok	ok	ok	ok	same	same															
+JonasSchubert/traefik-allow-countries	v1.2.0	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+JonasSchubert/traefik-allow-countries	v1.2.0	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+negasus/traefik-plugin-bridge	v0.1.1	headers	yes	ok	ok	ok	ok	same	same															
+negasus/traefik-plugin-bridge	v0.1.1	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+negasus/traefik-plugin-bridge	v0.1.1	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+Desuuuu/traefik-real-ip-plugin	v1.1.0	headers	yes	ok	ok	ok	ok	same	same															
+Desuuuu/traefik-real-ip-plugin	v1.1.0	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+Desuuuu/traefik-real-ip-plugin	v1.1.0	conc	yes	ok	race	ok	ok	yaegi fails	yaegi fails									0	1	0	0			==================
+NX211/traefik-webfinger	v0.3.5	headers	yes	ok	ok	ok	ok	same	same															
+NX211/traefik-webfinger	v0.3.5	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+NX211/traefik-webfinger	v0.3.5	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+Medzoner/traefik-plugin-cors-preflight	v1.3.0	headers	yes	ok	load	load	load	both fail	both fail													load: ./main.go:10:2: could not import github.com/rs/zerolog (cannot find package github.com/rs/zerolog: not in module github.com/Medzoner/traefik-plugin-cors-preflight nor in its vendor directory)	load: ./main.go:10:2: could not import github.com/rs/zerolog (cannot find package github.com/rs/zerolog: not in module github.com/Medzoner/traefik-plugin-cors-preflight nor in its vendor directory)	load: 1:21: import "github.com/Medzoner/traefik-plugin-cors-preflight" error: $WORK/compare/catalog/out/Medzoner_traefik-plugin-cors-preflight/headers-yaegi.tmp/yhost-gopath-3830787656/src/github.com/Medzoner/traefik-plug
+Medzoner/traefik-plugin-cors-preflight	v1.3.0	stream	yes	ok	load	load	load	both fail	both fail	yes	-	-	-	yes	-	-	-					load: ./main.go:10:2: could not import github.com/rs/zerolog (cannot find package github.com/rs/zerolog: not in module github.com/Medzoner/traefik-plugin-cors-preflight nor in its vendor directory)	load: ./main.go:10:2: could not import github.com/rs/zerolog (cannot find package github.com/rs/zerolog: not in module github.com/Medzoner/traefik-plugin-cors-preflight nor in its vendor directory)	load: 1:21: import "github.com/Medzoner/traefik-plugin-cors-preflight" error: $WORK/compare/catalog/out/Medzoner_traefik-plugin-cors-preflight/stream-yaegi.tmp/yhost-gopath-2476389990/src/github.com/Medzoner/traefik-plugi
+Medzoner/traefik-plugin-cors-preflight	v1.3.0	conc	yes	ok	load	load	load	both fail	both fail									0	0	0	0	load: ./main.go:10:2: could not import github.com/rs/zerolog (cannot find package github.com/rs/zerolog: not in module github.com/Medzoner/traefik-plugin-cors-preflight nor in its vendor directory)	load: ./main.go:10:2: could not import github.com/rs/zerolog (cannot find package github.com/rs/zerolog: not in module github.com/Medzoner/traefik-plugin-cors-preflight nor in its vendor directory)	load: 1:21: import "github.com/Medzoner/traefik-plugin-cors-preflight" error: $WORK/compare/catalog/out/Medzoner_traefik-plugin-cors-preflight/conc-yaegi.tmp/yhost-gopath-818333048/src/github.com/Medzoner/traefik-plugin-c
+kingjan1999/traefik-plugin-query-modification	v1.0.0	headers	yes	ok	ok	ok	ok	same	same															
+kingjan1999/traefik-plugin-query-modification	v1.0.0	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+kingjan1999/traefik-plugin-query-modification	v1.0.0	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+DIE-Bonn/MatomoTracking	v1.2.0	headers	yes	ok	ok	ok	ok	same	same															
+DIE-Bonn/MatomoTracking	v1.2.0	stream	yes	ok	ok	ok	ok	same	same	yes	yes	yes	yes	yes	yes	yes	yes							
+DIE-Bonn/MatomoTracking	v1.2.0	conc	yes	ok	ok	ok	ok	same	same									0	0	0	0			
+unsoon/traefik-open-policy-agent	v1.2.1	headers	n/a: native never reaches next	ok	ok	ok	ok	same	same															
+unsoon/traefik-open-policy-agent	v1.2.1	stream	n/a: native does not reach next for sse and ws	ok	ok	ok	ok	same	same	-	-	-	-	-	-	-	-							
+unsoon/traefik-open-policy-agent	v1.2.1	conc	n/a: native stops at crash	crash	crash	crash	crash	both fail	both fail									9	9	15	3	fatal error: concurrent map writes	fatal error: concurrent map iteration and map write	fatal error: concurrent map writes

@@ -1,0 +1,8 @@
+displayName: complex graphql
+type: middleware
+import: example.com/complex/graphql
+basePkg: graphqlplug
+summary: yaegi v2 study plugin
+useUnsafe: true
+testData:
+  prefix: X-Complex

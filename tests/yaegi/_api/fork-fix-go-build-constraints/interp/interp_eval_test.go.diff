@@ -1,0 +1,22 @@
+diff --git a/interp/interp_eval_test.go b/interp/interp_eval_test.go
+index 1a8fc680..737c6a7c 100644
+--- a/interp/interp_eval_test.go
++++ b/interp/interp_eval_test.go
+@@ -1930,3 +1930,17 @@ func TestIssue1623(t *testing.T) {
+ 		{desc: `pkg.S = "bar"`, src: `pkg.S = "bar"; pkg.S`, res: "bar"},
+ 	})
+ }
++
++func TestEvalGoBuildConstraint(t *testing.T) {
++	i := interp.New(interp.Options{GoPath: filepath.FromSlash("testdata/gobuild")})
++
++	// Package foo contains files excluded only by a //go:build line (no legacy +build line):
++	// a "package main" file tagged "ignore", and a redeclaration of X behind an unset tag.
++	if _, err := i.Eval(`import "foo"`); err != nil {
++		t.Fatal(err)
++	}
++
++	runTests(t, i, []testCase{
++		{desc: "foo.X", src: "foo.X", res: "1"},
++	})
++}

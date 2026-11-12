@@ -1,0 +1,8 @@
+displayName: complex protobuf
+type: middleware
+import: example.com/complex/protobuf
+basePkg: protobufplug
+summary: yaegi v2 study plugin
+useUnsafe: true
+testData:
+  prefix: X-Complex

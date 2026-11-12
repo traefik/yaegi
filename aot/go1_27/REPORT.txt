@@ -1,0 +1,1018 @@
+aotgen report
+=============
+
+targets: encoding/json encoding/json/v2 encoding/json/jsontext fmt errors sort encoding/xml encoding/gob encoding/binary encoding/asn1 text/template html/template flag net/rpc log/slog database/sql gopkg.in/yaml.v3 sigs.k8s.io/yaml github.com/goccy/go-yaml github.com/BurntSushi/toml github.com/pelletier/go-toml/v2 github.com/mitchellh/mapstructure github.com/go-viper/mapstructure/v2 github.com/go-playground/validator/v10 github.com/json-iterator/go github.com/spf13/cast github.com/google/go-cmp/cmp github.com/google/go-cmp/cmp/cmpopts
+
+package                                            kind    build   refl missing blockers
+database/sql                                       aot     ok        43       0 0
+database/sql/driver                                aot     ok        33       0 0
+database/sql/internal                              copy    ok         0       0 0
+encoding/asn1                                      aot     ok        55       0 0
+encoding/binary                                    aot     ok        50       0 0
+encoding/gob                                       aot     ok        92       0 0
+encoding/json                                      aot     ok        25       0 0
+encoding/json/internal                             copy    ok         0       0 0
+encoding/json/internal/jsonflags                   copy    ok         0       0 0
+encoding/json/internal/jsonopts                    copy    ok         0       0 0
+encoding/json/internal/jsonwire                    copy    ok         0       0 0
+encoding/json/jsontext                             aot     ok         0       0 0
+encoding/json/v2                                   aot     ok        94       0 0
+encoding/xml                                       aot     ok        74       0 0
+errors                                             aot     ok        15       0 0
+flag                                               aot     ok        14       0 0
+fmt                                                aot     ok        64       0 0
+github.com/BurntSushi/toml                         aot     ok        80       0 0
+github.com/BurntSushi/toml/internal                copy    ok         0       0 0
+github.com/go-playground/validator/v10             aot     ok        74       0 0
+github.com/go-viper/mapstructure/v2                aot     ok        98       0 0
+github.com/go-viper/mapstructure/v2/internal/errors copy    ok         0       0 0
+github.com/goccy/go-yaml                           aot     ok        80       0 0
+github.com/goccy/go-yaml/internal/errors           aot     ok         1       0 0
+github.com/goccy/go-yaml/internal/format           copy    ok         0       0 0
+github.com/google/go-cmp/cmp                       aot     ok        89       0 0
+github.com/google/go-cmp/cmp/cmpopts               aot     ok        48       0 0
+github.com/google/go-cmp/cmp/internal/diff         copy    ok         0       0 0
+github.com/google/go-cmp/cmp/internal/flags        copy    ok         0       0 0
+github.com/google/go-cmp/cmp/internal/function     aot     ok        12       0 0
+github.com/google/go-cmp/cmp/internal/value        aot     ok        73       0 0
+github.com/json-iterator/go                        aot     FAIL      42       0 0
+github.com/mitchellh/mapstructure                  aot     ok        81       0 0
+github.com/modern-go/concurrent                    aot     ok         2       0 0
+github.com/modern-go/reflect2                      aot     FAIL      81       0 4
+github.com/pelletier/go-toml/v2                    aot     ok        82       0 0
+github.com/pelletier/go-toml/v2/internal/parserbridge copy    ok         0       0 0
+github.com/pelletier/go-toml/v2/internal/tracker   copy    ok         0       0 0
+github.com/spf13/cast                              aot     ok        39       0 0
+github.com/spf13/cast/internal                     copy    ok         0       0 0
+go.yaml.in/yaml/v2                                 aot     ok        72       0 0
+gopkg.in/yaml.v3                                   aot     ok        72       0 0
+html/template                                      aot     ok        11       0 0
+internal/fmtsort                                   aot     ok        47       0 0
+internal/godebug                                   copy    ok         0       0 0
+internal/goexperiment                              copy    ok         0       0 0
+internal/saferio                                   copy    ok         0       0 0
+internal/stringslite                               copy    ok         0       0 0
+log/internal                                       copy    ok         0       0 0
+log/slog                                           aot     ok        10       0 0
+log/slog/internal                                  copy    ok         0       0 0
+log/slog/internal/buffer                           copy    ok         0       0 0
+net/rpc                                            aot     ok        34       0 0
+sigs.k8s.io/yaml                                   aot     ok        35       0 0
+sort                                               aot     ok         3       0 0
+text/template                                      aot     ok        89       0 0
+
+== database/sql [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/database/sql
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (43 members):
+    reflect:Bool x3, reflect:Float32 x4, reflect:Float64 x4, reflect:Indirect x1, reflect:Int x4
+    reflect:Int16 x4, reflect:Int32 x4, reflect:Int64 x4, reflect:Int8 x4, reflect:New x1
+    reflect:Pointer x3, reflect:String x2, reflect:Type x2, reflect:Type.AssignableTo x1
+    reflect:Type.Bits x3, reflect:Type.ConvertibleTo x1, reflect:Type.Elem x2, reflect:Type.Implements x1
+    reflect:TypeFor x2, reflect:Uint x4, reflect:Uint16 x4, reflect:Uint32 x4, reflect:Uint64 x4
+    reflect:Uint8 x4, reflect:Value x2, reflect:Value.Bool x2, reflect:Value.Convert x1
+    reflect:Value.Float x4, reflect:Value.Int x2, reflect:Value.Interface x1, reflect:Value.IsNil x2
+    reflect:Value.IsValid x2, reflect:Value.Kind x15, reflect:Value.Set x4, reflect:Value.SetFloat x1
+    reflect:Value.SetInt x1, reflect:Value.SetString x2, reflect:Value.SetUint x1
+    reflect:Value.SetZero x1, reflect:Value.String x1, reflect:Value.Type x10, reflect:Value.Uint x2
+    reflect:ValueOf x8
+missing from the twin: none
+partial in the twin: none
+rewrites: 30 interface assertions, 2 type switches, 5 interface comparisons, 1 interface tag switches, 4 composite unboxes, 0 vet fixes, 2 linknames removed, 0 assertions left native
+glue: 85 hooks, 35 wrappers; no hook (generic reflect.Call path): none
+risks: 0 uses of unsafe, 4 go statements
+
+== database/sql/driver [aot: imports reflect] -> github.com/traefik/yaegi/v2/aot/go1_27/database/sql/driver
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (33 members):
+    reflect:Bool x1, reflect:Float32 x1, reflect:Float64 x1, reflect:Int x3, reflect:Int16 x3
+    reflect:Int32 x3, reflect:Int64 x3, reflect:Int8 x3, reflect:Pointer x2, reflect:Slice x1
+    reflect:String x2, reflect:Type x1, reflect:Type.Elem x2, reflect:Type.Implements x1
+    reflect:Type.Kind x1, reflect:TypeFor x1, reflect:Uint x3, reflect:Uint16 x3, reflect:Uint32 x3
+    reflect:Uint64 x3, reflect:Uint8 x4, reflect:Value.Bool x1, reflect:Value.Bytes x1
+    reflect:Value.Elem x1, reflect:Value.Float x1, reflect:Value.Int x3, reflect:Value.Interface x1
+    reflect:Value.IsNil x2, reflect:Value.Kind x5, reflect:Value.String x2, reflect:Value.Type x2
+    reflect:Value.Uint x4, reflect:ValueOf x4
+missing from the twin: none
+partial in the twin: Value.Bytes (copy (no aliasing) for interpreted []byte held as []Value)
+rewrites: 0 interface assertions, 2 type switches, 0 interface comparisons, 0 interface tag switches, 3 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 6 hooks, 32 wrappers; no hook (generic reflect.Call path): none
+
+== database/sql/internal [copy: internal package imported by database/sql] -> github.com/traefik/yaegi/v2/aot/go1_27/database/sql/internal
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+
+== encoding/asn1 [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/encoding/asn1
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (55 members):
+    reflect:Append x1, reflect:Bool x3, reflect:Copy x1, reflect:DeepEqual x2, reflect:Int x4
+    reflect:Int16 x3, reflect:Int32 x4, reflect:Int64 x4, reflect:Int8 x3, reflect:Interface x2
+    reflect:Kind x1, reflect:MakeSlice x2, reflect:New x1, reflect:Pointer x2, reflect:Slice x4
+    reflect:String x3, reflect:Struct x3, reflect:StructField.IsExported x2, reflect:StructField.Tag x3
+    reflect:StructField.Type x3, reflect:StructTag.Get x3, reflect:Type x4, reflect:Type.Elem x4
+    reflect:Type.Field x7, reflect:Type.Kind x7, reflect:Type.Name x2, reflect:Type.NumField x5
+    reflect:Type.NumMethod x2, reflect:Type.Size x2, reflect:Type.String x3, reflect:TypeAssert x6
+    reflect:TypeFor x8, reflect:TypeOf x1, reflect:Uint8 x3, reflect:Value x5, reflect:Value.Addr x1
+    reflect:Value.Bool x1, reflect:Value.Bytes x2, reflect:Value.Elem x3, reflect:Value.Field x5
+    reflect:Value.Index x3, reflect:Value.Int x1, reflect:Value.Interface x5, reflect:Value.IsNil x1
+    reflect:Value.IsValid x1, reflect:Value.Kind x7, reflect:Value.Len x3, reflect:Value.Set x4
+    reflect:Value.SetBool x2, reflect:Value.SetInt x4, reflect:Value.SetString x1, reflect:Value.String x6
+    reflect:Value.Type x12, reflect:ValueOf x5, reflect:Zero x2
+missing from the twin: none
+partial in the twin: Type.Size (interpreted types: gc sizes (types.SizesFor)), Value.Bytes (copy (no aliasing) for interpreted []byte held as []Value)
+rewrites: 0 interface assertions, 0 type switches, 6 interface comparisons, 1 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 10 hooks, 0 wrappers; no hook (generic reflect.Call path): none
+note: switch on an interface value with a complex tag left native at encoding/asn1/marshal.go:459:2
+
+== encoding/binary [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/encoding/binary
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (50 members):
+    reflect:Array x4, reflect:Bool x3, reflect:Complex128 x3, reflect:Complex64 x3, reflect:Float32 x3
+    reflect:Float64 x3, reflect:Indirect x4, reflect:Int16 x3, reflect:Int32 x3, reflect:Int64 x3
+    reflect:Int8 x3, reflect:Pointer x2, reflect:Slice x5, reflect:Struct x5, reflect:StructField.Name x2
+    reflect:StructField.Type x1, reflect:Type x1, reflect:Type.Elem x2, reflect:Type.Field x3
+    reflect:Type.Kind x2, reflect:Type.Len x1, reflect:Type.NumField x1, reflect:Type.Size x1
+    reflect:Type.String x5, reflect:TypeOf x5, reflect:Uint16 x3, reflect:Uint32 x3, reflect:Uint64 x3
+    reflect:Uint8 x3, reflect:Value x5, reflect:Value.Bool x1, reflect:Value.CanSet x2
+    reflect:Value.Complex x2, reflect:Value.Elem x2, reflect:Value.Field x2, reflect:Value.Float x2
+    reflect:Value.Index x4, reflect:Value.Int x4, reflect:Value.IsValid x1, reflect:Value.Kind x5
+    reflect:Value.Len x6, reflect:Value.NumField x2, reflect:Value.SetBool x1, reflect:Value.SetComplex x2
+    reflect:Value.SetFloat x2, reflect:Value.SetInt x4, reflect:Value.SetUint x4, reflect:Value.Type x5
+    reflect:Value.Uint x4, reflect:ValueOf x6
+missing from the twin: none
+partial in the twin: Type.Size (interpreted types: gc sizes (types.SizesFor)), Value.Complex (complex numbers are not supported by the VM), Value.SetComplex (complex numbers are not supported by the VM)
+rewrites: 0 interface assertions, 0 type switches, 1 interface comparisons, 0 interface tag switches, 4 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 14 hooks, 6 wrappers; no hook (generic reflect.Call path): none
+type caches: 1 package-level sync.Map made vm.TypeCache
+note: variant native_endian_big.go (armbe || arm64be || mips || mips64 || mips64p32 || ppc || ppc64 || s390 || s390x || sparc || sparc64) copied
+
+== encoding/gob [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/encoding/gob
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (92 members):
+    reflect:Array x7, reflect:Bool x8, reflect:Chan x2, reflect:Complex128 x8, reflect:Complex64 x8
+    reflect:Float32 x8, reflect:Float64 x8, reflect:Func x2, reflect:Indirect x2, reflect:Int x8
+    reflect:Int16 x8, reflect:Int32 x8, reflect:Int64 x8, reflect:Int8 x8, reflect:Interface x5
+    reflect:Invalid x2, reflect:Kind x4, reflect:MakeMapWithSize x1, reflect:MakeSlice x2, reflect:Map x7
+    reflect:MapIter.Key x1, reflect:MapIter.Next x1, reflect:MapIter.Value x1, reflect:New x4
+    reflect:Pointer x17, reflect:PointerTo x3, reflect:Slice x7, reflect:String x8, reflect:Struct x11
+    reflect:StructField x1, reflect:StructField.Index x2, reflect:StructField.Name x4
+    reflect:StructField.Type x9, reflect:Type x36, reflect:Type.AssignableTo x1, reflect:Type.Elem x40
+    reflect:Type.Field x4, reflect:Type.FieldByName x1, reflect:Type.Implements x2, reflect:Type.Key x7
+    reflect:Type.Kind x34, reflect:Type.Len x3, reflect:Type.Name x9, reflect:Type.NumField x5
+    reflect:Type.PkgPath x2, reflect:Type.Size x2, reflect:Type.String x7, reflect:TypeAssert x38
+    reflect:TypeFor x14, reflect:TypeOf x4, reflect:Uint x8, reflect:Uint16 x8, reflect:Uint32 x8
+    reflect:Uint64 x8, reflect:Uint8 x10, reflect:Uintptr x8, reflect:Value x144, reflect:Value.Addr x2
+    reflect:Value.Bool x1, reflect:Value.Bytes x3, reflect:Value.CanAddr x33, reflect:Value.CanSet x1
+    reflect:Value.Cap x4, reflect:Value.Complex x1, reflect:Value.Elem x10, reflect:Value.FieldByIndex x2
+    reflect:Value.Float x1, reflect:Value.Grow x2, reflect:Value.Index x2, reflect:Value.Int x1
+    reflect:Value.IsNil x10, reflect:Value.IsValid x5, reflect:Value.IsZero x1, reflect:Value.Kind x10
+    reflect:Value.Len x37, reflect:Value.MapRange x1, reflect:Value.NumField x1, reflect:Value.Set x6
+    reflect:Value.SetBool x1, reflect:Value.SetComplex x2, reflect:Value.SetFloat x2
+    reflect:Value.SetInt x4, reflect:Value.SetLen x4, reflect:Value.SetMapIndex x1
+    reflect:Value.SetString x1, reflect:Value.SetUint x4, reflect:Value.SetZero x3
+    reflect:Value.Slice x33, reflect:Value.String x1, reflect:Value.Type x12, reflect:Value.Uint x1
+    reflect:ValueOf x5
+missing from the twin: none
+partial in the twin: Type.Size (interpreted types: gc sizes (types.SizesFor)), Value.Bytes (copy (no aliasing) for interpreted []byte held as []Value), Value.Complex (complex numbers are not supported by the VM), Value.SetComplex (complex numbers are not supported by the VM)
+rewrites: 2 interface assertions, 0 type switches, 6 interface comparisons, 0 interface tag switches, 2 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 8 hooks, 6 wrappers; no hook (generic reflect.Call path): none
+type caches: 3 package-level sync.Map made vm.TypeCache
+type maps: 1 package-level maps indexed by reflect.Type made vm.TypeMap
+
+== encoding/json [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/encoding/json
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (25 members):
+    reflect:Float32 x1, reflect:Float64 x1, reflect:Int x1, reflect:Int16 x1, reflect:Int32 x1
+    reflect:Int64 x1, reflect:Int8 x1, reflect:Pointer x2, reflect:StructField x1
+    reflect:StructField.Name x1, reflect:Type x6, reflect:Type.Elem x1, reflect:Type.Kind x3
+    reflect:Type.Name x1, reflect:Type.String x8, reflect:TypeFor x2, reflect:TypeOf x2, reflect:Uint x1
+    reflect:Uint16 x1, reflect:Uint32 x1, reflect:Uint64 x1, reflect:Uint8 x1, reflect:Uintptr x1
+    reflect:Value x2, reflect:ValueOf x1
+missing from the twin: none
+partial in the twin: none
+rewrites: 0 interface assertions, 0 type switches, 9 interface comparisons, 0 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 48 hooks, 3 wrappers; no hook (generic reflect.Call path): none
+note: variant decode.go (!goexperiment.jsonv2) not copied: imports reflect; aotgen_guard.go refuses these builds
+note: variant encode.go (!goexperiment.jsonv2) not copied: imports reflect; aotgen_guard.go refuses these builds
+note: variant fold.go (!goexperiment.jsonv2) copied
+note: variant indent.go (!goexperiment.jsonv2) not copied: comparison (the rewrite needs type information); aotgen_guard.go refuses these builds
+note: variant scanner.go (!goexperiment.jsonv2) not copied: comparison (the rewrite needs type information); aotgen_guard.go refuses these builds
+note: variant stream.go (!goexperiment.jsonv2) not copied: comparison (the rewrite needs type information); aotgen_guard.go refuses these builds
+note: variant tables.go (!goexperiment.jsonv2) copied
+note: variant tags.go (!goexperiment.jsonv2) not copied: comparison (the rewrite needs type information); aotgen_guard.go refuses these builds
+
+== encoding/json/internal [copy: internal package imported by encoding/json] -> github.com/traefik/yaegi/v2/aot/go1_27/encoding/json/internal
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+
+== encoding/json/internal/jsonflags [copy: internal package imported by encoding/json] -> github.com/traefik/yaegi/v2/aot/go1_27/encoding/json/internal/jsonflags
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+
+== encoding/json/internal/jsonopts [copy: internal package imported by encoding/json] -> github.com/traefik/yaegi/v2/aot/go1_27/encoding/json/internal/jsonopts
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+
+== encoding/json/internal/jsonwire [copy: internal package imported by encoding/json] -> github.com/traefik/yaegi/v2/aot/go1_27/encoding/json/internal/jsonwire
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+
+== encoding/json/jsontext [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/encoding/json/jsontext
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+rewrites: 0 interface assertions, 0 type switches, 15 interface comparisons, 1 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 69 hooks, 3 wrappers; no hook (generic reflect.Call path): none
+
+== encoding/json/v2 [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/encoding/json/v2
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (94 members):
+    reflect:Array x7, reflect:Bool x3, reflect:Float32 x2, reflect:Float64 x2, reflect:Int x3
+    reflect:Int16 x3, reflect:Int32 x3, reflect:Int64 x3, reflect:Int8 x3, reflect:Interface x9
+    reflect:Kind x1, reflect:Kind.String x1, reflect:MakeMap x3, reflect:MakeSlice x3, reflect:Map x4
+    reflect:MapIter.Next x5, reflect:MapIter.Value x1, reflect:MapOf x1, reflect:New x4
+    reflect:Pointer x20, reflect:PointerTo x4, reflect:Slice x5, reflect:SliceOf x2, reflect:String x8
+    reflect:Struct x5, reflect:StructField x1, reflect:StructField.Anonymous x3
+    reflect:StructField.IsExported x3, reflect:StructField.Name x32, reflect:StructField.PkgPath x1
+    reflect:StructField.Tag x2, reflect:StructField.Type x9, reflect:StructTag.Lookup x2, reflect:Type x49
+    reflect:Type.Bits x3, reflect:Type.Comparable x1, reflect:Type.Elem x27, reflect:Type.Field x4
+    reflect:Type.Implements x9, reflect:Type.Key x14, reflect:Type.Kind x25, reflect:Type.Len x1
+    reflect:Type.Name x3, reflect:Type.NumField x3, reflect:Type.PkgPath x1, reflect:Type.String x1
+    reflect:TypeAssert x17, reflect:TypeFor x23, reflect:TypeOf x7, reflect:Uint x3, reflect:Uint16 x3
+    reflect:Uint32 x3, reflect:Uint64 x3, reflect:Uint8 x5, reflect:Uintptr x3, reflect:Value x6
+    reflect:Value.Addr x22, reflect:Value.Bool x4, reflect:Value.Bytes x3, reflect:Value.CanSet x1
+    reflect:Value.Cap x2, reflect:Value.Convert x2, reflect:Value.Elem x27, reflect:Value.Field x5
+    reflect:Value.Float x3, reflect:Value.Grow x1, reflect:Value.Index x7, reflect:Value.Int x3
+    reflect:Value.Interface x19, reflect:Value.IsNil x23, reflect:Value.IsValid x11
+    reflect:Value.IsZero x1, reflect:Value.Kind x18, reflect:Value.Len x7, reflect:Value.MapIndex x5
+    reflect:Value.MapRange x5, reflect:Value.Set x20, reflect:Value.SetBool x5, reflect:Value.SetBytes x1
+    reflect:Value.SetFloat x7, reflect:Value.SetInt x5, reflect:Value.SetIterKey x5
+    reflect:Value.SetIterValue x2, reflect:Value.SetLen x4, reflect:Value.SetMapIndex x3
+    reflect:Value.SetString x5, reflect:Value.SetUint x4, reflect:Value.SetZero x17
+    reflect:Value.String x4, reflect:Value.Type x36, reflect:Value.Uint x3, reflect:Value.UnsafePointer x2
+    reflect:ValueOf x12, reflect:Zero x1
+missing from the twin: none
+partial in the twin: Value.Bytes (copy (no aliasing) for interpreted []byte held as []Value), Value.UnsafePointer (VM values: identity only, the memory is not Go memory)
+rewrites: 8 interface assertions, 0 type switches, 18 interface comparisons, 2 interface tag switches, 3 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 21 hooks, 10 wrappers; no hook (generic reflect.Call path): none
+type caches: 1 package-level sync.Map made vm.TypeCache
+cycle check: 1 Unbox made vm.NoUnbox, 2 copies made vm.AddrCopy
+
+== encoding/xml [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/encoding/xml
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (74 members):
+    reflect:Array x3, reflect:Bool x5, reflect:Copy x1, reflect:Float32 x5, reflect:Float64 x5
+    reflect:Int x5, reflect:Int16 x5, reflect:Int32 x5, reflect:Int64 x5, reflect:Int8 x5
+    reflect:Interface x8, reflect:Invalid x1, reflect:Map x1, reflect:New x4, reflect:Pointer x13
+    reflect:Slice x12, reflect:String x9, reflect:Struct x6, reflect:StructField x1
+    reflect:StructField.Anonymous x2, reflect:StructField.Index x1, reflect:StructField.IsExported x1
+    reflect:StructField.Name x12, reflect:StructField.Tag x6, reflect:StructField.Type x3
+    reflect:StructTag.Get x6, reflect:Type x8, reflect:Type.Bits x5, reflect:Type.Elem x16
+    reflect:Type.Field x2, reflect:Type.FieldByIndex x2, reflect:Type.Kind x15, reflect:Type.Name x5
+    reflect:Type.NumField x2, reflect:Type.String x5, reflect:TypeAssert x24, reflect:TypeFor x2
+    reflect:TypeOf x1, reflect:Uint x5, reflect:Uint16 x5, reflect:Uint32 x5, reflect:Uint64 x5
+    reflect:Uint8 x13, reflect:Uintptr x5, reflect:Value x21, reflect:Value.Addr x10
+    reflect:Value.Bool x2, reflect:Value.Bytes x3, reflect:Value.CanAddr x11
+    reflect:Value.CanInterface x20, reflect:Value.Elem x9, reflect:Value.Field x1, reflect:Value.Float x2
+    reflect:Value.Grow x2, reflect:Value.Index x4, reflect:Value.Int x2, reflect:Value.Interface x1
+    reflect:Value.IsNil x12, reflect:Value.IsValid x15, reflect:Value.IsZero x1, reflect:Value.Kind x26
+    reflect:Value.Len x7, reflect:Value.Set x9, reflect:Value.SetBool x2, reflect:Value.SetBytes x1
+    reflect:Value.SetFloat x2, reflect:Value.SetInt x2, reflect:Value.SetLen x4
+    reflect:Value.SetString x3, reflect:Value.SetUint x2, reflect:Value.String x3, reflect:Value.Type x25
+    reflect:Value.Uint x2, reflect:ValueOf x9
+missing from the twin: none
+partial in the twin: Value.Bytes (copy (no aliasing) for interpreted []byte held as []Value)
+rewrites: 2 interface assertions, 0 type switches, 7 interface comparisons, 0 interface tag switches, 1 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 32 hooks, 9 wrappers; no hook (generic reflect.Call path): none
+type caches: 1 package-level sync.Map made vm.TypeCache
+
+== errors [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/errors
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (15 members):
+    reflectlite:Interface x1, reflectlite:Ptr x1, reflectlite:Type x1, reflectlite:Type.AssignableTo x1
+    reflectlite:Type.Comparable x1, reflectlite:Type.Elem x2, reflectlite:Type.Implements x1
+    reflectlite:Type.Kind x2, reflectlite:TypeOf x3, reflectlite:Value x1, reflectlite:Value.Elem x1
+    reflectlite:Value.IsNil x1, reflectlite:Value.Set x1, reflectlite:Value.Type x1
+    reflectlite:ValueOf x2
+missing from the twin: none
+partial in the twin: none
+rewrites: 4 interface assertions, 3 type switches, 2 interface comparisons, 0 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 5 hooks, 4 wrappers; no hook (generic reflect.Call path): none
+recursion guards: 3 recursive calls counted by vm.NestAOT
+risks: 1 uses of unsafe, 0 go statements
+
+== flag [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/flag
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (14 members):
+    reflect:New x1, reflect:Pointer x2, reflect:Ptr x2, reflect:Type.Elem x4, reflect:Type.Kind x2
+    reflect:TypeOf x1, reflect:Value x1, reflect:Value.Elem x2, reflect:Value.Interface x1
+    reflect:Value.Kind x2, reflect:Value.Set x1, reflect:Value.Type x4, reflect:ValueOf x2
+    reflect:Zero x1
+missing from the twin: none
+partial in the twin: none
+rewrites: 3 interface assertions, 1 type switches, 4 interface comparisons, 0 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 55 hooks, 7 wrappers; no hook (generic reflect.Call path): BoolVar, Float64Var, Int64Var, IntVar, StringVar, Uint64Var, UintVar, FlagSet.BoolVar, FlagSet.IntVar, FlagSet.Int64Var, FlagSet.UintVar, FlagSet.Uint64Var, FlagSet.StringVar, FlagSet.Float64Var
+process exits: 6 uses of os.Exit, log.Fatal and os.Args made vm.AOTExit, AOTFatal, AOTArgs
+
+== fmt [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/fmt
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (64 members):
+    reflect:Array x2, reflect:Bool x2, reflect:Chan x2, reflect:Complex128 x2, reflect:Complex64 x2
+    reflect:Float32 x2, reflect:Float64 x2, reflect:Func x2, reflect:Int x3, reflect:Int16 x3
+    reflect:Int32 x3, reflect:Int64 x3, reflect:Int8 x3, reflect:Interface x2, reflect:Invalid x1
+    reflect:MakeSlice x1, reflect:Map x3, reflect:Pointer x4, reflect:Slice x6, reflect:String x3
+    reflect:Struct x2, reflect:StructField.Name x1, reflect:Type.Bits x4, reflect:Type.Elem x2
+    reflect:Type.Field x1, reflect:Type.Kind x3, reflect:Type.String x14, reflect:TypeOf x4
+    reflect:Uint x3, reflect:Uint16 x3, reflect:Uint32 x3, reflect:Uint64 x3, reflect:Uint8 x5
+    reflect:Uintptr x3, reflect:UnsafePointer x2, reflect:Value x33, reflect:Value.Bool x1
+    reflect:Value.Bytes x1, reflect:Value.CanAddr x1, reflect:Value.CanInterface x2
+    reflect:Value.Complex x2, reflect:Value.Elem x4, reflect:Value.Field x1, reflect:Value.Float x2
+    reflect:Value.Index x4, reflect:Value.Int x2, reflect:Value.Interface x2, reflect:Value.IsNil x4
+    reflect:Value.IsValid x5, reflect:Value.Kind x10, reflect:Value.Len x3, reflect:Value.NumField x1
+    reflect:Value.Set x1, reflect:Value.SetBool x1, reflect:Value.SetComplex x1, reflect:Value.SetFloat x1
+    reflect:Value.SetInt x1, reflect:Value.SetString x1, reflect:Value.SetUint x2, reflect:Value.String x1
+    reflect:Value.Type x17, reflect:Value.Uint x3, reflect:Value.UnsafePointer x2, reflect:ValueOf x6
+missing from the twin: none
+partial in the twin: Value.Bytes (copy (no aliasing) for interpreted []byte held as []Value), Value.Complex (complex numbers are not supported by the VM), Value.SetComplex (complex numbers are not supported by the VM), Value.UnsafePointer (VM values: identity only, the memory is not Go memory)
+rewrites: 8 interface assertions, 1 type switches, 5 interface comparisons, 0 interface tag switches, 1 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 23 hooks, 10 wrappers; no hook (generic reflect.Call path): none
+
+== github.com/BurntSushi/toml [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/BurntSushi/toml
+license: github.com/BurntSushi/toml@v1.6.0, LICENSES/github.com_BurntSushi_toml.txt
+build: ok
+reflect API used (80 members):
+    reflect:Array x5, reflect:Bool x5, reflect:Float32 x7, reflect:Float64 x7, reflect:Indirect x2
+    reflect:Int x6, reflect:Int16 x5, reflect:Int32 x5, reflect:Int64 x5, reflect:Int8 x5
+    reflect:Interface x9, reflect:Kind.String x6, reflect:MakeMap x1, reflect:MakeSlice x1, reflect:Map x8
+    reflect:New x3, reflect:Ptr x10, reflect:Slice x8, reflect:String x8, reflect:Struct x10
+    reflect:StructField.Anonymous x3, reflect:StructField.Index x3, reflect:StructField.Name x2
+    reflect:StructField.PkgPath x2, reflect:StructField.Tag x4, reflect:StructField.Type x2
+    reflect:StructTag x1, reflect:StructTag.Get x1, reflect:Type x13, reflect:Type.Comparable x1
+    reflect:Type.Elem x10, reflect:Type.Field x2, reflect:Type.FieldByIndex x1, reflect:Type.Implements x4
+    reflect:Type.Key x3, reflect:Type.Kind x6, reflect:Type.Name x2, reflect:Type.NumField x2
+    reflect:Type.String x2, reflect:TypeOf x9, reflect:Uint x5, reflect:Uint16 x5, reflect:Uint32 x5
+    reflect:Uint64 x6, reflect:Uint8 x5, reflect:Value x37, reflect:Value.Addr x2, reflect:Value.Bool x2
+    reflect:Value.CanAddr x1, reflect:Value.CanSet x2, reflect:Value.Cap x1, reflect:Value.Elem x6
+    reflect:Value.Field x3, reflect:Value.FieldByIndex x1, reflect:Value.Float x3, reflect:Value.Index x5
+    reflect:Value.Int x2, reflect:Value.Interface x12, reflect:Value.IsNil x10, reflect:Value.IsValid x4
+    reflect:Value.Kind x24, reflect:Value.Len x10, reflect:Value.MapIndex x2, reflect:Value.MapKeys x1
+    reflect:Value.NumField x1, reflect:Value.NumMethod x2, reflect:Value.Pointer x1, reflect:Value.Set x6
+    reflect:Value.SetBool x1, reflect:Value.SetFloat x2, reflect:Value.SetInt x2, reflect:Value.SetLen x1
+    reflect:Value.SetMapIndex x1, reflect:Value.SetString x4, reflect:Value.SetUint x1
+    reflect:Value.String x5, reflect:Value.Type x22, reflect:Value.Uint x2, reflect:ValueOf x12
+    reflect:Zero x1
+missing from the twin: none
+partial in the twin: Value.Pointer (VM values: identity only)
+rewrites: 7 interface assertions, 2 type switches, 6 interface comparisons, 0 interface tag switches, 11 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 21 hooks, 12 wrappers; no hook (generic reflect.Call path): none
+type maps: 1 package-level maps indexed by reflect.Type made vm.TypeMap
+
+== github.com/BurntSushi/toml/internal [copy: internal package imported by github.com/BurntSushi/toml] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/BurntSushi/toml/internal
+license: github.com/BurntSushi/toml@v1.6.0, LICENSES/github.com_BurntSushi_toml.txt
+build: ok
+
+== github.com/go-playground/validator/v10 [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/go-playground/validator/v10
+license: github.com/go-playground/validator/v10@v10.30.2, LICENSES/github.com_go-playground_validator_v10.txt
+build: ok
+reflect API used (74 members):
+    reflect:Array x18, reflect:Bool x9, reflect:Chan x4, reflect:Complex128 x1, reflect:Complex64 x1
+    reflect:Float32 x25, reflect:Float64 x25, reflect:Func x4, reflect:Indirect x1, reflect:Int x30
+    reflect:Int16 x30, reflect:Int32 x30, reflect:Int64 x30, reflect:Int8 x30, reflect:Interface x9
+    reflect:Invalid x9, reflect:Kind x17, reflect:Map x22, reflect:NewAt x1, reflect:Ptr x20
+    reflect:Slice x23, reflect:String x34, reflect:Struct x27, reflect:StructField x2
+    reflect:StructField.Anonymous x1, reflect:StructField.Name x5, reflect:StructField.PkgPath x1
+    reflect:StructField.Tag x1, reflect:StructTag.Get x1, reflect:Type x19, reflect:Type.ConvertibleTo x35
+    reflect:Type.Elem x2, reflect:Type.Field x1, reflect:Type.Implements x1, reflect:Type.Key x1
+    reflect:Type.Kind x3, reflect:Type.Name x3, reflect:Type.String x7, reflect:TypeOf x11
+    reflect:Uint x30, reflect:Uint16 x30, reflect:Uint32 x30, reflect:Uint64 x30, reflect:Uint8 x30
+    reflect:Uintptr x22, reflect:Value x45, reflect:Value.Addr x1, reflect:Value.Bool x11
+    reflect:Value.Call x1, reflect:Value.CanAddr x2, reflect:Value.CanInterface x4
+    reflect:Value.Complex x1, reflect:Value.Convert x27, reflect:Value.Elem x12, reflect:Value.Field x1
+    reflect:Value.FieldByName x3, reflect:Value.Float x43, reflect:Value.Index x3, reflect:Value.Int x39
+    reflect:Value.Interface x12, reflect:Value.IsNil x19, reflect:Value.IsValid x7
+    reflect:Value.IsZero x4, reflect:Value.Kind x77, reflect:Value.Len x31, reflect:Value.MapIndex x18
+    reflect:Value.MapKeys x2, reflect:Value.MethodByName x2, reflect:Value.NumField x1
+    reflect:Value.String x171, reflect:Value.Type x107, reflect:Value.Uint x40
+    reflect:Value.UnsafeAddr x1, reflect:ValueOf x28
+missing from the twin: none
+partial in the twin: NewAt (native types only), Value.Complex (complex numbers are not supported by the VM), Value.UnsafeAddr (address of the VM cell: identity only)
+rewrites: 4 interface assertions, 0 type switches, 13 interface comparisons, 1 interface tag switches, 8 composite unboxes, 1 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 29 hooks, 8 wrappers; no hook (generic reflect.Call path): Validate.ValidateMapCtx, Validate.ValidateMap, Validate.RegisterStructValidationMapRules
+risks: 1 uses of unsafe, 0 go statements
+
+== github.com/go-viper/mapstructure/v2 [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/go-viper/mapstructure/v2
+license: github.com/go-viper/mapstructure/v2@v2.5.0, LICENSES/github.com_go-viper_mapstructure_v2.txt
+build: ok
+reflect API used (98 members):
+    reflect:Append x1, reflect:Array x10, reflect:ArrayOf x1, reflect:Bool x9, reflect:Chan x1
+    reflect:Complex128 x2, reflect:Complex64 x5, reflect:Float32 x11, reflect:Float64 x3, reflect:Func x2
+    reflect:Indirect x27, reflect:Int x11, reflect:Int16 x2, reflect:Int32 x2, reflect:Int64 x3
+    reflect:Int8 x2, reflect:Interface x6, reflect:Kind x5, reflect:MakeMap x3, reflect:MakeSlice x3
+    reflect:Map x9, reflect:MapIter.Key x1, reflect:MapIter.Next x1, reflect:MapIter.Value x1
+    reflect:MapOf x2, reflect:New x12, reflect:Pointer x2, reflect:Ptr x11, reflect:Slice x13
+    reflect:SliceOf x3, reflect:String x37, reflect:Struct x15, reflect:StructField x4
+    reflect:StructField.Anonymous x2, reflect:StructField.Name x7, reflect:StructField.PkgPath x2
+    reflect:StructField.Tag x1, reflect:StructTag.Get x1, reflect:Type x58, reflect:Type.AssignableTo x2
+    reflect:Type.Bits x3, reflect:Type.ConvertibleTo x1, reflect:Type.Elem x18, reflect:Type.Field x3
+    reflect:Type.Implements x2, reflect:Type.Key x4, reflect:Type.Kind x50, reflect:Type.Len x3
+    reflect:Type.Name x3, reflect:Type.NumField x3, reflect:Type.NumMethod x2, reflect:Type.PkgPath x3
+    reflect:Type.String x1, reflect:TypeOf x14, reflect:Uint x11, reflect:Uint16 x2, reflect:Uint32 x2
+    reflect:Uint64 x3, reflect:Uint8 x5, reflect:Uintptr x1, reflect:Value x61, reflect:Value.Addr x1
+    reflect:Value.Bool x7, reflect:Value.CanAddr x4, reflect:Value.CanInterface x1
+    reflect:Value.CanSet x3, reflect:Value.Cap x1, reflect:Value.Comparable x1, reflect:Value.Complex x1
+    reflect:Value.Convert x1, reflect:Value.Elem x20, reflect:Value.Field x2, reflect:Value.Float x7
+    reflect:Value.Index x6, reflect:Value.Int x7, reflect:Value.Interface x29, reflect:Value.IsNil x13
+    reflect:Value.IsValid x8, reflect:Value.IsZero x1, reflect:Value.Kind x30, reflect:Value.Len x19
+    reflect:Value.MapIndex x5, reflect:Value.MapKeys x3, reflect:Value.MapRange x1, reflect:Value.Set x24
+    reflect:Value.SetBool x6, reflect:Value.SetComplex x1, reflect:Value.SetFloat x7
+    reflect:Value.SetInt x7, reflect:Value.SetMapIndex x6, reflect:Value.SetString x7
+    reflect:Value.SetUint x7, reflect:Value.Slice x1, reflect:Value.String x9, reflect:Value.Type x61
+    reflect:Value.Uint x7, reflect:ValueOf x30, reflect:Zero x7
+missing from the twin: none
+partial in the twin: Value.Complex (complex numbers are not supported by the VM), Value.SetComplex (complex numbers are not supported by the VM)
+rewrites: 3 interface assertions, 0 type switches, 15 interface comparisons, 0 interface tag switches, 2 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 46 hooks, 4 wrappers; no hook (generic reflect.Call path): none
+
+== github.com/go-viper/mapstructure/v2/internal/errors [copy: internal package imported by github.com/go-viper/mapstructure/v2] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/go-viper/mapstructure/v2/internal/errors
+license: github.com/go-viper/mapstructure/v2@v2.5.0, LICENSES/github.com_go-viper_mapstructure_v2.txt
+build: ok
+
+== github.com/goccy/go-yaml [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/goccy/go-yaml
+license: github.com/goccy/go-yaml@v1.19.2, LICENSES/github.com_goccy_go-yaml.txt
+build: ok
+reflect API used (80 members):
+    reflect:Append x2, reflect:Array x2, reflect:Bool x5, reflect:Float32 x7, reflect:Float64 x7
+    reflect:Int x6, reflect:Int16 x6, reflect:Int32 x6, reflect:Int64 x6, reflect:Int8 x6
+    reflect:Interface x9, reflect:MakeMap x1, reflect:MakeSlice x1, reflect:Map x6, reflect:MapIter.Key x2
+    reflect:MapIter.Next x1, reflect:MapIter.Value x1, reflect:New x3, reflect:Ptr x26, reflect:Slice x7
+    reflect:String x6, reflect:Struct x5, reflect:StructField x3, reflect:StructField.Anonymous x1
+    reflect:StructField.Name x12, reflect:StructField.PkgPath x4, reflect:StructField.Tag x2
+    reflect:StructField.Type x1, reflect:StructTag.Get x2, reflect:Type x16, reflect:Type.AssignableTo x4
+    reflect:Type.ConvertibleTo x2, reflect:Type.Elem x7, reflect:Type.Field x7, reflect:Type.Key x1
+    reflect:Type.Kind x29, reflect:Type.Name x3, reflect:Type.NumField x4, reflect:Type.String x1
+    reflect:TypeOf x17, reflect:Uint x6, reflect:Uint16 x6, reflect:Uint32 x6, reflect:Uint64 x6
+    reflect:Uint8 x6, reflect:Uintptr x4, reflect:Value x44, reflect:Value.Addr x6, reflect:Value.Bool x5
+    reflect:Value.CanAddr x1, reflect:Value.CanInterface x2, reflect:Value.CanSet x2
+    reflect:Value.Convert x3, reflect:Value.Elem x14, reflect:Value.Field x3, reflect:Value.FieldByName x3
+    reflect:Value.Float x6, reflect:Value.Index x5, reflect:Value.Int x5, reflect:Value.Interface x20
+    reflect:Value.IsNil x8, reflect:Value.IsValid x12, reflect:Value.Kind x8, reflect:Value.Len x5
+    reflect:Value.MapIndex x1, reflect:Value.MapKeys x2, reflect:Value.MapRange x1
+    reflect:Value.NumField x3, reflect:Value.OverflowInt x4, reflect:Value.OverflowUint x4
+    reflect:Value.Pointer x7, reflect:Value.Set x22, reflect:Value.SetInt x4, reflect:Value.SetMapIndex x4
+    reflect:Value.SetUint x4, reflect:Value.String x5, reflect:Value.Type x55, reflect:Value.Uint x5
+    reflect:ValueOf x23, reflect:Zero x11
+missing from the twin: none
+partial in the twin: Value.Pointer (VM values: identity only)
+rewrites: 23 interface assertions, 3 type switches, 5 interface comparisons, 0 interface tag switches, 1 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 84 hooks, 23 wrappers; no hook (generic reflect.Call path): CommentToMap, WithComment
+type maps: 2 package-level maps indexed by reflect.Type made vm.TypeMap
+
+== github.com/goccy/go-yaml/internal/errors [aot: imports reflect] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/goccy/go-yaml/internal/errors
+license: github.com/goccy/go-yaml@v1.19.2, LICENSES/github.com_goccy_go-yaml.txt
+build: ok
+reflect API used (1 members):
+    reflect:Type x5
+missing from the twin: none
+partial in the twin: none
+rewrites: 0 interface assertions, 0 type switches, 0 interface comparisons, 0 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 31 hooks, 1 wrappers; no hook (generic reflect.Call path): none
+
+== github.com/goccy/go-yaml/internal/format [copy: internal package imported by github.com/goccy/go-yaml] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/goccy/go-yaml/internal/format
+license: github.com/goccy/go-yaml@v1.19.2, LICENSES/github.com_goccy_go-yaml.txt
+build: ok
+
+== github.com/google/go-cmp/cmp [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/google/go-cmp/cmp
+license: github.com/google/go-cmp@v0.7.0, LICENSES/github.com_google_go-cmp.txt
+build: ok
+reflect API used (89 members):
+    reflect:Array x9, reflect:Bool x5, reflect:Chan x3, reflect:Complex128 x4, reflect:Complex64 x4
+    reflect:Float32 x4, reflect:Float64 x4, reflect:Func x3, reflect:Int x4, reflect:Int16 x4
+    reflect:Int32 x4, reflect:Int64 x4, reflect:Int8 x4, reflect:Interface x10, reflect:Kind x3
+    reflect:Kind.String x1, reflect:Map x7, reflect:Method.Func x1, reflect:Method.Type x5, reflect:New x6
+    reflect:NewAt x1, reflect:PointerTo x1, reflect:Ptr x5, reflect:Slice x17, reflect:String x7
+    reflect:Struct x7, reflect:StructField x2, reflect:StructField.Name x3, reflect:StructField.Offset x1
+    reflect:StructField.PkgPath x1, reflect:StructField.Type x4, reflect:Type x37
+    reflect:Type.AssignableTo x3, reflect:Type.Bits x1, reflect:Type.Comparable x1, reflect:Type.Elem x15
+    reflect:Type.Field x5, reflect:Type.In x4, reflect:Type.Kind x35, reflect:Type.MethodByName x2
+    reflect:Type.Name x6, reflect:Type.NumField x2, reflect:Type.NumIn x1, reflect:Type.NumMethod x3
+    reflect:Type.NumOut x1, reflect:Type.Out x4, reflect:Type.PkgPath x2, reflect:Type.String x1
+    reflect:TypeOf x5, reflect:Uint x4, reflect:Uint16 x4, reflect:Uint32 x4, reflect:Uint64 x4
+    reflect:Uint8 x4, reflect:Uintptr x4, reflect:UnsafePointer x2, reflect:Value x83
+    reflect:Value.Addr x5, reflect:Value.Bool x6, reflect:Value.Bytes x3, reflect:Value.Call x5
+    reflect:Value.CanAddr x3, reflect:Value.CanInterface x9, reflect:Value.Cap x1
+    reflect:Value.Complex x3, reflect:Value.Convert x1, reflect:Value.Elem x18, reflect:Value.Field x3
+    reflect:Value.Float x3, reflect:Value.Index x11, reflect:Value.Int x4, reflect:Value.Interface x8
+    reflect:Value.IsNil x29, reflect:Value.IsValid x28, reflect:Value.IsZero x5, reflect:Value.Kind x2
+    reflect:Value.Len x28, reflect:Value.MapIndex x3, reflect:Value.MapKeys x3, reflect:Value.NumField x2
+    reflect:Value.Pointer x2, reflect:Value.Set x5, reflect:Value.Slice x10, reflect:Value.String x9
+    reflect:Value.Type x21, reflect:Value.Uint x9, reflect:Value.UnsafeAddr x1, reflect:ValueOf x15
+    reflect:Zero x1
+missing from the twin: none
+partial in the twin: NewAt (native types only), Value.Bytes (copy (no aliasing) for interpreted []byte held as []Value), Value.Complex (complex numbers are not supported by the VM), Value.Pointer (VM values: identity only), Value.UnsafeAddr (address of the VM cell: identity only)
+rewrites: 1 interface assertions, 3 type switches, 12 interface comparisons, 0 interface tag switches, 0 composite unboxes, 1 vet fixes, 0 linknames removed, 1 assertions left native
+glue: 46 hooks, 5 wrappers; no hook (generic reflect.Call path): none
+risks: 2 uses of unsafe, 2 go statements
+
+== github.com/google/go-cmp/cmp/cmpopts [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/google/go-cmp/cmp/cmpopts
+license: github.com/google/go-cmp@v0.7.0, LICENSES/github.com_google_go-cmp.txt
+build: ok
+reflect API used (48 members):
+    reflect:Bool x2, reflect:Interface x1, reflect:MakeSlice x2, reflect:Map x2, reflect:New x1
+    reflect:Ptr x2, reflect:PtrTo x1, reflect:Slice x2, reflect:SliceOf x1, reflect:Struct x4
+    reflect:StructField x2, reflect:StructField.Anonymous x1, reflect:StructField.Index x2
+    reflect:StructField.Name x6, reflect:StructField.Type x6, reflect:StructOf x1, reflect:Type x9
+    reflect:Type.AssignableTo x9, reflect:Type.Comparable x1, reflect:Type.Elem x3, reflect:Type.Field x3
+    reflect:Type.FieldByIndex x1, reflect:Type.FieldByName x1, reflect:Type.In x5, reflect:Type.Key x2
+    reflect:Type.Kind x7, reflect:Type.Name x1, reflect:Type.NumField x2, reflect:Type.NumMethod x1
+    reflect:TypeOf x5, reflect:Value x12, reflect:Value.Bool x6, reflect:Value.Call x6
+    reflect:Value.Elem x1, reflect:Value.Field x4, reflect:Value.Index x9, reflect:Value.Int x2
+    reflect:Value.Interface x4, reflect:Value.IsNil x4, reflect:Value.IsValid x4, reflect:Value.Kind x6
+    reflect:Value.Len x13, reflect:Value.MapIndex x1, reflect:Value.MapKeys x1, reflect:Value.Set x4
+    reflect:Value.Slice x1, reflect:Value.Type x23, reflect:ValueOf x12
+missing from the twin: none
+partial in the twin: StructOf (native field types only)
+rewrites: 4 interface assertions, 0 type switches, 5 interface comparisons, 0 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 15 hooks, 1 wrappers; no hook (generic reflect.Call path): none
+
+== github.com/google/go-cmp/cmp/internal/diff [copy: internal package imported by github.com/google/go-cmp/cmp] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/google/go-cmp/cmp/internal/diff
+license: github.com/google/go-cmp@v0.7.0, LICENSES/github.com_google_go-cmp.txt
+build: ok
+
+== github.com/google/go-cmp/cmp/internal/flags [copy: internal package imported by github.com/google/go-cmp/cmp] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/google/go-cmp/cmp/internal/flags
+license: github.com/google/go-cmp@v0.7.0, LICENSES/github.com_google_go-cmp.txt
+build: ok
+
+== github.com/google/go-cmp/cmp/internal/function [aot: imports reflect] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/google/go-cmp/cmp/internal/function
+license: github.com/google/go-cmp@v0.7.0, LICENSES/github.com_google_go-cmp.txt
+build: ok
+reflect API used (12 members):
+    reflect:Func x1, reflect:Type x1, reflect:Type.AssignableTo x1, reflect:Type.In x6
+    reflect:Type.IsVariadic x1, reflect:Type.Kind x1, reflect:Type.NumIn x1, reflect:Type.NumOut x1
+    reflect:Type.Out x5, reflect:TypeOf x2, reflect:Value x1, reflect:Value.Pointer x1
+missing from the twin: none
+partial in the twin: Value.Pointer (VM values: identity only)
+rewrites: 0 interface assertions, 0 type switches, 7 interface comparisons, 0 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 2 hooks, 0 wrappers; no hook (generic reflect.Call path): none
+
+== github.com/google/go-cmp/cmp/internal/value [aot: imports reflect] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/google/go-cmp/cmp/internal/value
+license: github.com/google/go-cmp@v0.7.0, LICENSES/github.com_google_go-cmp.txt
+build: ok
+reflect API used (73 members):
+    reflect:Array x3, reflect:Bool x2, reflect:Chan x2, reflect:Complex128 x2, reflect:Complex64 x2
+    reflect:Float32 x2, reflect:Float64 x2, reflect:Func x1, reflect:Int x2, reflect:Int16 x2
+    reflect:Int32 x2, reflect:Int64 x2, reflect:Int8 x2, reflect:Interface x2, reflect:Kind.String x2
+    reflect:Map x1, reflect:Method.Name x1, reflect:Method.PkgPath x2, reflect:Method.Type x1
+    reflect:Ptr x2, reflect:RecvDir x1, reflect:SendDir x1, reflect:Slice x1, reflect:String x2
+    reflect:Struct x2, reflect:StructField.Anonymous x1, reflect:StructField.Name x1
+    reflect:StructField.PkgPath x2, reflect:StructField.Tag x2, reflect:StructField.Type x1
+    reflect:Type x3, reflect:Type.ChanDir x2, reflect:Type.Elem x6, reflect:Type.Field x1
+    reflect:Type.In x2, reflect:Type.IsVariadic x1, reflect:Type.Key x1, reflect:Type.Kind x4
+    reflect:Type.Len x1, reflect:Type.Method x1, reflect:Type.Name x2, reflect:Type.NumField x1
+    reflect:Type.NumIn x2, reflect:Type.NumMethod x1, reflect:Type.NumOut x2, reflect:Type.Out x2
+    reflect:Type.PkgPath x6, reflect:Type.String x5, reflect:TypeOf x1, reflect:Uint x2, reflect:Uint16 x2
+    reflect:Uint32 x2, reflect:Uint64 x2, reflect:Uint8 x2, reflect:Uintptr x2, reflect:UnsafePointer x2
+    reflect:Value x4, reflect:Value.Bool x2, reflect:Value.Complex x2, reflect:Value.Elem x4
+    reflect:Value.Field x4, reflect:Value.Float x2, reflect:Value.Index x4, reflect:Value.Int x2
+    reflect:Value.IsValid x4, reflect:Value.Kind x2, reflect:Value.Len x1, reflect:Value.NumField x1
+    reflect:Value.Pointer x5, reflect:Value.String x2, reflect:Value.Type x7, reflect:Value.Uint x2
+    reflect:ValueOf x2
+missing from the twin: none
+partial in the twin: Value.Complex (complex numbers are not supported by the VM), Value.Pointer (VM values: identity only)
+rewrites: 0 interface assertions, 0 type switches, 2 interface comparisons, 0 interface tag switches, 0 composite unboxes, 1 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 5 hooks, 0 wrappers; no hook (generic reflect.Call path): none
+risks: 2 uses of unsafe, 0 go statements
+
+== github.com/json-iterator/go [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/json-iterator/go
+license: github.com/json-iterator/go@v1.1.13-0.20220915233716-71ac16282d12, LICENSES/github.com_json-iterator_go.txt
+build: FAIL
+    # github.com/traefik/yaegi/v2/aot/go1_27/github.com/modern-go/reflect2
+    aot/go1_27/github.com/modern-go/reflect2/unsafe_link.go:10:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/unsafe_link.go:13:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/unsafe_link.go:16:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/unsafe_link.go:23:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/unsafe_link.go:28:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/unsafe_link.go:33:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/unsafe_link.go:38:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/go_above_118.go:18:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/go_above_19.go:17:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/type_map.go:19:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/type_map.go:19:6: too many errors
+reflect API used (42 members):
+    reflect:Array x3, reflect:Bool x5, reflect:Float32 x5, reflect:Float64 x5, reflect:Int x5
+    reflect:Int16 x5, reflect:Int32 x5, reflect:Int64 x5, reflect:Int8 x5, reflect:Interface x4
+    reflect:Map x4, reflect:Ptr x10, reflect:Slice x6, reflect:String x9, reflect:Struct x6
+    reflect:StructField.Name x2, reflect:StructTag.Get x3, reflect:StructTag.Lookup x1
+    reflect:Type.Field x2, reflect:Type.Kind x1, reflect:Type.Name x11, reflect:TypeOf x1, reflect:Uint x5
+    reflect:Uint16 x5, reflect:Uint32 x5, reflect:Uint64 x5, reflect:Uint8 x7, reflect:Uintptr x5
+    reflect:Value x3, reflect:Value.CanInterface x1, reflect:Value.Field x1, reflect:Value.FieldByName x1
+    reflect:Value.Index x2, reflect:Value.Interface x12, reflect:Value.IsValid x2, reflect:Value.Len x14
+    reflect:Value.MapIndex x2, reflect:Value.MapKeys x2, reflect:Value.NumField x5
+    reflect:Value.String x2, reflect:Value.Type x2, reflect:ValueOf x4
+missing from the twin: none
+partial in the twin: none
+rewrites: 13 interface assertions, 0 type switches, 49 interface comparisons, 0 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 121 hooks, 17 wrappers; no hook (generic reflect.Call path): RegisterFieldDecoderFunc, RegisterFieldEncoderFunc, RegisterTypeDecoderFunc, RegisterTypeEncoderFunc, DecoderExtension.UpdateStructDescriptor, DecoderExtension.CreateMapKeyDecoder, DecoderExtension.CreateMapKeyEncoder, DecoderExtension.CreateDecoder, DecoderExtension.CreateEncoder, DecoderExtension.DecorateDecoder, DecoderExtension.DecorateEncoder, EncoderExtension.UpdateStructDescriptor, EncoderExtension.CreateDecoder, EncoderExtension.CreateEncoder, EncoderExtension.CreateMapKeyDecoder, EncoderExtension.CreateMapKeyEncoder, EncoderExtension.DecorateDecoder, EncoderExtension.DecorateEncoder, OptionalDecoder.Decode, OptionalEncoder.Encode, OptionalEncoder.IsEmpty
+risks: 191 uses of unsafe, 0 go statements
+note: does not build: moved to aot/go1_27/_failed/github.com/json-iterator/go
+
+== github.com/mitchellh/mapstructure [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/mitchellh/mapstructure
+license: github.com/mitchellh/mapstructure@v1.5.1-0.20231216201459-8508981c8b6c, LICENSES/github.com_mitchellh_mapstructure.txt
+build: ok
+reflect API used (81 members):
+    reflect:Append x1, reflect:Array x9, reflect:ArrayOf x1, reflect:Bool x8, reflect:Chan x1
+    reflect:Float32 x10, reflect:Float64 x2, reflect:Func x2, reflect:Indirect x23, reflect:Int x10
+    reflect:Int16 x1, reflect:Int32 x1, reflect:Int64 x2, reflect:Int8 x1, reflect:Interface x4
+    reflect:Kind x7, reflect:MakeMap x3, reflect:MakeSlice x2, reflect:Map x7, reflect:MapOf x2
+    reflect:New x10, reflect:Ptr x9, reflect:Slice x10, reflect:SliceOf x1, reflect:String x16
+    reflect:Struct x12, reflect:StructField x1, reflect:StructField.Anonymous x2
+    reflect:StructField.Name x3, reflect:StructField.PkgPath x2, reflect:StructField.Tag x4
+    reflect:StructTag.Get x4, reflect:Type x13, reflect:Type.AssignableTo x2, reflect:Type.Bits x3
+    reflect:Type.ConvertibleTo x1, reflect:Type.Elem x12, reflect:Type.Field x3, reflect:Type.Key x5
+    reflect:Type.Kind x10, reflect:Type.Len x3, reflect:Type.Name x3, reflect:Type.NumField x3
+    reflect:Type.PkgPath x3, reflect:TypeOf x6, reflect:Uint x10, reflect:Uint16 x1, reflect:Uint32 x1
+    reflect:Uint64 x2, reflect:Uint8 x4, reflect:Uintptr x1, reflect:Value x40, reflect:Value.Bool x7
+    reflect:Value.CanAddr x3, reflect:Value.CanSet x3, reflect:Value.Convert x1, reflect:Value.Elem x16
+    reflect:Value.Field x2, reflect:Value.Float x7, reflect:Value.Index x6, reflect:Value.Int x7
+    reflect:Value.Interface x24, reflect:Value.IsNil x10, reflect:Value.IsValid x7, reflect:Value.Kind x26
+    reflect:Value.Len x18, reflect:Value.MapIndex x5, reflect:Value.MapKeys x3, reflect:Value.Set x22
+    reflect:Value.SetBool x6, reflect:Value.SetFloat x7, reflect:Value.SetInt x7
+    reflect:Value.SetMapIndex x4, reflect:Value.SetString x7, reflect:Value.SetUint x7
+    reflect:Value.Slice x1, reflect:Value.String x9, reflect:Value.Type x58, reflect:Value.Uint x7
+    reflect:ValueOf x25, reflect:Zero x6
+missing from the twin: none
+partial in the twin: none
+rewrites: 1 interface assertions, 0 type switches, 9 interface comparisons, 0 interface tag switches, 2 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 19 hooks, 2 wrappers; no hook (generic reflect.Call path): none
+
+== github.com/modern-go/concurrent [aot: imports reflect] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/modern-go/concurrent
+license: github.com/modern-go/concurrent@v0.0.0-20180306012644-bacd9c7ef1dd, LICENSES/github.com_modern-go_concurrent.txt
+build: ok
+reflect API used (2 members):
+    reflect:Value.Pointer x1, reflect:ValueOf x1
+missing from the twin: none
+partial in the twin: Value.Pointer (VM values: identity only)
+rewrites: 0 interface assertions, 0 type switches, 0 interface comparisons, 0 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 6 hooks, 3 wrappers; no hook (generic reflect.Call path): none
+risks: 0 uses of unsafe, 1 go statements
+
+== github.com/modern-go/reflect2 [aot: imports reflect] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/modern-go/reflect2
+license: github.com/modern-go/reflect2@v1.0.3-0.20250322232337-35a7c28c31ee, LICENSES/github.com_modern-go_reflect2.txt
+build: FAIL
+    # github.com/traefik/yaegi/v2/aot/go1_27/github.com/modern-go/reflect2
+    aot/go1_27/github.com/modern-go/reflect2/unsafe_link.go:10:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/unsafe_link.go:13:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/unsafe_link.go:16:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/unsafe_link.go:23:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/unsafe_link.go:28:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/unsafe_link.go:33:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/unsafe_link.go:38:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/go_above_118.go:18:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/go_above_19.go:17:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/type_map.go:19:6: missing function body
+    aot/go1_27/github.com/modern-go/reflect2/type_map.go:19:6: too many errors
+reflect API used (81 members):
+    reflect:Append x2, reflect:Array x2, reflect:Bool x1, reflect:Chan x3, reflect:Float32 x1
+    reflect:Float64 x1, reflect:Func x3, reflect:Indirect x1, reflect:Int x1, reflect:Int16 x1
+    reflect:Int32 x1, reflect:Int64 x1, reflect:Int8 x1, reflect:Interface x2, reflect:Kind x6
+    reflect:MakeMap x1, reflect:MakeSlice x1, reflect:Map x3, reflect:New x10, reflect:Ptr x4
+    reflect:PtrTo x8, reflect:Slice x2, reflect:SliceHeader x1, reflect:SliceHeader.Cap x1
+    reflect:SliceHeader.Data x1, reflect:SliceHeader.Len x1, reflect:String x1, reflect:StringHeader x1
+    reflect:StringHeader.Data x1, reflect:StringHeader.Len x2, reflect:Struct x3, reflect:StructField x3
+    reflect:StructField.Anonymous x2, reflect:StructField.Index x2, reflect:StructField.Name x2
+    reflect:StructField.Offset x4, reflect:StructField.PkgPath x2, reflect:StructField.Tag x2
+    reflect:StructField.Type x4, reflect:StructTag x3, reflect:Type x22, reflect:Type.AssignableTo x1
+    reflect:Type.Elem x10, reflect:Type.Field x3, reflect:Type.FieldByIndex x2
+    reflect:Type.FieldByName x2, reflect:Type.FieldByNameFunc x2, reflect:Type.Implements x1
+    reflect:Type.Key x4, reflect:Type.Kind x7, reflect:Type.Len x2, reflect:Type.Name x1
+    reflect:Type.NumField x2, reflect:Type.NumMethod x1, reflect:Type.PkgPath x2, reflect:Type.Size x2
+    reflect:Type.String x6, reflect:TypeOf x4, reflect:Uint x1, reflect:Uint16 x1, reflect:Uint32 x1
+    reflect:Uint64 x1, reflect:Uint8 x1, reflect:Uintptr x1, reflect:UnsafePointer x1, reflect:Value x3
+    reflect:Value.Cap x1, reflect:Value.Elem x30, reflect:Value.FieldByIndex x2, reflect:Value.Index x2
+    reflect:Value.Interface x11, reflect:Value.IsNil x1, reflect:Value.IsValid x2, reflect:Value.Len x1
+    reflect:Value.MapIndex x3, reflect:Value.MapKeys x1, reflect:Value.Set x13
+    reflect:Value.SetMapIndex x1, reflect:Value.Type x8, reflect:ValueOf x24, reflect:Zero x1
+missing from the twin: none
+partial in the twin: Type.Size (interpreted types: gc sizes (types.SizesFor))
+rewrites: 4 interface assertions, 0 type switches, 0 interface comparisons, 0 interface tag switches, 0 composite unboxes, 0 vet fixes, 12 linknames removed, 0 assertions left native
+glue: 63 hooks, 11 wrappers; no hook (generic reflect.Call path): IFaceToEFace, NoEscape, UnsafeArrayType.UnsafeIndirect, UnsafeArrayType.UnsafeSetIndex, UnsafeArrayType.UnsafeGetIndex, UnsafeEFaceType.UnsafeIsNil, UnsafeEFaceType.UnsafeIndirect, UnsafeIFaceType.UnsafeIndirect, UnsafeIFaceType.UnsafeIsNil, UnsafeMapType.UnsafeIterate, UnsafeMapType.UnsafeIsNil, UnsafeMapType.UnsafeIndirect, UnsafeMapType.UnsafeSetIndex, UnsafeMapType.UnsafeGetIndex, UnsafePtrType.UnsafeIsNil, UnsafePtrType.UnsafeIndirect, UnsafeSliceType.UnsafeSet, UnsafeSliceType.UnsafeIsNil, UnsafeSliceType.UnsafeSetNil, UnsafeSliceType.UnsafeLengthOf, UnsafeSliceType.UnsafeSetIndex, UnsafeSliceType.UnsafeGetIndex, UnsafeSliceType.UnsafeAppend, UnsafeSliceType.UnsafeCap, UnsafeSliceType.UnsafeGrow, UnsafeStructField.UnsafeSet, UnsafeStructField.UnsafeGet, UnsafeStructType.UnsafeIndirect
+risks: 198 uses of unsafe, 0 go statements
+BLOCKER: bodyless functions (assembly/linkname) in go_above_118.go: mapiterinit
+BLOCKER: bodyless functions (assembly/linkname) in go_above_19.go: resolveTypeOff, makemap
+BLOCKER: bodyless functions (assembly/linkname) in type_map.go: typelinks2
+BLOCKER: bodyless functions (assembly/linkname) in unsafe_link.go: unsafe_New, typedmemmove, unsafe_NewArray, typedslicecopy, mapassign, mapaccess, mapiternext, ifaceE2I
+note: assembly file reflect2_amd64.s not copied
+note: assembly file relfect2_386.s not copied
+note: assembly file relfect2_amd64p32.s not copied
+note: assembly file relfect2_arm.s not copied
+note: assembly file relfect2_arm64.s not copied
+note: assembly file relfect2_mips64x.s not copied
+note: assembly file relfect2_mipsx.s not copied
+note: assembly file relfect2_ppc64x.s not copied
+note: assembly file relfect2_s390x.s not copied
+note: does not build: moved to aot/go1_27/_failed/github.com/modern-go/reflect2
+
+== github.com/pelletier/go-toml/v2 [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/pelletier/go-toml/v2
+license: github.com/pelletier/go-toml/v2@v2.4.3, LICENSES/github.com_pelletier_go-toml_v2.txt
+build: ok
+reflect API used (82 members):
+    reflect:Append x4, reflect:Array x11, reflect:Bool x3, reflect:Float32 x6, reflect:Float64 x6
+    reflect:Int x5, reflect:Int16 x5, reflect:Int32 x5, reflect:Int64 x5, reflect:Int8 x5
+    reflect:Interface x27, reflect:MakeMap x6, reflect:MakeSlice x5, reflect:Map x17
+    reflect:MapIter.Next x1, reflect:MapIter.Value x1, reflect:New x28, reflect:Ptr x20, reflect:PtrTo x8
+    reflect:Slice x13, reflect:String x6, reflect:Struct x14, reflect:StructField x1
+    reflect:StructField.Anonymous x2, reflect:StructField.Index x1, reflect:StructField.Name x3
+    reflect:StructField.PkgPath x3, reflect:StructField.Tag x6, reflect:StructField.Type x3
+    reflect:StructTag.Get x4, reflect:StructTag.Lookup x2, reflect:Type x16, reflect:Type.AssignableTo x4
+    reflect:Type.Elem x31, reflect:Type.Field x2, reflect:Type.Implements x18, reflect:Type.Key x7
+    reflect:Type.Kind x12, reflect:Type.NumField x2, reflect:TypeOf x14, reflect:Uint x5
+    reflect:Uint16 x5, reflect:Uint32 x5, reflect:Uint64 x5, reflect:Uint8 x5, reflect:Uintptr x5
+    reflect:Value x146, reflect:Value.Addr x10, reflect:Value.Bool x2, reflect:Value.CanAddr x9
+    reflect:Value.CanSet x7, reflect:Value.Convert x1, reflect:Value.Elem x38, reflect:Value.Field x3
+    reflect:Value.Float x5, reflect:Value.Index x17, reflect:Value.Int x3, reflect:Value.Interface x26
+    reflect:Value.IsNil x35, reflect:Value.IsValid x22, reflect:Value.IsZero x2, reflect:Value.Kind x51
+    reflect:Value.Len x24, reflect:Value.MapIndex x3, reflect:Value.MapRange x1
+    reflect:Value.OverflowInt x2, reflect:Value.OverflowUint x2, reflect:Value.Pointer x2
+    reflect:Value.Set x30, reflect:Value.SetBool x1, reflect:Value.SetFloat x3, reflect:Value.SetInt x2
+    reflect:Value.SetIterKey x1, reflect:Value.SetMapIndex x4, reflect:Value.SetString x2
+    reflect:Value.SetUint x2, reflect:Value.Slice x1, reflect:Value.String x2, reflect:Value.Type x103
+    reflect:Value.Uint x3, reflect:ValueOf x25, reflect:Zero x4
+missing from the twin: none
+partial in the twin: Value.Pointer (VM values: identity only)
+rewrites: 17 interface assertions, 0 type switches, 11 interface comparisons, 2 interface tag switches, 7 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 32 hooks, 8 wrappers; no hook (generic reflect.Call path): none
+type caches: 3 package-level sync.Map made vm.TypeCache
+note: switch on an interface value with a complex tag left native at github.com/pelletier/go-toml/v2/unmarshaler.go:1866:2
+note: switch on an interface value with a complex tag left native at github.com/pelletier/go-toml/v2/unmarshaler.go:1886:2
+note: switch on an interface value with a complex tag left native at github.com/pelletier/go-toml/v2/unmarshaler.go:1909:2
+
+== github.com/pelletier/go-toml/v2/internal/parserbridge [copy: internal package imported by github.com/pelletier/go-toml/v2] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/pelletier/go-toml/v2/internal/parserbridge
+license: github.com/pelletier/go-toml/v2@v2.4.3, LICENSES/github.com_pelletier_go-toml_v2.txt
+build: ok
+
+== github.com/pelletier/go-toml/v2/internal/tracker [copy: internal package imported by github.com/pelletier/go-toml/v2] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/pelletier/go-toml/v2/internal/tracker
+license: github.com/pelletier/go-toml/v2@v2.4.3, LICENSES/github.com_pelletier_go-toml_v2.txt
+build: ok
+
+== github.com/spf13/cast [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/spf13/cast
+license: github.com/spf13/cast@v1.10.0, LICENSES/github.com_spf13_cast.txt
+build: ok
+reflect API used (39 members):
+    reflect:Array x1, reflect:Bool x2, reflect:Float32 x2, reflect:Float64 x2, reflect:Int x2
+    reflect:Int16 x2, reflect:Int32 x2, reflect:Int64 x2, reflect:Int8 x2, reflect:Interface x1
+    reflect:Kind x1, reflect:Map x1, reflect:Ptr x3, reflect:Slice x1, reflect:String x2
+    reflect:Type.Kind x4, reflect:Type.Name x2, reflect:TypeOf x4, reflect:Uint x2, reflect:Uint16 x2
+    reflect:Uint32 x2, reflect:Uint64 x2, reflect:Uint8 x2, reflect:Value x15, reflect:Value.Bool x1
+    reflect:Value.Elem x2, reflect:Value.Float x2, reflect:Value.Index x1, reflect:Value.Int x5
+    reflect:Value.Interface x3, reflect:Value.IsNil x1, reflect:Value.Kind x3, reflect:Value.Len x2
+    reflect:Value.MapIndex x1, reflect:Value.MapKeys x1, reflect:Value.SetMapIndex x1
+    reflect:Value.String x1, reflect:Value.Uint x5, reflect:ValueOf x6
+missing from the twin: none
+partial in the twin: none
+rewrites: 0 interface assertions, 4 type switches, 0 interface comparisons, 0 interface tag switches, 7 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 72 hooks, 0 wrappers; no hook (generic reflect.Call path): none
+
+== github.com/spf13/cast/internal [copy: internal package imported by github.com/spf13/cast] -> github.com/traefik/yaegi/v2/aot/go1_27/github.com/spf13/cast/internal
+license: github.com/spf13/cast@v1.10.0, LICENSES/github.com_spf13_cast.txt
+build: ok
+
+== go.yaml.in/yaml/v2 [aot: imports reflect] -> github.com/traefik/yaegi/v2/aot/go1_27/go.yaml.in/yaml/v2
+license: go.yaml.in/yaml/v2@v2.4.4, LICENSES/go.yaml.in_yaml_v2.txt
+build: ok
+reflect API used (72 members):
+    reflect:Array x3, reflect:Bool x5, reflect:Float32 x6, reflect:Float64 x5, reflect:Int x5
+    reflect:Int16 x5, reflect:Int32 x5, reflect:Int64 x5, reflect:Int8 x5, reflect:Interface x9
+    reflect:MakeMap x3, reflect:MakeSlice x1, reflect:Map x7, reflect:New x9, reflect:Ptr x10
+    reflect:Slice x5, reflect:String x5, reflect:Struct x5, reflect:StructField.Anonymous x1
+    reflect:StructField.Name x1, reflect:StructField.PkgPath x2, reflect:StructField.Tag x3
+    reflect:StructField.Type x3, reflect:StructTag.Get x1, reflect:Type x4, reflect:Type.Elem x10
+    reflect:Type.Field x2, reflect:Type.Key x3, reflect:Type.Kind x2, reflect:Type.NumField x1
+    reflect:Type.String x5, reflect:TypeOf x8, reflect:Uint x5, reflect:Uint16 x5, reflect:Uint32 x5
+    reflect:Uint64 x5, reflect:Uint8 x5, reflect:Uintptr x5, reflect:Value x36, reflect:Value.Addr x2
+    reflect:Value.Bool x5, reflect:Value.CanAddr x3, reflect:Value.Convert x1, reflect:Value.Elem x19
+    reflect:Value.Field x5, reflect:Value.FieldByIndex x2, reflect:Value.Float x5, reflect:Value.Index x2
+    reflect:Value.Int x5, reflect:Value.Interface x8, reflect:Value.IsNil x10, reflect:Value.IsValid x2
+    reflect:Value.Kind x20, reflect:Value.Len x6, reflect:Value.MapIndex x3, reflect:Value.MapKeys x3
+    reflect:Value.NumField x1, reflect:Value.OverflowInt x4, reflect:Value.OverflowUint x4
+    reflect:Value.Set x20, reflect:Value.SetBool x1, reflect:Value.SetFloat x4, reflect:Value.SetInt x5
+    reflect:Value.SetMapIndex x2, reflect:Value.SetString x2, reflect:Value.SetUint x4
+    reflect:Value.Slice x1, reflect:Value.String x9, reflect:Value.Type x29, reflect:Value.Uint x5
+    reflect:ValueOf x23, reflect:Zero x2
+missing from the twin: none
+partial in the twin: none
+rewrites: 3 interface assertions, 1 type switches, 13 interface comparisons, 0 interface tag switches, 1 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 11 hooks, 7 wrappers; no hook (generic reflect.Call path): none
+type maps: 1 package-level maps indexed by reflect.Type made vm.TypeMap
+
+== gopkg.in/yaml.v3 [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/gopkg.in/yaml.v3
+license: gopkg.in/yaml.v3@v3.0.1, LICENSES/gopkg.in_yaml.v3.txt
+build: ok
+reflect API used (72 members):
+    reflect:Array x3, reflect:Bool x5, reflect:Float32 x6, reflect:Float64 x5, reflect:Int x5
+    reflect:Int16 x5, reflect:Int32 x5, reflect:Int64 x5, reflect:Int8 x5, reflect:Interface x10
+    reflect:MakeMap x4, reflect:MakeSlice x1, reflect:Map x6, reflect:New x9, reflect:Ptr x16
+    reflect:PtrTo x1, reflect:Slice x5, reflect:String x6, reflect:Struct x6
+    reflect:StructField.Anonymous x1, reflect:StructField.Name x1, reflect:StructField.PkgPath x2
+    reflect:StructField.Tag x3, reflect:StructField.Type x3, reflect:StructTag.Get x1, reflect:Type x6
+    reflect:Type.Elem x8, reflect:Type.Field x2, reflect:Type.Implements x1, reflect:Type.Key x4
+    reflect:Type.Kind x4, reflect:Type.NumField x1, reflect:Type.String x5, reflect:TypeOf x7
+    reflect:Uint x5, reflect:Uint16 x5, reflect:Uint32 x5, reflect:Uint64 x5, reflect:Uint8 x5
+    reflect:Uintptr x5, reflect:Value x41, reflect:Value.Addr x3, reflect:Value.Bool x5
+    reflect:Value.CanAddr x4, reflect:Value.Elem x21, reflect:Value.Field x7, reflect:Value.Float x5
+    reflect:Value.Index x2, reflect:Value.Int x5, reflect:Value.Interface x10, reflect:Value.IsNil x13
+    reflect:Value.IsValid x5, reflect:Value.Kind x23, reflect:Value.Len x6, reflect:Value.MapIndex x3
+    reflect:Value.MapKeys x3, reflect:Value.NumField x1, reflect:Value.OverflowInt x4
+    reflect:Value.OverflowUint x4, reflect:Value.Set x16, reflect:Value.SetBool x3
+    reflect:Value.SetFloat x4, reflect:Value.SetInt x5, reflect:Value.SetMapIndex x3
+    reflect:Value.SetString x2, reflect:Value.SetUint x4, reflect:Value.Slice x1, reflect:Value.String x9
+    reflect:Value.Type x25, reflect:Value.Uint x5, reflect:ValueOf x17, reflect:Zero x1
+missing from the twin: none
+partial in the twin: none
+rewrites: 4 interface assertions, 1 type switches, 9 interface comparisons, 0 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 16 hooks, 8 wrappers; no hook (generic reflect.Call path): none
+type maps: 1 package-level maps indexed by reflect.Type made vm.TypeMap
+
+== html/template [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/html/template
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (11 members):
+    reflect:Pointer x4, reflect:Type.Implements x3, reflect:Type.Kind x1, reflect:TypeFor x3
+    reflect:TypeOf x1, reflect:Value.Elem x3, reflect:Value.Interface x3, reflect:Value.IsNil x3
+    reflect:Value.Kind x3, reflect:Value.Type x3, reflect:ValueOf x3
+missing from the twin: none
+partial in the twin: none
+rewrites: 0 interface assertions, 1 type switches, 2 interface comparisons, 0 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 29 hooks, 5 wrappers; no hook (generic reflect.Call path): Template.Funcs
+
+== internal/fmtsort [aot: imports reflect] -> github.com/traefik/yaegi/v2/aot/go1_27/internal/fmtsort
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (47 members):
+    reflect:Array x1, reflect:Bool x1, reflect:Chan x1, reflect:Complex128 x1, reflect:Complex64 x1
+    reflect:Float32 x1, reflect:Float64 x1, reflect:Int x1, reflect:Int16 x1, reflect:Int32 x1
+    reflect:Int64 x1, reflect:Int8 x1, reflect:Interface x1, reflect:Map x1, reflect:MapIter.Key x1
+    reflect:MapIter.Next x1, reflect:MapIter.Value x1, reflect:Pointer x1, reflect:String x1
+    reflect:Struct x1, reflect:Type.Kind x1, reflect:Type.String x1, reflect:Uint x1, reflect:Uint16 x1
+    reflect:Uint32 x1, reflect:Uint64 x1, reflect:Uint8 x1, reflect:Uintptr x1, reflect:UnsafePointer x1
+    reflect:Value x4, reflect:Value.Bool x2, reflect:Value.Complex x2, reflect:Value.Elem x4
+    reflect:Value.Field x2, reflect:Value.Float x2, reflect:Value.Index x2, reflect:Value.Int x2
+    reflect:Value.IsNil x3, reflect:Value.Kind x1, reflect:Value.Len x2, reflect:Value.MapRange x1
+    reflect:Value.NumField x1, reflect:Value.Pointer x4, reflect:Value.String x2, reflect:Value.Type x5
+    reflect:Value.Uint x2, reflect:ValueOf x2
+missing from the twin: none
+partial in the twin: Value.Complex (complex numbers are not supported by the VM), Value.Pointer (VM values: identity only)
+rewrites: 0 interface assertions, 0 type switches, 1 interface comparisons, 0 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 1 hooks, 0 wrappers; no hook (generic reflect.Call path): none
+
+== internal/godebug [copy: internal package imported by html/template] -> github.com/traefik/yaegi/v2/aot/go1_27/internal/godebug
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+note: replaced by a hand-written shim (cmd/aotgen/shims)
+
+== internal/goexperiment [copy: internal package imported by log/slog] -> github.com/traefik/yaegi/v2/aot/go1_27/internal/goexperiment
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+note: variant exp_arenas_on.go (goexperiment.arenas) copied
+note: variant exp_boringcrypto_on.go (goexperiment.boringcrypto) copied
+note: variant exp_cgocheck2_on.go (goexperiment.cgocheck2) copied
+note: variant exp_dwarf5_on.go (goexperiment.dwarf5) copied
+note: variant exp_fieldtrack_on.go (goexperiment.fieldtrack) copied
+note: variant exp_greenteagc_off.go (!goexperiment.greenteagc) copied
+note: variant exp_heapminimum512kib_on.go (goexperiment.heapminimum512kib) copied
+note: variant exp_jsonv2_off.go (!goexperiment.jsonv2) copied
+note: variant exp_loopvar_on.go (goexperiment.loopvar) copied
+note: variant exp_mapsplitgroup_on.go (goexperiment.mapsplitgroup) copied
+note: variant exp_newinliner_on.go (goexperiment.newinliner) copied
+note: variant exp_preemptibleloops_on.go (goexperiment.preemptibleloops) copied
+note: variant exp_randomizedheapbase64_off.go (!goexperiment.randomizedheapbase64) copied
+note: variant exp_regabiargs_off.go (!goexperiment.regabiargs) copied
+note: variant exp_regabiwrappers_off.go (!goexperiment.regabiwrappers) copied
+note: variant exp_runtimefreegc_on.go (goexperiment.runtimefreegc) copied
+note: variant exp_runtimesecret_on.go (goexperiment.runtimesecret) copied
+note: variant exp_simd_on.go (goexperiment.simd) copied
+note: variant exp_sizespecializedmalloc_off.go (!goexperiment.sizespecializedmalloc) copied
+note: variant exp_staticlockranking_on.go (goexperiment.staticlockranking) copied
+
+== internal/saferio [copy: internal package imported by encoding/asn1] -> github.com/traefik/yaegi/v2/aot/go1_27/internal/saferio
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+risks: 1 uses of unsafe, 0 go statements
+
+== internal/stringslite [copy: internal package imported by fmt] -> github.com/traefik/yaegi/v2/aot/go1_27/internal/stringslite
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+note: replaced by a hand-written shim (cmd/aotgen/shims)
+
+== log/internal [copy: internal package imported by log/slog] -> github.com/traefik/yaegi/v2/aot/go1_27/log/internal
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+note: replaced by a hand-written shim (cmd/aotgen/shims)
+
+== log/slog [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/log/slog
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (10 members):
+    reflect:Pointer x1, reflect:Slice x1, reflect:Type.Elem x1, reflect:Type.Kind x2, reflect:TypeOf x1
+    reflect:Uint8 x1, reflect:Value.Bytes x1, reflect:Value.IsNil x1, reflect:Value.Kind x1
+    reflect:ValueOf x2
+missing from the twin: none
+partial in the twin: Value.Bytes (copy (no aliasing) for interpreted []byte held as []Value)
+rewrites: 5 interface assertions, 1 type switches, 1 interface comparisons, 0 interface tag switches, 2 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 102 hooks, 9 wrappers; no hook (generic reflect.Call path): none
+risks: 6 uses of unsafe, 0 go statements
+
+== log/slog/internal [copy: internal package imported by log/slog] -> github.com/traefik/yaegi/v2/aot/go1_27/log/slog/internal
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+
+== log/slog/internal/buffer [copy: internal package imported by log/slog] -> github.com/traefik/yaegi/v2/aot/go1_27/log/slog/internal/buffer
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+
+== net/rpc [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/net/rpc
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (34 members):
+    reflect:Indirect x1, reflect:MakeMap x1, reflect:MakeSlice x1, reflect:Map x1, reflect:Method x1
+    reflect:Method.Func x1, reflect:Method.IsExported x1, reflect:Method.Name x1, reflect:Method.Type x1
+    reflect:New x3, reflect:Pointer x3, reflect:PointerTo x1, reflect:Slice x1, reflect:Type x5
+    reflect:Type.Elem x6, reflect:Type.In x2, reflect:Type.Kind x4, reflect:Type.Method x1
+    reflect:Type.Name x2, reflect:Type.NumIn x2, reflect:Type.NumMethod x1, reflect:Type.NumOut x2
+    reflect:Type.Out x1, reflect:Type.PkgPath x1, reflect:Type.String x1, reflect:TypeFor x1
+    reflect:TypeOf x1, reflect:Value x4, reflect:Value.Call x1, reflect:Value.Elem x3
+    reflect:Value.Interface x3, reflect:Value.Set x2, reflect:Value.Type x1, reflect:ValueOf x1
+missing from the twin: none
+partial in the twin: none
+rewrites: 2 interface assertions, 0 type switches, 6 interface comparisons, 0 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 24 hooks, 9 wrappers; no hook (generic reflect.Call path): Client.Go
+default mux: 2 uses of http.Handle, http.DefaultServeMux and the nil-handler functions made vm.AOTHandle, AOTDefaultServeMux...
+risks: 0 uses of unsafe, 3 go statements
+
+== sigs.k8s.io/yaml [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/sigs.k8s.io/yaml
+license: sigs.k8s.io/yaml@v1.6.0, LICENSES/sigs.k8s.io_yaml.txt
+build: ok
+reflect API used (35 members):
+    reflect:Indirect x1, reflect:Interface x1, reflect:Map x1, reflect:New x3, reflect:Ptr x6
+    reflect:Slice x1, reflect:String x1, reflect:Struct x2, reflect:StructField.Anonymous x1
+    reflect:StructField.Name x1, reflect:StructField.PkgPath x1, reflect:StructField.Tag x1
+    reflect:StructField.Type x1, reflect:StructTag.Get x1, reflect:Type x9, reflect:Type.Elem x5
+    reflect:Type.Field x1, reflect:Type.Kind x2, reflect:Type.Name x3, reflect:Type.NumField x1
+    reflect:Type.NumMethod x1, reflect:TypeOf x1, reflect:Value x7, reflect:Value.Addr x1
+    reflect:Value.CanAddr x1, reflect:Value.CanSet x2, reflect:Value.Elem x4, reflect:Value.Field x1
+    reflect:Value.Interface x2, reflect:Value.IsNil x3, reflect:Value.Kind x10, reflect:Value.Set x1
+    reflect:Value.Type x7, reflect:ValueOf x1, reflect:Zero x1
+missing from the twin: none
+partial in the twin: none
+rewrites: 2 interface assertions, 0 type switches, 0 interface comparisons, 0 interface tag switches, 2 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 7 hooks, 3 wrappers; no hook (generic reflect.Call path): JSONObjectToYAMLObject
+type maps: 1 package-level maps indexed by reflect.Type made vm.TypeMap
+
+== sort [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/sort
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (3 members):
+    reflectlite:Swapper x2, reflectlite:Value.Len x3, reflectlite:ValueOf x3
+missing from the twin: none
+partial in the twin: none
+rewrites: 0 interface assertions, 0 type switches, 0 interface comparisons, 0 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 33 hooks, 1 wrappers; no hook (generic reflect.Call path): none
+
+== text/template [aot: target] -> github.com/traefik/yaegi/v2/aot/go1_27/text/template
+license: Go (BSD-3-Clause), LICENSES/Go-BSD-3-Clause.txt
+build: ok
+reflect API used (89 members):
+    reflect:Array x5, reflect:Bool x3, reflect:Chan x6, reflect:Complex128 x3, reflect:Complex64 x3
+    reflect:Float32 x3, reflect:Float64 x3, reflect:Func x7, reflect:Int x6, reflect:Int16 x6
+    reflect:Int32 x6, reflect:Int64 x6, reflect:Int8 x6, reflect:Interface x10, reflect:Invalid x5
+    reflect:Kind x1, reflect:Map x7, reflect:New x6, reflect:Pointer x8, reflect:PointerTo x3
+    reflect:SendDir x1, reflect:Slice x7, reflect:String x6, reflect:Struct x5
+    reflect:StructField.Index x1, reflect:StructField.IsExported x1, reflect:Type x12
+    reflect:Type.AssignableTo x6, reflect:Type.CanSeq x1, reflect:Type.CanSeq2 x1, reflect:Type.ChanDir x1
+    reflect:Type.Comparable x1, reflect:Type.ConvertibleTo x1, reflect:Type.Elem x7
+    reflect:Type.FieldByName x2, reflect:Type.Implements x4, reflect:Type.In x7
+    reflect:Type.IsVariadic x5, reflect:Type.Key x2, reflect:Type.Kind x5, reflect:Type.NumIn x7
+    reflect:Type.NumMethod x2, reflect:Type.NumOut x2, reflect:Type.Out x2, reflect:TypeFor x4
+    reflect:Uint x6, reflect:Uint16 x6, reflect:Uint32 x6, reflect:Uint64 x6, reflect:Uint8 x6
+    reflect:Uintptr x6, reflect:UnsafePointer x1, reflect:Value x138, reflect:Value.Addr x3
+    reflect:Value.Bool x3, reflect:Value.Call x1, reflect:Value.CanAddr x3, reflect:Value.Cap x1
+    reflect:Value.Complex x3, reflect:Value.Convert x1, reflect:Value.Elem x11, reflect:Value.Equal x1
+    reflect:Value.FieldByIndexErr x1, reflect:Value.Float x5, reflect:Value.Index x2
+    reflect:Value.Int x14, reflect:Value.Interface x6, reflect:Value.IsNil x7, reflect:Value.IsValid x18
+    reflect:Value.Kind x24, reflect:Value.Len x8, reflect:Value.MapIndex x2, reflect:Value.MethodByName x1
+    reflect:Value.Recv x1, reflect:Value.Seq x2, reflect:Value.Seq2 x1, reflect:Value.SetBool x1
+    reflect:Value.SetComplex x1, reflect:Value.SetFloat x1, reflect:Value.SetInt x1
+    reflect:Value.SetString x1, reflect:Value.SetUint x1, reflect:Value.Slice x1, reflect:Value.Slice3 x1
+    reflect:Value.String x5, reflect:Value.Type x43, reflect:Value.Uint x10, reflect:ValueOf x20
+    reflect:Zero x5
+missing from the twin: none
+partial in the twin: Value.Complex (complex numbers are not supported by the VM), Value.SetComplex (complex numbers are not supported by the VM)
+rewrites: 2 interface assertions, 1 type switches, 10 interface comparisons, 0 interface tag switches, 0 composite unboxes, 0 vet fixes, 0 linknames removed, 0 assertions left native
+glue: 30 hooks, 5 wrappers; no hook (generic reflect.Call path): Template.Funcs

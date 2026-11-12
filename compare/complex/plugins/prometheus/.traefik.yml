@@ -1,0 +1,8 @@
+displayName: complex prometheus
+type: middleware
+import: example.com/complex/prometheus
+basePkg: prometheusplug
+summary: yaegi v2 study plugin
+useUnsafe: true
+testData:
+  prefix: X-Complex

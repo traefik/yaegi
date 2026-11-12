@@ -1,0 +1,20 @@
+# cmd/stdtests, go1.27.3 linux/amd64, -test.short
+# package: run (excluded), native pass; vm and aot: pass / native pass
+fmt:             run   66 (excluded   2), native pass   65, vm   65 / 65, aot   65 / 65
+sort:            run   46 (excluded   2), native pass   45, vm   45 / 45, aot   45 / 45
+slices:          run  106 (excluded   0), native pass  106, vm  103 / 106, aot  103 / 106
+maps:            run   10 (excluded   0), native pass   10, vm   10 / 10, aot   10 / 10
+io:              run   70 (excluded   2), native pass   70, vm   66 / 70, aot   66 / 70
+bufio:           run   81 (excluded   7), native pass   81, vm   80 / 81, aot   80 / 81
+bytes:           run  163 (excluded   0), native pass  163, vm  158 / 163, aot  158 / 163
+strings:         run  124 (excluded   4), native pass  124, vm  120 / 124, aot  120 / 124
+strconv:         run   67 (excluded   4), native pass   66, vm   65 / 66, aot   65 / 66
+errors:          run   22 (excluded   0), native pass   22, vm   22 / 22, aot   22 / 22
+encoding/json:   run   28 (excluded   0), native pass   27, vm   27 / 27, aot   27 / 27
+encoding/xml:    run    5 (excluded   0), native pass    5, vm    5 / 5, aot    5 / 5
+flag:            run   21 (excluded   8), native pass   19, vm   19 / 19, aot   19 / 19
+context:         run   42 (excluded   4), native pass   42, vm   40 / 42, aot   40 / 42
+math/big:        run   15 (excluded   0), native pass   15, vm   14 / 15, aot   14 / 15
+text/template:   run    9 (excluded   0), native pass    8, vm    8 / 8, aot    8 / 8
+total:           run  875 (excluded  33), native pass  868, vm  847 / 868, aot  847 / 868
+yaegi v2 failures by class (tests, vm or aot): allocs 17, frames 2, wrong 2

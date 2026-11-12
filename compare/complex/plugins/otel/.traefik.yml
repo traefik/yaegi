@@ -1,0 +1,8 @@
+displayName: complex otel
+type: middleware
+import: example.com/complex/otel
+basePkg: otelplug
+summary: yaegi v2 study plugin
+useUnsafe: true
+testData:
+  prefix: X-Complex

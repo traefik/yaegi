@@ -1,0 +1,2 @@
+edition = "2023"
+hello from an embedded file

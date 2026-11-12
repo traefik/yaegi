@@ -1,0 +1,102 @@
+# aotcheck -bench -reps 5 (3 passes, minimum kept), Apple M3 Pro, go1.26.8, 2026-10-16
+program	mode	status	ns_per_op	spread_pct
+asn1	go	ref	2917	22
+asn1	native	DIFF	21398	425
+asn1	interp	UNSUP	0	
+asn1	aot	MATCH	17194	4
+binary	go	ref	335	2
+binary	native	UNSUP	0	
+binary	interp	UNSUP	0	
+binary	aot	MATCH	5202	1
+cast	go	ref	255	4
+cast	native	DIFF	2805	5
+cast	interp	DIFF	6048	10
+cast	aot	MATCH	2667	10
+errors	go	ref	72	1
+errors	native	DIFF	0	
+errors	interp	UNSUP	0	
+errors	aot	MATCH	1257	0
+flag	go	ref	423	3
+flag	native	DIFF	0	
+flag	interp	MATCH	5918	3
+flag	aot	MATCH	3540	5
+fmt	go	ref	277	6
+fmt	native	DIFF	2703	1
+fmt	interp	UNSUP	0	
+fmt	aot	MATCH	2843	18
+gob	go	ref	14591	3
+gob	native	UNSUP	0	
+gob	interp	UNSUP	0	
+gob	aot	MATCH	64916	1
+goccyyaml	go	ref	38166	119
+goccyyaml	native	DIFF	0	
+goccyyaml	interp	UNSUP	0	
+goccyyaml	aot	MATCH	93168	6
+gocmp	go	ref	19192	0
+gocmp	native	UNSUP	0	
+gocmp	interp	UNSUP	0	
+gocmp	aot	MATCH	73983	6
+gotoml	go	ref	4247	2
+gotoml	native	DIFF	0	
+gotoml	interp	DIFF	0	
+gotoml	aot	MATCH	15121	7
+htmltemplate	go	ref	3362	1
+htmltemplate	native	DIFF	10203	1
+htmltemplate	interp	UNSUP	0	
+htmltemplate	aot	MATCH	12838	5
+json	go	ref	5289	4
+json	native	DIFF	0	
+json	interp	UNSUP	0	
+json	aot	MATCH	20293	3
+jsoniter	go	ref	624	3
+jsoniter	native	DIFF	7217	11
+jsoniter	interp	DIFF	0	
+jsoniter	aot	DIFF	0	
+k8syaml	go	ref	33050	1
+k8syaml	native	DIFF	0	
+k8syaml	interp	DIFF	0	
+k8syaml	aot	MATCH	61380	6
+mapstructure	go	ref	4452	3
+mapstructure	native	DIFF	23939	8
+mapstructure	interp	UNSUP	0	
+mapstructure	aot	MATCH	18129	15
+mapstructure2	go	ref	6558	3
+mapstructure2	native	DIFF	30176	17
+mapstructure2	interp	UNSUP	0	
+mapstructure2	aot	MATCH	22168	5
+rpc	go	ref	4350	1
+rpc	native	DIFF	0	
+rpc	interp	UNSUP	0	
+rpc	aot	MATCH	8358	6
+slog	go	ref	578	2
+slog	native	DIFF	3405	2
+slog	interp	UNSUP	0	
+slog	aot	MATCH	3645	1
+sort	go	ref	2350	3
+sort	native	DIFF	123545	5
+sort	interp	MATCH	98270	4
+sort	aot	MATCH	116576	2
+sql	go	ref	643	1
+sql	native	DIFF	0	
+sql	interp	UNSUP	0	
+sql	aot	MATCH	11257	3
+template	go	ref	1583	2
+template	native	UNSUP	0	
+template	interp	UNSUP	0	
+template	aot	MATCH	10050	3
+toml	go	ref	33208	1
+toml	native	DIFF	0	
+toml	interp	UNSUP	0	
+toml	aot	MATCH	81960	6
+validator	go	ref	1565	0
+validator	native	DIFF	17919	12
+validator	interp	UNSUP	0	
+validator	aot	MATCH	11528	8
+xml	go	ref	8146	5
+xml	native	DIFF	0	
+xml	interp	MATCH	633980	14
+xml	aot	MATCH	37489	1
+yamlv3	go	ref	18499	1
+yamlv3	native	DIFF	0	
+yamlv3	interp	DIFF	0	
+yamlv3	aot	MATCH	45190	2

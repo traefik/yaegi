@@ -1,0 +1,65 @@
+yaegi v2 conformance run: 2026-10-25, go1.27.3, go directive 1.22, 8 jobs, 1m21s
+
+programs: 1013
+
+by status
+  ERR_OTHERMSG      33
+  LOADFAIL           2
+  PASS             906
+  PASS_ERR          13
+  PASS_ERR_GC       20
+  SKIP              32
+  UNSUPPORTED        1
+  WRONG              6
+
+by group
+                                      total   pass   fail  unsupported  skipped
+  all                                  1013    939     41            1       32
+
+by origin
+                                      total   pass   fail  unsupported  skipped
+  fork:ai/fix-empty-typeswitch-clauses      5      5      0            0        0
+  fork:ai/fix-upstream-1341               2      2      0            0        0
+  fork:ai/fix-upstream-1414               2      2      0            0        0
+  fork:ai/fix-upstream-1437               5      5      0            0        0
+  fork:ai/fix-upstream-1518               2      2      0            0        0
+  fork:ai/fix-upstream-1674               9      5      4            0        0
+  master                                952    885     34            1       32
+  upstream-pr:1729                        5      5      0            0        0
+  upstream-pr:1730                        1      1      0            0        0
+  upstream-pr:1732                       16     13      3            0        0
+  upstream-pr:1737                       14     14      0            0        0
+
+by kind
+                                      total   pass   fail  unsupported  skipped
+  (none)                                 31      0      0            0       31
+  Error                                  66     33     33            0        0
+  Output                                916    906      8            1        1
+
+master Output: programs passing: 860 / 868 (+0 with matching stdout but non-zero exit)
+
+by family (pass/total, largest first)
+  issue 112/115 struct 64/65 interface 53/53 switch 47/47 a 44/44 method 40/42 type 25/35 map 31/31
+  fun 26/28 const 26/27 gen 23/27 for 22/22 assign 19/21 closure 21/21 composite 21/21 select 16/17
+  time 16/17 var 16/16 redeclaration 4/15 upstream 13/15 if 12/12 op 10/12 run 12/12 variadic 12/12
+  chan 9/11 defer 10/10 import 9/10 ptr 10/10 range 9/10 server 0/10 unsafe 8/10 cli 8/8
+  ret 8/8 scope 8/8 bin 6/7 bool 7/7 addr 6/6 str 6/6 and 5/5 append 5/5
+  assert 5/5 complex 5/5 cont 5/5 named 5/5 recover 5/5 break 4/4 convert 4/4 l 2/4
+  make 4/4 math 4/4 nil 4/4 opint 4/4 opuint 4/4 ptr_array 4/4 recurse 4/4 restricted 4/4
+  shift 4/4 add 3/3 comp 3/3 copy 3/3 io 2/3 max 1/3 min 2/3 new 3/3
+  not 3/3 or 3/3 pkgname 3/3 rune 3/3 bltn 2/2 clear 1/2 context 2/2 export 0/2
+  fib 1/2 goto 2/2 init 2/2 iota 2/2 opfloat 2/2 p 1/2 bad 0/1 binstruct_ptr_map 1/1
+  binstruct_ptr_slice 1/1 binstruct_slice 1/1 cap 1/1 d 1/1 delete 1/1 eval 0/1 factor 0/1 file_access 1/1
+  flag 1/1 heap 1/1 imag 1/1 inc 1/1 inception 0/1 ipp_as_key 1/1 len 1/1 neg 1/1
+  num 1/1 opstring 1/1 os 1/1 panic 1/1 primes 1/1 print 1/1 real 1/1 selector 1/1
+  sieve 1/1 slice 1/1 tag 1/1
+
+top failure causes
+    33 ERR_OTHERMSG: -: # command-line-arguments
+     2 LOADFAIL: load: command-line-arguments is not a main package
+     2 WRONG: "main.T"
+     1 UNSUPPORTED: unsupported: unsafe: viewing a uint16 as a [2]uint8 needs byte-level memory
+     1 WRONG: "&{property:value} param"
+     1 WRONG: "interface conversion: interface {} is int, not string\ninterface conversion: interface {} is nil, not"
+     1 WRONG: "num: 643630023"
+     1 WRONG: "{\"B\":\"v\"} <nil>\n{\"B\":\"p\"} <nil>\nslice marshal err: false\nmap[B:u] <nil>\nA<v> A<p>"

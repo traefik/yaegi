@@ -1,0 +1,373 @@
+# Credential plugins of the catalog, for the "auth" scenario of
+# compare/catalog/run (README.md, "Other scenarios").
+#
+# The class comes from the Config struct, the code and the README of each
+# plugin. config replaces the manifest testData: mapstructure (Traefik's
+# decoder) matches the Go field names without case, it ignores the json
+# tags, so the keys below are field names. Placeholders, expanded by the
+# runner: {{issuer}} and {{backend}} (the local server), {{jwks_url}},
+# {{rsa_public_pem}}, {{rsa_cert_pem}}, {{hmac_secret}}, {{token:<variant>}},
+# {{basic:user:password}} (base64). Placeholders filled by the driver from the
+# last redirection: {{state}}, {{code}}, {{redirect_uri}}, {{callback}}
+# (redirect_uri with code and state added).
+#
+# token: one request per JWT variant of alg (valid, expired, badsig, minimal,
+# floatexp, wrongiss, wrongaud, notyet, fresh), plus none, garbage and no
+# token. requests: explicit requests (cookies: send the cookies set by the
+# previous responses). mocks: answers of the local server for this plugin
+# (require: exact request headers; contains: text of the request body).
+#
+# A plugin that cannot be configured locally has skip: <reason>; it stays in
+# results/auth.tsv.
+
+# ---- API keys and basic auth ----
+
+- repo: dtomlinson91/traefik-api-key-middleware
+  class: apikey
+  config:
+    authenticationHeader: true
+    authenticationHeaderName: X-API-KEY
+    bearerHeader: true
+    bearerHeaderName: Authorization
+    removeHeadersOnSuccess: true
+    keys: [catalog-key-1, catalog-key-2]
+  requests:
+    - {name: no key}
+    - {name: header valid, header: [[X-Api-Key, catalog-key-2]]}
+    - {name: header invalid, header: [[X-Api-Key, catalog-key-3]]}
+    - {name: bearer valid, header: [[Authorization, "Bearer catalog-key-1"]]}
+    - {name: bearer invalid, header: [[Authorization, "Bearer nope"]]}
+    - {name: bearer without prefix, header: [[Authorization, "catalog-key-1"]]}
+    - {name: post valid, method: POST, target: "http://example.com/api/data", body: '{"a":1}', header: [[X-Api-Key, catalog-key-1], [Content-Type, application/json]]}
+
+- repo: Septima/traefik-api-key-auth
+  class: apikey
+  config:
+    authenticationHeader: true
+    authenticationHeaderName: X-API-KEY
+    bearerHeader: true
+    bearerHeaderName: Authorization
+    queryParam: true
+    queryParamName: token
+    pathSegment: true
+    removeHeadersOnSuccess: true
+    internalForwardHeaderName: X-Api-Key-Used
+    keys: [catalog-key-1, catalog-key-2]
+  requests:
+    - {name: no key}
+    - {name: header valid, header: [[X-Api-Key, catalog-key-2]]}
+    - {name: header invalid, header: [[X-Api-Key, catalog-key-3]]}
+    - {name: bearer valid, header: [[Authorization, "Bearer catalog-key-1"]]}
+    - {name: query valid, target: "http://example.com/private?token=catalog-key-1&x=1"}
+    - {name: query invalid, target: "http://example.com/private?token=nope"}
+    - {name: path segment valid, target: "http://example.com/catalog-key-2/page"}
+    - {name: path segment invalid, target: "http://example.com/catalog-key-9/page"}
+
+- repo: Aetherinox/traefik-api-token-middleware
+  class: apikey
+  note: "yaegi v2 refuses the code at load time (unused variables, invalid Go): the scenario still runs under yaegi v0"
+  config:
+    authenticationHeader: true
+    authenticationHeaderName: X-API-TOKEN
+    authenticationErrorMsg: "Access Denied"
+    bearerHeader: true
+    bearerHeaderName: Authorization
+    removeHeadersOnSuccess: true
+    tokens: [catalog-token-1]
+  requests:
+    - {name: no token}
+    - {name: header valid, header: [[X-Api-Token, catalog-token-1]]}
+    - {name: header invalid, header: [[X-Api-Token, catalog-token-2]]}
+    - {name: bearer valid, header: [[Authorization, "Bearer catalog-token-1"]]}
+
+- repo: leonjza/trauth
+  class: basic
+  note: "htpasswd users with bcrypt and {SHA} hashes; a valid login sets a gorilla session cookie and redirects"
+  config:
+    domain: example.com
+    realm: "catalog"
+    cookiename: trauth-catalog
+    cookiepath: /
+    cookiekey: "97zh8jwic74b5jcxc09nnxroewfzvn3p"
+    cookiesecure: false
+    cookiehttponly: true
+    users: |
+      user42:$2a$05$LuOr/QQzbst/UOUH1vk/fONjANOXRYIcuLqlFQYknr5mbaDEmwV16
+      shauser:{SHA}rcRLi9fMkxC0q7/l5GTD64IM2nM=
+  requests:
+    - {name: no credentials}
+    - {name: wrong password, header: [[Authorization, "Basic {{basic:user42:wrong}}"]]}
+    - {name: unknown user, header: [[Authorization, "Basic {{basic:nobody:catalog-password}}"]]}
+    - {name: bcrypt user, header: [[Authorization, "Basic {{basic:user42:catalog-password}}"]]}
+    - {name: session cookie, cookies: true}
+    - {name: sha user, header: [[Authorization, "Basic {{basic:shauser:catalog-password}}"]]}
+    - {name: malformed basic, header: [[Authorization, "Basic !!!"]]}
+
+- repo: paladium/traefikkeycloak
+  class: other
+  note: "only checks that the token cookie is present (the verification is commented out in the plugin)"
+  config:
+    URL: "{{issuer}}"
+    Token: Auth-Token
+    Realm: catalog
+    ParsedToken: Parsed-Token
+  requests:
+    - {name: no cookie}
+    - {name: token cookie, header: [[Cookie, "Auth-Token={{token:rs256-valid}}"]]}
+
+# ---- JWT ----
+
+- repo: 23deg/jwt-middleware
+  class: jwt
+  note: "HS256 signature check only, no claim check; forwards the payload in a header"
+  config:
+    secret: "{{hmac_secret}}"
+    proxyHeaderName: X-Jwt-Payload
+    authHeader: Authorization
+    headerPrefix: Bearer
+  token: {alg: HS256, header: Authorization, prefix: "Bearer "}
+
+- repo: agilezebra/jwt-middleware
+  class: jwt
+  note: "keys fetched from the local issuer (openid-configuration then JWKS); golang-jwt v5 parser"
+  config:
+    issuers: ["{{issuer}}"]
+    require:
+      aud: catalog-client
+      groups: admins
+    headerMap:
+      X-User: sub
+      X-Email: email
+      X-Org: org
+    forwardToken: false
+  token: {alg: RS256, header: Authorization, prefix: "Bearer "}
+
+- repo: traefik-plugins/traefik-jwt-plugin
+  class: jwt
+  note: "fixed RSA public key and the local JWKS (forced refresh on an unknown kid); no OPA (OpaUrl empty)"
+  config:
+    Required: true
+    Keys: ["{{rsa_public_pem}}", "{{jwks_url}}"]
+    # The JWKS is fetched by a background goroutine started in New: without
+    # a forced refresh, the result of the first requests depends on whether
+    # that goroutine has finished (a race of the plugin, not of the engine).
+    ForceRefreshKeys: true
+    PayloadFields: [exp, sub]
+    Aud: catalog-client
+    JwtHeaders:
+      X-Subject: sub
+      X-Email: email
+  token: {alg: RS256, header: Authorization, prefix: "Bearer "}
+
+- repo: MuXiu1997/traefik-github-oauth-plugin
+  class: oauth
+  note: "the HS256 session cookie is checked with golang-jwt v4 (claims id and login); the GitHub side goes through its own server, mocked under {{backend}}/ghoauth"
+  config:
+    ApiBaseUrl: "{{backend}}/ghoauth/"
+    AuthPath: /_auth
+    JwtSecretKey: "{{hmac_secret}}"
+    LogLevel: debug
+    Whitelist:
+      Ids: ["996"]
+      Logins: [user42]
+  token: {alg: HS256, cookie: com.github.MuXiu1997.traefik-github-oauth-plugin.jwt}
+  requests:
+    - {name: auth callback, target: "http://example.com/_auth?rid=catalog-rid"}
+    - {name: session cookie, cookies: true}
+  mocks:
+    - path: /ghoauth/oauth/page-url
+      method: POST
+      body: '{"oauth_page_url":"https://github.example.com/login/oauth/authorize?rid=catalog-rid"}'
+    - path: /ghoauth/oauth/result
+      body: '{"redirect_uri":"http://example.com/private/page?x=1","github_user_id":"996","github_user_login":"user42"}'
+
+- repo: luizfonseca/traefik-github-oauth-plugin
+  class: oauth
+  note: "the HS256 session cookie is checked with golang-jwt v4 MapClaims (exp, teams); its own server is mocked under {{backend}}/ghoauth2"
+  config:
+    ApiBaseUrl: "{{backend}}/ghoauth2/"
+    AuthPath: /_auth
+    JwtSecretKey: "{{hmac_secret}}"
+    JwtExpirationInHours: 24
+    LogLevel: debug
+    Whitelist:
+      Ids: ["996"]
+      Logins: [user42]
+      Teams: ["876255"]
+  token: {alg: HS256, cookie: com.github.oauth.priv.jwt}
+  requests:
+    - {name: auth callback, target: "http://example.com/_auth?rid=catalog-rid"}
+    - {name: session cookie, cookies: true}
+  mocks:
+    - path: /ghoauth2/oauth/page-url
+      method: POST
+      body: '{"oauth_page_url":"https://github.example.com/login/oauth/authorize?rid=catalog-rid"}'
+    - path: /ghoauth2/oauth/result
+      body: '{"redirect_uri":"http://example.com/private/page?x=1","github_user_id":"996","github_user_login":"user42","github_team_ids":["876255"],"github_user_two_factor_auth":true}'
+
+# ---- OIDC ----
+
+- repo: sevensolutions/traefik-oidc-auth
+  class: oidc
+  note: "local issuer; bearer access tokens through AuthorizationHeader, then the code flow with a session cookie"
+  config:
+    LogLevel: debug
+    Secret: "catalog-secret-0123456789abcdefg"
+    Provider:
+      Url: "{{issuer}}"
+      ClientId: catalog-client
+      ClientSecret: catalog-secret
+      TokenValidation: AccessToken
+    Scopes: [openid, profile, email]
+    CallbackUri: /oidc/callback
+    SessionCookie:
+      Secure: false
+    AuthorizationHeader:
+      Name: Authorization
+    Authorization:
+      AssertClaims:
+        - Name: groups
+          AnyOf: [admins]
+    Headers:
+      - Name: X-Oidc-User
+        Value: "{{ .claims.preferred_username }}"
+      - Name: X-Oidc-Org
+        Value: "{{ .claims.org.name }}"
+  token: {alg: RS256, header: Authorization, prefix: "Bearer "}
+  requests:
+    - {name: login redirect, header: [[Accept, text/html]]}
+    - {name: callback, target: "{{callback}}", cookies: true, header: [[Accept, text/html]]}
+    - {name: session, cookies: true, header: [[Accept, text/html]]}
+
+- repo: lukaszraczylo/traefikoidc
+  class: oidc
+  note: "local issuer; bearer path (EnableBearerAuth, needs a recent iat: variant fresh) and the code flow with a session cookie"
+  config:
+    providerURL: "{{issuer}}"
+    clientID: catalog-client
+    clientSecret: catalog-secret
+    audience: catalog-client
+    sessionEncryptionKey: catalog-session-key-0123456789abcdef
+    callbackURL: /oauth2/callback
+    forceHTTPS: false
+    logLevel: debug
+    rateLimit: 100
+    allowedRolesAndGroups: [admins]
+    enableBearerAuth: true
+  token: {alg: RS256, header: Authorization, prefix: "Bearer "}
+  requests:
+    - {name: login redirect, header: [[Accept, text/html]]}
+    - {name: callback, target: "{{callback}}", cookies: true, header: [[Accept, text/html]]}
+    - {name: session, cookies: true, header: [[Accept, text/html]]}
+
+- repo: Gwojda/keycloakopenid
+  class: oidc
+  note: "Keycloak paths under the local issuer (realms/catalog/protocol/openid-connect); tokens checked by introspection"
+  config:
+    KeycloakURL: "{{issuer}}"
+    ClientID: catalog-client
+    ClientSecret: catalog-secret
+    KeycloakRealm: catalog
+    Scope: openid
+    TokenCookieName: AUTH_TOKEN
+    UseAuthHeader: true
+    UserClaimName: preferred_username
+    UserHeaderName: X-Forwarded-User
+  requests:
+    - {name: login redirect, header: [[X-Forwarded-Proto, http], [X-Forwarded-Host, example.com]]}
+    - {name: callback, target: "{{callback}}", header: [[X-Forwarded-Proto, http], [X-Forwarded-Host, example.com]]}
+    - {name: session, cookies: true, header: [[X-Forwarded-Proto, http], [X-Forwarded-Host, example.com]]}
+    - {name: valid cookie, header: [[Cookie, 'Authorization="Bearer {{token:rs256-valid}}"'], [X-Forwarded-Proto, http], [X-Forwarded-Host, example.com]]}
+    - {name: expired cookie, header: [[Cookie, 'Authorization="Bearer {{token:rs256-expired}}"'], [X-Forwarded-Proto, http], [X-Forwarded-Host, example.com]]}
+    - {name: bad signature cookie, header: [[Cookie, 'Authorization="Bearer {{token:rs256-badsig}}"'], [X-Forwarded-Proto, http], [X-Forwarded-Host, example.com]]}
+
+- repo: andrewkroh/google-oidc-auth-middleware
+  class: oidc
+  note: "partial: the Google endpoints are constants (oidc.go:27-28), so only the redirection to Google and the refusal of bad cookies and callbacks are tested, not a valid session"
+  config:
+    OIDC:
+      ClientID: catalog-client.apps.googleusercontent.com
+      ClientSecret: catalog-secret
+    Cookie:
+      Secret: catalog-cookie-secret
+    Authorized:
+      Emails: [user42@example.com]
+      Domains: [example.com]
+  requests:
+    - {name: login redirect, header: [[Accept, text/html]]}
+    - {name: forged session cookie, header: [[Cookie, "oidc_auth={{token:hs256-valid}}"]]}
+    - {name: callback without state, target: "http://example.com/oauth2/callback?code=abc"}
+
+# ---- forward auth to a service ----
+
+- repo: xabinapal/traefik-authentik-forward-plugin
+  class: forward-auth
+  note: "authentik outpost mocked under {{backend}}/ak: 200 with X-Authentik-* headers for the session cookie, 401 otherwise"
+  config:
+    address: "{{backend}}/ak"
+    unauthorizedStatusCode: 401
+    redirectStatusCode: 302
+    unauthorizedPaths: ["^/.*$"]
+    redirectPaths: ["^/app/.*$"]
+    timeout: 5s
+  requests:
+    - {name: no session}
+    - {name: valid session, header: [[Cookie, authentik_proxy_catalog=session-ok]]}
+    - {name: invalid session, header: [[Cookie, authentik_proxy_catalog=session-bad]]}
+    - {name: redirect path, target: "http://example.com/app/home"}
+  mocks:
+    - path: /ak/outpost.goauthentik.io/auth/nginx
+      require: [[Cookie, authentik_proxy_catalog=session-ok]]
+      header:
+        X-Authentik-Username: user42
+        X-Authentik-Email: user42@example.com
+        X-Authentik-Groups: admins|dev
+      body: ""
+    - path: /ak/outpost.goauthentik.io/auth/nginx
+      status: 401
+      body: ""
+
+- repo: fosrl/badger
+  class: forward-auth
+  note: "Pangolin API mocked under {{backend}}/pangolin: verify-session answers valid for the session cookie p_session_token=catalog-session"
+  config:
+    apiBaseUrl: "{{backend}}/pangolin"
+    userSessionCookieName: p_session_token
+    resourceSessionRequestParam: p_session_request
+  requests:
+    - {name: no session}
+    - {name: valid session, header: [[Cookie, p_session_token=catalog-session]]}
+    - {name: invalid session, header: [[Cookie, p_session_token=other]]}
+    - {name: session exchange, target: "http://example.com/private?p_session_request=catalog-request"}
+  mocks:
+    - path: /pangolin/badger/verify-session
+      contains: catalog-session
+      body: '{"data":{"valid":true,"userId":"u42","username":"user42","email":"user42@example.com","name":"User 42","role":"admin"}}'
+    - path: /pangolin/badger/verify-session
+      body: '{"data":{"valid":false,"redirectUrl":"http://auth.example.com/login"}}'
+    - path: /pangolin/badger/exchange-session
+      body: '{"data":{"valid":true,"cookie":"p_session_token=catalog-session; Path=/; HttpOnly"}}'
+
+- repo: ZeroGachis/traefik-auth-middleware
+  class: basic
+  note: "user and password in query parameters, exchanged at the local token endpoint (password grant: user42 / catalog-password)"
+  config:
+    IAM:
+      Url: "{{issuer}}/token"
+      ClientId: catalog-client
+      UserQueryParamName: Username
+      PasswordQueryParamName: Password
+  requests:
+    - {name: no credentials}
+    - {name: valid credentials, target: "http://example.com/private?Username=user42&Password=catalog-password"}
+    - {name: wrong password, target: "http://example.com/private?Username=user42&Password=wrong"}
+
+# ---- not configured ----
+
+- repo: wiltonsr/ldapAuth
+  class: ldap
+  skip: "needs an LDAP server (go-ldap client): the harness has no LDAP mock"
+
+- repo: hhftechnology/tailscale-access
+  class: other
+  skip: "no credential: it authorizes by the Tailscale address range of the client"

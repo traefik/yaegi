@@ -1,0 +1,8 @@
+displayName: complex lua
+type: middleware
+import: example.com/complex/lua
+basePkg: luaplug
+summary: yaegi v2 study plugin
+useUnsafe: true
+testData:
+  prefix: X-Complex

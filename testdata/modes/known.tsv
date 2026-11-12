@@ -1,0 +1,7 @@
+# The cases of the reflect battery that do not give the output of the
+# compiled program today, per mode (v1: default mode, v1aot: yaegi -aot),
+# with their verdict (run.sh). check.sh fails on any other failure.
+# WRONG is a silent difference (TODO.md section 1): fix it, or make it
+# fail with an error, and remove its line.
+# case	mode	verdict	why
+lib_validator	v1	REFUSED	golang.org/x/sys/cpu is interpreted and has assembly

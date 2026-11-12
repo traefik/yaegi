@@ -1,0 +1,151 @@
+# Probes of testdata/boundary that do not give the output of go run yet,
+# per mode (vm: default mode, aot: yaegi -aot, restricted: yaegi v2
+# -restricted -aot, the mode of Traefik's plugins). TestBoundary fails on any
+# other difference, and when a probe listed here gives the output of Go:
+# then remove its line. Class: wrong (a silent wrong result), crash (an
+# error of the VM, or a panic where Go has none, or none where Go has
+# one), message (only the panic value or the text of a message differs).
+# restricted (restricted mode only): a difference that the restricted mode
+# makes on purpose, with no issue: a program it refuses (an import or a
+# function that plugins cannot use), or a state of its own (os.Stdin, the
+# default registries of the standard library). The probe "" is the output
+# before the first probe (the error of a refused program).
+# A mode with a release (vm@go1.27) is for that Go release only.
+# The issue column is a short name of the cause, shared by the probes
+# with the same cause ("-" when there is no issue).
+# probe	mode	class	issue	why
+context.go:String/program	aot	wrong	context-string	String names the wrapper of a program context
+context.go:String/program	vm	wrong	context-string	String names the wrapper of a program context
+crypto_tls.go:QUIC	aot	wrong	native-only	QUIC with program keys
+crypto_tls.go:QUIC	vm	wrong	native-only	QUIC with program keys
+crypto_x509.go:pkix/FillFromRDNSequence	vm	wrong	pkix	pkix with a program value
+crypto_x509.go:pkix/String	aot	wrong	pkix	pkix with a program value
+crypto_x509.go:pkix/String	vm	wrong	pkix	pkix with a program value
+debug_dwarf.go:LineReader	vm	wrong	named-type	a named int64 of the program taken as int64
+debug_dwarf.go:Ranges	vm	wrong	named-type	a named int64 of the program taken as int64
+encoding_asn1.go:Marshal/Rec	vm	wrong	named-type	the SET suffix of a named type is not seen
+encoding_asn1.go:Marshal/values	vm	wrong	named-type	named types taken as their underlying type
+encoding_asn1.go:Unmarshal/Rec	vm	wrong	named-type	named types taken as their underlying type
+encoding_binary.go:Decode/basic	vm	wrong	named-type	named types taken as their underlying type
+fmt.go:Containers/Stringers	vm	wrong	named-type	%#v of a []fmt.Stringer names the underlying types
+go_ast.go:Fprint	aot	wrong	native-field	ast.Fprint of program values prints wrappers
+go_ast.go:Fprint	vm	wrong	native-field	ast.Fprint of program values prints wrappers
+go_ast.go:Walk/unexpected	aot	wrong	native-field	a program node that embeds *ast.Ident
+go_ast.go:Walk/unexpected	vm	wrong	native-field	a program node that embeds *ast.Ident
+go_doc.go:constant.Make	vm	wrong	named-type	constant.Make of a named bool/int/string
+go_parser.go:ParseExpr/src	vm	wrong	named-type	named string/[]byte sources and program readers
+go_parser.go:ParseFile/src	vm	wrong	named-type	named string/[]byte sources and program readers
+go_printer.go:Fprint/slices	aot	wrong	native-field	program node slices taken as []ast.Decl
+go_printer.go:Fprint/slices	vm	wrong	native-field	program node slices taken as []ast.Decl
+image.go:Decode/reader	aot	wrong	native-only	Peek of a program reader not used: an optimization only, not added (known limit)
+image.go:Decode/reader	vm	wrong	native-only	Peek of a program reader not used: an optimization only, not added (known limit)
+net.go:DefaultResolver/alt	vm	wrong	named-type	a named func type of the program taken as the unnamed one
+net.go:Resolver/alt	vm	wrong	named-type	a named func type of the program taken as the unnamed one
+net.go:TCPConn.ReadFrom	aot	wrong	native-only	SyscallConn of a program reader not used: an optimization only, not added (known limit)
+net.go:TCPConn.ReadFrom	vm	wrong	native-only	SyscallConn of a program reader not used: an optimization only, not added (known limit)
+net_http_3.go:Transport/RegisterProtocol	aot	wrong	native-only	reflect on a program RoundTripper struct (known limit)
+net_http_3.go:Transport/RegisterProtocol	vm	wrong	native-only	reflect on a program RoundTripper struct (known limit)
+net_http_3.go:Transport/alt	aot	wrong	native-only	IsHTTP2NoCachedConnError of a program error (x/net/http2), not added
+net_http_3.go:Transport/alt	vm	wrong	native-only	IsHTTP2NoCachedConnError of a program error (x/net/http2), not added
+net_http_fcgi.go:ProcessEnv	aot	wrong	named-type	a map from a context stays a handle to keep aliasing (known limit)
+net_http_fcgi.go:ProcessEnv	vm	wrong	named-type	a named map of the program from a context
+runtime.go:Profile.Add	aot	wrong	named-type	a handle of an uncomparable value of the program is comparable: no hash panic
+runtime.go:Profile.Add	vm	wrong	named-type	pprof profile entries of program values
+encoding_binary.go:Encode/nilnamed	vm	crash	named-type	nil pointer to a named type of the program
+go_ast.go:CommentMap.Update	aot	crash	native-field	program nodes as map keys
+go_ast.go:CommentMap.Update	vm	crash	native-field	program nodes as map keys
+go_ast.go:NotNilFilter	aot	crash	native-field	a program ast.Node in a native field
+go_ast.go:NotNilFilter	vm	crash	native-field	a program ast.Node in a native field
+go_doc.go:Examples	aot	crash	native-field	a program ast.Decl in a native field
+go_doc.go:Examples	vm	crash	native-field	a program ast.Decl in a native field
+go_doc.go:PlusBuildLines	aot	crash	native-field	a program constraint.Expr in a native field
+go_doc.go:PlusBuildLines	vm	crash	native-field	a program constraint.Expr in a native field
+go_printer.go:Fprint/Node	aot	crash	native-field	a program ast.Expr is not a known node
+go_printer.go:Fprint/Node	vm	crash	native-field	a program ast.Expr is not a known node
+go_printer.go:nodeSize	aot	crash	native-field	a program ast.Expr in a native field
+go_printer.go:nodeSize	vm	crash	native-field	a program ast.Expr in a native field
+crypto.go:ecdsa/Equal/uncomparable	aot	message	type-name	the panic names the wrapper type
+crypto.go:ecdsa/Equal/uncomparable	vm	message	type-name	the panic names the wrapper type
+crypto_tls.go:SupportsCertificate	aot	message	type-name	%T of the key is the VM copy
+crypto_tls.go:SupportsCertificate	vm	message	type-name	%T of the key is the VM copy
+crypto_tls.go:TLS13/BadKeys	aot	message	type-name	%T of the key is the VM copy
+crypto_tls.go:TLS13/BadKeys	vm	message	type-name	%T of the key is the VM copy
+crypto_x509.go:ParsePKIXPublicKey	aot	message	type-name	%T of the key is the VM copy
+crypto_x509.go:ParsePKIXPublicKey	vm	message	type-name	%T of the key is the VM copy
+encoding_binary.go:Decode/structs	vm	message	type-name	the error names the underlying type
+encoding_binary.go:Encode/notfixed	vm	message	type-name	the error names the underlying type
+fmt_3.go:Named	vm	message	named-type	scan errors name the underlying type
+image_draw.go:Draw/uncomparable	aot	message	type-name	the panic names []struct {}
+image_draw.go:Draw/uncomparable	vm	message	type-name	the panic names []struct {}
+log_slog.go:Value	aot	message	type-name	*vm.typeAssertError for a type of the program (Go cannot make its native type)
+log_slog.go:Value	vm	message	type-name	*vm.typeAssertError for a type of the program (Go cannot make its native type)
+net_http_httputil.go:ReverseProxy/upgrade-body	aot	message	type-name	the error names the native ResponseWriter type
+net_http_httputil.go:ReverseProxy/upgrade-body	vm	message	type-name	the error names the native ResponseWriter type
+net_http.go:Request/uncomparable-error	aot	message	type-name	the panic names []struct {}
+net_http.go:Request/uncomparable-error	vm	message	type-name	the panic names []struct {}
+net_rpc.go:ServeHTTP	aot	message	type-name	the panic names the wrapper type
+net_rpc.go:ServeHTTP	vm	message	type-name	the panic names the wrapper type
+math_big.go:Int.Format	vm@go1.27	wrong	fmt-state	fmt.State of the copy has no WriteByte and WriteString
+math_big.go:Float.Format	vm@go1.27	wrong	fmt-state	fmt.State of the copy has no WriteByte and WriteString
+math_big.go:Int.Format	aot@go1.27	wrong	fmt-state	fmt.State of the copy has no WriteByte and WriteString
+math_big.go:Float.Format	aot@go1.27	wrong	fmt-state	fmt.State of the copy has no WriteByte and WriteString
+encoding_json_jsontext.go:Encoder/options	vm@go1.27	crash	native-field	json options of the program (embedding a json option)
+encoding_json_jsontext.go:Encoder/options	aot@go1.27	crash	native-field	json options of the program (embedding a json option)
+encoding_json_jsontext.go:Decoder/options	vm@go1.27	crash	native-field	json options of the program (embedding a json option)
+encoding_json_jsontext.go:Decoder/options	aot@go1.27	crash	native-field	json options of the program (embedding a json option)
+encoding_json_jsontext.go:Value/options	vm@go1.27	crash	native-field	json options of the program (embedding a json option)
+encoding_json_jsontext.go:Value/options	aot@go1.27	crash	native-field	json options of the program (embedding a json option)
+encoding_json_v2.go:JoinOptions	vm@go1.27	crash	native-field	json options of the program (embedding a json option)
+encoding_json_v2.go:JoinOptions	aot@go1.27	crash	native-field	json options of the program (embedding a json option)
+context.go:String/program	restricted	wrong	context-string	String names the wrapper of a program context
+crypto.go:ecdsa/Equal/uncomparable	restricted	message	type-name	the panic names the wrapper type
+crypto_tls.go:TLS13/BadKeys	restricted	message	type-name	%T of the key is the VM copy
+crypto_tls.go:SupportsCertificate	restricted	message	type-name	%T of the key is the VM copy
+crypto_tls.go:QUIC	restricted	wrong	native-only	QUIC with program keys
+crypto_x509.go:ParsePKIXPublicKey	restricted	message	type-name	%T of the key is the VM copy
+crypto_x509.go:pkix/String	restricted	wrong	pkix	pkix with a program value
+expvar.go:Published	restricted	restricted	-	a restricted machine has its own log: the host expvar logs the reuse to the host log
+flag.go:FlagSet.Parse	restricted	wrong	native-flag	native flag: the zero value of a program flag.Value is the wrapper
+flag.go:PrintDefaults	restricted	wrong	native-flag	native flag: the zero value of a program flag.Value is the wrapper
+flag.go:Parse	restricted	wrong	native-flag	native flag: the zero value of a program flag.Value is the wrapper
+go_ast.go:Walk/unexpected	restricted	wrong	native-field	a program node that embeds *ast.Ident
+go_ast.go:CommentMap.Update	restricted	crash	native-field	program nodes as map keys
+go_ast.go:Fprint	restricted	wrong	native-field	ast.Fprint of program values prints wrappers
+go_ast.go:NotNilFilter	restricted	crash	native-field	a program ast.Node in a native field
+go_doc.go:Examples	restricted	crash	native-field	a program ast.Decl in a native field
+go_doc.go:PlusBuildLines	restricted	crash	native-field	a program constraint.Expr in a native field
+go_printer.go:Fprint/slices	restricted	wrong	native-field	program node slices taken as []ast.Decl
+go_printer.go:Fprint/Node	restricted	crash	native-field	a program ast.Expr is not a known node
+go_printer.go:nodeSize	restricted	crash	native-field	a program ast.Expr in a native field
+image.go:Decode/reader	restricted	wrong	native-only	Peek of a program reader not used: an optimization only, not added (known limit)
+image_draw.go:Draw/uncomparable	restricted	message	type-name	the panic names []struct {}
+issues.go:193	restricted	crash	native-flag	native flag: the variable of TextVar is the wrapper, not a pointer
+log_slog.go:Value	restricted	message	type-name	*vm.typeAssertError for a type of the program (Go cannot make its native type)
+net.go:DefaultResolver/stream	restricted	restricted	-	a restricted machine has its own net.DefaultResolver
+net.go:DefaultResolver/packet	restricted	restricted	-	a restricted machine has its own net.DefaultResolver
+net.go:DefaultResolver/timeout	restricted	restricted	-	a restricted machine has its own net.DefaultResolver
+net.go:DefaultResolver/alt	restricted	wrong	named-type	a named func type of the program taken as the unnamed one
+net.go:TCPConn.ReadFrom	restricted	wrong	native-only	SyscallConn of a program reader not used: an optimization only, not added (known limit)
+net_http.go:Request/uncomparable-error	restricted	message	type-name	the panic names []struct {}
+net_http_3.go:Transport/alt	restricted	wrong	native-only	IsHTTP2NoCachedConnError of a program error (x/net/http2), not added
+net_http_3.go:Transport/RegisterProtocol	restricted	wrong	native-only	reflect on a program RoundTripper struct (known limit)
+net_http_fcgi.go:ProcessEnv	restricted	wrong	named-type	a named map of the program from a context
+net_http_httptest.go:Server.Close	restricted	restricted	-	a restricted machine has its own http.DefaultTransport
+net_http_httputil.go:ReverseProxy/upgrade-body	restricted	message	type-name	the error names the native ResponseWriter type
+net_rpc.go:ServeHTTP	restricted	message	type-name	the panic names the wrapper type
+os.go:	restricted	restricted	-	the program is refused: os.Chdir is not allowed in a plugin
+os.go:readdir	restricted	restricted	-	the program is refused: os.Chdir is not allowed in a plugin
+os.go:Chdir	restricted	restricted	-	the program is refused: os.Chdir is not allowed in a plugin
+os.go:RemoveAll	restricted	restricted	-	the program is refused: os.Chdir is not allowed in a plugin
+os.go:ReadFrom/WriteTo	restricted	restricted	-	the program is refused: os.Chdir is not allowed in a plugin
+os.go:Timeout	restricted	restricted	-	the program is refused: os.Chdir is not allowed in a plugin
+runtime.go:	restricted	restricted	-	the program is refused: runtime/trace.Start is not allowed in a plugin
+runtime.go:FlightRecorder	restricted	restricted	-	the program is refused: runtime/trace.Start is not allowed in a plugin
+runtime.go:Profile.Add	restricted	restricted	-	the program is refused: runtime/trace.Start is not allowed in a plugin
+runtime.go:trace.Start	restricted	restricted	-	the program is refused: runtime/trace.Start is not allowed in a plugin
+math_big.go:Int.Format	restricted@go1.27	wrong	fmt-state	fmt.State of the copy has no WriteByte and WriteString
+math_big.go:Float.Format	restricted@go1.27	wrong	fmt-state	fmt.State of the copy has no WriteByte and WriteString
+encoding_json_jsontext.go:Encoder/options	restricted@go1.27	crash	native-field	json options of the program (embedding a json option)
+encoding_json_jsontext.go:Decoder/options	restricted@go1.27	crash	native-field	json options of the program (embedding a json option)
+encoding_json_jsontext.go:Value/options	restricted@go1.27	crash	native-field	json options of the program (embedding a json option)
+encoding_json_v2.go:JoinOptions	restricted@go1.27	crash	native-field	json options of the program (embedding a json option)

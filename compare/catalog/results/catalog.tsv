@@ -1,0 +1,101 @@
+repo	version	scope	native	depth	yaegi	govm	aot	class	class_aot	load_ms_yaegi	load_ms_govm	load_ms_aot	govm_error	aot_error	yaegi_error
+darkweak/souin	plugins/beego/v1.7.9		ok	requests	ok	ok	ok	same	same	544	1232	385			
+maxlerebourg/crowdsec-bouncer-traefik-plugin	v1.7.1		ok	requests	ok	ok	ok	same	same	63	158	158			
+sevensolutions/traefik-oidc-auth	v0.21.0		run	requests	ok	ok	ok	same	same	254	2908	2142			
+PascalMinder/geoblock	v0.3.8		ok	requests	ok	ok	ok	same	same	15	80	81			
+tomMoulard/fail2ban	v0.9.0		ok	requests	ok	ok	ok	same	same	12	83	78			
+NX211/traefik-proxmox-provider	v0.8.0	provider
+lukaszraczylo/traefikoidc	v1.0.45		ok	requests, nondeterministic	ok	ok	ok	same	same	6419	3512	5683			
+acouvreur/traefik-modsecurity-plugin	v1.3.0		ok	requests	ok	ok	ok	same	same	118	423	1323			
+fosrl/badger	v1.7.0		ok	requests	ok	ok	ok	same	same	19	120	95			
+traefik/plugindemo	v0.2.2		ok	requests	ok	ok	ok	same	same	4	65	65			
+traefik-plugins/traefik-jwt-plugin	v0.10.0		ok	requests	ok	ok	ok	same	same	19	144	236			
+wiltonsr/ldapAuth	v0.1.12		run	requests	ok	ok	ok	same	same	2113	1122	1987			
+tomMoulard/htransformation	v0.4.1		ok	requests	ok	ok	ok	same	same	14	163	127			
+jcchavezs/coraza-http-wasm-traefik	v0.3.0	wasm
+BetterCorp/cloudflarewarp	v1.3.3		ok	requests	ok	ok	ok	same	same	58	769	1218			
+Paxxs/traefik-get-real-ip	v1.0.4		ok	requests	ok	ok	ok	same	same	53	677	1017			
+sablierapp/sablier-traefik-plugin	v1.3.1		ok	requests	ok	ok	ok	same	same	8	68	72			
+nscuro/traefik-plugin-geoblock	v0.14.0		ok	requests	ok	ok	ok	same	same	31	103	154			
+traefik/plugin-rewritebody	v0.3.1		ok	requests	ok	ok	ok	same	same	5	71	66			
+david-garcia-garcia/traefik-geoblock	v1.2.1		ok	requests	ok	ok	ok	same	same	99	190	206			
+traefik/plugin-simplecache	v0.2.1		ok	requests	ok	ok	ok	same	same	27	147	115			
+Gwojda/keycloakopenid	v0.1.36		ok	requests	ok	ok	ok	same	same	176	416	497			
+leonjza/trauth	v1.6.7		ok	requests	ok	ok	ok	same	same	706	510	326			
+agilezebra/jwt-middleware	v1.6.0		ok	requests	ok	ok	ok	same	same	77	367	460			
+kvncrw/denyip	v1.3.0		ok	requests	ok	ok	ok	same	same	24	311	101			
+madebymode/traefik-modsecurity-plugin	v1.6.0		ok	requests	ok	ok	ok	same	same	5	88	93			
+packruler/traefik-themepark	v1.4.2		ok	requests	ok	ok	ok	same	same	81	251	265			
+traefik/plugin-log4shell	v0.1.2		ok	requests	ok	ok	ok	same	same	9	274	233			
+astappiev/traefik-umami-feeder	v1.4.1		ok	requests	ok	ok	ok	same	same	10	81	94			
+hhftechnology/tailscale-access	v2.0.0		ok	requests	ok	ok	ok	same	same	18	236	314			
+snapt/traefik-nova-plugin	v1.1.2		ok	requests	run	run	run	same	same	206	912	288	panic: runtime error: invalid memory address or nil pointer dereference	panic: runtime error: invalid memory address or nil pointer dereference	panic: reflect: call of reflect.Value.Field on zero Value
+packruler/rewrite-body	v1.2.0		ok	requests	ok	ok	ok	same	same	57	426	824			
+hhftechnology/ipwhitelistshaper	v1.0.8		ok	requests	ok	ok	ok	same	same	39	220	246			
+hhftechnology/statiq	v1.0.1		ok	requests	ok	ok	ok	same	same	19	148	190			
+andrewkroh/google-oidc-auth-middleware	v0.4.0		ok	requests, nondeterministic	ok	ok	ok	same	same	42	304	603			
+MarkusJx/traefik-wol	v0.1.1		ok	requests	ok	ok	ok	same	same	17	85	107			
+MuXiu1997/traefik-github-oauth-plugin	v0.3.1		ok	requests	ok	ok	ok	same	same	79	239	226			
+traefik/plugin-blockpath	v0.3.0		ok	requests	ok	ok	ok	same	same	39	460	1302			
+Septima/traefik-api-key-auth	v0.3.0		ok	requests	ok	ok	ok	same	same	17	156	132			
+agence-gaya/traefik-plugin-cloudflare	v1.2.0		ok	requests	ok	ok	ok	same	same	11	98	101			
+darkweak/go-esi	v0.0.6		ok	requests	ok	ok	ok	same	same	26	157	153			
+tomMoulard/traefik-plugin-waeb	v1.0.1		ok	requests	ok	ok	ok	same	same	7	119	106			
+PseudoResonance/cloudflarewarp	v1.4.2		ok	requests	ok	ok	ok	same	same	170	417	153			
+libops/captcha-protect	v1.15.1		ok	requests	ok	ok	ok	same	same	58	196	182			
+adyanth/traefik-container-manager	v0.1.2		ok	requests	ok	ok	ok	same	same	11	357	107			
+XciD/traefik-plugin-rewrite-headers	v0.0.4		ok	requests	ok	ok	ok	same	same	7	127	151			
+jptosso/coraza-traefik	HEAD		ok	requests	load	load	load	both fail	both fail	74	373	401	load: go.uber.org/atomic: import "unsafe" is restricted: the plugin needs Options.UseUnsafe	load: go.uber.org/atomic: import "unsafe" is restricted: the plugin needs Options.UseUnsafe	load: 1:21: import "github.com/jptosso/coraza-traefik" error: $WORK/compare/catalog/out/jptosso_coraza-traefik/yaegi.tmp/yhost-gopath-893489569/src/github.com/jptosso/coraza-traefik/coraza.go:9:2: import "github.com/jptos
+chaitin/traefik-safeline	v1.4.0		ok	requests	ok	ok	ok	same	same	244	2552	4108			
+traefik/pluginproviderdemo	v0.3.0	provider
+safing/scanblock	v1.0.0		ok	requests	ok	ok	ok	same	same	175	1396	1304			
+zekihan/traefik-real-ip	v0.1.25		ok	requests	ok	ok	ok	same	same	123	361	209			
+1cedsoda/traefik-umami-plugin	v1.0.3		ok	requests	ok	ok	ok	same	same	20	550	215			
+23deg/jwt-middleware	v0.1.3		ok	requests	ok	ok	ok	same	same	7	246	94			
+paladium/traefikkeycloak	v1.11		ok	requests	ok	ok	ok	same	same	19	110	129			
+solution-libre/traefik-plugin-robots-txt	v0.2.2		ok	requests	ok	ok	ok	same	same	5	90	243			
+agence-gaya/traefik-plugin-blockuseragent	v0.1.8		ok	requests	ok	ok	ok	same	same	4	89	88			
+taskmedia/ddns-allowlist	v1.7.0		ok	requests	ok	ok	ok	same	same	15	91	238			
+PrivPlugMatt/traefik-private-plugins	HEAD	no manifest
+TRIMM/traefik-maintenance	v1.0.1		ok	requests	ok	ok	ok	same	same	9	93	62			
+Miromani4/traefik-plugin-AdminAPI_WebUI	v1.3.1		ok	requests	ok	ok	ok	same	same	11	77	68			
+hhftechnology/traefik-queue-manager	v1.0.3		ok	requests, nondeterministic	ok	ok	ok	same	same	41	219	363			
+juitde/traefik-plugin-fail2ban	v0.3.0		ok	requests	ok	ok	ok	same	same	17	173	381			
+traefik-plugins/traefikgeoip2	v0.22.0		ok	requests	ok	ok	ok	same	same	159	805	378			
+dkijkuit/checkheadersplugin	v0.3.1		ok	requests	ok	ok	ok	same	same	94	294	598			
+dtomlinson91/traefik-api-key-middleware	v0.1.2		ok	requests	ok	ok	ok	same	same	31	259	435			
+traefik/plugindemowasm	v0.0.3	wasm
+jdel/staticresponse	v0.0.1		ok	requests	ok	ok	ok	same	same	10	153	127			
+ghnexpress/traefik-ratelimit	v0.0.20		ok	requests	ok	ok	ok	same	same	116	164	205			
+Aetherinox/traefik-api-token-middleware	v0.1.4		build	stops at build	diff	diff	diff	same	different	30	217	455	[31m[Aetherx-apikey]: [0mStarting Plugin [35mcatalog-test[0m	[31m[Aetherx-apikey]: [0mStarting Plugin [35mcatalog-test[0m	[31m[Aetherx-apikey]: [0mStarting Plugin [35mcatalog-test[0m
+holysoles/bot-wrangler-traefik-plugin	v0.10.2		ok	requests	ok	ok	ok	same	same	36	404	373			
+hhftechnology/bandwidthlimiter	v1.0.1		ok	requests	ok	ok	ok	same	same	115	991	292			
+luizfonseca/traefik-github-oauth-plugin	v0.7.0		ok	requests	ok	ok	ok	same	same	330	1013	231			
+jeppestaerk/traefik-xff-to-xrealip	v0.1.3		ok	requests	ok	ok	ok	same	same	53	697	757			
+xabinapal/traefik-authentik-forward-plugin	v1.0.1		ok	requests	ok	ok	ok	same	same	250	336	615			
+dirtycajunrice/subfilter	v0.5.0		ok	requests	ok	ok	ok	same	same	8	153	145			
+acouvreur/traefik-ondemand-plugin	v1.3.1		ok	requests	ok	ok	ok	same	same	9	93	155			
+ciaranj/cacheify	v1.0.0		ok	requests, nondeterministic	diff	diff	diff	same	same	45	302	586			
+smerschjohann/mtlswhitelist	v0.4.2		ok	requests	ok	ok	ok	same	same	29	128	106			
+im-kulikov/traefik-provider	v0.2.0	provider
+jpxd/torblock	v0.1.1		ok	requests	ok	ok	ok	same	same	32	408	147			
+traefik-contrib/noop	v0.1.0		ok	requests	ok	ok	ok	same	same	4	83	152			
+blueshift-labs/traefik-block-regex-urls	v0.0.1		ok	requests	ok	ok	ok	same	same	16	139	138			
+ZeroGachis/traefik-auth-middleware	v1.1.0		ok	requests	ok	ok	ok	same	same	5	74	73			
+Desuuuu/traefik-cloudflare-plugin	v1.0.0		ok	requests	ok	ok	ok	same	same	54	598	550			
+l4rm4nd/traefik-warp	v1.1.5		ok	requests	ok	ok	ok	same	same	52	402	394			
+negasus/traefik-plugin-ip2location	v0.1.0		ok	requests	ok	ok	ok	same	same	136	507	288			
+nzin/traefik-cluster-ratelimit	v1.2.0		ok	requests	ok	ok	ok	same	same	46	261	151			
+discoverygarden/traefik-ultimate-bad-bot-blocker	v0.4.0		ok	requests	ok	ok	ok	same	same	19	153	101			
+cookielab/traefik-middleware-request-logger	v0.0.11		ok	requests, nondeterministic	ok	ok	ok	same	same	32	222	185			
+renanqts/xdpfail2ban	v0.0.1		ok	requests	ok	ok	ok	same	same	79	1008	525			
+Lepkem/traefik-plugin-response-code-override	v0.0.3		ok	requests	ok	ok	ok	same	same	5	73	79			
+JonasSchubert/traefik-allow-countries	v1.2.0		ok	requests	ok	ok	ok	same	same	18	140	146			
+negasus/traefik-plugin-bridge	v0.1.1		ok	requests	ok	ok	ok	same	same	22	224	381			
+Desuuuu/traefik-real-ip-plugin	v1.1.0		ok	requests	ok	ok	ok	same	same	35	190	299			
+dariopb/traefikServiceFabricPlugin	v0.2.2	provider
+NX211/traefik-webfinger	v0.3.5		ok	requests	ok	ok	ok	same	same	24	191	128			
+Medzoner/traefik-plugin-cors-preflight	v1.3.0		ok	requests	load	load	load	both fail	both fail	9	226	263	load: ./main.go:10:2: could not import github.com/rs/zerolog (cannot find package github.com/rs/zerolog: not in module github.com/Medzoner/traefik-plugin-cors-preflight nor in its vendor directory)	load: ./main.go:10:2: could not import github.com/rs/zerolog (cannot find package github.com/rs/zerolog: not in module github.com/Medzoner/traefik-plugin-cors-preflight nor in its vendor directory)	load: 1:21: import "github.com/Medzoner/traefik-plugin-cors-preflight" error: $WORK/compare/catalog/out/Medzoner_traefik-plugin-cors-preflight/yaegi.tmp/yhost-gopath-2833331512/src/github.com/Medzoner/traefik-plugin-cors-
+kingjan1999/traefik-plugin-query-modification	v1.0.0		ok	requests	ok	ok	ok	same	same	32	195	275			
+DIE-Bonn/MatomoTracking	v1.2.0		ok	requests	ok	ok	ok	same	same	43	378	567			
+unsoon/traefik-open-policy-agent	v1.2.1		ok	requests	ok	ok	ok	same	same	18	134	228			

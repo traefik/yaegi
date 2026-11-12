@@ -1,0 +1,1063 @@
+name: CI
+
+# Two levels, to keep the cost of CI low (job "plan" decides):
+#
+# - Each pull request runs the gate: linux/amd64 (gofmt, vet, all tests), the
+#   generated data, build and vet of the 32-bit platforms, go mod verify,
+#   govulncheck and staticcheck. About 30 runner minutes.
+# - The nightly run (schedule, on v2) runs everything: also the other
+#   platforms, linux/386, qemu (arm, s390x), the race detector, the GOROOT
+#   test suite, the standard library tests, the next Go release (latest release, release candidate,
+#   tip) and the manifest of the new Go patch releases (job gopatch). About
+#   300 runner minutes. When v2 has not changed since the last nightly
+#   run (or run by hand on v2), it does not run the jobs again, except the
+#   next Go jobs and gopatch (Go changes, not v2): if that run passed,
+#   there is nothing to do; if it failed, job "carried" fails and the run
+#   stays red, with a link to the failed run, until v2 changes or a run by
+#   hand on v2 passes. When it fails, job "report" opens an issue with the
+#   label ci-nightly (or comments on the open one), and closes it at the
+#   next green nightly run. GitHub runs a schedule only on the default
+#   branch: while it is master (yaegi v0), there is no nightly run of v2
+#   (TODO.md).
+#
+# The label ci:full on a pull request runs everything on that pull request
+# (for a change to the assembly, Windows, 32-bit or big-endian code). A run
+# by hand (Actions tab, "Run workflow") also runs everything. A push to v2
+# runs nothing: the pull request ran the gate, the nightly run the rest.
+#
+# yaegi v0 has its own workflows on branch master: a pull request to master
+# runs those, not this one.
+on:
+  pull_request:
+    # labeled: adding ci:full starts the full run at once.
+    types: [opened, synchronize, reopened, labeled]
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Another label (the merge bot adds some) must not cancel a running run: it
+  # gets a group of its own, and job "plan" stops it at once.
+  group: ci-${{ github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'ci:full' && format('-{0}', github.run_id) || '' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # The Go releases of yaegi v2 (internal/gorelease.Window): N (GO_VERSION, the
+  # release of most jobs) and N-1 (GO_VERSION_PREV: the jobs "test" and
+  # "generated data" run with both). Each has its generated data (stdtypes,
+  # stdsyms, aot/go1_NN, vm/zz_natsigs_go1_NN.go). Keep them on the latest
+  # patch releases: patch releases carry security fixes, also for the AOT
+  # copies of the standard library. The "go" line of go.mod is N-1, the
+  # minimum for consumers. When one changes, run the generators with the same
+  # release (job "generated data" checks it).
+  GO_VERSION: "1.27.4"
+  GO_VERSION_PREV: "1.26.10"
+  # go.mod and go.sum must be complete and tidy: no silent update.
+  GOFLAGS: -mod=readonly
+
+# Actions are pinned by full commit SHA (the tag is in the comment): a moved
+# tag cannot change what runs here.
+jobs:
+  plan:
+    # run: the gate jobs run. full: all the other jobs run too. nextgo: the
+    # next Go jobs run (each nightly run and each run by hand). carried: the
+    # URL of the failed run whose failure this nightly run carries over (job
+    # "carried"). kept: the URL of the passed run whose result it keeps.
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    outputs:
+      run: ${{ steps.plan.outputs.run }}
+      full: ${{ steps.plan.outputs.full }}
+      nextgo: ${{ steps.plan.outputs.nextgo }}
+      carried: ${{ steps.plan.outputs.carried }}
+      kept: ${{ steps.plan.outputs.kept }}
+    steps:
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          LABEL: ${{ github.event.label.name }}
+          HAS_FULL_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'ci:full') }}
+        run: |
+          run=true
+          full=false
+          nextgo=false
+          carried=
+          kept=
+          case "$EVENT" in
+          pull_request)
+            if [ "$ACTION" = labeled ] && [ "$LABEL" != ci:full ]; then
+              run=false
+            fi
+            if [ "$HAS_FULL_LABEL" = true ]; then
+              full=true
+            fi
+            ;;
+          schedule)
+            full=true
+            nextgo=true
+            # The last full run on v2: a nightly run or a run by hand, not
+            # cancelled, whose jobs ran (not one that only ran the next Go
+            # jobs or job "carried"). Same commit: its result is known. It
+            # passed when its jobs of v2 passed (next Go and gopatch are
+            # not counted: they fail when Go changes, not v2): nothing to
+            # do. Else its
+            # failure is carried over (job "carried", with its URL), so a red
+            # v2 never shows green. Before, the last run of any kind was
+            # kept, so a failed v2 showed green from the next night on.
+            last_sha=
+            last_url=
+            last_failed=
+            for r in $(gh api "repos/$GH_REPO/actions/workflows/ci.yml/runs?branch=v2&status=completed&per_page=30" \
+              --jq '.workflow_runs[] | select(.event == "schedule" or .event == "workflow_dispatch")
+                | select(.conclusion != "cancelled" and .conclusion != "skipped")
+                | "\(.id),\(.head_sha),\(.html_url)"'); do
+              IFS=, read -r id sha url <<< "$r"
+              jobs=$(gh api "repos/$GH_REPO/actions/runs/$id/jobs?per_page=100" \
+                --jq '.jobs[] | select(.conclusion != "skipped")
+                  | select(.name | test("^(next Go|Go patch releases|report|last run on this commit)") | not)
+                  | "\(.conclusion) \(.name)"')
+              if ! grep -q '^[a-z_]* build, vet, test (linux/amd64' <<< "$jobs"; then
+                continue # not a full run
+              fi
+              last_sha=$sha
+              last_url=$url
+              last_failed=$(grep -v '^success ' <<< "$jobs" | grep -c . || true)
+              break
+            done
+            if [ "$last_sha" = "$GITHUB_SHA" ]; then
+              run=false
+              full=false
+              if [ "$last_failed" = 0 ]; then
+                echo "v2 has not changed since the last full run ($last_url), which passed: nothing to do."
+                kept=$last_url
+              else
+                echo "v2 has not changed since the last full run ($last_url), where $last_failed jobs of v2 failed: its failure is carried over."
+                carried=$last_url
+              fi
+            fi
+            ;;
+          *)
+            full=true
+            nextgo=true
+            ;;
+          esac
+          echo "run=$run full=$full nextgo=$nextgo carried=$carried kept=$kept"
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+          echo "nextgo=$nextgo" >> "$GITHUB_OUTPUT"
+          echo "carried=$carried" >> "$GITHUB_OUTPUT"
+          echo "kept=$kept" >> "$GITHUB_OUTPUT"
+
+  carried:
+    # A nightly run on the commit of a failed run: v2 has not changed, so
+    # the failure stands. This job fails the run without running the other
+    # jobs again. Fix v2, or run the workflow by hand on v2 (a run that
+    # passes is kept by the next nightly runs).
+    name: last run on this commit failed
+    needs: plan
+    if: needs.plan.outputs.carried != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - env:
+          CARRIED: ${{ needs.plan.outputs.carried }}
+        run: |
+          echo "::error::v2 has not changed since the last run on v2, which failed: $CARRIED"
+          exit 1
+
+  test:
+    name: build, vet, test (linux/amd64, Go ${{ matrix.release }})
+    needs: plan
+    if: needs.plan.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    # cmd/runtests alone takes about 23 min: with the vm tests, 30 min was
+    # often too short on a slow runner.
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        # N and N-1: both releases of the window are a gate.
+        release: [N, N-1]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ matrix.release == 'N' && env.GO_VERSION || env.GO_VERSION_PREV }}
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: test-${{ matrix.release }}
+      - name: Go release
+        env:
+          GO: ${{ matrix.release == 'N' && env.GO_VERSION || env.GO_VERSION_PREV }}
+        run: |
+          go version
+          test "$(go env GOVERSION)" = "go$GO"
+      - name: modules (verify, tidy)
+        run: |
+          go mod verify
+          go mod tidy -diff
+          # compare/: the study and comparison tools (module of their own,
+          # it requires yaegi v0).
+          cd compare
+          go mod verify
+          go mod tidy -diff
+      - name: setup (modules, build, vet)
+        run: sh scripts/setup.sh
+      - name: go.mod and go.sum unchanged by setup
+        run: git diff --exit-code go.mod go.sum compare/go.mod compare/go.sum
+      - name: gofmt
+        run: |
+          # The actively maintained trees. Generated code (aot/, natsyms/,
+          # stdsyms/go1_*, stdtypes/go1_*), the imported yaegi tests and the
+          # study and catalog programs are not gated.
+          unformatted=$(gofmt -l vm cmd)
+          if [ -n "$unformatted" ]; then
+            echo "these files are not gofmt'd (run: gofmt -w vm cmd):"; echo "$unformatted"; exit 1
+          fi
+      - name: test
+        # 30m, not the 10m default: ./vm alone takes about 10m on a loaded
+        # runner.
+        run: go test ./... -count=1 -timeout 30m
+      - name: test (compare module)
+        # The catalog harness, the GOROOT test suite runner and the
+        # benchmark host (compare/go.mod).
+        working-directory: compare
+        run: go test ./... -count=1 -timeout 30m
+      - uses: ./.github/actions/go-cache
+        # also after a failed test: the cache is for the build
+        if: ${{ !cancelled() }}
+        with:
+          name: test-${{ matrix.release }}
+          save: true
+
+  platforms:
+    # The getg assembly of arm64, the TLS path of Windows and the stdtypes and
+    # stdsyms data of darwin and windows only run on these runners.
+    name: build, vet, test (${{ matrix.os }})
+    needs: plan
+    if: needs.plan.outputs.full == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # linux/arm64: everything, as on linux/amd64.
+          - os: ubuntu-24.04-arm
+            tests: ./...
+          # darwin/arm64 and windows/amd64: the VM and the generated data.
+          # The conformance runners (cmd/runtests, cmd/aotcheck) compare with
+          # go run and are Unix tools; linux covers them.
+          - os: macos-latest
+            tests: ./vm/... ./stdtypes/... ./stdsyms/... ./vreflect/... ./internal/...
+          - os: windows-latest
+            tests: ./vm/... ./stdtypes/... ./stdsyms/... ./vreflect/... ./internal/...
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: platforms-${{ matrix.os }}
+      - name: build and vet
+        run: |
+          go version
+          go build ./...
+          go vet ./...
+      - name: test
+        run: go test -count=1 -timeout 30m ${{ matrix.tests }}
+      - name: test (compare module)
+        # linux/arm64 only: everything, as on linux/amd64.
+        if: matrix.tests == './...'
+        working-directory: compare
+        run: go test -count=1 -timeout 30m ./...
+      - uses: ./.github/actions/go-cache
+        # also after a failed test: the cache is for the build
+        if: ${{ !cancelled() }}
+        with:
+          name: platforms-${{ matrix.os }}
+          save: true
+
+  cross:
+    # The platforms without a runner here: every target of the Traefik
+    # releases has stdtypes and stdsyms data (internal/gorelease.Platforms),
+    # and must build and vet. go vet type-checks every package and its tests
+    # for the target: a constant that overflows int on 32-bit fails
+    # here. The 32-bit part runs on each pull request (it is the one that
+    # catches the most); the two others in the full run.
+    name: cross (${{ matrix.id }})
+    needs: plan
+    if: needs.plan.outputs.run == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        # The platforms of each part are in the step "build and vet": an
+        # include entry for a part that is not in this list would still
+        # create a job.
+        id: ${{ fromJSON(needs.plan.outputs.full == 'true' && '["32bit", "64bit", "other"]' || '["32bit"]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: cross-${{ matrix.id }}
+      - name: build and vet for each platform
+        run: |
+          case "${{ matrix.id }}" in
+          32bit) platforms="linux/386 linux/arm windows/386 freebsd/386 openbsd/386" ;;
+          64bit) platforms="linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64" ;;
+          other) platforms="linux/ppc64le linux/s390x linux/riscv64 freebsd/amd64 openbsd/amd64 openbsd/riscv64" ;;
+          esac
+          for p in $platforms; do
+            echo "== $p"
+            GOOS=${p%/*} GOARCH=${p#*/} go build ./...
+            GOOS=${p%/*} GOARCH=${p#*/} go vet ./...
+          done
+      - uses: ./.github/actions/go-cache
+        # also after a failed test: the cache is for the build
+        if: ${{ !cancelled() }}
+        with:
+          name: cross-${{ matrix.id }}
+          save: true
+
+  test386:
+    # linux/386 runs natively on the amd64 runner: all the tests, with int,
+    # uint and uintptr of 32 bits (the VM uses the sizes of runtime.GOARCH).
+    # The testdata programs and the conformance sample are compared with
+    # go run on 386.
+    name: build, vet, test (linux/386)
+    needs: plan
+    if: needs.plan.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GOARCH: "386"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: test-386
+      - name: modules
+        run: |
+          go mod download
+          (cd compare && go mod download)
+      - name: test
+        run: go test ./... -count=1 -timeout 40m
+      - name: test (compare module)
+        working-directory: compare
+        run: go test ./... -count=1 -timeout 40m
+      - uses: ./.github/actions/go-cache
+        # also after a failed test: the cache is for the build
+        if: ${{ !cancelled() }}
+        with:
+          name: test-386
+          save: true
+
+  qemu:
+    # linux/arm (32-bit, as on a Raspberry Pi) and linux/s390x (big-endian)
+    # run under qemu-user on the amd64 runner: binfmt_misc starts the test
+    # binaries and the go run programs of the tests through qemu. qemu is
+    # about ten times slower than the runner: the tests of ./vm are split in
+    # the four shards of scripts/race-shards.sh (one job each), shard 5 runs
+    # the other packages and the testdata programs, and shard 6 the
+    # conformance sample (both compared with go run on the same platform).
+    # Not run here: cmd/aotcheck and the other tests of cmd/runtests (too
+    # slow under qemu; the linux/386 job runs them).
+    name: test (linux/${{ matrix.arch }}, qemu, shard ${{ matrix.shard }})
+    needs: plan
+    if: needs.plan.outputs.full == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm, s390x]
+        shard: [1, 2, 3, 4, 5, 6]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      GOARCH: ${{ matrix.arch }}
+      # Loading net/http under qemu takes longer than the 30s default.
+      YAEGI_CONFORMANCE_TIMEOUT: 5m
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: qemu-${{ matrix.arch }}-${{ matrix.shard }}
+      - name: qemu-user and binfmt_misc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static binfmt-support
+          printf 'package main\n\nimport ("fmt"; "runtime")\n\nfunc main() { fmt.Println(runtime.GOARCH) }\n' > "$RUNNER_TEMP/arch.go"
+          test "$(go run "$RUNNER_TEMP/arch.go")" = "$GOARCH"
+      - name: modules
+        run: go mod download
+      - name: test (./vm, shard ${{ matrix.shard }})
+        if: matrix.shard <= 4
+        run: go test -count=1 -timeout 85m -run "$(sh scripts/race-shards.sh pattern ${{ matrix.shard }})" ./vm
+      - name: test (other packages, testdata programs)
+        if: matrix.shard == 5
+        run: |
+          go test -count=1 -timeout 85m $(go list ./vm/... ./vreflect/... ./stdtypes/... ./stdsyms/... ./internal/... | grep -v '/vm$')
+          go test -count=1 -timeout 85m -run 'TestTestdata' ./cmd/runtests
+      - name: test (conformance sample)
+        if: matrix.shard == 6
+        run: go test -count=1 -timeout 85m -run 'TestConformanceSample' ./cmd/runtests
+      - uses: ./.github/actions/go-cache
+        # also after a failed test: the cache is for the build
+        if: ${{ !cancelled() }}
+        with:
+          name: qemu-${{ matrix.arch }}-${{ matrix.shard }}
+          save: true
+
+  race:
+    # ./vm under -race took about 25 minutes on one runner: four shards run
+    # at once (scripts/race-shards.sh splits the tests by name, and shard 1
+    # checks that each test is in exactly one shard).
+    name: race detector (vm, shard ${{ matrix.shard }})
+    needs: plan
+    if: needs.plan.outputs.full == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: race-${{ matrix.shard }}
+      - name: modules
+        # Some tests read the sources of a module from the module cache
+        # (TestAOTVendoredVersion: spf13/cast). go test only downloads what
+        # it builds; the other jobs get every module with setup.sh.
+        run: go mod download
+      - name: every test is in one shard
+        if: matrix.shard == 1
+        run: sh scripts/race-shards.sh check
+      - name: go test -race
+        run: sh scripts/race-shards.sh run ${{ matrix.shard }}
+      - uses: ./.github/actions/go-cache
+        # also after a failed test: the cache is for the build
+        if: ${{ !cancelled() }}
+        with:
+          name: race-${{ matrix.shard }}
+          save: true
+
+  generated:
+    # stdtypes, stdsyms, aot/, natsyms/ and the zz_*.go files of vm/ are
+    # generated. Regenerate them with each pinned Go (a run writes the files
+    # of its release) and fail if anything differs: a stale or edited file (a
+    # tampered blob or AOT copy) does not pass.
+    name: generated data is up to date (Go ${{ matrix.release }})
+    needs: plan
+    if: needs.plan.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        release: [N, N-1]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ matrix.release == 'N' && env.GO_VERSION || env.GO_VERSION_PREV }}
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: generated-${{ matrix.release }}
+      - name: setup (modules)
+        run: sh scripts/setup.sh
+      - name: regenerate
+        run: |
+          go generate ./stdtypes
+          go generate ./stdsyms
+          go generate ./vm
+          sh scripts/aotgen.sh
+      - name: no difference
+        run: |
+          git status --porcelain
+          git diff --stat --exit-code
+          test -z "$(git status --porcelain)"
+      - uses: ./.github/actions/go-cache
+        # also after a failed test: the cache is for the build
+        if: ${{ !cancelled() }}
+        with:
+          name: generated-${{ matrix.release }}
+          save: true
+
+  checks:
+    # One job, not two: each job pays the setup and the rounding up to the
+    # next minute.
+    name: go mod verify, govulncheck, staticcheck
+    needs: plan
+    if: needs.plan.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: checks
+      - name: go mod verify
+        run: |
+          go mod verify
+          (cd compare && go mod verify)
+      - name: install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+      - name: govulncheck
+        # Fails when the code calls a known vulnerable function: of the
+        # standard library of the pinned Go (move GO_VERSION to the fixed
+        # patch release and regenerate) or of a module.
+        run: |
+          govulncheck ./...
+          (cd compare && govulncheck ./...)
+      - name: install staticcheck
+        if: ${{ !cancelled() }}
+        run: go install honnef.co/go/tools/cmd/staticcheck@v0.8.2
+      - name: staticcheck (informative)
+        # Clean today. Still a heads-up, not a gate: a new staticcheck
+        # release may add checks.
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: staticcheck ./vm/... ./cmd/... ./stdtypes/... ./internal/...
+      - uses: ./.github/actions/go-cache
+        # also after a failed test: the cache is for the build
+        if: ${{ !cancelled() }}
+        with:
+          name: checks
+          save: true
+
+  differential:
+    # Random programs compared with Go (internal/progen, TestGeneratedPrograms
+    # of cmd/runtests): the job "test" runs 40 fixed seeds (the default of
+    # go test ./...), this job 2000 new ones each night (the first seed is
+    # the run number times 2000), so the search goes on. A failed seed is in the name of its test:
+    # go run ./cmd/progen -seed N prints its program.
+    name: differential (generated programs)
+    needs: plan
+    if: needs.plan.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: differential
+      - name: modules
+        run: go mod download
+      - name: generated programs
+        env:
+          YAEGI_PROGEN_N: "2000"
+          RUN: ${{ github.run_number }}
+        run: YAEGI_PROGEN_FIRST=$((RUN * 2000)) go test -count=1 -timeout 40m -run 'TestGeneratedPrograms' ./cmd/runtests
+      - uses: ./.github/actions/go-cache
+        # also after a failed test: the cache is for the build
+        if: ${{ !cancelled() }}
+        with:
+          name: differential
+          save: true
+
+  hostgraph:
+    # The AOT copies in the module graph of Traefik (cmd/hostgraph,
+    # docs/AOTGEN.md): Traefik may require newer versions of the copied
+    # modules than the go.mod of yaegi v2, and aot/all must still build there. The
+    # offline check of the snapshot runs in the job "test" (go test). Here:
+    # the real build with the committed snapshot, then with the go.mod of
+    # traefik/traefik master (read only), so a change there shows up before
+    # a release. The network is needed (module proxy, checksum database).
+    name: AOT copies in Traefik's module graph
+    needs: plan
+    if: needs.plan.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: hostgraph
+      - name: modules
+        run: go mod download
+      - name: build aot/all with the snapshot
+        run: go run ./cmd/hostgraph -build
+      - name: build aot/all with traefik/traefik master
+        run: |
+          go run ./cmd/hostgraph -update
+          git diff --stat -- testdata/hostgraph
+          go run ./cmd/hostgraph
+          go run ./cmd/hostgraph -build
+      - uses: ./.github/actions/go-cache
+        if: ${{ !cancelled() }}
+        with:
+          name: hostgraph
+          save: true
+
+  gotestdir:
+    # The official Go test suite (GOROOT/test of go1.27.3) under yaegi v2,
+    # against the frozen pass list compare/gotestdir/results/govm.tsv (the
+    # engine key "govm" of the measurements is yaegi v2): a test
+    # that passed and does not pass any more fails the job. New passes do not.
+    name: GOROOT test suite (no regression)
+    needs: plan
+    if: needs.plan.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: gotestdir
+      # The sparse clone of test/ of golang/go at the tag of gate.sh. It
+      # never changes for a tag: the key is the scripts that name the tag.
+      # The go1.27.3 toolchain that run.sh gets is in the module cache
+      # (go-cache).
+      - id: testdir
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/yaegi-gotestdir
+          key: gotestdir-clone-${{ hashFiles('compare/gotestdir/gate.sh', 'compare/gotestdir/run.sh') }}
+      - name: run and compare
+        # 120 s per test: a slower runner must not turn a slow pass into a
+        # timeout. gate.sh runs a failed frozen pass once more, alone.
+        run: compare/gotestdir/gate.sh 4 120s
+      # The results of this run, also when the gate fails: the frozen pass
+      # list (results/govm.tsv) is measured on linux/amd64, as here, so a
+      # new suite (a new Go release) is frozen from this file.
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gotestdir-govm
+          path: compare/gotestdir/out/govm.tsv
+          if-no-files-found: ignore
+      - if: ${{ !cancelled() && github.ref == 'refs/heads/v2' && steps.testdir.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/yaegi-gotestdir
+          key: gotestdir-clone-${{ hashFiles('compare/gotestdir/gate.sh', 'compare/gotestdir/run.sh') }}
+      - uses: ./.github/actions/go-cache
+        # also after a failed test: the cache is for the build
+        if: ${{ !cancelled() }}
+        with:
+          name: gotestdir
+          save: true
+
+  battery:
+    # The reflect battery (testdata/modes): 30 programs where native code
+    # must see the plugin's types, in default mode and in AOT mode, against
+    # the compiled program. The verdicts must be exactly the ones of
+    # testdata/modes/known.tsv: a new silent difference (same exit code,
+    # other output) fails the job at once, and so does a known case that
+    # passes or fails another way (the list cannot go stale).
+    name: reflect battery (no new silent difference)
+    needs: plan
+    if: needs.plan.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: battery
+      - name: run and compare
+        run: testdata/modes/check.sh
+      - uses: ./.github/actions/go-cache
+        # also after a failed run: the cache is for the build
+        if: ${{ !cancelled() }}
+        with:
+          name: battery
+          save: true
+
+  stdtests:
+    # The external tests of standard library packages (fmt, sort, io,
+    # encoding/json...) under yaegi v2, in VM mode and in AOT mode, against
+    # docs/conformance/stdlib.tsv (cmd/stdtests, docs/STDTESTS.md): a test
+    # that passes there natively and in a yaegi v2 mode, and passes natively
+    # here, must still pass in that mode. New passes do not fail. Nightly
+    # (and ci:full, and by hand) only.
+    name: standard library tests (no regression)
+    needs: plan
+    if: needs.plan.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: stdtests
+      - name: run and compare
+        run: go run ./cmd/stdtests -j 2 -out stdtests.tsv -summary stdtests.txt -check docs/conformance/stdlib.tsv
+      # The results of this run, also when the check fails: to check in new
+      # passes measured on linux/amd64.
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stdtests
+          path: |
+            stdtests.tsv
+            stdtests.txt
+          if-no-files-found: ignore
+      - uses: ./.github/actions/go-cache
+        # also after a failed run: the cache is for the build
+        if: ${{ !cancelled() }}
+        with:
+          name: stdtests
+          save: true
+
+  forward:
+    name: next Go (${{ matrix.channel }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # The AOT copies, the embedded stdlib types and the native registry are
+    # generated for each Go release of the window. This job regenerates them
+    # with a newer Go and runs the tests, so a drift (new SSA op, a std
+    # internal change, the extractor on a new release) is seen weeks before
+    # the release, not after it. With YAEGI_FORWARD=1, the release of the
+    # toolchain joins the window (internal/gorelease): its data is written
+    # next to the others. Three channels:
+    #   - stable: the latest release (its newest patch release);
+    #   - rc: the newest beta or release candidate of the next release, when
+    #     there is one (otherwise the job stops at once). A failure here fails
+    #     the nightly run: job "report" writes it in the ci-nightly issue,
+    #     with the steps that failed;
+    #   - tip: the development branch of Go. It breaks often: a failure is
+    #     only a notice (the next-go-tip issue, once a week).
+    # It only runs in the nightly run (also when v2 has not changed: Go
+    # changes) and by hand: a newer Go does not depend on the change, and it
+    # is never a gate of a pull request.
+    needs: plan
+    if: needs.plan.outputs.nextgo == 'true'
+    continue-on-error: ${{ matrix.channel != 'rc' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [stable, rc, tip]
+    env:
+      # As before: this job checks the generators on the new release, not
+      # go.mod and go.sum.
+      GOFLAGS: -mod=mod
+      # TestSupportWindow then does not compare the go line of go.mod and
+      # GO_VERSION (still the pinned release) with the toolchain.
+      YAEGI_FORWARD: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: stable
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      # rc and tip: the toolchain is installed with golang.org/dl and put
+      # first in PATH (GOTOOLCHAIN=local: the go command does not switch).
+      - name: toolchain
+        id: toolchain
+        env:
+          CHANNEL: ${{ matrix.channel }}
+        run: |
+          case "$CHANNEL" in
+          rc)
+            # The rc leg is a gate: retry the downloads, so that a short
+            # outage of go.dev does not fail the nightly run.
+            stable=$(curl -fsSL --retry 3 --retry-all-errors 'https://go.dev/dl/?mode=json' | jq -r '.[0].version' | cut -d. -f2)
+            v=$(curl -fsSL --retry 3 --retry-all-errors 'https://go.dev/dl/?mode=json&include=all' | jq -r --argjson m "$stable" '
+              [.[].version | select(test("^go1\\.[0-9]+(rc|beta)[0-9]+$"))
+                | select((capture("^go1\\.(?<n>[0-9]+)").n | tonumber) > $m)] | first // ""')
+            if [ -z "$v" ]; then
+              echo "No beta or release candidate newer than go1.$stable: nothing to test."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            go install "golang.org/dl/$v@latest" || go install "golang.org/dl/$v@latest"
+            "$(go env GOPATH)/bin/$v" download || "$(go env GOPATH)/bin/$v" download
+            echo "$HOME/sdk/$v/bin" >> "$GITHUB_PATH"
+            ;;
+          tip)
+            go install golang.org/dl/gotip@latest
+            "$(go env GOPATH)/bin/gotip" download
+            echo "$HOME/sdk/gotip/bin" >> "$GITHUB_PATH"
+            ;;
+          esac
+          echo "GOTOOLCHAIN=local" >> "$GITHUB_ENV"
+      - name: Go release
+        if: steps.toolchain.outputs.skip != 'true'
+        run: |
+          which go
+          go version
+      # No cache for tip: the key has the Go version, a new one each night,
+      # so each run would save a cache that is never used again.
+      - uses: ./.github/actions/go-cache
+        if: steps.toolchain.outputs.skip != 'true' && matrix.channel != 'tip'
+        with:
+          name: forward-${{ matrix.channel }}
+      # On a newer release than the generated data, setup.sh stops before the
+      # build (the release guards would stop it): it only gets the modules.
+      - name: setup (modules)
+        if: steps.toolchain.outputs.skip != 'true'
+        run: sh scripts/setup.sh
+      - name: regenerate generated data
+        id: regenerate
+        if: steps.toolchain.outputs.skip != 'true'
+        run: |
+          go generate ./stdtypes
+          go generate ./stdsyms
+          go generate ./vm
+          sh scripts/aotgen.sh
+      # The checks of docs/DEVELOPMENT.md "Following a new Go release", step 4: each one
+      # is a step, so the report names what broke. The checks after a failed
+      # one still run, as long as the code builds.
+      - name: build
+        id: build
+        if: ${{ !cancelled() && steps.regenerate.outcome == 'success' }}
+        run: |
+          sh scripts/release-check.sh
+          go build ./...
+      - name: vet
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: go vet ./...
+      - name: new SSA instructions (TestSSAInstructionsHandled, TestCompileCorpus)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: go test -count=1 -timeout 20m -run 'TestSSAInstructionsHandled|TestCompileCorpus' ./vm
+      - name: runtime couplings (TestRuntimeCouplings, TestNativeRecoversNames)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: go test -count=1 -timeout 10m -run 'TestRuntimeCouplings|TestNativeRecoversNames' ./vm
+      - name: test
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: go test ./... -count=1 -timeout 45m
+      - name: test (compare module)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        working-directory: compare
+        run: go test ./... -count=1 -timeout 45m
+      - name: conformance (every program, against docs/conformance)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          YAEGI_CONFORMANCE: "1"
+        run: go test -count=1 -timeout 30m -run 'TestConformanceFull' ./cmd/runtests
+      - uses: ./.github/actions/go-cache
+        # also after a failed test: the cache is for the build
+        if: ${{ !cancelled() && steps.toolchain.outputs.skip != 'true' && matrix.channel != 'tip' }}
+        with:
+          name: forward-${{ matrix.channel }}
+          save: true
+
+  gopatch:
+    # The manifest of the Go sources of the AOT copies (aot/all/gosources.txt,
+    # internal/gosources) must know each new Go patch release: a host built
+    # with a newer patch release than the copies keeps them only when the
+    # manifest says that this patch release changed no copied package
+    # (vm/aotversion.go); otherwise it falls back to default mode
+    # (Options.StaleAOTFallback) or refuses AOT mode. This job adds the patch
+    # releases of the Go module proxy that are newer than the copies, and
+    # fails when the manifest changed: commit the output of
+    # `go run ./cmd/aotgosrc -update`, and regenerate the copies
+    # (sh scripts/aotgen.sh, GO_VERSION) when it says a copied package
+    # changed. Nightly and by hand, also when v2 has not changed: Go
+    # changes, not v2.
+    name: Go patch releases (manifest of the AOT copies)
+    needs: plan
+    if: needs.plan.outputs.nextgo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+      - name: setup (modules)
+        run: sh scripts/setup.sh
+      - name: new Go patch releases
+        run: go run ./cmd/aotgosrc -update
+      - name: manifest is up to date
+        run: |
+          if ! git diff --exit-code aot/all/gosources.txt; then
+            echo "::error::New Go patch releases: commit the output of go run ./cmd/aotgosrc -update (and regenerate the AOT copies when a copied package changed)"
+            exit 1
+          fi
+
+  report:
+    # The nightly run only: an issue with the label ci-nightly when a job
+    # fails (a comment when one is already open), with the steps that failed,
+    # closed at the next green nightly run. The informative jobs (next Go on
+    # stable and tip, staticcheck) never fail the run; they are only listed
+    # when they fail. A failure of next Go on tip is also written once a week
+    # (on Monday) in the issue with the label next-go-tip, closed when tip
+    # passes again.
+    name: report (nightly)
+    needs: [plan, carried, test, platforms, cross, test386, qemu, race, generated, checks, differential, hostgraph, gotestdir, battery, stdtests, forward, gopatch]
+    if: ${{ always() && github.event_name == 'schedule' && (needs.plan.result != 'success' || needs.plan.outputs.run == 'true' || needs.plan.outputs.nextgo == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+          # false when v2 has not changed: only the next Go jobs ran, so a
+          # green run does not close the ci-nightly issue.
+          RUN: ${{ needs.plan.outputs.run }}
+          # the failed run that this run carries over (job "carried"), or empty
+          CARRIED: ${{ needs.plan.outputs.carried }}
+          # the passed full run on this commit (v2 has not changed), or empty
+          KEPT: ${{ needs.plan.outputs.kept }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create ci-nightly --color B60205 \
+            --description "The nightly CI run fails on v2" 2>/dev/null || true
+          gh label create next-go-tip --color FBCA04 \
+            --description "The next-Go job fails on Go tip (a notice)" 2>/dev/null || true
+          # Each failed job, with its failed steps. The jobs that may fail
+          # (continue-on-error) are listed apart.
+          gh api "repos/$GH_REPO/actions/runs/$GITHUB_RUN_ID/jobs?per_page=100" > "$RUNNER_TEMP/jobs.json"
+          list() {
+            jq -r --arg info "$1" '.jobs[]
+              | select(.conclusion == "failure" or .conclusion == "cancelled" or .conclusion == "timed_out")
+              | select((.name == "next Go (stable)" or .name == "next Go (tip)") == ($info == "true"))
+              | "- [\(.name)](\(.html_url))"
+                + ([.steps[]? | select(.conclusion == "failure") | .name] | if length > 0 then ": " + join(", ") else "" end)' "$RUNNER_TEMP/jobs.json"
+          }
+          jobs=$(list false)
+          info=$(list true)
+          issue=$(gh issue list --label ci-nightly --state open --limit 1 --json number --jq '.[0].number // ""')
+          if [ "$FAILED" = true ] && [ -n "$CARRIED" ] && [ -n "$issue" ] && [ -z "$(grep -v '^- \[last run on this commit failed\]' <<< "$jobs")" ]; then
+            # Only job "carried" failed: the failure of the last run, which
+            # the open issue already has. No comment each night.
+            echo "v2 still fails at $GITHUB_SHA (carried over from $CARRIED): issue $issue stays open."
+          elif [ "$FAILED" = true ]; then
+            if [ -n "$CARRIED" ]; then
+              head="The nightly CI run still fails on v2 at $GITHUB_SHA: v2 has not changed since the failed run $CARRIED, so the jobs did not run again."
+            elif [ "$RUN" = true ]; then
+              head="The nightly CI run fails on v2 at $GITHUB_SHA."
+            else
+              # v2 has not changed: only the next Go jobs ran, and Go did.
+              head="Next Go fails on v2 at $GITHUB_SHA (v2 has not changed since the last nightly run: only the next Go jobs ran)."
+            fi
+            body=$(printf '%s\n\nRun: %s\n\nFailed jobs (and steps):\n%s\n' "$head" "$RUN_URL" "$jobs")
+            if [ -n "$info" ]; then
+              body=$(printf '%s\nInformational jobs that failed (not counted):\n%s\n' "$body" "$info")
+            fi
+            if [ -n "$issue" ]; then
+              gh issue comment "$issue" --body "$body"
+            else
+              gh issue create --label ci-nightly --title "Nightly CI fails on v2" --body "$body"
+            fi
+          elif [ -n "$issue" ] && [ "$RUN" = true ]; then
+            gh issue close "$issue" --comment "The nightly CI run passes again at $GITHUB_SHA: $RUN_URL"
+          elif [ -n "$issue" ] && [ -n "$KEPT" ]; then
+            # v2 has not changed and its last full run (a run by hand) passed
+            gh issue close "$issue" --comment "The CI passes again on v2 at $GITHUB_SHA: $KEPT"
+          fi
+          # Go tip: a notice once a week, not a failure of the run.
+          tip=$(jq -r '[.jobs[] | select(.name == "next Go (tip)")][0].conclusion // ""' "$RUNNER_TEMP/jobs.json")
+          tipissue=$(gh issue list --label next-go-tip --state open --limit 1 --json number --jq '.[0].number // ""')
+          if { [ "$tip" = failure ] || [ "$tip" = cancelled ] || [ "$tip" = timed_out ]; } && [ "$(date -u +%u)" = 1 ]; then
+            steps=$(jq -r '[.jobs[] | select(.name == "next Go (tip)")][0] | [.steps[]? | select(.conclusion == "failure") | .name] | join(", ")' "$RUNNER_TEMP/jobs.json")
+            body=$(printf 'The next-Go job fails on Go tip at %s (steps: %s).\n\nRun: %s\n\nA notice: tip breaks often. It shows the work of the next port early (docs/DEVELOPMENT.md, "Following a new Go release").\n' "$GITHUB_SHA" "$steps" "$RUN_URL")
+            if [ -n "$tipissue" ]; then
+              gh issue comment "$tipissue" --body "$body"
+            else
+              gh issue create --label next-go-tip --title "Next Go: the port fails on Go tip" --body "$body"
+            fi
+          elif [ "$tip" = success ] && [ -n "$tipissue" ]; then
+            gh issue close "$tipissue" --comment "The next-Go job passes again on Go tip at $GITHUB_SHA: $RUN_URL"
+          fi

@@ -1,0 +1,52 @@
+# go-cache: the Go build cache and module cache of one CI job.
+#
+# setup-go has one cache per OS, Go release and go.sum, shared by all the
+# jobs: only the first job that ended saved it, so the race builds and the
+# vet of the cross platforms were never reused, and a change of go.sum
+# restored nothing. Here each job has its own key, a change of go.sum still
+# restores the last cache of the job (restore-keys), and only v2 saves
+# (pull requests read the caches of v2 and do not fill the quota).
+#
+# A job calls it twice: first with save: false (restore), as its last step
+# with save: true.
+name: go cache
+description: Restore or save the Go build and module caches of one CI job.
+inputs:
+  name:
+    description: The job (and matrix entry) the cache belongs to.
+    required: true
+  save:
+    description: "'true' for the last step of the job: save on v2."
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - id: paths
+      shell: bash
+      run: |
+        echo "build=$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
+        echo "mod=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
+        echo "prefix=go-${{ runner.os }}-${{ runner.arch }}-${{ inputs.name }}-$(go env GOVERSION)-" >> "$GITHUB_OUTPUT"
+    - id: restore
+      if: inputs.save != 'true'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ${{ steps.paths.outputs.build }}
+          ${{ steps.paths.outputs.mod }}
+        key: ${{ steps.paths.outputs.prefix }}${{ hashFiles('go.sum', 'compare/go.sum') }}
+        restore-keys: ${{ steps.paths.outputs.prefix }}
+    - if: inputs.save != 'true'
+      shell: bash
+      run: echo "GO_CACHE_HIT=${{ steps.restore.outputs.cache-hit }}" >> "$GITHUB_ENV"
+    # A key is never written twice: v2 saves once per go.sum (root and
+    # compare/) and Go
+    # release. The package under test is rebuilt anyway; the cache is for
+    # the standard library, the modules and the tools.
+    - if: inputs.save == 'true' && github.ref == 'refs/heads/v2' && env.GO_CACHE_HIT != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ${{ steps.paths.outputs.build }}
+          ${{ steps.paths.outputs.mod }}
+        key: ${{ steps.paths.outputs.prefix }}${{ hashFiles('go.sum', 'compare/go.sum') }}

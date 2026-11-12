@@ -1,0 +1,1562 @@
+235.go	run	FAIL_EXIT	0.07	exit status 1: bad:  1  should be  2 | 235.go:38:7: panic: main.main(...) | run: 235 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp
+abi/convF_criteria.go	run	PASS	0.05	
+abi/convT64_criteria.go	run	PASS	0.04	
+abi/defer_aggregate.go	run	PASS	0.10	
+abi/defer_recover_results.go	run	PASS	0.05	
+abi/double_nested_addressed_struct.go	run	PASS	0.03	
+abi/double_nested_struct.go	run	PASS	0.04	
+abi/f_ret_z_not.go	run	PASS	0.05	
+abi/fibish.go	run	TIMEOUT	60.07	
+abi/fibish_closure.go	run	FAIL_EXIT	0.07	exit status 2: panic: interface conversion: reflect.Type is nil, not *reflect.rtype |  | goroutine 1 [running]: | reflect.FuncOf({0x195163aa07e0, 0x2, 0x1951636aa900?}, {0x195163aa07c0, 0x2, 0x1951636aa450?}, 0x0) |  $GOROOT/src/reflect/type.go:1956 +0x8d4 | github.com/traefik/yaegi/interp.(*itype).
+abi/fuzz_trailing_zero_field.go	run	PASS	0.05	
+abi/idata.go	run	PASS	0.06	
+abi/leaf.go	run	PASS	0.08	
+abi/leaf2.go	run	PASS	0.04	
+abi/many_int_input.go	run	PASS	0.03	
+abi/many_intstar_input.go	run	PASS	0.04	
+abi/map.go	run	PASS	0.12	
+abi/method_wrapper.go	run	FAIL_EXIT	0.09	exit status 1: abi/method_wrapper.go:21:5: panic: main(...) | run: reflect.Set: value of type func(int, [2]int, float64, [2]float64) (int, int, [2]int, float64, [2]float64) is not assignable to type func(*struct { Xa int; S int }, int, [2]int, float64, [2]float64) (int, int, [2]int, float64, [2]floa
+abi/more_intstar_input.go	run	PASS	0.07	
+abi/named_results.go	run	PASS	0.04	
+abi/named_return_stuff.go	run	PASS	0.12	
+abi/open_defer_1.go	run	PASS	0.06	
+abi/part_live.go	run	FAIL_EXIT	0.06	exit status 1: run: abi/part_live.go:12:8: import "unsafe" error: unable to find source related to: "unsafe"
+abi/part_live_2.go	run	FAIL_EXIT	0.04	exit status 1: run: abi/part_live_2.go:12:8: import "unsafe" error: unable to find source related to: "unsafe"
+abi/reg_not_ssa.go	run	PASS	0.04	
+abi/result_regalloc.go	run	PASS	0.07	
+abi/return_stuff.go	run	PASS	0.04	
+abi/s_sif_sif.go	run	PASS	0.04	
+abi/spills3.go	run	PASS	0.05	
+abi/spills4.go	run	PASS	0.06	
+abi/store_reg_args.go	run	PASS	0.04	
+abi/struct_3_string_input.go	run	PASS	0.06	
+abi/struct_lower_1.go	run	PASS	0.08	
+abi/too_big_to_ssa.go	run	PASS	0.05	
+abi/uglyfib.go	run	TIMEOUT	60.01	
+abi/wrapdefer_largetmp.go	run	PASS	0.06	
+abi/zombie_struct_select.go	run	PASS	0.07	
+alias.go	errorcheck	ERR_WRONGMSG	0.05	line 23: "cannot use type float64 as type uint8" does not match "byte"
+alias1.go	run	PASS	0.06	
+alias2.go	errorcheck	ERR_WRONGLINE	0.06	line 20 has no ERROR comment: run: alias2.go:20:6: cannot use _ as value
+align.go	run	PASS	0.07	
+append.go	run	PASS	0.15	
+append1.go	errorcheck	ERR_WRONGMSG	0.06	line 16: "not enough arguments in call to append" does not match "missing arguments to append|not enough arguments for append"
+args.go	run	FAIL_EXIT	0.06	exit status 1: args.go:14:9: panic: main.main(...) | run: argc | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/program.go:146 +0x79 
+armimm.go	run	FAIL_EXIT	0.07	exit status 1: armimm.go:118:6: panic: main.test32(...) | armimm.go:113:2: panic: main.main(...) | run: add32a(11111111) = 11bb11ee, want 0 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1()
+assign.go	errorcheck	PASS	0.05	
+assign1.go	errorcheck	ERR_MISSED	0.07	
+atomicload.go	run	PASS	5.38	
+bigalg.go	run	PASS	0.08	
+bigmap.go	run	PASS	0.10	
+blank.go	run	FAIL_EXIT	0.06	exit status 1: run: blank.go:13:2: import "unsafe" error: package location $GOROOT/test not in GOPATH
+blank1.go	errorcheck	PASS	0.06	
+bombad.go	errorcheck	ERR_WRONGMSG	0.04	line 14: "illegal byte order mark" does not match "BOM"
+cannotassign.go	errorcheck	ERR_WRONGMSG	0.04	line 14: "cannot convert \"b\" to uint8" does not match "cannot assign to .* (\\(strings are immutable\\))?"
+chan/doubleselect.go	run	PASS	1.33	
+chan/fifo.go	run	PASS	0.06	
+chan/goroutines.go	run	FAIL_EXIT	0.06	exit status 1: bad arg | chan/goroutines.go:22:6: panic: main.main(...) | run: os.Exit(1) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/i
+chan/nonblock.go	run	FAIL_EXIT	0.08	exit status 1: chan/nonblock.go:75:6: panic: main.main(...) | run: reflect.Select: value of type int is not assignable to type int32 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GO
+chan/perm.go	errorcheck	PASS	0.03	
+chan/powser1.go	run	FAIL_EXIT	0.05	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x128 pc=0x837615] |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*itype).refType(0x0?, 0x2f84a5a8c780?) |  $GOMODCACHE/github.com/traefik/ya
+chan/powser2.go	run	FAIL_OUTPUT	0.10	line 1: got "Ones: 1 1 1 1 1 1 1 1 1 1 \nTwos: 2 2 2 2 2 2 2 2 2 2 \nAdd: 3 3 3 3 3 3 3 3 3 3 \nDiff: 1 2 3 4 5 6 7 8 9 10 \nInteg: 0 1 1" want ""
+chan/select.go	run	TIMEOUT	60.01	
+chan/select2.go	run	FAIL_EXIT	0.03	exit status 1: run: chan/select2.go:31:2: cannot assign to %!s(int=524288) (int constant)
+chan/select3.go	run	FAIL_EXIT	0.05	exit status 1: run: chan/select3.go:208:8: unsupported assign expression
+chan/select4.go	run	FAIL_EXIT	0.04	exit status 1: chan/select4.go:17:8: panic: main.main(...) | run: reflect.Select: invalid Dir | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16
+chan/select6.go	run	PASS	0.05	
+chan/select7.go	run	PASS	0.06	
+chan/select8.go	run	PASS	0.04	
+chan/sendstmt.go	run	PASS	0.10	
+chan/sieve1.go	run	PASS	0.10	
+chan/sieve2.go	run	TIMEOUT	60.02	
+chan/zerosize.go	run	PASS	0.05	
+chancap.go	run	FAIL_EXIT	0.06	exit status 1: run: chancap.go:13:2: import "unsafe" error: package location $GOROOT/test not in GOPATH
+chanlinear.go	run	FAIL_EXIT	0.06	exit status 1: chanlinear.go:71:9: panic: main.main.func(...) | chanlinear.go:29:9: panic: main.checkLinear.func(...) | chanlinear.go:28:11: panic: main.checkLinear.func(...) | chanlinear.go:70:34: panic: main.main.func(...) | run: reflect: call of reflect.Value.Len on int Value | goroutine 1 [runni
+char_lit.go	run	PASS	0.06	
+clear.go	run	FAIL_EXIT	0.05	exit status 1: run: clear.go:13:2: undefined: clear
+closedchan.go	run	FAIL_EXIT	0.10	exit status 1: closedchan.go:47:9: panic: main.Recv(...) | closedchan.go:228:6: panic: main.test1(...) | closedchan.go:335:21: panic: main.main(...) | run: reflect: reflect.Value.Set using unaddressable value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +
+closure.go	run	FAIL_EXIT	0.06	exit status 1: newfunc allocated unexpectedly | closure.go:84:2: panic: main.main(...) | run: fail | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@
+closure1.go	run	PASS	0.04	
+closure2.go	run	FAIL_EXIT	0.06	exit status 1: closure2.go:16:3: panic: main.main(...) | run: g() != 1 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/program.go:14
+closure4.go	run	PASS	0.04	
+closure7.go	run	PASS	0.04	
+cmp.go	run	FAIL_EXIT	0.04	exit status 1: run: cmp.go:13:2: import "unsafe" error: package location $GOROOT/test not in GOPATH
+cmp6.go	errorcheck	PASS	0.08	
+cmplx.go	errorcheck	ERR_WRONGMSG	0.08	line 45: "invalid operation: mismatched types float32 and float64" does not match "complex"
+cmplxdivide.go	run	PASS	0.85	
+complit.go	run	PASS	0.07	
+complit1.go	errorcheck	ERR_WRONGLINE	0.05	line 14 has no ERROR comment: run: complit1.go:14:1: missing function body
+compos.go	run	PASS	0.03	
+const.go	run	FAIL_EXIT	0.06	exit status 1: run: const.go:54:24: constant 1267650600228229401496703205376 overflows int64 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.
+const1.go	errorcheck	ERR_WRONGLINE	0.04	line 12 has no ERROR comment: run: const1.go:12:8: import "unsafe" error: package location $GOROOT/test not in GOPATH
+const2.go	errorcheck	ERR_WRONGMSG	0.05	line 14: "constant definition loop" does not match "type without expr|expected .=.|missing init expr"
+const3.go	run	PASS	0.06	
+const4.go	run	FAIL_EXIT	0.05	exit status 1: const4.go:20:11: panic: main(...) | run: reflect: slice index out of range | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/i
+const5.go	errorcheck	ERR_WRONGLINE	0.06	line 19 has no ERROR comment: run: const5.go:19:1: missing function body
+const6.go	errorcheck	PASS	0.05	
+const7.go	run	FAIL_EXIT	0.06	exit status 1: run: const7.go:17:2: import "os/exec" error: package location $GOROOT/test not in GOPATH
+const8.go	run	PASS	0.08	
+convT2X.go	run	FAIL_EXIT	0.04	exit status 1: convT2X.go:98:5: panic: main.main(...) | run: u16 != iu16 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/program.go:
+convert.go	run	PASS	0.05	
+convert1.go	errorcheck	PASS	0.06	
+convert2.go	errorcheck	PASS	0.09	
+convert3.go	errorcheck	ERR_CRASH	0.06	exit 1: convert3.go:14:5: panic: main(...) | run: reflect: call of reflect.Value.Len on zero Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@
+convert4.go	run	FAIL_EXIT	0.08	exit status 1: run: convert4.go:29:25: invalid operation: cannot take address of uint8 [kind: indexExpr]
+convert5.go	run	FAIL_EXIT	0.04	exit status 1: run: convert5.go:65:23: invalid operation: division by zero
+convlit.go	errorcheck	ERR_WRONGLINE	0.02	line 12 has no ERROR comment: run: convlit.go:12:8: import "unsafe" error: package location $GOROOT/test not in GOPATH
+convlit1.go	errorcheck	PASS	0.02	
+copy.go	run	PASS	53.74	
+copy1.go	errorcheck	PASS	0.02	
+ddd.go	run	FAIL_EXIT	0.05	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x150 pc=0x4e764a] |  | goroutine 1 [running]: | reflect.SliceOf({0x0?, 0x0?}) |  $GOROOT/src/reflect/type.go:2150 +0x2a | github.com/traefik/yaegi/interp.(*
+ddd1.go	errorcheck	ERR_WRONGLINE	0.03	line 12 has no ERROR comment: run: ddd1.go:12:8: import "unsafe" error: package location $GOROOT/test not in GOPATH
+decl.go	run	PASS	0.07	
+declbad.go	errorcheck	PASS	0.04	
+defer.go	run	FAIL_EXIT	0.06	exit status 1: test1: bad defer result (should be 9876543210): "10101010101010101010" | defer.go:24:2: panic: main.test1(...) | defer.go:50:2: panic: main.main(...) | run: defer | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi
+deferfin.go	run	TIMEOUT	60.00	
+defernil.go	run	PASS	0.05	
+deferprint.go	run	FAIL_OUTPUT	0.06	line 2: got "42 true false true 1.5 world <nil> [] map[] <nil> 255\n" want "42 true false true 1.5 world 0x0 [0/0]0x0 0x0 0x0 255\n"
+devirtualization_nil_panics.go	run	FAIL_EXIT	0.07	exit status 1: devirtualization_nil_panics.go:27:7: panic: main.main.func(...) | devirtualization_nil_panics.go:73:8: panic: main.shouldNilPanic.func(...) | devirtualization_nil_panics.go:26:21: panic: main.main.func(...) | run: reflect: call of reflect.Value.Interface on zero Value | goroutine 1 [r
+directive.go	errorcheck	ERR_MISSED	0.04	
+directive2.go	errorcheck	ERR_MISSED	0.03	
+divide.go	run	PASS	0.13	
+divmod.go	run	FAIL_EXIT	0.56	exit status 1: divmod.go:38:5: panic: main.gen(...) | divmod.go:38:5: panic: main.gen(...) | divmod.go:38:5: panic: main.gen(...) | divmod.go:38:5: panic: main.gen(...) | divmod.go:38:5: panic: main.gen(...) | divmod.go:38:5: panic: main.gen(...) | divmod.go:38:5: panic: main.gen(...) | divmod.go:38
+embedfunc.go	errorcheck	ERR_WRONGLINE	0.01	line 9 has no ERROR comment: run: embedfunc.go:9:8: import "embed" error: package location $GOROOT/test not in GOPATH
+env.go	run	PASS	0.02	
+escape.go	run	FAIL_EXIT	0.04	exit status 1: wrong value want 11 got 12 after select_escapes1 | aliased pointers -11 -12 after select_escapes1 | escape.go:179:10: panic: main.main(...) | run: BUG: no escape | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/
+escape3.go	run	PASS	0.09	
+finprofiled.go	run	FAIL_EXIT	0.07	exit status 1: run: finprofiled.go:16:2: import "unsafe" error: package location $GOROOT/test not in GOPATH
+fixedbugs/bug000.go	run	PASS	0.06	
+fixedbugs/bug002.go	run	PASS	0.03	
+fixedbugs/bug003.go	run	PASS	0.03	
+fixedbugs/bug004.go	run	PASS	0.04	
+fixedbugs/bug005.go	run	PASS	0.06	
+fixedbugs/bug006.go	run	PASS	0.05	
+fixedbugs/bug007.go	run	PASS	0.04	
+fixedbugs/bug008.go	run	PASS	0.04	
+fixedbugs/bug009.go	run	PASS	0.08	
+fixedbugs/bug010.go	run	PASS	0.03	
+fixedbugs/bug011.go	run	PASS	0.02	
+fixedbugs/bug012.go	run	PASS	0.04	
+fixedbugs/bug013.go	run	PASS	0.03	
+fixedbugs/bug014.go	errorcheck	PASS	0.03	
+fixedbugs/bug015.go	errorcheck	ERR_MISSED	0.04	
+fixedbugs/bug016.go	errorcheck	ERR_WRONGMSG	0.04	line 11: "invalid operation: shift count type untyped int, must be integer" does not match "overflows|negative"
+fixedbugs/bug017.go	run	PASS	0.02	
+fixedbugs/bug021.go	run	PASS	0.04	
+fixedbugs/bug022.go	errorcheck	ERR_CRASH	0.04	exit 2: scope.go:207: nil type | panic: nil type [recovered] |  panic: fixedbugs/bug022.go:12:6: CFG post-order panic: nil type |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/cfg.go:608 +0x67 | panic({
+fixedbugs/bug023.go	run	PASS	0.05	
+fixedbugs/bug024.go	run	PASS	0.07	
+fixedbugs/bug026.go	run	PASS	0.06	
+fixedbugs/bug027.go	run	PASS	0.06	
+fixedbugs/bug028.go	run	PASS	0.05	
+fixedbugs/bug030.go	errorcheck	PASS	0.04	
+fixedbugs/bug031.go	run	PASS	0.04	
+fixedbugs/bug035.go	errorcheck	PASS	0.05	
+fixedbugs/bug037.go	errorcheck	PASS	0.07	
+fixedbugs/bug039.go	errorcheck	PASS	0.03	
+fixedbugs/bug040.go	errorcheck	PASS	0.03	
+fixedbugs/bug045.go	run	PASS	0.02	
+fixedbugs/bug046.go	errorcheck	ERR_CRASH	0.03	exit 2: panic: runtime error: index out of range [0] with length 0 |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func1(0xd6237e67b80) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/cfg.go:453 +0x34ef | github.com/traefik/yaegi/interp.(*node).Walk(0xd6237e67
+fixedbugs/bug047.go	run	PASS	0.05	
+fixedbugs/bug048.go	run	PASS	0.05	
+fixedbugs/bug049.go	errorcheck	ERR_MISSED	0.04	
+fixedbugs/bug051.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/bug052.go	run	PASS	0.03	
+fixedbugs/bug053.go	run	PASS	0.03	
+fixedbugs/bug054.go	run	PASS	0.02	
+fixedbugs/bug055.go	run	PASS	0.02	
+fixedbugs/bug056.go	run	PASS	0.03	
+fixedbugs/bug058.go	run	PASS	0.06	
+fixedbugs/bug059.go	run	PASS	0.05	
+fixedbugs/bug060.go	run	PASS	0.04	
+fixedbugs/bug061.go	run	PASS	0.04	
+fixedbugs/bug062.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/bug065.go	run	PASS	0.03	
+fixedbugs/bug067.go	run	PASS	0.02	
+fixedbugs/bug068.go	errorcheck	PASS	0.02	
+fixedbugs/bug070.go	run	PASS	0.03	
+fixedbugs/bug072.go	errorcheck	PASS	0.03	
+fixedbugs/bug074.go	errorcheck	ERR_CRASH	0.03	exit 1: run: runtime error: invalid memory address or nil pointer dereference | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/progra
+fixedbugs/bug075.go	run	PASS	0.07	
+fixedbugs/bug078.go	run	PASS	0.08	
+fixedbugs/bug081.go	errorcheck	PASS	0.06	
+fixedbugs/bug082.go	run	PASS	0.08	
+fixedbugs/bug084.go	run	PASS	0.05	
+fixedbugs/bug085.go	errorcheck	PASS	0.08	
+fixedbugs/bug086.go	errorcheck	ERR_MISSED	0.10	0
+fixedbugs/bug090.go	errorcheck	PASS	0.07	
+fixedbugs/bug091.go	errorcheck	PASS	0.08	
+fixedbugs/bug092.go	run	PASS	0.02	
+fixedbugs/bug093.go	run	PASS	0.03	
+fixedbugs/bug097.go	run	PASS	0.06	
+fixedbugs/bug099.go	run	PASS	0.05	
+fixedbugs/bug101.go	run	PASS	0.11	
+fixedbugs/bug102.go	run	PASS	0.04	
+fixedbugs/bug103.go	errorcheck	ERR_CRASH	0.01	exit 1: fixedbugs/bug103.go:12:7: panic: main.main(...) | run: reflect.Set: value of type *interface {} is not assignable to type func() | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() | 
+fixedbugs/bug104.go	errorcheck	PASS	0.02	
+fixedbugs/bug107.go	errorcheck	ERR_WRONGLINE	0.08	line 9 has no ERROR comment: run: bug107.go:9:6: cannot use _ as value
+fixedbugs/bug108.go	errorcheck	PASS	0.03	
+fixedbugs/bug111.go	run	PASS	0.03	
+fixedbugs/bug113.go	run	FAIL_OUTPUT	0.08	line 1: got "fixedbugs/bug113.go:29:6: panic: main.p1(...)\n" want ""
+fixedbugs/bug114.go	run	PASS	0.07	
+fixedbugs/bug116.go	run	PASS	0.06	
+fixedbugs/bug117.go	errorcheck	ERR_MISSED	0.06	
+fixedbugs/bug119.go	run	PASS	0.05	
+fixedbugs/bug120.go	run	PASS	0.05	
+fixedbugs/bug121.go	errorcheck	ERR_WRONGMSG	0.03	line 12: "expected ';', found ','" does not match "unexpected comma"
+fixedbugs/bug122.go	errorcheck	PASS	0.06	
+fixedbugs/bug123.go	errorcheck	ERR_CRASH	0.07	exit 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: fixedbugs/bug123.go:10:5: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x83a2f7] |  | gorouti
+fixedbugs/bug126.go	errorcheck	PASS	0.04	
+fixedbugs/bug127.go	errorcheck	ERR_CRASH	0.04	exit 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: fixedbugs/bug127.go:11:10: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0xb8 pc=0x842bac] |  | gorou
+fixedbugs/bug128.go	run	PASS	0.03	
+fixedbugs/bug130.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/bug130.go:17:7: panic: main.main(...) | run: os.Exit(0) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/pro
+fixedbugs/bug131.go	errorcheck	PASS	0.03	
+fixedbugs/bug132.go	errorcheck	PASS	0.06	
+fixedbugs/bug13343.go	errorcheck	ERR_WRONGMSG	0.04	line 10: "assignment mismatch: 2 variables but f returns 0 values" does not match "initialization cycle|depends upon itself|depend upon each other"
+fixedbugs/bug136.go	errorcheck	PASS	0.03	
+fixedbugs/bug141.go	run	PASS	0.02	
+fixedbugs/bug142.go	run	PASS	0.06	
+fixedbugs/bug146.go	errorcheck	PASS	0.03	
+fixedbugs/bug147.go	run	PASS	0.04	
+fixedbugs/bug148.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/bug148.go:39:6: panic: main.shouldPanic.func(...) | fixedbugs/bug148.go:26:13: panic: main.main(...) | run: function should panic | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).
+fixedbugs/bug1515.go	run	PASS	0.02	
+fixedbugs/bug152.go	run	PASS	0.04	
+fixedbugs/bug154.go	run	PASS	0.07	
+fixedbugs/bug159.go	run	FAIL_EXIT	0.04	exit status 1: abc: expected 4 5 6 got 4 4 -4 | fixedbugs/bug159.go:12:2: panic: main.main(...) | run: os.Exit(1) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com
+fixedbugs/bug163.go	errorcheck	ERR_WRONGMSG	0.04	line 9: "illegal character U+229B '⊛'" does not match "invalid character .* in identifier"
+fixedbugs/bug165.go	errorcheck	ERR_MISSED	0.06	
+fixedbugs/bug168.go	run	PASS	0.03	
+fixedbugs/bug169.go	errorcheck	PASS	0.03	
+fixedbugs/bug170.go	errorcheck	PASS	0.04	
+fixedbugs/bug171.go	errorcheck	ERR_MISSED	0.05	
+fixedbugs/bug172.go	errorcheck	PASS	0.06	
+fixedbugs/bug175.go	errorcheck	ERR_MISSED	0.04	
+fixedbugs/bug176.go	errorcheck	PASS	0.04	
+fixedbugs/bug177.go	run	PASS	0.04	
+fixedbugs/bug178.go	run	PASS	0.03	
+fixedbugs/bug179.go	errorcheck	PASS	0.03	
+fixedbugs/bug180.go	run	FAIL_EXIT	0.04	exit status 1: fixedbugs/bug180.go:9:50: panic: main.shift(...) | fixedbugs/bug180.go:12:10: panic: main.main(...) | run: reflect: call of reflect.Value.Uint on int Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp
+fixedbugs/bug181.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/bug182.go	errorcheck	PASS	0.04	
+fixedbugs/bug183.go	errorcheck	PASS	0.03	
+fixedbugs/bug184.go	run	PASS	0.03	
+fixedbugs/bug185.go	run	FAIL_EXIT	0.03	exit status 1: f2 2 2 | fixedbugs/bug185.go:24:10: panic: main.main(...) | run: fail | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp
+fixedbugs/bug186.go	errorcheck	ERR_MISSED	0.06	
+fixedbugs/bug187.go	run	PASS	0.05	
+fixedbugs/bug189.go	errorcheck	PASS	0.05	
+fixedbugs/bug192.go	errorcheck	PASS	0.03	
+fixedbugs/bug193.go	errorcheck	ERR_MISSED	0.04	
+fixedbugs/bug194.go	run	PASS	0.03	
+fixedbugs/bug19403.go	run	PASS	0.04	
+fixedbugs/bug196.go	run	PASS	0.05	
+fixedbugs/bug197.go	errorcheck	PASS	0.03	
+fixedbugs/bug198.go	errorcheck	ERR_WRONGMSG	0.05	line 8: "constant definition loop" does not match "undefined"
+fixedbugs/bug199.go	run	PASS	0.04	
+fixedbugs/bug200.go	errorcheck	PASS	0.04	
+fixedbugs/bug201.go	run	FAIL_EXIT	0.03	exit status 1: *T1 true false true | fixedbugs/bug201.go:23:9: panic: main.main(...) | run: fail | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0
+fixedbugs/bug202.go	run	PASS	0.05	
+fixedbugs/bug203.go	run	PASS	0.01	
+fixedbugs/bug204.go	run	PASS	0.04	
+fixedbugs/bug205.go	errorcheck	PASS	0.02	
+fixedbugs/bug206.go	run	PASS	0.04	
+fixedbugs/bug207.go	run	PASS	0.04	
+fixedbugs/bug208.go	errorcheck	ERR_WRONGMSG	0.06	line 17: "constant definition loop" does not match "undefined"
+fixedbugs/bug209.go	errorcheck	PASS	0.03	
+fixedbugs/bug212.go	errorcheck	PASS	0.03	
+fixedbugs/bug213.go	errorcheck	PASS	0.06	
+fixedbugs/bug215.go	errorcheck	ERR_MISSED	0.05	
+fixedbugs/bug217.go	errorcheck	ERR_WRONGMSG	0.03	line 12: "missing function body" does not match "no receiver"
+fixedbugs/bug221.go	run	PASS	0.03	
+fixedbugs/bug223.go	errorcheck	ERR_MISSED	0.04	
+fixedbugs/bug224.go	errorcheck	ERR_WRONGMSG	0.06	line 9: "undefined: T" does not match "recursive|cycle"
+fixedbugs/bug225.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/bug225.go:10:7: panic: main.main(...) | run: reflect.Select: invalid Dir | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v
+fixedbugs/bug227.go	run	FAIL_EXIT	0.04	exit status 2: scope.go:207: nil type | panic: nil type |  | goroutine 1 [running]: | log.Panic({0x2a4fa3d98c88?, 0x1?, 0x4d?}) |  $GOROOT/src/log/log.go:451 +0x6e | github.com/traefik/yaegi/interp.(*scope).add(0x2a4fa41b6090, 0x0) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/scope.go:207 
+fixedbugs/bug228.go	errorcheck	ERR_WRONGMSG	0.08	line 11: "expected type, found ')'" does not match "[.][.][.]"
+fixedbugs/bug228a.go	errorcheck	PASS	0.03	
+fixedbugs/bug229.go	errorcheck	ERR_WRONGMSG	0.03	line 19: "package testing \"testing\" has no symbol anyLowercaseName" does not match "unexported|undefined"
+fixedbugs/bug230.go	run	PASS	0.04	
+fixedbugs/bug231.go	errorcheck	ERR_WRONGMSG	0.03	line 22: "cannot use type main.T as type main.I in assignment" does not match "not a method|has no methods|does not implement I"
+fixedbugs/bug234.go	run	PASS	0.06	
+fixedbugs/bug236.go	run	PASS	0.03	
+fixedbugs/bug237.go	run	PASS	0.05	
+fixedbugs/bug238.go	errorcheck	ERR_WRONGMSG	0.04	line 11: "constant definition loop" does not match "convert|wrong|invalid"
+fixedbugs/bug240.go	errorcheck	ERR_WRONGMSG	0.04	line 9: "import \"unsafe\" error: unable to find source related to: \"unsafe\"" does not match "not used"
+fixedbugs/bug241.go	errorcheck	ERR_WRONGLINE	0.04	line 9 has no ERROR comment: run: bug241.go:9:11: undefined selector String
+fixedbugs/bug242.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/bug242.go:71:17: panic: main.main(...) | run: reflect.Set: value of type interface {} is not assignable to type interp.valueInterface | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpret
+fixedbugs/bug243.go	run	FAIL_EXIT	0.05	exit status 2: fixedbugs/bug243.go:45:9: panic: main.Accept(...) | fixedbugs/bug243.go:20:18: panic: main.main.func(...) | panic: reflect: reflect.Value.Set using unaddressable value [recovered, repanicked] |  | goroutine 5 [running]: | github.com/traefik/yaegi/interp.runCfg.func1() |  $GOMODCACHE/g
+fixedbugs/bug244.go	run	FAIL_EXIT	0.05	exit status 2: scope.go:207: nil type | panic: nil type |  | goroutine 1 [running]: | log.Panic({0x3dc117920c88?, 0x1?, 0x25?}) |  $GOROOT/src/log/log.go:451 +0x6e | github.com/traefik/yaegi/interp.(*scope).add(0x3dc1179ce090, 0x0) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/scope.go:207 
+fixedbugs/bug246.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/bug246.go:9:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/bug247.go	run	PASS	0.05	
+fixedbugs/bug249.go	errorcheck	PASS	0.02	
+fixedbugs/bug251.go	errorcheck	ERR_MISSED	0.04	
+fixedbugs/bug252.go	errorcheck	PASS	0.06	
+fixedbugs/bug253.go	run	PASS	0.03	
+fixedbugs/bug254.go	run	FAIL_EXIT	0.08	exit status 2: panic: 10 not an Int |  | goroutine 1 [running]: | go/constant.BitLen({0xfea768?, 0x3f00e5b20440?}) |  $GOROOT/src/go/constant/value.go:658 +0x16d | github.com/traefik/yaegi/interp.constToInt({0xfea768, 0x3f00e5b20440}) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/type.go:23
+fixedbugs/bug255.go	errorcheck	ERR_CRASH	0.03	exit 2: panic: 10 not an Int |  | goroutine 1 [running]: | go/constant.BitLen({0xfea768?, 0x278addfde7c0?}) |  $GOROOT/src/go/constant/value.go:658 +0x16d | github.com/traefik/yaegi/interp.constToInt({0xfea768, 0x278addfde7c0}) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/type.go:2349 +0x2
+fixedbugs/bug256.go	errorcheck	ERR_MISSED	0.06	
+fixedbugs/bug257.go	run	PASS	0.14	
+fixedbugs/bug258.go	run	PASS	0.04	
+fixedbugs/bug259.go	run	PASS	0.03	
+fixedbugs/bug260.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/bug260.go:28:16: panic: main.main(...) | run: os.Exit(0) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/pr
+fixedbugs/bug261.go	run	PASS	0.04	
+fixedbugs/bug262.go	run	FAIL_EXIT	0.06	exit status 1: BUG 0 fgh | fixedbugs/bug262.go:39:7: panic: main.main(...) | run: fail | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/inte
+fixedbugs/bug263.go	run	PASS	0.04	
+fixedbugs/bug264.go	run	PASS	0.05	
+fixedbugs/bug265.go	run	PASS	0.06	
+fixedbugs/bug266.go	run	PASS	0.07	
+fixedbugs/bug269.go	run	PASS	0.05	
+fixedbugs/bug271.go	run	PASS	0.06	
+fixedbugs/bug272.go	run	PASS	0.09	
+fixedbugs/bug273.go	run	FAIL_EXIT	0.04	exit status 1: run: fixedbugs/bug273.go:11:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/bug274.go	errorcheck	ERR_WRONGLINE	0.06	line 24 has no ERROR comment: run: bug274.go:24:2: expected statement, found 'case'
+fixedbugs/bug276.go	run	PASS	0.03	
+fixedbugs/bug278.go	errorcheck	ERR_CRASH	0.02	exit 1: fixedbugs/bug278.go:18:2: panic: main.main(...) | run: reflect: reflect.Value.Set using unaddressable value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.c
+fixedbugs/bug279.go	run	FAIL_EXIT	0.05	exit status 1: run: fixedbugs/bug279.go:11:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/bug280.go	errorcheck	ERR_MISSED	0.04	
+fixedbugs/bug281.go	run	PASS	0.06	
+fixedbugs/bug284.go	errorcheck	ERR_MISSED	0.05	
+fixedbugs/bug285.go	run	FAIL_EXIT	0.04	exit status 1: fixedbugs/bug285.go:20:2: panic: main.main(...) | run: reflect.Value.MapIndex: value of type interface {} is not assignable to type *struct { Xx int } | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*In
+fixedbugs/bug286.go	run	PASS	0.03	
+fixedbugs/bug287.go	errorcheck	ERR_WRONGMSG	0.07	line 11: "cannot use type [3][5]uint8 as type [3][1]uint8 in assignment" does not match "\\.\\.\\."
+fixedbugs/bug289.go	errorcheck	PASS	0.09	
+fixedbugs/bug290.go	run	PASS	0.06	
+fixedbugs/bug291.go	run	FAIL_EXIT	0.04	exit status 2: scope.go:207: nil type | panic: nil type |  | goroutine 1 [running]: | log.Panic({0x3ef65c286c88?, 0x2?, 0x61?}) |  $GOROOT/src/log/log.go:451 +0x6e | github.com/traefik/yaegi/interp.(*scope).add(0x3ef65c2bc090, 0x0) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/scope.go:207 
+fixedbugs/bug292.go	run	FAIL_EXIT	0.08	exit status 1: run: fixedbugs/bug292.go:11:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/bug293.go	run	PASS	0.04	
+fixedbugs/bug294.go	run	FAIL_EXIT	0.06	exit status 2: panic: interface conversion: reflect.Type is nil, not *reflect.rtype |  | goroutine 1 [running]: | reflect.FuncOf({0x3fc1a39a07e0, 0x1, 0x3fc1a35a7400?}, {0x3fc1a39a07c0, 0x1, 0x1004d30?}, 0x0) |  $GOROOT/src/reflect/type.go:1965 +0x8a6 | github.com/traefik/yaegi/interp.(*itype).refTy
+fixedbugs/bug295.go	run	FAIL_EXIT	0.04	exit status 1: run: fixedbugs/bug295.go:11:6: cannot use _ as value
+fixedbugs/bug296.go	run	PASS	0.07	
+fixedbugs/bug298.go	errorcheck	PASS	0.02	
+fixedbugs/bug299.go	errorcheck	PASS	0.05	
+fixedbugs/bug300.go	errorcheck	PASS	0.06	
+fixedbugs/bug303.go	run	PASS	0.05	
+fixedbugs/bug305.go	errorcheck	PASS	0.05	
+fixedbugs/bug311.go	run	PASS	0.07	
+fixedbugs/bug312.go	run	FAIL_EXIT	0.07	exit status 1: fixedbugs/bug312.go:12:8: panic: main.main(...) | run: reflect.Select: invalid Dir | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v
+fixedbugs/bug314.go	run	PASS	0.03	
+fixedbugs/bug317.go	run	PASS	0.06	
+fixedbugs/bug318.go	errorcheck	ERR_WRONGMSG	0.08	line 12: "constant definition loop" does not match "type"
+fixedbugs/bug320.go	run	PASS	0.02	
+fixedbugs/bug321.go	run	PASS	0.02	
+fixedbugs/bug323.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/bug325.go	errorcheck	ERR_WRONGLINE	0.05	line 9 has no ERROR comment: run: bug325.go:9:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/bug326.go	errorcheck	PASS	0.05	
+fixedbugs/bug327.go	run	PASS	0.06	
+fixedbugs/bug328.go	run	FAIL_EXIT	0.07	exit status 1: run: fixedbugs/bug328.go:9:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/bug329.go	run	PASS	0.06	
+fixedbugs/bug330.go	errorcheck	PASS	0.06	
+fixedbugs/bug331.go	run	PASS	0.04	
+fixedbugs/bug332.go	errorcheck	PASS	0.03	
+fixedbugs/bug333.go	run	PASS	0.02	
+fixedbugs/bug336.go	run	FAIL_EXIT	0.07	exit status 2: panic: interface conversion: reflect.Type is nil, not *reflect.rtype [recovered] |  panic: fixedbugs/bug336.go:57:11: CFG post-order panic: interface conversion: reflect.Type is nil, not *reflect.rtype |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.fu
+fixedbugs/bug337.go	errorcheck	ERR_MISSED	0.08	
+fixedbugs/bug339.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/bug339.go:12:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/bug340.go	errorcheck	PASS	0.03	
+fixedbugs/bug341.go	run	PASS	0.05	
+fixedbugs/bug342.go	errorcheck	PASS	0.04	
+fixedbugs/bug343.go	run	FAIL_OUTPUT	0.04	line 1: got "BUG bug343 map[]\n" want ""
+fixedbugs/bug344.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/bug346.go	run	PASS	0.06	
+fixedbugs/bug347.go	run	FAIL_OUTPUT	0.05	line 1: got "fixedbugs/bug347.go:22:9: panic: main.f(...)\nBUG: bug347: cannot find caller\n" want ""
+fixedbugs/bug348.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/bug348.go:15:8: panic: main.f(...) | BUG: bug348: cannot find caller | fixedbugs/bug348.go:26:8: panic: main.main.func(...) | run: runtime error: invalid memory address or nil pointer dereference | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/s
+fixedbugs/bug349.go	errorcheck	ERR_WRONGMSG	0.12	line 12: "expected ';', found 2.01" does not match "unexpected literal 2.01|expected ';' or '}' or newline|not enough arguments to return"
+fixedbugs/bug350.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/bug351.go	errorcheck	ERR_WRONGMSG	0.03	line 12: "no new variables on left side of :=" does not match "non-name [(]x[)]|non-name on left side"
+fixedbugs/bug352.go	run	PASS	0.03	
+fixedbugs/bug353.go	errorcheck	PASS	0.02	
+fixedbugs/bug355.go	run	PASS	0.05	
+fixedbugs/bug356.go	run	PASS	0.04	
+fixedbugs/bug357.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/bug362.go	errorcheck	ERR_MISSED	0.06	
+fixedbugs/bug363.go	errorcheck	ERR_CRASH	0.04	exit 1: fixedbugs/bug363.go:12:6: panic: main.main(...) | run: reflect: call of reflect.Value.Float on int Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/
+fixedbugs/bug364.go	run	FAIL_OUTPUT	0.02	line 1: got "BUG: defer\n0.30000000000000004\n0.30000000000000004\n0.30000000000000004\n" want ""
+fixedbugs/bug365.go	errorcheck	ERR_CRASH	0.06	exit 2: panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x128 pc=0x82c43c] |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.nodeType2(0x157d08f7448, 0x157d08fa5a0, 0x157d0879540, {0x157d0c82a80, 0x0, 0x1}) |
+fixedbugs/bug366.go	run	PASS	0.03	
+fixedbugs/bug368.go	run	PASS	0.04	
+fixedbugs/bug370.go	run	PASS	0.04	
+fixedbugs/bug371.go	errorcheck	ERR_CRASH	0.06	exit 1: fixedbugs/bug371.go:17:8: panic: main.main(...) | run: reflect.Set: value of type *struct {} is not assignable to type struct {} | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() | 
+fixedbugs/bug372.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/bug372.go:23:2: ambiguous selector: m
+fixedbugs/bug373.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/bug374.go	errorcheck	ERR_WRONGMSG	0.03	line 18: "constant definition loop" does not match "xxxx"
+fixedbugs/bug375.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/bug375.go:12:8: panic: main.main(...) | run: reflect.Value.Convert: value of type interface {} cannot be converted to type string | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).
+fixedbugs/bug376.go	errorcheck	ERR_WRONGLINE	0.04	line 9 has no ERROR comment: run: bug376.go:9:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/bug378.go	run	PASS	0.03	
+fixedbugs/bug379.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/bug381.go	errorcheck	ERR_WRONGLINE	0.02	line 23 has no ERROR comment: run: bug381.go:23:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/bug383.go	errorcheck	ERR_CRASH	0.03	exit 2: panic: reflect: call of reflect.Value.Bool on struct Value [recovered] |  panic: fixedbugs/bug383.go:11:2: CFG post-order panic: reflect: call of reflect.Value.Bool on struct Value |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/githu
+fixedbugs/bug384.go	errorcheck	PASS	0.02	
+fixedbugs/bug385_64.go	errorcheck	ERR_MISSED	3.33	
+fixedbugs/bug386.go	errorcheck	PASS	0.05	
+fixedbugs/bug388.go	errorcheck	PASS	0.01	
+fixedbugs/bug388a.go	errorcheck	ERR_WRONGMSG	0.04	line 13: "no new variables on left side of :=" does not match "non-name runtime.UintType|non-name on left side|undefined"
+fixedbugs/bug389.go	errorcheck	ERR_WRONGMSG	0.04	line 12: "cannot use type func(float32) as type func(int) in assignment" does not match "different parameter types|cannot use fn .*type func.*float32.. as func.*int. value in variable declaration"
+fixedbugs/bug390.go	errorcheck	ERR_WRONGLINE	0.02	line 11 has no ERROR comment: run: bug390.go:11:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/bug394.go	errorcheck	PASS	0.02	
+fixedbugs/bug398.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/bug401.go	run	PASS	0.03	
+fixedbugs/bug402.go	run	PASS	0.03	
+fixedbugs/bug405.go	run	PASS	0.04	
+fixedbugs/bug406.go	run	PASS	0.02	
+fixedbugs/bug409.go	run	PASS	0.05	
+fixedbugs/bug412.go	errorcheck	PASS	0.02	
+fixedbugs/bug413.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/bug416.go	errorcheck	ERR_MISSED	0.05	
+fixedbugs/bug418.go	errorcheck	ERR_WRONGLINE	0.03	line 12 has no ERROR comment: run: bug418.go:12:1: missing function body
+fixedbugs/bug421.go	errorcheck	PASS	0.02	
+fixedbugs/bug423.go	run	PASS	0.03	
+fixedbugs/bug428.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/bug428.go:13:7: panic: main.main(...) | run: [49 50 51 52 53 53] | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/i
+fixedbugs/bug433.go	run	PASS	0.02	
+fixedbugs/bug434.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/bug434.go:17:7: panic: main.main(...) | run: 9223372036854775808 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/i
+fixedbugs/bug435.go	errorcheck	ERR_WRONGMSG	0.04	line 15: "expected ')', found 'EOF'" does not match "unexpected|missing|undefined"
+fixedbugs/bug436.go	run	FAIL_EXIT	0.04	exit status 1: run: fixedbugs/bug436.go:16:5: assignment mismatch: 1 variables but foo returns 2 values
+fixedbugs/bug440_32.go	run	PASS	0.03	
+fixedbugs/bug440_64.go	run	PASS	0.02	
+fixedbugs/bug441.go	run	PASS	0.03	
+fixedbugs/bug442.go	run	FAIL_EXIT	0.04	exit status 2: panic: reflect.StructOf: duplicate field X_ [recovered] |  panic: fixedbugs/bug442.go:20:7: CFG post-order panic: reflect.StructOf: duplicate field X_ |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.
+fixedbugs/bug444.go	run	FAIL_OUTPUT	0.02	line 1: got "fixedbugs/bug444.go:26:9: panic: main.f(...)\n" want ""
+fixedbugs/bug446.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/bug446.go:29:5: panic: main.main(...) | run: dummy1 != 1 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/pr
+fixedbugs/bug450.go	run	PASS	0.02	
+fixedbugs/bug451.go	errorcheck	ERR_CRASH	0.03	exit 2: panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x128 pc=0x7b677b] |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).gta.func1(0x279d9db75cc0) |  $GOMODCACHE/github.com/traefik/yaegi@v0
+fixedbugs/bug452.go	run	PASS	0.02	
+fixedbugs/bug453.go	run	PASS	0.01	
+fixedbugs/bug454.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/bug454.go:12:10: panic: main.main(...) | run: reflect: call of reflect.Value.Len on zero Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/gith
+fixedbugs/bug455.go	run	PASS	0.02	
+fixedbugs/bug456.go	run	PASS	0.02	
+fixedbugs/bug457.go	run	PASS	0.02	
+fixedbugs/bug459.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/bug461.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/bug461.go:18:7: panic: main.main(...) | run: int should be unexported | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.1
+fixedbugs/bug462.go	errorcheck	PASS	0.02	
+fixedbugs/bug463.go	errorcheck	PASS	0.01	
+fixedbugs/bug464.go	errorcheck	ERR_CRASH	1.06	exit 2: runtime: goroutine stack exceeds 1000000000-byte limit | runtime: sp=0x2cc2536f2cf8 stack=[0x2cc2536f2000, 0x2cc2736f2000] | fatal error: stack overflow |  | runtime stack: | runtime.throw({0xf83af7?, 0x46680?}) |  $GOROOT/src/runtime/panic.go:1229 +0x48 fp=0x7fffb89c2348 sp=0x7fffb89c2318 p
+fixedbugs/bug470.go	run	PASS	0.02	
+fixedbugs/bug473.go	run	PASS	0.04	
+fixedbugs/bug474.go	run	PASS	0.04	
+fixedbugs/bug483.go	run	PASS	0.04	
+fixedbugs/bug484.go	run	PASS	0.07	
+fixedbugs/bug485.go	run	FAIL_EXIT	0.04	exit status 1: fixedbugs/bug485.go:31:4: panic: main.main(...) | run: a | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/program.go:1
+fixedbugs/bug487.go	errorcheck	PASS	0.03	
+fixedbugs/bug491.go	run	PASS	0.04	
+fixedbugs/bug494.go	run	PASS	0.03	
+fixedbugs/bug497.go	run	PASS	0.02	
+fixedbugs/bug498.go	run	PASS	0.03	
+fixedbugs/bug499.go	run	PASS	0.03	
+fixedbugs/bug500.go	run	PASS	0.09	
+fixedbugs/bug501.go	run	PASS	0.09	
+fixedbugs/bug512.go	run	FAIL_EXIT	0.03	exit status 2: fixedbugs/bug512.go:27:12: panic: main.Check(...) | panic: <int32 Value> [recovered, repanicked] |  | goroutine 34 [running]: | github.com/traefik/yaegi/interp.runCfg.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/run.go:226 +0x1ae | panic({0xf6b7c0?, 0x31dfc372c6d8?})
+fixedbugs/bug513.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/bug513.go:14:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/bug514.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/bug514.go:11:8: import "runtime/cgo" error: unable to find source related to: "runtime/cgo"
+fixedbugs/bug517.go	run	FAIL_EXIT	0.06	exit status 1: run: fixedbugs/bug517.go:13:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/bug518.go	errorcheck	PASS	0.03	
+fixedbugs/gcc61258.go	run	PASS	0.09	
+fixedbugs/gcc65755.go	run	FAIL_EXIT	0.06	exit status 1: fixedbugs/gcc65755.go:32:8: panic: main.main(...) | run: XfXg | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/program
+fixedbugs/issue10135.go	run	PASS	0.04	
+fixedbugs/issue10253.go	run	PASS	0.03	
+fixedbugs/issue10320.go	run	PASS	0.05	
+fixedbugs/issue10332.go	run	FAIL_OUTPUT	0.04	line 1: got "BUG: incorrect PkgPath: " want ""
+fixedbugs/issue10353.go	run	PASS	0.06	
+fixedbugs/issue10486.go	run	PASS	0.05	
+fixedbugs/issue10607.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue10607.go:17:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue10925.go	run	PASS	0.03	
+fixedbugs/issue11256.go	run	PASS	0.12	
+fixedbugs/issue11286.go	run	PASS	0.03	
+fixedbugs/issue11326.go	errorcheck	PASS	0.04	
+fixedbugs/issue11326b.go	run	PASS	0.03	
+fixedbugs/issue11359.go	errorcheck	ERR_WRONGMSG	0.02	line 11: "illegal character U+06F6 '۶'" does not match "identifier cannot begin with digit"
+fixedbugs/issue11361.go	errorcheck	ERR_CRASH	0.03	exit 2: scope.go:212: nil reflect type | panic: nil reflect type [recovered] |  panic: fixedbugs/issue11361.go:11:7: CFG post-order panic: nil reflect type |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/inter
+fixedbugs/issue11362.go	errorcheck	ERR_WRONGMSG	0.02	line 11: "import \"unicode//utf8\" error: unable to find source related to: \"unicode//utf8\"" does not match "non-canonical import path .unicode//utf8. \\(should be .unicode/utf8.\\)"
+fixedbugs/issue11369.go	run	PASS	0.02	
+fixedbugs/issue11371.go	errorcheck	ERR_WRONGMSG	0.04	line 12: "constant definition loop" does not match "constant 1.1 truncated to integer|floating-point constant truncated to integer|truncated to int|truncated"
+fixedbugs/issue11590.go	errorcheck	ERR_WRONGMSG	0.03	line 9: "invalid operation: mismatched types int8 and untyped int" does not match "overflows int8"
+fixedbugs/issue11610.go	errorcheck	ERR_WRONGMSG	0.04	line 11: "illegal character U+003F '?'" does not match "invalid character U\\+003F '\\?'|invalid character 0x3f in input file"
+fixedbugs/issue11610a.go	errorcheck	ERR_WRONGMSG	0.04	line 11: "import \".\" error: no Go files in $GOPATH/src" does not match "import path is empty|invalid import path \\(empty string\\)"
+fixedbugs/issue11674.go	errorcheck	ERR_MISSED	0.08	
+fixedbugs/issue11737.go	errorcheck	ERR_WRONGLINE	0.03	line 11 has no ERROR comment: run: issue11737.go:11:1: missing function body
+fixedbugs/issue11771.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue11771.go:19:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue11945.go	run	FAIL_EXIT	0.02	exit status 2: panic: reflect: call of reflect.Value.Complex on int64 Value [recovered] |  panic: fixedbugs/issue11945.go:13:6: CFG post-order panic: reflect: call of reflect.Value.Complex on int64 Value |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $G
+fixedbugs/issue11987.go	run	PASS	0.05	
+fixedbugs/issue12108.go	run	PASS	0.04	
+fixedbugs/issue12133.go	run	FAIL_EXIT	0.08	exit status 1: fixedbugs/issue12133.go:25:17: panic: main.f1(...) | fixedbugs/issue12133.go:15:10: panic: main.main(...) | run: reflect: call of reflect.Value.Uint on int Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/
+fixedbugs/issue12226.go	run	PASS	0.02	
+fixedbugs/issue12411.go	run	PASS	0.02	
+fixedbugs/issue12525.go	errorcheck	ERR_WRONGMSG	0.02	line 22: "invalid operation: operator ++ not defined on bool" does not match "invalid operation: b\\+\\+ \\(non-numeric type bool\\)"
+fixedbugs/issue12577.go	run	PASS	0.03	
+fixedbugs/issue12621.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/issue12621.go:17:5: panic: main.main(...) | run: -0 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/program
+fixedbugs/issue12944.go	errorcheck	ERR_WRONGLINE	0.01	line 9 has no ERROR comment: run: issue12944.go:9:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue1304.go	run	PASS	0.02	
+fixedbugs/issue13160.go	run	PASS	2.05	
+fixedbugs/issue13162.go	run	FAIL_EXIT	0.03	exit status 1: index after range with side-effect = -1 want 0 | fixedbugs/issue13162.go:17:6: panic: main.check(...) | fixedbugs/issue13162.go:79:2: panic: main.main(...) | run: os.Exit(1) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/tr
+fixedbugs/issue13169.go	run	TIMEOUT	60.05	
+fixedbugs/issue13171.go	run	PASS	0.04	
+fixedbugs/issue13248.go	errorcheck	PASS	0.02	
+fixedbugs/issue13266.go	errorcheck	ERR_WRONGMSG	0.02	line 10: "expected 'IDENT', found '%'" does not match "unexpected %|package name must be an identifier|after package clause|expected declaration"
+fixedbugs/issue13268.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue13268.go:21:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue13273.go	errorcheck	PASS	0.02	
+fixedbugs/issue13274.go	errorcheck	PASS	0.02	
+fixedbugs/issue13319.go	errorcheck	ERR_WRONGMSG	0.02	line 12: "missing ',' before newline in argument list" does not match "expecting \\)|possibly missing comma or \\)"
+fixedbugs/issue13365.go	errorcheck	ERR_WRONGMSG	0.02	line 19: "index int must be integer constant" does not match "index 100 out of bounds|out of range"
+fixedbugs/issue13415.go	errorcheck	PASS	0.02	
+fixedbugs/issue13471.go	errorcheck	PASS	0.02	
+fixedbugs/issue13480.go	errorcheck	ERR_WRONGMSG	0.01	line 21: "invalid operation: operator == not defined on []uint8" does not match "compare.*to nil|operator \\=\\= not defined for .|cannot compare"
+fixedbugs/issue13485.go	errorcheck	ERR_CRASH	0.04	exit 2: panic: 10 not an Int |  | goroutine 1 [running]: | go/constant.BitLen({0xfea768?, 0x17a906128380?}) |  $GOROOT/src/go/constant/value.go:658 +0x16d | github.com/traefik/yaegi/interp.constToInt({0xfea768, 0x17a906128380}) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/type.go:2349 +0x2
+fixedbugs/issue13539.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue13559.go	errorcheck	ERR_WRONGMSG	0.02	line 13: "constant definition loop" does not match "1e\\-10000 truncated|.* truncated to int64|truncated"
+fixedbugs/issue13684.go	run	PASS	0.02	
+fixedbugs/issue13779.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue13821b.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue14006.go	errorcheck	ERR_WRONGMSG	0.02	line 24: "illegal label declaration" does not match "unexpected :|expected .*;.* or .*}.* or newline|value computed is not used"
+fixedbugs/issue14010.go	errorcheck	ERR_WRONGMSG	0.02	line 13: "cannot assign to %!s(bool=true) (untyped bool constant)" does not match "cannot assign to true|invalid left hand side"
+fixedbugs/issue14136.go	errorcheck	ERR_WRONGMSG	0.02	line 17: "unknown field X in struct literal" does not match "unknown field 'X' in struct literal of type T|unknown field .*X.* in .*T.*"
+fixedbugs/issue14321.go	errorcheck	ERR_WRONGLINE	0.02	line 25 has no ERROR comment: run: issue14321.go:25:8: undefined selector I
+fixedbugs/issue14520.go	errorcheck	ERR_WRONGMSG	0.02	line 9: "missing ',' before newline in parameter list" does not match "unexpected newline"
+fixedbugs/issue14520a.go	errorcheck	ERR_WRONGMSG	0.02	line 9: "import \"\\nbogus\" error: unable to find source related to: \"\\nbogus\"" does not match "import path"
+fixedbugs/issue14540.go	errorcheck	ERR_WRONGLINE	0.02	line 12 has no ERROR comment: run: issue14540.go:12:3: fallthrough statement out of place
+fixedbugs/issue14553.go	run	PASS	0.05	
+fixedbugs/issue14591.go	run	PASS	0.05	
+fixedbugs/issue14636.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/issue14636.go:14:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue14646.go	run	FAIL_OUTPUT	0.03	line 1: got "Expected line = 18 but got line = 369 and file = $GOROOT/src/reflect/value.go\n" want ""
+fixedbugs/issue14651.go	run	PASS	0.03	
+fixedbugs/issue14725.go	run	PASS	0.02	
+fixedbugs/issue14729.go	errorcheck	ERR_WRONGLINE	0.02	line 11 has no ERROR comment: run: issue14729.go:11:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue14988.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue15002.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/issue15002.go:13:2: import "syscall" error: unable to find source related to: "syscall"
+fixedbugs/issue15039.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue15039.go:21:22: cannot convert expression of type string to type string
+fixedbugs/issue15042.go	run	PASS	0.02	
+fixedbugs/issue15055.go	errorcheck	PASS	0.02	
+fixedbugs/issue15175.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue15175.go:41:28: invalid operation: mismatched types uint16 and int8
+fixedbugs/issue15252.go	run	FAIL_OUTPUT	0.02	line 1: got "fixedbugs/issue15252.go:18:7: panic: main.f(...)\n" want ""
+fixedbugs/issue15277.go	run	FAIL_OUTPUT	0.11	line 1: got "after drop: expected delta below 1MB, got:  10485256\n" want ""
+fixedbugs/issue15281.go	run	FAIL_OUTPUT	0.12	line 1: got "BUG: f1: after alloc: expected delta below 1MB, got:  10495800\n[]\nBUG: f2: after alloc: expected delta below 1MB, got:  " want ""
+fixedbugs/issue15303.go	run	FAIL_EXIT	0.04	exit status 1: fixedbugs/issue15303.go:14:6: panic: main.main(...) | run: reflect: call of reflect.Value.SetBool on int Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACH
+fixedbugs/issue15311.go	errorcheck	ERR_WRONGMSG	0.03	line 18: "undefined: foo" does not match "field name"
+fixedbugs/issue15329.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/issue15329.go:37:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue15439.go	run	PASS	0.03	
+fixedbugs/issue15528.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/issue15528.go:14:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue15550.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue15550.go:9:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue15611.go	errorcheck	ERR_WRONGMSG	0.02	line 11: "rune literal not terminated" does not match "newline in character literal|newline in rune literal"
+fixedbugs/issue15722.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue15898.go	errorcheck	PASS	0.02	
+fixedbugs/issue15902.go	run	PASS	0.05	
+fixedbugs/issue15975.go	run	FAIL_OUTPUT	0.05	line 1: got "fixedbugs/issue15975.go:16:6: panic: main.nilInterfaceDeferCall(...)\n" want ""
+fixedbugs/issue15992.go	run	FAIL_EXIT	0.03	exit status 1: run: runtime error: index out of range [2] with length 2 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/program.go:1
+fixedbugs/issue16016.go	run	PASS	1.25	
+fixedbugs/issue16037_run.go	run	FAIL_EXIT	0.05	exit status 1: run: fixedbugs/issue16037_run.go:18:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue16095.go	run	PASS	0.08	
+fixedbugs/issue16130.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/issue16130.go:25:8: panic: main.main.func(...) | run: got *interp.cfgError, expected runtime.Error | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/
+fixedbugs/issue16249.go	run	PASS	17.20	
+fixedbugs/issue16331.go	run	FAIL_EXIT	0.06	exit status 2: fixedbugs/issue16331.go:35:8: panic: main.main.func(...) | panic: reflect: Method index out of range [recovered, repanicked] |  | goroutine 50 [running]: | github.com/traefik/yaegi/interp.runCfg.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/run.go:226 +0x1ae | panic({
+fixedbugs/issue16369.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue16428.go	errorcheck	ERR_WRONGMSG	0.03	line 10: "cannot convert expression of type untyped string to type [1]uint8" does not match "outside of array literal|outside a composite literal"
+fixedbugs/issue16439.go	errorcheck	ERR_WRONGMSG	0.03	line 16: "index untyped complex must be integer constant" does not match "truncated to integer|index expression is not integer constant|truncated to int"
+fixedbugs/issue16515.go	run	PASS	0.05	
+fixedbugs/issue16760.go	run	FAIL_OUTPUT	0.03	line 1: got "fixedbugs/issue16760.go:32:7: panic: main.main.func(...)\n" want ""
+fixedbugs/issue16870.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/issue16870.go:21:6: panic: main.main(...) | run: reflect: call of reflect.Value.SetBool on interface Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOM
+fixedbugs/issue16948.go	run	PASS	0.02	
+fixedbugs/issue16949.go	errorcheck	PASS	0.01	
+fixedbugs/issue16985.go	run	PASS	0.02	
+fixedbugs/issue17038.go	errorcheck	ERR_WRONGMSG	0.02	line 9: "constant definition loop" does not match "cannot call .* not a function"
+fixedbugs/issue17039.go	run	FAIL_EXIT	0.03	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: fixedbugs/issue17039.go:12:6: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x150 pc=0x4e764a]
+fixedbugs/issue17328.go	errorcheck	PASS	0.02	
+fixedbugs/issue17381.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue17381.go:14:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue17631.go	errorcheck	ERR_WRONGMSG	0.03	line 20: "unknown field updates in struct literal" does not match "unknown field updates in struct literal of type|unknown field .*updates.* in .*unnamed struct.*"
+fixedbugs/issue17640.go	run	PASS	0.02	
+fixedbugs/issue17645.go	errorcheck	ERR_WRONGMSG	0.03	line 15: "cannot convert \"\" to int" does not match "cannot use append\\(s, Foo{…}\\) .* as string value in variable declaration" "cannot use Foo{…} .* as int value in argument to append" "cannot use .* as int value in struct literal"
+fixedbugs/issue17752.go	run	PASS	0.01	
+fixedbugs/issue17758.go	errorcheck	PASS	0.02	
+fixedbugs/issue18092.go	errorcheck	ERR_WRONGMSG	0.02	line 14: "expected ':', found newline" does not match "expected :"
+fixedbugs/issue18149.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue18149.go:19:17: panic: main.check(...) | /foo/bar.go:123: panic: main.main(...) | run: got $GOROOT/src/reflect/value.go:369; want /foo/bar.go:123 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/i
+fixedbugs/issue18231.go	errorcheck	ERR_WRONGMSG	0.02	line 17: "undefined type" does not match "missing type in composite literal|may only omit types within"
+fixedbugs/issue18392.go	errorcheck	ERR_CRASH	0.02	exit 2: panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x128 pc=0x82e968] |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.nodeType2(0x22a4925f9448, 0x22a492666000, 0x22a49264b400, {0x22a49262ea10, 0x1, 0x2
+fixedbugs/issue18393.go	errorcheck	PASS	0.03	
+fixedbugs/issue18410.go	run	PASS	0.02	
+fixedbugs/issue18459.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue18595.go	run	FAIL_EXIT	0.01	exit status 1: fixedbugs/issue18595.go:31:7: panic: main.test1(...) | fixedbugs/issue18595.go:26:2: panic: main.main(...) | run: interfaces not equal | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execu
+fixedbugs/issue18636.go	run	PASS	0.02	
+fixedbugs/issue18655.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue18661.go	run	FAIL_EXIT	0.01	exit status 1: fixedbugs/issue18661.go:33:8: panic: main.main(...) | run: reflect: call of reflect.Value.SetBool on array Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCA
+fixedbugs/issue18725.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue18725.go:12:5: panic: main.panicWhenNot(...) | fixedbugs/issue18725.go:20:8: panic: main.main(...) | run: os.Exit(0) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.
+fixedbugs/issue18747.go	errorcheck	PASS	0.01	
+fixedbugs/issue18808.go	run	PASS	0.01	
+fixedbugs/issue18882.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue18906.go	run	PASS	0.02	
+fixedbugs/issue18915.go	errorcheck	ERR_WRONGMSG	0.02	line 13: "expected boolean expression, found assignment (missing parentheses around composite literal?)" does not match "cannot use a := 10 as value|expected .*;|declared and not used"
+fixedbugs/issue18994.go	run	PASS	0.01	
+fixedbugs/issue19012.go	errorcheck	PASS	0.01	
+fixedbugs/issue19040.go	run	FAIL_OUTPUT	0.02	line 1: got "panicwrap error text:\n\t\"reflect: call of reflect.Value.Set on zero Value\"\nwant:\n\t\"value method main.T.F called using nil" want ""
+fixedbugs/issue19056.go	errorcheck	PASS	0.01	
+fixedbugs/issue19078.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue19078.go:11:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue19113.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue19113.go:103:6: panic: main.shouldPanic.func(...) | fixedbugs/issue19113.go:81:8: panic: main.runTest(...) | fixedbugs/issue19113.go:75:20: panic: main.main(...) | run: did not panic | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:
+fixedbugs/issue19182.go	run	PASS	0.03	
+fixedbugs/issue19201.go	run	PASS	0.01	
+fixedbugs/issue19246.go	run	PASS	0.01	
+fixedbugs/issue19275.go	run	PASS	0.02	
+fixedbugs/issue19323.go	errorcheck	ERR_CRASH	0.02	exit 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: fixedbugs/issue19323.go:12:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x128 pc=0x837615] |  | g
+fixedbugs/issue19359.go	run	PASS	0.02	
+fixedbugs/issue19482.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue19610.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue19658.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue19658.go:17:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue19667.go	errorcheck	PASS	0.01	
+fixedbugs/issue19699b.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue19710.go	run	FAIL_EXIT	0.01	exit status 1: got 3 want 0 | fixedbugs/issue19710.go:12:14: panic: main.main(...) | run: bad defer delete | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefi
+fixedbugs/issue19799.go	run	PASS	0.02	
+fixedbugs/issue19880.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue19911.go	run	PASS	0.01	
+fixedbugs/issue19947.go	errorcheck	ERR_WRONGMSG	0.01	line 11: "invalid operation: mismatched types float32 and untyped float" does not match "constant 1e\\+200 overflows float32|1e200 .* overflows float32"
+fixedbugs/issue19977.go	errorcheck	PASS	0.02	
+fixedbugs/issue20027.go	errorcheck	ERR_CRASH	0.02	exit 2: panic: reflect.ChanOf: element size too large |  | goroutine 1 [running]: | reflect.ChanOf(0x3, {0xffb3e0?, 0x2f7b8b1e910?}) |  $GOROOT/src/reflect/type.go:1853 +0x4f0 | github.com/traefik/yaegi/interp.(*itype).refType(0x2f7b873a280?, 0x0?) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/int
+fixedbugs/issue20029.go	run	PASS	0.03	
+fixedbugs/issue20185.go	errorcheck	ERR_CRASH	0.01	exit 2: scope.go:212: nil reflect type | panic: nil reflect type |  | goroutine 1 [running]: | log.Panic({0x3098e3f21308?, 0x8?, 0xf17b20?}) |  $GOROOT/src/log/log.go:451 +0x6e | github.com/traefik/yaegi/interp.(*scope).add(0x3098e3bbeea0, 0x3098e3f21a48?) |  $GOMODCACHE/github.com/traefik/yaegi@v0.
+fixedbugs/issue20227.go	errorcheck	ERR_CRASH	0.02	exit 2: panic: division of zero by zero or infinity by infinity [recovered] |  panic: fixedbugs/issue20227.go:11:9: CFG post-order panic: division of zero by zero or infinity by infinity |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/github.
+fixedbugs/issue20233.go	errorcheck	ERR_WRONGMSG	0.02	line 11: "constant definition loop" does not match "undefined: A"
+fixedbugs/issue20415.go	errorcheck	PASS	0.01	
+fixedbugs/issue20529.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue20530.go	run	PASS	0.01	
+fixedbugs/issue20602.go	errorcheck	ERR_WRONGMSG	0.01	line 13: "invalid complex type ptr" does not match "type \\*\\[1\\]complex128|argument must have complex type"
+fixedbugs/issue20749.go	errorcheck	ERR_WRONGMSG	0.01	line 12: "index int is out of bounds" does not match "invalid slice index 2|array index out of bounds|index 2 out of bounds"
+fixedbugs/issue20780.go	errorcheck	ERR_CRASH	0.02	exit 2: panic: 4e+08 not an Int |  | goroutine 1 [running]: | go/constant.BitLen({0xfea768?, 0x16548ea9a500?}) |  $GOROOT/src/go/constant/value.go:658 +0x16d | github.com/traefik/yaegi/interp.constToInt({0xfea768, 0x16548ea9a500}) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/type.go:2349 +
+fixedbugs/issue20780b.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue20780b.go:40:1: constant definition loop
+fixedbugs/issue20789.go	errorcheck	ERR_WRONGMSG	0.01	line 13: "expected '(', found u" does not match "unexpected name u"
+fixedbugs/issue20811.go	run	PASS	0.02	
+fixedbugs/issue20812.go	errorcheck	PASS	0.02	
+fixedbugs/issue20813.go	errorcheck	PASS	0.02	
+fixedbugs/issue21048.go	run	FAIL_EXIT	0.01	exit status 2: panic: reflect.StructOf: duplicate field X_ |  | goroutine 1 [running]: | reflect.StructOf({0x3a1a51dcaa08, 0xa, 0x3a1a52086e28?}) |  $GOROOT/src/reflect/type.go:2411 +0x18fa | github.com/traefik/yaegi/interp.(*itype).refType(0x3a1a5203ca00?, 0x0?) |  $GOMODCACHE/github.com/traefik/ya
+fixedbugs/issue21221.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue21221.go:9:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue21256.go	errorcheck	ERR_CRASH	0.02	exit 1: fixedbugs/issue21256.go:9:12: panic: main.func(...) | run: runtime error: index out of range [1] with length 0 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/githu
+fixedbugs/issue21273.go	errorcheck	ERR_WRONGLINE	0.01	line 10 has no ERROR comment: run: issue21273.go:10:6: cannot use _ as value
+fixedbugs/issue21576.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue21576.go:20:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue21687.go	run	FAIL_EXIT	0.02	exit status 1: 2 1 1 | fixedbugs/issue21687.go:58:2: panic: main.main(...) | run: 1 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/
+fixedbugs/issue21770.go	errorcheck	ERR_CRASH	0.03	exit 2: panic: runtime error: index out of range [0] with length 0 [recovered] |  panic: fixedbugs/issue21770.go:16:2: CFG post-order panic: runtime error: index out of range [0] with length 0 |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/g
+fixedbugs/issue21808.go	run	PASS	0.01	
+fixedbugs/issue21879.go	run	FAIL_OUTPUT	0.02	line 1: got "reflect.Value.Call\nreflect.Value.Call\n" want "main.main\nmain.main\n"
+fixedbugs/issue21882.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue21887.go	run	PASS	0.01	
+fixedbugs/issue21934.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue21963.go	run	PASS	0.03	
+fixedbugs/issue21979.go	errorcheck	ERR_WRONGMSG	0.02	line 10: "cannot convert expression of type untyped string to type bool" does not match "cannot convert .. \\(.*untyped string.*\\) to type bool|invalid type conversion"
+fixedbugs/issue21988.go	errorcheck	ERR_WRONGMSG	0.01	line 11: "constant definition loop" does not match "undefined: Wrong|undefined name .*Wrong"
+fixedbugs/issue22063.go	errorcheck	ERR_WRONGMSG	0.01	line 11: "constant definition loop" does not match "undefined: Wrong|reference to undefined name .*Wrong"
+fixedbugs/issue22083.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue22083.go:22:9: panic: main.Get(...) | fixedbugs/issue22083.go:27:8: panic: main.main.func(...) | run: wrong stack trace: goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | reflect.Value.call({0xe0eaa0?, 0xfd3d00?, 0x26c716b9f
+fixedbugs/issue22164.go	errorcheck	ERR_WRONGMSG	0.01	line 12: "missing ',' before newline in argument list" does not match "unexpected newline"
+fixedbugs/issue22200.go	errorcheck	ERR_CRASH	0.02	exit 2: panic: 1.07274e+09 not an Int |  | goroutine 1 [running]: | go/constant.BitLen({0xfea768?, 0x2b3c9ff90380?}) |  $GOROOT/src/go/constant/value.go:658 +0x16d | github.com/traefik/yaegi/interp.constToInt({0xfea768, 0x2b3c9ff90380}) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/type.go:
+fixedbugs/issue22200b.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue22326.go	run	FAIL_OUTPUT	0.02	line 1: got "abcd_\n" want "abc_d\n"
+fixedbugs/issue22351.go	errorcheck	ERR_WRONGLINE	0.01	line 9 has no ERROR comment: run: issue22351.go:9:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue22581.go	errorcheck	ERR_WRONGMSG	0.02	line 10: "expected ';', found ')'" does not match "unexpected \\)"
+fixedbugs/issue22605.go	run	PASS	0.01	
+fixedbugs/issue22660.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue22660.go:17:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue22662.go	run	FAIL_EXIT	0.01	exit status 1: fixedbugs/issue22662.go:18:17: panic: main.check(...) | 1: panic: main.main(...) | run: got $GOROOT/src/reflect/value.go:369; want ??:1 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Exec
+fixedbugs/issue22662b.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue22662b.go:17:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue22683.go	run	PASS	0.02	
+fixedbugs/issue22781.go	run	PASS	1.62	
+fixedbugs/issue22794.go	errorcheck	ERR_WRONGMSG	0.01	line 16: "undefined selector: floats" does not match "(type it .* field or method floats, but does have field Floats)|undefined field or method"
+fixedbugs/issue22822.go	errorcheck	ERR_WRONGMSG	0.02	line 16: "too many arguments" does not match "cannot call non-function len .type int., declared at issue22822.go:15|expected function|cannot call len"
+fixedbugs/issue22881.go	run	FAIL_OUTPUT	0.02	line 1: got "RHS didn't panic, case f0\nfixedbugs/issue22881.go:55:8: panic: main.f1(...)\nfixedbugs/issue22881.go:60:8: panic: main.f2" want ""
+fixedbugs/issue22904.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue23017.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue23017.go:110:5: panic: main.check(...) | fixedbugs/issue23017.go:33:3: panic: main.init.func(...) | run: wanted 1, but got 0 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).
+fixedbugs/issue23093.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue23094.go	errorcheck	ERR_WRONGMSG	0.01	line 11: "constant definition loop" does not match "\\[len\\(a\\)\\]int|initialization cycle"
+fixedbugs/issue23116.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue23188.go	run	PASS	0.01	
+fixedbugs/issue23305.go	run	PASS	0.02	
+fixedbugs/issue23489.go	run	PASS	0.03	
+fixedbugs/issue23522.go	run	PASS	0.02	
+fixedbugs/issue23536.go	run	PASS	0.01	
+fixedbugs/issue23545.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue23545.go:13:17: invalid operation: mismatched types main.OutputID and [32]interface{}
+fixedbugs/issue23546.go	run	PASS	0.01	
+fixedbugs/issue23586.go	errorcheck	PASS	0.02	
+fixedbugs/issue23587.go	errorcheck	ERR_WRONGMSG	0.01	line 14: "expected ';', found '~'" does not match "unexpected ~ at end of statement"
+fixedbugs/issue23609.go	errorcheck	PASS	0.02	
+fixedbugs/issue23664.go	errorcheck	ERR_WRONGMSG	0.01	line 12: "expected ';', found true" does not match "unexpected name true, expected {"
+fixedbugs/issue23719.go	run	PASS	0.02	
+fixedbugs/issue23732.go	errorcheck	ERR_WRONGLINE	0.01	line 27 has no ERROR comment: run: issue23732.go:27:3: too few values in struct literal
+fixedbugs/issue23734.go	run	FAIL_EXIT	0.04	exit status 1: fixedbugs/issue23734.go:14:7: panic: main.main.func(...) | fixedbugs/issue23734.go:26:8: panic: main.mustPanic.func(...) | fixedbugs/issue23734.go:10:7: panic: main.main(...) | run: didn't panic | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 
+fixedbugs/issue23812.go	run	PASS	0.01	
+fixedbugs/issue23814.go	run	PASS	0.02	
+fixedbugs/issue23823.go	errorcheck	ERR_CRASH	0.88	exit 2: runtime: goroutine stack exceeds 1000000000-byte limit | runtime: sp=0xa66ebf60380 stack=[0xa66ebf60000, 0xa670bf60000] | fatal error: stack overflow |  | runtime stack: | runtime.throw({0xf83af7?, 0x427b45?}) |  $GOROOT/src/runtime/panic.go:1229 +0x48 fp=0x7ffdf7c45f38 sp=0x7ffdf7c45f08 pc=
+fixedbugs/issue23837.go	run	FAIL_OUTPUT	0.03	line 1: got "fixedbugs/issue23837.go:11:9: panic: main.f(...)\nfixedbugs/issue23837.go:42:23: panic: main.main.func(...)\nfixedbugs/iss" want ""
+fixedbugs/issue24159.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue24339.go	errorcheck	PASS	0.01	
+fixedbugs/issue24419.go	run	PASS	0.06	
+fixedbugs/issue24449.go	run	PASS	0.03	
+fixedbugs/issue24488.go	run	FAIL_EXIT	2.62	exit status 2: runtime: goroutine stack exceeds 1000000000-byte limit | runtime: sp=0x13df18b80370 stack=[0x13df18b80000, 0x13df38b80000] | fatal error: stack overflow |  | runtime stack: | runtime.throw({0xf83af7?, 0x0?}) |  $GOROOT/src/runtime/panic.go:1229 +0x48 fp=0x7f3bff7fdc60 sp=0x7f3bff7fdc3
+fixedbugs/issue24491a.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue24491a.go:13:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue24491b.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue24491b.go:14:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue24503.go	run	PASS	0.02	
+fixedbugs/issue24547.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue24547.go:27:2: panic: main.main(...) | run: FAIL | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/progr
+fixedbugs/issue24755.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue24763.go	run	PASS	0.01	
+fixedbugs/issue24799.go	run	PASS	0.02	
+fixedbugs/issue24817.go	run	PASS	0.02	
+fixedbugs/issue24937.go	run	PASS	0.01	
+fixedbugs/issue25322.go	run	PASS	0.02	
+fixedbugs/issue25507.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue25727.go	errorcheck	ERR_WRONGLINE	0.01	line 11 has no ERROR comment: run: issue25727.go:11:9: undefined selector doneChan
+fixedbugs/issue25776.go	run	PASS	0.03	
+fixedbugs/issue25897a.go	run	PASS	0.03	
+fixedbugs/issue25897b.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/issue25897b.go:27:8: panic: main.main(...) | run: reflect: call of reflect.Value.Interface on zero Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMOD
+fixedbugs/issue25958.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue26094.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue26094.go:16:11: panic: main.scopes(...) | fixedbugs/issue26094.go:44:2: panic: main.main(...) | run: reflect: call of reflect.Value.Type on zero Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/ya
+fixedbugs/issue26097.go	run	PASS	0.02	
+fixedbugs/issue26116.go	run	PASS	0.02	
+fixedbugs/issue2615.go	run	PASS	0.05	
+fixedbugs/issue26153.go	run	PASS	0.03	
+fixedbugs/issue26248.go	run	PASS	0.02	
+fixedbugs/issue26335.go	run	PASS	0.02	
+fixedbugs/issue26407.go	run	PASS	0.01	
+fixedbugs/issue26411.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue26411.go:21:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue26416.go	errorcheck	PASS	0.01	
+fixedbugs/issue26426.go	run	PASS	0.01	
+fixedbugs/issue26438.go	run	PASS	0.02	
+fixedbugs/issue26495.go	run	PASS	0.01	
+fixedbugs/issue26616.go	errorcheck	ERR_WRONGLINE	0.02	line 19 has no ERROR comment: run: issue26616.go:19:1: missing function body
+fixedbugs/issue26855.go	errorcheck	ERR_WRONGMSG	0.01	line 23: "cannot use type *p.T as type p.T in struct literal" does not match "cannot use &T{}|incompatible type"
+fixedbugs/issue27201.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue27201.go:27:6: panic: main.checkstack(...) | fixedbugs/issue27201.go:15:2: panic: main.main(...) | run: no panic at correct location | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Inter
+fixedbugs/issue27278.go	run	PASS	0.04	
+fixedbugs/issue27289.go	run	FAIL_OUTPUT	0.01	line 1: got "fixedbugs/issue27289.go:13:8: panic: main.f(...)\n" want ""
+fixedbugs/issue27356.go	errorcheck	ERR_WRONGMSG	0.01	line 14: "too many arguments" does not match "cannot call|expected function"
+fixedbugs/issue27518a.go	run	PASS	0.05	
+fixedbugs/issue27518b.go	run	FAIL_EXIT	0.29	exit status 1: fixedbugs/issue27518b.go:45:6: panic: main.main(...) | run: heap object finalized at the wrong time | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.co
+fixedbugs/issue27595.go	errorcheck	ERR_WRONGMSG	0.02	line 10: "assignment mismatch: 3 variables but twoResults returns 0 values" does not match "assignment mismatch: 3 variables but twoResults returns 2 values|cannot initialize"
+fixedbugs/issue27695.go	run	FAIL_EXIT	0.03	exit status 2: fixedbugs/issue27695.go:50:7: panic: main._test(...) | fixedbugs/issue27695.go:24:10: panic: main.main.func(...) | panic: reflect: call of reflect.Value.Interface on zero Value [recovered, repanicked] |  | goroutine 53 [running]: | github.com/traefik/yaegi/interp.runCfg.func1() |  $GO
+fixedbugs/issue27695b.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue27695b.go:16:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue27695c.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue27695c.go:17:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue27718.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue27718.go:31:6: panic: main.testSub64(...) | fixedbugs/issue27718.go:96:2: panic: main.main(...) | run: negZero-0 != negZero (64 bit) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Inter
+fixedbugs/issue27829.go	run	PASS	0.02	
+fixedbugs/issue27961.go	run	PASS	0.02	
+fixedbugs/issue28058.go	errorcheck	ERR_CRASH	0.01	exit 2: panic: reflect.MapOf: invalid key type func() |  | goroutine 1 [running]: | reflect.MapOf({0xffb3e0, 0xdfa520}, {0xffb3e0, 0xe0c7a0}) |  $GOROOT/src/reflect/map.go:34 +0x7da | github.com/traefik/yaegi/interp.(*itype).frameType(0x0?) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/type
+fixedbugs/issue28079b.go	errorcheck	ERR_WRONGLINE	0.01	line 11 has no ERROR comment: run: issue28079b.go:11:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue28079c.go	errorcheck	ERR_WRONGLINE	0.02	line 11 has no ERROR comment: run: issue28079c.go:11:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue28085.go	errorcheck	PASS	0.02	
+fixedbugs/issue28268.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue28390.go	run	PASS	0.02	
+fixedbugs/issue28450.go	errorcheck	PASS	0.02	
+fixedbugs/issue28688.go	run	PASS	0.02	
+fixedbugs/issue28748.go	run	PASS	0.01	
+fixedbugs/issue28797.go	run	FAIL_OUTPUT	0.01	line 1: got "fixedbugs/issue28797.go:37:7: panic: main.foo(...)\nfixedbugs/issue28797.go:46:7: panic: main.bar(...)\n" want ""
+fixedbugs/issue28926.go	errorcheck	ERR_WRONGMSG	0.01	line 16: "G is not a type" does not match "undefined: G|undefined type .*G"
+fixedbugs/issue29013a.go	run	PASS	0.02	
+fixedbugs/issue29013b.go	run	PASS	0.03	
+fixedbugs/issue29190.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue29190.go:19:57: panic: main.main.func(...) | fixedbugs/issue29190.go:26:10: panic: main.shouldPanic.func(...) | fixedbugs/issue29190.go:18:7: panic: main.main(...) | run: fixedbugs/issue29190.go:30:8: interface conversion: string is not error: missing method Error | gor
+fixedbugs/issue29264.go	run	PASS	0.02	
+fixedbugs/issue29304.go	run	FAIL_EXIT	0.03	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: fixedbugs/issue29304.go:16:5: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0xd0 pc=0x7aca28] 
+fixedbugs/issue29312.go	run	PASS	0.04	
+fixedbugs/issue29329.go	run	PASS	0.04	
+fixedbugs/issue29362.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue29362.go:13:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue29362b.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue29362b.go:13:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue29402.go	run	PASS	0.02	
+fixedbugs/issue29504.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue29504.go:22:7: panic: main.main.func(...) | could not find marker line in traceback: | $GOROOT/src/reflect/value.go:586 reflect.Value.call | $GOROOT/src/reflect/value.go:369 reflect.Value.Call | $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/run.go:1465 github.com/
+fixedbugs/issue29735.go	run	PASS	0.01	
+fixedbugs/issue29855.go	errorcheck	ERR_WRONGMSG	0.02	line 13: "unknown field Name in struct literal" does not match "unknown field 'Name' in struct literal of type T|unknown field .*Name.* in .*T"
+fixedbugs/issue29870b.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue29943.go	run	PASS	0.02	
+fixedbugs/issue30041.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue30041.go:15:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue30085.go	errorcheck	ERR_CRASH	0.02	exit 2: panic: runtime error: index out of range [5] with length 5 [recovered] |  panic: fixedbugs/issue30085.go:11:6: CFG post-order panic: runtime error: index out of range [5] with length 5 |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/g
+fixedbugs/issue30087.go	errorcheck	ERR_WRONGMSG	0.01	line 10: "unsupported assign expression" does not match "assignment mismatch: 2 variables but 1 value|wrong number of initializations|cannot initialize"
+fixedbugs/issue30116.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue30116.go:36:8: panic: main.doIndex.func(...) | fixedbugs/issue30116.go:105:3: panic: main.printPanic.func(...) | fixedbugs/issue30116.go:33:7: panic: main.doIndex(...) | fixedbugs/issue30116.go:26:6: panic: main.main(...) | run: fixedbugs/issue30116.go:107:10: interface
+fixedbugs/issue30116u.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue30116u.go:36:8: panic: main.doIndex.func(...) | fixedbugs/issue30116u.go:105:3: panic: main.printPanic.func(...) | fixedbugs/issue30116u.go:33:7: panic: main.doIndex(...) |  slice[0] no panic |  slice[2] no panic | fixedbugs/issue30116u.go:26:6: panic: main.main(...) | 
+fixedbugs/issue30243.go	run	FAIL_EXIT	0.01	exit status 2: panic: reflect: call of reflect.Value.Complex on struct Value [recovered] |  panic: fixedbugs/issue30243.go:20:5: CFG post-order panic: reflect: call of reflect.Value.Complex on struct Value |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  
+fixedbugs/issue30476.go	run	PASS	0.04	
+fixedbugs/issue30566a.go	run	PASS	0.01	
+fixedbugs/issue30566b.go	run	PASS	0.02	
+fixedbugs/issue30606.go	run	PASS	0.03	
+fixedbugs/issue30606b.go	run	PASS	0.02	
+fixedbugs/issue30709.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue30709.go:12:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue30722.go	errorcheck	PASS	0.01	
+fixedbugs/issue30956.go	run	PASS	0.02	
+fixedbugs/issue30977.go	run	PASS	0.02	
+fixedbugs/issue31060.go	errorcheck	ERR_WRONGMSG	0.01	line 13: "constant definition loop" does not match "invalid operation|expected integer"
+fixedbugs/issue31412b.go	errorcheck	PASS	0.01	
+fixedbugs/issue31419.go	run	PASS	0.08	
+fixedbugs/issue31546.go	run	FAIL_EXIT	0.02	exit status 1: got 2 want 0 | fixedbugs/issue31546.go:16:10: panic: main.main(...) | run: fail | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.1
+fixedbugs/issue31782.go	run	PASS	0.01	
+fixedbugs/issue31987.go	run	PASS	0.01	
+fixedbugs/issue32133.go	errorcheck	ERR_WRONGMSG	0.01	line 10: "string literal not terminated" does not match "newline in string"
+fixedbugs/issue32175.go	run	PASS	0.01	
+fixedbugs/issue32187.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue32187.go:31:11: panic: main.main.func(...) | fixedbugs/issue32187.go:35:50: panic: main.main.func(...) | fixedbugs/issue32187.go:36:47: panic: main.main.func(...) | fixedbugs/issue32187.go:37:43: panic: main.main.func(...) | fixedbugs/issue32187.go:53:8: panic: main.tes
+fixedbugs/issue32288.go	run	FAIL_OUTPUT	0.01	line 1: got "fixedbugs/issue32288.go:16:6: panic: main.f(...)\n" want ""
+fixedbugs/issue32477.go	run	FAIL_EXIT	0.07	exit status 1: fixedbugs/issue32477.go:45:7: panic: main.main(...) | run: heap object finalized at the wrong time | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com
+fixedbugs/issue32560.go	run	PASS	0.01	
+fixedbugs/issue32680.go	run	PASS	0.02	
+fixedbugs/issue32723.go	errorcheck	ERR_WRONGMSG	0.02	line 12: "constant definition loop" does not match "invalid operation: .*not defined on untyped complex|non-ordered type"
+fixedbugs/issue33062.go	run	PASS	0.01	
+fixedbugs/issue33275_run.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue33275_run.go:17:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue33308.go	errorcheck	PASS	0.01	
+fixedbugs/issue33386.go	errorcheck	PASS	0.01	
+fixedbugs/issue33460.go	errorcheck	PASS	0.01	
+fixedbugs/issue33555.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue33555.go:17:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue33724.go	run	FAIL_OUTPUT	0.01	line 1: got "fixedbugs/issue33724.go:26:8: panic: main.ExpectedInStackTrace(...)\nFAIL, stacktrace does not contain ExpectedInStackTra" want ""
+fixedbugs/issue34123.go	run	FAIL_OUTPUT	0.01	line 1: got "fixedbugs/issue34123.go:22:2: panic: main.f(...)\n" want ""
+fixedbugs/issue34395.go	run	PASS	0.06	
+fixedbugs/issue34968.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue34968.go:12:8: import "C" error: unable to find source related to: "C"
+fixedbugs/issue35027.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue35027.go:11:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue35073a.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue35073a.go:14:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue35291.go	errorcheck	PASS	0.02	
+fixedbugs/issue35576.go	run	FAIL_OUTPUT	0.03	line 1: got "-42-42\n" want "-4242x-42 42 x\n"
+fixedbugs/issue36437.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue36437.go:23:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue36516.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue36516.go:14:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue36705.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue36705.go:13:8: import "C" error: unable to find source related to: "C"
+fixedbugs/issue3705.go	errorcheck	ERR_WRONGMSG	0.02	line 9: "missing function body" does not match "func init must have a body|cannot declare init"
+fixedbugs/issue37716.go	run	PASS	0.02	
+fixedbugs/issue37753.go	run	PASS	0.02	
+fixedbugs/issue3783.go	errorcheck	ERR_WRONGMSG	0.01	line 11: "cannot define new methods on non-local type int" does not match "not a type|expected type"
+fixedbugs/issue37975.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue37975.go:20:3: panic: main.main.func(...) | fixedbugs/issue37975.go:46:10: panic: main.shouldPanic.func(...) | fixedbugs/issue37975.go:16:6: panic: main.main(...) | run: fixedbugs/issue37975.go:47:17: interface conversion: string is not error: missing method Error | gor
+fixedbugs/issue38117.go	errorcheck	ERR_WRONGLINE	0.02	line 13 has no ERROR comment: run: issue38117.go:13:2: constant definition loop
+fixedbugs/issue38496.go	run	FAIL_EXIT	0.01	exit status 1: fixedbugs/issue38496.go:13:10: panic: main.main.func(...) | run: failed to check nil ptr | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/y
+fixedbugs/issue38745.go	errorcheck	ERR_WRONGMSG	0.02	line 12: "undefined selector: M" does not match "t{}.M undefined \\(type t has no field or method M\\)|undefined field or method .*M"
+fixedbugs/issue3925.go	errorcheck	PASS	0.02	
+fixedbugs/issue39505b.go	run	PASS	0.02	
+fixedbugs/issue39541.go	run	PASS	2.54	
+fixedbugs/issue39651.go	run	PASS	0.02	
+fixedbugs/issue40152.go	run	PASS	0.03	
+fixedbugs/issue40367.go	run	PASS	0.02	
+fixedbugs/issue40629.go	run	PASS	0.02	
+fixedbugs/issue4066.go	run	FAIL_EXIT	0.01	exit status 1: fixedbugs/issue4066.go:36:8: panic: main.foo1(...) | fixedbugs/issue4066.go:24:11: panic: main.foo.func(...) | fixedbugs/issue4066.go:12:7: panic: main.main(...) | run: fixedbugs/issue4066.go:25:8: interface conversion: interface {} is reflect.Value, not struct {} | goroutine 1 [runni
+fixedbugs/issue4085a.go	errorcheck	PASS	0.02	
+fixedbugs/issue4085b.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue4085b.go:11:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue40917.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/issue40917.go:9:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue40954.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue40954.go:12:2: import "runtime/cgo" error: unable to find source related to: "runtime/cgo"
+fixedbugs/issue4097.go	errorcheck	ERR_WRONGMSG	0.02	line 10: "constant definition loop" does not match "is not a constant|is not constant"
+fixedbugs/issue41239.go	run	PASS	0.02	
+fixedbugs/issue41247.go	errorcheck	ERR_WRONGMSG	0.01	line 10: "cannot use  (type arrayT) as type arrayT in return argument" does not match "cannot use \\[\\.\\.\\.\\]int{.*} \\(.*type \\[3\\]int\\)"
+fixedbugs/issue41440.go	errorcheck	ERR_WRONGMSG	0.02	line 13: "cannot use type []int as type int" does not match "have \\(\\[\\]int, \\.\\.\\.int\\)|too many arguments"
+fixedbugs/issue41500.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue41575.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue4167.go	run	PASS	0.02	
+fixedbugs/issue41780.go	run	PASS	0.02	
+fixedbugs/issue41872.go	run	PASS	0.01	
+fixedbugs/issue42032.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue42032.go:11:8: import "runtime/cgo" error: unable to find source related to: "runtime/cgo"
+fixedbugs/issue42058a.go	errorcheck	ERR_CRASH	0.03	exit 2: panic: reflect.ChanOf: element size too large |  | goroutine 1 [running]: | reflect.ChanOf(0x3, {0xffb3e0?, 0x2f073bdd0190?}) |  $GOROOT/src/reflect/type.go:1853 +0x4f0 | github.com/traefik/yaegi/interp.(*itype).refType(0x2f073bdd52c0?, 0x0?) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/i
+fixedbugs/issue42058b.go	errorcheck	ERR_CRASH	0.03	exit 2: panic: reflect.ChanOf: element size too large |  | goroutine 1 [running]: | reflect.ChanOf(0x3, {0xffb3e0?, 0x24c759dc20f0?}) |  $GOROOT/src/reflect/type.go:1853 +0x4f0 | github.com/traefik/yaegi/interp.(*itype).refType(0x24c759dc6640?, 0x0?) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/i
+fixedbugs/issue42075.go	errorcheck	ERR_WRONGLINE	0.02	line 9 has no ERROR comment: run: issue42075.go:9:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue42076.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue42076.go:13:2: import "runtime/cgo" error: unable to find source related to: "runtime/cgo"
+fixedbugs/issue4215.go	errorcheck	PASS	0.02	
+fixedbugs/issue4232.go	errorcheck	PASS	0.01	
+fixedbugs/issue4251.go	errorcheck	ERR_WRONGMSG	0.01	line 12: "invalid index values, must be low <= high <= max" does not match "invalid slice index|inverted slice range|invalid slice indices"
+fixedbugs/issue4264.go	errorcheck	PASS	0.01	
+fixedbugs/issue42703.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue42703.go:18:19: panic: main.f(...) | fixedbugs/issue42703.go:12:2: panic: main.main(...) | run: reflect.Set: value of type *interp.node is not assignable to type func() | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | git
+fixedbugs/issue4283.go	errorcheck	ERR_CRASH	0.02	exit 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: fixedbugs/issue4283.go:12:9: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0xb8 pc=0x842b93] |  | gor
+fixedbugs/issue42876.go	run	PASS	0.03	
+fixedbugs/issue43111.go	run	TIMEOUT	60.04	
+fixedbugs/issue4313.go	run	FAIL_EXIT	0.09	exit status 1: fixedbugs/issue4313.go:12:7: panic: main.main(...) | run: 42 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/program.
+fixedbugs/issue4316.go	run	FAIL_EXIT	0.09	exit status 2: panic: interface conversion: reflect.Type is nil, not *reflect.rtype |  | goroutine 1 [running]: | reflect.PointerTo(...) |  $GOROOT/src/reflect/type.go:1415 | reflect.PtrTo(...) |  $GOROOT/src/reflect/type.go:1410 | github.com/traefik/yaegi/interp.(*itype).frameType(0x3335e62ff180?) 
+fixedbugs/issue43167.go	errorcheck	ERR_MISSED	0.08	
+fixedbugs/issue43292.go	run	FAIL_EXIT	0.11	exit status 1: fixedbugs/issue43292.go:11:10: panic: main.main(...) | run: reflect.Select: invalid Dir | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/ya
+fixedbugs/issue43384.go	errorcheck	ERR_MISSED	0.10	
+fixedbugs/issue43428.go	errorcheck	ERR_WRONGMSG	0.08	line 17: "cannot use type func() as type int in array or slice literal" does not match "cannot use T\\.Mv|incompatible type"
+fixedbugs/issue43444.go	run	FAIL_OUTPUT	0.10	line 1: got " e  a  b  c  d\n" want "e a b c d\n"
+fixedbugs/issue43480.go	run	FAIL_EXIT	0.06	exit status 1: fixedbugs/issue43480.go:21:6: panic: main.main(...) | run: 10000000000000000 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1
+fixedbugs/issue4353.go	run	PASS	0.06	
+fixedbugs/issue43570.go	run	PASS	0.17	
+fixedbugs/issue4359.go	errorcheck	PASS	0.05	
+fixedbugs/issue43619.go	run	PASS	0.03	
+fixedbugs/issue4365.go	errorcheck	ERR_MISSED	0.04	
+fixedbugs/issue43762.go	errorcheck	ERR_WRONGMSG	0.04	line 9: "invalid operation: mismatched types untyped bool and untyped int" does not match "invalid operation: (cannot compare true)|(true) == '\\\\\\\\' \\(mismatched types untyped bool and untyped rune\\)"
+fixedbugs/issue43835.go	run	FAIL_EXIT	0.05	exit status 1: fixedbugs/issue43835.go:10:5: panic: main.main(...) | run: FAIL | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/progr
+fixedbugs/issue43908.go	run	FAIL_EXIT	0.05	exit status 2: panic: invalid binary operation (0 + 2i) /= 3 [recovered] |  panic: fixedbugs/issue43908.go:14:24: CFG post-order panic: invalid binary operation (0 + 2i) /= 3 |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/github.com/traefik/
+fixedbugs/issue43942.go	run	FAIL_EXIT	0.01	exit status 1: 2026/10/19 12:31:40 want 1, have 1 | fixedbugs/issue43942.go:45:5: panic: main.expect(...) | fixedbugs/issue43942.go:27:16: panic: main.main.func.func.func.func(...) | 2026/10/19 12:31:40 want 5, have want 1, have 1 | fixedbugs/issue43942.go:45:5: panic: main.expect(...) | fixedbugs/i
+fixedbugs/issue4396a.go	run	PASS	0.01	
+fixedbugs/issue4396b.go	run	PASS	0.02	
+fixedbugs/issue4405.go	errorcheck	PASS	0.02	
+fixedbugs/issue44266.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue4429.go	errorcheck	PASS	0.02	
+fixedbugs/issue4448.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/issue4448.go:30:14: panic: main.main(...) | run: reflect: call of reflect.Value.SetUint on int Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACH
+fixedbugs/issue4452.go	errorcheck	ERR_WRONGMSG	0.03	line 12: "cannot convert expression of type untyped int to type [1]int" does not match "\\[\\.\\.\\.\\].*outside of array literal|invalid use of \\[\\.\\.\\.\\] array"
+fixedbugs/issue4458.go	errorcheck	ERR_CRASH	0.02	exit 1: fixedbugs/issue4458.go:17:8: panic: main.main(...) | run: reflect.Set: value of type **struct {} is not assignable to type struct {} | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1(
+fixedbugs/issue4463.go	errorcheck	ERR_WRONGLINE	0.03	line 12 has no ERROR comment: run: issue4463.go:12:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue4468.go	errorcheck	PASS	0.02	
+fixedbugs/issue4470.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue44823.go	run	PASS	0.02	
+fixedbugs/issue44830.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue44830.go:11:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue4495.go	run	FAIL_EXIT	0.04	exit status 1: run: fixedbugs/issue4495.go:21:15: too many arguments
+fixedbugs/issue45045.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue45045.go:12:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue45175.go	run	PASS	0.03	
+fixedbugs/issue4517a.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue4517b.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue4517c.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue4517d.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue4518.go	run	PASS	0.02	
+fixedbugs/issue45242.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue45242.go:13:6: panic: main.repro(...) | fixedbugs/issue45242.go:22:6: panic: main.main(...) | run: reflect: call of reflect.Value.SetUint on int Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/ya
+fixedbugs/issue4545.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue4562.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue4562.go:34:5: panic: main.expectError(...) | run: cannot find issue4562.go on stack | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com
+fixedbugs/issue45804.go	errorcheck	ERR_WRONGLINE	0.03	line 9 has no ERROR comment: run: issue45804.go:9:1: missing function body
+fixedbugs/issue4585.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue4585.go:12:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue45851.go	run	PASS	0.03	
+fixedbugs/issue45913.go	errorcheck	PASS	0.02	
+fixedbugs/issue4610.go	errorcheck	ERR_WRONGMSG	0.03	line 15: "undefined type" does not match "is not a type|expected .;."
+fixedbugs/issue4618.go	run	FAIL_EXIT	0.03	exit status 1: AllocsPerRun(100, F) = 7, want 1 | fixedbugs/issue4618.go:31:8: panic: main.main(...) | run: os.Exit(1) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/githu
+fixedbugs/issue4620.go	run	FAIL_EXIT	0.02	exit status 1: map[0:1 1:2] | fixedbugs/issue4620.go:14:19: panic: main.main(...) | run: m[i] != 2 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@
+fixedbugs/issue46304.go	run	PASS	0.02	
+fixedbugs/issue4654.go	errorcheck	ERR_WRONGLINE	0.02	line 12 has no ERROR comment: run: issue4654.go:12:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue4663.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue4667.go	run	FAIL_EXIT	0.04	exit status 1: AllocsPerRun(100, F) = 5, want 1 | fixedbugs/issue4667.go:27:8: panic: main.main(...) | run: os.Exit(1) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/githu
+fixedbugs/issue46725.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue46725.go:29:5: invalid type assertion: non-interface type []*main.T on left
+fixedbugs/issue46749.go	errorcheck	PASS	0.02	
+fixedbugs/issue46903.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue46903.go:10:8: import "runtime/cgo" error: unable to find source related to: "runtime/cgo"
+fixedbugs/issue46938.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue46938.go:11:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue46957.go	errorcheck	ERR_WRONGMSG	0.01	line 12: "can only use ... with matching parameter" does not match "not enough arguments in call to f\\n\\thave \\(nil\\)\\n\\twant \\(int, \\[\\]int\\)|not enough arguments"
+fixedbugs/issue47227.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue47227.go:12:8: import "C" error: unable to find source related to: "C"
+fixedbugs/issue4748.go	run	PASS	0.02	
+fixedbugs/issue4752.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue4752.go:19:23: constant 9223372036854775808 overflows int64 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.1
+fixedbugs/issue4776.go	errorcheck	ERR_WRONGMSG	0.02	line 9: "expected 'package', found 'type'" does not match "package statement must be first|package clause"
+fixedbugs/issue47771.go	run	PASS	0.04	
+fixedbugs/issue4785.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/issue4785.go:12:9: panic: main.t(...) | fixedbugs/issue4785.go:16:7: panic: main.main(...) | run: reflect: call of reflect.Value.SetBool on interface Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/ya
+fixedbugs/issue47928.go	run	PASS	0.04	
+fixedbugs/issue4813.go	errorcheck	ERR_WRONGLINE	0.03	line 45 has no ERROR comment: run: issue4813.go:45:2: constant definition loop
+fixedbugs/issue48230.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue48289.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue48289.go:12:8: panic: main.main(...) | run: got *ptr 1, want 0 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.
+fixedbugs/issue48301.go	errorcheck	ERR_WRONGMSG	0.02	line 12: "undefined: T" does not match "invalid recursive type: T refers to itself"
+fixedbugs/issue48357.go	run	PASS	0.01	
+fixedbugs/issue4847.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue48471.go	errorcheck	ERR_WRONGLINE	0.02	line 15 has no ERROR comment: run: issue48471.go:15:1: missing function body
+fixedbugs/issue48473.go	run	PASS	0.03	
+fixedbugs/issue48476.go	run	PASS	0.02	
+fixedbugs/issue48536.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue48536.go:9:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue48558.go	errorcheck	ERR_CRASH	0.02	exit 2: panic: runtime error: index out of range [5] with length 5 [recovered] |  panic: fixedbugs/issue48558.go:19:2: CFG post-order panic: runtime error: index out of range [5] with length 5 |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/g
+fixedbugs/issue48784.go	errorcheck	ERR_CRASH	0.03	exit 2: panic: reflect: nil type passed to Type.AssignableTo [recovered] |  panic: fixedbugs/issue48784.go:21:6: CFG post-order panic: reflect: nil type passed to Type.AssignableTo |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/github.com/tr
+fixedbugs/issue48834.go	errorcheck	ERR_WRONGMSG	0.02	line 10: "not enough arguments to return" does not match "not enough (arguments to return|return values)\\n\\thave \\(number\\)\\n\\twant \\(int, error\\)"
+fixedbugs/issue48835.go	errorcheck	ERR_WRONGLINE	0.04	line 9 has no ERROR comment: run: issue48835.go:9:1: missing function body
+fixedbugs/issue48898.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue48898.go:36:10: panic: main.main.func.func.func(...) | 123fixedbugs/issue48898.go:34:9: panic: main.main.func(...) | fixedbugs/issue48898.go:11:11: panic: main.main.func(...) | run: fixedbugs/issue48898.go:11:11: interface conversion: interface {} is reflect.Value, not 
+fixedbugs/issue49003.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue49005a.go	errorcheck	ERR_WRONGMSG	0.02	line 13: "constant definition loop" does not match "undefined: X"
+fixedbugs/issue49005b.go	errorcheck	ERR_WRONGLINE	0.02	line 11 has no ERROR comment: run: issue49005b.go:11:1: missing function body
+fixedbugs/issue4909a.go	errorcheck	ERR_WRONGLINE	0.02	line 13 has no ERROR comment: run: issue4909a.go:13:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue49100.go	run	PASS	0.02	
+fixedbugs/issue49100b.go	run	PASS	0.05	
+fixedbugs/issue49110.go	run	PASS	0.04	
+fixedbugs/issue49145.go	run	PASS	0.02	
+fixedbugs/issue49512.go	run	FAIL_EXIT	0.05	exit status 1: fixedbugs/issue49512.go:37:21: panic: main.Call(...) | fixedbugs/issue49512.go:48:8: panic: main.main(...) | run: reflect.Set: value of type int is not assignable to type bool | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/
+fixedbugs/issue49665.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/issue49665.go:14:9: invalid operation: mismatched types *any and *interface{}
+fixedbugs/issue49767.go	errorcheck	ERR_CRASH	0.02	exit 2: panic: reflect.ChanOf: element size too large [recovered] |  panic: fixedbugs/issue49767.go:10:8: CFG post-order panic: reflect.ChanOf: element size too large |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/github.com/traefik/yaegi@v0
+fixedbugs/issue49814.go	errorcheck	ERR_CRASH	0.03	exit 2: runtime: out of memory: cannot allocate 1125899906842624-byte block (7897088 in use) | fatal error: out of memory |  | goroutine 1 gp=0x91db09661e0 m=5 mp=0x91db0a80008 [running]: | runtime.throw({0xf8168f?, 0x2000000000?}) |  $GOROOT/src/runtime/panic.go:1229 +0x48 fp=0x91db0a35910 sp=0x91d
+fixedbugs/issue50190.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/issue50190.go:21:8: undefined: C
+fixedbugs/issue50372.go	errorcheck	ERR_WRONGMSG	0.03	line 16: "expected at most 2 expressions" does not match "range clause permits at most two iteration variables"
+fixedbugs/issue5056.go	run	PASS	0.05	
+fixedbugs/issue50671.go	run	PASS	0.04	
+fixedbugs/issue50672.go	run	FAIL_EXIT	0.03	exit status 2: panic: runtime error: index out of range [1] with length 1 |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.genAST.func1(0x2b4c97672500, 0x2b4c9738f7c0) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/generic.go:88 +0xf54 | github.com/traefik/yaegi/interp.genAST.fu
+fixedbugs/issue50854.go	run	PASS	0.04	
+fixedbugs/issue5089.go	errorcheck	ERR_WRONGMSG	0.02	line 13: "undefined: " does not match "non-local|redefinition"
+fixedbugs/issue51101.go	run	PASS	0.04	
+fixedbugs/issue51401.go	run	PASS	0.03	
+fixedbugs/issue5172.go	errorcheck	PASS	0.03	
+fixedbugs/issue51733.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue51733.go:13:2: import "runtime/cgo" error: unable to find source related to: "runtime/cgo"
+fixedbugs/issue51913.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/issue51913.go:18:5: panic: main.main(...) | run: FAIL | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/progr
+fixedbugs/issue52072.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/issue52072.go:29:12: panic: main.main(...) | run: reflect: call of reflect.Value.Set on zero Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/
+fixedbugs/issue52127.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue52127.go:19:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue52438.go	run	PASS	0.04	
+fixedbugs/issue5244.go	run	PASS	0.03	
+fixedbugs/issue52612.go	run	FAIL_EXIT	0.06	exit status 1: run: fixedbugs/issue52612.go:11:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue52697.go	errorcheck	ERR_MISSED	1.40	
+fixedbugs/issue52748.go	errorcheck	ERR_WRONGLINE	0.02	line 9 has no ERROR comment: run: issue52748.go:9:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue52788.go	run	PASS	0.02	
+fixedbugs/issue52788a.go	run	FAIL_EXIT	0.03	exit status 1: true | fixedbugs/issue52788a.go:18:11: panic: main.f(...) | fixedbugs/issue52788a.go:25:10: panic: main.main(...) | run: os.Exit(0) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.
+fixedbugs/issue52953.go	run	PASS	0.02	
+fixedbugs/issue53137.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue53137.go:10:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue53309.go	run	PASS	0.02	
+fixedbugs/issue5358.go	errorcheck	ERR_WRONGLINE	0.02	line 13 has no ERROR comment: run: issue5358.go:13:1: missing function body
+fixedbugs/issue53600.go	run	PASS	0.04	
+fixedbugs/issue53619.go	run	FAIL_EXIT	0.03	exit status 2: scope.go:207: nil type | panic: nil type |  | goroutine 1 [running]: | log.Panic({0x1ff9f611ac88?, 0x1?, 0xf5d500?}) |  $GOROOT/src/log/log.go:451 +0x6e | github.com/traefik/yaegi/interp.(*scope).add(0x1ff9f5cfabd0, 0x0) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/scope.go:
+fixedbugs/issue53635.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue53635.go:14:9: panic: main.f(...) | fixedbugs/issue53635.go:10:2: panic: main.main(...) | run: FAIL | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMOD
+fixedbugs/issue53653.go	run	PASS	0.02	
+fixedbugs/issue53702.go	run	PASS	0.01	
+fixedbugs/issue5373.go	run	FAIL_EXIT	0.02	exit status 1: index function calls = 1 want 0 | fixedbugs/issue5373.go:20:7: panic: main.check(...) | fixedbugs/issue5373.go:68:2: panic: main.main(...) | run: os.Exit(1) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/inter
+fixedbugs/issue54220.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue54220.go:12:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue54280.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue54343.go	run	FAIL_EXIT	0.03	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x128 pc=0x82af94] |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.nodeType2(0x1e5d023bf448, 0x1e5d0232c090, 0x1e5d0236e8c0, {0x1e5d02302798, 0
+fixedbugs/issue54348.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/issue54348.go:10:4: type not found: T[int]
+fixedbugs/issue54467.go	run	PASS	0.02	
+fixedbugs/issue54542.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue54542.go:15:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue54632.go	run	PASS	0.02	
+fixedbugs/issue5493.go	run	FAIL_EXIT	0.41	exit status 1: 10 out of 10 finalizer are not called | fixedbugs/issue5493.go:37:5: panic: main.main(...) | run: not all finalizers are called | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func
+fixedbugs/issue54959.go	run	PASS	0.02	
+fixedbugs/issue55122.go	run	PASS	0.16	
+fixedbugs/issue55122b.go	run	PASS	0.17	
+fixedbugs/issue5515.go	run	PASS	0.02	
+fixedbugs/issue5581.go	errorcheck	ERR_WRONGLINE	0.02	line 14 has no ERROR comment: run: issue5581.go:14:1: constant definition loop
+fixedbugs/issue5607.go	run	PASS	0.03	
+fixedbugs/issue5609.go	errorcheck	ERR_CRASH	0.03	exit 2: panic: reflect: negative length passed to ArrayOf |  | goroutine 1 [running]: | reflect.ArrayOf(0x4?, {0xffb3e0?, 0xe0c760?}) |  $GOROOT/src/reflect/type.go:2672 +0x865 | github.com/traefik/yaegi/interp.(*itype).frameType(0x2a63fbfc6dd0?) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/inter
+fixedbugs/issue56103.go	errorcheck	ERR_WRONGLINE	0.03	line 11 has no ERROR comment: run: issue56103.go:11:6: cannot use _ as value
+fixedbugs/issue56220.go	errorcheck	ERR_WRONGMSG	0.02	line 10: "cannot convert expression of type untyped float to type int" does not match "cannot convert 1 - \\.0000001 \\(untyped float constant 0\\.9999999\\) to type int"
+fixedbugs/issue5698.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue56990.go	run	PASS	0.06	
+fixedbugs/issue5704.go	run	PASS	0.02	
+fixedbugs/issue57184.go	run	PASS	0.04	
+fixedbugs/issue57309.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue57309.go:21:6: panic: main.main.func(...) | fixedbugs/issue57309.go:20:2: panic: main.main.func(...) | run: fixedbugs/issue57309.go:21:3: invalid interface value {} | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.
+fixedbugs/issue5753.go	run	PASS	0.01	
+fixedbugs/issue57823.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/issue57823.go:11:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue5793.go	run	FAIL_EXIT	0.04	exit status 2: panic: runtime error: index out of range [2] with length 2 [recovered] |  panic: fixedbugs/issue5793.go:25:10: CFG post-order panic: runtime error: index out of range [2] with length 2 |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMOD
+fixedbugs/issue5809.go	run	PASS	0.03	
+fixedbugs/issue5820.go	run	PASS	0.02	
+fixedbugs/issue58300.go	run	FAIL_OUTPUT	0.04	line 1: got "\n\n" want "main.f\nmain.g\n"
+fixedbugs/issue58300b.go	run	FAIL_OUTPUT	0.03	line 1: got "\n\n" want "main.f\nmain.g\n"
+fixedbugs/issue5856.go	run	FAIL_EXIT	0.02	exit status 1: BUG: defer called from $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/run.go:1465, want issue5856.go:28 | fixedbugs/issue5856.go:32:22: panic: main.g(...) | fixedbugs/issue5856.go:17:2: panic: main.main(...) | run: os.Exit(1) | goroutine 1 [running]: | runtime/debug.Stack() |  $G
+fixedbugs/issue58671.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue58671.go:9:8: undefined type for P
+fixedbugs/issue59190.go	errorcheck	ERR_WRONGLINE	0.01	line 9 has no ERROR comment: run: issue59190.go:9:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue59293.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue59293.go:9:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue59334.go	run	PASS	0.02	
+fixedbugs/issue59338.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/issue59338.go:14:7: cannot use type func(main.P) main.P as type func(int) int in assignment
+fixedbugs/issue59367.go	run	PASS	0.02	
+fixedbugs/issue59404part2.go	run	PASS	0.01	
+fixedbugs/issue59411.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue59411.go:37:4: undefined: clear
+fixedbugs/issue59572.go	run	PASS	0.02	
+fixedbugs/issue5963.go	run	FAIL_EXIT	0.02	exit status 2: fixedbugs/issue5963.go:23:3: panic: main.init.func(...) | panic: os.Exit(0) [recovered, repanicked] |  | goroutine 34 [running]: | github.com/traefik/yaegi/interp.runCfg.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/run.go:226 +0x1ae | panic({0xe0c560?, 0x3385ddcabb20
+fixedbugs/issue59680.go	run	TIMEOUT	60.02	
+fixedbugs/issue6004.go	errorcheck	ERR_CRASH	0.03	exit 2: scope.go:212: nil reflect type | panic: nil reflect type [recovered] |  panic: fixedbugs/issue6004.go:10:2: CFG post-order panic: nil reflect type |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp
+fixedbugs/issue6055.go	run	FAIL_OUTPUT	0.04	line 1: got "fixedbugs/issue6055.go:16:8: panic: main.nilInterfaceDeferCall.func(...)\n" want ""
+fixedbugs/issue60601.go	run	FAIL_EXIT	0.01	exit status 1: run: fixedbugs/issue60601.go:11:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue62203.go	run	FAIL_EXIT	0.02	exit status 1: run: 43:24: undefined type for K
+fixedbugs/issue62360.go	run	PASS	0.01	
+fixedbugs/issue6269.go	run	FAIL_EXIT	0.01	exit status 1: fixedbugs/issue6269.go:31:2: panic: main.main(...) | run: reflect.Set: value of type struct { struct {} } is not assignable to type error | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Ex
+fixedbugs/issue63333.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue63657.go	run	FAIL_OUTPUT	0.02	line 1: got "fixedbugs/issue63657.go:18:2: panic: main.f(...)\nfixedbugs/issue63657.go:36:7: panic: main.main.func(...)\n" want ""
+fixedbugs/issue6402.go	errorcheck	ERR_CRASH	0.02	exit 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: fixedbugs/issue6402.go:12:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x20 pc=0x8338a4] |  | gor
+fixedbugs/issue6403.go	errorcheck	ERR_WRONGLINE	0.03	line 11 has no ERROR comment: run: issue6403.go:11:8: import "syscall" error: unable to find source related to: "syscall"
+fixedbugs/issue6405.go	errorcheck	PASS	0.02	
+fixedbugs/issue6406.go	errorcheck	PASS	0.02	
+fixedbugs/issue6428.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue64565.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue64565.go:12:7: undefined: max
+fixedbugs/issue64715.go	run	PASS	0.03	
+fixedbugs/issue6500.go	errorcheck	PASS	0.03	
+fixedbugs/issue65417.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue65417.go:11:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue6572.go	errorcheck	ERR_WRONGMSG	0.03	line 9: "constant definition loop" does not match "undefined"
+fixedbugs/issue65962.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: fixedbugs/issue65962.go:33:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] |
+fixedbugs/issue66066.go	run	PASS	0.02	
+fixedbugs/issue66066b.go	run	PASS	0.02	
+fixedbugs/issue66261.go	run	PASS	0.03	
+fixedbugs/issue66575.go	run	PASS	0.02	
+fixedbugs/issue66585.go	run	PASS	0.02	
+fixedbugs/issue6671.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue6703a.go	errorcheck	ERR_MISSED	0.04	
+fixedbugs/issue6703b.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue6703c.go	errorcheck	ERR_CRASH	0.04	exit 1: fixedbugs/issue6703c.go:18:9: panic: methexpr(...) | run: reflect.Set: value of type func() int is not assignable to type func(int) int | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.fun
+fixedbugs/issue6703d.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue6703e.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue6703f.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue6703g.go	errorcheck	ERR_CRASH	0.02	exit 1: fixedbugs/issue6703g.go:20:9: panic: embedmethexpr(...) | run: reflect.Set: value of type func() int is not assignable to type func(struct { int }) int | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpre
+fixedbugs/issue6703h.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue6703i.go	errorcheck	ERR_MISSED	0.05	
+fixedbugs/issue6703j.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue6703k.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue6703l.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue6703m.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue6703n.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue6703o.go	errorcheck	ERR_MISSED	0.04	
+fixedbugs/issue6703p.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue6703q.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue6703r.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue6703s.go	errorcheck	ERR_CRASH	0.03	exit 1: fixedbugs/issue6703s.go:18:10: panic: ptrmethexpr(...) | run: reflect.Set: value of type func() int is not assignable to type func(*int) int | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execut
+fixedbugs/issue6703t.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue6703u.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue6703v.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue6703w.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue6703x.go	errorcheck	ERR_MISSED	0.01	
+fixedbugs/issue6703y.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue6703z.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue67160.go	run	PASS	0.06	
+fixedbugs/issue67190.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/issue67190.go:10:9: panic: main.main(...) | run: bad narrow case | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/i
+fixedbugs/issue67255.go	run	FAIL_EXIT	0.03	exit status 2: scope.go:207: nil type | panic: nil type |  | goroutine 1 [running]: | log.Panic({0x1979ae56b308?, 0x1979ae56b318?, 0x824035?}) |  $GOROOT/src/log/log.go:451 +0x6e | github.com/traefik/yaegi/interp.(*scope).add(0x1979ae2deea0, 0x0) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/inter
+fixedbugs/issue6750.go	errorcheck	ERR_WRONGMSG	0.04	line 21: "cannot convert \"abc\" to int" does not match "too many arguments in call( to printmany\\n\\thave \\(number, string, \\.\\.\\.int\\)\\n\\twant \\(...int\\))?"
+fixedbugs/issue6772.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue68227.go	run	PASS	0.03	
+fixedbugs/issue68292.go	errorcheck	ERR_WRONGLINE	0.04	line 9 has no ERROR comment: run: issue68292.go:9:15: undefined type for T
+fixedbugs/issue68322.go	run	PASS	0.02	
+fixedbugs/issue68415.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue68415.go:11:2: import "unique" error: unable to find source related to: "unique"
+fixedbugs/issue68525.go	run	PASS	0.02	
+fixedbugs/issue6866.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue6866.go:26:2: constant definition loop
+fixedbugs/issue68809.go	run	PASS	0.01	
+fixedbugs/issue68816.go	run	FAIL_OUTPUT	0.03	line 1: got "fixedbugs/issue68816.go:23:21: panic: main.f1(...)\nfixedbugs/issue68816.go:11:3: panic: main.main.func(...)\nfixedbugs/is" want ""
+fixedbugs/issue6889.go	errorcheck	ERR_MISSED	0.03	
+fixedbugs/issue6899.go	run	PASS	0.03	
+fixedbugs/issue6902.go	run	PASS	0.03	
+fixedbugs/issue69434.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue69434.go:10:2: import "iter" error: unable to find source related to: "iter"
+fixedbugs/issue69507.go	run	FAIL_EXIT	0.02	exit status 2: scope.go:207: nil type | panic: nil type |  | goroutine 1 [running]: | log.Panic({0x3fab8c3c7288?, 0x3fab8c3c7298?, 0x824035?}) |  $GOROOT/src/log/log.go:451 +0x6e | github.com/traefik/yaegi/interp.(*scope).add(0x3fab8c8aa090, 0x0) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/inter
+fixedbugs/issue6964.go	errorcheck	ERR_WRONGMSG	0.03	line 10: "cannot convert expression of type untyped complex to type string" does not match "-4 \\+ 2i|invalid type conversion"
+fixedbugs/issue6977.go	errorcheck	ERR_WRONGMSG	0.03	line 37: "m redeclared in this block\n\tprevious declaration at issue6977.go:37:21" does not match "duplicate method .*m"
+fixedbugs/issue70156.go	run	PASS	0.03	
+fixedbugs/issue70189.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue70189.go:31:4: undefined: clear
+fixedbugs/issue7044.go	run	PASS	0.03	
+fixedbugs/issue70481.go	run	PASS	0.02	
+fixedbugs/issue7050.go	run	PASS	0.03	
+fixedbugs/issue7083.go	run	PASS	0.02	
+fixedbugs/issue7129.go	errorcheck	ERR_WRONGMSG	0.02	line 18: "cannot use type bool as type int" does not match "in argument to f|incompatible type|cannot convert"
+fixedbugs/issue7150.go	errorcheck	ERR_WRONGMSG	0.01	line 15: "index int must be integer constant" does not match "index 15 out of bounds \\[0:10\\]|out of range"
+fixedbugs/issue7153.go	errorcheck	PASS	0.02	
+fixedbugs/issue71675.go	run	FAIL_EXIT	0.04	exit status 2: scope.go:207: nil type | panic: nil type |  | goroutine 1 [running]: | log.Panic({0x4898528f308?, 0x4898528f318?, 0x824035?}) |  $GOROOT/src/log/log.go:451 +0x6e | github.com/traefik/yaegi/interp.(*scope).add(0x4898536c1b0, 0x0) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/s
+fixedbugs/issue71759.go	run	PASS	0.02	
+fixedbugs/issue71857.go	run	PASS	0.02	
+fixedbugs/issue71932.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/issue71932.go:38:7: invalid operation: cannot take address of uint8 [kind: indexExpr]
+fixedbugs/issue72063.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue72063.go:12:35: undefined type for RecFct
+fixedbugs/issue7214.go	errorcheck	PASS	0.02	
+fixedbugs/issue7223.go	errorcheck	ERR_WRONGMSG	0.03	line 20: "cannot convert \"abc\" to int" does not match "non-integer.*len|untyped string"
+fixedbugs/issue72844.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/issue72844.go:17:11: panic: main.testLen1(...) | fixedbugs/issue72844.go:21:10: panic: main.testLen2(...) | fixedbugs/issue72844.go:69:2: panic: main.shouldNotPanic(...) | fixedbugs/issue72844.go:50:2: panic: main.main(...) | run: reflect: call of reflect.Value.Len on zero V
+fixedbugs/issue72860.go	run	FAIL_OUTPUT	0.03	line 1: got "fixedbugs/issue72860.go:11:11: panic: main.f(...)\n" want ""
+fixedbugs/issue7310.go	errorcheck	ERR_CRASH	0.03	exit 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: fixedbugs/issue7310.go:12:6: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0xb8 pc=0x83fb97] |  | gor
+fixedbugs/issue73476.go	run	FAIL_EXIT	0.01	exit status 1: fixedbugs/issue73476.go:11:18: panic: main.f(...) | fixedbugs/issue73476.go:16:2: panic: main.main(...) | run: reflect: call of reflect.Value.Interface on zero Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/ya
+fixedbugs/issue73748a.go	run	FAIL_OUTPUT	0.04	line 1: got "fixedbugs/issue73748a.go:21:2: panic: main.f(...)\n" want ""
+fixedbugs/issue73748b.go	run	FAIL_OUTPUT	0.04	line 1: got "fixedbugs/issue73748b.go:21:2: panic: main.f(...)\n" want ""
+fixedbugs/issue73888.go	run	PASS	0.02	
+fixedbugs/issue73888b.go	run	PASS	0.04	
+fixedbugs/issue73916.go	run	FAIL_OUTPUT	0.03	line 1: got "fixedbugs/issue73916.go:19:9: panic: main.main.func(...)\n" want ""
+fixedbugs/issue73916b.go	run	FAIL_OUTPUT	0.03	line 1: got "fixedbugs/issue73916b.go:21:9: panic: main.main.func(...)\n" want ""
+fixedbugs/issue73917.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue73917.go:21:11: panic: main(...) | run: reflect.Set: value of type func() is not assignable to type func(struct { *int }) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Exe
+fixedbugs/issue73920.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/issue73920.go:21:12: panic: main(...) | run: reflect.Set: value of type func() is not assignable to type func(*struct { *int }) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Ex
+fixedbugs/issue7419.go	run	PASS	0.02	
+fixedbugs/issue74379.go	run	FAIL_OUTPUT	0.05	line 1: got "fixedbugs/issue74379.go:16:5: panic: main.crashOnErr(...)\n" want ""
+fixedbugs/issue74379b.go	run	FAIL_OUTPUT	0.02	line 1: got "fixedbugs/issue74379b.go:16:5: panic: main.crashOnErr(...)\n" want ""
+fixedbugs/issue74379c.go	run	FAIL_OUTPUT	0.03	line 1: got "fixedbugs/issue74379c.go:18:5: panic: main.crashOnErr1(...)\nfixedbugs/issue74379c.go:35:5: panic: main.crashOnErr2(...)\n" want ""
+fixedbugs/issue74935.go	run	PASS	0.03	
+fixedbugs/issue7525.go	errorcheck	ERR_WRONGLINE	0.03	line 11 has no ERROR comment: run: issue7525.go:11:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue7525b.go	errorcheck	ERR_WRONGMSG	0.03	line 11: "constant definition loop" does not match "initialization cycle: y refers to itself"
+fixedbugs/issue7525c.go	errorcheck	ERR_WRONGMSG	0.03	line 11: "constant definition loop" does not match "initialization cycle: z refers to itself"
+fixedbugs/issue7525d.go	errorcheck	ERR_WRONGLINE	0.03	line 11 has no ERROR comment: run: issue7525d.go:11:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue7525e.go	errorcheck	ERR_WRONGLINE	0.02	line 11 has no ERROR comment: run: issue7525e.go:11:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue75327.go	run	FAIL_EXIT	0.03	exit status 2: scope.go:207: nil type | panic: nil type |  | goroutine 1 [running]: | log.Panic({0x130a6790f308?, 0x130a6790f318?, 0x824035?}) |  $GOROOT/src/log/log.go:451 +0x6e | github.com/traefik/yaegi/interp.(*scope).add(0x130a674e4c60, 0x0) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/inter
+fixedbugs/issue7538a.go	errorcheck	ERR_WRONGMSG	0.01	line 14: "label _ undefined" does not match "not defined|undefined label"
+fixedbugs/issue7550.go	run	FAIL_OUTPUT	0.02	line 1: got "fixedbugs/issue7550.go:19:24: panic: main.f(...)\n" want ""
+fixedbugs/issue75569.go	run	PASS	0.04	
+fixedbugs/issue76008.go	run	FAIL_OUTPUT	0.03	line 1: got "fixedbugs/issue76008.go:13:11: panic: main.main.func.func(...)\nfixedbugs/issue76008.go:16:11: panic: main.main.func(...)" want ""
+fixedbugs/issue76709.go	run	PASS	0.02	
+fixedbugs/issue7675.go	errorcheck	ERR_WRONGLINE	0.03	line 11 has no ERROR comment: run: issue7675.go:11:1: missing function body
+fixedbugs/issue7690.go	run	FAIL_EXIT	0.07	exit status 1: fixedbugs/issue7690.go:21:10: panic: main.main(...) | run: reflect.Value.Slice: slice index out of bounds | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/git
+fixedbugs/issue7740.go	run	PASS	0.02	
+fixedbugs/issue7746.go	errorcheck	TIMEOUT	60.97	
+fixedbugs/issue7760.go	errorcheck	ERR_WRONGLINE	0.05	line 11 has no ERROR comment: run: issue7760.go:11:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue77613.go	run	PASS	0.02	
+fixedbugs/issue77779.go	run	FAIL_EXIT	0.02	exit status 1: fixedbugs/issue77779.go:39:5: panic: main.render(...) | fixedbugs/issue77779.go:34:9: panic: main.main(...) | run: fixedbugs/issue77779.go:44:6: interface conversion: nil is not main.Renderer | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x
+fixedbugs/issue78404.go	run	PASS	0.03	
+fixedbugs/issue7863.go	run	PASS	0.04	
+fixedbugs/issue78641.go	run	PASS	0.04	
+fixedbugs/issue79182.go	run	PASS	0.04	
+fixedbugs/issue79186.go	run	TIMEOUT	60.01	
+fixedbugs/issue7944.go	run	PASS	0.06	
+fixedbugs/issue79874.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/issue79874.go:14:2: import "syscall" error: unable to find source related to: "syscall"
+fixedbugs/issue79909.go	run	PASS	0.05	
+fixedbugs/issue7995.go	run	PASS	0.04	
+fixedbugs/issue80004.go	run	FAIL_EXIT	0.02	exit status 1: run: fixedbugs/issue80004.go:11:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue8004.go	run	FAIL_EXIT	0.04	exit status 1: run: fixedbugs/issue8004.go:12:2: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue8011.go	run	PASS	0.03	
+fixedbugs/issue80127.go	run	PASS	0.02	
+fixedbugs/issue80188.go	run	FAIL_EXIT	0.05	exit status 2: scope.go:207: nil type | panic: nil type |  | goroutine 1 [running]: | log.Panic({0x135b71507308?, 0x135b71507318?, 0x824035?}) |  $GOROOT/src/log/log.go:451 +0x6e | github.com/traefik/yaegi/interp.(*scope).add(0x135b711830e0, 0x0) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/inter
+fixedbugs/issue8036.go	run	PASS	0.06	
+fixedbugs/issue8039.go	run	PASS	0.03	
+fixedbugs/issue8047.go	run	FAIL_EXIT	0.03	exit status 1: run: reflect.Value.Call: call of nil function | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/program.go:146 +0x79 | 
+fixedbugs/issue8047b.go	run	PASS	0.04	
+fixedbugs/issue8048.go	run	FAIL_OUTPUT	0.13	line 1: got "<invalid reflect.Value>\n<invalid reflect.Value>\n<invalid reflect.Value>\n" want ""
+fixedbugs/issue80517_1.go	run	PASS	0.02	
+fixedbugs/issue80517_2.go	run	PASS	0.04	
+fixedbugs/issue80517_3.go	run	PASS	0.04	
+fixedbugs/issue80577.go	run	PASS	0.02	
+fixedbugs/issue8132.go	run	FAIL_OUTPUT	0.08	line 1: got "<invalid reflect.Value>\n" want ""
+fixedbugs/issue8139.go	run	PASS	0.05	
+fixedbugs/issue8155.go	run	PASS	0.09	
+fixedbugs/issue8158.go	run	PASS	0.08	
+fixedbugs/issue81612.go	run	FAIL_EXIT	0.05	exit status 2: scope.go:207: nil type | panic: nil type |  | goroutine 1 [running]: | log.Panic({0x2b981c499308?, 0x2b981c499318?, 0x824035?}) |  $GOROOT/src/log/log.go:451 +0x6e | github.com/traefik/yaegi/interp.(*scope).add(0x2b981c0eb320, 0x0) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/inter
+fixedbugs/issue8183.go	errorcheck	ERR_CRASH	0.05	exit 2: panic: reflect: negative length passed to ArrayOf [recovered] |  panic: fixedbugs/issue8183.go:19:10: CFG post-order panic: reflect: negative length passed to ArrayOf |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/github.com/traefik/
+fixedbugs/issue8311.go	errorcheck	ERR_WRONGMSG	0.02	line 14: "invalid operation: operator ++ not defined on []uint8" does not match "invalid operation: x[+][+]|non-numeric type"
+fixedbugs/issue8325.go	run	FAIL_EXIT	0.04	exit status 1: found a bad character A | fixedbugs/issue8325.go:15:14: panic: main.main(...) | run: BUG | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/y
+fixedbugs/issue8336.go	run	PASS	0.02	
+fixedbugs/issue8347.go	run	FAIL_EXIT	0.03	exit status 1: fixedbugs/issue8347.go:10:7: panic: main.main(...) | run: reflect.Set: value of type bool is not assignable to type chan bool | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1(
+fixedbugs/issue8385.go	errorcheck	ERR_WRONGLINE	0.05	line 27 has no ERROR comment: run: issue8385.go:27:1: missing function body
+fixedbugs/issue8438.go	errorcheck	PASS	0.04	
+fixedbugs/issue8440.go	errorcheck	PASS	0.03	
+fixedbugs/issue8501.go	errorcheck	PASS	0.07	
+fixedbugs/issue8507.go	errorcheck	ERR_MISSED	0.06	
+fixedbugs/issue8606.go	run	FAIL_OUTPUT	0.07	line 1: got "fixedbugs/issue8606.go:83:8: panic: main.main.func.func(...)\nfixedbugs/issue8606.go:83:8: panic: main.main.func.func(..." want ""
+fixedbugs/issue8606b.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/issue8606b.go:25:2: import "syscall" error: unable to find source related to: "syscall"
+fixedbugs/issue8613.go	run	FAIL_OUTPUT	0.05	line 1: got "fixedbugs/issue8613.go:14:9: panic: main.main.func(...)\nfixedbugs/issue8613.go:17:7: panic: main.main.func(...)\nfixedbug" want ""
+fixedbugs/issue8620.go	run	PASS	0.04	
+fixedbugs/issue8745.go	errorcheck	ERR_WRONGMSG	0.03	line 12: "cannot use type uint8 as type float64 in assignment" does not match "cannot use.*type byte.*as type float64|cannot use .* as float64 value"
+fixedbugs/issue8836.go	errorcheck	ERR_WRONGLINE	0.03	line 13 has no ERROR comment: run: issue8836.go:13:1: missing function body
+fixedbugs/issue8947.go	run	FAIL_EXIT	0.04	exit status 1: run: fixedbugs/issue8947.go:15:12: too many values in struct literal
+fixedbugs/issue8961.go	run	PASS	0.04	
+fixedbugs/issue9006.go	run	PASS	0.02	
+fixedbugs/issue9017.go	errorcheck	ERR_MISSED	0.02	
+fixedbugs/issue9036.go	errorcheck	PASS	0.03	
+fixedbugs/issue9076.go	errorcheck	ERR_WRONGLINE	0.03	line 11 has no ERROR comment: run: issue9076.go:11:8: import "unsafe" error: unable to find source related to: "unsafe"
+fixedbugs/issue9083.go	errorcheck	ERR_WRONGMSG	0.02	line 17: "cannot use type map[int]int as type int in assignment" does not match "cannot use make\\(map\\[int\\]int\\)|incompatible"
+fixedbugs/issue9110.go	run	PASS	0.31	
+fixedbugs/issue9321.go	run	PASS	0.52	
+fixedbugs/issue9355.go	run	FAIL_EXIT	0.05	exit status 1: run: fixedbugs/issue9355.go:15:2: import "os/exec" error: unable to find source related to: "os/exec"
+fixedbugs/issue9370.go	errorcheck	PASS	0.05	
+fixedbugs/issue9432.go	errorcheck	ERR_MISSED	0.05	
+fixedbugs/issue9521.go	errorcheck	ERR_WRONGMSG	0.02	line 16: "cannot use func() ([]int,[]int) as type ([]int,)" does not match "cannot use \\[\\]int value as type int in append|cannot use.*type \\[\\]int.*to append"
+fixedbugs/issue9604.go	run	PASS	0.03	
+fixedbugs/issue9634.go	errorcheck	PASS	0.02	
+fixedbugs/issue9691.go	run	FAIL_EXIT	0.05	exit status 1: fixedbugs/issue9691.go:10:2: panic: main.main(...) | run: bad | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/program
+fixedbugs/issue9738.go	run	PASS	0.02	
+fixedbugs/issue9862_run.go	run	FAIL_EXIT	0.03	exit status 1: run: fixedbugs/issue9862_run.go:14:2: import "os/exec" error: unable to find source related to: "os/exec"
+float_lit.go	run	PASS	0.04	
+float_lit2.go	run	PASS	0.04	
+float_lit3.go	errorcheck	PASS	0.06	
+floatcmp.go	run	PASS	0.02	
+for.go	run	FAIL_EXIT	0.03	exit status 1: assertion fail  incorrect index value after range loop  | for.go:12:5: panic: main.assertequal(...) | for.go:19:6: panic: main.main(...) | run: 1 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpr
+func.go	run	PASS	0.03	
+func1.go	errorcheck	PASS	0.03	
+func3.go	errorcheck	PASS	0.03	
+func4.go	errorcheck	ERR_CRASH	0.02	exit 1: func4.go:15:10: panic: main.main(...) | run: reflect.Value.Addr of unaddressable value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.1
+func5.go	run	PASS	0.04	
+func6.go	run	PASS	0.03	
+func7.go	run	PASS	0.04	
+func8.go	run	PASS	0.04	
+funcdup.go	errorcheck	PASS	0.01	
+funcdup2.go	errorcheck	PASS	0.03	
+gc.go	run	PASS	0.10	
+gc1.go	run	PASS	0.09	
+gc2.go	run	PASS	10.03	
+gcgort.go	run	FAIL_EXIT	1.32	exit status 2: gcgort.go:193:9: panic: main.func(...) | gcgort.go:193:9: panic: main.func(...) | gcgort.go:193:9: panic: main.func(...) | gcgort.go:193:9: panic: main.func(...) | gcgort.go:193:9: panic: main.func(...) | gcgort.go:193:9: panic: main.func(...) | gcgort.go:193:9: panic: main.func(...) 
+gcstring.go	run	PASS	0.33	
+goprint.go	run	FAIL_OUTPUT	0.04	line 1: got "42 true false true 1.5 world <nil> [] map[] <nil> 255\n" want "42 true false true 1.5 world 0x0 [0/0]0x0 0x0 0x0 255\n"
+goto.go	errorcheck	ERR_WRONGLINE	0.03	line 372 has no ERROR comment: run: goto.go:372:2: undefined: L
+heapsampling.go	run	FAIL_EXIT	0.04	exit status 1: run: heapsampling.go:31:2: cannot assign to %!s(int=524288) (int constant)
+helloworld.go	run	PASS	0.03	
+if.go	run	PASS	0.03	
+import1.go	errorcheck	PASS	0.03	
+import5.go	errorcheck	PASS	0.02	
+import6.go	errorcheck	ERR_WRONGMSG	0.03	line 17: "import \".\" error: no Go files in $GOPATH/src" does not match "import path"
+indirect.go	run	PASS	0.02	
+indirect1.go	errorcheck	PASS	0.02	
+init.go	errorcheck	PASS	0.02	
+init1.go	run	PASS	0.99	
+initcomma.go	run	PASS	0.02	
+initexp.go	errorcheck	ERR_CRASH	4.09	exit 2: runtime: goroutine stack exceeds 1000000000-byte limit | runtime: sp=0xb9ad8400320 stack=[0xb9ad8400000, 0xb9af8400000] | fatal error: stack overflow |  | runtime stack: | runtime.throw({0xf83af7?, 0x0?}) |  $GOROOT/src/runtime/panic.go:1229 +0x48 fp=0x7fa3df7fdc60 sp=0x7fa3df7fdc30 pc=0x494
+initialize.go	run	PASS	0.03	
+initializerr.go	errorcheck	PASS	0.03	
+initloop.go	errorcheck	ERR_WRONGLINE	0.03	line 13 has no ERROR comment: run: initloop.go:13:2: variable definition loop
+inline_caller.go	run	FAIL_EXIT	0.03	exit status 1: inline_caller.go:67:6: panic: main.main(...) | run: skip=0 expected line 36, got line 586 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/
+inline_callers.go	run	FAIL_OUTPUT	0.02	line 1: got "testCallers(0):\n got [runtime.Callers reflect.Value.call reflect.Value.Call github.com/traefik/yaegi/interp.callBin.func" want ""
+inline_literal.go	run	FAIL_EXIT	0.03	exit status 1: inline_literal.go:37:8: panic: main.main(...) | run: runtime error: invalid memory address or nil pointer dereference | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GO
+int_lit.go	run	PASS	0.03	
+intcvt.go	run	PASS	0.03	
+interface/bigdata.go	run	PASS	0.04	
+interface/convert.go	run	FAIL_EXIT	0.05	exit status 1: interface/convert.go:71:2: panic: main.main(...) | run: reflect.Set: value of type interface {} is not assignable to type interp.valueInterface | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpret
+interface/convert1.go	run	PASS	0.03	
+interface/convert2.go	run	PASS	0.03	
+interface/embed.go	run	PASS	0.07	
+interface/embed2.go	errorcheck	ERR_CRASH	0.04	exit 1: interface/embed2.go:48:17: panic: main.main(...) | run: interface/embed2.go:51:19: invalid interface value {0x23778a462c80 {0xe0c720 0x23778a488908 390}} | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interp
+interface/explicit.go	errorcheck	ERR_WRONGMSG	0.05	line 46: "cannot use type *main.T as type main.I in assignment" does not match "incompatible|missing method M"
+interface/fail.go	run	FAIL_EXIT	0.04	exit status 1: interface/fail.go:34:6: panic: main.shouldPanic.func(...) | interface/fail.go:16:2: panic: main.main(...) | run: function should panic | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execu
+interface/fake.go	run	PASS	0.07	
+interface/noeq.go	run	FAIL_OUTPUT	0.04	line 1: got "interface/noeq.go:26:9: panic: main.cmp(...)\ninterface/noeq.go:30:23: panic: main.noCmp.func(...)\ninterface/noeq.go:26:9" want ""
+interface/pointer.go	errorcheck	ERR_WRONGMSG	0.06	line 36: "cannot use type *main.Start as type *main.Inst in assignment" does not match "pointer to interface|incompatible type"
+interface/receiver.go	run	FAIL_EXIT	0.03	exit status 1: dynamic i.(P) succeeded incorrectly | interface/receiver.go:48:6: panic: main.main(...) | run: fail | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.co
+interface/receiver1.go	errorcheck	ERR_WRONGLINE	0.05	line 14 has no ERROR comment: run: receiver1.go:14:1: missing function body
+interface/returntype.go	run	FAIL_OUTPUT	0.03	line 1: got "interface/returntype.go:25:6: panic: main.p1(...)\n" want ""
+interface/struct.go	run	PASS	0.07	
+iota.go	run	FAIL_EXIT	0.05	exit status 1: run: iota.go:68:2: constant definition loop
+ken/array.go	run	PASS	0.03	
+ken/chan.go	run	TIMEOUT	60.02	
+ken/chan1.go	run	PASS	0.06	
+ken/complit.go	run	PASS	0.08	
+ken/convert.go	run	PASS	0.08	
+ken/cplx0.go	run	PASS	0.04	
+ken/cplx1.go	run	PASS	0.05	
+ken/cplx2.go	run	FAIL_EXIT	0.06	exit status 2: panic: reflect: call of reflect.Value.Complex on interface Value [recovered] |  panic: ken/cplx2.go:112:20: CFG post-order panic: reflect: call of reflect.Value.Complex on interface Value |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GO
+ken/cplx3.go	run	FAIL_EXIT	0.04	exit status 1: run: ken/cplx3.go:11:8: import "unsafe" error: unable to find source related to: "unsafe"
+ken/cplx4.go	run	PASS	0.02	
+ken/cplx5.go	run	PASS	0.04	
+ken/divconst.go	run	PASS	36.38	
+ken/divmod.go	run	PASS	0.02	
+ken/embed.go	run	PASS	0.02	
+ken/for.go	run	PASS	0.02	
+ken/interbasic.go	run	PASS	0.02	
+ken/interfun.go	run	PASS	0.03	
+ken/intervar.go	run	PASS	0.02	
+ken/label.go	run	PASS	0.03	
+ken/litfun.go	run	PASS	0.02	
+ken/mfunc.go	run	PASS	0.03	
+ken/modconst.go	run	PASS	36.19	
+ken/ptrfun.go	run	PASS	0.02	
+ken/ptrvar.go	run	PASS	0.03	
+ken/range.go	run	PASS	0.02	
+ken/rob1.go	run	PASS	0.02	
+ken/rob2.go	run	PASS	0.03	
+ken/robfor.go	run	PASS	0.02	
+ken/robfunc.go	run	PASS	0.04	
+ken/shift.go	run	PASS	0.03	
+ken/simparray.go	run	PASS	0.03	
+ken/simpbool.go	run	PASS	0.03	
+ken/simpconv.go	run	PASS	0.02	
+ken/simpfun.go	run	PASS	0.04	
+ken/simpswitch.go	run	PASS	0.02	
+ken/simpvar.go	run	PASS	0.02	
+ken/slicearray.go	run	PASS	0.03	
+ken/sliceslice.go	run	PASS	0.03	
+ken/string.go	run	FAIL_OUTPUT	0.03	line 1: got "abcxyz -abcxyz -abcxyz -abcxyz -abcxyz -abcxyz -abc xyz\n" want "abcxyz-abcxyz-abcxyz-abcxyz-abcxyz-abcxyz-abcxyz\n"
+ken/strvar.go	run	PASS	0.02	
+label.go	errorcheck	ERR_WRONGMSG	0.02	line 31: "L6 redeclared in this block\n\tprevious declaration at label.go:29:1" does not match "label .*L6.* already defined"
+label1.go	errorcheck	ERR_WRONGMSG	0.03	line 108: "label on undefined" does not match "continue label not defined: on|invalid continue label .*on"
+linkmain_run.go	run	FAIL_EXIT	0.02	exit status 1: run: linkmain_run.go:17:2: import "os/exec" error: package location $GOROOT/test not in GOPATH
+linkname3.go	errorcheck	ERR_WRONGLINE	0.02	line 10 has no ERROR comment: run: linkname3.go:10:8: import "unsafe" error: package location $GOROOT/test not in GOPATH
+linkx_run.go	run	FAIL_EXIT	0.02	exit status 1: run: linkx_run.go:17:2: import "os/exec" error: package location $GOROOT/test not in GOPATH
+literal.go	run	PASS	0.04	
+literal2.go	run	PASS	0.02	
+mainsig.go	errorcheck	PASS	0.04	
+makechan.go	errorcheck	PASS	0.03	
+makemap.go	errorcheck	PASS	0.03	
+makenew.go	errorcheck	PASS	0.02	
+makeslice.go	run	FAIL_EXIT	0.02	exit status 1: run: makeslice.go:11:2: import "unsafe" error: package location $GOROOT/test not in GOPATH
+mallocfin.go	run	PASS	0.07	
+map.go	run	PASS	0.06	
+map1.go	errorcheck	ERR_CRASH	0.03	exit 2: panic: reflect.MapOf: invalid key type []int |  | goroutine 1 [running]: | reflect.MapOf({0xffb3e0, 0xdfe780}, {0xffb3e0, 0xe0c960}) |  $GOROOT/src/reflect/map.go:34 +0x7da | github.com/traefik/yaegi/interp.(*itype).frameType(0x53a75c2a8c0?) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/in
+mapclear.go	run	FAIL_EXIT	0.02	exit status 1: var after range with side-effect = 0 want 42 | mapclear.go:42:2: panic: main.checkloopvars(...) | mapclear.go:86:2: panic: main.main(...) | run: os.Exit(1) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp
+maplinear.go	run	FAIL_EXIT	0.49	exit status 1: maplinear.go:98:8: panic: main.main.func(...) | maplinear.go:28:9: panic: main.checkLinear.func(...) | maplinear.go:27:11: panic: main.checkLinear.func(...) | maplinear.go:76:28: panic: main.main.func(...) | run: reflect.Value.MapIndex: value of type int is not assignable to type inte
+maymorestack.go	run	FAIL_EXIT	0.02	exit status 1: maymorestack.go:22:8: panic: main.main(...) | run: mayMoreStack not called | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/i
+method.go	run	FAIL_EXIT	0.02	exit status 1: run: method.go:121:13: too many arguments
+method1.go	errorcheck	PASS	0.02	
+method2.go	errorcheck	ERR_CRASH	0.02	exit 2: panic: runtime error: index out of range [0] with length 0 |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func1(0xb6b590dcc0) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/cfg.go:453 +0x34ef | github.com/traefik/yaegi/interp.(*node).Walk(0xb6b590dcc
+method3.go	run	FAIL_EXIT	0.02	exit status 1: method3.go:20:12: panic: main.main(...) | run: reflect.Set: value of type *[]int is not assignable to type []int | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCA
+method5.go	run	FAIL_EXIT	0.02	exit status 1: method5.go:130:6: panic: main.shouldPanic.func(...) | method5.go:142:8: panic: main.main(...) | run: not panicking | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMOD
+method6.go	errorcheck	ERR_MISSED	0.02	
+method7.go	run	FAIL_EXIT	0.02	exit status 1: run: method7.go:35:6: too many arguments
+named.go	run	PASS	0.04	
+named1.go	errorcheck	TIMEOUT	60.01	
+newexpr.go	run	FAIL_EXIT	0.02	exit status 1: newexpr.go:13:8: panic: main.main(...) | run: wrong value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/program.go:
+nil.go	run	FAIL_EXIT	0.04	exit status 1: nil.go:70:8: panic: main.arraytest(...) | nil.go:23:8: panic: main.main(...) | run: reflect: call of reflect.Value.Len on zero Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute
+nilptr.go	run	FAIL_EXIT	0.02	exit status 1: run: nilptr.go:15:8: import "unsafe" error: package location $GOROOT/test not in GOPATH
+nilptr2.go	run	FAIL_EXIT	0.02	exit status 1: run: nilptr2.go:60:32: invalid operation: cannot take address of int [kind: indexExpr]
+noinit.go	run	FAIL_EXIT	0.02	exit status 1: run: noinit.go:16:2: import "unsafe" error: package location $GOROOT/test not in GOPATH
+nosplit.go	run	FAIL_EXIT	0.03	exit status 1: run: nosplit.go:17:2: import "os/exec" error: package location $GOROOT/test not in GOPATH
+peano.go	run	FAIL_EXIT	0.02	exit status 2: panic: interface conversion: reflect.Type is nil, not *reflect.rtype |  | goroutine 1 [running]: | reflect.PointerTo(...) |  $GOROOT/src/reflect/type.go:1415 | reflect.PtrTo(...) |  $GOROOT/src/reflect/type.go:1410 | github.com/traefik/yaegi/interp.(*itype).frameType(0x124eaa2237c0?) 
+print.go	run	FAIL_OUTPUT	0.02	line 1: got "<nil>\n{<nil> {<nil> <nil> 0}}\nmap[]\n[]\n-7\n7\n7\n7\n7\n7\n7\n8\n(9+10i)\ntrue\nfalse\nhello\none two\none two\nhello\nfalse\ntrue\n(14+15" want "(0x0,0x0)\n(0x0,0x0)\n0x0\n[0/0]0x0\n-7\n7\n7\n7\n7\n7\n7\n8\n(9+10i)\ntrue\nfalse\nhello\none two\none two\nhello\nfalse\ntrue\n(14+15i)\
+printbig.go	run	FAIL_OUTPUT	0.02	line 1: got "-9223372036854775808 \n9223372036854775807 \n" want "-9223372036854775808\n9223372036854775807\n"
+range.go	run	FAIL_EXIT	0.03	exit status 1: wrong parallel assignment 1 10 20 | range.go:101:2: panic: main.testslice(...) | range.go:475:2: panic: main.main(...) | run: fail | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.f
+range2.go	errorcheck	ERR_CRASH	0.02	exit 2: scope.go:207: nil type | panic: nil type |  | goroutine 1 [running]: | log.Panic({0xa85ce4a1308?, 0xa85ce4a1318?, 0x824035?}) |  $GOROOT/src/log/log.go:451 +0x6e | github.com/traefik/yaegi/interp.(*scope).add(0xa85ce0ac480, 0x0) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/scope.go
+range3.go	run	FAIL_EXIT	0.03	exit status 2: scope.go:207: nil type | panic: nil type |  | goroutine 1 [running]: | log.Panic({0xb351c007308?, 0xb351c007318?, 0x824035?}) |  $GOROOT/src/log/log.go:451 +0x6e | github.com/traefik/yaegi/interp.(*scope).add(0xb351bbe0240, 0x0) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/s
+range4.go	run	FAIL_EXIT	0.02	exit status 2: scope.go:207: nil type | panic: nil type |  | goroutine 1 [running]: | log.Panic({0x2e016b07d308?, 0x2e016b07d318?, 0x824035?}) |  $GOROOT/src/log/log.go:451 +0x6e | github.com/traefik/yaegi/interp.(*scope).add(0x2e016b17b200, 0x0) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/inter
+recover.go	run	FAIL_EXIT	0.03	exit status 2: wrong value <int Value> 1 | SIGTRAP: trace trap | PC=0x49b701 m=4 sigcode=128 |  | goroutine 1 gp=0x1149676a1e0 m=4 mp=0x114967f9808 [running]: | runtime.breakpoint() |  $GOROOT/src/runtime/asm_amd64.s:412 +0x1 fp=0x11496c07c88 sp=0x11496c07c80 pc=0x49b701 | runtime.Breakpoint() |  $G
+recover1.go	run	FAIL_EXIT	0.04	exit status 2: wrong value <int Value> 2 | SIGTRAP: trace trap | PC=0x49b701 m=5 sigcode=128 |  | goroutine 1 gp=0x29b459baa1e0 m=5 mp=0x29b459c6a008 [running]: | runtime.breakpoint() |  $GOROOT/src/runtime/asm_amd64.s:412 +0x1 fp=0x29b45a00f070 sp=0x29b45a00f068 pc=0x49b701 | runtime.Breakpoint() |
+recover2.go	run	FAIL_EXIT	0.03	exit status 1: recover2.go:29:7: panic: main.mustRecover(...) | recover2.go:19:2: panic: main.main(...) | run: recover2.go:33:10: interface conversion: string is not error: missing method Error | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.c
+recover3.go	run	FAIL_EXIT	0.02	exit status 1: recover3.go:58:41: panic: main.main.func(...) | recover3.go:59:43: panic: main.main.func(...) | recover3.go:61:38: panic: main.main.func(...) | BUG | nil-deref panicked but not with runtime.Error | recover3.go:62:40: panic: main.main.func(...) | nil-deref-1 panicked but not with runti
+recover4.go	run	FAIL_EXIT	0.02	exit status 1: run: recover4.go:27:2: import "syscall" error: package location $GOROOT/test not in GOPATH
+recover5.go	errorcheck	PASS	0.01	
+reflectmethod1.go	run	FAIL_EXIT	0.02	exit status 1: reflectmethod1.go:26:2: panic: main.main(...) | run: reflect: Method index out of range | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/ya
+reflectmethod2.go	run	FAIL_EXIT	0.02	exit status 1: reflectmethod2.go:30:17: panic: main.main(...) | run: reflect: call of reflect.Value.Interface on zero Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/
+reflectmethod3.go	run	FAIL_EXIT	0.02	exit status 1: reflectmethod3.go:30:17: panic: main.main(...) | run: reflect: Method index out of range | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/y
+reflectmethod4.go	run	FAIL_EXIT	0.03	exit status 1: reflectmethod4.go:26:2: panic: main.main(...) | run: reflect: Method index out of range | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/ya
+reflectmethod5.go	run	FAIL_EXIT	0.02	exit status 1: run: reflectmethod5.go:24:9: too many arguments
+reflectmethod6.go	run	FAIL_EXIT	0.02	exit status 1: run: reflectmethod6.go:23:13: too many arguments
+reflectmethod7.go	run	FAIL_EXIT	0.02	exit status 1: reflectmethod7.go:18:7: panic: main.main(...) | run: FAIL | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/program.go:
+rename.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: index out of range [0] with length 0 [recovered] |  panic: rename.go:64:2: CFG post-order panic: runtime error: index out of range [0] with length 0 |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/github.c
+rename1.go	errorcheck	ERR_CRASH	0.02	exit 2: panic: runtime error: index out of range [0] with length 0 [recovered] |  panic: rename1.go:22:2: CFG post-order panic: runtime error: index out of range [0] with length 0 |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/github.com/tra
+reorder.go	run	FAIL_EXIT	0.02	exit status 1: [1 1 3], want 2,1,3 | reorder.go:34:5: panic: main.check(...) | reorder.go:64:7: panic: main.p3(...) | reorder.go:14:2: panic: main.main(...) | run: failed | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp
+reorder2.go	run	FAIL_EXIT	0.03	exit status 2: panic: interface conversion: reflect.Type is nil, not *reflect.rtype |  | goroutine 1 [running]: | reflect.FuncOf({0x17842c6207e0, 0x1, 0x17842c703e00?}, {0x17842c6207c0, 0x1, 0x1004d30?}, 0x0) |  $GOROOT/src/reflect/type.go:1965 +0x8a6 | github.com/traefik/yaegi/interp.(*itype).refTy
+return.go	errorcheck	ERR_WRONGLINE	0.04	line 17 has no ERROR comment: run: return.go:17:1: missing function body
+runtime.go	errorcheck	ERR_WRONGMSG	0.02	line 20: "package runtime \"runtime\" has no symbol printbool" does not match "unexported|undefined"
+shift1.go	errorcheck	ERR_WRONGMSG	0.02	line 28: "invalid operation: shift of type untyped float" does not match "truncated|must be integer"
+shift3.go	run	FAIL_EXIT	0.02	exit status 1: shift3.go:25:6: panic: main.main(...) | run: reflect: call of reflect.Value.Uint on int Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/trae
+sigchld.go	run	FAIL_EXIT	0.02	exit status 1: run: sigchld.go:13:8: import "syscall" error: package location $GOROOT/test not in GOPATH
+simassign.go	run	PASS	0.01	
+sizeof.go	run	FAIL_EXIT	0.02	exit status 1: run: sizeof.go:9:8: import "unsafe" error: package location $GOROOT/test not in GOPATH
+slice3err.go	errorcheck	PASS	0.02	
+slicecap.go	run	FAIL_EXIT	0.02	exit status 1: run: slicecap.go:9:8: import "unsafe" error: package location $GOROOT/test not in GOPATH
+stack.go	run	FAIL_EXIT	0.02	exit status 1: stack.go:65:8: panic: main.recur(...) | stack.go:96:6: panic: main.main(...) | run: reflect: reflect.Value.Set using unaddressable value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Exe
+stackobj.go	run	FAIL_EXIT	0.10	exit status 1: stackobj.go:32:2: panic: main.main(...) | run: heap object never collected | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/i
+stackobj2.go	run	PASS	0.13	
+stackobj3.go	run	FAIL_EXIT	0.11	exit status 1: stackobj3.go:61:6: panic: main.fTrue(...) | stackobj3.go:91:2: panic: main.main(...) | run: bad liveness | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/gith
+strcopy.go	run	FAIL_EXIT	0.02	exit status 1: run: strcopy.go:14:2: import "unsafe" error: package location $GOROOT/test not in GOPATH
+string_lit.go	run	FAIL_EXIT	0.02	exit status 1: string_lit.go:54:2: panic: main.main(...) | run: os.Exit(0) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/program.g
+stringrange.go	run	FAIL_EXIT	0.02	exit status 1: unexpected offset 6 not 4 | unexpected offset 9 not 5 | unexpected rune 9 from DecodeRuneInString: fffd not 123 | unexpected offset 11 not 6 | unexpected rune 11 from DecodeRuneInString: fffd not babe | unexpected offset 14 not 7 | unexpected rune 14 from DecodeRuneInString: fffd not 
+struct0.go	run	PASS	0.02	
+switch.go	run	FAIL_EXIT	0.02	exit status 1: switch.go:21:2: panic: main.main(...) | run: reflect.Value.Convert: value of type interface {} cannot be converted to type int | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1
+switch2.go	errorcheck	ERR_WRONGMSG	0.01	line 14: "expected ':', found ';'" does not match "expecting := or = or : or comma|expected :"
+switch3.go	errorcheck	ERR_MISSED	0.01	
+switch4.go	errorcheck	ERR_MISSED	0.02	
+switch5.go	errorcheck	ERR_MISSED	0.02	
+switch6.go	errorcheck	ERR_CRASH	0.02	exit 2: panic: runtime error: slice bounds out of range [:-1] [recovered] |  panic: switch6.go:28:2: CFG post-order panic: runtime error: slice bounds out of range [:-1] |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMODCACHE/github.com/traefik/yaegi
+switch7.go	errorcheck	PASS	0.03	
+syntax/chan.go	errorcheck	ERR_WRONGMSG	0.02	line 11: "expected type, found '}'" does not match "unexpected .*}.* in channel type|missing channel element type"
+syntax/chan1.go	errorcheck	ERR_WRONGMSG	0.01	line 13: "expected boolean expression, found simple statement (missing parentheses around composite literal?)" does not match "cannot use c <- v as value|send statement used as value"
+syntax/composite.go	errorcheck	ERR_WRONGMSG	0.02	line 10: "missing ',' before newline in composite literal" does not match "need trailing comma before newline in composite literal|possibly missing comma or }"
+syntax/ddd.go	errorcheck	ERR_WRONGMSG	0.01	line 10: "expected selector or type assertion, found .3" does not match "unexpected literal \\.3, expected name or \\("
+syntax/else.go	errorcheck	ERR_WRONGMSG	0.02	line 11: "expected if statement or block, found ';'" does not match "else must be followed by if or statement block|expected .if. or .{."
+syntax/if.go	errorcheck	PASS	0.02	
+syntax/import.go	errorcheck	ERR_WRONGMSG	0.03	line 10: "expected ';', found ','" does not match "unexpected comma"
+syntax/initvar.go	errorcheck	PASS	0.02	
+syntax/semi1.go	errorcheck	ERR_WRONGMSG	0.01	line 10: "expected '{', found newline" does not match "expected .*{.* after if clause|undefined"
+syntax/semi2.go	errorcheck	ERR_WRONGMSG	0.02	line 10: "expected '{', found newline" does not match "missing .*{.* after switch clause|undefined"
+syntax/semi3.go	errorcheck	ERR_WRONGMSG	0.02	line 10: "expected '{', found newline" does not match "expected .*{.* after for clause|undefined"
+syntax/semi4.go	errorcheck	ERR_WRONGMSG	0.02	line 11: "expected operand, found '{'" does not match "unexpected {, expected for loop condition|expecting .*{.* after for clause"
+syntax/semi5.go	errorcheck	PASS	0.02	
+syntax/semi6.go	errorcheck	ERR_WRONGMSG	0.02	line 9: "expected type, found newline" does not match "newline in type declaration"
+syntax/semi7.go	errorcheck	ERR_WRONGMSG	0.02	line 11: "expected statement, found 'else'" does not match "unexpected semicolon or newline before .?else.?|unexpected keyword else"
+syntax/topexpr.go	errorcheck	PASS	0.02	
+syntax/typesw.go	errorcheck	ERR_WRONGMSG	0.02	line 10: "no new variables on left side of :=" does not match "invalid variable name|cannot use .* as value"
+syntax/vareq.go	errorcheck	ERR_WRONGMSG	0.02	line 10: "expected ';', found '{'" does not match "unexpected { at end of statement|expected ';' or '}' or newline"
+syntax/vareq1.go	errorcheck	ERR_WRONGMSG	0.01	line 9: "expected ';', found '{'" does not match "unexpected { at end of statement|unexpected { after top level declaration|expected ';' or newline after top level declaration"
+tinyfin.go	run	FAIL_EXIT	5.03	exit status 1: timeout, 0 finalized so far | tinyfin.go:19:5: panic: main.main(...) | run: not all finalizers are called | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/git
+turing.go	run	PASS	0.02	
+typecheck.go	errorcheck	ERR_WRONGMSG	0.02	line 15: "constant definition loop" does not match "undefined.*b"
+typecheckloop.go	errorcheck	ERR_WRONGMSG	0.02	line 12: "constant definition loop" does not match "constant definition loop\\n.*A uses B\\n.*B uses C\\n.*C uses A|initialization cycle"
+typeparam/absdiff.go	run	PASS	0.01	
+typeparam/absdiff2.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/absdiff2.go:119:39: untyped float does not implement main.orderedNumeric
+typeparam/absdiff3.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/absdiff3.go:82:39: untyped float does not implement main.OrderedNumeric
+typeparam/adder.go	run	PASS	0.01	
+typeparam/append.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/append.go:15:28: undefined type for T
+typeparam/boundmethod.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/boundmethod.go:41:12: too many arguments
+typeparam/chans.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/chans.go:39:15: undefined type for Elem
+typeparam/combine.go	run	FAIL_EXIT	0.03	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/combine.go:48:8: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x40 pc=0x7b5270] |  
+typeparam/cons.go	run	FAIL_EXIT	1.46	exit status 2: runtime: goroutine stack exceeds 1000000000-byte limit | runtime: sp=0x2ba7f6d0ac20 stack=[0x2ba7f6d0a000, 0x2ba816d0a000] | fatal error: stack overflow |  | runtime stack: | runtime.throw({0xf83af7?, 0xfb100?}) |  $GOROOT/src/runtime/panic.go:1229 +0x48 fp=0x7fbfb77fdc60 sp=0x7fbfb77
+typeparam/devirtualize1.go	run	FAIL_EXIT	0.02	exit status 1: typeparam/devirtualize1.go:21:5: panic: main.main(...) | run: typeparam/devirtualize1.go:21:2: interface conversion: nil is not interface { M1()} | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpr
+typeparam/devirtualize2.go	run	PASS	0.01	
+typeparam/dictionaryCapture-noinline.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/dictionaryCapture-noinline.go:102:5: constant definition loop
+typeparam/dictionaryCapture.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/dictionaryCapture.go:149:5: constant definition loop
+typeparam/dottype.go	run	FAIL_EXIT	0.02	exit status 1: 3 | typeparam/dottype.go:10:9: panic: main.f(...) | typeparam/dottype.go:60:23: panic: main.main.func(...) | 3 | 0 | 3 | typeparam/dottype.go:32:9: panic: main.g(...) | typeparam/dottype.go:65:23: panic: main.main.func(...) | 3 | 0 | 3 | typeparam/dottype.go:44:12: panic: main.k(...) 
+typeparam/double.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/double.go:51:8: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] |  | 
+typeparam/eface.go	run	FAIL_OUTPUT	0.03	line 1: got "test 5 failed\ntest 6 failed\ntest 7 failed\ntest 8 failed\n" want ""
+typeparam/equal.go	run	FAIL_EXIT	0.02	exit status 1: typeparam/equal.go:66:5: panic: main.assert(...) | typeparam/equal.go:47:9: panic: main.main(...) | run: assertion failed | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() | 
+typeparam/fact.go	run	FAIL_EXIT	0.01	exit status 1: run: typeparam/fact.go:29:17: untyped float does not implement interface{}
+typeparam/genembed.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/genembed.go:44:31: invalid operation: mismatched types interface { get() int} and int
+typeparam/genembed2.go	run	PASS	0.01	
+typeparam/graph.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/graph.go:214:7: not a generic type: func([]main._Node) *main._Graph
+typeparam/ifaceconv.go	run	FAIL_EXIT	0.02	exit status 1: typeparam/ifaceconv.go:62:18: panic: main.main(...) | run: typeparam/ifaceconv.go:65:40: interface conversion: interface {} is nil, not []int | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter
+typeparam/index.go	run	PASS	0.03	
+typeparam/index2.go	run	PASS	0.02	
+typeparam/interfacearg.go	run	PASS	0.02	
+typeparam/issue23536.go	run	PASS	0.02	
+typeparam/issue376214.go	run	PASS	0.02	
+typeparam/issue42758.go	run	FAIL_EXIT	0.01	exit status 1: run: runtime error: invalid memory address or nil pointer dereference | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp
+typeparam/issue44688.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/issue44688.go:120:6: cannot use type interface { m2(string)} as type string
+typeparam/issue45722.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: index out of range [1] with length 1 [recovered] |  panic: typeparam/issue45722.go:33:6: CFG post-order panic: runtime error: index out of range [1] with length 1 |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  $GOMOD
+typeparam/issue45817.go	run	PASS	0.01	
+typeparam/issue46472.go	run	PASS	0.02	
+typeparam/issue46591.go	run	FAIL_EXIT	0.02	exit status 1: typeparam/issue46591.go:19:5: panic: main.main(...) | run: 1 | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/program.
+typeparam/issue47258.go	run	PASS	0.02	
+typeparam/issue47272.go	run	FAIL_EXIT	0.02	exit status 1: Some(1) None | typeparam/issue47272.go:29:23: panic: main.Ok(...) | typeparam/issue47272.go:46:7: panic: main.main(...) | run: reflect.Set: value of type int is not assignable to type error | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e
+typeparam/issue47514.go	run	PASS	0.02	
+typeparam/issue47514b.go	run	PASS	0.02	
+typeparam/issue47676.go	run	PASS	0.02	
+typeparam/issue47684.go	run	PASS	0.02	
+typeparam/issue47684b.go	run	PASS	0.02	
+typeparam/issue47684c.go	run	PASS	0.02	
+typeparam/issue47708.go	run	PASS	0.01	
+typeparam/issue47713.go	run	PASS	0.02	
+typeparam/issue47716.go	run	FAIL_EXIT	0.01	exit status 1: run: typeparam/issue47716.go:11:2: import "unsafe" error: unable to find source related to: "unsafe"
+typeparam/issue47723.go	run	PASS	0.01	
+typeparam/issue47740.go	run	PASS	0.03	
+typeparam/issue47740b.go	run	PASS	0.01	
+typeparam/issue47775b.go	run	PASS	0.02	
+typeparam/issue47877.go	run	PASS	0.02	
+typeparam/issue47901.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/issue47901.go:16:8: type not found: main.Chan[int]
+typeparam/issue47925.go	run	PASS	0.01	
+typeparam/issue47925b.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/issue47925b.go:19:14: type not found: main.I[*main.S]
+typeparam/issue47925c.go	run	FAIL_EXIT	0.01	exit status 1: run: typeparam/issue47925c.go:21:14: type not found: main.J[*main.S]
+typeparam/issue47925d.go	run	FAIL_EXIT	0.01	exit status 1: run: typeparam/issue47925d.go:22:14: type not found: main.J[*main.S]
+typeparam/issue48013.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/issue48013.go:11:2: import "unsafe" error: unable to find source related to: "unsafe"
+typeparam/issue48016.go	run	PASS	0.01	
+typeparam/issue48030.go	run	FAIL_EXIT	0.01	exit status 2: panic: typeparam/issue48030.go:9:17: incomplete type Src[int] [recovered] |  panic: typeparam/issue48030.go:21:2: CFG post-order panic: typeparam/issue48030.go:9:17: incomplete type Src[int] |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |  
+typeparam/issue48042.go	run	FAIL_EXIT	0.01	exit status 1: run: typeparam/issue48042.go:31:9: undefined selector: g
+typeparam/issue48047.go	run	PASS	0.02	
+typeparam/issue48049.go	run	PASS	0.02	
+typeparam/issue48137.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/issue48137.go:23:7: invalid type declaration
+typeparam/issue48225.go	run	PASS	0.02	
+typeparam/issue48253.go	run	PASS	0.01	
+typeparam/issue48276a.go	run	PASS	0.02	
+typeparam/issue48276b.go	run	PASS	0.02	
+typeparam/issue48317.go	run	PASS	0.01	
+typeparam/issue48318.go	run	FAIL_EXIT	0.01	exit status 1: typeparam/issue48318.go:14:18: panic: main.main(...) | run: EOF | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/progr
+typeparam/issue48344.go	run	PASS	0.02	
+typeparam/issue48424.go	run	FAIL_EXIT	0.01	exit status 1: run: typeparam/issue48424.go:51:2: cannot use _ as value
+typeparam/issue48453.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/issue48453.go:20:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x150 pc=0x4dfb3d]
+typeparam/issue48598.go	run	FAIL_EXIT	0.02	exit status 1: run: runtime error: invalid memory address or nil pointer dereference | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp
+typeparam/issue48602.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/issue48602.go:24:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] |
+typeparam/issue48617.go	run	FAIL_EXIT	0.02	exit status 2: panic: typeparam/issue48617.go:13:17: incomplete type Bar[int] [recovered] |  panic: typeparam/issue48617.go:28:2: CFG post-order panic: typeparam/issue48617.go:13:17: incomplete type Bar[int] |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cfg.func2.1() |
+typeparam/issue48645a.go	run	PASS	0.02	
+typeparam/issue48645b.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/issue48645b.go:35:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x832e72] 
+typeparam/issue48711.go	errorcheck	ERR_CRASH	0.02	exit 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/issue48711.go:17:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x150 pc=0x4e764a] |  | g
+typeparam/issue48838.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/issue48838.go:10:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] |
+typeparam/issue49049.go	run	PASS	0.02	
+typeparam/issue49295.go	run	FAIL_EXIT	0.03	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/issue49295.go:28:16: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] 
+typeparam/issue49309.go	run	PASS	0.02	
+typeparam/issue49421.go	run	PASS	0.01	
+typeparam/issue49547.go	run	FAIL_OUTPUT	0.02	line 1: got "want: main.F[main.foo], got: struct {}\n" want ""
+typeparam/issue49659b.go	run	PASS	0.02	
+typeparam/issue50002.go	run	FAIL_EXIT	0.01	exit status 1: run: runtime error: invalid memory address or nil pointer dereference | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp
+typeparam/issue50109.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/issue50109.go:75:9: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/issue50109.go:87:7: CFG post-order panic: 
+typeparam/issue50109b.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/issue50109b.go:10:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] 
+typeparam/issue50193.go	run	PASS	0.02	
+typeparam/issue50264.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/issue50264.go:43:23: undefined type for A2
+typeparam/issue50317.go	errorcheck	PASS	0.01	
+typeparam/issue50417.go	run	PASS	0.01	
+typeparam/issue50417b.go	run	PASS	0.02	
+typeparam/issue50419.go	run	PASS	0.02	
+typeparam/issue50642.go	run	FAIL_EXIT	0.01	exit status 1: typeparam/issue50642.go:41:6: panic: main.HasNext(...) | typeparam/issue50642.go:51:9: panic: main.main(...) | run: reflect: call of reflect.Value.Interface on zero Value | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traef
+typeparam/issue50690a.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/issue50690a.go:54:2: undefined type for K
+typeparam/issue50690b.go	run	FAIL_EXIT	0.02	exit status 2: panic: interface conversion: reflect.Type is nil, not *reflect.rtype [recovered] |  panic: typeparam/issue50690b.go:44:2: CFG post-order panic: interface conversion: reflect.Type is nil, not *reflect.rtype |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cf
+typeparam/issue50690c.go	run	FAIL_EXIT	0.02	exit status 2: panic: interface conversion: reflect.Type is nil, not *reflect.rtype [recovered] |  panic: typeparam/issue50690c.go:32:2: CFG post-order panic: interface conversion: reflect.Type is nil, not *reflect.rtype |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter).cf
+typeparam/issue50833.go	run	PASS	0.02	
+typeparam/issue51232.go	errorcheck	ERR_MISSED	0.02	
+typeparam/issue51233.go	errorcheck	ERR_MISSED	0.01	
+typeparam/issue51236.go	run	PASS	0.02	
+typeparam/issue51303.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: index out of range [3] with length 3 [recovered] |  panic: typeparam/issue51303.go:32:37: CFG post-order panic: runtime error: index out of range [3] with length 3 [recovered] |  panic: typeparam/issue51303.go:16:2: CFG post-order panic: typeparam/issue51303.go:3
+typeparam/issue51521.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/issue51521.go:21:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] |
+typeparam/issue51522a.go	run	FAIL_OUTPUT	0.02	line 1: got "FAIL: if i != t\n" want ""
+typeparam/issue51522b.go	run	FAIL_EXIT	0.02	exit status 1: typeparam/issue51522b.go:10:6: panic: main.f(...) | typeparam/issue51522b.go:60:2: panic: main.main(...) | run: reflect.Value.Convert: value of type interface {} cannot be converted to type int | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +
+typeparam/issue51700.go	run	FAIL_EXIT	0.01	exit status 1: run: typeparam/issue51700.go:12:7: impossible type assertion: main.S does not implement interface { m1()} (missing m1 method)
+typeparam/issue52026.go	run	PASS	0.02	
+typeparam/issue52228.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/issue52228.go:29:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] |
+typeparam/issue53087.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/issue53087.go:33:27: undefined type for K
+typeparam/issue53419.go	run	PASS	0.02	
+typeparam/issue53477.go	run	FAIL_EXIT	0.03	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/issue53477.go:13:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] |
+typeparam/issue54135.go	run	PASS	0.01	
+typeparam/issue54225.go	run	FAIL_EXIT	0.03	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/issue54225.go:10:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] |
+typeparam/issue54456.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/issue54456.go:19:24: type definition not implemented: fieldList
+typeparam/issue54535.go	run	PASS	0.02	
+typeparam/issue54537.go	run	PASS	0.02	
+typeparam/issue54765.go	errorcheck	ERR_WRONGLINE	0.02	line 15 has no ERROR comment: run: issue54765.go:15:2: import "runtime/cgo" error: unable to find source related to: "runtime/cgo"
+typeparam/issue58513.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/issue58513.go:40:5: constant definition loop
+typeparam/list.go	run	PASS	0.01	
+typeparam/list2.go	run	FAIL_EXIT	1.08	exit status 2: runtime: goroutine stack exceeds 1000000000-byte limit | runtime: sp=0x2a8ec9fe0e38 stack=[0x2a8ec9fe0000, 0x2a8ee9fe0000] | fatal error: stack overflow |  | runtime stack: | runtime.throw({0xf83af7?, 0x0?}) |  $GOROOT/src/runtime/panic.go:1229 +0x48 fp=0x7fc8a5d48c60 sp=0x7fc8a5d48c3
+typeparam/lockable.go	run	PASS	0.03	
+typeparam/map.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/map.go:17:16: undefined type for T
+typeparam/maps.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/maps.go:160:5: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x7b2c36] |  | g
+typeparam/mdempsky/13.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/mdempsky/13.go:60:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] 
+typeparam/mdempsky/14.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: index out of range [1] with length 1 |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.genAST.func1(0x2f14260c0f00, 0x2f14260cef00) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/generic.go:88 +0xf54 | github.com/traefik/yaegi/interp.genAST.fu
+typeparam/mdempsky/15.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: index out of range [1] with length 1 |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.genAST.func1(0x3aa0e25d0640, 0x3aa0e25dc780) |  $GOMODCACHE/github.com/traefik/yaegi@v0.16.1/interp/generic.go:88 +0xf54 | github.com/traefik/yaegi/interp.genAST.fu
+typeparam/mdempsky/16.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/mdempsky/16.go:28:8: undefined type for T
+typeparam/mdempsky/17.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/mdempsky/17.go:50:20: undefined type for V
+typeparam/mdempsky/18.go	run	FAIL_EXIT	0.02	exit status 1: typeparam/mdempsky/18.go:17:8: panic: main.f(...) | typeparam/mdempsky/18.go:14:15: panic: main.main(...) | run: reflect.Select: invalid Dir | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter)
+typeparam/mdempsky/19.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/mdempsky/19.go:25:17: undefined type for T
+typeparam/mdempsky/20.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/mdempsky/20.go:13:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] 
+typeparam/mdempsky/21.go	run	PASS	0.03	
+typeparam/metrics.go	run	FAIL_EXIT	0.02	exit status 1: typeparam/metrics.go:124:8: panic: main.TestMetrics(...) | typeparam/metrics.go:167:2: panic: main.main(...) | run: Metrics = [], want [a] | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).E
+typeparam/min.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/min.go:38:16: untyped float does not implement main.Ordered
+typeparam/nested.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/nested.go:93:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] |  | 
+typeparam/ordered.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/ordered.go:38:12: type not found: orderedSlice[int]
+typeparam/orderedmap.go	run	FAIL_EXIT	1.58	exit status 2: runtime: goroutine stack exceeds 1000000000-byte limit | runtime: sp=0x3cbf75fe0368 stack=[0x3cbf75fe0000, 0x3cbf95fe0000] | fatal error: stack overflow |  | runtime stack: | runtime.throw({0xf83af7?, 0x446a1a?}) |  $GOROOT/src/runtime/panic.go:1229 +0x48 fp=0x7f43238fdc60 sp=0x7f4323
+typeparam/pair.go	run	FAIL_EXIT	0.04	exit status 1: run: typeparam/pair.go:11:2: import "unsafe" error: unable to find source related to: "unsafe"
+typeparam/sets.go	run	FAIL_EXIT	0.04	exit status 2: panic: reflect.MapOf: invalid key type struct { Xm map[string]struct {} } [recovered] |  panic: typeparam/sets.go:171:6: CFG post-order panic: reflect.MapOf: invalid key type struct { Xm map[string]struct {} } |  | goroutine 1 [running]: | github.com/traefik/yaegi/interp.(*Interpreter
+typeparam/settable.go	run	FAIL_EXIT	0.03	exit status 1: run: typeparam/settable.go:91:7: not a generic type: func([]string) []main.T
+typeparam/shape1.go	run	PASS	0.02	
+typeparam/slices.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/slices.go:180:5: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x7b2c36] |  |
+typeparam/smallest.go	run	PASS	0.02	
+typeparam/stringable.go	run	PASS	0.02	
+typeparam/stringer.go	run	FAIL_EXIT	0.02	exit status 1: typeparam/stringer.go:71:15: panic: main.main(...) | run: got [1 2 3 1 2 3], want [1 2 3] | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMODCACHE/github.com/traefik/
+typeparam/struct.go	run	PASS	0.02	
+typeparam/subdict.go	run	PASS	0.02	
+typeparam/sum.go	run	PASS	0.02	
+typeparam/tparam1.go	errorcheck	PASS	0.02	
+typeparam/typeswitch1.go	run	FAIL_EXIT	0.03	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/typeswitch1.go:29:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] 
+typeparam/typeswitch2.go	run	FAIL_EXIT	0.03	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/typeswitch2.go:31:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] 
+typeparam/typeswitch3.go	run	FAIL_EXIT	0.02	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/typeswitch3.go:39:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] 
+typeparam/typeswitch4.go	run	FAIL_EXIT	0.04	exit status 2: panic: runtime error: invalid memory address or nil pointer dereference [recovered] |  panic: typeparam/typeswitch4.go:40:2: CFG post-order panic: runtime error: invalid memory address or nil pointer dereference | [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x839fc0] 
+typeparam/typeswitch5.go	run	FAIL_EXIT	0.02	exit status 1: fooer 6 | typeparam/typeswitch5.go:16:2: panic: main.f(...) | typeparam/typeswitch5.go:24:9: panic: main.main(...) | run: reflect.Set: value of type float64 is not assignable to type int | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | 
+typeparam/typeswitch6.go	run	FAIL_OUTPUT	0.02	line 2: got "int\nother\nint\nother\n" want "T\nother\nint\nT\n"
+typeparam/typeswitch7.go	run	FAIL_OUTPUT	0.02	line 2: got "myint\nmyfloat\n" want "barT\nmyfloat\n"
+typeparam/value.go	run	FAIL_EXIT	0.02	exit status 1: run: typeparam/value.go:33:6: cannot use type *struct { val int} as type *main.value[struct { val int}]
+typeswitch.go	run	FAIL_EXIT	0.02	exit status 1: unknown | typeswitch.go:39:5: panic: main.assert(...) | typeswitch.go:70:6: panic: main.main(...) | run: os.Exit(1) | goroutine 1 [running]: | runtime/debug.Stack() |  $GOROOT/src/runtime/debug/stack.go:26 +0x5e | github.com/traefik/yaegi/interp.(*Interpreter).Execute.func1() |  $GOMO
+typeswitch1.go	run	PASS	0.03	
+typeswitch2.go	errorcheck	PASS	0.03	
+typeswitch2b.go	errorcheck	ERR_MISSED	0.02	
+typeswitch3.go	errorcheck	PASS	0.02	
+uintptrescapes3.go	run	FAIL_EXIT	0.04	exit status 1: run: uintptrescapes3.go:14:2: import "unsafe" error: package location $GOROOT/test not in GOPATH
+undef.go	errorcheck	ERR_WRONGMSG	0.03	line 13: "constant definition loop" does not match "undefined.*x"
+unsafe_slice_data.go	run	FAIL_EXIT	0.01	exit status 1: run: unsafe_slice_data.go:12:2: import "unsafe" error: package location $GOROOT/test not in GOPATH
+unsafe_string.go	run	FAIL_EXIT	0.02	exit status 1: run: unsafe_string.go:10:2: import "unsafe" error: package location $GOROOT/test not in GOPATH
+unsafe_string_data.go	run	FAIL_EXIT	0.02	exit status 1: run: unsafe_string_data.go:12:2: import "unsafe" error: package location $GOROOT/test not in GOPATH
+unsafebuiltins.go	run	FAIL_EXIT	0.02	exit status 1: run: unsafebuiltins.go:11:2: import "unsafe" error: package location $GOROOT/test not in GOPATH
+used.go	errorcheck	ERR_WRONGLINE	0.01	line 9 has no ERROR comment: run: used.go:9:8: import "unsafe" error: package location $GOROOT/test not in GOPATH
+utf.go	run	PASS	0.02	
+varerr.go	errorcheck	PASS	0.03	
+varinit.go	run	PASS	0.02	
+weak.go	errorcheck	ERR_WRONGLINE	0.02	line 13 has no ERROR comment: run: weak.go:13:2: import "weak" error: package location $GOROOT/test not in GOPATH
+winbatch.go	run	PASS	0.19	
+zerodivide.go	run	FAIL_OUTPUT	0.07	line 1: got "zerodivide.go:117:36: panic: main.func(...)\nzerodivide.go:118:37: panic: main.func(...)\nzerodivide.go:119:38: panic: mai" want ""
+zerosize.go	run	PASS	0.02	

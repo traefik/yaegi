@@ -1,0 +1,103 @@
+diff --git a/interp/build_test.go b/interp/build_test.go
+index 5706cc99..65d3165a 100644
+--- a/interp/build_test.go
++++ b/interp/build_test.go
+@@ -37,6 +37,30 @@ func TestBuildTag(t *testing.T) {
+ 		{"// +build foo", true},
+ 		{"// +build !foo", false},
+ 		{"// +build bar", false},
++		{"//go:build linux", true},
++		{"//go:build windows", false},
++		{"//go:build ignore", false},
++		{"//go:build go1.9", true},
++		{"//go:build go1.11", true},
++		{"//go:build go1.12", false},
++		{"//go:build !go1.12", true},
++		{"//go:build !go1.10", false},
++		{"//go:build foo", true},
++		{"//go:build !foo", false},
++		{"//go:build linux && amd64", true},
++		{"//go:build linux && 386", false},
++		{"//go:build windows || linux", true},
++		{"//go:build windows || darwin", false},
++		{"//go:build !windows", true},
++		{"//go:build !linux", false},
++		{"//go:build (linux && 386) || go1.11", true},
++		{"//go:build (linux || windows) && !amd64", false},
++		{"//go:build !(windows || darwin)", true},
++		{"//go:build linux\n// +build windows", true},
++		{"//go:build windows\n// +build linux", false},
++		{"// +build windows\n\n//go:build linux", true},
++		{"// Copyright notice.\n\n//go:build ignore", false},
++		{"/* block comment */\n//go:build ignore", false},
+ 	}
+ 
+ 	i := New(Options{})
+@@ -44,13 +68,66 @@ func TestBuildTag(t *testing.T) {
+ 		test := test
+ 		src := test.src + "\npackage x"
+ 		t.Run(test.src, func(t *testing.T) {
+-			if r, _ := i.buildOk(&ctx, "", src); r != test.res {
++			r, err := i.buildOk(&ctx, "", src)
++			if err != nil {
++				t.Fatal(err)
++			}
++			if r != test.res {
+ 				t.Errorf("got %v, want %v", r, test.res)
+ 			}
+ 		})
+ 	}
+ }
+ 
++func TestBuildTag_afterPackageClause(t *testing.T) {
++	ctx := build.Context{
++		GOARCH:      "amd64",
++		GOOS:        "linux",
++		ReleaseTags: []string{"go1.11"},
++	}
++
++	i := New(Options{})
++
++	ok, err := i.buildOk(&ctx, "", "package x\n\n//go:build ignore\n")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if !ok {
++		t.Error("got false, want true: constraints after the package clause must be ignored")
++	}
++}
++
++func TestBuildTag_errors(t *testing.T) {
++	ctx := build.Context{
++		GOARCH:      "amd64",
++		GOOS:        "linux",
++		ReleaseTags: []string{"go1.11"},
++	}
++
++	tests := []struct {
++		desc string
++		src  string
++	}{
++		{
++			desc: "invalid expression",
++			src:  "//go:build linux &&\n\npackage x",
++		},
++		{
++			desc: "multiple go:build lines",
++			src:  "//go:build linux\n//go:build amd64\n\npackage x",
++		},
++	}
++
++	i := New(Options{})
++	for _, test := range tests {
++		t.Run(test.desc, func(t *testing.T) {
++			if _, err := i.buildOk(&ctx, "", test.src); err == nil {
++				t.Error("got no error, want one")
++			}
++		})
++	}
++}
++
+ func TestSkipFile(t *testing.T) {
+ 	// Assume a specific OS, arch and go pattern no matter the real underlying system
+ 	ctx := build.Context{

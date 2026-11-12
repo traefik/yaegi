@@ -1,0 +1,64 @@
+diff --git a/interp/build_test.go b/interp/build_test.go
+index 5706cc99..b8d71f8a 100644
+--- a/interp/build_test.go
++++ b/interp/build_test.go
+@@ -2,6 +2,8 @@ package interp
+ 
+ import (
+ 	"go/build"
++	"os"
++	"path/filepath"
+ 	"testing"
+ )
+ 
+@@ -37,6 +39,12 @@ func TestBuildTag(t *testing.T) {
+ 		{"// +build foo", true},
+ 		{"// +build !foo", false},
+ 		{"// +build bar", false},
++		{"//go:build linux", true},
++		{"//go:build windows", false},
++		{"//go:build linux && amd64", true},
++		{"//go:build linux && arm64", false},
++		{"//go:build foo || bar", true},
++		{"//go:build !foo", false},
+ 	}
+ 
+ 	i := New(Options{})
+@@ -51,6 +59,37 @@ func TestBuildTag(t *testing.T) {
+ 	}
+ }
+ 
++func TestEvalPathBuildConstraints(t *testing.T) {
++	tests := []struct {
++		name string
++		tag  string
++	}{
++		{name: "legacy", tag: "// +build windows"},
++		{name: "gobuild", tag: "//go:build windows"},
++	}
++
++	for _, test := range tests {
++		test := test
++		t.Run(test.name, func(t *testing.T) {
++			dir := t.TempDir()
++			path := filepath.Join(dir, "main.go")
++			src := test.tag + "\n\npackage main\n\nfunc main() { panic(\"should not run\") }\n"
++			if err := os.WriteFile(path, []byte(src), 0o600); err != nil {
++				t.Fatal(err)
++			}
++
++			i := New(Options{})
++			v, err := i.EvalPath(path)
++			if err != nil {
++				t.Fatalf("unexpected error: %v", err)
++			}
++			if v.IsValid() {
++				t.Fatalf("got %v, want invalid zero result", v)
++			}
++		})
++	}
++}
++
+ func TestSkipFile(t *testing.T) {
+ 	// Assume a specific OS, arch and go pattern no matter the real underlying system
+ 	ctx := build.Context{

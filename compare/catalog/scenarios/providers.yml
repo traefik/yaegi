@@ -1,0 +1,76 @@
+# Provider plugins of the catalog (type: provider in .traefik.yml), run by the
+# "provider" scenario of compare/catalog/run as Traefik runs them
+# (pkg/plugins/providers.go). config replaces the manifest testData. The
+# mocks answer on the local server of the runner ({{backend}}, see
+# compare/catalog/README.md): path, optional status, header and body.
+# coarse: compare only the stages and the number of messages, with the reason.
+
+- repo: traefik/pluginproviderdemo
+  note: "no external API; emits one more router and service when the current minute is even (demo.go:137)"
+  coarse: "the content depends on the wall clock minute"
+  config:
+    pollInterval: "1s"
+
+- repo: NX211/traefik-proxmox-provider
+  note: "Proxmox VE API mocked under {{backend}}/pve: one node, one running VM, one stopped VM, one container"
+  config:
+    pollInterval: "5s"
+    apiEndpoint: "{{backend}}/pve"
+    apiTokenId: "root@pam!traefik"
+    apiToken: "00000000-0000-0000-0000-000000000000"
+    apiLogging: "info"
+    apiValidateSSL: "false"
+  mocks:
+    - path: /pve/api2/json/version
+      require: [[Authorization, "PVEAPIToken=root@pam!traefik=00000000-0000-0000-0000-000000000000"]]
+      body: '{"data":{"release":"8.1.4"}}'
+    - path: /pve/api2/json/nodes
+      body: '{"data":[{"node":"pve1"}]}'
+    - path: /pve/api2/json/nodes/pve1/qemu
+      body: '{"data":[{"vmid":100,"name":"web","status":"running"},{"vmid":101,"name":"off","status":"stopped"}]}'
+    - path: /pve/api2/json/nodes/pve1/qemu/100/config
+      body: '{"data":{"description":"traefik.enable=true\ntraefik.http.routers.web.rule=Host(`web.example.com`)\ntraefik.http.routers.web.entrypoints=web\ntraefik.http.services.web.loadbalancer.server.port=8080"}}'
+    - path: /pve/api2/json/nodes/pve1/qemu/100/agent/network-get-interfaces
+      body: '{"data":{"result":[{"ip-addresses":[{"ip-address":"127.0.0.1","ip-address-type":"ipv4","prefix":8},{"ip-address":"10.0.0.5","ip-address-type":"ipv4","prefix":24}]}]}}'
+    - path: /pve/api2/json/nodes/pve1/lxc
+      body: '{"data":[{"vmid":200,"name":"app","status":"running"}]}'
+    - path: /pve/api2/json/nodes/pve1/lxc/200/config
+      body: '{"data":{"description":"traefik.enable=true"}}'
+    - path: /pve/api2/json/nodes/pve1/lxc/200/interfaces
+      body: '{"data":[{"name":"eth0","hwaddr":"aa:bb:cc:dd:ee:ff","inet":"10.0.0.6/24","ip-addresses":[{"ip-address":"10.0.0.6","ip-address-type":"inet","prefix":24}]}]}'
+
+- repo: dariopb/traefikServiceFabricPlugin
+  note: "Service Fabric REST API mocked under {{backend}}/sf: one stateful service with labels in an XML extension, one partition, a primary and a secondary replica"
+  config:
+    pollInterval: "1s"
+    clusterManagementURL: "{{backend}}/sf"
+  mocks:
+    - path: /sf/Applications/
+      body: '{"ContinuationToken":"","Items":[{"Id":"TestApplication","Name":"fabric:/TestApplication","TypeName":"TestApplicationType","TypeVersion":"1.0.0","Status":"Ready","Parameters":[],"HealthState":"Ok"}]}'
+    - path: /sf/Applications/TestApplication/$/GetServices
+      body: '{"ContinuationToken":"","Items":[{"Id":"TestApplication/TestService","ServiceKind":"Stateful","Name":"fabric:/TestApplication/TestService","TypeName":"TestServiceType","ManifestVersion":"1.0.0","HasPersistedState":true,"HealthState":"Ok","ServiceStatus":"Active","IsServiceGroup":false}]}'
+    - path: /sf/ApplicationTypes/TestApplicationType/$/GetServiceTypes
+      body: '[{"ServiceTypeDescription":{"IsStateful":true,"ServiceTypeName":"TestServiceType","PlacementConstraints":"","HasPersistedState":true,"Kind":"Stateful","Extensions":[{"Key":"Traefik","Value":"<Labels xmlns=\"http://schemas.microsoft.com/2015/03/fabact-no-schema\"><Label Key=\"traefik.http.enable\">true</Label><Label Key=\"traefik.http.loadbalancer.healthcheck.path\">/health</Label></Labels>"}],"LoadMetrics":[],"ServicePlacementPolicies":[]},"ServiceManifestVersion":"1.0.0","ServiceManifestName":"ServiceManifest","IsServiceGroup":false}]'
+    - path: /sf/Names/TestApplication/TestService
+      status: 404
+      body: '{"Error":{"Code":"FABRIC_E_NAME_DOES_NOT_EXIST"}}'
+    - path: /sf/Applications/TestApplication/$/GetServices/TestApplication/TestService/$/GetPartitions/
+      body: '{"ContinuationToken":"","Items":[{"ServiceKind":"Stateful","PartitionInformation":{"ServicePartitionKind":"Int64Range","Id":"bce46a8c-b62d-4996-89dc-7ffc00a96902","LowKey":"-9223372036854775808","HighKey":"9223372036854775807"},"TargetReplicaSetSize":3,"MinReplicaSetSize":3,"HealthState":"Ok","PartitionStatus":"Ready","CurrentConfigurationEpoch":{"ConfigurationVersion":"1","DataLossVersion":"1"}}]}'
+    - path: /sf/Applications/TestApplication/$/GetServices/TestApplication/TestService/$/GetPartitions/bce46a8c-b62d-4996-89dc-7ffc00a96902/$/GetReplicas
+      body: '{"ContinuationToken":"","Items":[{"ReplicaId":"1","ReplicaRole":"Primary","ReplicaStatus":"Ready","HealthState":"Ok","NodeName":"_Node_0","ServiceKind":"Stateful","Address":"{\"Endpoints\":{\"\":\"http://127.0.0.1:8081\"}}"},{"ReplicaId":"2","ReplicaRole":"ActiveSecondary","ReplicaStatus":"Ready","HealthState":"Ok","NodeName":"_Node_1","ServiceKind":"Stateful","Address":"{\"Endpoints\":{\"\":\"http://127.0.0.1:8082\"}}"}]}'
+
+- repo: im-kulikov/traefik-provider
+  note: "another Traefik API mocked at the root of {{backend}} (/ and /api/rawdata); tlsResolver set, so secure routers and a redirect middleware too"
+  config:
+    connTimeout: "5s"
+    pollInterval: "5s"
+    tlsResolver: "letsencrypt"
+    endpoints:
+      - host: "{{backend_host}}"
+        apiPort: "{{backend_port}}"
+        webPort: "{{backend_port}}"
+  mocks:
+    - path: /
+      body: "ok"
+    - path: /api/rawdata
+      body: '{"routers":{"api@internal":{"entryPoints":["traefik"],"service":"api@internal","rule":"PathPrefix(`/api`)","priority":9223372036854775806,"status":"enabled"},"whoami@docker":{"entryPoints":["web"],"service":"whoami","rule":"Host(`whoami.example.com`)","priority":21,"status":"enabled","using":["web"]}},"services":{"api@internal":{"status":"enabled"},"whoami@docker":{"loadBalancer":{"servers":[{"url":"http://192.168.97.2:80"}],"passHostHeader":true},"status":"enabled","serverStatus":{"http://192.168.97.2:80":"UP"}}}}'

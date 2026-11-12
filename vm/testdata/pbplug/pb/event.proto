@@ -1,0 +1,43 @@
+// The messages of the pbplug test plugin. There is no protoc in the
+// development setup: gen/main.go builds the same descriptor in Go and runs
+// the generator of protoc-gen-go v1.36.11 on it (go generate).
+syntax = "proto3";
+
+package pbplug;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/traefik/yaegi/v2/vm/testdata/pbplug/pb";
+
+enum Kind {
+  KIND_UNSPECIFIED = 0;
+  KIND_HTTP = 1;
+  KIND_TCP = 2;
+}
+
+message Header {
+  string name = 1;
+  repeated string values = 2;
+}
+
+message Event {
+  string id = 1;
+  Kind kind = 2;
+  optional int64 retries = 3;
+  repeated Header headers = 4;
+  map<string, int32> counts = 5;
+  map<string, Header> named = 6;
+  oneof target {
+    string url = 7;
+    Header header_target = 8;
+  }
+  google.protobuf.Timestamp at = 9;
+  google.protobuf.Any detail = 10;
+  repeated double weights = 11;
+  bytes body = 12;
+  Event parent = 13;
+  google.protobuf.Struct meta = 14;
+  repeated Kind kinds = 15;
+}

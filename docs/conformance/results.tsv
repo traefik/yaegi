@@ -1,0 +1,1014 @@
+file	origin	kind	status	group	family	ms	detail	note
+a1.go	master	Output	PASS	pass	a	971		
+a10.go	master	Output	PASS	pass	a	825		
+a11.go	master	Output	PASS	pass	a	833		
+a12.go	master	Output	PASS	pass	a	874		
+a13.go	master	Output	PASS	pass	a	918		
+a14.go	master	Output	PASS	pass	a	853		
+a15.go	master	Output	PASS	pass	a	859		
+a16.go	master	Output	PASS	pass	a	834		
+a17.go	master	Output	PASS	pass	a	569		
+a18.go	master	Output	PASS	pass	a	256		
+a19.go	master	Output	PASS	pass	a	260		
+a2.go	master	Output	PASS	pass	a	190		
+a20.go	master	Output	PASS	pass	a	226		
+a21.go	master	Output	PASS	pass	a	217		
+a22.go	master	Output	PASS	pass	a	295		
+a23.go	master	Output	PASS	pass	a	387		
+a24.go	master	Output	PASS	pass	a	355		
+a25.go	master	Output	PASS	pass	a	430		
+a26.go	master	Output	PASS	pass	a	398		
+a27.go	master	Output	PASS	pass	a	288		
+a28.go	master	Output	PASS	pass	a	426		
+a29.go	master	Output	PASS	pass	a	388		
+a3.go	master	Output	PASS	pass	a	402		
+a30.go	master	Output	PASS	pass	a	409		
+a31.go	master	Output	PASS	pass	a	320		
+a32.go	master	Output	PASS	pass	a	345		
+a33.go	master	Output	PASS	pass	a	400		
+a34.go	master	Output	PASS	pass	a	361		
+a35.go	master	Output	PASS	pass	a	378		
+a36.go	master	Output	PASS	pass	a	334		
+a37.go	master	Output	PASS	pass	a	329		
+a38.go	master	Output	PASS	pass	a	279		
+a39.go	master	Output	PASS	pass	a	266		
+a4.go	master	Output	PASS	pass	a	444		
+a40.go	master	Output	PASS	pass	a	326		
+a41.go	master	Output	PASS	pass	a	356		
+a42.go	master	Output	PASS	pass	a	287		
+a43.go	master	Output	PASS	pass	a	299		
+a44.go	master	Output	PASS	pass	a	299		
+a5.go	master	Output	PASS	pass	a	363		
+a6.go	master	Output	PASS	pass	a	409		
+a7.go	master	Output	PASS	pass	a	346		
+a8.go	master	Output	PASS	pass	a	283		
+a9.go	master	Output	PASS	pass	a	253		
+add0.go	master	Output	PASS	pass	add	222		
+add1.go	master	Output	PASS	pass	add	302		
+add2.go	master	Output	PASS	pass	add	225		
+addr0.go	master	Output	PASS	pass	addr	8886		
+addr1.go	master	Output	PASS	pass	addr	356		
+addr2.go	master	Output	PASS	pass	addr	335		
+addr3.go	master	Output	PASS	pass	addr	348		
+addr4.go	master	Output	PASS	pass	addr	311		
+addr5.go	master	Output	PASS	pass	addr	404		
+and.go	master	Output	PASS	pass	and	360		
+and0.go	master	Output	PASS	pass	and	344		
+and1.go	master	Output	PASS	pass	and	293		
+and2.go	master	Output	PASS	pass	and	295		
+and3.go	master	Output	PASS	pass	and	351		
+append0.go	master	Output	PASS	pass	append	304		
+append1.go	master	Output	PASS	pass	append	278		
+append2.go	master	Output	PASS	pass	append	259		
+append3.go	master	Output	PASS	pass	append	319		
+append4.go	master	Output	PASS	pass	append	317		
+assert0.go	master	Output	PASS	pass	assert	395		
+assert1.go	master	Output	PASS	pass	assert	415		
+assert2.go	master	Output	PASS	pass	assert	352		
+assert3.go	master	Output	PASS	pass	assert	469		
+assert4.go	master	Output	PASS	pass	assert	308		
+assign.go	master	Output	PASS	pass	assign	268		
+assign0.go	master	Output	PASS	pass	assign	7872		
+assign1.go	master	Output	PASS	pass	assign	494		
+assign10.go	master	Output	PASS	pass	assign	382		
+assign11.go	master	Error	PASS_ERR_GC	pass	assign	153	-: # command-line-arguments	expect error
+assign12.go	master	Error	PASS_ERR_GC	pass	assign	138	-: # command-line-arguments	expect error
+assign13.go	master	Output	PASS	pass	assign	511		
+assign14.go	master	Output	PASS	pass	assign	626		
+assign15.go	master	Error	ERR_OTHERMSG	fail	assign	363	-: # command-line-arguments	expect error
+assign16.go	master	Output	PASS	pass	assign	502		
+assign17.go	master	Output	PASS	pass	assign	388		
+assign18.go	master	Output	PASS	pass	assign	481		
+assign19.go	master	Error	ERR_OTHERMSG	fail	assign	217	-: # command-line-arguments	expect error
+assign2.go	master	Output	PASS	pass	assign	429		
+assign3.go	master	Output	PASS	pass	assign	272		
+assign4.go	master	Output	PASS	pass	assign	334		
+assign5.go	master	Output	PASS	pass	assign	423		
+assign6.go	master	Output	PASS	pass	assign	433		
+assign7.go	master	Output	PASS	pass	assign	321		
+assign8.go	master	Output	PASS	pass	assign	506		
+assign9.go	master	Output	PASS	pass	assign	267		
+bad0.go	master		SKIP	skipped	bad	0	no Output:/Error: comment	expect error
+bin.go	master	Output	PASS	pass	bin	602		
+bin0.go	master	Output	PASS	pass	bin	420		
+bin1.go	master	Output	PASS	pass	bin	642		
+bin2.go	master	Output	PASS	pass	bin	434		
+bin3.go	master	Output	PASS	pass	bin	695		
+bin4.go	master		SKIP	skipped	bin	0	no Output:/Error: comment	
+bin5.go	master	Output	PASS	pass	bin	455		
+binstruct_ptr_map0.go	master	Output	PASS	pass	binstruct_ptr_map	377		
+binstruct_ptr_slice0.go	master	Output	PASS	pass	binstruct_ptr_slice	339		
+binstruct_slice0.go	master	Output	PASS	pass	binstruct_slice	313		
+bltn.go	master	Output	PASS	pass	bltn	359		
+bltn0.go	master	Error	PASS_ERR_GC	pass	bltn	220	-: # command-line-arguments	expect error
+bool.go	master	Output	PASS	pass	bool	309		
+bool0.go	master	Output	PASS	pass	bool	423		
+bool1.go	master	Output	PASS	pass	bool	446		
+bool2.go	master	Output	PASS	pass	bool	468		
+bool3.go	master	Output	PASS	pass	bool	321		
+bool4.go	master	Output	PASS	pass	bool	368		
+bool5.go	master	Output	PASS	pass	bool	405		
+break0.go	master	Error	PASS_ERR_GC	pass	break	493	-: # command-line-arguments	expect error
+break1.go	master	Output	PASS	pass	break	581		
+break2.go	master	Output	PASS	pass	break	531		
+break3.go	master	Output	PASS	pass	break	590		
+cap0.go	master	Output	PASS	pass	cap	467		
+chan0.go	master	Output	PASS	pass	chan	361		
+chan1.go	master	Output	PASS	pass	chan	435		
+chan10.go	master	Output	PASS	pass	chan	358		
+chan2.go	master	Output	PASS	pass	chan	464		
+chan3.go	master	Output	PASS	pass	chan	396		
+chan4.go	master	Output	PASS	pass	chan	293		
+chan5.go	master		SKIP	skipped	chan	0	no Output:/Error: comment	
+chan6.go	master		SKIP	skipped	chan	0	no Output:/Error: comment	
+chan7.go	master	Output	PASS	pass	chan	394		
+chan8.go	master	Output	PASS	pass	chan	373		
+chan9.go	master	Output	PASS	pass	chan	447		
+clear0.go	fork:ai/fix-upstream-1674	Output	PASS	pass	clear	715		
+clear1.go	fork:ai/fix-upstream-1674	Error	ERR_OTHERMSG	fail	clear	234	-: # command-line-arguments	expect error
+cli1.go	master	Output	PASS	pass	cli	9584		
+cli2.go	master	Output	PASS	pass	cli	9039		
+cli3.go	master	Output	PASS	pass	cli	9793		
+cli4.go	master	Output	PASS	pass	cli	9200		
+cli5.go	master	Output	PASS	pass	cli	10156		
+cli6.go	master	Output	PASS	pass	cli	9082		
+cli7.go	master	Output	PASS	pass	cli	7597		
+cli8.go	master	Output	PASS	pass	cli	7632		
+closure0.go	master	Output	PASS	pass	closure	570		
+closure1.go	master	Output	PASS	pass	closure	290		
+closure10.go	master	Output	PASS	pass	closure	358		
+closure11.go	master	Output	PASS	pass	closure	359		
+closure12.go	master	Output	PASS	pass	closure	393		
+closure13.go	master	Output	PASS	pass	closure	454		
+closure14.go	master	Output	PASS	pass	closure	452		
+closure15.go	master	Output	PASS	pass	closure	466		
+closure16.go	master	Output	PASS	pass	closure	635		
+closure17.go	master	Output	PASS	pass	closure	364		
+closure18.go	master	Output	PASS	pass	closure	535		
+closure19.go	master	Output	PASS	pass	closure	421		
+closure2.go	master	Output	PASS	pass	closure	581		
+closure20.go	master	Output	PASS	pass	closure	594		
+closure3.go	master	Output	PASS	pass	closure	348		
+closure4.go	master	Output	PASS	pass	closure	369		
+closure5.go	master	Output	PASS	pass	closure	422		
+closure6.go	master	Output	PASS	pass	closure	329		
+closure7.go	master	Output	PASS	pass	closure	472		
+closure8.go	master	Output	PASS	pass	closure	318		
+closure9.go	master	Output	PASS	pass	closure	313		
+comp0.go	master	Output	PASS	pass	comp	278		
+comp1.go	master	Output	PASS	pass	comp	296		
+comp2.go	master	Output	PASS	pass	comp	287		
+complex0.go	master	Output	PASS	pass	complex	442		
+complex1.go	master	Output	PASS	pass	complex	327		
+complex2.go	master	Output	PASS	pass	complex	308		
+complex3.go	master	Output	PASS	pass	complex	329		
+complex4.go	master	Output	PASS	pass	complex	292		
+composite0.go	master	Output	PASS	pass	composite	321		
+composite1.go	master	Output	PASS	pass	composite	265		
+composite10.go	master	Output	PASS	pass	composite	284		
+composite11.go	master	Output	PASS	pass	composite	273		
+composite12.go	master	Output	PASS	pass	composite	457		
+composite13.go	master	Output	PASS	pass	composite	404		
+composite14.go	master	Output	PASS	pass	composite	377		
+composite15.go	master	Output	PASS	pass	composite	356		
+composite16.go	master	Output	PASS	pass	composite	347		
+composite17.go	master	Output	PASS	pass	composite	323		
+composite18.go	master	Output	PASS	pass	composite	349		
+composite19.go	master	Output	PASS	pass	composite	507		
+composite2.go	master	Output	PASS	pass	composite	347		
+composite3.go	master	Output	PASS	pass	composite	505		
+composite4.go	master	Output	PASS	pass	composite	535		
+composite5.go	master	Output	PASS	pass	composite	272		
+composite6.go	master	Output	PASS	pass	composite	4104		
+composite7.go	master	Output	PASS	pass	composite	344		
+composite8.go	master	Output	PASS	pass	composite	517		
+composite8bis.go	master	Output	PASS	pass	composite	433		
+composite9.go	master	Output	PASS	pass	composite	358		
+const0.go	master	Output	PASS	pass	const	346		
+const1.go	master	Output	PASS	pass	const	255		
+const10.go	master	Output	PASS	pass	const	251		
+const11.go	master	Output	PASS	pass	const	377		
+const12.go	master	Output	PASS	pass	const	313		
+const13.go	master	Output	PASS	pass	const	404		
+const14.go	master	Output	PASS	pass	const	435		
+const15.go	master	Output	PASS	pass	const	244		
+const16.go	master	Output	PASS	pass	const	241		
+const17.go	master	Output	PASS	pass	const	340		
+const18.go	master	Output	PASS	pass	const	236		
+const19.go	master	Output	PASS	pass	const	256		
+const2.go	master	Output	PASS	pass	const	310		
+const20.go	master	Output	PASS	pass	const	210		
+const21.go	master	Output	PASS	pass	const	290		
+const22.go	master	Output	PASS	pass	const	278		
+const23.go	master	Output	PASS	pass	const	227		
+const24.go	master	Output	PASS	pass	const	424		
+const25.go	master		SKIP	skipped	const	0	no Output:/Error: comment	
+const26.go	master	Output	PASS	pass	const	336		
+const3.go	master	Output	PASS	pass	const	264		
+const4.go	master	Output	PASS	pass	const	233		
+const5.go	master	Output	PASS	pass	const	230		
+const6.go	master	Output	PASS	pass	const	281		
+const7.go	master	Output	PASS	pass	const	381		
+const8.go	master	Output	PASS	pass	const	313		
+const9.go	master	Error	PASS_ERR_GC	pass	const	153	-: # command-line-arguments	expect error
+cont.go	master	Output	PASS	pass	cont	354		
+cont0.go	master	Output	PASS	pass	cont	280		
+cont1.go	master	Output	PASS	pass	cont	255		
+cont2.go	master	Output	PASS	pass	cont	341		
+cont3.go	master	Error	PASS_ERR_GC	pass	cont	129	-: # command-line-arguments	expect error
+context.go	master	Output	PASS	pass	context	386		
+context2.go	master	Output	PASS	pass	context	414		
+convert0.go	master	Output	PASS	pass	convert	349		
+convert1.go	master	Output	PASS	pass	convert	291		
+convert2.go	master	Output	PASS	pass	convert	274		
+convert3.go	master	Output	PASS	pass	convert	7151		
+copy0.go	master	Output	PASS	pass	copy	679		
+copy1.go	master	Output	PASS	pass	copy	384		
+copy2.go	master	Output	PASS	pass	copy	614		
+d3.go	master	Output	PASS	pass	d	508		
+defer0.go	master	Output	PASS	pass	defer	521		
+defer1.go	master	Output	PASS	pass	defer	457		
+defer2.go	master	Output	PASS	pass	defer	524		
+defer3.go	master	Output	PASS	pass	defer	6480		
+defer4.go	master	Output	PASS	pass	defer	515		
+defer5.go	master	Output	PASS	pass	defer	314		
+defer6.go	master	Output	PASS	pass	defer	343		
+defer7.go	master	Output	PASS	pass	defer	449		
+defer8.go	master	Output	PASS	pass	defer	353		
+defer9.go	master	Output	PASS	pass	defer	341		
+delete0.go	master	Output	PASS	pass	delete	338		
+eval0.go	master	Output	SKIP	skipped	eval	0	imports yaegi's interp package	
+export0.go	master	Output	LOADFAIL	fail	export	178	load: command-line-arguments is not a main package	non-main package
+export1.go	master	Output	LOADFAIL	fail	export	109	load: command-line-arguments is not a main package	non-main package
+factor.go	master		SKIP	skipped	factor	0	no Output:/Error: comment	bench
+fib.go	master		SKIP	skipped	fib	0	no Output:/Error: comment	bench
+fib0.go	master	Output	PASS	pass	fib	335		
+file_access.go	master	Output	PASS	pass	file_access	456		
+flag0.go	master	Output	PASS	pass	flag	401		
+for0.go	master	Output	PASS	pass	for	387		
+for1.go	master	Output	PASS	pass	for	383		
+for10.go	master	Output	PASS	pass	for	316		
+for11.go	master	Output	PASS	pass	for	232		
+for12.go	master	Output	PASS	pass	for	225		
+for13.go	master	Output	PASS	pass	for	362		
+for14.go	master	Output	PASS	pass	for	315		
+for15.go	master	Output	PASS	pass	for	330		
+for16.go	master	Output	PASS	pass	for	299		
+for17.go	master	Output	PASS	pass	for	437		
+for18.go	master	Output	PASS	pass	for	465		
+for19.go	master	Output	PASS	pass	for	416		
+for2.go	master	Output	PASS	pass	for	358		
+for20.go	upstream-pr:1729	Error	PASS_ERR_GC	pass	for	186	-: # command-line-arguments	expect error
+for21.go	upstream-pr:1729	Error	PASS_ERR_GC	pass	for	260	-: # command-line-arguments	expect error
+for3.go	master	Output	PASS	pass	for	342		
+for4.go	master	Output	PASS	pass	for	444		
+for5.go	master	Output	PASS	pass	for	383		
+for6.go	master	Output	PASS	pass	for	355		
+for7.go	master	Error	PASS_ERR_GC	pass	for	296	-: # command-line-arguments	expect error
+for8.go	master	Output	PASS	pass	for	324		
+for9.go	master	Output	PASS	pass	for	352		
+fun.go	master	Output	PASS	pass	fun	461		
+fun10.go	master	Output	PASS	pass	fun	457		
+fun11.go	master	Output	PASS	pass	fun	523		
+fun12.go	master	Output	PASS	pass	fun	319		
+fun13.go	master	Output	PASS	pass	fun	366		
+fun14.go	master	Output	PASS	pass	fun	254		
+fun15.go	master	Output	PASS	pass	fun	268		
+fun16.go	master	Output	PASS	pass	fun	279		
+fun17.go	master	Output	PASS	pass	fun	260		
+fun18.go	master	Output	PASS	pass	fun	251		
+fun19.go	master	Output	PASS	pass	fun	308		
+fun2.go	master	Output	PASS	pass	fun	206		
+fun20.go	master	Output	PASS	pass	fun	387		
+fun21.go	master	Error	PASS_ERR_GC	pass	fun	168	-: # command-line-arguments	expect error
+fun22.go	master	Error	PASS_ERR	pass	fun	157	-: # command-line-arguments	expect error
+fun23.go	master	Error	PASS_ERR_GC	pass	fun	138	-: # command-line-arguments	expect error
+fun24.go	master	Error	ERR_OTHERMSG	fail	fun	133	-: # command-line-arguments	expect error
+fun25.go	master	Error	ERR_OTHERMSG	fail	fun	189	-: # command-line-arguments	expect error
+fun26.go	master	Output	PASS	pass	fun	265		
+fun27.go	master	Output	PASS	pass	fun	433		
+fun28.go	master	Output	PASS	pass	fun	373		
+fun3.go	master	Output	PASS	pass	fun	215		
+fun4.go	master	Output	PASS	pass	fun	387		
+fun5.go	master	Output	PASS	pass	fun	376		
+fun6.go	master	Output	PASS	pass	fun	453		
+fun7.go	master	Output	PASS	pass	fun	339		
+fun8.go	master	Output	PASS	pass	fun	302		
+fun9.go	master	Output	PASS	pass	fun	412		
+gen1.go	master		SKIP	skipped	gen	0	no Output:/Error: comment	
+gen10.go	master	Output	PASS	pass	gen	541		
+gen11.go	master	Output	PASS	pass	gen	284		
+gen12.go	master	Output	PASS	pass	gen	466		
+gen13.go	master	Output	PASS	pass	gen	491		
+gen14.go	upstream-pr:1737	Output	PASS	pass	gen	716		
+gen15.go	upstream-pr:1737	Output	PASS	pass	gen	521		
+gen16.go	upstream-pr:1737	Output	PASS	pass	gen	564		
+gen17.go	upstream-pr:1737	Output	PASS	pass	gen	3360		has deps
+gen18.go	upstream-pr:1737	Output	PASS	pass	gen	376		
+gen19.go	upstream-pr:1737	Error	PASS_ERR	pass	gen	241	-: # command-line-arguments	expect error
+gen2.go	master	Output	PASS	pass	gen	466		
+gen20.go	upstream-pr:1737	Output	PASS	pass	gen	360		
+gen21.go	upstream-pr:1737	Output	PASS	pass	gen	591		
+gen22.go	upstream-pr:1737	Output	PASS	pass	gen	602		
+gen23.go	upstream-pr:1737	Output	PASS	pass	gen	407		
+gen24.go	upstream-pr:1737	Output	PASS	pass	gen	614		
+gen25.go	upstream-pr:1737	Output	PASS	pass	gen	604		
+gen26.go	upstream-pr:1737	Output	PASS	pass	gen	731		
+gen27.go	upstream-pr:1737	Output	PASS	pass	gen	3380		has deps
+gen3.go	master	Output	PASS	pass	gen	515		
+gen4.go	master	Output	PASS	pass	gen	304		
+gen5.go	master	Output	PASS	pass	gen	286		
+gen6.go	master	Output	PASS	pass	gen	294		
+gen7.go	master	Error	ERR_OTHERMSG	fail	gen	129	-: # command-line-arguments	expect error
+gen8.go	master	Error	ERR_OTHERMSG	fail	gen	160	-: # command-line-arguments	expect error
+gen9.go	master	Error	ERR_OTHERMSG	fail	gen	153	-: # command-line-arguments	expect error
+goto0.go	master	Output	PASS	pass	goto	360		
+goto1.go	master	Output	PASS	pass	goto	294		
+heap.go	master	Output	PASS	pass	heap	341		
+if.go	master	Output	PASS	pass	if	341		
+if0.go	master	Output	PASS	pass	if	451		
+if1.go	master	Output	PASS	pass	if	255		
+if10.go	upstream-pr:1729	Error	PASS_ERR_GC	pass	if	172	-: # command-line-arguments	expect error
+if2.go	master	Error	PASS_ERR_GC	pass	if	190	-: # command-line-arguments	expect error
+if3.go	master	Output	PASS	pass	if	301		
+if4.go	master	Output	PASS	pass	if	279		
+if5.go	master	Output	PASS	pass	if	260		
+if6.go	master	Output	PASS	pass	if	264		
+if7.go	master	Output	PASS	pass	if	422		
+if8.go	upstream-pr:1729	Error	PASS_ERR_GC	pass	if	131	-: # command-line-arguments	expect error
+if9.go	upstream-pr:1729	Error	PASS_ERR_GC	pass	if	176	-: # command-line-arguments	expect error
+imag0.go	master	Output	PASS	pass	imag	347		
+import0.go	master	Output	PASS	pass	import	332		
+import1.go	master	Output	PASS	pass	import	368		
+import2.go	master	Output	PASS	pass	import	432		
+import3.go	master	Output	PASS	pass	import	575		
+import4.go	master	Output	WRONG	fail	import	4175	"num: 643630023"	
+import5.go	master	Output	PASS	pass	import	359		
+import6.go	master	Error	PASS_ERR_GC	pass	import	128	../_test/c2/c2.go:3:8: could not import github.com/traefik/yaegi/_test/c1 (import cycle: [command-line-arguments github.com/traefik/yaegi/_test/c1 github.com/traefik/yaegi/_test/c2])	expect error
+import7.go	master	Output	PASS	pass	import	557		
+import8.go	master	Output	PASS	pass	import	452		
+import9.go	master	Output	PASS	pass	import	470		
+inc.go	master	Output	PASS	pass	inc	253		
+inception.go	master		SKIP	skipped	inception	0	no Output:/Error: comment	
+init0.go	master	Output	PASS	pass	init	236		
+init1.go	master	Error	PASS_ERR	pass	init	160	-: # command-line-arguments	expect error
+interface0.go	master	Output	PASS	pass	interface	446		
+interface1.go	master	Output	PASS	pass	interface	429		
+interface10.go	master	Output	PASS	pass	interface	434		
+interface11.go	master	Output	PASS	pass	interface	500		
+interface12.go	master	Output	PASS	pass	interface	412		
+interface13.go	master	Output	PASS	pass	interface	620		
+interface14.go	master	Output	PASS	pass	interface	738		
+interface15.go	master	Output	PASS	pass	interface	402		
+interface16.go	master	Output	PASS	pass	interface	367		
+interface17.go	master	Output	PASS	pass	interface	481		
+interface18.go	master	Output	PASS	pass	interface	734		
+interface19.go	master	Output	PASS	pass	interface	621		
+interface2.go	master	Output	PASS	pass	interface	984		
+interface20.go	master	Output	PASS	pass	interface	762		
+interface21.go	master	Output	PASS	pass	interface	763		
+interface22.go	master	Output	PASS	pass	interface	925		
+interface23.go	master	Output	PASS	pass	interface	882		
+interface24.go	master	Output	PASS	pass	interface	922		
+interface25.go	master	Output	PASS	pass	interface	1220		
+interface26.go	master	Output	PASS	pass	interface	920		
+interface27.go	master	Output	PASS	pass	interface	944		
+interface28.go	master	Output	PASS	pass	interface	825		
+interface29.go	master	Output	PASS	pass	interface	700		
+interface3.go	master	Output	PASS	pass	interface	769		
+interface30.go	master	Output	PASS	pass	interface	576		
+interface31.go	master	Output	PASS	pass	interface	353		
+interface32.go	master	Output	PASS	pass	interface	374		
+interface33.go	master	Output	PASS	pass	interface	399		
+interface34.go	master	Output	PASS	pass	interface	340		
+interface35.go	master	Output	PASS	pass	interface	351		
+interface36.go	master	Output	PASS	pass	interface	327		
+interface37.go	master	Output	PASS	pass	interface	319		
+interface38.go	master	Output	PASS	pass	interface	334		
+interface39.go	master	Output	PASS	pass	interface	455		
+interface4.go	master	Output	PASS	pass	interface	401		
+interface40.go	master	Output	PASS	pass	interface	342		
+interface41.go	master	Output	PASS	pass	interface	319		
+interface42.go	master	Output	PASS	pass	interface	359		
+interface43.go	master	Output	PASS	pass	interface	349		
+interface44.go	master	Output	PASS	pass	interface	270		
+interface45.go	master	Output	PASS	pass	interface	366		
+interface46.go	master	Output	PASS	pass	interface	519		
+interface47.go	master	Output	PASS	pass	interface	327		
+interface48.go	master	Output	PASS	pass	interface	599		
+interface49.go	master	Output	PASS	pass	interface	557		
+interface5.go	master	Output	PASS	pass	interface	546		
+interface50.go	master	Output	PASS	pass	interface	585		
+interface51.go	master	Output	PASS	pass	interface	602		
+interface52.go	master	Output	PASS	pass	interface	570		
+interface6.go	master	Output	PASS	pass	interface	544		
+interface7.go	master	Output	PASS	pass	interface	452		
+interface8.go	master	Output	PASS	pass	interface	347		
+interface9.go	master	Output	PASS	pass	interface	320		
+io0.go	master		SKIP	skipped	io	0	no Output:/Error: comment	use random number
+io1.go	master	Output	PASS	pass	io	440		
+io2.go	master	Output	PASS	pass	io	404		
+iota.go	master	Output	PASS	pass	iota	318		
+iota0.go	master	Output	PASS	pass	iota	387		
+ipp_as_key.go	master	Output	PASS	pass	ipp_as_key	497		has deps
+issue-1007.go	master	Output	PASS	pass	issue	465		
+issue-1010.go	master	Output	PASS	pass	issue	368		
+issue-1022.go	master	Output	PASS	pass	issue	337		
+issue-1052.go	master	Output	PASS	pass	issue	290		
+issue-1065.go	master	Output	PASS	pass	issue	326		
+issue-1068.go	master	Output	PASS	pass	issue	323		
+issue-1088.go	master	Output	PASS	pass	issue	295		
+issue-1089.go	master	Output	PASS	pass	issue	313		
+issue-1093.go	master	Error	PASS_ERR_GC	pass	issue	223	-: # command-line-arguments	expect error
+issue-1094.go	master	Output	PASS	pass	issue	354		
+issue-1101.go	master	Output	PASS	pass	issue	5868		
+issue-1115.go	master	Output	PASS	pass	issue	317		
+issue-1126.go	master	Output	PASS	pass	issue	350		
+issue-1128.go	master	Output	PASS	pass	issue	346		
+issue-1134.go	master	Output	PASS	pass	issue	487		
+issue-1136.go	master	Output	PASS	pass	issue	656		
+issue-1145.go	master	Output	PASS	pass	issue	711		
+issue-1156.go	master	Output	PASS	pass	issue	680		
+issue-1163.go	master	Output	PASS	pass	issue	756		
+issue-1166.go	master	Output	PASS	pass	issue	753		
+issue-1167.go	master	Output	PASS	pass	issue	829		
+issue-1173.go	master	Output	PASS	pass	issue	543		
+issue-1175.go	master	Output	PASS	pass	issue	409		
+issue-1177.go	master	Output	PASS	pass	issue	334		
+issue-1179.go	master	Output	PASS	pass	issue	242		
+issue-1181.go	master	Output	PASS	pass	issue	310		
+issue-1185.go	master	Output	PASS	pass	issue	284		
+issue-1187.go	master	Output	PASS	pass	issue	274		
+issue-1189.go	master	Output	PASS	pass	issue	205		
+issue-1202.go	master	Output	PASS	pass	issue	235		
+issue-1205.go	master	Output	PASS	pass	issue	233		
+issue-1208.go	master	Output	PASS	pass	issue	364		
+issue-1260.go	master	Output	PASS	pass	issue	386		
+issue-1276.go	master	Output	PASS	pass	issue	303		expect error
+issue-1280.go	master	Output	PASS	pass	issue	372		
+issue-1285.go	master	Output	PASS	pass	issue	352		
+issue-1288.go	master	Output	PASS	pass	issue	331		
+issue-1300.go	master	Output	PASS	pass	issue	300		
+issue-1304.go	master	Output	PASS	pass	issue	397		
+issue-1306.go	master	Output	PASS	pass	issue	484		
+issue-1308.go	master	Output	PASS	pass	issue	311		
+issue-1311.go	master	Output	PASS	pass	issue	364		
+issue-1315.go	master	Output	PASS	pass	issue	319		
+issue-1320.go	master	Output	PASS	pass	issue	283		
+issue-1326.go	master	Output	PASS	pass	issue	300		
+issue-1328.go	master	Output	PASS	pass	issue	513		
+issue-1330.go	master	Output	PASS	pass	issue	485		expect error
+issue-1332.go	master	Output	PASS	pass	issue	379		
+issue-1333.go	master	Output	PASS	pass	issue	5975		
+issue-1337.go	master	Output	PASS	pass	issue	457		
+issue-1341.go	fork:ai/fix-upstream-1341	Output	PASS	pass	issue	333		
+issue-1342.go	master	Output	PASS	pass	issue	310		
+issue-1344.go	master	Output	PASS	pass	issue	447		
+issue-1354.go	master	Output	PASS	pass	issue	309		
+issue-1355.go	master	Output	PASS	pass	issue	568		
+issue-1356.go	fork:ai/fix-upstream-1341	Output	PASS	pass	issue	430		
+issue-1360.go	master	Output	PASS	pass	issue	400		
+issue-1361.go	master	Output	PASS	pass	issue	421		
+issue-1364.go	master	Output	PASS	pass	issue	273		
+issue-1365.go	master	Output	PASS	pass	issue	259		
+issue-1368.go	master	Output	PASS	pass	issue	195		
+issue-1371.go	master	Output	PASS	pass	issue	214		
+issue-1373.go	master	Output	PASS	pass	issue	434		
+issue-1375.go	master	Output	PASS	pass	issue	260		
+issue-1378.go	master	Output	PASS	pass	issue	238		
+issue-1381.go	master	Output	PASS	pass	issue	498		
+issue-1404.go	master	Output	PASS	pass	issue	283		
+issue-1408.go	master	Output	PASS	pass	issue	308		
+issue-1411.go	master		SKIP	skipped	issue	0	no Output:/Error: comment	
+issue-1414.go	fork:ai/fix-upstream-1414	Output	PASS	pass	issue	411		
+issue-1414b.go	fork:ai/fix-upstream-1414	Output	PASS	pass	issue	290		
+issue-1416.go	master	Output	PASS	pass	issue	255		
+issue-1421.go	master		SKIP	skipped	issue	0	no Output:/Error: comment	
+issue-1425.go	master	Output	PASS	pass	issue	406		
+issue-1437.go	fork:ai/fix-upstream-1437	Output	PASS	pass	issue	571		
+issue-1437b.go	fork:ai/fix-upstream-1437	Output	PASS	pass	issue	482		
+issue-1437c.go	fork:ai/fix-upstream-1437	Output	PASS	pass	issue	325		
+issue-1437d.go	fork:ai/fix-upstream-1437	Output	PASS	pass	issue	371		
+issue-1437e.go	fork:ai/fix-upstream-1437	Error	PASS_ERR	pass	issue	170	-: # command-line-arguments	expect error
+issue-1439.go	master	Output	PASS	pass	issue	375		
+issue-1442.go	master	Output	PASS	pass	issue	246		
+issue-1447.go	master	Output	PASS	pass	issue	509		
+issue-1451.go	master	Output	PASS	pass	issue	385		
+issue-1454.go	master	Output	PASS	pass	issue	266		
+issue-1459.go	master	Output	PASS	pass	issue	260		
+issue-1460.go	master	Output	PASS	pass	issue	387		
+issue-1465.go	master	Output	PASS	pass	issue	383		
+issue-1466.go	master	Output	PASS	pass	issue	333		
+issue-1470.go	master	Output	PASS	pass	issue	337		
+issue-1475.go	master	Output	PASS	pass	issue	350		
+issue-1488.go	master	Output	PASS	pass	issue	265		
+issue-1496.go	master	Output	PASS	pass	issue	250		
+issue-1515.go	master	Output	PASS	pass	issue	282		
+issue-1518-b.go	fork:ai/fix-upstream-1518	Output	PASS	pass	issue	227		
+issue-1518.go	fork:ai/fix-upstream-1518	Output	PASS	pass	issue	208		
+issue-1536.go	master	Output	PASS	pass	issue	302		
+issue-1571.go	master	Output	PASS	pass	issue	207		
+issue-1593.go	upstream-pr:1730	Error	PASS_ERR	pass	issue	134	-: # command-line-arguments	expect error
+issue-1594.go	master	Output	PASS	pass	issue	305		
+issue-1618.go	master		SKIP	skipped	issue	0	no Output:/Error: comment	bench (infinite running)
+issue-1640.go	master	Output	PASS	pass	issue	289		
+issue-1653.go	master	Output	PASS	pass	issue	303		
+issue-1674.go	fork:ai/fix-upstream-1674	Output	PASS	pass	issue	311		
+issue-435.go	master	Output	PASS	pass	issue	337		
+issue-558.go	master	Output	PASS	pass	issue	390		
+issue-735.go	master	Output	PASS	pass	issue	380		
+issue-770.go	master	Output	PASS	pass	issue	366		
+issue-772.go	master	Output	PASS	pass	issue	525		
+issue-775.go	master	Output	PASS	pass	issue	5715		
+issue-776.go	master	Output	PASS	pass	issue	437		
+issue-782.go	master	Output	PASS	pass	issue	389		
+issue-784.go	master	Output	PASS	pass	issue	280		
+issue-880.go	master	Output	PASS	pass	issue	265		
+issue-981.go	master	Output	PASS	pass	issue	372		
+issue-993.go	master	Output	PASS	pass	issue	332		
+l2.go	master	Output	PASS	pass	l	369		
+l3.go	master		SKIP	skipped	l	0	no Output:/Error: comment	
+l4.go	master	Output	PASS	pass	l	265		
+l5.go	master		SKIP	skipped	l	0	no Output:/Error: comment	
+len0.go	master	Output	PASS	pass	len	257		
+make.go	master	Output	PASS	pass	make	5911		
+make0.go	master	Output	PASS	pass	make	423		
+make1.go	master	Output	PASS	pass	make	563		
+make2.go	master	Output	PASS	pass	make	584		
+map.go	master	Output	PASS	pass	map	549		
+map10.go	master	Output	PASS	pass	map	485		
+map11.go	master	Output	PASS	pass	map	333		
+map12.go	master	Output	PASS	pass	map	331		
+map13.go	master	Output	PASS	pass	map	6241		
+map14.go	master	Output	PASS	pass	map	314		
+map15.go	master	Output	PASS	pass	map	321		
+map16.go	master	Output	PASS	pass	map	234		
+map17.go	master	Output	PASS	pass	map	5937		
+map18.go	master	Output	PASS	pass	map	304		
+map19.go	master	Output	PASS	pass	map	339		
+map2.go	master	Output	PASS	pass	map	314		
+map20.go	master	Output	PASS	pass	map	306		
+map21.go	master	Output	PASS	pass	map	419		
+map22.go	master	Output	PASS	pass	map	383		
+map23.go	master	Output	PASS	pass	map	339		
+map24.go	master	Output	PASS	pass	map	427		
+map25.go	master	Output	PASS	pass	map	310		
+map26.go	master	Output	PASS	pass	map	323		
+map27.go	master	Output	PASS	pass	map	351		
+map28.go	master	Output	PASS	pass	map	330		
+map29.go	master	Output	PASS	pass	map	504		
+map3.go	master	Output	PASS	pass	map	323		
+map30.go	master	Output	PASS	pass	map	334		
+map31.go	master	Output	PASS	pass	map	344		
+map4.go	master	Output	PASS	pass	map	405		
+map5.go	master	Output	PASS	pass	map	487		
+map6.go	master	Output	PASS	pass	map	374		
+map7.go	master	Output	PASS	pass	map	327		
+map8.go	master	Output	PASS	pass	map	614		
+map9.go	master	Output	PASS	pass	map	518		
+math0.go	master	Output	PASS	pass	math	539		
+math1.go	master	Output	PASS	pass	math	320		
+math2.go	master	Output	PASS	pass	math	366		
+math3.go	master	Output	PASS	pass	math	565		
+max0.go	fork:ai/fix-upstream-1674	Output	PASS	pass	max	280		
+max1.go	fork:ai/fix-upstream-1674	Error	ERR_OTHERMSG	fail	max	169	-: # command-line-arguments	expect error
+max2.go	fork:ai/fix-upstream-1674	Error	ERR_OTHERMSG	fail	max	298	-: # command-line-arguments	expect error
+method.go	master	Output	PASS	pass	method	446		
+method0.go	master	Output	PASS	pass	method	466		
+method1.go	master	Output	PASS	pass	method	322		
+method10.go	master	Output	PASS	pass	method	321		
+method11.go	master	Output	PASS	pass	method	753		
+method12.go	master	Output	PASS	pass	method	431		
+method13.go	master	Output	PASS	pass	method	347		
+method14.go	master	Output	PASS	pass	method	348		
+method15.go	master	Output	PASS	pass	method	380		
+method16.go	master	Output	WRONG	fail	method	518	"&{property:value} param"	private struct field
+method17.go	master	Output	PASS	pass	method	377		
+method18.go	master	Output	PASS	pass	method	5691		
+method19.go	master	Output	PASS	pass	method	267		
+method2.go	master	Output	PASS	pass	method	385		
+method20.go	master	Output	PASS	pass	method	379		
+method21.go	master	Output	PASS	pass	method	328		
+method22.go	master	Output	PASS	pass	method	329		
+method23.go	master	Output	PASS	pass	method	281		
+method24.go	master	Output	PASS	pass	method	305		
+method25.go	master	Output	PASS	pass	method	406		
+method26.go	master	Output	PASS	pass	method	393		
+method27.go	master	Output	PASS	pass	method	5843		
+method28.go	master	Output	PASS	pass	method	350		
+method29.go	master	Output	PASS	pass	method	366		
+method3.go	master	Output	PASS	pass	method	322		
+method30.go	master	Output	PASS	pass	method	281		
+method31.go	master	Output	PASS	pass	method	469		
+method32.go	master	Output	PASS	pass	method	313		
+method33.go	master	Output	PASS	pass	method	306		
+method34.go	master	Output	PASS	pass	method	326		
+method35.go	master	Output	PASS	pass	method	275		
+method36.go	master	Output	PASS	pass	method	368		
+method37.go	master	Output	PASS	pass	method	314		
+method38.go	master	Output	PASS	pass	method	3417		
+method39.go	master	Error	ERR_OTHERMSG	fail	method	162	-: # command-line-arguments	expect error
+method4.go	master	Output	PASS	pass	method	238		
+method40.go	master	Output	PASS	pass	method	322		
+method5.go	master	Output	PASS	pass	method	293		
+method6.go	master	Output	PASS	pass	method	280		
+method7.go	master	Output	PASS	pass	method	278		
+method8.go	master	Output	PASS	pass	method	572		
+method9.go	master	Output	PASS	pass	method	203		
+min0.go	fork:ai/fix-upstream-1674	Output	PASS	pass	min	237		
+min1.go	fork:ai/fix-upstream-1674	Error	ERR_OTHERMSG	fail	min	171	-: # command-line-arguments	expect error
+min2.go	fork:ai/fix-upstream-1674	Output	PASS	pass	min	377		
+named0.go	master	Output	PASS	pass	named	569		
+named1.go	master	Output	PASS	pass	named	596		
+named2.go	master	Output	PASS	pass	named	588		
+named3.go	master	Output	PASS	pass	named	6155		
+named4.go	master	Output	PASS	pass	named	5304		
+neg0.go	master	Output	PASS	pass	neg	508		
+new0.go	master	Output	PASS	pass	new	403		
+new1.go	master	Output	PASS	pass	new	563		
+new2.go	master	Output	PASS	pass	new	448		
+nil0.go	master	Output	PASS	pass	nil	450		
+nil1.go	master	Output	PASS	pass	nil	338		
+nil2.go	master	Output	PASS	pass	nil	302		
+nil3.go	master	Output	PASS	pass	nil	259		
+not0.go	master	Output	PASS	pass	not	282		
+not1.go	master	Output	PASS	pass	not	352		
+not2.go	master	Output	PASS	pass	not	322		
+num0.go	master	Output	PASS	pass	num	544		
+op0.go	master	Output	PASS	pass	op	555		
+op1.go	master	Error	PASS_ERR_GC	pass	op	367	-: # command-line-arguments	expect error
+op10.go	master	Output	PASS	pass	op	337		
+op11.go	master	Output	PASS	pass	op	308		
+op2.go	master	Output	PASS	pass	op	307		
+op3.go	master	Output	PASS	pass	op	277		
+op4.go	master	Output	PASS	pass	op	233		
+op5.go	master	Output	PASS	pass	op	313		
+op6.go	master	Output	PASS	pass	op	230		
+op7.go	master	Error	ERR_OTHERMSG	fail	op	147	-: # command-line-arguments	expect error
+op8.go	master	Output	PASS	pass	op	216		
+op9.go	master	Error	ERR_OTHERMSG	fail	op	122	-: # command-line-arguments	expect error
+opfloat32.go	master	Output	PASS	pass	opfloat	225		
+opfloat64.go	master	Output	PASS	pass	opfloat	232		
+opint16.go	master	Output	PASS	pass	opint	257		
+opint32.go	master	Output	PASS	pass	opint	245		
+opint64.go	master	Output	PASS	pass	opint	242		
+opint8.go	master	Output	PASS	pass	opint	312		
+opstring.go	master	Output	PASS	pass	opstring	236		
+opuint16.go	master	Output	PASS	pass	opuint	216		
+opuint32.go	master	Output	PASS	pass	opuint	391		
+opuint64.go	master	Output	PASS	pass	opuint	265		
+opuint8.go	master	Output	PASS	pass	opuint	419		
+or0.go	master	Output	PASS	pass	or	350		
+or1.go	master	Output	PASS	pass	or	330		
+or2.go	master	Output	PASS	pass	or	384		
+os0.go	master	Output	PASS	pass	os	317		
+p5.go	master	Output	PASS	pass	p	394		
+p6.go	master		SKIP	skipped	p	0	no Output:/Error: comment	
+panic0.go	master	Error	PASS_ERR	pass	panic	342	panic: stop!	expect error
+pkgname0.go	master	Output	PASS	pass	pkgname	590		has deps
+pkgname1.go	master	Error	PASS_ERR	pass	pkgname	190	-: # command-line-arguments	expect error
+pkgname2.go	master	Output	PASS	pass	pkgname	390		has deps
+primes.go	master	Output	PASS	pass	primes	315		
+print0.go	master	Output	PASS	pass	print	254		
+ptr0.go	master	Output	PASS	pass	ptr	233		
+ptr1.go	master	Output	PASS	pass	ptr	275		
+ptr2.go	master	Output	PASS	pass	ptr	210		
+ptr3.go	master	Output	PASS	pass	ptr	204		
+ptr4.go	master	Output	PASS	pass	ptr	246		
+ptr5.go	master	Output	PASS	pass	ptr	221		
+ptr5a.go	master	Output	PASS	pass	ptr	212		
+ptr6.go	master	Output	PASS	pass	ptr	259		
+ptr7.go	master	Output	PASS	pass	ptr	455		
+ptr8.go	master	Output	PASS	pass	ptr	214		
+ptr_array0.go	master	Output	PASS	pass	ptr_array	259		
+ptr_array1.go	master	Output	PASS	pass	ptr_array	236		
+ptr_array2.go	master	Output	PASS	pass	ptr_array	257		
+ptr_array3.go	master	Output	PASS	pass	ptr_array	279		
+range0.go	master	Output	PASS	pass	range	255		
+range1.go	master	Output	PASS	pass	range	246		
+range2.go	master	Output	PASS	pass	range	309		
+range3.go	master	Output	PASS	pass	range	234		
+range4.go	master	Output	PASS	pass	range	341		
+range5.go	master	Output	PASS	pass	range	374		
+range6.go	master	Output	PASS	pass	range	405		
+range7.go	master	Output	PASS	pass	range	394		
+range8.go	master	Output	PASS	pass	range	411		
+range9.go	master	Error	ERR_OTHERMSG	fail	range	243	-: # command-line-arguments	expect error
+real0.go	master	Output	PASS	pass	real	232		
+recover0.go	master	Output	PASS	pass	recover	353		
+recover1.go	master	Output	PASS	pass	recover	375		
+recover2.go	master	Output	PASS	pass	recover	319		
+recover3.go	master	Output	PASS	pass	recover	329		
+recover4.go	master	Output	PASS	pass	recover	538		
+recurse0.go	master	Output	PASS	pass	recurse	344		
+recurse1.go	master	Output	PASS	pass	recurse	306		
+recurse2.go	master	Output	PASS	pass	recurse	295		
+recurse3.go	master	Output	PASS	pass	recurse	188		
+redeclaration-global0.go	master	Error	ERR_OTHERMSG	fail	redeclaration	118	-: # command-line-arguments	expect error
+redeclaration-global1.go	master		SKIP	skipped	redeclaration	0	no Output:/Error: comment	expect error
+redeclaration-global2.go	master	Error	ERR_OTHERMSG	fail	redeclaration	144	-: # command-line-arguments	expect error
+redeclaration-global2.upstream-pr1732.go	upstream-pr:1732	Error	ERR_OTHERMSG	fail	redeclaration	151	-: # command-line-arguments	
+redeclaration-global3.go	master	Error	ERR_OTHERMSG	fail	redeclaration	133	-: # command-line-arguments	expect error
+redeclaration-global4.go	master	Error	ERR_OTHERMSG	fail	redeclaration	181	-: # command-line-arguments	expect error
+redeclaration-global5.go	master	Error	ERR_OTHERMSG	fail	redeclaration	193	-: # command-line-arguments	expect error
+redeclaration-global6.go	master	Error	ERR_OTHERMSG	fail	redeclaration	204	-: # command-line-arguments	expect error
+redeclaration-global7.go	master	Error	ERR_OTHERMSG	fail	redeclaration	458	-: # command-line-arguments	expect error
+redeclaration0.go	master	Error	ERR_OTHERMSG	fail	redeclaration	223	-: # command-line-arguments	expect error
+redeclaration1.go	master	Error	PASS_ERR	pass	redeclaration	222	-: # command-line-arguments	expect error
+redeclaration2.go	master	Error	ERR_OTHERMSG	fail	redeclaration	448	-: # command-line-arguments	expect error
+redeclaration3.go	master	Error	PASS_ERR	pass	redeclaration	213	-: # command-line-arguments	expect error
+redeclaration4.go	master	Error	PASS_ERR	pass	redeclaration	194	-: # command-line-arguments	expect error
+redeclaration5.go	master	Error	PASS_ERR	pass	redeclaration	354	-: # command-line-arguments	expect error
+restricted0.go	master	Output	PASS	pass	restricted	325		expect error
+restricted1.go	master	Output	PASS	pass	restricted	459		expect error
+restricted2.go	master	Output	PASS	pass	restricted	480		expect error
+restricted3.go	master	Output	PASS	pass	restricted	618		expect error
+ret1.go	master	Output	PASS	pass	ret	449		
+ret2.go	master	Output	PASS	pass	ret	705		
+ret3.go	master	Output	PASS	pass	ret	499		
+ret4.go	master	Output	PASS	pass	ret	807		
+ret5.go	master	Output	PASS	pass	ret	559		
+ret6.go	master	Output	PASS	pass	ret	891		
+ret7.go	master	Output	PASS	pass	ret	800		
+ret8.go	master	Output	PASS	pass	ret	798		
+run0.go	master	Output	PASS	pass	run	719		
+run1.go	master	Output	PASS	pass	run	607		
+run10.go	master	Output	PASS	pass	run	555		
+run11.go	master	Output	PASS	pass	run	536		
+run12.go	master	Output	PASS	pass	run	371		
+run13.go	master	Output	PASS	pass	run	293		
+run4.go	master	Output	PASS	pass	run	277		
+run5.go	master	Output	PASS	pass	run	312		
+run6.go	master	Output	PASS	pass	run	344		
+run7.go	master	Output	PASS	pass	run	271		
+run8.go	master	Output	PASS	pass	run	380		
+run9.go	master	Output	PASS	pass	run	336		
+rune0.go	master	Output	PASS	pass	rune	317		
+rune1.go	master	Output	PASS	pass	rune	256		
+rune2.go	master	Output	PASS	pass	rune	347		
+scope0.go	master	Output	PASS	pass	scope	270		
+scope1.go	master	Output	PASS	pass	scope	316		
+scope2.go	master	Output	PASS	pass	scope	331		
+scope3.go	master	Output	PASS	pass	scope	293		
+scope4.go	master	Output	PASS	pass	scope	304		
+scope5.go	master	Output	PASS	pass	scope	280		
+scope6.go	master	Output	PASS	pass	scope	608		
+scope7.go	master	Output	PASS	pass	scope	285		
+select.go	master		SKIP	skipped	select	0	no Output:/Error: comment	
+select0.go	master	Output	PASS	pass	select	284		
+select1.go	master	Output	PASS	pass	select	927		
+select10.go	master	Output	PASS	pass	select	686		
+select11.go	master	Output	PASS	pass	select	760		
+select12.go	master	Output	PASS	pass	select	855		
+select13.go	master	Output	PASS	pass	select	906		
+select14.go	master	Output	PASS	pass	select	1749		
+select15.go	master	Output	PASS	pass	select	715		
+select2.go	master	Output	PASS	pass	select	767		
+select3.go	master	Output	PASS	pass	select	508		
+select4.go	master	Output	PASS	pass	select	414		
+select5.go	master	Output	PASS	pass	select	425		
+select6.go	master	Output	PASS	pass	select	568		
+select7.go	master	Output	PASS	pass	select	516		
+select8.go	master	Output	PASS	pass	select	371		
+select9.go	master	Output	PASS	pass	select	361		
+selector-scope0.go	master	Output	PASS	pass	selector	827		
+server.go	master		SKIP	skipped	server	0	no Output:/Error: comment	syntax parsing
+server0.go	master		SKIP	skipped	server	0	no Output:/Error: comment	syntax parsing
+server1.go	master		SKIP	skipped	server	0	no Output:/Error: comment	syntax parsing
+server1a.go	master		SKIP	skipped	server	0	no Output:/Error: comment	syntax parsing
+server2.go	master		SKIP	skipped	server	0	no Output:/Error: comment	syntax parsing
+server3.go	master		SKIP	skipped	server	0	no Output:/Error: comment	syntax parsing
+server4.go	master		SKIP	skipped	server	0	no Output:/Error: comment	syntax parsing
+server5.go	master		SKIP	skipped	server	0	no Output:/Error: comment	syntax parsing
+server6.go	master		SKIP	skipped	server	0	no Output:/Error: comment	syntax parsing
+server7.go	master		SKIP	skipped	server	0	no Output:/Error: comment	
+shift0.go	master	Output	PASS	pass	shift	832		
+shift1.go	master	Output	PASS	pass	shift	1440		
+shift2.go	master	Output	PASS	pass	shift	1108		
+shift3.go	master	Output	PASS	pass	shift	1542		
+sieve.go	master	Output	PASS	pass	sieve	1763		
+slice.go	master	Output	PASS	pass	slice	1675		
+str.go	master	Output	PASS	pass	str	1177		
+str0.go	master	Output	PASS	pass	str	1137		
+str1.go	master	Output	PASS	pass	str	1128		
+str2.go	master	Output	PASS	pass	str	1393		
+str3.go	master	Output	PASS	pass	str	706		
+str4.go	master	Output	PASS	pass	str	1086		
+struct.go	master	Output	PASS	pass	struct	1112		
+struct0.go	master	Output	PASS	pass	struct	1417		
+struct0a.go	master	Output	PASS	pass	struct	1391		
+struct1.go	master	Output	PASS	pass	struct	1495		
+struct10.go	master	Output	PASS	pass	struct	1147		
+struct11.go	master	Output	PASS	pass	struct	8597		
+struct12.go	master	Output	PASS	pass	struct	1133		
+struct13.go	master	Output	PASS	pass	struct	8852		
+struct14.go	master	Output	PASS	pass	struct	9077		
+struct15.go	master	Output	PASS	pass	struct	8604		
+struct16.go	master	Output	PASS	pass	struct	1129		
+struct17.go	master	Output	PASS	pass	struct	819		
+struct18.go	master	Output	PASS	pass	struct	9004		
+struct19.go	master	Output	PASS	pass	struct	669		
+struct2.go	master	Output	PASS	pass	struct	569		
+struct20.go	master	Output	PASS	pass	struct	586		
+struct21.go	master	Output	PASS	pass	struct	540		
+struct22.go	master	Output	PASS	pass	struct	303		
+struct23.go	master	Output	PASS	pass	struct	299		
+struct24.go	master	Output	PASS	pass	struct	337		
+struct25.go	master	Output	PASS	pass	struct	314		
+struct26.go	master	Output	PASS	pass	struct	290		
+struct27.go	master	Output	PASS	pass	struct	412		
+struct28.go	master	Output	PASS	pass	struct	425		
+struct29.go	master	Output	PASS	pass	struct	330		
+struct3.go	master	Output	PASS	pass	struct	290		
+struct30.go	master	Output	PASS	pass	struct	445		
+struct31.go	master	Output	PASS	pass	struct	318		
+struct32.go	master	Output	PASS	pass	struct	408		
+struct33.go	master	Output	PASS	pass	struct	319		
+struct34.go	master	Output	PASS	pass	struct	361		
+struct35.go	master	Output	PASS	pass	struct	315		
+struct36.go	master	Output	PASS	pass	struct	8365		
+struct37.go	master	Output	PASS	pass	struct	8875		
+struct38.go	master	Output	PASS	pass	struct	1106		
+struct39.go	master	Output	PASS	pass	struct	1331		
+struct4.go	master	Output	PASS	pass	struct	657		
+struct40.go	master	Output	PASS	pass	struct	926		
+struct41.go	master	Output	PASS	pass	struct	756		
+struct42.go	master	Output	PASS	pass	struct	737		
+struct43.go	master	Output	PASS	pass	struct	430		
+struct44.go	master	Output	PASS	pass	struct	635		
+struct45.go	master	Output	PASS	pass	struct	516		
+struct46.go	master	Output	PASS	pass	struct	289		
+struct47.go	master	Output	PASS	pass	struct	817		
+struct48.go	master	Output	PASS	pass	struct	487		
+struct49.go	master	Output	PASS	pass	struct	460		
+struct5.go	master	Output	PASS	pass	struct	263		
+struct50.go	master	Output	PASS	pass	struct	446		
+struct51.go	master	Output	PASS	pass	struct	355		
+struct52.go	master	Output	PASS	pass	struct	450		
+struct53.go	master	Output	PASS	pass	struct	507		
+struct54.go	master		SKIP	skipped	struct	0	no Output:/Error: comment	
+struct55.go	master	Output	PASS	pass	struct	293		
+struct56.go	master	Output	PASS	pass	struct	290		
+struct57.go	master	Output	PASS	pass	struct	732		
+struct58.go	master	Output	PASS	pass	struct	524		
+struct59.go	master	Output	PASS	pass	struct	352		
+struct6.go	master	Output	PASS	pass	struct	313		
+struct60.go	master	Output	PASS	pass	struct	412		
+struct61.go	master	Output	PASS	pass	struct	713		
+struct62.go	master	Output	PASS	pass	struct	576		
+struct7.go	master	Output	PASS	pass	struct	645		
+struct8.go	master	Output	PASS	pass	struct	428		
+struct9.go	master	Output	PASS	pass	struct	431		
+switch.go	master	Output	PASS	pass	switch	481		
+switch0.go	master	Output	PASS	pass	switch	335		
+switch1.go	master	Output	PASS	pass	switch	340		
+switch10.go	master	Output	PASS	pass	switch	579		
+switch11.go	master	Output	PASS	pass	switch	318		
+switch12.go	master	Output	PASS	pass	switch	342		
+switch13.go	master	Error	PASS_ERR_GC	pass	switch	214	-: # command-line-arguments	expect error
+switch14.go	master	Output	PASS	pass	switch	562		
+switch15.go	master	Output	PASS	pass	switch	328		
+switch16.go	master	Output	PASS	pass	switch	405		
+switch17.go	master	Output	PASS	pass	switch	450		
+switch18.go	master	Output	PASS	pass	switch	440		
+switch19.go	master	Error	PASS_ERR_GC	pass	switch	288	-: # command-line-arguments	expect error
+switch2.go	master	Output	PASS	pass	switch	348		
+switch20.go	master	Output	PASS	pass	switch	295		
+switch21.go	master	Output	PASS	pass	switch	413		
+switch22.go	master	Output	PASS	pass	switch	375		
+switch23.go	master	Output	PASS	pass	switch	342		
+switch24.go	master	Output	PASS	pass	switch	322		
+switch25.go	master	Output	PASS	pass	switch	294		
+switch26.go	master	Output	PASS	pass	switch	306		
+switch27.go	master	Output	PASS	pass	switch	304		
+switch28.go	master	Output	PASS	pass	switch	281		
+switch29.go	master	Output	PASS	pass	switch	349		
+switch3.go	master	Output	PASS	pass	switch	222		
+switch30.go	master	Output	PASS	pass	switch	261		
+switch31.go	master	Output	PASS	pass	switch	285		
+switch32.go	master	Output	PASS	pass	switch	250		
+switch33.go	master	Output	PASS	pass	switch	342		
+switch34.go	master	Output	PASS	pass	switch	289		
+switch35.go	master	Output	PASS	pass	switch	243		
+switch36.go	master	Output	PASS	pass	switch	218		
+switch37.go	master	Output	PASS	pass	switch	462		
+switch38.go	master	Output	PASS	pass	switch	307		
+switch39.go	master	Output	PASS	pass	switch	316		
+switch4.go	master	Output	PASS	pass	switch	237		
+switch40.go	master	Output	PASS	pass	switch	316		
+switch41.go	fork:ai/fix-empty-typeswitch-clauses	Output	PASS	pass	switch	390		
+switch42.go	fork:ai/fix-empty-typeswitch-clauses	Output	PASS	pass	switch	273		
+switch43.go	fork:ai/fix-empty-typeswitch-clauses	Output	PASS	pass	switch	355		
+switch44.go	fork:ai/fix-empty-typeswitch-clauses	Output	PASS	pass	switch	323		
+switch45.go	fork:ai/fix-empty-typeswitch-clauses	Output	PASS	pass	switch	313		
+switch5.go	master	Output	PASS	pass	switch	240		
+switch6.go	master	Output	PASS	pass	switch	331		
+switch7.go	master	Output	PASS	pass	switch	386		
+switch8.go	master	Error	PASS_ERR	pass	switch	133	-: # command-line-arguments	expect error
+switch9.go	master	Error	PASS_ERR	pass	switch	230	-: # command-line-arguments	expect error
+tag0.go	master	Output	PASS	pass	tag	366		
+time0.go	master		SKIP	skipped	time	0	no Output:/Error: comment	display time (similar to random number)
+time1.go	master	Output	PASS	pass	time	518		
+time10.go	master	Output	PASS	pass	time	260		
+time11.go	master	Output	PASS	pass	time	252		
+time12.go	master	Output	PASS	pass	time	371		
+time13.go	master	Output	PASS	pass	time	254		
+time14.go	master	Output	PASS	pass	time	311		
+time15.go	master	Output	PASS	pass	time	305		
+time16.go	master	Output	PASS	pass	time	214		
+time2.go	master	Output	PASS	pass	time	339		
+time3.go	master	Output	PASS	pass	time	294		
+time4.go	master	Output	PASS	pass	time	446		
+time5.go	master	Output	PASS	pass	time	352		
+time6.go	master	Output	PASS	pass	time	387		
+time7.go	master	Output	PASS	pass	time	649		
+time8.go	master	Output	PASS	pass	time	431		
+time9.go	master	Output	PASS	pass	time	360		
+type0.go	master	Output	PASS	pass	type	324		
+type1.go	master	Output	PASS	pass	type	482		
+type10.go	master	Output	PASS	pass	type	413		
+type11.go	master	Output	PASS	pass	type	504		
+type12.go	master	Output	PASS	pass	type	347		
+type13.go	master	Output	PASS	pass	type	400		
+type14.go	master	Output	PASS	pass	type	451		
+type15.go	master	Output	PASS	pass	type	472		
+type16.go	master	Output	PASS	pass	type	341		
+type17.go	master	Output	PASS	pass	type	269		
+type18.go	master	Output	PASS	pass	type	296		
+type19.go	master	Output	PASS	pass	type	753		
+type2.go	master	Output	PASS	pass	type	257		
+type20.go	master	Output	PASS	pass	type	413		
+type21.go	master	Output	PASS	pass	type	461		
+type22.go	master	Output	PASS	pass	type	233		
+type23.go	master	Output	PASS	pass	type	6342		
+type24.go	master	Output	WRONG	fail	type	6158	"interface conversion: interface {} is int, not string\ninterface conversion: interface {} is nil, not"	expect error
+type25.go	master	Output	PASS	pass	type	273		
+type26.go	master	Output	PASS	pass	type	378		
+type27.go	master	Error	ERR_OTHERMSG	fail	type	212	-: # command-line-arguments	expect error
+type28.go	master	Error	ERR_OTHERMSG	fail	type	211	-: # command-line-arguments	expect error
+type29.go	master	Error	ERR_OTHERMSG	fail	type	190	-: # command-line-arguments	expect error
+type3.go	master	Output	PASS	pass	type	481		
+type30.go	master	Error	ERR_OTHERMSG	fail	type	155	-: # command-line-arguments	expect error
+type31.go	master	Error	ERR_OTHERMSG	fail	type	240	-: # command-line-arguments	expect error
+type32.go	master	Error	ERR_OTHERMSG	fail	type	182	-: # command-line-arguments	expect error
+type33.go	master	Error	ERR_OTHERMSG	fail	type	267	-: # command-line-arguments	expect error
+type34.go	master	Output	PASS	pass	type	303		
+type4.go	master	Output	PASS	pass	type	269		
+type5.go	master	Output	WRONG	fail	type	279	"main.T"	reflect cannot create named types
+type6.go	master	Output	WRONG	fail	type	266	"main.T"	reflect cannot create named types
+type7.go	master	Output	PASS	pass	type	320		
+type8.go	master	Output	PASS	pass	type	248		
+type9.go	master	Output	PASS	pass	type	236		
+unsafe0.go	master	Output	PASS	pass	unsafe	232		
+unsafe1.go	master	Output	PASS	pass	unsafe	221		
+unsafe10.go	master	Output	PASS	pass	unsafe	211		
+unsafe2.go	master	Output	PASS	pass	unsafe	252		
+unsafe3.go	master	Output	UNSUPPORTED	unsupported	unsafe	213	unsupported: unsafe: viewing a uint16 as a [2]uint8 needs byte-level memory	
+unsafe4.go	master	Output	PASS	pass	unsafe	228		
+unsafe5.go	master	Output	PASS	pass	unsafe	217		
+unsafe6.go	master	Output	PASS	pass	unsafe	273		needs go.mod to be 1.17
+unsafe7.go	master		SKIP	skipped	unsafe	0	no Output:/Error: comment	needs go.mod to be 1.17
+unsafe8.go	master	Output	PASS	pass	unsafe	376		
+upstream-1125.go	upstream-pr:1732	Output	PASS	pass	upstream	568		
+upstream-1196.go	upstream-pr:1732	Error	ERR_OTHERMSG	fail	upstream	202	-: # command-line-arguments	expect error
+upstream-1234.go	upstream-pr:1732	Output	PASS	pass	upstream	387		
+upstream-1294.go	upstream-pr:1732	Output	PASS	pass	upstream	282		
+upstream-1356.go	upstream-pr:1732	Output	PASS	pass	upstream	423		
+upstream-1414.go	upstream-pr:1732	Output	PASS	pass	upstream	552		
+upstream-1437.go	upstream-pr:1732	Output	PASS	pass	upstream	492		
+upstream-1480.go	upstream-pr:1732	Output	PASS	pass	upstream	504		
+upstream-1502.go	upstream-pr:1732	Output	PASS	pass	upstream	395		
+upstream-1518.go	upstream-pr:1732	Output	PASS	pass	upstream	366		
+upstream-1549.go	upstream-pr:1732	Output	PASS	pass	upstream	363		
+upstream-1651.go	upstream-pr:1732	Output	PASS	pass	upstream	268		
+upstream-1674.go	upstream-pr:1732	Output	PASS	pass	upstream	369		
+upstream-633.go	upstream-pr:1732	Output	WRONG	fail	upstream	434	"{\"B\":\"v\"} <nil>\n{\"B\":\"p\"} <nil>\nslice marshal err: false\nmap[B:u] <nil>\nA<v> A<p>"	interface-element containers do not marshal (documented)
+upstream-865.go	upstream-pr:1732	Output	PASS	pass	upstream	266		
+var.go	master	Output	PASS	pass	var	233		
+var10.go	master	Output	PASS	pass	var	207		
+var11.go	master	Output	PASS	pass	var	288		
+var12.go	master	Output	PASS	pass	var	256		
+var13.go	master	Output	PASS	pass	var	232		
+var14.go	master	Output	PASS	pass	var	373		
+var15.go	master	Output	PASS	pass	var	345		
+var16.go	master	Output	PASS	pass	var	277		
+var2.go	master	Output	PASS	pass	var	223		
+var3.go	master	Output	PASS	pass	var	200		
+var4.go	master	Output	PASS	pass	var	279		
+var5.go	master	Output	PASS	pass	var	362		
+var6.go	master	Output	PASS	pass	var	356		
+var7.go	master	Output	PASS	pass	var	278		
+var8.go	master	Output	PASS	pass	var	341		
+var9.go	master	Output	PASS	pass	var	279		
+variadic.go	master	Output	PASS	pass	variadic	555		
+variadic0.go	master	Output	PASS	pass	variadic	537		
+variadic1.go	master	Output	PASS	pass	variadic	374		
+variadic10.go	master	Output	PASS	pass	variadic	701		
+variadic2.go	master	Output	PASS	pass	variadic	646		
+variadic3.go	master	Output	PASS	pass	variadic	477		
+variadic4.go	master	Output	PASS	pass	variadic	674		
+variadic5.go	master	Output	PASS	pass	variadic	729		
+variadic6.go	master	Output	PASS	pass	variadic	812		
+variadic7.go	master	Output	PASS	pass	variadic	684		
+variadic8.go	master	Output	PASS	pass	variadic	1384		
+variadic9.go	master	Output	PASS	pass	variadic	1178		

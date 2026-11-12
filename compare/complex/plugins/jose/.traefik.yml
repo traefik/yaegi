@@ -1,0 +1,8 @@
+displayName: complex jose
+type: middleware
+import: example.com/complex/jose
+basePkg: joseplug
+summary: yaegi v2 study plugin
+useUnsafe: true
+testData:
+  prefix: X-Complex

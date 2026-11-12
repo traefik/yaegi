@@ -1,0 +1,15 @@
+The files of this directory, except deps.tsv (17 October 2026), were measured on 23 October 2026:
+
+- yaegi v2 (vm/, aot/, stdtypes/, stdsyms/, internal/pluginhost): commit d418abbec06daabe5248130f447c5843cf7b4e5f
+  of the history before the import into this repository
+- scenarios middleware, auth, reload, provider, headers, stream, conc: the harness of the same commit
+  (go run ./compare/catalog/run -j 4, all scenarios, 10:47 to 11:15)
+- scenarios reloadcancel and reloadsandbox: a newer version of the harness
+  (compare/catalog/run and compare/catalog/vmhost only) on the same yaegi v2
+  (go run ./compare/catalog/run -j 4 -scenarios reloadcancel,reloadsandbox, 11:37 to 12:03)
+- all the files then written again from out/ with that harness, and the soak
+  (go run ./compare/catalog/run -j 4 -reuse -soak 10m, 12:04 to 12:16)
+- plugins: versions.tsv (the tags of 17 October 2026)
+- toolchain go1.26.9 linux/amd64, 12 cores, a shared machine with a load average of 25 to 75:
+  the load times and the requests of the soak are not comparable with the earlier runs.
+- every host but the middleware one ran behind the no-network proxy of the runner.

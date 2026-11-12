@@ -1,0 +1,20 @@
+repo	class	note	native	depth	yaegi	govm	aot	class	class_aot	govm_error	aot_error	yaegi_error
+sevensolutions/traefik-oidc-auth	oidc	local issuer; bearer access tokens through AuthorizationHeader, then the code flow with a session cookie	ok	complete, nondeterministic	ok	ok	ok	same	same			
+lukaszraczylo/traefikoidc	oidc	local issuer; bearer path (EnableBearerAuth, needs a recent iat: variant fresh) and the code flow with a session cookie	ok	complete, nondeterministic	ok	ok	ok	same	same			
+fosrl/badger	forward-auth	Pangolin API mocked under {{backend}}/pangolin: verify-session answers valid for the session cookie p_session_token=catalog-session	ok	complete	ok	ok	ok	same	same			
+traefik-plugins/traefik-jwt-plugin	jwt	fixed RSA public key and the local JWKS (forced refresh on an unknown kid); no OPA (OpaUrl empty)	ok	complete	ok	ok	ok	same	same			
+wiltonsr/ldapAuth	ldap	skip: needs an LDAP server (go-ldap client): the harness has no LDAP mock
+Gwojda/keycloakopenid	oidc	Keycloak paths under the local issuer (realms/catalog/protocol/openid-connect); tokens checked by introspection	ok	complete	ok	ok	ok	same	same			
+leonjza/trauth	basic	htpasswd users with bcrypt and {SHA} hashes; a valid login sets a gorilla session cookie and redirects	ok	complete, nondeterministic	ok	ok	ok	same	same			
+agilezebra/jwt-middleware	jwt	keys fetched from the local issuer (openid-configuration then JWKS); golang-jwt v5 parser	ok	complete	ok	diff	ok	yaegi v2 fails	same	[90m2026-10-23T08:54:16Z [32mINF[0m [1mfetched openid-configuration from url:http://127.0.0.1:38551/.well-known/openid-configuration[0m		
+hhftechnology/tailscale-access	other	skip: no credential: it authorizes by the Tailscale address range of the client
+andrewkroh/google-oidc-auth-middleware	oidc	partial: the Google endpoints are constants (oidc.go:27-28), so only the redirection to Google and the refusal of bad cookies and callbacks are tested, not a valid session	ok	complete, nondeterministic	ok	ok	ok	same	same			
+MuXiu1997/traefik-github-oauth-plugin	oauth	the HS256 session cookie is checked with golang-jwt v4 (claims id and login); the GitHub side goes through its own server, mocked under {{backend}}/ghoauth	run	complete	ok	ok	ok	same	same			
+Septima/traefik-api-key-auth	apikey		ok	complete	ok	ok	ok	same	same			
+23deg/jwt-middleware	jwt	HS256 signature check only, no claim check; forwards the payload in a header	ok	complete	ok	ok	ok	same	same			
+paladium/traefikkeycloak	other	only checks that the token cookie is present (the verification is commented out in the plugin)	ok	complete	ok	ok	ok	same	same			
+dtomlinson91/traefik-api-key-middleware	apikey		ok	complete	ok	ok	ok	same	same			
+Aetherinox/traefik-api-token-middleware	apikey	yaegi v2 refuses the code at load time (unused variables, invalid Go): the scenario still runs under yaegi	build	stops at build	diff	diff	diff	different	different	[31m[Aetherx-apikey]: [0mStarting Plugin [35mcatalog-test[0m	[31m[Aetherx-apikey]: [0mStarting Plugin [35mcatalog-test[0m	[31m[Aetherx-apikey]: [0mStarting Plugin [35mcatalog-test[0m
+luizfonseca/traefik-github-oauth-plugin	oauth	the HS256 session cookie is checked with golang-jwt v4 MapClaims (exp, teams); its own server is mocked under {{backend}}/ghoauth2	run	complete, nondeterministic	run	ok	ok	yaegi fails	yaegi fails			panic: $WORK/compare/catalog/out/luizfonseca_traefik-github-oauth-plugin/auth-yaegi.tmp/yhost-gopath-959625717/src/github.com/luizfonseca/traefik-github-oauth-plugin/internal/pkg/jwt/jwt.go:61:11: interface conversion: in
+xabinapal/traefik-authentik-forward-plugin	forward-auth	authentik outpost mocked under {{backend}}/ak: 200 with X-Authentik-* headers for the session cookie, 401 otherwise	ok	complete	ok	ok	ok	same	same			
+ZeroGachis/traefik-auth-middleware	basic	user and password in query parameters, exchanged at the local token endpoint (password grant: user42 / catalog-password)	ok	complete	ok	ok	ok	same	same			

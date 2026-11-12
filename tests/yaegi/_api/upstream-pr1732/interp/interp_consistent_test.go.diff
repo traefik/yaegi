@@ -1,0 +1,15 @@
+diff --git a/interp/interp_consistent_test.go b/interp/interp_consistent_test.go
+index 4e12f4ac..f39a9cac 100644
+--- a/interp/interp_consistent_test.go
++++ b/interp/interp_consistent_test.go
+@@ -125,7 +125,9 @@ func TestInterpConsistencyBuild(t *testing.T) {
+ 			file.Name() == "type30.go" || // expect error
+ 			file.Name() == "type31.go" || // expect error
+ 			file.Name() == "type32.go" || // expect error
+-			file.Name() == "type33.go" { // expect error
++			file.Name() == "type33.go" || // expect error
++			file.Name() == "upstream-1196.go" || // expect error
++			file.Name() == "upstream-633.go" { // interface-element containers do not marshal (documented)
+ 			continue
+ 		}
+ 		// Skip some tests which are problematic in go1.21 only.

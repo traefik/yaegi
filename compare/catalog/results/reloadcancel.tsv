@@ -1,0 +1,94 @@
+repo	class	note	native	depth	yaegi	govm	aot	class	class_aot	rounds_native	rounds_yaegi	rounds_govm	rounds_aot	goroutines_per_round(native,yaegi,govm,aot)	heap_kib_per_round(native,yaegi,govm,aot)	leak_yaegi	leak_govm	leak_aot	govm_error	aot_error	yaegi_error
+darkweak/souin			ok	complete, nondeterministic	ok	ok	ok	same	same	200	200	200	200	2.00,2.00,2.00,2.00	4.7,57.6,61.6,61.5						
+maxlerebourg/crowdsec-bouncer-traefik-plugin			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,-0.2,-0.9,0.0						
+sevensolutions/traefik-oidc-auth			run	complete	ok	ok	ok	same	same	200	200	200	200	0.67,0.67,0.67,0.67	12.9,12.9,12.9,12.9						
+PascalMinder/geoblock			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,0.0,0.0,0.2						
+tomMoulard/fail2ban			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.0,-0.0,0.0,0.0						
+lukaszraczylo/traefikoidc			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.01	0.4,2.4,6.2,6.8						
+acouvreur/traefik-modsecurity-plugin			ok	complete	diff	diff	diff	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.2,0.0,-0.0,0.0				new: modSecurityUrl cannot be empty	new: modSecurityUrl cannot be empty	new: modSecurityUrl cannot be empty
+fosrl/badger			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,0.1,0.0,0.0						
+traefik/plugindemo			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.2,0.1,0.0,0.1						
+traefik-plugins/traefik-jwt-plugin			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	1.0,0.3,0.2,0.3						
+wiltonsr/ldapAuth			run	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.0,0.2,0.1						
+tomMoulard/htransformation			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.0,0.1,0.0,0.0						
+BetterCorp/cloudflarewarp			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.1,0.1,0.0						
+Paxxs/traefik-get-real-ip			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.1,0.0,0.0						
+sablierapp/sablier-traefik-plugin			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.0,0.1,0.0,0.0						
+nscuro/traefik-plugin-geoblock			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,-0.0,0.0,-0.0						
+traefik/plugin-rewritebody			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.0,0.1,0.1						
+david-garcia-garcia/traefik-geoblock			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.3,0.2,0.3						
+traefik/plugin-simplecache			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.50,0.50,0.50,0.50	0.7,2.5,14.6,14.6						
+Gwojda/keycloakopenid			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.2,-0.0,0.0,0.0						
+leonjza/trauth			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.2,0.0,0.2,0.1						
+agilezebra/jwt-middleware			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.6,0.3,0.4,0.4						
+kvncrw/denyip			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,0.0,0.1,0.1						
+madebymode/traefik-modsecurity-plugin			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.2,0.1,-0.0,0.0						
+packruler/traefik-themepark			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,-0.0,0.1,-0.0						
+traefik/plugin-log4shell			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.1,0.0,0.0						
+astappiev/traefik-umami-feeder			ok	complete	ok	ok	ok	same	same	200	200	200	200	-0.01,-0.01,-0.01,-0.01	0.6,0.2,0.1,0.0						
+hhftechnology/tailscale-access			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,-0.1,0.0,0.0						
+snapt/traefik-nova-plugin			ok	complete	run	run	run	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.2,0.0,0.1,0.0				panic: runtime error: invalid memory address or nil pointer dereference	panic: runtime error: invalid memory address or nil pointer dereference	panic: reflect: call of reflect.Value.Field on zero Value
+packruler/rewrite-body			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.0,0.1,-0.0						
+hhftechnology/ipwhitelistshaper			ok	complete	ok	ok	ok	same	same	200	200	200	200	-0.01,-0.01,-0.01,-0.01	0.6,0.4,0.1,0.0						
+hhftechnology/statiq			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.1,0.1,-0.0						
+andrewkroh/google-oidc-auth-middleware			ok	complete, nondeterministic	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.0,0.0,0.0,0.2						
+MarkusJx/traefik-wol			run	complete	ok	ok	ok	same	same	120	120	120	120	0.14,0.14,0.14,0.14	1.4,2.6,16.4,15.7						
+MuXiu1997/traefik-github-oauth-plugin			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.1,0.1,0.1						
+traefik/plugin-blockpath			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.0,-0.0,0.0,0.0						
+Septima/traefik-api-key-auth			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.2,0.0,0.0,0.0						
+agence-gaya/traefik-plugin-cloudflare			new	stops at new	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.0,0.0,0.0,0.0						
+darkweak/go-esi			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.4,0.2,0.3,0.3						
+tomMoulard/traefik-plugin-waeb			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.0,-0.0,0.0						
+PseudoResonance/cloudflarewarp			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.0,0.0,0.0						
+libops/captcha-protect			ok	complete	diff	ok	ok	yaegi fails	yaegi fails	200	200	200	200	0.00,1.00,0.00,0.00	0.6,12.7,0.7,1.0	goroutines					new: invalid handler type: <nil>
+adyanth/traefik-container-manager			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.2,0.0,0.1,0.1						
+XciD/traefik-plugin-rewrite-headers			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.1,0.0,0.0						
+jptosso/coraza-traefik			ok	complete	load	load	load	both fail	both fail	200				0.00,-,-,-	0.3,-,-,-				load: go.uber.org/atomic: import "unsafe" is restricted: the plugin needs Options.UseUnsafe	load: go.uber.org/atomic: import "unsafe" is restricted: the plugin needs Options.UseUnsafe	load: 1:21: import "github.com/jptosso/coraza-traefik" error: $WORK/compare/catalog/out/jptosso_coraza-traefik/reloadcancel-yaegi.tmp/yhost-gopath-266515950/src/github.com/jptosso/coraza-traefik/coraza.go:9:2: import "git
+chaitin/traefik-safeline			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.0,0.1,0.1						
+safing/scanblock			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	-2.0,-2.3,0.0,0.1						
+zekihan/traefik-real-ip			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.0,0.1,0.3,0.5						
+1cedsoda/traefik-umami-plugin			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,-0.0,0.1,0.1						
+23deg/jwt-middleware			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.1,0.1,-0.0						
+paladium/traefikkeycloak			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.2,0.0,0.0,0.0						
+solution-libre/traefik-plugin-robots-txt			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.2,0.0,0.0,0.0						
+agence-gaya/traefik-plugin-blockuseragent			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,-0.0,0.0,0.0						
+taskmedia/ddns-allowlist			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,0.1,0.0,0.0						
+TRIMM/traefik-maintenance			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,0.0,0.0,0.0						
+Miromani4/traefik-plugin-AdminAPI_WebUI			new	stops at new	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.0,0.1,0.2,0.1						
+hhftechnology/traefik-queue-manager			ok	complete, nondeterministic	ok	ok	ok	same	same	200	200	200	200	2.00,2.00,2.00,2.00	3.8,13.3,60.5,60.5						
+juitde/traefik-plugin-fail2ban			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	-2.1,-2.4,-0.0,-0.0						
+traefik-plugins/traefikgeoip2			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.4,0.0,0.0,0.0						
+dkijkuit/checkheadersplugin			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,0.0,0.0,0.0						
+dtomlinson91/traefik-api-key-middleware			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.2,0.0,0.0,0.0						
+jdel/staticresponse			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.0,0.0,0.0						
+ghnexpress/traefik-ratelimit			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,-0.0,0.0,0.0						
+Aetherinox/traefik-api-token-middleware			build	stops at build	diff	diff	diff	same	different		200	200	200	-,0.00,0.00,0.00	-,0.0,0.1,0.0				new: Must specify at least one valid api token in plugin configurations	new: Must specify at least one valid api token in plugin configurations	new: Must specify at least one valid api token in plugin configurations
+holysoles/bot-wrangler-traefik-plugin			new	stops at new	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,0.1,0.1,0.0						
+hhftechnology/bandwidthlimiter			ok	complete	ok	ok	ok	same	same	200	200	200	200	1.00,1.00,1.00,1.00	2.2,5.7,30.8,30.9						
+luizfonseca/traefik-github-oauth-plugin			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.4,0.1,0.3,0.2						
+jeppestaerk/traefik-xff-to-xrealip			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,-0.0,-0.0,0.0						
+xabinapal/traefik-authentik-forward-plugin			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.67,0.67,0.67,0.67	5.0,4.8,4.8,4.7						
+dirtycajunrice/subfilter			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,0.0,-0.0,0.0						
+acouvreur/traefik-ondemand-plugin			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,-0.0,0.0,0.0						
+ciaranj/cacheify			ok	complete, nondeterministic	diff	ok	diff	yaegi fails	same	91	53	75	33	0.51,0.52,0.51,0.54	1.1,4.3,15.5,34.1					new: invalid cache path: stat : no such file or directory	new: invalid cache path: stat : no such file or directory
+smerschjohann/mtlswhitelist			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.4,0.0,0.1,0.0						
+jpxd/torblock			ok	complete	ok	ok	ok	same	same	200	200	200	200	1.00,1.00,1.00,1.00	1.6,4.8,29.2,29.2						
+traefik-contrib/noop			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,-0.0,0.0,0.0						
+blueshift-labs/traefik-block-regex-urls			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,-0.0,0.0,0.0						
+ZeroGachis/traefik-auth-middleware			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.0,0.0,0.1,0.1						
+Desuuuu/traefik-cloudflare-plugin			new	stops at new	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.0,0.1,0.0,0.0						
+l4rm4nd/traefik-warp			ok	complete	ok	ok	ok	same	same	200	200	200	200	-0.01,-0.01,-0.01,-0.01	0.4,0.0,-0.1,-0.1						
+negasus/traefik-plugin-ip2location			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.2,0.0,0.0,0.0						
+nzin/traefik-cluster-ratelimit			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,0.1,0.1,0.1						
+discoverygarden/traefik-ultimate-bad-bot-blocker			ok	complete	ok	ok	ok	same	same	200	200	200	200	-0.01,-0.01,-0.01,-0.01	0.9,0.2,0.0,0.2						
+cookielab/traefik-middleware-request-logger			ok	complete, nondeterministic	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.2,-0.1,-0.0,-0.1						
+renanqts/xdpfail2ban			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.0,-0.0,0.1						
+Lepkem/traefik-plugin-response-code-override			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.1,0.1,0.0						
+JonasSchubert/traefik-allow-countries			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,0.1,0.1,0.1						
+negasus/traefik-plugin-bridge			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.1,0.5,0.3						
+Desuuuu/traefik-real-ip-plugin			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,-0.0,0.0,0.1						
+NX211/traefik-webfinger			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,0.1,0.0,0.1						
+Medzoner/traefik-plugin-cors-preflight			ok	complete	load	load	load	both fail	both fail	200				0.00,-,-,-	0.1,-,-,-				load: ./main.go:10:2: could not import github.com/rs/zerolog (cannot find package github.com/rs/zerolog: not in module github.com/Medzoner/traefik-plugin-cors-preflight nor in its vendor directory)	load: ./main.go:10:2: could not import github.com/rs/zerolog (cannot find package github.com/rs/zerolog: not in module github.com/Medzoner/traefik-plugin-cors-preflight nor in its vendor directory)	load: 1:21: import "github.com/Medzoner/traefik-plugin-cors-preflight" error: $WORK/compare/catalog/out/Medzoner_traefik-plugin-cors-preflight/reloadcancel-yaegi.tmp/yhost-gopath-2791398480/src/github.com/Medzoner/traefik
+kingjan1999/traefik-plugin-query-modification			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,0.0,0.0,0.0						
+DIE-Bonn/MatomoTracking			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.1,-0.0,-0.0,0.0						
+unsoon/traefik-open-policy-agent			ok	complete	ok	ok	ok	same	same	200	200	200	200	0.00,0.00,0.00,0.00	0.3,0.0,0.1,0.0						

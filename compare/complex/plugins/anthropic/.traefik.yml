@@ -1,0 +1,8 @@
+displayName: complex anthropic
+type: middleware
+import: example.com/complex/anthropic
+basePkg: anthropicplug
+summary: yaegi v2 study plugin
+useUnsafe: true
+testData:
+  prefix: X-Complex

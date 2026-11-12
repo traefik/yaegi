@@ -1,0 +1,8 @@
+displayName: complex cel
+type: middleware
+import: example.com/complex/cel
+basePkg: celplug
+summary: yaegi v2 study plugin
+useUnsafe: true
+testData:
+  prefix: X-Complex

@@ -1,0 +1,166 @@
+Traefik plugin catalog, extra scenarios, 2026-10-23 (conc 32x50)
+
+conc applies:
+  n/a                  41
+  yes                  52
+
+conc class:
+  both fail            4
+  different            3
+  same                 74
+  yaegi fails          12
+
+conc class_aot:
+  both fail            3
+  different            3
+  same                 73
+  yaegi fails          13
+  yaegi v2 fails       1
+
+conc races_aot:
+  plugins with races   7
+
+conc races_govm:
+  plugins with races   7
+
+conc races_native:
+  plugins with races   8
+
+conc races_yaegi:
+  plugins with races   20
+
+conc verdict_aot:
+  crash                1
+  diff                 5
+  load                 2
+  new                  1
+  ok                   82
+  run                  2
+
+conc verdict_govm:
+  crash                2
+  diff                 3
+  load                 2
+  new                  1
+  ok                   83
+  run                  2
+
+conc verdict_yaegi:
+  crash                2
+  diff                 2
+  load                 2
+  new                  1
+  ok                   72
+  race                 12
+  run                  2
+
+headers applies:
+  n/a                  40
+  yes                  53
+
+headers class:
+  both fail            2
+  different            1
+  same                 89
+  yaegi v2 fails       1
+
+headers class_aot:
+  both fail            2
+  different            2
+  same                 89
+
+headers verdict_aot:
+  diff                 3
+  load                 2
+  new                  1
+  ok                   85
+  run                  2
+
+headers verdict_govm:
+  crash                1
+  diff                 3
+  load                 2
+  new                  1
+  ok                   84
+  run                  2
+
+headers verdict_yaegi:
+  diff                 3
+  load                 2
+  new                  1
+  ok                   85
+  run                  2
+
+stream applies:
+  n/a                  41
+  yes                  52
+
+stream class:
+  both fail            2
+  different            1
+  same                 84
+  yaegi fails          6
+
+stream class_aot:
+  both fail            2
+  different            1
+  same                 84
+  yaegi fails          6
+
+stream flush_aot:
+  -                    44
+  no                   6
+  yes                  43
+
+stream flush_govm:
+  -                    44
+  no                   6
+  yes                  43
+
+stream flush_native:
+  -                    40
+  no                   8
+  yes                  44
+
+stream flush_yaegi:
+  -                    44
+  no                   10
+  yes                  39
+
+stream hijack_aot:
+  -                    40
+  no                   4
+  yes                  49
+
+stream hijack_govm:
+  -                    40
+  no                   4
+  yes                  49
+
+stream hijack_native:
+  -                    37
+  no                   5
+  yes                  50
+
+stream hijack_yaegi:
+  -                    40
+  no                   4
+  yes                  49
+
+stream verdict_aot:
+  diff                 2
+  load                 2
+  new                  1
+  ok                   88
+
+stream verdict_govm:
+  diff                 2
+  load                 2
+  new                  1
+  ok                   88
+
+stream verdict_yaegi:
+  diff                 8
+  load                 2
+  new                  1
+  ok                   82

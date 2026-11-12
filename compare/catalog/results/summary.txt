@@ -1,0 +1,16 @@
+Traefik plugin catalog, 2026-10-23
+
+scope:
+  measured         93
+  no manifest      1
+  provider         4
+  wasm             2
+
+class:
+  both fail        2
+  same             91
+
+class_aot:
+  both fail        2
+  different        1
+  same             90

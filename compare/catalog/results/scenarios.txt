@@ -1,0 +1,75 @@
+Traefik plugin catalog, other scenarios, 2026-10-23
+
+auth:
+  status:
+    measured         17
+    not configured   2
+  class:
+    different        1
+    same             14
+    yaegi fails      1
+    yaegi v2 fails   1
+  class_aot:
+    different        1
+    same             15
+    yaegi fails      1
+
+reload:
+  status:
+    leak aot         1
+    leak govm        1
+    leak yaegi       1
+    measured         93
+  class:
+    both fail        2
+    same             90
+    yaegi fails      1
+  class_aot:
+    both fail        2
+    different        1
+    same             88
+    yaegi fails      1
+    yaegi v2 fails   1
+
+reloadcancel:
+  status:
+    leak yaegi       1
+    measured         93
+  class:
+    both fail        2
+    same             89
+    yaegi fails      2
+  class_aot:
+    both fail        2
+    different        1
+    same             89
+    yaegi fails      1
+
+reloadsandbox:
+  status:
+    leak yaegi       1
+    measured         93
+  class:
+    both fail        2
+    different        2
+    same             85
+    yaegi fails      1
+    yaegi v2 fails   3
+  class_aot:
+    both fail        2
+    different        2
+    same             85
+    yaegi fails      1
+    yaegi v2 fails   3
+
+provider:
+  status:
+    leak aot         1
+    leak govm        1
+    measured         4
+  class:
+    same             3
+    yaegi fails      1
+  class_aot:
+    same             3
+    yaegi fails      1

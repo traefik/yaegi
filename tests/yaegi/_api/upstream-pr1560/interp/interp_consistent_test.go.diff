@@ -1,0 +1,52 @@
+diff --git a/interp/interp_consistent_test.go b/interp/interp_consistent_test.go
+index b7d4817d..73d43833 100644
+--- a/interp/interp_consistent_test.go
++++ b/interp/interp_consistent_test.go
+@@ -15,6 +15,10 @@ import (
+ 	"github.com/traefik/yaegi/stdlib/unsafe"
+ )
+ 
++var testsToSkipGo122 = map[string]bool{}
++
++var go122 = strings.HasPrefix(runtime.Version(), "go1.22")
++
+ func TestInterpConsistencyBuild(t *testing.T) {
+ 	if testing.Short() {
+ 		t.Skip("short mode")
+@@ -37,6 +41,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
+ 			file.Name() == "assign11.go" || // expect error
+ 			file.Name() == "assign12.go" || // expect error
+ 			file.Name() == "assign15.go" || // expect error
++			file.Name() == "assign19.go" || // expect error
+ 			file.Name() == "bad0.go" || // expect error
+ 			file.Name() == "break0.go" || // expect error
+ 			file.Name() == "cont3.go" || // expect error
+@@ -72,6 +77,7 @@ func TestInterpConsistencyBuild(t *testing.T) {
+ 			file.Name() == "time0.go" || // display time (similar to random number)
+ 			file.Name() == "factor.go" || // bench
+ 			file.Name() == "fib.go" || // bench
++			file.Name() == "issue-1618.go" || // bench (infinite running)
+ 
+ 			file.Name() == "type5.go" || // used to illustrate a limitation with no workaround, related to the fact that the reflect package does not allow the creation of named types
+ 			file.Name() == "type6.go" || // used to illustrate a limitation with no workaround, related to the fact that the reflect package does not allow the creation of named types
+@@ -163,6 +169,9 @@ func TestInterpConsistencyBuild(t *testing.T) {
+ 			os.Stdout = backupStdout
+ 
+ 			bin := filepath.Join(dir, strings.TrimSuffix(file.Name(), ".go"))
++			if runtime.GOOS == "windows" {
++				bin += ".exe"
++			}
+ 
+ 			cmdBuild := exec.Command("go", "build", "-tags=dummy", "-o", bin, filePath)
+ 			outBuild, err := cmdBuild.CombinedOutput()
+@@ -279,8 +288,8 @@ func TestInterpErrorConsistency(t *testing.T) {
+ 		},
+ 		{
+ 			fileName:       "switch13.go",
+-			expectedInterp: "9:2: i is not a type",
+-			expectedExec:   "9:7: i (variable of type interface{}) is not a type",
++			expectedInterp: "is not a type",
++			expectedExec:   "is not a type",
+ 		},
+ 		{
+ 			fileName:       "switch19.go",

@@ -1,0 +1,21 @@
+package main
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+// A []byte view on a string's bytes via the old header idiom, read only:
+// common in parsers that want to scan a string as bytes without copying.
+func s2b(s string) []byte { return *(*[]byte)(unsafe.Pointer(&s)) }
+
+func main() {
+	b := s2b("readonly")
+	n := 0
+	for _, c := range b[:8] {
+		if c == 'o' || c == 'e' {
+			n++
+		}
+	}
+	fmt.Println(n, len(b))
+}

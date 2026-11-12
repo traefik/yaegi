@@ -1,0 +1,8 @@
+displayName: complex openai
+type: middleware
+import: example.com/complex/openai
+basePkg: openaiplug
+summary: yaegi v2 study plugin
+useUnsafe: true
+testData:
+  prefix: X-Complex

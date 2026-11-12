@@ -1,0 +1,178 @@
+package json
+
+import (
+	internal "AOTPATH/encoding/json/internal"
+	jsonflags "AOTPATH/encoding/json/internal/jsonflags"
+	jsonopts "AOTPATH/encoding/json/internal/jsonopts"
+	jsontext "AOTPATH/encoding/json/jsontext"
+	errors "AOTPATH/errors"
+	aotvm "github.com/traefik/yaegi/v2/vm"
+	"io"
+)
+
+// The generic functions of encoding/json/v2 for the types of the program.
+// Each one is the function of arshal_funcs.go or options.go with the type
+// argument T as a twin type t and the function of the program called by
+// the VM (aotvm.GenericCall). Keep them in sync with these files.
+func init() {
+	aotvm.RegisterGeneric("encoding/json/v2.GetOption", aotGetOption)
+	aotvm.RegisterGeneric("encoding/json/v2.MarshalFunc", aotMarshalFunc)
+	aotvm.RegisterGeneric("encoding/json/v2.MarshalToFunc", aotMarshalToFunc)
+	aotvm.RegisterGeneric("encoding/json/v2.UnmarshalFunc", aotUnmarshalFunc)
+	aotvm.RegisterGeneric("encoding/json/v2.UnmarshalFromFunc", aotUnmarshalFromFunc)
+}
+
+// aotGetOption is GetOption[T]: the instance for any finds the option, the
+// VM converts the value to T.
+func aotGetOption(c *aotvm.GenericCall) aotvm.Value {
+	opts := aotvm.Arg[Options](c.M, c.Args[0])
+	setter := func(x any) Options {
+		r := c.Call(1, c.VMValue(0, x))
+		return aotvm.Arg[Options](c.M, r[0])
+	}
+	v, ok := jsonopts.GetOption(opts, setter)
+	return aotvm.Tuple(c.VMValue(0, v), aotvm.Ret(c.M, ok))
+}
+
+// aotMarshalFunc is MarshalFunc[T].
+func aotMarshalFunc(c *aotvm.GenericCall) aotvm.Value {
+	t := c.Types[0]
+	assertCastableTo(t, true)
+	typFnc := typedMarshaler{
+		typ: t,
+		fnc: func(enc *jsontext.Encoder, va addressableValue, mo *jsonopts.Struct) error {
+			r := c.Call(0, c.VMOfRV(0, va.castTo(t)))
+			val, err := aotvm.Arg[[]byte](c.M, r[0]), aotvm.Arg[error](c.M, r[1])
+			if err != nil {
+				err = wrapErrUnsupported(err, "marshal function of type func(T) ([]byte, error)")
+				if mo.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
+					return internal.NewMarshalerError(va.Addr().Interface(), err, "MarshalFunc") // unlike unmarshal, always wrapped
+				}
+				err = newMarshalErrorBefore(enc, t, err)
+				return collapseSemanticErrors(err)
+			}
+			if err := enc.WriteValue(val); err != nil {
+				if mo.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
+					return internal.NewMarshalerError(va.Addr().Interface(), err, "MarshalFunc") // unlike unmarshal, always wrapped
+				}
+				if isSyntacticError(err) {
+					err = newMarshalErrorBefore(enc, t, err)
+				}
+				return err
+			}
+			return nil
+		},
+	}
+	return aotvm.Ret(c.M, &Marshalers{fncVals: []typedMarshaler{typFnc}, fromAny: castableToFromAny(t)})
+}
+
+// aotMarshalToFunc is MarshalToFunc[T].
+func aotMarshalToFunc(c *aotvm.GenericCall) aotvm.Value {
+	t := c.Types[0]
+	assertCastableTo(t, true)
+	typFnc := typedMarshaler{
+		typ: t,
+		fnc: func(enc *jsontext.Encoder, va addressableValue, mo *jsonopts.Struct) error {
+			xe := export.Encoder(enc)
+			prevDepth, prevLength := xe.Tokens.DepthLength()
+			xe.Flags.Set(jsonflags.WithinArshalCall | 1)
+			r := c.Call(0, c.ParamValue(0, 0, enc), c.VMOfRV(0, va.castTo(t)))
+			err := aotvm.Arg[error](c.M, r[0])
+			xe.Flags.Set(jsonflags.WithinArshalCall | 0)
+			currDepth, currLength := xe.Tokens.DepthLength()
+			if err == nil && (prevDepth != currDepth || prevLength+1 != currLength) {
+				err = errNonSingularValue
+			}
+			if err != nil {
+				if errors.Is(err, errors.ErrUnsupported) {
+					if prevDepth == currDepth && prevLength == currLength {
+						return err // forward [errors.ErrUnsupported]
+					}
+					err = errUnsupportedMutation
+				}
+				if mo.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
+					return internal.NewMarshalerError(va.Addr().Interface(), err, "MarshalToFunc") // unlike unmarshal, always wrapped
+				}
+				if !export.IsIOError(err) {
+					err = newSemanticErrorWithPosition(enc, t, prevDepth, prevLength, err)
+				}
+				return err
+			}
+			return nil
+		},
+		maySkip: true,
+	}
+	return aotvm.Ret(c.M, &Marshalers{fncVals: []typedMarshaler{typFnc}, fromAny: castableToFromAny(t)})
+}
+
+// aotUnmarshalFunc is UnmarshalFunc[T].
+func aotUnmarshalFunc(c *aotvm.GenericCall) aotvm.Value {
+	t := c.Types[0]
+	assertCastableTo(t, false)
+	typFnc := typedUnmarshaler{
+		typ: t,
+		fnc: func(dec *jsontext.Decoder, va addressableValue, uo *jsonopts.Struct) error {
+			val, err := dec.ReadValue()
+			if err != nil {
+				return err // must be a syntactic or I/O error
+			}
+			r := c.Call(0, aotvm.BytesVal(val), c.VMOfRV(0, va.castTo(t)))
+			err = aotvm.Arg[error](c.M, r[0])
+			if err != nil {
+				err = wrapErrUnsupported(err, "unmarshal function of type func([]byte, T) error")
+				if uo.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
+					return err // unlike marshal, never wrapped
+				}
+				err = newUnmarshalErrorAfter(dec, t, err)
+				return collapseSemanticErrors(err)
+			}
+			return nil
+		},
+	}
+	return aotvm.Ret(c.M, &Unmarshalers{fncVals: []typedUnmarshaler{typFnc}, fromAny: castableToFromAny(t)})
+}
+
+// aotUnmarshalFromFunc is UnmarshalFromFunc[T].
+func aotUnmarshalFromFunc(c *aotvm.GenericCall) aotvm.Value {
+	t := c.Types[0]
+	assertCastableTo(t, false)
+	typFnc := typedUnmarshaler{
+		typ: t,
+		fnc: func(dec *jsontext.Decoder, va addressableValue, uo *jsonopts.Struct) error {
+			xd := export.Decoder(dec)
+			prevDepth, prevLength := xd.Tokens.DepthLength()
+			if prevDepth == 1 && xd.AtEOF() {
+				return io.EOF // check EOF early to avoid fn reporting an EOF
+			}
+			xd.Flags.Set(jsonflags.WithinArshalCall | 1)
+			r := c.Call(0, c.ParamValue(0, 0, dec), c.VMOfRV(0, va.castTo(t)))
+			err := aotvm.Arg[error](c.M, r[0])
+			xd.Flags.Set(jsonflags.WithinArshalCall | 0)
+			currDepth, currLength := xd.Tokens.DepthLength()
+			if err == nil && (prevDepth != currDepth || prevLength+1 != currLength) {
+				err = errNonSingularValue
+			}
+			if err != nil {
+				if errors.Is(err, errors.ErrUnsupported) {
+					if prevDepth == currDepth && prevLength == currLength {
+						return err // forward [errors.ErrUnsupported]
+					}
+					err = errUnsupportedMutation
+				}
+				if uo.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
+					if err2 := xd.SkipUntil(prevDepth, prevLength+1); err2 != nil {
+						return err2
+					}
+					return err // unlike marshal, never wrapped
+				}
+				if !isSyntacticError(err) && !export.IsIOError(err) {
+					err = newSemanticErrorWithPosition(dec, t, prevDepth, prevLength, err)
+				}
+				return err
+			}
+			return nil
+		},
+		maySkip: true,
+	}
+	return aotvm.Ret(c.M, &Unmarshalers{fncVals: []typedUnmarshaler{typFnc}, fromAny: castableToFromAny(t)})
+}
