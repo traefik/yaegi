@@ -62,6 +62,9 @@ package vm
 //   - archive/zip: RegisterCompressor and RegisterDecompressor add to the
 //     machine's tables; NewReader, OpenReader and NewWriter give them to
 //     the reader or writer they return.
+//   - runtime/pprof: NewProfile, Lookup and Profiles use the machine's
+//     table of profiles; the profiles that the host made are not visible,
+//     and the goroutine profile is a stand-in (hostpprof.go).
 //
 // A machine with the load-time restrictions (m.restricted: Load without
 // Unrestricted, RunMain with Restricted) also gets:
@@ -157,6 +160,7 @@ type hostRegs struct {
 
 	mime  mimeState
 	image imageState
+	pprof pprofState // hostpprof.go
 
 	mu2           sync.Mutex // the fields below
 	hashes        map[crypto.Hash]func() hash.Hash
@@ -207,7 +211,7 @@ var hostPkgs = map[string]bool{
 	"net/http": true, "net/http/httptest": true, "net/http/fcgi": true, "net/http/cgi": true,
 	"expvar": true, "mime": true, "image": true, "database/sql": true, "net/rpc": true,
 	"net/rpc/jsonrpc": true, "crypto": true, "crypto/x509": true, "archive/zip": true,
-	"runtime": true,
+	"runtime": true, "runtime/pprof": true,
 }
 
 // makeHostFunc returns the machine's version of pkg.name, or an invalid
@@ -262,6 +266,10 @@ func (m *Machine) makeHostFunc(pkg, name string) reflect.Value {
 	case "runtime":
 		if name == "GOMAXPROCS" && m.restricted && m.native("runtime") {
 			fn = restrictedGOMAXPROCS
+		}
+	case "runtime/pprof":
+		if m.native("runtime/pprof") {
+			fn = m.pprofFunc(name)
 		}
 	}
 	if fn == nil || reflect.ValueOf(fn).IsNil() {

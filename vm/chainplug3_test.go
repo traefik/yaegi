@@ -184,26 +184,32 @@ func TestChainedPluginsWrappedWriterMethods(t *testing.T) {
 // source is the outer handler, the last one is the leaf.
 func loadChain(t *testing.T, opts Options, srcs ...string) http.Handler {
 	t.Helper()
-	ctx := context.Background()
 	var next http.Handler = http.NotFoundHandler()
 	for i := len(srcs) - 1; i >= 0; i-- {
-		dir, pkgPath := writePlugin(t, srcs[i])
-		o := opts
-		o.Dir = dir
-		p, err := Load(o, pkgPath)
-		if err != nil {
-			t.Fatal(err)
-		}
-		cfg, err := createConfig(p)
-		if err != nil {
-			t.Fatal(err)
-		}
-		next, err = newHandler(ctx, p, next, cfg, fmt.Sprint("chain", i))
-		if err != nil {
-			t.Fatal(err)
-		}
+		next = loadOne(t, opts, srcs[i], next, fmt.Sprint("chain", i))
 	}
 	return next
+}
+
+// loadOne loads the plugin src with its own Load and returns its handler,
+// with next after it.
+func loadOne(t *testing.T, opts Options, src string, next http.Handler, name string) http.Handler {
+	t.Helper()
+	dir, pkgPath := writePlugin(t, src)
+	opts.Dir = dir
+	p, err := Load(opts, pkgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := createConfig(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h, err := newHandler(context.Background(), p, next, cfg, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return h
 }
 
 func checkChain(t *testing.T, h http.Handler, wantLeaf, wantBody string) {

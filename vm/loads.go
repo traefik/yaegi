@@ -35,12 +35,7 @@ import (
 // arrays are skipped, and the spills are known.
 func (c *compiler) markLoads() {
 	fn := c.f.ssa
-	pos := map[ssa.Instruction]int{}
-	for _, b := range fn.Blocks {
-		for i, ins := range b.Instrs {
-			pos[ins] = i
-		}
-	}
+	pos := c.instrIndex() // index of each instruction in its block
 	for _, b := range fn.Blocks {
 		for i, ins := range b.Instrs {
 			ld, ok := ins.(*ssa.UnOp)

@@ -10,7 +10,7 @@ import (
 
 func init() {
 	XSysUnix = &NativeTable{
-		Version: "v0.48.0",
+		Version: "v0.49.0",
 		Funcs: map[string]reflect.Value{
 			"Accept":                       reflect.ValueOf(unix.Accept),
 			"Accept4":                      reflect.ValueOf(unix.Accept4),
@@ -214,6 +214,7 @@ func init() {
 			"Link":                         reflect.ValueOf(unix.Link),
 			"Linkat":                       reflect.ValueOf(unix.Linkat),
 			"Listen":                       reflect.ValueOf(unix.Listen),
+			"Listns":                       reflect.ValueOf(unix.Listns),
 			"Listxattr":                    reflect.ValueOf(unix.Listxattr),
 			"Llistxattr":                   reflect.ValueOf(unix.Llistxattr),
 			"Lremovexattr":                 reflect.ValueOf(unix.Lremovexattr),
@@ -280,6 +281,7 @@ func init() {
 			"Poll":                         reflect.ValueOf(unix.Poll),
 			"Ppoll":                        reflect.ValueOf(unix.Ppoll),
 			"Prctl":                        reflect.ValueOf(unix.Prctl),
+			"PrctlArg5Ptr":                 reflect.ValueOf(unix.PrctlArg5Ptr),
 			"PrctlRetInt":                  reflect.ValueOf(unix.PrctlRetInt),
 			"Pread":                        reflect.ValueOf(unix.Pread),
 			"Preadv":                       reflect.ValueOf(unix.Preadv),
@@ -560,6 +562,7 @@ func init() {
 			"LoopConfig":                reflect.TypeFor[unix.LoopConfig](),
 			"LoopInfo":                  reflect.TypeFor[unix.LoopInfo](),
 			"LoopInfo64":                reflect.TypeFor[unix.LoopInfo64](),
+			"Mmsghdr":                   reflect.TypeFor[unix.Mmsghdr](),
 			"MountAttr":                 reflect.TypeFor[unix.MountAttr](),
 			"Msghdr":                    reflect.TypeFor[unix.Msghdr](),
 			"MtdEccStats":               reflect.TypeFor[unix.MtdEccStats](),
@@ -578,6 +581,7 @@ func init() {
 			"NlAttr":                    reflect.TypeFor[unix.NlAttr](),
 			"NlMsgerr":                  reflect.TypeFor[unix.NlMsgerr](),
 			"NlMsghdr":                  reflect.TypeFor[unix.NlMsghdr](),
+			"NsIdReq":                   reflect.TypeFor[unix.NsIdReq](),
 			"OpenHow":                   reflect.TypeFor[unix.OpenHow](),
 			"OtpInfo":                   reflect.TypeFor[unix.OtpInfo](),
 			"PPSFData":                  reflect.TypeFor[unix.PPSFData](),

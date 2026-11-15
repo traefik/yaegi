@@ -475,7 +475,8 @@ func realMemory(p Value) bool {
 // entry point of package syscall (Syscall, Syscall6, RawSyscall...): the
 // kernel uses a uintptr argument of it as an address (unsafeToUintptr).
 func isSyscallFunc(fn *ssa.Function) bool {
-	return fn.Pkg != nil && fn.Pkg.Pkg.Path() == "syscall"
+	p := funcPkg(fn)
+	return p != nil && p.Path() == "syscall"
 }
 
 // badAddr is an unsafe.Pointer made from an address that is not in memory

@@ -10,7 +10,7 @@ import (
 
 func init() {
 	XSysUnix = &NativeTable{
-		Version: "v0.48.0",
+		Version: "v0.49.0",
 		Funcs: map[string]reflect.Value{
 			"Accept":                       reflect.ValueOf(unix.Accept),
 			"Accept4":                      reflect.ValueOf(unix.Accept4),

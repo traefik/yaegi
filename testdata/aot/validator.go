@@ -12,7 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-playground/locales/en"
+	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
+	en_translations "github.com/go-playground/validator/v10/translations/en"
 )
 
 type Address struct {
@@ -76,6 +79,41 @@ func main() {
 	var ie *validator.InvalidValidationError
 	fmt.Println(errors.As(err, &ie), err)
 	fmt.Println(v.StructPartial(bad, "Name", "Age") != nil, v.StructExcept(good, "When"))
+	translate()
+}
+
+// translate translates the errors with universal-translator, interpreted
+// in AOT mode: FieldError.Translate is then a method of the AOT copy,
+// called through an interface with an interpreted ut.Translator.
+func translate() {
+	v := validator.New()
+	uni := ut.New(en.New(), en.New())
+	trans, found := uni.GetTranslator("en")
+	fmt.Println("translator:", found, trans.Locale())
+	if err := en_translations.RegisterDefaultTranslations(v, trans); err != nil {
+		fmt.Println(err)
+	}
+	type Login struct {
+		Name string `validate:"required"`
+		Age  int    `validate:"gte=18"`
+		Mail string `validate:"email"`
+	}
+	errs := v.Struct(Login{Age: 3, Mail: "x"}).(validator.ValidationErrors)
+	for _, fe := range errs {
+		fmt.Println(fe.Field(), "->", fe.Translate(trans))
+	}
+	fmt.Println(errs[0].Translate(trans))
+	f := errs[1].Translate // a method value: a native func value
+	fmt.Println(f(trans))
+	m := errs.Translate(trans)
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		fmt.Println(k, "=", m[k])
+	}
 }
 
 var benchV = validator.New()

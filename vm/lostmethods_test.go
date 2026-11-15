@@ -1,7 +1,10 @@
 package vm
 
 import (
+	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -202,6 +205,25 @@ func TestLostMethods(t *testing.T) {
 	want := "yaegi v2: in default mode, encoding/json.Unmarshal does not call the method plug.NumericDate.UnmarshalJSON, found in a value of type *plug.Claims"
 	if !strings.HasPrefix(got, want) {
 		t.Errorf("dynamic: body %q, want prefix %q", got, want)
+	}
+	// Machine.Stats counts the *LostMethodError results.
+	lp, err := Load(opts, pkg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lcfg, err := createConfig(lp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lh, err := newHandler(context.Background(), lp, http.NotFoundHandler(), lcfg, "x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		lh.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/dynamic", nil))
+	}
+	if n := lp.M.Stats().LostMethodErrors; n != 2 {
+		t.Errorf("Stats.LostMethodErrors %d after 2 calls, want 2", n)
 	}
 	if got := serveOnce(t, opts, pkg, "/plain"); got != "<nil> x" {
 		t.Errorf("plain: body %q, want %q", got, "<nil> x")

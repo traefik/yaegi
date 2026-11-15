@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -135,6 +136,11 @@ func TestAOTSourceHash(t *testing.T) {
 			why := p.M.AOTFallback["example.com/aotlib2"]
 			if !strings.Contains(why, tc.why) || (tc.why == "") != (why == "") {
 				t.Errorf("fallback reason %q, want one with %q", why, tc.why)
+			}
+			// Plugin.Notes says it too: the host logs one place.
+			note := "package example.com/aotlib2 runs interpreted, not its AOT copy: " + why
+			if (why != "") != slices.Contains(p.Notes, note) {
+				t.Errorf("Notes %q, want the note %q: %v", p.Notes, note, why != "")
 			}
 		})
 	}

@@ -875,7 +875,7 @@ func (m *Machine) toNativeU(v Value, t types.Type, rt reflect.Type, c *natConv) 
 			c.g.shadows, c.g.cells = map[*Value]reflect.Value{}, map[uintptr]*Value{}
 		}
 		c.g.ushadows[k], c.g.cells[sh.Pointer()] = sh, cell
-		sh.Elem().Set(m.toNativeU(*cell, u.Elem(), rt.Elem(), c))
+		sh.Elem().Set(m.toNativeU(loadCell(cell, u.Elem()), u.Elem(), rt.Elem(), c))
 		return sh
 	case *types.Struct:
 		out := reflect.New(rt).Elem()
@@ -885,7 +885,7 @@ func (m *Machine) toNativeU(v Value, t types.Type, rt reflect.Type, c *natConv) 
 			if !f.CanSet() {
 				f = reflect.NewAt(f.Type(), f.Addr().UnsafePointer()).Elem()
 			}
-			f.Set(m.toNativeU(fs[i], u.Field(i).Type(), f.Type(), c))
+			f.Set(m.toNativeU(loadCell(&fs[i], u.Field(i).Type()), u.Field(i).Type(), f.Type(), c))
 		}
 		return out
 	case *types.Slice:
@@ -896,7 +896,7 @@ func (m *Machine) toNativeU(v Value, t types.Type, rt reflect.Type, c *natConv) 
 		if !c.keeps() {
 			out := reflect.MakeSlice(rt, len(s), len(s))
 			for i := range s {
-				out.Index(i).Set(m.toNativeU(s[i], u.Elem(), rt.Elem(), c))
+				out.Index(i).Set(m.toNativeU(loadCell(&s[i], u.Elem()), u.Elem(), rt.Elem(), c))
 			}
 			return out
 		}
@@ -905,7 +905,7 @@ func (m *Machine) toNativeU(v Value, t types.Type, rt reflect.Type, c *natConv) 
 		out := reflect.New(rt).Elem()
 		es, _ := v.R.([]Value)
 		for i := range es {
-			out.Index(i).Set(m.toNativeU(es[i], u.Elem(), rt.Elem(), c))
+			out.Index(i).Set(m.toNativeU(loadCell(&es[i], u.Elem()), u.Elem(), rt.Elem(), c))
 		}
 		return out
 	case *types.Map:

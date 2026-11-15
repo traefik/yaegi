@@ -68,11 +68,13 @@ const (
 type memQuota struct {
 	max     int64
 	mu      sync.Mutex
-	used    int64         // bytes of the counted objects that may be alive
-	objs    []memObj      // the counted objects
-	sweepAt int           // len(objs) at which add removes the dead ones
-	gcWait  time.Duration // wait between two forced GCs of this machine (0: gcEvery)
-	nextGC  time.Time     // when this machine may force the next GC
+	used    int64          // bytes of the counted objects that may be alive
+	objs    []memObj       // the counted objects
+	sweepAt int            // len(objs) at which add removes the dead ones
+	stacks  []*stackCharge // the charges of the stacks of the ctxs (stacklimit.go)
+	stackAt int            // len(stacks) at which a new charge removes the dead ones
+	gcWait  time.Duration  // wait between two forced GCs of this machine (0: gcEvery)
+	nextGC  time.Time      // when this machine may force the next GC
 }
 
 type memObj struct {
@@ -80,13 +82,28 @@ type memObj struct {
 	n int64
 }
 
+// stackCharge is the part of the stack of a ctx (its frame-local cells and
+// deferred calls) counted in a quota (stacklimit.go). Unlike a memObj, the
+// ctx gives the bytes back itself when it ends (ctx.releaseMem), and a ctx
+// of the pool keeps its stackCharge from one call to the next, so a call
+// adds no object to the quota. tok is a weak pointer to a small object of
+// the ctx: when a ctx that did not give its charge back (a panic left the
+// call) is freed by the GC, sweep gives the bytes back.
+type stackCharge struct {
+	q    *memQuota
+	tok  weak.Pointer[[16]byte]
+	n    int64 // bytes counted; q.mu is held to change it
+	gone bool  // the ctx no longer uses it: sweep drops it
+}
+
 // forcedGC spaces the garbage collections that the quotas force: at most one
 // every gcEvery in the process. Before, each machine had its own period, so
 // a plugin per core that recovered ErrMemory in a loop made the host
 // collect all the time.
 var forcedGC struct {
-	mu   sync.Mutex
-	last time.Time
+	mu    sync.Mutex
+	start time.Time // start of the last forced collection
+	last  time.Time // end of the last forced collection
 }
 
 // fits reports whether n more bytes fit in the quota, after removing the
@@ -104,9 +121,15 @@ func (q *memQuota) fits(n int64) bool {
 // a garbage collection. q.mu is not held: the waits for the collection
 // happen without it, so the other goroutines of the plugin go on.
 func (q *memQuota) reserve(n int64, p unsafe.Pointer) bool {
+	return q.reserveFor(n, p, nil)
+}
+
+// reserveFor is reserve, with the n bytes counted in the stack charge sc
+// when sc is not nil.
+func (q *memQuota) reserveFor(n int64, p unsafe.Pointer, sc *stackCharge) bool {
 	q.mu.Lock()
 	if q.fits(n) {
-		q.add(n, p)
+		q.addFor(n, p, sc)
 		q.mu.Unlock()
 		return true
 	}
@@ -122,7 +145,7 @@ func (q *memQuota) reserve(n int64, p unsafe.Pointer) bool {
 	defer q.mu.Unlock()
 	if q.fits(n) {
 		q.gcWait = gcEvery
-		q.add(n, p)
+		q.addFor(n, p, sc)
 		return true
 	}
 	q.gcWait = min(2*wait, gcMaxWait)
@@ -130,9 +153,25 @@ func (q *memQuota) reserve(n int64, p unsafe.Pointer) bool {
 	return false
 }
 
+// tryReserveFor is reserveFor with no forced garbage collection: it only
+// removes the objects that the GC already freed.
+func (q *memQuota) tryReserveFor(n int64, sc *stackCharge) bool {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if !q.fits(n) {
+		return false
+	}
+	q.addFor(n, nil, sc)
+	return true
+}
+
 // collect runs a garbage collection, not before next (the turn of the
 // machine) and not within gcEvery of the last forced one (forcedGC). A
-// collection that ran while the caller waited counts as its own.
+// collection that started after the call of collect counts as its own: it
+// frees all that was dead when collect was called. One that only ended
+// after it does not: it can have started before the caller dropped its
+// objects (before, the caller then found the quota still full of dead
+// objects, and got ErrMemory).
 func collect(next time.Time) {
 	start := time.Now()
 	if d := time.Until(next); d > 0 {
@@ -140,14 +179,26 @@ func collect(next time.Time) {
 	}
 	forcedGC.mu.Lock()
 	defer forcedGC.mu.Unlock()
-	if forcedGC.last.After(start) {
+	if forcedGC.start.After(start) {
 		return
 	}
 	if d := gcEvery - time.Since(forcedGC.last); d > 0 {
 		time.Sleep(d)
 	}
+	forcedGC.start = time.Now()
 	runtime.GC()
 	forcedGC.last = time.Now()
+}
+
+// addFor counts the object of n bytes at p (nil: nothing to count), or n
+// more bytes in the stack charge sc when sc is not nil. q.mu is held.
+func (q *memQuota) addFor(n int64, p unsafe.Pointer, sc *stackCharge) {
+	if sc != nil {
+		q.used += n
+		sc.n += n
+		return
+	}
+	q.add(n, p)
 }
 
 // add counts the object of n bytes at p (nil: nothing to count). q.mu is
@@ -176,6 +227,48 @@ func (q *memQuota) sweep() {
 	clear(q.objs[len(live):])
 	q.objs = live
 	q.sweepAt = 2*len(live) + 64
+	q.sweepStacks()
+}
+
+// sweepStacks removes the stack charges that no ctx uses, and gives back
+// the bytes of the ones whose ctx the GC freed. q.mu is held.
+func (q *memQuota) sweepStacks() {
+	live := q.stacks[:0]
+	for _, sc := range q.stacks {
+		if sc.tok.Value() == nil {
+			q.used -= sc.n
+			sc.n, sc.gone = 0, true
+		}
+		if !sc.gone {
+			live = append(live, sc)
+		}
+	}
+	clear(q.stacks[len(live):])
+	q.stacks = live
+	q.stackAt = 2*len(live) + 64
+}
+
+// newStackCharge returns a stack charge of q held by tok. q.mu is not held.
+func (q *memQuota) newStackCharge(tok *[16]byte) *stackCharge {
+	sc := &stackCharge{q: q, tok: weak.Make(tok)}
+	q.mu.Lock()
+	if len(q.stacks) >= q.stackAt {
+		q.sweepStacks()
+	}
+	q.stacks = append(q.stacks, sc)
+	q.mu.Unlock()
+	return sc
+}
+
+// release gives back the bytes of the stack charge sc, and drops it from
+// its quota when gone is true.
+func (sc *stackCharge) release(gone bool) {
+	q := sc.q
+	q.mu.Lock()
+	q.used -= sc.n
+	sc.n = 0
+	sc.gone = sc.gone || gone
+	q.mu.Unlock()
 }
 
 // memCheck panics with ErrMemory when n more bytes do not fit in the quota

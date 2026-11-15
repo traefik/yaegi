@@ -17,18 +17,7 @@ var knownAOTFailures = map[string]string{}
 // "Version check of the non-standard copies" in docs/AOTGEN.md). The reason
 // starts with the status of the failure (DIFF, UNSUP, FAIL): runMode checks
 // it.
-var knownFallbackFailures = map[string]string{
-	"validator.go": "UNSUP: golang.org/x/sys/cpu is interpreted and has assembly",
-}
-
-func init() {
-	// The init of golang.org/x/sys/cpu calls its assembly on x86 (cpuid)
-	// and on darwin, but on linux/arm64 it reads the CPU features from
-	// /proc/self/auxv in Go: validator.go matches go run there.
-	if runtime.GOOS == "linux" && runtime.GOARCH == "arm64" {
-		delete(knownFallbackFailures, "validator.go")
-	}
-}
+var knownFallbackFailures = map[string]string{}
 
 // TestAOT runs every program of testdata/aot with the AOT packages and
 // compares its output with `go run`.

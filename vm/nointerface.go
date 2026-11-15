@@ -26,13 +26,14 @@ import (
 )
 
 // methodSet returns the run-time method set of t: the go/types method set,
-// without the methods marked //go:nointerface when m.FieldTrack is set.
+// without the generic methods (genmethod.go) and without the methods
+// marked //go:nointerface when m.FieldTrack is set.
 func (m *Machine) methodSet(t types.Type) []*types.Selection {
 	ms := m.prog.MethodSets.MethodSet(t)
 	out := make([]*types.Selection, 0, ms.Len())
 	for i := 0; i < ms.Len(); i++ {
 		sel := ms.At(i)
-		if fn, ok := sel.Obj().(*types.Func); ok && m.isNoInterface(fn) {
+		if fn, ok := sel.Obj().(*types.Func); ok && (isGenericMethod(fn) || m.isNoInterface(fn)) {
 			continue
 		}
 		out = append(out, sel)

@@ -510,7 +510,7 @@ func (v *hdrView) as(to types.Type) Value {
 // cur returns the current header: the pending one, or the header of the
 // value in the cell.
 func (v *hdrView) cur() hdr {
-	h := hdrOf(*v.cell, v.src)
+	h := hdrOf(loadCell(v.cell, v.src), v.src)
 	if p := v.st.pend; p != nil {
 		if h.triple() == v.st.seen {
 			return *p
@@ -531,7 +531,7 @@ const (
 // set makes h the header of the variable; wrote has the words the store
 // wrote.
 func (v *hdrView) set(h hdr, wrote int) {
-	if _, ok := v.cell.R.(reflect.Value); ok {
+	if _, ok := loadCell(v.cell, v.src).R.(reflect.Value); ok {
 		unsupported("unsafe: writing the header of a native variable")
 	}
 	if isString(v.src) {
@@ -552,7 +552,7 @@ func (v *hdrView) set(h hdr, wrote int) {
 		val, ok = makeHdr(h, v.src)
 	}
 	if ok {
-		*v.cell = val
+		storeCell(v.cell, val, v.src)
 		// The cell gives back the same header, and its memory reaches as
 		// far (a slice of capacity 0 or an empty string has none): no need
 		// to keep h.
@@ -562,7 +562,7 @@ func (v *hdrView) set(h hdr, wrote int) {
 		}
 	}
 	v.st.pend = &h
-	v.st.seen = hdrOf(*v.cell, v.src).triple()
+	v.st.seen = hdrOf(loadCell(v.cell, v.src), v.src).triple()
 }
 
 // word returns word w of the header h, of type t.
@@ -653,7 +653,7 @@ func (v *hdrView) setWord(h *hdr, w int, x Value, t types.Type) {
 // load reads the view as a value of type t.
 func (v *hdrView) load(t types.Type) Value {
 	if types.Identical(t.Underlying(), v.src.Underlying()) {
-		return *v.cell
+		return loadCell(v.cell, v.src)
 	}
 	if isIface(v.src) {
 		return v.ifaceLoad(t)
@@ -730,7 +730,7 @@ func (m *Machine) words(x Value, t types.Type) []Value {
 // store writes x, of type t, through the view.
 func (v *hdrView) store(x Value, t types.Type) {
 	if types.Identical(t.Underlying(), v.src.Underlying()) {
-		*v.cell = x
+		storeCell(v.cell, x, v.src)
 		v.st.pend, v.st.ipend = nil, nil
 		return
 	}

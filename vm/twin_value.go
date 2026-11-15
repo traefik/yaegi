@@ -39,10 +39,59 @@ func natRV(n reflect.Value) RV {
 
 func mkVM(t *vtype, p *Value, flag int64) RV { return RV{t: t, p: p, flag: flag} }
 
+// cur reads the cell of v: with loadWord when v is of a wordKind (a
+// pointer, map, chan, func, interface or slice, wordcell.go). Another
+// goroutine may swap the cell meanwhile (a reload that sets cfg.M while
+// fmt prints cfg), and a plain read could tear. Each read of a cell by a
+// read method of RV goes through cur, without an allocation; MapRange
+// keeps the map it read (MapIter.mp), as gc's iterator keeps its map.
+func (v RV) cur() Value {
+	if wordReflectKind(v.t.kind) {
+		return loadWord(v.p)
+	}
+	if bv, ok := v.arrayView(); ok {
+		return bv.load(v.t.t)
+	}
+	return *v.p
+}
+
+// arrayView gives the bytes of v when v is an addressable [n]byte in real
+// bytes (bigByteArray): its cell holds the view, not the array (see
+// vmReflect Elem). Reads decode the array (cur), and Index, Slice, Bytes,
+// Set and SetZero reach the bytes.
+func (v RV) arrayView() (*byteView, bool) {
+	if v.t == nil || v.t.kind != reflect.Array || v.p == nil {
+		return nil, false
+	}
+	bv, ok := v.p.R.(*byteView)
+	return bv, ok
+}
+
+// storeVal writes x into the cell of v, or into its bytes (arrayView).
+func (v RV) storeVal(x Value) {
+	if bv, ok := v.arrayView(); ok {
+		bv.store(x, v.t.t)
+		return
+	}
+	storeCell(v.p, x, v.t.t)
+}
+
 // native returns the native data of v, if any.
 func (v RV) native() (reflect.Value, bool) {
+	n, ok, _ := v.snap()
+	return n, ok
+}
+
+// snap is native, and also returns the value of the cell that it read (a
+// zero Value when it read no cell: native-backed v, or a shadow). A caller
+// that needs both the native check and the VM value uses this one read: a
+// second read of the cell could see a value that another goroutine stored
+// meanwhile. With a plain read, that was the []Value type word with the
+// data word of a native reflect.Value (forged host memory); with a second
+// cur, a VM path that found a native value (a wrong panic).
+func (v RV) snap() (reflect.Value, bool, Value) {
 	if v.p == nil {
-		return v.n, v.n.IsValid()
+		return v.n, v.n.IsValid(), Value{}
 	}
 	// A cell with a native shadow (Interface of a pointer to it: yaml.v3
 	// asks every field for an Unmarshaler with v.Addr().Interface()) is
@@ -50,17 +99,18 @@ func (v RV) native() (reflect.Value, bool) {
 	// shadow goes back into the cell at the end of the call, and a value
 	// written into the cell itself was lost (an `any` field stayed nil).
 	if s := ownShadow(v.p); s != nil {
-		return s.rv, true // before the cell: it may hold a native slice view
+		return s.rv, true, Value{} // before the cell: it may hold a native slice view
 	}
-	if r, ok := v.p.R.(*shadowRef); ok {
-		return r.rv, true
+	c := v.cur() // a racy writer must not make it tear
+	if r, ok := c.R.(*shadowRef); ok {
+		return r.rv, true, c
 	}
 	if v.t.kind == reflect.Interface {
-		return reflect.Value{}, false
+		return reflect.Value{}, false, c
 	}
-	switch r := v.p.R.(type) {
+	switch r := c.R.(type) {
 	case reflect.Value:
-		return r, true
+		return r, true, c
 	case *byte:
 		if v.t.t != nil {
 			if p, ok := v.t.t.Underlying().(*types.Pointer); ok && hasMethods(p.Elem()) {
@@ -68,12 +118,27 @@ func (v RV) native() (reflect.Value, bool) {
 				// methods: a native *uint8 has none, and json skipped the
 				// UnmarshalJSON of *U. The VM keeps it
 				// (Elem: byteElem, whose writes reach the byte).
-				return reflect.Value{}, false
+				return reflect.Value{}, false, c
 			}
 		}
-		return reflect.ValueOf(r), true
+		return reflect.ValueOf(r), true, c
 	}
-	return reflect.Value{}, false
+	return reflect.Value{}, false, c
+}
+
+// frozen returns a view of v at the read (n, ok, c) of snap: the later
+// reads of the view do not read the cell of v again. The elements stay
+// shared (Index of a []Value gives the element in the array), but a Set
+// of the view itself would not reach v. It is for a function that reads v
+// many times and writes only its elements (Copy: Len, then Index).
+func (v RV) frozen(n reflect.Value, ok bool, c Value) RV {
+	if v.p == nil {
+		return v
+	}
+	if ok {
+		return RV{t: v.t, n: n, flag: v.flag & flagRO}
+	}
+	return RV{t: v.t, p: &c, flag: v.flag}
 }
 
 func (v RV) mach() *Machine { return v.t.vr.m }
@@ -121,11 +186,16 @@ func (x RV) natVal(rt reflect.Type) reflect.Value {
 	if x.t == nil {
 		return reflect.Zero(rt)
 	}
-	if n, ok := x.native(); ok {
+	n, ok, val := x.snap()
+	if ok {
 		return n
 	}
+	return x.natValOf(val, rt)
+}
+
+// natValOf is natVal for val, the value of the cell of x that snap read.
+func (x RV) natValOf(val Value, rt reflect.Type) reflect.Value {
 	m := x.mach()
-	val := *x.p
 	if rt.Kind() == reflect.Interface && x.t.kind != reflect.Interface {
 		val = Value{R: &Iface{T: m.rtypeOf(x.t.t), V: deepCopy(val, x.t.t)}}
 	}
@@ -152,26 +222,27 @@ func (x RV) natStored(rt reflect.Type) reflect.Value {
 	if x.t == nil {
 		return x.natVal(rt)
 	}
-	if _, ok := x.native(); ok {
-		return x.natVal(rt)
+	n, ok, val := x.snap() // one read for the check and the data
+	if ok {
+		return n
 	}
 	m := x.mach()
 	if rt.Kind() == reflect.Interface {
-		iv, _ := x.p.R.(*Iface)
+		iv, _ := val.R.(*Iface)
 		if x.t.kind != reflect.Interface {
-			iv = &Iface{T: m.rtypeOf(x.t.t), V: deepCopy(*x.p, x.t.t)}
+			iv = &Iface{T: m.rtypeOf(x.t.t), V: deepCopy(val, x.t.t)}
 		}
 		if iv != nil && iv.T.Native == nil {
 			if b := reflect.ValueOf(m.ifaceAny(iv)); b.IsValid() && b.Type().Implements(rt) {
 				return b
 			}
 		}
-		return x.natVal(rt)
+		return x.natValOf(val, rt)
 	}
-	if ch, ok := x.p.R.(chan Value); ok && rt.Kind() == reflect.Chan && x.t.t != nil && !inChanReader() {
+	if ch, ok := val.R.(chan Value); ok && rt.Kind() == reflect.Chan && x.t.t != nil && !inChanReader() {
 		return m.standIn(ch, x.t.t, rt) // keeps the type of x
 	}
-	return m.argNatAt(*x.p, rt, true)
+	return m.argNatAt(val, rt, true)
 }
 
 // vmVal returns x in the VM representation of type t.
@@ -179,10 +250,10 @@ func (x RV) vmVal(m *Machine, t types.Type) Value {
 	if x.t == nil {
 		return m.zero(t)
 	}
-	if n, ok := x.native(); ok {
+	n, ok, val := x.snap()
+	if ok {
 		return m.natToVM(n, t)
 	}
-	val := *x.p
 	if _, isI := t.Underlying().(*types.Interface); isI && x.t.kind != reflect.Interface {
 		return Value{R: &Iface{T: m.rtypeOf(x.t.t), V: deepCopy(val, x.t.t)}}
 	}
@@ -282,7 +353,7 @@ func (m *Machine) argNatAt(v Value, rt reflect.Type, stored bool) reflect.Value 
 		case []Value:
 			out := reflect.MakeSlice(rt, len(s), len(s))
 			for i := range s {
-				out.Index(i).Set(m.argNatAt(s[i], rt.Elem(), stored))
+				out.Index(i).Set(m.argNatAt(loadCellK(&s[i], rt.Elem().Kind()), rt.Elem(), stored))
 			}
 			return out
 		}
@@ -290,7 +361,7 @@ func (m *Machine) argNatAt(v Value, rt reflect.Type, stored bool) reflect.Value 
 		out := reflect.New(rt).Elem()
 		es, _ := v.R.([]Value)
 		for i := range es {
-			out.Index(i).Set(m.argNatAt(es[i], rt.Elem(), stored))
+			out.Index(i).Set(m.argNatAt(loadCellK(&es[i], rt.Elem().Kind()), rt.Elem(), stored))
 		}
 		return out
 	case reflect.Map:
@@ -313,7 +384,8 @@ func (m *Machine) argNatAt(v Value, rt reflect.Type, stored bool) reflect.Value 
 			if s := ownShadow(p); s != nil {
 				return s.rv.Addr()
 			}
-			switch r := p.R.(type) {
+			pv := loadCellK(p, rt.Elem().Kind()) // read once: a racy writer may swap it
+			switch r := pv.R.(type) {
 			case reflect.Value:
 				if r.CanAddr() && r.Type() == rt.Elem() {
 					return r.Addr()
@@ -327,7 +399,7 @@ func (m *Machine) argNatAt(v Value, rt reflect.Type, stored bool) reflect.Value 
 				}
 			}
 			sh := reflect.New(rt.Elem()) // pointer into VM memory: copy (no write-back)
-			sh.Elem().Set(m.argNatAt(*p, rt.Elem(), true))
+			sh.Elem().Set(m.argNatAt(pv, rt.Elem(), true))
 			return sh
 		}
 	case reflect.Func:
@@ -365,7 +437,7 @@ func (m *Machine) argNatAt(v Value, rt reflect.Type, stored bool) reflect.Value 
 			if !f.CanSet() {
 				f = reflect.NewAt(f.Type(), f.Addr().UnsafePointer()).Elem()
 			}
-			f.Set(m.argNatAt(fs[i], f.Type(), stored))
+			f.Set(m.argNatAt(loadCellK(&fs[i], f.Type().Kind()), f.Type(), stored))
 		}
 		return out
 	}
@@ -616,7 +688,7 @@ func (m *Machine) ifaceVMs(e reflect.Value, seen *natSeen) Value {
 			}
 		}
 	}
-	return Value{R: &Iface{T: m.nativeRType(e.Type()), V: Value{R: e}}}
+	return Value{R: &Iface{T: m.nativeRTypeOf(e), V: Value{R: e}}}
 }
 
 var valueErrorPtr = reflect.TypeFor[*reflect.ValueError]()
@@ -798,7 +870,8 @@ func (v RV) Type() RT {
 
 func (v RV) Elem() RV {
 	v.mustValid("Elem")
-	if n, ok := v.native(); ok {
+	n, ok, c := v.snap()
+	if ok {
 		switch n.Kind() {
 		case reflect.Interface:
 			if n.IsNil() {
@@ -819,7 +892,7 @@ func (v RV) Elem() RV {
 	checkStack()
 	switch v.t.kind {
 	case reflect.Pointer:
-		switch p := v.p.R.(type) {
+		switch p := c.R.(type) {
 		case nil:
 			return RV{}
 		case *Value:
@@ -834,12 +907,19 @@ func (v RV) Elem() RV {
 			// a settable value of read-only memory.
 			return mkVM(v.t.elemT(), &Value{N: int64(*p)}, flagROMem)
 		case *byteView:
+			if bigByteArray(v.t.elemT().t) && !p.ro && !p.host {
+				// A [n]byte in real bytes (bigByteArray): addressable, as in
+				// gc; its cell holds the view (arrayView). Not a view over
+				// host bytes (UseUnsafe): Index gives byteElem, whose
+				// writes do not check the host.
+				return mkVM(v.t.elemT(), &Value{R: p}, flagAddr|v.flag&flagRO)
+			}
 			// Plain data over bytes (byteview.go): a copy, not addressable.
-			c := p.load(v.t.elemT().t)
-			return mkVM(v.t.elemT(), &c, flagROMem)
+			e := p.load(v.t.elemT().t)
+			return mkVM(v.t.elemT(), &e, flagROMem)
 		}
 	case reflect.Interface:
-		iv, _ := v.p.R.(*Iface)
+		iv, _ := c.R.(*Iface)
 		if iv == nil {
 			return RV{}
 		}
@@ -861,7 +941,7 @@ func (v RV) Field(i int) RV {
 		return natRV(n.Field(i))
 	}
 	st := v.t.structT()
-	fs := v.p.R.([]Value)
+	fs := v.cur().R.([]Value)
 	return mkVM(v.t.fieldT(i), &fs[i], fieldFlag(v.flag, st.Field(i)))
 }
 
@@ -924,12 +1004,22 @@ func (v RV) NumField() int {
 
 func (v RV) Index(i int) RV {
 	v.mustValid("Index")
-	if n, ok := v.native(); ok {
+	if bv, ok := v.arrayView(); ok {
+		// Before snap, which decodes the whole array (cur): a loop of
+		// Index on a [1<<20]byte (DeepEqual, json) was quadratic.
+		bs := bv.bytes(v.t.t)
+		if uint(i) >= uint(len(bs)) {
+			panic("reflect: array index out of range")
+		}
+		return byteElem(v.t.elemT(), &bs[i], v.flag&flagRO)
+	}
+	n, ok, c := v.snap()
+	if ok {
 		return natRV(n.Index(i))
 	}
 	switch v.t.kind {
 	case reflect.Slice:
-		switch s := v.p.R.(type) {
+		switch s := c.R.(type) {
 		case []Value:
 			if uint(i) >= uint(len(s)) {
 				panic("reflect: slice index out of range")
@@ -964,13 +1054,13 @@ func (v RV) Index(i int) RV {
 			panic("reflect: slice index out of range")
 		}
 	case reflect.Array:
-		s := v.p.R.([]Value)
+		s := c.R.([]Value)
 		if uint(i) >= uint(len(s)) {
 			panic("reflect: array index out of range")
 		}
 		return mkVM(v.t.elemT(), &s[i], v.flag&(flagAddr|flagRO))
 	case reflect.String:
-		s, _ := v.p.R.(string)
+		s, _ := c.R.(string)
 		if uint(i) >= uint(len(s)) {
 			panic("reflect: string index out of range")
 		}
@@ -981,10 +1071,16 @@ func (v RV) Index(i int) RV {
 
 func (v RV) Len() int {
 	v.mustValid("Len")
-	if n, ok := v.native(); ok {
+	if v.t.kind == reflect.Array {
+		// The length of the type, without reading the value: snap of an
+		// array in real bytes (arrayView) decodes the whole array.
+		return v.t.Len()
+	}
+	n, ok, c := v.snap()
+	if ok {
 		return n.Len()
 	}
-	switch r := v.p.R.(type) {
+	switch r := c.R.(type) {
 	case []Value:
 		return len(r)
 	case []byte:
@@ -1009,10 +1105,14 @@ func (v RV) Len() int {
 
 func (v RV) Cap() int {
 	v.mustValid("Cap")
-	if n, ok := v.native(); ok {
+	if v.t.kind == reflect.Array {
+		return v.t.Len() // as Len
+	}
+	n, ok, c := v.snap()
+	if ok {
 		return n.Cap()
 	}
-	switch r := v.p.R.(type) {
+	switch r := c.R.(type) {
 	case []Value:
 		return cap(r)
 	case []byte:
@@ -1037,18 +1137,19 @@ func (v RV) Interface() any {
 	if v.flag&flagRO != 0 {
 		panic("reflect.Value.Interface: cannot return value obtained from unexported field or method")
 	}
-	if n, ok := v.native(); ok {
+	n, ok, c := v.snap()
+	if ok {
 		return n.Interface()
 	}
 	m := v.mach()
 	if v.t.kind == reflect.Pointer {
 		// A pointer to native data in VM memory is handed out as a native
 		// pointer aliasing it (a shadow for VM-represented data, see shadow).
-		if cell, ok := v.p.R.(*Value); ok && cell != nil {
+		if cell, ok := c.R.(*Value); ok && cell != nil {
 			if s := ownShadow(cell); s != nil {
 				return s.rv.Addr().Interface()
 			}
-			switch r := cell.R.(type) {
+			switch r := loadWord(cell).R.(type) { // the pointee may be a word kind
 			case reflect.Value:
 				if r.CanAddr() {
 					return r.Addr().Interface()
@@ -1064,11 +1165,11 @@ func (v RV) Interface() any {
 	}
 	var iv *Iface
 	if v.t.kind == reflect.Interface {
-		if iv, _ = v.p.R.(*Iface); iv == nil {
+		if iv, _ = c.R.(*Iface); iv == nil {
 			return nil
 		}
 	} else {
-		iv = &Iface{T: m.rtypeOf(v.t.t), V: deepCopy(*v.p, v.t.t)}
+		iv = &Iface{T: m.rtypeOf(v.t.t), V: deepCopy(c, v.t.t)}
 	}
 	return m.ifaceAny(iv)
 }
@@ -1118,6 +1219,15 @@ func (v RV) Addr() RV {
 		// The address of the byte, as the VM has it (OpStore of *byte).
 		return mkVM(v.t.ptrT(), &Value{R: v.b}, v.flag&flagRO)
 	}
+	if bv, ok := v.arrayView(); ok {
+		// A [n]byte in real bytes: its address is the view, as the VM has
+		// &a. A pointer to the cell of the view was not a pointer to the
+		// array: a store through it panicked, and a load aliased it.
+		if v.flag&flagAddr == 0 {
+			panic("reflect.Value.Addr of unaddressable value")
+		}
+		return mkVM(v.t.ptrT(), &Value{R: bv}, v.flag&flagRO)
+	}
 	if n, ok := v.native(); ok && (v.p == nil || n.CanAddr()) {
 		return natRV(n.Addr())
 	}
@@ -1129,22 +1239,24 @@ func (v RV) Addr() RV {
 
 func (v RV) IsNil() bool {
 	v.mustValid("IsNil")
-	if n, ok := v.native(); ok {
+	n, ok, c := v.snap()
+	if ok {
 		return n.IsNil()
 	}
 	switch v.t.kind {
 	case reflect.Chan, reflect.Func, reflect.Map, reflect.Pointer, reflect.UnsafePointer, reflect.Interface, reflect.Slice:
-		return isNilVal(rval{p: v.p})
+		return isNilValue(c)
 	}
 	panic(&reflect.ValueError{Method: "reflect.Value.IsNil", Kind: v.t.kind})
 }
 
 func (v RV) IsZero() bool {
 	v.mustValid("IsZero")
-	if n, ok := v.native(); ok {
+	n, ok, c := v.snap()
+	if ok {
 		return n.IsZero()
 	}
-	return v.mach().vr.isZeroDeep(*v.p, v.t.t)
+	return v.mach().vr.isZeroDeep(c, v.t.t)
 }
 
 // isZeroDeep is isZero also for native data inside VM values.
@@ -1156,7 +1268,7 @@ func (vr *vmReflect) isZeroDeep(v Value, t types.Type) bool {
 	case *types.Struct:
 		fs, _ := v.R.([]Value)
 		for i := range fs {
-			if !vr.isZeroDeep(fs[i], u.Field(i).Type()) {
+			if !vr.isZeroDeep(loadCell(&fs[i], u.Field(i).Type()), u.Field(i).Type()) {
 				return false
 			}
 		}
@@ -1164,7 +1276,7 @@ func (vr *vmReflect) isZeroDeep(v Value, t types.Type) bool {
 	case *types.Array:
 		es, _ := v.R.([]Value)
 		for i := range es {
-			if !vr.isZeroDeep(es[i], u.Elem()) {
+			if !vr.isZeroDeep(loadCell(&es[i], u.Elem()), u.Elem()) {
 				return false
 			}
 		}
@@ -1220,7 +1332,7 @@ func (v RV) Float() float64 {
 		return n.Float()
 	}
 	v.kindPanic("Float", v.Kind() == reflect.Float32 || v.Kind() == reflect.Float64)
-	return f64(*v.p)
+	return f64(v.cur())
 }
 
 func (v RV) Complex() complex128 {
@@ -1228,7 +1340,7 @@ func (v RV) Complex() complex128 {
 		return n.Complex()
 	}
 	v.kindPanic("Complex", v.CanComplex())
-	return cplx(*v.p) // Value{R: complex128}, complex.go
+	return cplx(v.cur()) // Value{R: complex128}, complex.go
 }
 
 func (v RV) CanInt() bool     { return isIntKind(v.Kind()) }
@@ -1244,42 +1356,49 @@ func (v RV) String() string {
 		return n.String()
 	}
 	if v.t.kind == reflect.String {
-		s, _ := v.p.R.(string)
+		s, _ := v.cur().R.(string)
 		return s
 	}
 	return "<" + v.Type().String() + " Value>"
 }
 
 func (v RV) Bytes() []byte {
-	if n, ok := v.native(); ok {
+	if bv, ok := v.arrayView(); ok {
+		return bv.bytes(v.t.t) // the bytes of the array, as in gc (before snap: it decodes them)
+	}
+	n, ok, c := v.snap()
+	if ok {
 		return n.Bytes()
 	}
 	switch v.t.kind {
 	case reflect.Slice:
 		if v.t.Elem().Kind() == reflect.Uint8 {
-			if b, ok := v.p.R.([]byte); ok {
+			if b, ok := c.R.([]byte); ok {
 				return b
 			}
-			if v.p.R == nil {
+			if c.R == nil {
 				return nil
 			}
-			return valBytes(*v.p) // copy: []Value cannot alias a []byte
+			return valBytes(c) // copy: []Value cannot alias a []byte
 		}
 	case reflect.Array:
 		if v.t.Elem().Kind() == reflect.Uint8 {
-			return valBytes(*v.p)
+			return valBytes(c)
 		}
 	}
 	panic(&reflect.ValueError{Method: "reflect.Value.Bytes", Kind: v.t.kind})
 }
 
 func (v RV) UnsafePointer() unsafe.Pointer {
-	if n, ok := v.native(); ok {
+	n, ok, c := v.snap()
+	if ok {
 		return n.UnsafePointer()
 	}
-	switch r := v.p.R.(type) {
+	switch r := c.R.(type) {
 	case *Value:
 		return unsafe.Pointer(r)
+	case *byteView:
+		return unsafe.Pointer(r.ptr()) // plain data in real bytes: its first byte, as &a[0]
 	case *MapV:
 		return unsafe.Pointer(r)
 	case *Closure:
@@ -1346,11 +1465,9 @@ func PtrKey(v RV) any {
 // jsonV2Cycle).
 func AddrCopy(x RV) RV {
 	if x.t != nil && x.p != nil && x.flag&flagRO == 0 && (x.t.kind == reflect.Map || x.t.kind == reflect.Slice) {
-		switch x.p.R.(type) {
+		switch c := x.cur(); c.R.(type) { // one read for the check and the copy
 		case *MapV, []Value:
-			c := new(Value)
-			*c = *x.p
-			return mkVM(x.t, c, flagAddr)
+			return mkVM(x.t, &c, flagAddr)
 		}
 	}
 	n := New(x.Type()).Elem()
@@ -1363,7 +1480,11 @@ func AddrCopy(x RV) RV {
 // UnsafeAddrOf is unsafe.Pointer(v.UnsafeAddr()) for AOT code (cmd/aotgen
 // rewrites that conversion: go vet only accepts it for reflect.Value).
 func UnsafeAddrOf(v RV) unsafe.Pointer {
+	if bv, ok := v.arrayView(); ok && v.flag&flagAddr != 0 {
+		return unsafe.Pointer(bv.ptr()) // the bytes of the array, as Pointer of its address
+	}
 	if n, ok := v.native(); ok && v.p == nil {
+		rememberNative(n) // see NewAt
 		return unsafe.Pointer(n.UnsafeAddr())
 	}
 	if v.flag&flagAddr == 0 {
@@ -1374,7 +1495,11 @@ func UnsafeAddrOf(v RV) unsafe.Pointer {
 }
 
 func (v RV) UnsafeAddr() uintptr {
+	if bv, ok := v.arrayView(); ok && v.flag&flagAddr != 0 {
+		return bv.addr() // the bytes of the array, as Pointer of its address
+	}
 	if n, ok := v.native(); ok && v.p == nil {
+		rememberNative(n) // see NewAt
 		return n.UnsafeAddr()
 	}
 	if v.flag&flagAddr == 0 {
@@ -1428,8 +1553,8 @@ func (v RV) Equal(u RV) bool {
 	if v.Kind() != u.Kind() || v.Type() != u.Type() {
 		return false
 	}
-	vn, vok := v.native()
-	un, uok := u.native()
+	vn, vok, vc := v.snap()
+	un, uok, uc := u.snap()
 	switch {
 	case vok && uok:
 		return vn.Equal(un)
@@ -1437,13 +1562,13 @@ func (v RV) Equal(u RV) bool {
 		if !v.t.Comparable() {
 			panic("reflect.Value.Equal: values of type " + v.Type().String() + " are not comparable")
 		}
-		return v.mach().equal(*v.p, *u.p, v.t.t)
+		return v.mach().equal(vc, uc, v.t.t)
 	}
 	// Mixed: compare natively.
 	if vok {
-		return vn.Equal(u.natVal(vn.Type()))
+		return vn.Equal(u.natValOf(uc, vn.Type()))
 	}
-	return un.Equal(v.natVal(un.Type()))
+	return un.Equal(v.natValOf(vc, un.Type()))
 }
 
 // ---- setters ----
@@ -1474,7 +1599,7 @@ func (v RV) mustSet(op string) {
 // into the cell. The native array is shared: writes to the elements reach
 // it, as in Go; a new length or a new array changes only this variable.
 func (v RV) setNat(f func(n reflect.Value)) bool {
-	n, ok := v.native()
+	n, ok, cell := v.snap()
 	if !ok {
 		return false
 	}
@@ -1483,11 +1608,11 @@ func (v RV) setNat(f func(n reflect.Value)) bool {
 		f(n)
 		return true
 	}
-	if _, ok := v.p.R.(reflect.Value); ok && isNatView(n) {
+	if _, ok := cell.R.(reflect.Value); ok && isNatView(n) {
 		c := reflect.New(n.Type()).Elem()
 		c.Set(n)
 		f(c)
-		*v.p = viewValue(c)
+		storeCell(v.p, viewValue(c), v.t.t)
 		return true
 	}
 	return false
@@ -1495,10 +1620,11 @@ func (v RV) setNat(f func(n reflect.Value)) bool {
 
 func (v RV) Set(x RV) {
 	v.mustSet("Set")
+	mustAssign("Set", x, v.t)
 	if v.setNat(func(n reflect.Value) { setNative(n, x.natStored(n.Type())) }) {
 		return
 	}
-	storeCell(v.p, x.vmVal(v.mach(), v.t.t), v.t.t)
+	v.storeVal(x.vmVal(v.mach(), v.t.t))
 	v.syncByte()
 }
 
@@ -1602,10 +1728,10 @@ func (v RV) SetBytes(b []byte) {
 		return
 	}
 	if optBytes {
-		*v.p = Value{R: b}
+		storeWord(v.p, Value{R: b}) // a slice: a racy reader must not see half of it
 		return
 	}
-	*v.p = BytesVal(b)
+	storeWord(v.p, BytesVal(b))
 }
 
 func (v RV) SetZero() {
@@ -1613,7 +1739,7 @@ func (v RV) SetZero() {
 	if v.setNat(func(n reflect.Value) { n.SetZero() }) {
 		return
 	}
-	storeCell(v.p, deepCopy(v.mach().zero(v.t.t), v.t.t), v.t.t)
+	v.storeVal(deepCopy(v.mach().zero(v.t.t), v.t.t))
 	v.syncByte()
 }
 
@@ -1622,11 +1748,11 @@ func (v RV) SetLen(n int) {
 	if v.setNat(func(r reflect.Value) { r.SetLen(n) }) {
 		return
 	}
-	switch s := v.p.R.(type) {
+	switch s := loadWord(v.p).R.(type) {
 	case []Value:
-		*v.p = Value{R: s[:n]}
+		storeWord(v.p, Value{R: s[:n]})
 	case []byte:
-		*v.p = Value{R: s[:n]}
+		storeWord(v.p, Value{R: s[:n]})
 	case nil:
 		if n != 0 {
 			panic("reflect: slice length out of range in SetLen")
@@ -1639,11 +1765,11 @@ func (v RV) SetCap(n int) {
 	if v.setNat(func(r reflect.Value) { r.SetCap(n) }) {
 		return
 	}
-	switch s := v.p.R.(type) {
+	switch s := loadWord(v.p).R.(type) {
 	case []Value:
-		*v.p = Value{R: s[:len(s):n]}
+		storeWord(v.p, Value{R: s[:len(s):n]})
 	case []byte:
-		*v.p = Value{R: s[:len(s):n]}
+		storeWord(v.p, Value{R: s[:len(s):n]})
 	}
 }
 
@@ -1652,32 +1778,34 @@ func (v RV) Grow(n int) {
 	if v.setNat(func(r reflect.Value) { r.Grow(n) }) {
 		return
 	}
-	switch s := v.p.R.(type) {
+	cur := loadWord(v.p) // a slice: a racy reader must not see half of it
+	switch s := cur.R.(type) {
 	case []byte:
 		if cap(s)-len(s) < n {
 			ns := make([]byte, len(s), max(2*cap(s), len(s)+n))
 			copy(ns, s)
-			*v.p = Value{R: ns}
+			storeWord(v.p, Value{R: ns})
 		}
 		return
 	}
-	s, _ := v.p.R.([]Value)
+	s, _ := cur.R.([]Value)
 	if cap(s)-len(s) < n {
 		nc := max(2*cap(s), len(s)+n, 4)
 		et := v.t.t.Underlying().(*types.Slice).Elem()
 		ns := v.mach().vr.makeSlice(et, len(s), nc)
 		growValues(ns, s, et)
-		*v.p = Value{R: ns}
+		storeWord(v.p, Value{R: ns})
 	}
 }
 
 func (v RV) Clear() {
-	if n, ok := v.native(); ok {
+	n, ok, c := v.snap()
+	if ok {
 		v.writer().hostWriteIn(n)
 		n.Clear()
 		return
 	}
-	switch r := v.p.R.(type) {
+	switch r := c.R.(type) {
 	case *MapV:
 		if r != nil {
 			r.clear()
@@ -1703,28 +1831,32 @@ func (v RV) Clear() {
 // ---- slices ----
 
 func (v RV) Slice(i, j int) RV {
-	if n, ok := v.native(); ok {
+	n, ok, c := v.snap()
+	if ok {
 		return natRV(n.Slice(i, j))
 	}
-	return v.slice3(i, j, -1)
+	return v.slice3(c, i, j, -1)
 }
 
 func (v RV) Slice3(i, j, k int) RV {
-	if n, ok := v.native(); ok {
+	n, ok, c := v.snap()
+	if ok {
 		return natRV(n.Slice3(i, j, k))
 	}
-	return v.slice3(i, j, k)
+	return v.slice3(c, i, j, k)
 }
 
-func (v RV) slice3(i, j, k int) RV {
+// slice3 is Slice and Slice3 of c, the value of the cell of v that snap
+// read.
+func (v RV) slice3(c Value, i, j, k int) RV {
 	vr := v.mach().vr
 	switch v.t.kind {
 	case reflect.String:
-		s, _ := v.p.R.(string)
+		s, _ := c.R.(string)
 		return mkVM(v.t, &Value{R: s[i:j]}, v.flag&flagRO)
 	case reflect.Slice:
 		var r any
-		switch s := v.p.R.(type) {
+		switch s := c.R.(type) {
 		case []Value:
 			if k < 0 {
 				r = s[i:j]
@@ -1749,8 +1881,16 @@ func (v RV) slice3(i, j, k int) RV {
 		if v.flag&flagAddr == 0 {
 			panic("reflect.Value.Slice: slice of unaddressable array")
 		}
-		s := v.p.R.([]Value)
 		st := vr.vtypeOf(types.NewSlice(v.t.t.Underlying().(*types.Array).Elem()))
+		if bv, ok := v.arrayView(); ok {
+			// a slice of the bytes of the array, as a []byte of the VM
+			bs := bv.bytes(v.t.t)
+			if k < 0 {
+				return mkVM(st, &Value{R: bs[i:j]}, v.flag&flagRO)
+			}
+			return mkVM(st, &Value{R: bs[i:j:k]}, v.flag&flagRO)
+		}
+		s := c.R.([]Value)
 		if k < 0 {
 			return mkVM(st, &Value{R: s[i:j]}, v.flag&flagRO)
 		}
@@ -1764,14 +1904,15 @@ func (v RV) slice3(i, j, k int) RV {
 func (v RV) mapT() *types.Map { return v.t.t.Underlying().(*types.Map) }
 
 func (v RV) MapIndex(k RV) RV {
-	if n, ok := v.native(); ok {
+	n, ok, c := v.snap()
+	if ok {
 		e := n.MapIndex(k.natStored(n.Type().Key()))
 		if b, ok := boxedOf(e); ok && n.Type().Elem().Kind() != reflect.Interface {
 			return fromBoxed(b, 0)
 		}
 		return natRV(e)
 	}
-	mp, _ := v.p.R.(*MapV)
+	mp, _ := c.R.(*MapV)
 	if mp == nil {
 		return RV{}
 	}
@@ -1785,7 +1926,8 @@ func (v RV) MapIndex(k RV) RV {
 }
 
 func (v RV) MapKeys() []RV {
-	if n, ok := v.native(); ok {
+	n, ok, c := v.snap()
+	if ok {
 		ks := n.MapKeys()
 		out := make([]RV, len(ks))
 		for i := range ks {
@@ -1793,7 +1935,7 @@ func (v RV) MapKeys() []RV {
 		}
 		return out
 	}
-	mp, _ := v.p.R.(*MapV)
+	mp, _ := c.R.(*MapV)
 	if mp == nil {
 		return nil
 	}
@@ -1807,7 +1949,17 @@ func (v RV) MapKeys() []RV {
 }
 
 func (v RV) SetMapIndex(k, e RV) {
-	if n, ok := v.native(); ok {
+	n, ok, c := v.snap()
+	if v.Kind() == reflect.Map {
+		// The key too: the plugin reads it back with MapKeys or a range.
+		if k.IsValid() {
+			mustAssign("Value.SetMapIndex", k, v.Type().Key())
+		}
+		if e.IsValid() {
+			mustAssign("Value.SetMapIndex", e, v.Type().Elem())
+		}
+	}
+	if ok {
 		v.writer().hostWriteIn(n)
 		mt := n.Type()
 		if !e.IsValid() {
@@ -1820,7 +1972,7 @@ func (v RV) SetMapIndex(k, e RV) {
 	if v.flag&flagRO != 0 {
 		panic("reflect: reflect.Value.SetMapIndex using value obtained using unexported field")
 	}
-	mp, _ := v.p.R.(*MapV)
+	mp, _ := c.R.(*MapV)
 	if mp == nil {
 		if !e.IsValid() {
 			return // a delete from a nil map does nothing, as in gc
@@ -1844,6 +1996,7 @@ func (v RV) SetMapIndex(k, e RV) {
 // MapIter mirrors reflect.MapIter.
 type MapIter struct {
 	v    RV
+	mp   *MapV // the map that MapRange read
 	nat  *reflect.MapIter
 	keys []any
 	i    int
@@ -1853,14 +2006,16 @@ type MapIter struct {
 
 func (v RV) MapRange() *MapIter {
 	it := &MapIter{v: v}
-	if n, ok := v.native(); ok {
+	n, ok, c := v.snap()
+	if ok {
 		it.nat = n.MapRange()
 		return it
 	}
 	if v.Kind() != reflect.Map {
 		panic(&reflect.ValueError{Method: "reflect.Value.MapRange", Kind: v.Kind()})
 	}
-	if mp, _ := v.p.R.(*MapV); mp != nil {
+	if mp, _ := c.R.(*MapV); mp != nil {
+		it.mp = mp
 		it.keys = make([]any, 0, len(mp.M))
 		for k := range mp.M {
 			it.keys = append(it.keys, k)
@@ -1873,7 +2028,7 @@ func (it *MapIter) Next() bool {
 	if it.nat != nil {
 		return it.nat.Next()
 	}
-	mp, _ := it.v.p.R.(*MapV)
+	mp := it.mp
 	for it.i < len(it.keys) {
 		k := it.keys[it.i]
 		it.i++
@@ -1893,7 +2048,7 @@ func (it *MapIter) Key() RV {
 	if !it.ok {
 		panic("MapIter.Key called before Next")
 	}
-	c := it.v.p.R.(*MapV).key(it.cur)
+	c := it.mp.key(it.cur)
 	return mkVM(it.v.mach().vr.vtypeOf(it.v.mapT().Key()), &c, it.v.flag&flagRO)
 }
 
@@ -1905,7 +2060,7 @@ func (it *MapIter) Value() RV {
 	if !it.ok {
 		panic("MapIter.Value called before Next")
 	}
-	c := it.v.p.R.(*MapV).M[it.cur]
+	c := it.mp.M[it.cur]
 	return mkVM(it.v.mach().vr.vtypeOf(it.v.mapT().Elem()), &c, it.v.flag&flagRO)
 }
 
@@ -1931,7 +2086,7 @@ func (v RV) boundMethod(sel *types.Selection) RV {
 	m := v.mach()
 	sig := sel.Obj().Type().(*types.Signature)
 	ft := types.NewSignatureType(nil, nil, nil, sig.Params(), sig.Results(), sig.Variadic())
-	recv := deepCopy(*v.p, v.t.t)
+	recv := deepCopy(v.cur(), v.t.t)
 	fn := m.prog.MethodValue(sel)
 	if m.isNativeNamed(baseNamed(v.t.t)) && !m.isInterp(fn) {
 		// Method of a native type held in VM representation: call it natively.
@@ -1968,11 +2123,12 @@ func (v RV) Method(i int) RV {
 
 func (v RV) MethodByName(name string) RV {
 	v.mustValid("MethodByName")
-	if n, ok := v.native(); ok {
+	n, ok, c := v.snap()
+	if ok {
 		return natRV(restrictedMethodValue(n, name, n.MethodByName(name)))
 	}
 	if v.t.kind == reflect.Interface {
-		iv, _ := v.p.R.(*Iface)
+		iv, _ := c.R.(*Iface)
 		if iv == nil {
 			panic("reflect: Method on nil interface value")
 		}
@@ -1991,7 +2147,8 @@ func (v RV) CallSlice(in []RV) []RV { return v.call(in, true) }
 
 func (v RV) call(in []RV, isSlice bool) []RV {
 	v.mustValid("Call")
-	if n, ok := v.native(); ok {
+	n, ok, fn := v.snap()
+	if ok {
 		if isChanReaderFunc(n) {
 			defer enterChanReader()() // before the data: see readsChans
 		}
@@ -2025,7 +2182,7 @@ func (v RV) call(in []RV, isSlice bool) []RV {
 	if v.t.kind != reflect.Func {
 		panic(&reflect.ValueError{Method: "reflect.Value.Call", Kind: v.t.kind})
 	}
-	if v.p.R == nil {
+	if fn.R == nil {
 		panic("reflect: call of nil function")
 	}
 	checkCallArgs(v.t, in, isSlice)
@@ -2049,7 +2206,7 @@ func (v RV) call(in []RV, isSlice bool) []RV {
 		}
 		args = append(args, in[i].vmVal(m, pt))
 	}
-	res := m.callValue(*v.p, args)
+	res := m.callValue(fn, args)
 	nr := sig.Results().Len()
 	switch nr {
 	case 0:
@@ -2069,6 +2226,34 @@ func (v RV) call(in []RV, isSlice bool) []RV {
 	return out
 }
 
+// structShape reports whether t is a struct or a pointer to a struct.
+func structShape(t RT) bool {
+	return t.kind == reflect.Struct || t.kind == reflect.Pointer && t.Elem().Kind() == reflect.Struct
+}
+
+// mustAssign panics when x is not assignable to t, for a struct or a
+// pointer to a struct with a type of the program on a side: as Go, a
+// native struct with unexported fields is never one type with a struct of
+// the program (natIdentical), and the twin must not copy the fields of one
+// into the other. Every reflect call that stores a value checks it (Set,
+// Append, Copy, SetMapIndex, Send). Two native types keep the conversion of
+// the store: the stand-ins of the restricted standard library, such as
+// the logger, are native on both sides.
+func mustAssign(op string, x RV, t RT) {
+	if x.t == nil {
+		panic(&reflect.ValueError{Method: "reflect.Value." + op, Kind: reflect.Invalid})
+	}
+	mustAssignT(op, x.Type(), t)
+}
+
+// mustAssignT is mustAssign for the type of the value.
+func mustAssignT(op string, xt, t RT) {
+	if xt.isNat() && t.isNat() || !structShape(xt) || !structShape(t) || twinAssignable(xt, t) {
+		return
+	}
+	panic("reflect." + op + ": value of type " + xt.String() + " is not assignable to type " + t.String())
+}
+
 // twinAssignable is x.AssignableTo(t) for the checks of reflect calls. A
 // native type and a VM type that is not an interface can be two
 // descriptors of one type (the VM type of string and the native string).
@@ -2083,6 +2268,22 @@ func twinAssignable(x, t RT) bool {
 	if x.isNat() != t.isNat() && t.kind != reflect.Interface {
 		if x.kind != t.kind {
 			return false
+		}
+		// A native struct and a struct of the program: one type only when
+		// Go sees one (natIdentical: never with an unexported field).
+		if x.kind == reflect.Struct {
+			if x.isNat() {
+				return t.vr.m.natIdentical(x.nat, t.t)
+			}
+			return x.vr.m.natIdentical(t.nat, x.t)
+		}
+		if x.kind == reflect.Pointer && x.Elem().Kind() == reflect.Struct && t.Elem().Kind() == reflect.Struct {
+			// *A and *B are one type only when A and B are (never two
+			// named types).
+			if x.isNat() {
+				return t.vr.m.natIdentical(x.nat.Elem(), t.t.Underlying().(*types.Pointer).Elem())
+			}
+			return x.vr.m.natIdentical(t.nat.Elem(), x.t.Underlying().(*types.Pointer).Elem())
 		}
 		xn, tn := x.Name() != "", t.Name() != ""
 		switch {
@@ -2108,6 +2309,22 @@ func twinAssignable(x, t RT) bool {
 func twinConvertible(x, t RT) (ok, known bool) {
 	if x.isNat() == t.isNat() || t.kind == reflect.Interface {
 		return x.ConvertibleTo(t), true
+	}
+	if x.kind == reflect.Struct && t.kind == reflect.Struct {
+		// The names and the tags do not count in a conversion, the fields
+		// do: never with an unexported field (natConvertible).
+		if x.isNat() {
+			return t.vr.m.natConvertible(x.nat, t.t), true
+		}
+		return x.vr.m.natConvertible(t.nat, x.t), true
+	}
+	if x.kind == reflect.Pointer && t.kind == reflect.Pointer && x.Elem().Kind() == reflect.Struct && t.Elem().Kind() == reflect.Struct {
+		// *A to *B: the same rule for A and B (Go: their underlying
+		// types are identical, tags ignored).
+		if x.isNat() {
+			return t.vr.m.natConvertible(x.nat.Elem(), t.t.Underlying().(*types.Pointer).Elem()), true
+		}
+		return x.vr.m.natConvertible(t.nat.Elem(), x.t.Underlying().(*types.Pointer).Elem()), true
 	}
 	nat := func(r RT) reflect.Type {
 		if r.isNat() {
@@ -2188,27 +2405,35 @@ func checkCallArgs(t RT, in []RV, isSlice bool) {
 
 // ---- channels ----
 
-func (v RV) vmChan() chan Value {
-	ch, _ := v.p.R.(chan Value)
-	return ch
-}
-
 func (v RV) chanElem() *vtype { return v.t.elemT() }
 
+// chanOf reads the cell of v once (snap): its native channel, or its VM
+// channel. A second read could find the VM channel nil because another
+// goroutine stored a native one meanwhile, and block forever.
+func (v RV) chanOf() (reflect.Value, bool, chan Value) {
+	n, ok, c := v.snap()
+	ch, _ := c.R.(chan Value)
+	return n, ok, ch
+}
+
 func (v RV) Send(x RV) {
-	if n, ok := v.native(); ok {
+	n, ok, ch := v.chanOf()
+	mustAssign("Value.Send", x, v.Type().Elem())
+	if ok {
 		n.Send(x.natVal(n.Type().Elem()))
 		return
 	}
-	v.vmChan() <- x.vmVal(v.mach(), v.chanElem().t)
+	ch <- x.vmVal(v.mach(), v.chanElem().t)
 }
 
 func (v RV) TrySend(x RV) bool {
-	if n, ok := v.native(); ok {
+	n, ok, ch := v.chanOf()
+	mustAssign("Value.TrySend", x, v.Type().Elem())
+	if ok {
 		return n.TrySend(x.natVal(n.Type().Elem()))
 	}
 	select {
-	case v.vmChan() <- x.vmVal(v.mach(), v.chanElem().t):
+	case ch <- x.vmVal(v.mach(), v.chanElem().t):
 		return true
 	default:
 		return false
@@ -2216,11 +2441,12 @@ func (v RV) TrySend(x RV) bool {
 }
 
 func (v RV) Recv() (RV, bool) {
-	if n, ok := v.native(); ok {
+	n, ok, ch := v.chanOf()
+	if ok {
 		x, ok := n.Recv()
 		return natRV(x), ok
 	}
-	x, ok := <-v.vmChan()
+	x, ok := <-ch
 	if !ok {
 		return v.zeroOf(v.chanElem()), false
 	}
@@ -2228,12 +2454,13 @@ func (v RV) Recv() (RV, bool) {
 }
 
 func (v RV) TryRecv() (RV, bool) {
-	if n, ok := v.native(); ok {
+	n, ok, ch := v.chanOf()
+	if ok {
 		x, ok := n.TryRecv()
 		return natRV(x), ok
 	}
 	select {
-	case x, ok := <-v.vmChan():
+	case x, ok := <-ch:
 		if !ok {
 			return v.zeroOf(v.chanElem()), false
 		}
@@ -2246,11 +2473,12 @@ func (v RV) TryRecv() (RV, bool) {
 func (v RV) zeroOf(t *vtype) RV { return mkVM(t, v.mach().vr.zeroCell(t.t), 0) }
 
 func (v RV) Close() {
-	if n, ok := v.native(); ok {
+	n, ok, ch := v.chanOf()
+	if ok {
 		n.Close()
 		return
 	}
-	close(v.vmChan())
+	close(ch)
 }
 
 // GoString helps debugging.
@@ -2304,7 +2532,7 @@ func (v RV) Convert(t RT) RV {
 	if v.Kind() == reflect.Slice && t.kind == reflect.Pointer && t.Elem().Kind() == reflect.Array && t.Elem().Len() > v.Len() {
 		panic("reflect: cannot convert slice with length " + strconv.Itoa(v.Len()) + " to pointer to array with length " + strconv.Itoa(t.Elem().Len()))
 	}
-	n, isN := v.native()
+	n, isN, cv := v.snap()
 	if isN && t.isNat() {
 		return natRV(n.Convert(t.nat))
 	}
@@ -2389,17 +2617,21 @@ func (v RV) Convert(t RT) RV {
 	if sk == reflect.Slice && tk == reflect.Array && v.Len() > t.Len() {
 		// the first t.Len() elements of the slice
 		v = v.Slice(0, t.Len())
-		n, isN = v.native()
+		n, isN, cv = v.snap()
 	}
-	// Same underlying type: copy the representation.
+	// Same underlying type: copy the representation, from the one read of
+	// the cell (snap).
 	if t.isNat() {
-		return natRV(v.natVal(t.nat))
+		if isN {
+			return natRV(n)
+		}
+		return natRV(v.natValOf(cv, t.nat))
 	}
 	c := new(Value)
 	if isN {
 		*c = t.vr.m.natToVM(n, t.t)
 	} else {
-		*c = deepCopy(*v.p, t.t)
+		*c = deepCopy(cv, t.t)
 	}
 	return mkVM(t, c, 0)
 }
@@ -2441,6 +2673,15 @@ type shadowRef struct {
 	// callback did not change the cell.
 	parked   Value
 	isParked bool
+	// snap is a copy of rv as the cell was when it was converted (attach)
+	// or last written back: detach does not write the cell when native
+	// code did not change rv (natSame), so a read only use of the cell
+	// (fmt.Sprint(p)) does not undo the writes of other goroutines.
+	snap reflect.Value
+	// shared holds the slices and maps of rv right after attach that are
+	// not recorded copies: native memory that the cell shares
+	// (eachUntracked, sameRefs).
+	shared []shareID
 }
 
 // ownedShadows counts the owned shadows of all machines, and shadowSlots
@@ -2491,7 +2732,7 @@ func (m *Machine) shadow(cell *Value, t types.Type) reflect.Value {
 	if s := ownShadow(cell); s != nil {
 		return s.rv
 	}
-	if s, ok := cell.R.(*shadowRef); ok {
+	if s, ok := loadWord(cell).R.(*shadowRef); ok {
 		return s.rv
 	}
 	if gs := lookupG(getg()); gs != nil {
@@ -2517,7 +2758,7 @@ func (m *Machine) addShadow(s *shadowRef) {
 	s.owned = false
 	m.shadowMu.Lock()
 	if s.cell != nil {
-		*s.cell = Value{R: s}
+		storeCell(s.cell, Value{R: s}, s.t)
 	}
 	m.shadows = append(m.shadows, s)
 	m.nOrphans.Add(1)
@@ -2579,7 +2820,7 @@ func (s *shadowRef) live() bool {
 	if s.cell == nil || s.owned {
 		return true
 	}
-	cur, ok := s.cell.R.(*shadowRef)
+	cur, ok := loadWord(s.cell).R.(*shadowRef)
 	return ok && cur == s
 }
 
@@ -2594,7 +2835,7 @@ func (m *Machine) suspendShadows() []*shadowRef {
 		}
 		s.detach()
 		if s.cell != nil { // an Unbox copy is written back now, not re-attached
-			s.parked, s.isParked = *s.cell, true
+			s.parked, s.isParked = loadCell(s.cell, s.t), true
 			out = append(out, s)
 		}
 	}
@@ -2612,7 +2853,38 @@ func (s *shadowRef) attach() {
 		gs.attaching = append(gs.attaching, s)
 		defer func() { gs.attaching = gs.attaching[:len(gs.attaching)-1] }()
 	}
-	s.rv.Set(s.m.toNativeW(*s.cell, s.t, s.c))
+	s.rv.Set(s.m.toNativeW(loadCell(s.cell, s.t), s.t, s.c))
+	s.snapshot()
+	s.shared = s.shared[:0]
+	if holdsRefs(s.t) {
+		s.c.g.eachUntracked(s.rv, func(v reflect.Value) bool {
+			s.shared = append(s.shared, shareIDOf(v))
+			return true
+		})
+	}
+}
+
+// sameRefs reports whether native code changed nothing in the slices and
+// maps of rv that only fromNativeDeepC gives back to the program: each
+// one is a recorded copy (written back in place by writeBack) or native
+// memory that the cell shared at attach (written in place by native code
+// itself). natSame compares slices and maps by identity only, so detach
+// may skip the write-back of a value that holds some only then.
+func (s *shadowRef) sameRefs() bool {
+	if !holdsRefs(s.t) {
+		return true
+	}
+	return s.c.g.eachUntracked(s.rv, func(v reflect.Value) bool {
+		return slices.Contains(s.shared, shareIDOf(v))
+	})
+}
+
+// snapshot records the content of rv in snap (see shadowRef.snap).
+func (s *shadowRef) snapshot() {
+	if !s.snap.IsValid() {
+		s.snap = reflect.New(s.rv.Type()).Elem()
+	}
+	s.snap.Set(s.rv)
 }
 
 // detach gives the cell its VM representation back.
@@ -2622,13 +2894,27 @@ func (s *shadowRef) detach() {
 		*s.wb = nil
 		return
 	}
+	if s.owned && s.snap.IsValid() && natSame(s.rv, s.snap) && s.sameRefs() {
+		// Native code did not change the value: the cell still holds it
+		// (or a newer value that another goroutine wrote meanwhile, which
+		// must stay). natSame compares a slice or a map by identity: its
+		// elements changed in place reach the program without a store
+		// (sameRefs). Else the value goes through fromNativeDeepC below (a
+		// slice that gob made and a callback converted back). The pointers
+		// of rv may lead to shadows that native code changed: keptRef
+		// writes them back, as shadowSame does.
+		s.m.keptRef(s.rv, s.t, s.c)
+		writeBack(*s.wb)
+		return
+	}
 	v := s.m.fromNativeDeepC(s.rv, s.t, s.c)
 	writeBack(*s.wb)
 	if s.owned {
 		// the cell still holds the VM value: other goroutines may read it
 		storeChanged(s.cell, v, s.t)
+		s.snapshot()
 	} else {
-		*s.cell = v
+		storeCell(s.cell, v, s.t)
 	}
 }
 
@@ -2637,7 +2923,7 @@ func (m *Machine) resumeShadows(ss []*shadowRef) {
 		if ownShadow(s.cell) != nil {
 			continue
 		}
-		if _, ok := s.cell.R.(*shadowRef); ok {
+		if _, ok := loadWord(s.cell).R.(*shadowRef); ok {
 			continue
 		}
 		// A callback that did not change the cell: the native value stays,
@@ -2646,7 +2932,7 @@ func (m *Machine) resumeShadows(ss []*shadowRef) {
 		// GobDecode of the program, then sets the element).
 		// A new conversion made new memory, and the
 		// decoded values went to the old one.
-		parked := s.isParked && sameCell(*s.cell, s.parked)
+		parked := s.isParked && sameCell(loadCell(s.cell, s.t), s.parked)
 		s.parked, s.isParked = Value{}, false
 		if parked {
 			// the same conversion for the next detach, so the maps and

@@ -129,6 +129,14 @@ var loadBombs = []struct{ name, src, want string }{
 			return fmt.Sprintf("func F%d[T any]() { F%d[A[T]](); F%d[B[T]]() }\n", i, i+1, i+1)
 		},
 		"func F31[T any]() {}\nfunc G() { F1[int]() }\n"), "instances"},
+	// A local type of a generic function is a new type in each instance of
+	// the function: 2^20 instances of F21 for the SSA builder, while
+	// go/types has one L per function (the exact count saw 41 instances).
+	{"genericLocalType", chain("", 20,
+		func(i int) string {
+			return fmt.Sprintf("func F%d[T any]() { type L struct{ x T }; F%d[L](); F%d[*L]() }\n", i, i+1, i+1)
+		},
+		"func F21[T any]() {}\nfunc G() { F1[int]() }\n"), "instances"},
 }
 
 // TestLoadBombs checks that each load bomb is refused with a *LoadError at
@@ -256,6 +264,20 @@ func TestLoadBombsKeepGood(t *testing.T) {
 				"\tr := Rechunk(s, 3)\n\tp := Map(e, func(p Pair[string, S%d]) []Pair[int, []S%d] { return nil })\n"+
 				"\treturn len(e) + len(g) + len(k) + len(r) + len(p)\n}\n", i, i, i, i, i, i, i)
 		}, ""),
+		// Generic layers that call the next one through two helpers, all
+		// with the same type argument (as otter's cache layers end on
+		// node.Node[K, V]): 2^20 paths from G to F20, but 62 instances.
+		// Counted by paths, it passed maxInstances and maxInstanceWork
+		// (exactInstances).
+		"genericPaths": chain("type Node[K comparable, V any] struct{ k K; v V; next *Node[K, V] }\n", 20,
+			func(i int) string {
+				return fmt.Sprintf("func F%d[K comparable, V any]() { A%d[K, V](); B%d[K, V]() }\n"+
+					"func A%d[K comparable, V any]() { F%d[K, V]() }\nfunc B%d[K comparable, V any]() { F%d[K, V]() }\n",
+					i, i, i, i, i+1, i, i+1)
+			}, "func F21[K comparable, V any]() { _ = Node[K, V]{} }\nfunc G() { F1[string, []byte]() }\n"),
+		// The same call written many times is one instance.
+		"genericSameSite": "package p\n\nfunc H[T any](x T) T { return x }\nfunc G() {\n" +
+			strings.Repeat("\t_ = H[int](1)\n", 70000) + "}\n",
 	}
 	for name, src := range good {
 		t.Run(name, func(t *testing.T) {

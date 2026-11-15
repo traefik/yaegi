@@ -34,7 +34,7 @@ func (m *Machine) nativeView(p Value, from, to types.Type) (Value, bool) {
 	var src reflect.Type
 	switch q := p.R.(type) {
 	case *Value:
-		rv, ok := q.R.(reflect.Value)
+		rv, ok := loadWord(q).R.(reflect.Value) // the pointee may be a word kind
 		if !ok || !rv.IsValid() || !rv.CanAddr() {
 			return Value{}, false
 		}

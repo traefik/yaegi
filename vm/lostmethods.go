@@ -27,6 +27,7 @@ package vm
 // names the method and asks for AOT mode.
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/types"
 	"reflect"
@@ -80,9 +81,28 @@ func topHandled(path string, decode bool, name string) bool {
 	return name == "MarshalJSON" // vmObj.MarshalJSON
 }
 
+// keeps reports whether a call of the site that does not go to the AOT
+// copy keeps the methods of the values (keepmethods.go): the encoders of
+// encoding/json.
+func (s lostSite) keeps() bool { return s.path == "encoding/json" && !s.decode }
+
+// keepMethods are the methods of the keeping lostSites (keeps), for a call on a
+// native value through an interface (var e interface{ Encode(any) error } =
+// json.NewEncoder(w)), which has no ssa function: callNativeMethod.
+var keepMethods = map[methodKey]bool{
+	{reflect.TypeFor[*json.Encoder](), "Encode"}: true,
+}
+
+// keepFuncPtrs are the functions of the keeping lostSites called as func
+// values (a json.Marshal held in a map), by code pointer: callNativeValue.
+var keepFuncPtrs = map[uintptr]bool{
+	reflect.ValueOf(json.Marshal).Pointer():       true,
+	reflect.ValueOf(json.MarshalIndent).Pointer(): true,
+}
+
 // lostSiteOf returns the lostSite of the native function f, if it has one.
 func lostSiteOf(f *ssa.Function) (lostSite, bool) {
-	if f.Pkg == nil {
+	if funcPkg(f) == nil {
 		return lostSite{}, false
 	}
 	s, ok := lostSites[f.String()]
@@ -101,6 +121,9 @@ func (m *Machine) routable(s lostSite, t types.Type) (ok bool, why string) {
 	case m.vr == nil || !m.routed[s.path]:
 		if _, explicit := m.Modes[s.path]; explicit {
 			return false, "the host sets the mode of " + s.path + " to native"
+		}
+		if m.staleAOT != nil && aotPkg(s.path) != nil {
+			return false, "the AOT copy of " + s.path + " cannot run in this host (" + staleShort(m.staleAOT) + ")"
 		}
 		return false, "the AOT copy of " + s.path + " is not compiled into the host"
 	case mentionsPkg(t, s.path, map[types.Type]bool{}):
@@ -198,7 +221,7 @@ func (w *lostWalk) walk(t types.Type, top, addr bool, p lostPlace) string {
 		}
 		ms := types.NewMethodSet(mt) // not prog.MethodSets: this runs on any goroutine
 		for _, name := range w.names(p) {
-			if ms.Lookup(nil, name) == nil {
+			if sel := ms.Lookup(nil, name); sel == nil || !runtimeMethod(sel) {
 				continue
 			}
 			if top && topHandled(w.s.path, w.s.decode, name) {
@@ -325,6 +348,13 @@ func (m *Machine) lostProblem(f *ssa.Function, args []ssa.Value) string {
 	if routeOK {
 		return ""
 	}
+	if s.keeps() {
+		// the call keeps the methods (keepmethods.go), unless it cannot
+		if p := m.keepPlanOf(t, keepJSON, ctxTop); p != nil && p.err != "" {
+			return "unsupported: " + lostMsg(s.name, "", typeString(t), why+"; "+p.err)
+		}
+		return ""
+	}
 	lost := m.lostMethod(s, t)
 	if lost == "" {
 		return ""
@@ -337,6 +367,9 @@ func (m *Machine) lostProblem(f *ssa.Function, args []ssa.Value) string {
 func lostMsg(name, lost, t, why string) string {
 	if strings.HasPrefix(name, "(*") {
 		name = strings.Replace(strings.TrimPrefix(name, "(*"), ").", ".", 1)
+	}
+	if lost == "" {
+		return fmt.Sprintf("in default mode, %s cannot keep the methods of a value of type %s (%s); run the plugin in AOT mode (Options.AOT)", name, t, why)
 	}
 	return fmt.Sprintf("in default mode, %s does not call the method %s, found in a value of type %s (%s); run the plugin in AOT mode (Options.AOT)", name, lost, t, why)
 }
@@ -371,6 +404,7 @@ func (m *Machine) lostCheck(name string, v Value) error {
 		if r == nil {
 			return nil
 		}
+		m.stats.lost.Add(1)
 		return r.(error)
 	}
 	var err error
@@ -383,6 +417,7 @@ func (m *Machine) lostCheck(name string, v Value) error {
 		m.lostTypes.Store(k, nil)
 	} else {
 		m.lostTypes.Store(k, err)
+		m.stats.lost.Add(1) // Stats.LostMethodErrors
 	}
 	return err
 }
@@ -410,6 +445,23 @@ func (m *Machine) lostCall(f *ssa.Function, args []int32) func([]Value) Value {
 	site := m.nativeSite(f, args)
 	ar := args[s.arg]
 	nres := f.Signature.Results().Len()
+	if s.keeps() {
+		// The encoders of encoding/json keep the methods of the values
+		// (keepmethods.go); a value they cannot keep returns the error.
+		site.keep = keepJSON
+		return func(regs []Value) (out Value) {
+			defer func() {
+				if r := recover(); r != nil {
+					e, ok := r.(*LostMethodError)
+					if !ok {
+						panic(r)
+					}
+					out = m.lostResult(e, nres)
+				}
+			}()
+			return m.callNativeSlow(site, regs)
+		}
+	}
 	return func(regs []Value) Value {
 		if err := m.lostCheck(s.name, regs[ar]); err != nil {
 			return m.lostResult(err, nres)

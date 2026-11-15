@@ -389,7 +389,7 @@ func RegisterNative(name string, h NativeHook) {
 func hookName(f *ssa.Function) string {
 	recv := f.Signature.Recv()
 	if recv == nil {
-		return f.Pkg.Pkg.Path() + "." + f.Name()
+		return funcPkg(f).Path() + "." + f.Name()
 	}
 	t := recv.Type()
 	ptr := false
@@ -408,7 +408,7 @@ func hookName(f *ssa.Function) string {
 }
 
 func (m *Machine) hookFor(f *ssa.Function) NativeHook {
-	if f.Pkg == nil || m.modeOf(f.Pkg.Pkg.Path()) != ModeAOT {
+	if p := funcPkg(f); p == nil || m.modeOf(p.Path()) != ModeAOT {
 		return nil
 	}
 	name := hookName(f)
@@ -481,8 +481,9 @@ func WriteBack[T any](m *Machine, v Value, x T) {
 		return
 	}
 	rv := reflect.ValueOf(x)
+	k := rv.Type().Elem().Kind()
 	for i := 0; i < len(s) && i < rv.Len(); i++ {
-		s[i] = m.retVM(rv.Index(i))
+		storeCellK(&s[i], m.retVM(rv.Index(i)), k) // a racy reader must not see half of it
 	}
 }
 

@@ -275,6 +275,28 @@ type rval struct {
 	b *byte
 }
 
+// cur reads the cell of x: with loadWord when x is of a wordKind (see
+// RV.cur), so that a racy writer never makes the read tear.
+func (x rval) cur() Value {
+	if x.t != nil && wordReflectKind(x.t.kind) {
+		return loadWord(x.p)
+	}
+	if bv, ok := x.arrayView(); ok {
+		return bv.load(x.t.t)
+	}
+	return *x.p
+}
+
+// arrayView gives the bytes of x when x is an addressable [n]byte in real
+// bytes (bigByteArray): its cell holds the view, not the array.
+func (x rval) arrayView() (*byteView, bool) {
+	if x.t == nil || x.t.kind != reflect.Array || x.p == nil {
+		return nil, false
+	}
+	bv, ok := x.p.R.(*byteView)
+	return bv, ok
+}
+
 func decV(v Value) rval {
 	s, _ := v.R.([]Value)
 	if len(s) < 3 {
@@ -307,6 +329,10 @@ func (vr *vmReflect) store(x rval, v Value) {
 	if x.b != nil {
 		vr.m.hostBytes(unsafe.Slice(x.b, 1), 1)
 		*x.b = byte(v.N)
+	}
+	if bv, ok := x.arrayView(); ok {
+		bv.store(v, x.t.t)
+		return
 	}
 	if x.t != nil {
 		storeCell(x.p, v, x.t.t) // a racy reader must not see half of a pointer
@@ -362,14 +388,17 @@ func (vr *vmReflect) ifaceOf(x rval) *Iface {
 		panic(&reflect.ValueError{Method: "reflect.Value.Interface", Kind: reflect.Invalid})
 	}
 	if x.t.kind == reflect.Interface {
-		iv, _ := x.p.R.(*Iface)
+		iv, _ := x.cur().R.(*Iface)
 		return iv
 	}
-	return &Iface{T: vr.m.rtypeOf(x.t.t), V: deepCopy(*x.p, x.t.t)}
+	return &Iface{T: vr.m.rtypeOf(x.t.t), V: deepCopy(x.cur(), x.t.t)}
 }
 
-func isNilVal(x rval) bool {
-	switch r := x.p.R.(type) {
+func isNilVal(x rval) bool { return isNilValue(x.cur()) }
+
+// isNilValue reports whether the value c of a cell is nil.
+func isNilValue(c Value) bool {
+	switch r := c.R.(type) {
 	case nil:
 		return true
 	case *Value:
@@ -404,7 +433,7 @@ func (vr *vmReflect) isZero(v Value, t types.Type) bool {
 	case *types.Struct:
 		fs, _ := v.R.([]Value)
 		for i := range fs {
-			if !vr.isZero(fs[i], u.Field(i).Type()) {
+			if !vr.isZero(loadCell(&fs[i], u.Field(i).Type()), u.Field(i).Type()) {
 				return false
 			}
 		}
@@ -412,13 +441,13 @@ func (vr *vmReflect) isZero(v Value, t types.Type) bool {
 	case *types.Array:
 		es, _ := v.R.([]Value)
 		for i := range es {
-			if !vr.isZero(es[i], u.Elem()) {
+			if !vr.isZero(loadCell(&es[i], u.Elem()), u.Elem()) {
 				return false
 			}
 		}
 		return true
 	}
-	return isNilVal(rval{p: &v})
+	return isNilValue(v)
 }
 
 func bitsOf(t types.Type) int {
@@ -698,17 +727,17 @@ func (vr *vmReflect) intrinsic1(f *ssa.Function, args []int32) func([]Value) Val
 				}
 				panic(&reflect.ValueError{Method: "Swapper", Kind: kind})
 			}
-			if nv, ok := natViewOf(x.p.R); ok {
+			if nv, ok := natViewOf(x.cur().R); ok {
 				return Value{R: reflect.ValueOf(reflect.Swapper(nv.Interface()))}
 			}
-			if bs, ok := x.p.R.([]byte); ok {
+			if bs, ok := x.cur().R.([]byte); ok {
 				m := vr.m
 				return Value{R: reflect.ValueOf(func(i, j int) {
 					m.hostBytes(bs, min(len(bs), 1))
 					bs[i], bs[j] = bs[j], bs[i]
 				})}
 			}
-			s, _ := x.p.R.([]Value)
+			s, _ := x.cur().R.([]Value)
 			if wordKind(x.t.elemT().t) {
 				return Value{R: reflect.ValueOf(func(i, j int) { swapWords(s, i, j) })}
 			}
@@ -797,28 +826,34 @@ func (vr *vmReflect) intrinsic1(f *ssa.Function, args []int32) func([]Value) Val
 			x := v0(regs)
 			switch x.t.kind {
 			case reflect.Pointer:
-				if b, ok := x.p.R.(roByte); ok {
+				if b, ok := x.cur().R.(roByte); ok {
 					// a copy of a byte of read-only memory (see RV.Elem)
 					return encV(vr.vtypeOf(x.t.t.Underlying().(*types.Pointer).Elem()), &Value{N: int64(*b)}, flagROMem)
 				}
-				if bv, ok := x.p.R.(*byteView); ok {
+				if bv, ok := x.cur().R.(*byteView); ok {
+					et := x.t.t.Underlying().(*types.Pointer).Elem()
+					if bigByteArray(et) && !bv.ro && !bv.host {
+						// a [n]byte in real bytes (bigByteArray): addressable,
+						// its cell holds the view (see rval.cur and store);
+						// not over host bytes, as in RV.Elem
+						return encV(vr.vtypeOf(et), &Value{R: bv}, flagAddr|x.flag&flagRO)
+					}
 					// plain data in real bytes (byteview.go): a copy, not
 					// addressable, as in RV.Elem
-					et := x.t.t.Underlying().(*types.Pointer).Elem()
 					c := bv.load(et)
 					return encV(vr.vtypeOf(et), &c, flagROMem)
 				}
-				if b, ok := x.p.R.(*byte); ok && b != nil {
+				if b, ok := x.cur().R.(*byte); ok && b != nil {
 					// a byte of a Go []byte (bytes.go)
 					return encByte(vr.vtypeOf(x.t.t.Underlying().(*types.Pointer).Elem()), b, flagAddr|x.flag&flagRO)
 				}
-				p, _ := x.p.R.(*Value)
+				p, _ := x.cur().R.(*Value)
 				if p == nil {
 					return encV(nil, nil, 0)
 				}
 				return encV(vr.vtypeOf(x.t.t.Underlying().(*types.Pointer).Elem()), p, flagAddr|x.flag&flagRO)
 			case reflect.Interface:
-				iv, _ := x.p.R.(*Iface)
+				iv, _ := x.cur().R.(*Iface)
 				if iv == nil {
 					return encV(nil, nil, 0)
 				}
@@ -839,7 +874,7 @@ func (vr *vmReflect) intrinsic1(f *ssa.Function, args []int32) func([]Value) Val
 			if uint(i) >= uint(st.NumFields()) {
 				panic("reflect: Field index out of range")
 			}
-			fs := x.p.R.([]Value)
+			fs := x.cur().R.([]Value)
 			fl := fieldFlag(x.flag, st.Field(i))
 			return encV(vr.vtypeOf(st.Field(i).Type()), &fs[i], fl)
 		}
@@ -863,32 +898,37 @@ func (vr *vmReflect) intrinsic1(f *ssa.Function, args []int32) func([]Value) Val
 			}
 			switch u := x.t.t.Underlying().(type) {
 			case *types.Slice:
-				if z, ok := x.p.R.(*zslice); ok {
+				if z, ok := x.cur().R.(*zslice); ok {
 					e := z.addr(int64(i)).R.(*Value) // an element has no state: a new cell
 					return encV(vr.vtypeOf(u.Elem()), e, flagAddr|x.flag&flagRO)
 				}
-				if nv, ok := natViewOf(x.p.R); ok {
+				if nv, ok := natViewOf(x.cur().R); ok {
 					// a native slice view (natslice.go): a copy of the
 					// element, not addressable (a Set panics, it is not lost)
 					e := natScalar(nv.Index(i))
 					return encV(vr.vtypeOf(u.Elem()), &e, x.flag&flagRO)
 				}
-				if bs, ok := x.p.R.([]byte); ok {
+				if bs, ok := x.cur().R.([]byte); ok {
 					if uint(i) >= uint(len(bs)) {
 						panic("reflect: slice index out of range")
 					}
 					return encByte(vr.vtypeOf(u.Elem()), &bs[i], flagAddr|x.flag&flagRO)
 				}
-				s := x.p.R.([]Value)
+				s := x.cur().R.([]Value)
 				return encV(vr.vtypeOf(u.Elem()), &s[i], flagAddr|x.flag&flagRO)
 			case *types.Array:
-				s := x.p.R.([]Value)
+				if bv, ok := x.arrayView(); ok {
+					// a byte of a [n]byte in real bytes: the byte itself
+					bs := bv.bytes(x.t.t)
+					return encByte(vr.vtypeOf(u.Elem()), &bs[i], x.flag&(flagAddr|flagRO))
+				}
+				s := x.cur().R.([]Value)
 				return encV(vr.vtypeOf(u.Elem()), &s[i], x.flag&(flagAddr|flagRO))
 			case *types.Basic:
 				if u.Info()&types.IsString == 0 {
 					break
 				}
-				s := x.p.R.(string)
+				s := x.cur().R.(string)
 				return encV(vr.vtypeOf(types.Typ[types.Uint8]), &Value{N: int64(s[i])}, x.flag&flagRO)
 			}
 			if k := x.t.kind; k != reflect.Slice && k != reflect.Array && k != reflect.String {
@@ -933,7 +973,7 @@ func (vr *vmReflect) intrinsic1(f *ssa.Function, args []int32) func([]Value) Val
 			case k != reflect.Slice && k != reflect.Chan:
 				panic(&reflect.ValueError{Method: "reflect.Value.Cap", Kind: k})
 			}
-			switch r := x.p.R.(type) {
+			switch r := x.cur().R.(type) {
 			case *zslice:
 				return Value{N: int64(cap(r.s))}
 			case []byte:
@@ -946,7 +986,7 @@ func (vr *vmReflect) intrinsic1(f *ssa.Function, args []int32) func([]Value) Val
 					return Value{N: int64(r.Cap())}
 				}
 			}
-			s, _ := x.p.R.([]Value)
+			s, _ := x.cur().R.([]Value)
 			return Value{N: int64(cap(s))}
 		}
 	case "Grow":
@@ -954,13 +994,13 @@ func (vr *vmReflect) intrinsic1(f *ssa.Function, args []int32) func([]Value) Val
 			x := v0(regs)
 			vr.mustSet(x, "Grow")
 			n := int(a(regs, 1).N)
-			s, _ := x.p.R.([]Value)
+			s, _ := loadWord(x.p).R.([]Value)
 			if cap(s)-len(s) < n {
 				nc := max(2*cap(s), len(s)+n, 4)
 				et := x.t.t.Underlying().(*types.Slice).Elem()
 				ns := vr.makeSlice(et, len(s), nc)
 				growValues(ns, s, et)
-				*x.p = Value{R: ns}
+				storeWord(x.p, Value{R: ns}) // a racy reader must not see half of a slice
 			}
 			return Value{}
 		}
@@ -968,8 +1008,8 @@ func (vr *vmReflect) intrinsic1(f *ssa.Function, args []int32) func([]Value) Val
 		return func(regs []Value) Value {
 			x := v0(regs)
 			vr.mustSet(x, "SetLen")
-			s, _ := x.p.R.([]Value)
-			*x.p = Value{R: s[:a(regs, 1).N]}
+			s, _ := loadWord(x.p).R.([]Value)
+			storeWord(x.p, Value{R: s[:a(regs, 1).N]})
 			return Value{}
 		}
 	case "Interface":
@@ -1002,12 +1042,18 @@ func (vr *vmReflect) intrinsic1(f *ssa.Function, args []int32) func([]Value) Val
 			if x.b != nil {
 				return encV(vr.vtypeOf(types.NewPointer(x.t.t)), &Value{R: x.b}, x.flag&flagRO)
 			}
+			if bv, ok := x.arrayView(); ok {
+				// a [n]byte in real bytes: its address is the view, as the
+				// VM has &a (a pointer to the cell of the view was not a
+				// pointer to the array)
+				return encV(vr.vtypeOf(types.NewPointer(x.t.t)), &Value{R: bv}, x.flag&flagRO)
+			}
 			return encV(vr.vtypeOf(types.NewPointer(x.t.t)), &Value{R: x.p}, x.flag&flagRO)
 		}
 	case "IsNil":
 		return func(regs []Value) Value { return Value{N: b2i(isNilVal(v0(regs)))} }
 	case "IsZero":
-		return func(regs []Value) Value { x := v0(regs); return Value{N: b2i(vr.isZero(*x.p, x.t.t))} }
+		return func(regs []Value) Value { x := v0(regs); return Value{N: b2i(vr.isZero(x.cur(), x.t.t))} }
 	case "Bool":
 		return func(regs []Value) Value { return Value{N: v0(regs).p.N} }
 	case "Int", "Uint", "Float":
@@ -1019,12 +1065,17 @@ func (vr *vmReflect) intrinsic1(f *ssa.Function, args []int32) func([]Value) Val
 				return Value{R: "<invalid Value>"}
 			}
 			if x.t.kind == reflect.String {
-				return Value{R: x.p.R}
+				return Value{R: x.cur().R}
 			}
 			return Value{R: "<" + x.t.String() + " Value>"}
 		}
 	case "Bytes":
-		return func(regs []Value) Value { return *v0(regs).p }
+		return func(regs []Value) Value {
+			if bv, ok := v0(regs).arrayView(); ok {
+				return Value{R: bv.bytes(v0(regs).t.t)} // the bytes of the array, as in gc
+			}
+			return loadWord(v0(regs).p) // a slice: a word kind
+		}
 	case "Pointer", "UnsafePointer":
 		return func(regs []Value) Value { return m.vrPointer(v0(regs)) }
 	case "OverflowInt":
@@ -1089,7 +1140,7 @@ func (vr *vmReflect) intrinsic1(f *ssa.Function, args []int32) func([]Value) Val
 			if op == "SetBytes" && x.t.elemT().kind != reflect.Uint8 {
 				panic("reflect.Value.SetBytes of non-byte slice")
 			}
-			*x.p = Value{R: a(regs, 1).R}
+			vr.store(x, Value{R: a(regs, 1).R})
 			return Value{}
 		}
 	case "SetZero":
@@ -1109,7 +1160,7 @@ func (vr *vmReflect) intrinsic1(f *ssa.Function, args []int32) func([]Value) Val
 					panic("reflect: reflect.Value.SetMapIndex using value obtained using unexported field")
 				}
 			}
-			mp, _ := x.p.R.(*MapV)
+			mp, _ := x.cur().R.(*MapV)
 			if mp == nil {
 				if e.t == nil {
 					return Value{} // a delete from a nil map does nothing, as in gc
@@ -1135,12 +1186,12 @@ func (vr *vmReflect) intrinsic1(f *ssa.Function, args []int32) func([]Value) Val
 	case "MapIndex":
 		return func(regs []Value) Value {
 			x, k := v0(regs), decV(a(regs, 1))
-			mp, _ := x.p.R.(*MapV)
+			mp, _ := x.cur().R.(*MapV)
 			mt := x.t.t.Underlying().(*types.Map)
 			if mp == nil {
 				return encV(nil, nil, 0)
 			}
-			e, ok := mp.M[keyOf(*k.p, mt.Key())]
+			e, ok := mp.M[keyOf(k.cur(), mt.Key())]
 			if !ok {
 				return encV(nil, nil, 0)
 			}
@@ -1149,10 +1200,10 @@ func (vr *vmReflect) intrinsic1(f *ssa.Function, args []int32) func([]Value) Val
 	case "MapRange":
 		return func(regs []Value) Value {
 			x := v0(regs)
-			if r, ok := x.p.R.(reflect.Value); ok && x.t.kind == reflect.Map {
+			if r, ok := x.cur().R.(reflect.Value); ok && x.t.kind == reflect.Map {
 				return Value{R: &Value{R: &vmapIter{nat: r.MapRange()}}}
 			}
-			mp, _ := x.p.R.(*MapV)
+			mp, _ := x.cur().R.(*MapV)
 			it := &vmapIter{m: mp, t: x.t.t}
 			if mp != nil {
 				it.keys = make([]any, 0, len(mp.M))
@@ -1167,7 +1218,7 @@ func (vr *vmReflect) intrinsic1(f *ssa.Function, args []int32) func([]Value) Val
 	case "MapKeys":
 		return func(regs []Value) Value {
 			x := v0(regs)
-			mp, _ := x.p.R.(*MapV)
+			mp, _ := x.cur().R.(*MapV)
 			mt := x.t.t.Underlying().(*types.Map)
 			kt := vr.vtypeOf(mt.Key())
 			var out []Value
@@ -1212,7 +1263,13 @@ func (vr *vmReflect) mustSet(x rval, op string) {
 // lenOf is the length of the value x of kind array, chan, map, slice or
 // string; -1 when its representation is not known here.
 func (vr *vmReflect) lenOf(x rval) int {
-	switch r := x.p.R.(type) {
+	if x.t != nil && x.t.kind == reflect.Array {
+		// The length of the array type: cur of an array in real bytes
+		// (arrayView) decodes the whole array, and a loop of Index (each
+		// checks lenOf) was quadratic.
+		return int(x.t.t.Underlying().(*types.Array).Len())
+	}
+	switch r := x.cur().R.(type) {
 	case []Value:
 		return len(r)
 	case []byte:
@@ -1286,10 +1343,18 @@ func (vr *vmReflect) assignedVal(y rval, dst types.Type, ctx string) Value {
 	if y.t != nil && !y.t.isNat() && dst != nil && !types.AssignableTo(y.t.t, dst) {
 		panic(ctx + ": value of type " + y.t.String() + " is not assignable to type " + vr.vtypeOf(dst).String())
 	}
-	if _, isI := dst.Underlying().(*types.Interface); isI && y.t.kind != reflect.Interface {
-		return Value{R: &Iface{T: vr.m.rtypeOf(y.t.t), V: deepCopy(*y.p, y.t.t)}}
+	if y.t != nil && y.t.isNat() && dst != nil && y.t.nat.Kind() == reflect.Struct && !vr.m.isNativeNamed(dst) {
+		// A native struct into a struct of the program: only when Go sees
+		// one type (natIdentical).
+		if _, isS := dst.Underlying().(*types.Struct); isS && !vr.m.natIdentical(y.t.nat, dst) {
+			panic(ctx + ": value of type " + y.t.String() + " is not assignable to type " + vr.vtypeOf(dst).String())
+		}
 	}
-	return deepCopy(*y.p, dst)
+	val := y.cur() // a racy writer of the cell of y must not make it tear
+	if _, isI := dst.Underlying().(*types.Interface); isI && y.t.kind != reflect.Interface {
+		return Value{R: &Iface{T: vr.m.rtypeOf(y.t.t), V: deepCopy(val, y.t.t)}}
+	}
+	return deepCopy(val, dst)
 }
 
 // iterEntry is MapIter.Key (key) or MapIter.Value of the iterator it.
@@ -1375,13 +1440,14 @@ func (m *Machine) callGenericMethod(fn *ssa.Function, recv Value, regs []Value, 
 // (uintptrToUnsafe), as gc keeps it alive in that expression.
 func (m *Machine) vrPointer(x rval) Value {
 	var p unsafe.Pointer
-	ptr := x.p.R
-	switch r := x.p.R.(type) {
+	c := x.cur() // one read: a racy writer may swap the cell
+	ptr := c.R
+	switch r := c.R.(type) {
 	case *Value:
 		p = unsafe.Pointer(r)
 		// unsafe.Pointer(v.Pointer()) + off finds the fields
 		// (protobuf's pointerOfValue)
-		m.rememberPointee(*x.p, x.t.t)
+		m.rememberPointee(c, x.t.t)
 	case *MapV:
 		p = unsafe.Pointer(r)
 	case *Closure:
@@ -1409,7 +1475,7 @@ func (m *Machine) vrPointer(x rval) Value {
 		// a byte of a Go []byte or of a string, or plain data in real
 		// bytes: the real address, as uintptr(unsafe.Pointer(p)) gives
 		// (golang.org/x/crypto/internal/alias with purego compares them)
-		return Value{N: int64(addrOf(*x.p)), R: ptr}
+		return Value{N: int64(addrOf(c)), R: ptr}
 	case []Value:
 		switch {
 		case cap(r) > 0:

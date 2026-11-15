@@ -14,6 +14,16 @@ import (
 // table (github.com/andybalholm/brotli) has thousands of literals in one
 // block; a search of each literal from the start of its block made the
 // compile time quadratic, and its preflight and init took seconds.
+//
+// The test checks the properties, not the shape of the SSA code: go/ssa
+// changes the order of the instructions of a literal between versions
+// (x/tools v0.51 stored all the elements after the last one, v0.52 stores
+// each one right after it is built), and a host such as Traefik can select
+// another x/tools than yaegi v2's go.mod. Whatever the shape:
+//   - each literal is built from registers (OpMakeAgg or OpStoreAgg), not
+//     in memory;
+//   - aggStore looks at a few instructions per literal;
+//   - the table holds the right values.
 func TestAggStoreLinear(t *testing.T) {
 	const n = 3000
 	// The shape of kStaticDictionaryWords in brotli.
@@ -23,23 +33,21 @@ func TestAggStoreLinear(t *testing.T) {
 	for i := 0; i < n; i++ {
 		fmt.Fprintf(&b, "\tword{%d, %d, %d},\n", i%255+1, i%3, i)
 	}
-	b.WriteString("}\n")
+	b.WriteString("}\n\n")
+	b.WriteString("func Sum() int {\n\ts := 0\n\tfor i, w := range table {\n\t\ts += (i+1) * (int(w.len)*1000003 + int(w.transform)*1009 + int(w.idx))\n\t}\n\treturn s\n}\n")
 	m, spkg := buildSrc(t, b.String())
 	fn := spkg.Func("init")
 
-	// go/ssa builds each element in its own temporary, then stores all of
-	// them after the last one: each is an OpMakeAgg (its Store does not
-	// follow its Load), and aggStore looks at each one.
 	f := m.funcOf(fn)
 	f.ensure()
-	makes := 0
+	lits := 0
 	for _, in := range f.code {
-		if in.Op == OpMakeAgg {
-			makes++
+		if in.Op == OpMakeAgg || in.Op == OpStoreAgg {
+			lits++
 		}
 	}
-	if makes != n {
-		t.Fatalf("%d OpMakeAgg, want %d", makes, n)
+	if lits != n {
+		t.Fatalf("%d literals built from registers (OpMakeAgg, OpStoreAgg), want %d", lits, n)
 	}
 
 	// aggStore looks at a few instructions per literal, not at the
@@ -54,5 +62,15 @@ func TestAggStoreLinear(t *testing.T) {
 	}
 	if c.aggScan > 2*n {
 		t.Errorf("aggStore looked at %d instructions for %d literals, want at most %d", c.aggScan, n, 2*n)
+	}
+
+	// The values: the same sum as the compiled program.
+	want := 0
+	for i := 0; i < n; i++ {
+		want += (i + 1) * ((i%255+1)*1000003 + (i%3)*1009 + i)
+	}
+	m.Call(f, nil, nil)
+	if got := m.Call(m.funcOf(spkg.Func("Sum")), nil, nil).N; got != int64(want) {
+		t.Errorf("Sum() = %d, want %d", got, want)
 	}
 }

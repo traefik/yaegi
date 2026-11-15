@@ -17,6 +17,7 @@ import (
 	"os"
 	"runtime"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -150,14 +151,91 @@ func Prefix(v string) string {
 }
 
 // StripExperiments returns v without the GOEXPERIMENT suffix that
-// runtime.Version() has in a toolchain built with experiments:
-// "go1.26.9" for "go1.26.9 X:boringcrypto,jsonv2". Other strings come back
-// as is.
+// runtime.Version() has in a binary built with experiments: "go1.27.3"
+// for "go1.27.3-X:nogreenteagc" (the form of the linker of go1.26 and
+// later for a version without a dash) and for "go1.27.3 X:jsonv2" (the
+// form for a version with a dash, and of older linkers). Other strings
+// come back as is.
 func StripExperiments(v string) string {
-	if i := strings.Index(v, " X:"); i >= 0 {
+	if i := experimentsAt(v); i >= 0 {
 		return v[:i]
 	}
 	return v
+}
+
+// experimentsAt returns the index of the GOEXPERIMENT suffix of v (" X:"
+// or "-X:"), or -1.
+func experimentsAt(v string) int {
+	i := strings.Index(v, " X:")
+	if j := strings.Index(v, "-X:"); j >= 0 && (i < 0 || j < i) {
+		i = j
+	}
+	return i
+}
+
+// Experiments returns the experiments of the GOEXPERIMENT suffix of v
+// (see StripExperiments), sorted: ["boringcrypto", "jsonv2"] for
+// "go1.26.9 X:boringcrypto,jsonv2", ["nogreenteagc"] for
+// "go1.27.3-X:nogreenteagc". An experiment turned off by default is
+// written with the prefix "no", as GOEXPERIMENT does.
+func Experiments(v string) []string {
+	i := experimentsAt(v)
+	if i < 0 {
+		return nil
+	}
+	var out []string
+	for _, e := range strings.Split(v[i+len(" X:"):], ",") {
+		if e = strings.TrimSpace(e); e != "" {
+			out = append(out, e)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// sourceNeutral are the experiments of the Go releases of the window that
+// change only the compiler, the linker or the runtime (internal/goexperiment
+// and the goexperiment.* build tags of GOROOT): not the sources of a
+// package that yaegi v2 copies (aot/), nor the API of the standard library
+// that the copies and the generated data see. A host built with one of
+// them may run the AOT copies made without it. The others (boringcrypto
+// changes the crypto packages, jsonv2 encoding/json, fieldtrack the
+// methods that interfaces see, arenas the API of reflect, an experiment
+// that this list does not know) need copies made with the same
+// experiments: fail closed.
+var sourceNeutral = map[string]bool{
+	"cgocheck2": true, "dwarf5": true, "greenteagc": true,
+	"heapminimum512kib": true, "loopvar": true, "mapsplitgroup": true,
+	"newinliner": true, "preemptibleloops": true, "randomizedheapbase64": true,
+	"regabiargs": true, "regabiwrappers": true, "runtimefreegc": true,
+	"sizespecializedmalloc": true, "staticlockranking": true,
+}
+
+// ExperimentsDiffer returns the experiments of the Go version host that
+// change the standard library (not in sourceNeutral, with or without the
+// prefix "no") and that the Go version copies does not have, and the
+// other way around, sorted. Copies made with these experiments differ
+// from the standard library of the host.
+func ExperimentsDiffer(host, copies string) []string {
+	h, c := map[string]bool{}, map[string]bool{}
+	for _, e := range Experiments(host) {
+		h[e] = true
+	}
+	for _, e := range Experiments(copies) {
+		c[e] = true
+	}
+	var out []string
+	add := func(a, b map[string]bool) {
+		for e := range a {
+			if !b[e] && !sourceNeutral[strings.TrimPrefix(e, "no")] {
+				out = append(out, e)
+			}
+		}
+	}
+	add(h, c)
+	add(c, h)
+	sort.Strings(out)
+	return out
 }
 
 // Release returns the release of a Go version: "go1.26" for "go1.26.8",

@@ -161,3 +161,58 @@ replace github.com/gorilla/mux => github.com/containous/mux v0.0.0-2025052312054
 		t.Errorf("local replacement kept:\n%s", s)
 	}
 }
+
+// TestHostVersions checks the list that the CI job hostgraph gives to go
+// get: only the modules of yaegi v2's go.mod that the host requires higher,
+// not the replaced ones.
+func TestHostVersions(t *testing.T) {
+	own := map[string]string{
+		"golang.org/x/tools": "v0.51.0",
+		"golang.org/x/sys":   "v0.49.0",
+		"example.com/old":    "v1.0.0",
+		"example.com/repl":   "v1.0.0",
+		"example.com/only":   "v1.0.0",
+	}
+	host := map[string]string{
+		"golang.org/x/tools": "v0.52.0",
+		"golang.org/x/sys":   "v0.48.0",
+		"example.com/old":    "v1.0.0",
+		"example.com/repl":   replacedBy + "../repl",
+		"example.com/host":   "v2.0.0",
+	}
+	got := strings.Join(hostVersions(own, host), " ")
+	if want := "golang.org/x/tools@v0.52.0"; got != want {
+		t.Errorf("hostVersions = %q, want %q", got, want)
+	}
+}
+
+// TestSharedModulesNotBehindHost checks that yaegi v2 is built and tested with
+// the versions that Traefik selects for the modules the VM itself depends
+// on: golang.org/x/... (go/ssa, go/packages, x/sys) and mimetype. With
+// x/tools v0.51 in yaegi v2 and v0.52 in Traefik, go/ssa built composite
+// literals in another order in Traefik, and the tests never saw it. When
+// this fails after a new snapshot, go get the versions that it names.
+func TestSharedModulesNotBehindHost(t *testing.T) {
+	root := filepath.Join("..", "..")
+	gomod, err := os.ReadFile(filepath.Join(root, "go.mod"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	own, err := requires("go.mod", gomod)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap, err := os.ReadFile(filepath.Join(root, snapshotPath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	host, err := requires(snapshotPath, snap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, mv := range hostVersions(own, host) {
+		if strings.HasPrefix(mv, "golang.org/x/") || strings.HasPrefix(mv, "github.com/gabriel-vasile/mimetype@") {
+			t.Errorf("go.mod is behind the host snapshot: go get %s", mv)
+		}
+	}
+}

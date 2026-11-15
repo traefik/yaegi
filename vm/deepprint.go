@@ -160,8 +160,8 @@ func (m *Machine) printTooDeep(s *nativeSite, regs []Value) bool {
 	for i, a := range s.args {
 		if s.vari && i == len(s.args)-1 {
 			vs, _ := regs[a].R.([]Value)
-			for _, v := range vs {
-				if m.nestedDeep(v, maxBoxDepth, false) {
+			for i := range vs { // xs... passes program memory
+				if m.nestedDeep(loadWord(&vs[i]), maxBoxDepth, false) {
 					return true
 				}
 			}
@@ -193,9 +193,13 @@ func (m *Machine) nestedDeep(v Value, limit int, cycles bool) bool {
 		v Value
 		d int
 	}
+	// The walk does not know the static types of the cells it reads, and
+	// another goroutine may swap a map, slice or pointer variable that fmt
+	// prints: every cell of program memory is read with loadWord, which
+	// never mixes two writes (wordcell.go).
 	top := iv.V
 	if c, ok := top.R.(*Value); ok && c != nil {
-		top = *c // fmt prints the value of a pointer at the top
+		top = loadWord(c) // fmt prints the value of a pointer at the top
 	}
 	stack := []item{{top, 1}}
 	var seen map[any]bool // containers past cycleFrom levels (cycles)
@@ -236,7 +240,7 @@ func (m *Machine) nestedDeep(v Value, limit int, cycles bool) bool {
 			stack = append(stack, item{x.V, it.d + 1})
 		case []Value:
 			for i := range x {
-				stack = append(stack, item{x[i], it.d})
+				stack = append(stack, item{loadWord(&x[i]), it.d})
 			}
 		case *MapV:
 			if x != nil {

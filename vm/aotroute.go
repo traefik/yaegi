@@ -20,6 +20,7 @@ package vm
 import (
 	"go/types"
 	"reflect"
+	"runtime"
 
 	"golang.org/x/tools/go/ssa"
 )
@@ -44,15 +45,35 @@ var aotRoutes = map[string]map[string]int{
 }
 
 // setupAOTRoutes selects the packages of aotRoutes whose calls can go to
-// their AOT copy: the copy is registered and the package is native by
-// default (no explicit mode). It reports whether there is one.
+// their AOT copy: the copy is registered, the package is native by default
+// (no explicit mode), and the copies can run in this host (the version
+// check of AOT mode, checkAOTVersion with m.hostGo). It reports whether
+// there is one.
+//
+// Without the version check, a host built with a newer Go patch release
+// than the copies (Options.StaleAOTFallback, or default mode) ran
+// json.Unmarshal, fmt.Sprintf and xml.Marshal of a plugin value in the
+// copies, which miss the fixes of the host. Such a call now stays native,
+// as with no copy: the lost methods check (lostmethods.go) then returns
+// an error that says why, instead of a wrong result.
 func (m *Machine) setupAOTRoutes() bool {
+	checked := false
 	for path := range aotRoutes {
 		if aotPkg(path) == nil || m.modeOf(path) != ModeNative {
 			continue
 		}
 		if _, explicit := m.Modes[path]; explicit {
 			continue
+		}
+		if !checked {
+			checked = true
+			host := m.hostGo
+			if host == "" {
+				host = runtime.Version()
+			}
+			if m.staleAOT = checkAOTVersion(host, m.allowStaleAOT); m.staleAOT != nil {
+				return false
+			}
 		}
 		if m.routed == nil {
 			m.routed = map[string]bool{}
@@ -117,8 +138,8 @@ func (m *Machine) routeNeeded(v Value, vari bool, path string) bool {
 	s, _ := v.R.([]Value)
 	need := false
 	walked := 0
-	for _, v := range s {
-		if iv, _ := v.R.(*Iface); iv != nil {
+	for i := range s { // xs... passes program memory
+		if iv, _ := loadWord(&s[i]).R.(*Iface); iv != nil {
 			n, stay := m.ifaceRoute(iv, path, &walked)
 			if stay {
 				return false
@@ -171,21 +192,23 @@ func (m *Machine) valueRoute(v Value, t types.Type, path string, walked *int) (n
 			return m.ifaceRoute(iv, path, walked)
 		}
 	case *types.Slice:
-		for _, e := range sliceVals(v) {
-			if walk(e, u.Elem()) {
+		es := sliceVals(v)
+		for i := range es {
+			if walk(loadCell(&es[i], u.Elem()), u.Elem()) {
 				break
 			}
 		}
 	case *types.Array:
-		for _, e := range sliceVals(v) {
-			if walk(e, u.Elem()) {
+		es := sliceVals(v)
+		for i := range es {
+			if walk(loadCell(&es[i], u.Elem()), u.Elem()) {
 				break
 			}
 		}
 	case *types.Struct:
 		fs := sliceVals(v)
 		for i := 0; i < u.NumFields() && i < len(fs); i++ {
-			if walk(fs[i], u.Field(i).Type()) {
+			if walk(loadCell(&fs[i], u.Field(i).Type()), u.Field(i).Type()) {
 				break
 			}
 		}
@@ -201,7 +224,7 @@ func (m *Machine) valueRoute(v Value, t types.Type, path string, walked *int) (n
 		}
 	case *types.Pointer:
 		if cell, ok := v.R.(*Value); ok && cell != nil {
-			walk(*cell, u.Elem())
+			walk(loadCell(cell, u.Elem()), u.Elem())
 		}
 	}
 	return need, stay
@@ -417,8 +440,8 @@ func (m *Machine) callAOTRoute(path string, s *nativeSite, fn reflect.Value, ai 
 		case vari:
 			vs, _ := regs[a].R.([]Value)
 			xs := make([]any, len(vs))
-			for j, v := range vs {
-				xs[j] = m.routeArg(v, c)
+			for j := range vs { // xs... passes program memory
+				xs[j] = m.routeArg(loadWord(&vs[j]), c)
 			}
 			in[i] = reflect.ValueOf(xs)
 		default:

@@ -135,7 +135,7 @@ func hasNatData(v Value, k int) bool {
 	if ownShadow(p) != nil {
 		return true
 	}
-	switch p.R.(type) {
+	switch loadWord(p).R.(type) { // the cell may be a word kind
 	case reflect.Value, *byte, roByte, *shadowRef: // as RV.native and RV.Elem
 		return true
 	}

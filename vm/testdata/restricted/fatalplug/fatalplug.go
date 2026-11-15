@@ -6,10 +6,17 @@
 package fatalplug
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"reflect"
 	"runtime"
+	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -26,6 +33,19 @@ func New(_ context.Context, _ http.Handler, _ *Config, _ string) (http.Handler, 
 }
 
 type pair struct{ a, b int }
+
+// node has a pointer: the runtime refuses a finalizer on a pointer inside
+// an object of nodes on every platform (a small object without pointers
+// can come from the tiny allocator, and then the runtime allows it).
+type node struct {
+	p *int
+	n int
+}
+
+type outer struct {
+	a *int
+	b node
+}
 
 type guarded struct {
 	mu sync.Mutex
@@ -86,6 +106,22 @@ func race(n, rounds int, f func(g, i int)) string {
 		}
 	}
 	return out
+}
+
+// release unblocks the finalizer of /finalizerblock.
+var release = make(chan struct{})
+
+// waitGC runs the GC until c gets a value (5 s at most), and returns it.
+func waitGC(c chan string) string {
+	for i := 0; i < 500; i++ {
+		runtime.GC()
+		select {
+		case s := <-c:
+			return s
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+	return "finalizer did not run"
 }
 
 func (handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -254,6 +290,153 @@ func (handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		} {
 			fmt.Fprintln(w, try(c))
 		}
+	case "/finalizerinner":
+		// Pointers inside an object that are not the cell of a value: a
+		// struct field, an element of an array, a field of a native
+		// struct. Then a second finalizer on the bytes of a []byte.
+		o := new(outer)
+		a := new([64]node)
+		b := make([]byte, 64)
+		for _, c := range []func(){
+			func() { runtime.SetFinalizer(&o.b, func(*node) {}) },
+			func() { runtime.SetFinalizer(&a[1], func(*node) {}) },
+			func() { runtime.SetFinalizer(&r.Header, func(*http.Header) {}) },
+			func() { runtime.SetFinalizer(&r.Header, nil) },
+			func() {
+				runtime.SetFinalizer(&b[0], func(*byte) {})
+				runtime.SetFinalizer(&b[0], func(*byte) {})
+			},
+		} {
+			fmt.Fprintln(w, try(c))
+		}
+	case "/finalizerstart":
+		// Correct uses on the start of an object: the first element of an
+		// array, the first field of a struct, a native *os.File, a large
+		// array (a malloc header), then a reset of each.
+		a := new([4]node)
+		p := new(pair)
+		big := new([200]node)
+		f, err := os.Open(os.DevNull)
+		if err != nil {
+			fmt.Fprintln(w, err)
+			return
+		}
+		defer f.Close()
+		for _, c := range []func(){
+			func() { runtime.SetFinalizer(&a[0], func(*node) {}) },
+			func() { runtime.SetFinalizer(&p.a, func(*int) {}) },
+			func() { runtime.SetFinalizer(f, func(*os.File) {}) },
+			func() { runtime.SetFinalizer(&big[0], func(*node) {}) },
+			func() { runtime.SetFinalizer(f, nil); runtime.SetFinalizer(f, func(any) {}) },
+			func() {
+				runtime.SetFinalizer(&a[0], nil)
+				runtime.SetFinalizer(&p.a, nil)
+				runtime.SetFinalizer(f, nil)
+				runtime.SetFinalizer(&big[0], nil)
+			},
+			func() {
+				// The finalizer runs, with its argument (a native func
+				// calls the interpreted one in AOT mode).
+				ran := make(chan int, 1)
+				q := new([4]node)
+				q[0].n = 7
+				runtime.SetFinalizer(&q[0], func(v *node) { ran <- v.n })
+				q = nil
+				for i := 0; i < 500; i++ {
+					runtime.GC()
+					select {
+					case n := <-ran:
+						if n != 7 {
+							panic(fmt.Sprint("finalizer got ", n))
+						}
+						return
+					case <-time.After(10 * time.Millisecond):
+					}
+				}
+				panic("finalizer did not run")
+			},
+		} {
+			fmt.Fprintln(w, try(c))
+		}
+		runtime.KeepAlive(a)
+		runtime.KeepAlive(p)
+		runtime.KeepAlive(big)
+	case "/finalizernative":
+		// Native funcs as finalizers, on a native *os.File, on a cell of
+		// the plugin and on the bytes of a []byte. Each one must run (it
+		// does in Go) and must not end the host. The pipes show that they
+		// ran: the Close of the write end gives EOF, and the Encode writes
+		// a line.
+		f, err := os.Open(os.DevNull)
+		if err != nil {
+			fmt.Fprintln(w, err)
+			return
+		}
+		pr, pw, err := os.Pipe()
+		if err != nil {
+			fmt.Fprintln(w, err)
+			return
+		}
+		defer pr.Close()
+		er, ew, err := os.Pipe()
+		if err != nil {
+			fmt.Fprintln(w, err)
+			return
+		}
+		defer er.Close()
+		defer ew.Close()
+		fmt.Fprintln(w, try(func() {
+			runtime.SetFinalizer(f, reflect.TypeOf)
+			runtime.SetFinalizer(pw, (*os.File).Close)
+			runtime.SetFinalizer(new(node), json.Marshal)
+			runtime.SetFinalizer(new(node), json.NewEncoder(ew).Encode)
+			runtime.SetFinalizer(&make([]byte, 64)[0], reflect.TypeOf)
+		}))
+		f, pw = nil, nil
+		done := make(chan string, 2)
+		go func() {
+			b, err := io.ReadAll(pr) // EOF when the finalizer closes pw
+			done <- fmt.Sprint("close ", len(b), err)
+		}()
+		go func() {
+			line, err := bufio.NewReader(er).ReadString('\n')
+			done <- fmt.Sprintf("encode %q %v", line, err)
+		}()
+		var got []string
+		for i := 0; i < 500 && len(got) < 2; i++ {
+			runtime.GC()
+			select {
+			case s := <-done:
+				got = append(got, s)
+			case <-time.After(10 * time.Millisecond):
+			}
+		}
+		sort.Strings(got)
+		fmt.Fprintln(w, strings.Join(got, "\n"))
+	case "/finalizerexit":
+		// A finalizer that calls runtime.Goexit ends only itself: its
+		// deferred calls run, and the next finalizer runs.
+		exited := make(chan string, 1)
+		runtime.SetFinalizer(new(node), func(*node) {
+			defer func() { exited <- "goexit ok" }()
+			runtime.Goexit()
+		})
+		fmt.Fprintln(w, waitGC(exited))
+		next := make(chan string, 1)
+		runtime.SetFinalizer(new(node), func(*node) { next <- "next ok" })
+		fmt.Fprintln(w, waitGC(next))
+	case "/finalizerblock":
+		// A finalizer that blocks until /finalizerrelease. The finalizers
+		// of the host must still run meanwhile.
+		started := make(chan string, 1)
+		runtime.SetFinalizer(new(node), func(*node) {
+			started <- "blocked"
+			<-release
+		})
+		fmt.Fprintln(w, waitGC(started))
+	case "/finalizerrelease":
+		close(release)
+		fmt.Fprintln(w, "released")
 	case "/finalizerrace":
 		// Goroutines set and clear the finalizers of shared objects. Two of
 		// them can set a finalizer on the same object at the same time: one

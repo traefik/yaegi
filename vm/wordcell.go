@@ -2,6 +2,7 @@ package vm
 
 import (
 	"go/types"
+	"reflect"
 	"runtime"
 	"sync/atomic"
 	"unsafe"
@@ -26,19 +27,34 @@ import (
 // contend; on amd64 the atomic loads are plain loads. An interface is two
 // words in Go too and may tear there, but in the VM its R may hold an
 // *Iface or a native reflect.Value: it gets the same lock, so that a torn
-// read never confuses two Go types.
+// read never confuses two Go types. A slice is three words in Go and may
+// tear there too (an old pointer with a new length), but in the VM its R
+// may hold a []Value, a *zslice or a native reflect.Value (a slice made by
+// strings.Split or read from an http.Header): a torn read gave the type
+// word of one with the data word of another, a fault of the host. Slices
+// get the same lock: a racy read sees the old or the new slice, never a
+// mix.
 
-// wordKind reports whether a variable of type t is one machine word in Go
-// (or an interface), so that a racy read must not tear.
+// wordKind reports whether a variable of type t is one machine word in Go,
+// an interface or a slice, so that a racy read must not tear.
 func wordKind(t types.Type) bool {
 	if t == nil {
 		return false
 	}
 	switch u := t.Underlying().(type) {
-	case *types.Pointer, *types.Map, *types.Chan, *types.Signature, *types.Interface:
+	case *types.Pointer, *types.Map, *types.Chan, *types.Signature, *types.Interface, *types.Slice:
 		return true
 	case *types.Basic:
 		return u.Kind() == types.UnsafePointer
+	}
+	return false
+}
+
+// wordReflectKind is wordKind for the kind of a reflect value.
+func wordReflectKind(k reflect.Kind) bool {
+	switch k {
+	case reflect.Pointer, reflect.Map, reflect.Chan, reflect.Func, reflect.Interface, reflect.Slice, reflect.UnsafePointer:
+		return true
 	}
 	return false
 }
@@ -195,15 +211,29 @@ func copyWords(dst, src []Value) int {
 // appendWords is append(s, t...) for elements of a wordKind type. When s
 // has room, the new elements go into memory that another slice may share
 // and read: they are written with storeWord. A new array is not seen by
-// anyone yet: a plain append.
+// anyone yet, so it is written with plain stores, but the elements of s
+// and t may change under a racy writer: append makes the array (with the
+// capacity of gc's rule), then each element is read again with loadWord,
+// as appendValues does for structs.
 func appendWords(s, t []Value) []Value {
 	old := len(s)
 	if cap(s)-old < len(t) {
-		return append(s, t...)
+		r := append(s, t...)
+		readWords2(r[:old], s)
+		readWords2(r[old:], t)
+		return r
 	}
 	s = s[:old+len(t)]
 	copyWords(s[old:], t)
 	return s
+}
+
+// readWords2 sets dst[i] = loadWord(&src[i]): dst is a new array that no
+// one else sees yet, src may be written by a racy writer.
+func readWords2(dst, src []Value) {
+	for i := range dst {
+		dst[i] = loadWord(&src[i])
+	}
 }
 
 // swapWords swaps s[i] and s[j], elements of a wordKind type, with loadWord
@@ -232,4 +262,22 @@ func loadCell(p *Value, t types.Type) Value {
 		return loadWord(p)
 	}
 	return *p
+}
+
+// loadCellK is loadCell for a cell whose native kind is k (the code that
+// converts by reflect type, not by go/types type).
+func loadCellK(p *Value, k reflect.Kind) Value {
+	if wordReflectKind(k) {
+		return loadWord(p)
+	}
+	return *p
+}
+
+// storeCellK is storeCell for a cell whose native kind is k.
+func storeCellK(p *Value, v Value, k reflect.Kind) {
+	if wordReflectKind(k) {
+		storeWord(p, v)
+		return
+	}
+	*p = v
 }

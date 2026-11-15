@@ -20,6 +20,7 @@ package vm
 
 import (
 	"context"
+	"errors"
 	"maps"
 	"os"
 	"os/exec"
@@ -114,6 +115,9 @@ var mockCmdMethods = sync.OnceValue(func() map[string]reflect.Value {
 		"Run":            reflect.ValueOf(func(c *exec.Cmd) error { return &ExecError{Name: name(c)} }),
 		"Output":         reflect.ValueOf(func(c *exec.Cmd) ([]byte, error) { return nil, &ExecError{Name: name(c)} }),
 		"CombinedOutput": reflect.ValueOf(func(c *exec.Cmd) ([]byte, error) { return nil, &ExecError{Name: name(c)} }),
+		// No process ever starts, so Cmd.Process can only be one the plugin
+		// set: the native Wait would call its real Wait.
+		"Wait": reflect.ValueOf(func(c *exec.Cmd) error { return errors.New("exec: not started") }),
 	}
 })
 

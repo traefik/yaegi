@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"sync"
 	"sync/atomic"
+	"weak"
 
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/types/typeutil"
@@ -21,18 +22,23 @@ import (
 // Machine holds the compiled program. It is immutable after compilation of a
 // function, so several goroutines (native callbacks) may execute concurrently.
 type Machine struct {
-	prog    *ssa.Program
-	mu      sync.Mutex
-	funcs   map[*ssa.Function]*Func
-	rtypes  typeutil.Map // types.Type -> *RType
-	natives sync.Map     // reflect.Type -> *RType of a native dynamic type (nativeRType)
-	globals map[*ssa.Global]Value
-	interp  map[*types.Package]bool // packages interpreted from source
+	prog      *ssa.Program
+	mu        sync.Mutex
+	funcs     map[*ssa.Function]*Func
+	rtypes    typeutil.Map // types.Type -> *RType
+	natives   sync.Map     // reflect.Type -> *RType of a native dynamic type (nativeRType)
+	foreign   sync.Map     // foreignKey -> *RType of a value of another machine (foreign.go)
+	copyTwins sync.Map     // reflect.Type -> reflect.Type of the AOT copy, or nil (copyTwin)
+	globals   map[*ssa.Global]Value
+	interp    map[*types.Package]bool // packages interpreted from source
 	// evalInterp holds the packages that a Session adds after the machine
 	// started (eval.go): *types.Package -> true. Code of earlier inputs may
 	// still run on other goroutines, so interp, a plain map, cannot grow.
 	// nil outside a Session.
 	evalInterp *sync.Map
+	// onCompile is called when the machine compiles a function (tests
+	// only: loadHooks.compiled).
+	onCompile func(*ssa.Function)
 
 	recFields   sync.Map                  // *types.Struct -> []bool, fields referring back to the struct (reflectType)
 	recNamed    sync.Map                  // *types.Named -> bool, a named type that refers to itself (selfRecursive)
@@ -66,12 +72,21 @@ type Machine struct {
 	// localSites numbers the memory sites of the frame-local Allocs: the
 	// index of their free list in a ctx (escape.go).
 	localSites atomic.Int32
+	// freeID tells the Machines apart for the free lists of a pooled ctx
+	// (escape.go, getCtx). An id, not the pointer: the ctx pool must not
+	// keep a Machine alive.
+	freeID uint64
 
 	// Budget is the number of calls plus backward jumps allowed to each
 	// call from the host, shared with its callbacks and with the goroutines
 	// it starts; a background goroutine gets Budget steps between two
 	// blocking points (budget.go; <=0: unlimited).
 	Budget int64
+	// BudgetRate makes the account of each call from the host a token
+	// bucket: Budget is its size, and it gets BudgetRate steps back per
+	// second of wall time (budget.go, Options.BudgetRate; <=0: Budget is a
+	// total per call).
+	BudgetRate int64
 	// MaxGoroutines bounds the live goroutines that the program started
 	// (go statements and iter.Pull sequences); past it, the go statement
 	// panics with ErrTooManyGoroutines (budget.go; <=0: no cap).
@@ -81,6 +96,11 @@ type Machine struct {
 	// Options.BackgroundRate; <=0: no bound).
 	BackgroundRate int64
 	bgRate         atomic.Pointer[rateBucket]
+	budgetStops    atomic.Int64 // ServeHTTP calls stopped by the budget (budget.go)
+	budgetReported atomic.Bool  // the first stop went to GoPanic (QuietBudget)
+	budgetReportAt atomic.Int64 // budgetNow of the last report of the stops (reportBudget)
+	budgetReportN  atomic.Int64 // budgetStops at that report
+	stats          machineStats // the counters of Stats (stats.go)
 	// mem counts the large allocations of the VM for Options.MaxMemory
 	// (memquota.go; nil: no quota).
 	mem *memQuota
@@ -93,6 +113,9 @@ type Machine struct {
 	// recoverHandler: topHandler recovers the panics of ServeHTTP
 	// (Options.RecoverHandler).
 	recoverHandler bool
+	// quietBudget: a ServeHTTP that the budget stops panics with
+	// http.ErrAbortHandler (Options.QuietBudget, budget.go).
+	quietBudget bool
 	// MaxDepth is the maximum number of interpreted frames of one goroutine,
 	// and MaxStack the maximum size in bytes of its register stack (<=0: no
 	// size limit). Past them, the VM panics with ErrStackOverflow.
@@ -152,6 +175,9 @@ type Machine struct {
 	// env is the environment copy of SetEnv (nil: the environment of the
 	// process).
 	env *vmEnv
+	// onMissingEnv is Options.OnMissingEnv, given to the environment copy
+	// by SetEnv.
+	onMissingEnv func(name string)
 	// flagSt: os.Args, flag.CommandLine and flag.Usage of a restricted
 	// machine (exit.go), made at the first use.
 	flagOnce sync.Once
@@ -188,6 +214,10 @@ type Machine struct {
 	gobNames map[string]*RType
 	gobBases map[*RType]string
 
+	// typeCaches: the entries with a string key of the AOT type caches
+	// that this machine stored (typecache.go): the gob names of the plugin.
+	typeCaches sync.Map // *TypeCache -> *sync.Map
+
 	// OpaqueAny: interpreted values passed to native interfaces without a
 	// known wrapper become opaque handles (see box).
 	OpaqueAny bool
@@ -223,12 +253,20 @@ type Machine struct {
 	// routed: packages whose calls with interpreted values go to their AOT
 	// copy (aotroute.go).
 	routed map[string]bool
+	// hostGo is the Go version of the host (runtime.Version, or the test
+	// hook of the load), and allowStaleAOT is Options.AllowStaleAOT: the
+	// routes check the version of the copies with them (setupAOTRoutes).
+	// staleAOT is the error of that check, when it failed.
+	hostGo        string
+	allowStaleAOT bool
+	staleAOT      error
 	// progVR: the program's own reflect calls and values use the VM
 	// reflect (OpaqueAny, ownReflect). m.vr may also exist only for the
 	// AOT routes: the program then keeps native reflect.
 	progVR    bool
 	pkgTypes  sync.Map // pkgTypeKey -> bool (aotroute.go)
 	lostTypes sync.Map // lostRTKey -> error or nil (lostmethods.go)
+	keepPlans sync.Map // keepTKey -> *keepPlan (keepmethods.go)
 
 	funcPCs      sync.Map   // uintptr -> *Func: code pointers given by reflect (funcpc.go)
 	funcStandIns sync.Map   // *Func -> *funcInl: stand-in *runtime.Func (funcpc.go)
@@ -261,7 +299,20 @@ type Machine struct {
 	liveMu   sync.Mutex
 	liveCond *sync.Cond
 	live     int
-	nGo      atomic.Int64 // live goroutines for MaxGoroutines (budget.go)
+	nGo      atomic.Int64 // live goroutines (budget.go)
+	nFree    atomic.Int64 // live goroutines of no instance, for MaxGoroutines (budget.go)
+
+	// The instances of the machine (instance.go): insts holds them while
+	// something uses them, so that Close stops their waits.
+	instMu   sync.Mutex
+	insts    map[weak.Pointer[Instance]]struct{}
+	instUsed atomic.Bool // NewInstance was called
+
+	// finQ holds the finalizers of the program that wait to run, and
+	// finRun is set while a goroutine runs them (runFinalizer).
+	finMu  sync.Mutex
+	finQ   []func()
+	finRun bool
 
 	// closed is set by Close, and done is the channel that Close closes,
 	// made at the first wait; draining is set by CloseContext (and Close),
@@ -296,12 +347,16 @@ func NewMachine(prog *ssa.Program, interp map[*types.Package]bool) *Machine {
 		chanStandIns: new(sync.Map),
 		standInChans: new(sync.Map),
 		closureFuncs: new(sync.Map),
+		freeID:       machineIDs.Add(1),
 	}
 	// time.Sleep is a blocking point of the budget, and ends early when
 	// the call from the host is canceled (budget.go).
 	m.addOverride("time.Sleep", m.sleep)
 	return m
 }
+
+// machineIDs numbers the Machines (Machine.freeID).
+var machineIDs atomic.Uint64
 
 type CompileError struct{ Msg string }
 
@@ -348,7 +403,7 @@ func (m *Machine) rtypeOf(t types.Type) *RType {
 	// yaegi wrappers) does not see the //go:nointerface ones, as in gc.
 	for _, sel := range m.methodSet(t) {
 		if f := m.prog.MethodValue(sel); f != nil {
-			methods[sel.Obj().Name()] = m.funcOf(f)
+			methods[sel.Obj().Id()] = m.funcOf(f)
 		}
 	}
 	nat := m.natKeyOf(t)
@@ -488,6 +543,34 @@ func (m *Machine) isInterp(f *ssa.Function) bool {
 	// calls it (slices.nextPowerOfTwo and xorshift.Next from pdqsort), and
 	// the native symbol tables have no unexported names.
 	return unexportedFunc(f) && embeddedStdSource(f.Pkg.Pkg.Path()) && m.modeOf(f.Pkg.Pkg.Path()) == ModeNative
+}
+
+// ssaOnDemand is the Synthetic of a method that ssa creates from its
+// types.Func because its package has no SSA package
+// (Program.objectMethod in x/tools go/ssa/methods.go).
+const ssaOnDemand = "from type information (on demand)"
+
+// funcPkg returns the package of the function or method f, or nil for a
+// synthetic function without a package (a wrapper, a thunk, a bound method,
+// an instance of a generic function).
+//
+// stdSSA creates no SSA package for the standard library packages that only
+// native packages import, so ssa creates the methods of their types on
+// demand, with no Pkg: a plugin that imports net/http/httptest but not bytes
+// calls (*bytes.Buffer).Grow on ResponseRecorder.Body. The checks and hooks
+// keyed by package (nativemem.go, storage.go, hookFor...) must see such a
+// method as a method of its package, as when the package has an SSA
+// package: they use funcPkg, not f.Pkg.
+func funcPkg(f *ssa.Function) *types.Package {
+	if f.Pkg != nil {
+		return f.Pkg.Pkg
+	}
+	if f.Synthetic == ssaOnDemand {
+		if obj, ok := f.Object().(*types.Func); ok {
+			return obj.Pkg()
+		}
+	}
+	return nil
 }
 
 // embeddedStdSource reports whether path is a standard library package whose
@@ -757,6 +840,10 @@ type invokeSite struct {
 	once sync.Once
 	fast func(recv any, regs []Value, a []int32) (Value, bool)
 	name string
+	// id: the key of the method in RType.Methods (types.Id: the name of
+	// an exported method, the package path and the name of an unexported
+	// one).
+	id   string
 	args []int32
 	sig  *types.Signature
 	// hit: the first interpreted dynamic type seen at this site and its
@@ -870,8 +957,12 @@ type fixup struct {
 }
 
 type compiler struct {
-	fused    map[ssa.Value]bool // address computations fused into their load/store
-	nextOf   map[ssa.Instruction]ssa.Instruction
+	fused map[ssa.Value]bool // address computations fused into their load/store
+	// index: the index of each instruction in its block (instrIndex).
+	index map[ssa.Instruction]int
+	// ninstrs: the number of instructions of the function (a size hint
+	// for regs and index: a large function grew them many times).
+	ninstrs  int
 	next     *ssa.BasicBlock // block compiled after the current one (fall-through target)
 	m        *Machine
 	f        *Func
@@ -916,13 +1007,28 @@ func (f *Func) ensure() {
 	f.once.Do(func() { f.m.compile(f) })
 }
 
+// reset makes f as funcOf made it, after a compile that panicked: the
+// next ensure compiles it again. Only for a Func that no goroutine runs
+// or compiles (preflight.go).
+func (f *Func) reset() {
+	*f = Func{m: f.m, ssa: f.ssa, wrapper: f.wrapper}
+}
+
 func (m *Machine) compile(f *Func) {
 	fn := f.ssa
 	if len(fn.Blocks) == 0 {
 		unsupported("call of bodyless function %s", fn)
 	}
+	if m.onCompile != nil {
+		m.onCompile(fn) // tests only (loadhooks.go)
+	}
 	m.noteLocalTypes(fn)
-	c := &compiler{m: m, f: f, regs: map[ssa.Value]int32{}, blockPC: map[*ssa.BasicBlock]int{}, fused: map[ssa.Value]bool{}}
+	n := 0
+	for _, b := range fn.Blocks {
+		n += len(b.Instrs)
+	}
+	c := &compiler{m: m, f: f, ninstrs: n, regs: make(map[ssa.Value]int32, n+len(fn.Params)+len(fn.FreeVars)),
+		blockPC: make(map[*ssa.BasicBlock]int, len(fn.Blocks)), fused: map[ssa.Value]bool{}}
 	for _, p := range fn.Params {
 		c.reg(p)
 	}
@@ -1006,6 +1112,7 @@ func (m *Machine) compile(f *Func) {
 		sw.finish(c)
 	}
 	f.code = c.code
+	f.ncode = len(c.code)
 	f.pos = c.pos
 	f.template = c.template
 	f.nregs = len(c.template)
@@ -1046,25 +1153,38 @@ func (c *compiler) instrLazy(ins ssa.Instruction) {
 	}
 }
 
-// nextInstr returns the instruction following ins in its block (skipping
-// debug refs).
-func (c *compiler) nextInstr(ins ssa.Instruction) ssa.Instruction {
-	if c.nextOf == nil {
-		c.nextOf = map[ssa.Instruction]ssa.Instruction{}
+// instrIndex returns the index of each instruction of the function in its
+// block. It is built once per function (skipAggregates, markLoads and
+// nextInstr read it).
+func (c *compiler) instrIndex() map[ssa.Instruction]int {
+	if c.index == nil {
+		c.index = make(map[ssa.Instruction]int, c.ninstrs)
 		for _, b := range c.f.ssa.Blocks {
-			var prev ssa.Instruction
-			for _, y := range b.Instrs {
-				if _, ok := y.(*ssa.DebugRef); ok {
-					continue
-				}
-				if prev != nil {
-					c.nextOf[prev] = y
-				}
-				prev = y
+			for i, ins := range b.Instrs {
+				c.index[ins] = i
 			}
 		}
 	}
-	return c.nextOf[ins]
+	return c.index
+}
+
+// nextInstr returns the instruction following ins in its block (skipping
+// debug refs).
+func (c *compiler) nextInstr(ins ssa.Instruction) ssa.Instruction {
+	if _, ok := ins.(*ssa.DebugRef); ok {
+		return nil
+	}
+	b := ins.Block()
+	i, ok := c.instrIndex()[ins]
+	if !ok || b == nil {
+		return nil
+	}
+	for _, y := range b.Instrs[i+1:] {
+		if _, ok := y.(*ssa.DebugRef); !ok {
+			return y
+		}
+	}
+	return nil
 }
 
 // fusable reports whether an address computation is used only by the
@@ -1398,8 +1518,8 @@ func (c *compiler) instr(ins ssa.Instruction) {
 			c.f.cells[c.reg(v)] = cell
 			ms := c.mem(et)
 			ms.local = c.m.localSites.Add(1) - 1
-			ms.cellVals = 1 + min(c.m.zeroEntries(et), maxZeroElems+1)
-			ms.localSize = int32(min(ms.cellVals, maxFreeCells+1))
+			ms.cellVals = 1 + min(c.m.cellEntries(et), maxZeroElems+1)
+			ms.localSize = int32(min(ms.cellVals, int64(maxFreeCells)+1))
 			c.f.locals = append(c.f.locals, localCell{reg: cell, site: ms})
 			c.emit(Instr{Op: OpAllocLocal, A: c.reg(v), B: cell, X: ms})
 			break
@@ -1919,7 +2039,7 @@ func (c *compiler) call(v *ssa.Call) {
 	dst := c.reg(v)
 	if cc.IsInvoke() {
 		c.emit(Instr{Op: OpInvoke, A: dst, B: c.reg(cc.Value), X: &invokeSite{
-			name: cc.Method.Name(), args: c.regList(cc.Args), sig: cc.Method.Type().(*types.Signature),
+			name: cc.Method.Name(), id: cc.Method.Id(), args: c.regList(cc.Args), sig: cc.Method.Type().(*types.Signature),
 			memCheck: c.m.mem != nil && nativeMemMethodNames[cc.Method.Name()],
 		}})
 		return
@@ -2041,7 +2161,7 @@ func (c *compiler) call(v *ssa.Call) {
 			if callee.Origin() != nil {
 				o = callee.Origin()
 			}
-			if o.Pkg != nil && isReflectPkg(o.Pkg.Pkg) {
+			if p := funcPkg(o); p != nil && isReflectPkg(p) {
 				c.emit(Instr{Op: OpFunc, A: dst, X: c.m.vr.intrinsic(callee, c.regList(cc.Args))})
 				return
 			}
@@ -2051,7 +2171,7 @@ func (c *compiler) call(v *ssa.Call) {
 			c.emitGo(dst, func(a []Value) Value { return h(m, f, a) }, c.regList(cc.Args))
 			return
 		}
-		if callee.Pkg != nil && !c.m.isInterp(callee) {
+		if funcPkg(callee) != nil && !c.m.isInterp(callee) {
 			if h := c.m.hookFor(callee); h != nil {
 				m, deep := c.m, c.m.deepHook(callee)
 				c.emitGo(dst, func(a []Value) Value {

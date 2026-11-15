@@ -88,6 +88,12 @@ func maskAddrs(out []byte) []byte {
 // here no longer exists on disk.
 var testdataCases = map[string][]testdataCase{
 	"contextvals.go": {{}, {flags: []string{"-aot"}}},
+	// keys of named, pointer and struct types through a context wrapper
+	// of the program under a native context
+	"ctxwrapkey.go": {{}, {flags: []string{"-aot"}}},
+	// the correct uses of runtime.SetFinalizer: interpreted cells in
+	// default mode, native pointers and native finalizers in AOT mode
+	"finalizeruse.go": {{}, {flags: []string{"-aot"}}},
 	// the init order of gc over its graph of init tasks (vm/initorder.go)
 	"initregistry.go": {{}, {flags: []string{"-aot"}}},
 	"initleaf.go":     {{}, {flags: []string{"-aot"}}},
@@ -98,6 +104,11 @@ var testdataCases = map[string][]testdataCase{
 	// field or an element goes to native code: fmt, json and flag in every
 	// mode (native, the AOT copies, opaque handles)
 	"plainaddrs.go": allModes,
+	// reflect and json over a big [n]byte in real bytes (bigByteArray): the
+	// VM reflect and the twin of the AOT copies
+	"bigbytearrayloop.go": {{}, {flags: []string{"-aot"}}},
+	"bigbytearrayaddr.go": {{}, {flags: []string{"-aot"}}},
+	"bigbytearraycopy.go": {{}, {flags: []string{"-aot"}}},
 	// unsafe header views on 32 goroutines: default mode, and a plugin
 	// with useUnsafe (-restricted -unsafe), as in Traefik.
 	"unsafegoroutines.go": {{}, {flags: []string{"-restricted", "-unsafe"}}},
@@ -109,6 +120,17 @@ var testdataCases = map[string][]testdataCase{
 	"constbytescap.go": {{}, {flags: []string{"-aot"}}, {flags: []string{"-opaque"}}, {flags: []string{"-restricted", "-unsafe"}}},
 	// a *reflect.Value in a sync.Pool (fxamacker/cbor): the AOT shadows
 	"reflectpoolshadow.go": {{}, {flags: []string{"-aot"}}},
+	// the reflect iterators of Go 1.26 (Fields, Methods), and the generic
+	// methods of Go 1.27 that reflect does not list: the twin in both modes
+	"reflectiters.go":      {{}, {flags: []string{"-aot"}}},
+	"genmethodsreflect.go": {{}, {flags: []string{"-aot"}}},
+	"genmethods.go":        {{}, {flags: []string{"-aot"}}},
+	// copy with overlap on word-sized elements (copyWords): backward when
+	// dst starts after src
+	"copyoverlap.go": {{}, {flags: []string{"-aot"}}},
+	// pointers to two elements of one array given to native code as an
+	// io.Writer: one payload per value (optPayload)
+	"optptrpayload.go": {{}, {flags: []string{"-aot"}}},
 	// native code that appends in place into the capacity of a slice of
 	// cells (hash.Sum(id[:0]) of wazero)
 	"nativeappendtail.go": {{}, {flags: []string{"-aot"}}},
@@ -132,6 +154,9 @@ var testdataCases = map[string][]testdataCase{
 	// os/exec alone in a restricted program (Options.Exec = ExecReal)
 	"execreal.go":   {{}, {flags: []string{"-restricted", "-exec", "real"}}},
 	"reflectown.go": {{flags: []string{"-aot"}}},
+	// racy reads of word variables and slices: the reflect views of the
+	// program (vmreflect.go) and of the AOT copies (the twin)
+	"tornwords.go": {{}, {flags: []string{"-aot"}}},
 	// error fields of a program struct printed by fmt: an unexported one
 	// is printed as a struct, in default mode too (aot containers)
 	"errfields.go": {{}, {flags: []string{"-aot"}}, {flags: []string{"-restricted"}}},
@@ -233,11 +258,14 @@ var testdataCases = map[string][]testdataCase{
 	// gob.Register of interpreted types: the native gob with the mirror
 	// types (vm/gob.go), and the AOT copy.
 	"gobregister.go": {{}, {flags: []string{"-aot"}}},
-	"tags":           {{goFlags: []string{"-tags=dummy"}, flags: []string{"-yaegi-tags"}}}, // "// yaegi:tags dummy"
-	"g3.go":          {{flags: []string{"-src", "slices,maps,iter"}}},
-	"srcdemo.go":     {{flags: []string{"-opaque", "-src", "sort,slices,errors,fmt,strconv,internal/strconv"}}},
-	"srcdemo2.go":    {{flags: []string{"-src", "sort,slices"}}},
-	"printiface.go":  {{maskAddrs: true}},
+	// unexported methods of the same name in several packages (keyed by
+	// types.Id): the method set and the interface calls in both modes
+	"methodids":     {{}, {flags: []string{"-aot"}}},
+	"tags":          {{goFlags: []string{"-tags=dummy"}, flags: []string{"-yaegi-tags"}}}, // "// yaegi:tags dummy"
+	"g3.go":         {{flags: []string{"-src", "slices,maps,iter"}}},
+	"srcdemo.go":    {{flags: []string{"-opaque", "-src", "sort,slices,errors,fmt,strconv,internal/strconv"}}},
+	"srcdemo2.go":   {{flags: []string{"-src", "sort,slices"}}},
+	"printiface.go": {{maskAddrs: true}},
 	// GOEXPERIMENT=fieldtrack: on a cold build cache, the first `go run`
 	// with a new experiment rebuilds the runtime and the standard library
 	// (a few seconds more).
@@ -425,7 +453,7 @@ func TestCaseEnv(t *testing.T) {
 }
 
 // discoverTestdata returns every top-level testdata entry to run: the *.go
-// files and the "tags" directory.
+// files and the "tags" and "methodids" directories.
 func discoverTestdata(t *testing.T) []string {
 	t.Helper()
 	ents, err := os.ReadDir(filepath.Join(root, "testdata"))
@@ -435,7 +463,7 @@ func discoverTestdata(t *testing.T) []string {
 	var files []string
 	for _, e := range ents {
 		if e.IsDir() {
-			if e.Name() == "tags" {
+			if e.Name() == "tags" || e.Name() == "methodids" {
 				files = append(files, e.Name())
 			}
 			continue // "aot" is a separate suite (cmd/aotcheck)
@@ -488,7 +516,7 @@ func TestTestdata(t *testing.T) {
 				if goos := onlyGOOS[f]; goos != "" && goos != runtime.GOOS {
 					t.Skipf("written for %s only", goos)
 				}
-				if ok, err := build.Default.MatchFile(filepath.Join(root, "testdata"), f); err == nil && !ok {
+				if ok, err := build.Default.MatchFile(filepath.Join(root, "testdata"), f); strings.HasSuffix(f, ".go") && err == nil && !ok {
 					t.Skip("excluded by its build constraint with this toolchain (encoding/json/v2 needs GOEXPERIMENT=jsonv2 with Go 1.26)")
 				}
 				t.Parallel()

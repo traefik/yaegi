@@ -883,7 +883,7 @@ build: ok
 note: variant exp_arenas_on.go (goexperiment.arenas) copied
 note: variant exp_boringcrypto_on.go (goexperiment.boringcrypto) copied
 note: variant exp_cgocheck2_on.go (goexperiment.cgocheck2) copied
-note: variant exp_dwarf5_on.go (goexperiment.dwarf5) copied
+note: variant exp_dwarf5_off.go (!goexperiment.dwarf5) copied
 note: variant exp_fieldtrack_on.go (goexperiment.fieldtrack) copied
 note: variant exp_greenteagc_off.go (!goexperiment.greenteagc) copied
 note: variant exp_heapminimum512kib_on.go (goexperiment.heapminimum512kib) copied

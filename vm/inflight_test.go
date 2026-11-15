@@ -74,15 +74,37 @@ func inflightHeap(t testing.TB, n int) float64 {
 // Each ServeHTTP runs on its own ctx: a register stack of 4096 Values made
 // up front cost about 100 KB per in-flight request (hundreds of MB with
 // thousands of slow clients). The stack now starts at the size of the entry
-// frame and grows on demand: about 6 KB per request.
+// frame and a quarter more, and grows on demand: about 4.7 KB per request
+// (6.8 KB when the first growth was twice the entry frame).
 func TestInflightHeap(t *testing.T) {
 	if testing.Short() {
 		t.Skip("heap measure")
 	}
-	const limit = 32 << 10
+	const limit = 6 << 10
 	got := inflightHeap(t, 1000)
 	t.Logf("heap per in-flight request: %.0f bytes", got)
 	if got > limit {
 		t.Errorf("heap per in-flight request: %.0f bytes, want at most %d", got, limit)
+	}
+}
+
+// TestGrowFirst checks the first growth of the register stack of a new
+// ctx: the entry frame and a quarter more. It was twice the entry frame:
+// with the 86 registers of the handler of W1, 4 KB per request in flight,
+// where yaegi keeps about 3.7 KB in all.
+func TestGrowFirst(t *testing.T) {
+	cx := &ctx{m: &Machine{}}
+	cx.grow(86)
+	if n := len(cx.stack); n < 86 || n > 86+86/4 {
+		t.Errorf("first growth to 86 Values: %d Values, want 86 to %d", n, 86+86/4)
+	}
+	// The next growths double: a deep call chain grows a few times only.
+	cx.grow(len(cx.stack) + 1)
+	if n := len(cx.stack); n < 2*(86+86/4) {
+		t.Errorf("second growth: %d Values, want at least twice the first", n)
+	}
+	small := &ctx{m: &Machine{}}
+	if small.grow(8); len(small.stack) != minStack {
+		t.Errorf("first growth to 8 Values: %d Values, want minStack (%d)", len(small.stack), minStack)
 	}
 }

@@ -54,8 +54,9 @@ func (m *Machine) iterPull(f *ssa.Function, args []int32) func([]Value) Value {
 			defer func() {
 				p := recover()
 				sub.giveBack()
+				sub.releaseMem()
 				leaveG(g, gs)
-				m.goRelease()
+				m.goRelease(sub.inst)
 				msg := pullMsg{pnc: p}
 				select {
 				case resp <- msg:
@@ -158,7 +159,7 @@ func (m *Machine) iterPull(f *ssa.Function, args []int32) func([]Value) Value {
 						cx.overflow()
 					}
 				}
-				m.goReserve()
+				m.goReserve(sub.inst)
 				started = true
 				go run(sub)
 			}

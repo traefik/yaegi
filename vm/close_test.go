@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -134,11 +135,14 @@ func loadReloadPlugin(t *testing.T, opts Options) (*Plugin, *Object) {
 	return p, cfg
 }
 
-// TestReloadGoroutineCap shows the failure that Close fixes: each New
-// leaves 2 goroutines that never end, and they count in MaxGoroutines for
-// the life of the machine, so New fails for ever after MaxGoroutines/2
-// reloads (about 500 with the 1000 of pluginhost). A goroutine that ended
-// does not count (it counts while it runs: hence the 1 of the cap).
+// TestReloadGoroutineCap shows the failure that instances fix
+// (instance.go): each New leaves 2 goroutines that never end, and without
+// an Instance they count in the MaxGoroutines of the machine for its whole
+// life, so New fails for ever after MaxGoroutines/2 reloads (about 500
+// with the 1000 of pluginhost). pluginhost.NewHandler runs each New in an
+// Instance (TestReloadLeakedGoroutines in internal/pluginhost). A goroutine
+// that ended does not count (it counts while it runs: hence the 1 of the
+// cap).
 func TestReloadGoroutineCap(t *testing.T) {
 	const reloads = 10
 	p, cfg := loadReloadPlugin(t, Options{Budget: 1e8, BackgroundRate: 5e7, MaxGoroutines: 2*reloads + 1})
@@ -262,11 +266,13 @@ func TestPluginCloseNoLimits(t *testing.T) {
 	}
 }
 
-// TestReloadByLoad is the host pattern for a reload: load the plugin again
-// (LoadCached reuses the program of the first load), build the new
-// instance, and close the old Plugin. The goroutines never pile up. It logs
-// the cost of each reload.
-func TestReloadByLoad(t *testing.T) {
+// TestLoadCachedClose loads a plugin again with LoadCached, builds an
+// instance, and closes the Plugin of the round before: the goroutines of a
+// closed Plugin stop. It logs the cost of each LoadCached. This is not the
+// reload model of a host (docs/RELOAD.md: one Plugin for the life of the
+// process, and New at each reload): LoadCached keeps its packages in the
+// program of the first load (TestLoadCachedKeepsProgram).
+func TestLoadCachedClose(t *testing.T) {
 	opts := Options{Budget: 1e8, BackgroundRate: 5e7, MaxGoroutines: 4}
 	needSource(t)
 	dir, pkg := writePlugin(t, reloadPlugin)
@@ -302,7 +308,56 @@ func TestReloadByLoad(t *testing.T) {
 		old = p
 	}
 	old.Close()
-	t.Logf("LoadCached: %v per reload", total/reloads)
+	t.Logf("LoadCached: %v per call", total/reloads)
+}
+
+// TestLoadCachedKeepsProgram measures what LoadCached keeps: the packages
+// of each call are added to the SSA program and the token.FileSet of the
+// first load, and stay there while the first Plugin lives, also after the
+// new Plugin is closed and dropped. This is why a host must not reload a
+// plugin with LoadCached (docs/RELOAD.md). The test fails when the cost per
+// call goes past 16 MB, and logs it (about 64 KB for this small plugin; it
+// grows with the code of the plugin).
+func TestLoadCachedKeepsProgram(t *testing.T) {
+	if testing.Short() {
+		t.Skip("loads a plugin 10 times")
+	}
+	opts := Options{Budget: 1e8, BackgroundRate: 5e7, MaxGoroutines: 4}
+	needSource(t)
+	dir, pkg := writePlugin(t, reloadPlugin)
+	opts.Dir = dir
+	base, err := Load(opts, pkg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer base.Close()
+	load := func() {
+		p, err := base.LoadCached(dir, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		p.Close()
+	}
+	load() // warm up
+	before := liveHeap()
+	const calls = 10
+	for range calls {
+		load()
+	}
+	per := (int64(liveHeap()) - int64(before)) / calls
+	t.Logf("LoadCached keeps %d KB per call in the program of the first load", per>>10)
+	if per > 16<<20 {
+		t.Errorf("LoadCached keeps %d MB per call, want at most 16 MB", per>>20)
+	}
+}
+
+// liveHeap returns the live heap after a full collection.
+func liveHeap() uint64 {
+	var ms runtime.MemStats
+	runtime.GC()
+	runtime.GC()
+	runtime.ReadMemStats(&ms)
+	return ms.HeapAlloc
 }
 
 // serveCode serves path with h and returns the status and the body, or the

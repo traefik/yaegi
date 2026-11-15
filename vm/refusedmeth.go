@@ -24,8 +24,12 @@ package vm
 // a refused method or an Execute method (templateRefused).
 //
 // The refusal is by name in templates: a field of the data with the name
-// of a refused method (a struct field Chdir or Execute) is refused too. The
-// names are rare (Chdir, Execute and ExecuteTemplate today).
+// of a refused method (a struct field Chdir or Execute) is refused too.
+// Chdir, Execute and ExecuteTemplate are rare names; Run, Kill, Signal and
+// Wait are not: a field or a map key Run or Wait in the data of a native
+// template is refused (Kill, Signal and Wait also with ExecReal). The AOT
+// copies of the templates use the twin of reflect and refuse by type, not
+// by name.
 //
 // TestRefusedMethods checks each path, and that every method of
 // refusedFuncs has an entry here.
@@ -35,11 +39,14 @@ import (
 	htmltemplate "html/template"
 	"io"
 	"maps"
+	"net"
 	"os"
 	"reflect"
+	"runtime/trace"
 	"sort"
 	"strings"
 	"sync"
+	"testing"
 	"text/template"
 	"text/template/parse"
 )
@@ -48,7 +55,45 @@ import (
 // with their types.Func.FullName.
 var refusedNative = map[methodKey]string{
 	{reflect.TypeOf((*os.File)(nil)), "Chdir"}: "(*os.File).Chdir",
+	{reflect.TypeOf((*testing.M)(nil)), "Run"}: "(*testing.M).Run",
+
+	// The oob argument is a socket control message that the kernel reads:
+	// on a unix socket, SCM_RIGHTS names descriptors of the host by number
+	// and gives them to the peer process (hostfd.go closes the ways to a
+	// descriptor, not the ways to name one). ReadMsgUnix keeps its data
+	// path with oob = nil (hostFDMethods). Only a unix socket carries
+	// descriptors, and a UDP or IP connection cannot hide one
+	// (net.FilePacketConn is refused): WriteMsgUDP and WriteMsgIP stay,
+	// quic-go sends its control messages (GSO, ECN) with them.
+	{reflect.TypeOf((*net.UnixConn)(nil)), "WriteMsgUnix"}: "(*net.UnixConn).WriteMsgUnix",
+
+	{reflect.TypeOf((*trace.FlightRecorder)(nil)), "Start"}: "(*runtime/trace.FlightRecorder).Start",
+
+	{processType, "Kill"}:                         "(*os.Process).Kill",
+	{processType, "Signal"}:                       "(*os.Process).Signal",
+	{processType, "Wait"}:                         "(*os.Process).Wait",
+	{reflect.TypeOf((*testing.T)(nil)), "Chdir"}:  "(*testing.T).Chdir",
+	{reflect.TypeOf((*testing.T)(nil)), "Setenv"}: "(*testing.T).Setenv",
+	{reflect.TypeOf((*testing.B)(nil)), "Chdir"}:  "(*testing.common).Chdir",
+	{reflect.TypeOf((*testing.B)(nil)), "Setenv"}: "(*testing.common).Setenv",
+	{reflect.TypeOf((*testing.F)(nil)), "Chdir"}:  "(*testing.common).Chdir",
+	{reflect.TypeOf((*testing.F)(nil)), "Setenv"}: "(*testing.common).Setenv",
+	// The VM calls a promoted method of *testing.B and *testing.F on the
+	// embedded *testing.common, which is not exported.
+	{testingCommon, "Chdir"}:  "(*testing.common).Chdir",
+	{testingCommon, "Setenv"}: "(*testing.common).Setenv",
 }
+
+// processType is *os.Process: its refused methods run with ExecReal, which
+// already runs programs (refusedMethodOf).
+var processType = reflect.TypeFor[*os.Process]()
+var testingCommon = func() reflect.Type {
+	f, ok := reflect.TypeOf((*testing.B)(nil)).Elem().FieldByName("common")
+	if !ok {
+		panic("vm: testing.B has no field common")
+	}
+	return reflect.PointerTo(f.Type)
+}()
 
 // refusedMethods are the functions that a restricted machine gets instead
 // of the methods of refusedNative (methodFunc: the receiver comes first),
@@ -102,7 +147,7 @@ func (e *RefusedError) Error() string {
 // no interpreted code (the twin of reflect called by an AOT copy on a
 // goroutine of native code): the method is refused too.
 func refusedMethodOf(m *Machine, t reflect.Type, name string) (reflect.Value, bool) {
-	if m != nil && !m.restricted {
+	if m != nil && (!m.restricted || t == processType && m.execMode == ExecReal) {
 		return reflect.Value{}, false
 	}
 	fn, ok := refusedMethods()[methodKey{t, name}]

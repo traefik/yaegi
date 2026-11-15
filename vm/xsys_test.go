@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -359,6 +360,9 @@ func Page() int64 { return int64(unix.Getpagesize()) }
 		why := p.M.NativeFallback[xsysUnixPath]
 		if c.why == "" && (why != "" || p.M.modeOf(xsysUnixPath) != ModeNative) || c.why != "" && !strings.Contains(why, c.why) {
 			t.Errorf("%s: fallback %q, want %q", c.name, why, c.why)
+		}
+		if note := "package " + xsysUnixPath + " runs interpreted, not natively: " + why; (why != "") != slices.Contains(p.Notes, note) {
+			t.Errorf("%s: Notes %q, want the note %q: %v", c.name, p.Notes, note, why != "")
 		}
 		res, err := p.Call(t.Context(), "Page")
 		if err != nil {

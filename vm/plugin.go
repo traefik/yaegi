@@ -12,6 +12,7 @@ import (
 	"go/token"
 	"go/types"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -266,6 +267,27 @@ type Options struct {
 	// entries); nil means a copy of os.Environ(), and an empty slice no
 	// variable of the host.
 	Env []string
+	// OnMissingEnv, when set, is called once per name when the plugin
+	// reads a variable that is not in its environment copy (os.Getenv,
+	// os.LookupEnv, os.ExpandEnv, syscall.Getenv, unix.Getenv) and that it
+	// did not set, unset or clear itself: a variable the host did not pass
+	// in Env (or Sandbox.Env). It gets the name, never a value, so a host
+	// can log "the plugin read FOO, which is not passed". It is called on
+	// the goroutine of the read, maybe from several goroutines at once, and
+	// must not block. Machine.MissingEnv lists the same names. A plugin
+	// that reads the whole environment (os.Environ, syscall.Environ) while
+	// the host left out some of its variables gives MissingEnvEnviron
+	// ("(os.Environ)") once. It applies to a restricted plugin (with an
+	// environment copy) only.
+	//
+	// The plugin chooses the name: it can hold a newline or terminal escape
+	// sequences. A host must quote it in a log (%q, strconv.Quote;
+	// host.MissingEnvMessage does it). A name longer than 128 bytes is cut
+	// (and ends with "..."). After 256 names, OnMissingEnv is called once
+	// more with MissingEnvMore (""), and the next names are not reported
+	// nor kept: these names live in the memory of the host, outside
+	// MaxMemory.
+	OnMissingEnv func(name string)
 	// Budget bounds every call from the host into the plugin (init, each
 	// Plugin.Call and Object.Call, each ServeHTTP of a handler that
 	// Object.Interface returns...) to that many
@@ -281,6 +303,21 @@ type Options struct {
 	// (GoPanic gets it). 0 means unlimited. See vm/budget.go and
 	// docs/SANDBOX.md.
 	Budget int64
+	// BudgetRate makes Budget a rate for the calls from the host instead of
+	// a total: the account of each call holds at most Budget steps (a
+	// burst) and gets BudgetRate steps back per second of wall time, so a
+	// call runs for ever while it uses on average at most BudgetRate steps
+	// per second, and stops with ErrBudget when it uses more for long
+	// enough to empty the account. A `for {}` (about 5e8 steps per second)
+	// still stops after about Budget/(5e8-BudgetRate) seconds, but a long
+	// response (a stream, a large download through a wrapper of the
+	// ResponseWriter) no longer dies after Budget steps in all. Each call
+	// has its own bucket: a stuck call does not take the steps of the
+	// others. Time spent in native code (a network read or write) refills
+	// the bucket. The background rule (see Budget) does not change. 0 (the
+	// default) keeps Budget a total per call. A Sandbox does not change it.
+	// See vm/budget.go.
+	BudgetRate int64
 	// BackgroundRate bounds the CPU of the background goroutines of the
 	// plugin (see Budget): all of them together run at most BackgroundRate
 	// steps per second, after a first burst of one second. A goroutine that
@@ -322,6 +359,17 @@ type Options struct {
 	// recovers it, logs it and closes the connection; ErrBudget and
 	// ErrStackOverflow come to the host the same way).
 	RecoverHandler bool
+	// QuietBudget makes a ServeHTTP that the budget stops (ErrBudget) panic
+	// with http.ErrAbortHandler: net/http aborts the response without a
+	// log. Without it, net/http logs "http: panic serving" and a full stack
+	// for each request that the budget stops, which floods the log of the
+	// host when a plugin loops on each request. Only the first stop of the
+	// plugin goes to GoPanic (ErrBudgetStopped, which is ErrBudget for
+	// errors.Is); Machine.BudgetStops counts them all. With RecoverHandler,
+	// the response still gets the status 500, and also only the first stop
+	// goes to GoPanic. Plugin.Call and Object.Call still return ErrBudget.
+	// Off by default: the host gets ErrBudget, as for any panic.
+	QuietBudget bool
 	// PanicOnFatal turns some fatal errors of the Go runtime into panics
 	// of the plugin, when the VM can see them before they happen: Unlock of
 	// an unlocked sync.Mutex, Unlock or RUnlock of an unlocked
@@ -365,9 +413,13 @@ type Options struct {
 	// goroutine while it runs; past the cap, it does not run and GoPanic
 	// gets ErrTooManyGoroutines (net/http gets it for a handler, and closes
 	// the connection). Goroutines of native code that run no code of the
-	// plugin are not counted. 0 means no cap. The count is for the life
-	// of the machine: goroutines that never end (a janitor started in each
-	// New) are only released by Plugin.Close (close.go).
+	// plugin are not counted. 0 means no cap. The cap is per Instance
+	// (instance.go): the goroutines that a call with the context of an
+	// Instance starts (New, in pluginhost.NewHandler), and their children,
+	// count in that instance only, so goroutines that never end (a janitor
+	// started in each New) do not make a later New fail. The goroutines of
+	// no instance (the requests) share one cap. Instance.Close and
+	// Plugin.Close stop them (close.go).
 	MaxGoroutines int
 	// GoPanic receives the panics of the goroutines the plugin starts, and
 	// of the callbacks that native code runs on goroutines of its own
@@ -539,13 +591,15 @@ func (opts Options) check(src []sourcePkg) error {
 // The check compiles on a machine of its own (newM returns a new machine
 // for the plugin), which is then dropped: the machine of the plugin still
 // compiles each function at its first call, as without the check, and the
-// code of the functions that never run does not stay in memory.
-func (opts Options) preflight(p *Plugin, newM func() *Machine, own func(*types.Package) bool) error {
+// code of the functions that never run does not stay in memory. The init
+// functions are the exception: the check compiles them on pm, the machine
+// of the plugin, which runs them just after (each init is compiled once).
+func (opts Options) preflight(ctx context.Context, p *Plugin, newM func() *Machine, pm *Machine, own func(*types.Package) bool) error {
 	if opts.NoPreflight {
 		return nil
 	}
 	t := time.Now()
-	err := newM().preflight(p.Pkg, own)
+	err := newM().preflight(ctx, p.Pkg, own, pm)
 	p.CheckTime = time.Since(t)
 	return err
 }
@@ -560,7 +614,11 @@ func (opts Options) newMachine(prog *ssa.Program, interp map[*types.Package]bool
 	m.OpaqueAny = opts.OpaqueAny || opts.AOT || hasMode(opts.Modes, ModeAOT)
 	m.AOT = opts.AOT
 	m.Modes = opts.Modes
+	m.hostGo, m.allowStaleAOT = opts.hooks.hostGoVersion(), opts.AllowStaleAOT
 	m.PrintOut = opts.PrintOut
+	if opts.hooks != nil {
+		m.onCompile = opts.hooks.compiled
+	}
 	if sb := opts.Sandbox; sb != nil {
 		m.Budget = sb.Budget
 		m.MaxGoroutines = sb.MaxGoroutines
@@ -570,9 +628,11 @@ func (opts Options) newMachine(prog *ssa.Program, interp map[*types.Package]bool
 		m.MaxGoroutines = opts.MaxGoroutines
 		m.GoPanic = opts.GoPanic
 	}
+	m.BudgetRate = opts.BudgetRate
 	m.BackgroundRate = opts.BackgroundRate
 	m.Cancel = opts.Cancel
 	m.recoverHandler = opts.RecoverHandler
+	m.quietBudget = opts.QuietBudget
 	m.panicOnFatal = opts.PanicOnFatal
 	if opts.MaxMemory > 0 {
 		m.mem = &memQuota{max: opts.MaxMemory, sweepAt: 64}
@@ -590,6 +650,7 @@ func (opts Options) newMachine(prog *ssa.Program, interp map[*types.Package]bool
 		}
 		m.GoPanic = func(r any) { fmt.Fprintf(stderr, "vm: panic in a plugin goroutine: %v\n", r) }
 	}
+	m.onMissingEnv = opts.OnMissingEnv
 	m.restricted = opts.restricted()
 	m.unsafeSyscall = opts.restricted() && opts.UseUnsafe
 	m.stubAsm = opts.StubAssembly
@@ -629,12 +690,21 @@ type Plugin struct {
 	InitTime  time.Duration // package init in the VM
 
 	// Notes are messages for the host about the load, which did not refuse
-	// the plugin. A note is one line, for a log (WARN). Today the only note
-	// says that the build constraints of a source package select other
-	// files than yaegi did: yaegi reads only "// +build" lines, so a file
-	// with only a "//go:build" line was always kept. yaegi v2 selects the files
-	// as go build does; the note helps to find a plugin that now runs other
-	// code than under yaegi. It is nil when there is nothing to say.
+	// the plugin. A note is one line, for a log (WARN); the host logs all
+	// of them, it is the one place to look. It is nil when there is nothing
+	// to say. The notes say that:
+	//   - the build constraints of a source package select other files than
+	//     yaegi did: yaegi reads only "// +build" lines, so a file with only
+	//     a "//go:build" line was always kept. yaegi v2 selects the files as go
+	//     build does; the note helps to find a plugin that now runs other
+	//     code than under yaegi;
+	//   - AOT mode is off for the load (StaleAOTFallback, or a host without
+	//     the AOT copies): the reason, without the fix for the host, which
+	//     CheckAOT gives;
+	//   - a package with an AOT copy runs interpreted, because the plugin has
+	//     another version of it (Machine.AOTFallback), or a package that the
+	//     host could run natively runs interpreted (Machine.NativeFallback):
+	//     one note per package, with the reason.
 	Notes []string
 }
 
@@ -660,23 +730,36 @@ func Load(opts Options, pkgPath string) (*Plugin, error) {
 // a pathological package; that goroutine keeps running in the background
 // until go/types returns (see loaddos.go).
 func LoadContext(ctx context.Context, opts Options, pkgPath string) (*Plugin, error) {
+	key := loadKey{dir: opts.Dir, goPath: opts.GoPath, pkgPath: pkgPath}
+	return runLoad(ctx, &opts, key, func(ctx context.Context) (*Plugin, error) {
+		return loadImpl(ctx, &opts, pkgPath)
+	})
+}
+
+// runLoad runs load for LoadContext and LoadCached: it applies
+// opts.LoadTimeout, takes the slot of the plugin (key, acquireLoadSlot),
+// returns at once when ctx is done, and gives every error as a *LoadError
+// whose message names no host directory (asLoadError, hidePaths).
+func runLoad(ctx context.Context, opts *Options, key loadKey, load func(ctx context.Context) (*Plugin, error)) (*Plugin, error) {
 	if opts.LoadTimeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, opts.LoadTimeout)
 		defer cancel()
 	}
-	release, err := acquireLoadSlot(ctx, &opts, pkgPath)
+	release, err := acquireLoadSlot(ctx, key)
 	if err != nil {
 		return nil, err
 	}
 	if ctx.Done() == nil {
 		// No deadline and no cancellation: run in this goroutine, as before.
 		defer release()
-		p, err := loadImpl(ctx, &opts, pkgPath)
-		return p, opts.hidePaths(err)
+		p, err := load(ctx)
+		return p, asLoadError(opts.hidePaths(err))
 	}
 	initStarted := new(atomic.Bool)
 	ctx = context.WithValue(ctx, initStartedKey{}, initStarted)
+	phase := new(atomic.Int32)
+	ctx = context.WithValue(ctx, loadPhaseKey{}, phase)
 	type result struct {
 		p   *Plugin
 		err error
@@ -686,7 +769,7 @@ func LoadContext(ctx context.Context, opts Options, pkgPath string) (*Plugin, er
 		// The slot is released when the load ends, also when LoadContext
 		// gave up on it: the next load of the plugin waits for it.
 		defer release()
-		p, err := loadImpl(ctx, &opts, pkgPath)
+		p, err := load(ctx)
 		ch <- result{p, err}
 	}()
 	select {
@@ -694,14 +777,30 @@ func LoadContext(ctx context.Context, opts Options, pkgPath string) (*Plugin, er
 		if initStarted.Load() {
 			return nil, initCanceledErr(ctx)
 		}
-		return nil, loadErrorf("vm load: %v (parse or type checking has no cancellation, so the abandoned load keeps running in the background)", ctx.Err())
+		return nil, loadErrorf("vm load: %v (%s)", ctx.Err(), loadPhaseNote(phase.Load()))
 	case r := <-ch:
 		if r.err != nil && ctx.Err() != nil && errors.Is(r.err, ErrCanceled) {
 			// The init stopped on the done context before the select saw it.
 			return nil, initCanceledErr(ctx)
 		}
-		return r.p, opts.hidePaths(r.err)
+		return r.p, asLoadError(opts.hidePaths(r.err))
 	}
+}
+
+// asLoadError returns err as a *LoadError: err itself when it is one, else
+// a *LoadError with the message of err that wraps it (errors.Is and
+// errors.As still see err and its causes: a *PreflightError, a type error,
+// a panic of the package init). Every error of Load, LoadContext and
+// LoadCached is a *LoadError, so a host can tell a plugin that does not load
+// (and fall back to another engine) from its own errors.
+func asLoadError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if le, ok := err.(*LoadError); ok {
+		return le
+	}
+	return &LoadError{Msg: err.Error(), Err: err}
 }
 
 // loadKey names a plugin for loadSlots: the same package from the same
@@ -720,12 +819,12 @@ type loadKey struct{ dir, goPath, pkgPath string }
 // channel per plugin loaded by the process.
 var loadSlots sync.Map // loadKey -> chan struct{}
 
-// acquireLoadSlot takes the slot of the plugin pkgPath of opts.Dir, waiting
-// for a previous load of the same plugin to end, until ctx is done. release
-// gives the slot back.
-func acquireLoadSlot(ctx context.Context, opts *Options, pkgPath string) (release func(), err error) {
-	key := loadKey{dir: opts.Dir, goPath: opts.GoPath, pkgPath: pkgPath}
-	if abs, err := filepath.Abs(opts.Dir); err == nil {
+// acquireLoadSlot takes the slot of the plugin key, waiting for a previous
+// load of the same plugin to end, until ctx is done. release gives the slot
+// back.
+func acquireLoadSlot(ctx context.Context, key loadKey) (release func(), err error) {
+	pkgPath := key.pkgPath
+	if abs, err := filepath.Abs(key.dir); err == nil {
 		key.dir = abs
 	}
 	v, _ := loadSlots.LoadOrStore(key, make(chan struct{}, 1))
@@ -743,6 +842,36 @@ func acquireLoadSlot(ctx context.Context, opts *Options, pkgPath string) (releas
 		return nil, loadErrorf("vm load: %v: a previous load of %s has not ended yet (go/types and the SSA builder cannot be canceled, so a load abandoned after its deadline runs until they return; a plugin is loaded once at a time)",
 			ctx.Err(), pkgPath)
 	}
+}
+
+// loadPhaseKey is the context key of the *atomic.Int32 that tells which
+// step the load is in (setLoadPhase), for the error of LoadContext when its
+// deadline passes.
+type loadPhaseKey struct{}
+
+// The steps of a load, for loadPhaseNote.
+const (
+	phaseParse int32 = iota // parse and type check
+	phaseBuild              // SSA build and the checks after it
+	phaseCheck              // load-time check (preflight) and package init
+)
+
+// setLoadPhase records the step of the load in ctx (see loadPhaseKey).
+func setLoadPhase(ctx context.Context, phase int32) {
+	if p, ok := ctx.Value(loadPhaseKey{}).(*atomic.Int32); ok {
+		p.Store(phase)
+	}
+}
+
+// loadPhaseNote explains what happens to a load abandoned in phase.
+func loadPhaseNote(phase int32) string {
+	switch phase {
+	case phaseBuild:
+		return "the SSA build has no cancellation, so the abandoned load keeps running in the background until it ends"
+	case phaseCheck:
+		return "during the load-time check of the plugin, which stops at its next step"
+	}
+	return "parse or type checking has no cancellation, so the abandoned load keeps running in the background"
 }
 
 // initStartedKey is the context key of the *atomic.Bool that
@@ -778,6 +907,9 @@ func loadImpl(ctx context.Context, opts *Options, pkgPath string) (p *Plugin, er
 	opts.AOT, opts.Modes, aotNote, err = aotGate(opts.hooks.hostGoVersion(), opts.AOT, opts.Modes, opts.AllowStaleAOT, opts.StaleAOTFallback)
 	if err != nil {
 		return nil, err
+	}
+	if opts.AOT && !hasStdAOT() {
+		aotNote = noAOTCopiesNote // CheckAOT returns errNoAOTCopies
 	}
 	if aotNote != "" {
 		defer func() {
@@ -943,6 +1075,7 @@ func loadImpl(ctx context.Context, opts *Options, pkgPath string) (p *Plugin, er
 	if err := ctxErr(ctx); err != nil {
 		return nil, err
 	}
+	setLoadPhase(ctx, phaseBuild)
 	t1 := time.Now()
 	var prog *ssa.Program
 	var spkgs []*ssa.Package
@@ -1009,31 +1142,48 @@ func loadImpl(ctx context.Context, opts *Options, pkgPath string) (p *Plugin, er
 	return p, nil
 }
 
+// fallbackNotes returns the notes of Plugin.Notes for the packages of m
+// that run interpreted instead of their AOT copy (AOTFallback) or natively
+// (NativeFallback), sorted by path.
+func fallbackNotes(m *Machine) []string {
+	var notes []string
+	for _, path := range slices.Sorted(maps.Keys(m.AOTFallback)) {
+		notes = append(notes, fmt.Sprintf("package %s runs interpreted, not its AOT copy: %s", path, m.AOTFallback[path]))
+	}
+	for _, path := range slices.Sorted(maps.Keys(m.NativeFallback)) {
+		notes = append(notes, fmt.Sprintf("package %s runs interpreted, not natively: %s", path, m.NativeFallback[path]))
+	}
+	return notes
+}
+
 // preflightAndInit runs the preflight of p, then creates its machine and
 // runs the package init. It checks ctx before each step: when the deadline
 // passes during the SSA build (one ssa.Package.Build cannot be interrupted),
 // LoadContext has already returned an error, and the abandoned load must not
 // run the code of the plugin that the host refused.
 func preflightAndInit(ctx context.Context, opts *Options, p *Plugin, newM func() *Machine, own func(*types.Package) bool) error {
+	setLoadPhase(ctx, phaseCheck)
 	opts.hooks.loadStage("built")
 	if err := ctxErr(ctx); err != nil {
 		return err
 	}
-	if err := opts.preflight(p, newM, own); err != nil {
+	m := newM()
+	if err := opts.preflight(ctx, p, newM, m, own); err != nil {
 		return err
 	}
 	opts.hooks.loadStage("checked")
 	if err := ctxErr(ctx); err != nil {
 		return err
 	}
-	m := newM()
 	p.M = m
+	p.Notes = append(p.Notes, fallbackNotes(m)...)
 	if inits := m.initOrder(p.Pkg); len(inits) > 0 {
 		if started, ok := ctx.Value(initStartedKey{}).(*atomic.Bool); ok {
 			started.Store(true)
 		}
 		defer opts.hooks.loadStage("init")
 		m.runInits(ctx, inits)
+		m.dropInitCode(p.Pkg, inits) // shrink.go
 	}
 	return nil
 }
@@ -1119,7 +1269,8 @@ func (o *Object) Type() types.Type { return o.t }
 // its results.
 //
 // An argument is either an *Object of this plugin, passed as is (its type
-// must be the type of the parameter), or a native value, converted to the
+// must be the type of the parameter, or be assignable to it when the
+// parameter is an interface), or a native value, converted to the
 // type of the parameter (nil gives the zero value). A native http.Handler
 // given for an interface parameter is wrapped: when native code that the
 // plugin started calls it on a goroutine of its own, its panics go to
@@ -1147,7 +1298,7 @@ func (o *Object) Call(ctx context.Context, name string, args ...any) (res []*Obj
 	}
 	m := o.p.M
 	sel := m.prog.MethodSets.MethodSet(o.t).Lookup(nil, name)
-	if sel == nil || !token.IsExported(name) {
+	if sel == nil || !token.IsExported(name) || !runtimeMethod(sel) {
 		return nil, fmt.Errorf("%s has no exported method %s", o.t, name)
 	}
 	recv := o.v
@@ -1178,6 +1329,13 @@ func (p *Plugin) call(ctx context.Context, fn *ssa.Function, recv *Value, args [
 		}
 		in = append(in, v)
 	}
+	m.stats.calls.Add(1)
+	defer func() {
+		if r := recover(); r != nil {
+			m.countFault(r)
+			panic(r)
+		}
+	}()
 	out := m.callTop(m.cancelCtx(ctx), m.funcOf(fn), in, nil)
 	n := sig.Results().Len()
 	if n == 0 {
@@ -1201,16 +1359,36 @@ func (p *Plugin) arg(a any, pt types.Type) (Value, error) {
 		if o.p != p {
 			return Value{}, errors.New("the object comes from another plugin")
 		}
-		if !types.Identical(o.t, pt) {
+		if types.Identical(o.t, pt) {
+			return o.v, nil
+		}
+		// An interface parameter takes any object whose type is assignable
+		// to it, as in a Go call (New(..., cfg any, ...) with the *Config of
+		// CreateConfig).
+		if !types.IsInterface(pt) || !types.AssignableTo(o.t, pt) {
 			return Value{}, fmt.Errorf("the object has the type %s, %s is expected", o.t, pt)
 		}
-		return o.v, nil
+		if types.IsInterface(o.t) {
+			return o.v, nil // ChangeInterface: the same *Iface
+		}
+		return Value{R: &Iface{T: m.rtypeOf(o.t), V: o.v}}, nil // MakeInterface
 	}
 	rt := m.reflectType(pt)
 	if a == nil {
 		return m.fromNative(reflect.Zero(rt), pt), nil
 	}
+	if m.restricted {
+		switch v := a.(type) {
+		case *http.Request:
+			a = hideServer(v)
+		case context.Context:
+			a = hideServerCtx(v)
+		}
+	}
 	if h, ok := a.(http.Handler); ok && rt.Kind() == reflect.Interface {
+		if m.restricted {
+			h = serverRestorer{h}
+		}
 		a = &nativeNext{m, h}
 	}
 	rv := reflect.ValueOf(a)
@@ -1229,6 +1407,18 @@ func (p *Plugin) arg(a any, pt types.Type) (Value, error) {
 // method) gives a handler whose each ServeHTTP is a call from the host: it has its own
 // budget, and it stops when the context of the request is done with
 // Options.Cancel.
+//
+// A func value (or a value with other methods) of the plugin is not a call
+// from the host: call plugin code through Plugin.Call, Object.Call or the
+// handler that New returns, which return its panics and its errors. When
+// the host calls such a func directly on its own goroutine, the VM cannot
+// tell that goroutine from a goroutine of native code that the plugin
+// started (time.AfterFunc), so the rule of the native callbacks applies:
+// a panic or the end of the budget goes to Options.GoPanic, and then a
+// func without results returns, a func whose last result is an error
+// returns zero values and an error, and another func calls
+// runtime.Goexit on the goroutine of the host (its deferred calls run,
+// the call never returns). See docs/SANDBOX.md.
 func (o *Object) Interface() (v any, err error) {
 	defer recoverErr(&err)
 	m := o.p.M
@@ -1271,7 +1461,7 @@ func (o *Object) Decode(decode func(ptr any) error) (err error) {
 	if err := decode(rv.Interface()); err != nil {
 		return err
 	}
-	*cell = m.fromNativeDeep(rv.Elem(), pt.Elem())
+	storeCell(cell, m.fromNativeDeep(rv.Elem(), pt.Elem()), pt.Elem())
 	return nil
 }
 
@@ -1293,7 +1483,7 @@ func (o *Object) SetFields(fields map[string]any) (err error) {
 		found := false
 		for i := 0; i < st.NumFields(); i++ {
 			if st.Field(i).Name() == name {
-				fs[i] = o.p.M.fromNativeDeep(reflect.ValueOf(v), st.Field(i).Type())
+				storeCell(&fs[i], o.p.M.fromNativeDeep(reflect.ValueOf(v), st.Field(i).Type()), st.Field(i).Type())
 				found = true
 			}
 		}
@@ -1318,6 +1508,10 @@ func panicErr(prefix string, r any) error {
 	if e, ok := r.(error); ok {
 		// Keep the error in the chain: errors.Is(err, ErrBudget) works, and
 		// a *LoadError from a load-time limit stays detectable with errors.As.
+		// The errors of the VM start with "vm: " already: no "vm: vm: ".
+		if strings.HasPrefix(e.Error(), prefix+": ") {
+			return fmt.Errorf("%w", e)
+		}
 		return fmt.Errorf("%s: %w", prefix, e)
 	}
 	return fmt.Errorf("%s: %v", prefix, r)
@@ -1334,21 +1528,65 @@ func panicErr(prefix string, r any) error {
 var cachedSeq atomic.Int64
 
 // LoadCached loads the plugin in dir again, reusing p's program and packages.
+// As LoadContext, it is bounded by opts.LoadTimeout (a *LoadError at once
+// when it passes; an init that runs then is canceled), loads one plugin of
+// dir at a time, and returns every error as a *LoadError. It checks the Go
+// version of the AOT copies as Load does (AllowStaleAOT, StaleAOTFallback),
+// and refuses the load bombs with the errors of Load (loadbomb.go).
+//
+// It is not a way to reload a plugin (docs/RELOAD.md: one Plugin for the
+// life of the host, and New at each reload): the packages of each call stay
+// in the SSA program and the token.FileSet of p while p lives, also after
+// the new Plugin is closed (about 64 KB per call for a small test plugin,
+// TestLoadCachedKeepsProgram; more for a large plugin).
 func (p *Plugin) LoadCached(dir string, opts Options) (*Plugin, error) {
-	return p.loadCached(dir, &opts)
+	key := loadKey{dir: dir, pkgPath: p.Pkg.Pkg.Path() + " (cached)"}
+	opts.Dir = dir // hidePaths names dir "."
+	return runLoad(context.Background(), &opts, key, func(ctx context.Context) (*Plugin, error) {
+		return p.loadCached(ctx, dir, &opts)
+	})
 }
 
 // loadCached is LoadCached with the options by pointer (see loadImpl).
-func (p *Plugin) loadCached(dir string, opts *Options) (q *Plugin, err error) {
+func (p *Plugin) loadCached(ctx context.Context, dir string, opts *Options) (q *Plugin, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = panicErr("vm cached load", r)
 		}
 	}()
+	// The same version gate as Load (loadImpl): with stale AOT copies, the
+	// load is refused, or runs in default mode with a note when
+	// StaleAOTFallback is on. newMachine uses opts.AOT and opts.Modes.
+	var aotNote string
+	opts.AOT, opts.Modes, aotNote, err = aotGate(opts.hooks.hostGoVersion(), opts.AOT, opts.Modes, opts.AllowStaleAOT, opts.StaleAOTFallback)
+	if err != nil {
+		return nil, err
+	}
+	if aotNote != "" {
+		defer func() {
+			if q != nil {
+				q.Notes = append(q.Notes, aotNote)
+			}
+		}()
+	}
 	t0 := time.Now()
+	// The packages of the program and all their imports: the program has
+	// no SSA package for the standard library packages that its source
+	// packages import only indirectly (stdSSA), but the cached package may
+	// import them, as it could when the program had one for each.
 	byPath := map[string]*types.Package{}
+	var visit func(*types.Package)
+	visit = func(tp *types.Package) {
+		if _, ok := byPath[tp.Path()]; ok {
+			return
+		}
+		byPath[tp.Path()] = tp
+		for _, imp := range tp.Imports() {
+			visit(imp)
+		}
+	}
 	for _, sp := range p.M.prog.AllPackages() {
-		byPath[sp.Pkg.Path()] = sp.Pkg
+		visit(sp.Pkg)
 	}
 	fset := p.M.prog.Fset
 	// The files are read with the rule of the module files (openModuleFile):
@@ -1361,6 +1599,12 @@ func (p *Plugin) loadCached(dir string, opts *Options) (q *Plugin, err error) {
 	}
 	ents, err := os.ReadDir(dir)
 	if err != nil {
+		return nil, err
+	}
+	// The same source limits as Load (LoadLimits): number of files, total
+	// size, and one package.
+	budget := newLoadBudget(opts.loadLimits())
+	if err := budget.addPackage(); err != nil {
 		return nil, err
 	}
 	var files []*ast.File
@@ -1376,7 +1620,7 @@ func (p *Plugin) loadCached(dir string, opts *Options) (q *Plugin, err error) {
 		if err != nil {
 			return nil, err
 		}
-		src, err := io.ReadAll(file)
+		src, err := readBudgeted(budget, file, name)
 		file.Close()
 		if err != nil {
 			return nil, err
@@ -1395,6 +1639,13 @@ func (p *Plugin) loadCached(dir string, opts *Options) (q *Plugin, err error) {
 			return ""
 		})
 	}
+	// The same checks as Load (srcload.go, loadbomb.go): go/types and
+	// go/constant cannot be canceled, so a LoadTimeout would return while
+	// they keep running on a load bomb. Refuse it before the check.
+	imported := func(path string) *types.Package { return byPath[path] }
+	if err := checkSourceSize(fset, files, imported, &budget.constBytes); err != nil {
+		return nil, err
+	}
 	path := fmt.Sprintf("%s_cached%d", p.Pkg.Pkg.Path(), cachedSeq.Add(1))
 	info := &types.Info{
 		Types: map[ast.Expr]types.TypeAndValue{}, Defs: map[*ast.Ident]types.Object{}, Uses: map[*ast.Ident]types.Object{},
@@ -1409,6 +1660,10 @@ func (p *Plugin) loadCached(dir string, opts *Options) (q *Plugin, err error) {
 	})}
 	tp, err := conf.Check(path, fset, files, info)
 	if err != nil {
+		return nil, err
+	}
+	// The generic instances that the SSA build would make (loadinst.go).
+	if err := checkInstances(fset, []*srcPkg{{path: path, files: files, info: info, types: tp}}); err != nil {
 		return nil, err
 	}
 	csrc := []sourcePkg{{fset: fset, types: tp, files: files, info: info}}
@@ -1433,6 +1688,9 @@ func (p *Plugin) loadCached(dir string, opts *Options) (q *Plugin, err error) {
 		cembeds[k] = v
 	}
 	t1 := time.Now()
+	if err := createStdImports(p.M.prog, tp); err != nil {
+		return nil, err
+	}
 	sp := p.M.prog.CreatePackage(tp, files, info, false)
 	sp.Build()
 	dropSyntax(csrc) // after the checks and the build (shrink.go)
@@ -1451,12 +1709,9 @@ func (p *Plugin) loadCached(dir string, opts *Options) (q *Plugin, err error) {
 		return m
 	}
 	q = &Plugin{Pkg: sp, LoadTime: t1.Sub(t0), BuildTime: t2.Sub(t1)}
-	if err := opts.preflight(q, newM, func(q *types.Package) bool { return q == tp }); err != nil {
+	if err := preflightAndInit(ctx, opts, q, newM, func(q *types.Package) bool { return q == tp }); err != nil {
 		return nil, err
 	}
-	m := newM()
-	q.M = m
-	m.runInits(context.Background(), m.initOrder(sp))
 	q.InitTime = time.Since(t2) - q.CheckTime
 	return q, nil
 }

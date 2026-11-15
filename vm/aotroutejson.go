@@ -39,7 +39,7 @@ const jsonV2Path = "encoding/json/v2"
 // *json.Encoder or *json.Decoder when json is routed to its AOT copy (nil
 // otherwise).
 func (m *Machine) jsonStreamCall(f *ssa.Function, args []int32) func([]Value) Value {
-	if f.Signature.Recv() == nil || f.Pkg == nil || f.Pkg.Pkg.Path() != jsonPath || !m.routed[jsonPath] {
+	if p := funcPkg(f); f.Signature.Recv() == nil || p == nil || p.Path() != jsonPath || !m.routed[jsonPath] {
 		return nil
 	}
 	p := aotPkg(jsonPath)

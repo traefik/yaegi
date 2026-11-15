@@ -83,6 +83,11 @@ func NewAt(t RT, p unsafe.Pointer) RV {
 	if !t.isNat() {
 		unsupported("vm reflect: NewAt on interpreted type %s", t)
 	}
+	if !unsafeNative(p) {
+		// The address of a VM cell that the ring forgot, or an address
+		// the program made up: never a Go pointer into it.
+		unsupported("vm reflect: NewAt at an address that UnsafeAddr did not give on this goroutine")
+	}
 	return natRV(reflect.NewAt(t.nat, p))
 }
 
@@ -342,7 +347,14 @@ func checkMakeFuncResults(res []RV, n int) {
 
 // Append mirrors reflect.Append.
 func Append(s RV, x ...RV) RV {
-	if n, ok := s.native(); ok {
+	n, ok, cell := s.snap() // one read: another goroutine may store the cell
+	if s.Kind() == reflect.Slice {
+		et := s.Type().Elem()
+		for _, e := range x {
+			mustAssign("Append", e, et)
+		}
+	}
+	if ok {
 		nx := make([]reflect.Value, len(x))
 		for i := range x {
 			nx[i] = x[i].natVal(n.Type().Elem())
@@ -354,7 +366,7 @@ func Append(s RV, x ...RV) RV {
 	}
 	m := s.mach()
 	et := s.t.elemT().t
-	switch b := s.p.R.(type) {
+	switch b := cell.R.(type) {
 	case []byte:
 		if len(x) > cap(b)-len(b) {
 			// The elements go in one append, as in Go: when they do not
@@ -372,7 +384,7 @@ func Append(s RV, x ...RV) RV {
 		}
 		return mkVM(s.t, &Value{R: b}, 0)
 	}
-	vs, _ := s.p.R.([]Value)
+	vs, _ := cell.R.([]Value)
 	if needsCopy(et) {
 		// struct or array elements: the same rules as the builtin append
 		xs := make([]Value, len(x))
@@ -389,9 +401,13 @@ func Append(s RV, x ...RV) RV {
 
 // AppendSlice mirrors reflect.AppendSlice.
 func AppendSlice(s, t RV) RV {
+	if s.Kind() == reflect.Slice && t.Kind() == reflect.Slice {
+		mustAssignT("AppendSlice", t.Type().Elem(), s.Type().Elem())
+	}
 	if n, ok := s.native(); ok {
 		return natRV(reflect.AppendSlice(n, t.natVal(n.Type())))
 	}
+	t = t.frozen(t.snap()) // Len and Index of the same slice
 	xs := make([]RV, t.Len())
 	for i := range xs {
 		xs[i] = t.Index(i)
@@ -401,14 +417,46 @@ func AppendSlice(s, t RV) RV {
 
 // Copy mirrors reflect.Copy.
 func Copy(dst, src RV) int {
-	dn, dok := dst.native()
-	sn, sok := src.native()
+	if bv, ok := dst.arrayView(); ok {
+		// A [n]byte in real bytes: the bytes of the array are the
+		// destination. snap and frozen below see a decoded copy of the
+		// array, and the writes went to that copy.
+		if src.Kind() == reflect.Slice || src.Kind() == reflect.Array {
+			mustAssignT("Copy", src.Type().Elem(), dst.Type().Elem())
+		}
+		if dst.flag&flagRO != 0 {
+			panic("reflect: reflect.Copy using value obtained using unexported field")
+		}
+		if bv.host {
+			panic(errHostWrite)
+		}
+		db := bv.bytes(dst.t.t)
+		if src.Kind() == reflect.String {
+			s := src.String()
+			dst.writer().hostBytes(db, min(len(db), len(s)))
+			return copy(db, s)
+		}
+		sb := src.Bytes()
+		dst.writer().hostBytes(db, min(len(db), len(sb)))
+		return copy(db, sb)
+	}
+	// One read of each cell, for the checks and the data: another goroutine
+	// may store a cell meanwhile. The rest of Copy reads src and dst
+	// through frozen views of these reads, as gc reads each slice header
+	// once: the length checked against the host memory is the one copied,
+	// and all the elements come from one slice.
+	dn, dok, dc := dst.snap()
+	sn, sok, sc := src.snap()
+	if (dst.Kind() == reflect.Slice || dst.Kind() == reflect.Array) && (src.Kind() == reflect.Slice || src.Kind() == reflect.Array) {
+		mustAssignT("Copy", src.Type().Elem(), dst.Type().Elem())
+	}
 	if dok && sok {
 		dst.writer().hostWriteIn(dn)
 		return reflect.Copy(dn, sn)
 	}
+	dst, src = dst.frozen(dn, dok, dc), src.frozen(sn, sok, sc)
 	if dst.p != nil && !dok {
-		if db, ok := dst.p.R.([]byte); ok {
+		if db, ok := dc.R.([]byte); ok {
 			dst.writer().hostBytes(db, min(len(db), src.Len()))
 			if src.Kind() == reflect.String {
 				return copy(db, src.String())
@@ -426,8 +474,8 @@ func Copy(dst, src RV) int {
 	}
 	n := min(dst.Len(), src.Len())
 	if dst.p != nil && src.p != nil && !dok && !sok {
-		dv, dvok := dst.p.R.([]Value)
-		sv, svok := src.p.R.([]Value)
+		dv, dvok := dc.R.([]Value)
+		sv, svok := sc.R.([]Value)
 		if dvok && svok {
 			if et := dst.t.elemT().t; needsCopy(et) {
 				return copyValues(dv, sv, et) // as the builtin copy
@@ -454,10 +502,11 @@ func Swapper(slice any) func(i, j int) {
 	if v.Kind() != reflect.Slice {
 		panic(&reflect.ValueError{Method: "Swapper", Kind: v.Kind()})
 	}
-	if n, ok := v.native(); ok {
+	n, ok, cell := v.snap()
+	if ok {
 		return reflect.Swapper(n.Interface())
 	}
-	switch s := v.p.R.(type) {
+	switch s := cell.R.(type) {
 	case []Value:
 		if wordKind(v.t.elemT().t) {
 			return func(i, j int) { swapWords(s, i, j) }
@@ -485,19 +534,26 @@ func Select(cases []SelectCase) (chosen int, recv RV, recvOK bool) {
 // (a nil stop never is): chosen is then -1.
 func selectStop(cases []SelectCase, stops ...chan struct{}) (chosen int, recv RV, recvOK bool) {
 	nc := make([]reflect.SelectCase, len(cases), len(cases)+len(stops))
+	// One read of each channel cell (chanOf): another goroutine may store
+	// a cell meanwhile, and the result must be read as the channel used.
+	isNat := make([]bool, len(cases))
 	for i, c := range cases {
 		nc[i].Dir = c.Dir
 		if !c.Chan.IsValid() {
 			continue
 		}
-		if n, ok := c.Chan.native(); ok {
+		if c.Dir == reflect.SelectSend && c.Send.IsValid() && c.Chan.Kind() == reflect.Chan {
+			mustAssign("Select", c.Send, c.Chan.Type().Elem()) // as Send
+		}
+		n, ok, ch := c.Chan.chanOf()
+		if ok {
+			isNat[i] = true
 			nc[i].Chan = n
 			if c.Dir == reflect.SelectSend {
 				nc[i].Send = c.Send.natVal(n.Type().Elem())
 			}
 			continue
 		}
-		ch := c.Chan.vmChan()
 		if ch == nil {
 			nc[i].Chan = reflect.Zero(chanValueType)
 		} else {
@@ -520,7 +576,7 @@ func selectStop(cases []SelectCase, stops ...chan struct{}) (chosen int, recv RV
 	if c.Dir != reflect.SelectRecv {
 		return chosen, RV{}, false
 	}
-	if _, nat := c.Chan.native(); nat {
+	if isNat[chosen] {
 		return chosen, natRV(r), ok
 	}
 	if !ok {

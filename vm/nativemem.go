@@ -115,7 +115,7 @@ func nativeRecv[T any](v Value) *T {
 	switch r := v.R.(type) {
 	case *Value:
 		if r != nil {
-			return nativeRecv[T](*r)
+			return nativeRecv[T](loadWord(r)) // the receiver may be a word kind
 		}
 	case reflect.Value:
 		if !r.IsValid() || !r.CanInterface() {
@@ -228,10 +228,11 @@ func valLen(v Value) int {
 // nativeMemCheck returns the size check of the native function f for the
 // machine (nil: no quota, or nothing to check).
 func (m *Machine) nativeMemCheck(f *ssa.Function) nativeMemSize {
-	if m.mem == nil || f.Pkg == nil || m.isInterp(f) {
+	p := funcPkg(f) // also a method that ssa made on demand (stdSSA)
+	if m.mem == nil || p == nil || m.isInterp(f) {
 		return nil
 	}
-	if m.progVR && isReflectPkg(f.Pkg.Pkg) {
+	if m.progVR && isReflectPkg(p) {
 		return nil // the VM reflect (vmReflect.makeSlice)
 	}
 	return nativeMemSizes[hookName(f)]
@@ -287,7 +288,7 @@ func (m *Machine) memResult(v Value) {
 // nativeMemHook returns the replacement of the native function f for the
 // machine (nil: no quota, or none).
 func (m *Machine) nativeMemHook(f *ssa.Function) NativeHook {
-	if m.mem == nil || f.Pkg == nil || m.isInterp(f) || f.Signature.Recv() != nil {
+	if m.mem == nil || funcPkg(f) == nil || m.isInterp(f) || f.Signature.Recv() != nil {
 		return nil
 	}
 	return nativeMemHooks[hookName(f)]

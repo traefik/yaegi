@@ -199,12 +199,7 @@ func (c *compiler) skipAggregates() {
 		return
 	}
 	fn := c.f.ssa
-	pos := map[ssa.Instruction]int{} // index of each instruction in its block
-	for _, b := range fn.Blocks {
-		for i, ins := range b.Instrs {
-			pos[ins] = i
-		}
-	}
+	pos := c.instrIndex() // index of each instruction in its block
 	for _, b := range fn.Blocks {
 		for _, ins := range b.Instrs {
 			a, ok := ins.(*ssa.Alloc)
@@ -218,7 +213,7 @@ func (c *compiler) skipAggregates() {
 			if optAggLit {
 				if lit, dead, ok := aggLiteral(a, t, pos); ok {
 					if c.skip == nil {
-						c.skip = map[ssa.Instruction]bool{}
+						c.skip = make(map[ssa.Instruction]bool, len(dead))
 					}
 					if c.aggs == nil {
 						c.aggs = map[*ssa.UnOp]*aggLit{}

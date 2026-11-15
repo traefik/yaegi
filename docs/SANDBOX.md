@@ -28,6 +28,13 @@ Traefik) from the plugins it runs, and what it does not do. The open work is in
   limits (seccomp, Landlock, namespaces, cgroups), or a runtime with its own
   memory space. For Traefik, the boundary for untrusted code is the Wasm
   plugins, or a separate Traefik instance for the routes that use such plugins.
+- **For host authors: call plugin code only through `Plugin.Call`,
+  `Object.Call` or the handler of `New`.** They return the panics and errors
+  of the plugin (`ErrBudget`, `ErrStackOverflow`, `ErrGoexit`). A func value
+  of the plugin that the host calls directly on its own goroutine follows the
+  rule of the native callbacks: after a panic or the end of the budget, a func
+  whose results are not just an error ends the goroutine of the host with
+  `runtime.Goexit` (see `vm.Object.Interface`).
 
 ## Restriction levels
 
@@ -79,10 +86,10 @@ goroutine) have a default.
 A host that loads plugins it does not trust should use package `host`:
 `host.Options()` sets the limits, and `host.Check` (called by `host.Load`)
 refuses an unsafe combination (`Unrestricted`, `RealProcess`, `ExecReal`, a
-zero limit, a nil `Env`, `PanicOnFatal` off...). The values are: AOT mode,
-`Budget` 1e8, `BackgroundRate` 5e7, `MaxGoroutines` 1000, `MaxMemory` 1 GiB,
-`MaxStack` 256 MiB, `PanicOnFatal`, `LoadTimeout` 30 s, and an empty
-environment. On the plugins of the Traefik catalog, these limits give the same
+zero limit, a nil `Env`, `PanicOnFatal` off...). The values are: AOT mode
+(with `StaleAOTFallback`), `Budget` 1e8, `BudgetRate` 1e8, `BackgroundRate`
+5e7, `QuietBudget`, `MaxGoroutines` 1000, `MaxMemory` 1 GiB, `MaxStack`
+256 MiB, `PanicOnFatal`, `LoadTimeout` 30 s, and an empty environment. On the plugins of the Traefik catalog, these limits give the same
 output as the zero `Options` (`docs/CATALOG.md`).
 
 `Options.RecoverHandler` makes `ServeHTTP` recover a panic of the plugin: the
@@ -97,11 +104,20 @@ plugin.
 
 - A nil `Options.Env` is a copy of the whole host environment; an empty slice
   is no variable.
-- `internal/pluginhost` sets an empty environment by default. A host passes
-  the environment of a plugin itself: `pluginhost.HostEnv()` for the whole host
-  environment (what Traefik gives a yaegi plugin), or
-  `pluginhost.EnvFilter{Names, Prefixes}.Env()` for only the listed variables,
-  as `settings.envs` of the Traefik Wasm plugins.
+- `host.Options` sets an empty environment by default. A host passes the
+  environment of a plugin itself, with `host.SetEnv`:
+  `host.PluginEnv(allowlist)` for only the variables of the allowlist of the
+  plugin configuration (`FOO`, `OIDC_*`; `host.EnvAllowlist` refuses `*`
+  alone), `host.EnvFilter{Names, Prefixes}.Env()` for the same with names and
+  prefixes (as `settings.envs` of the Traefik Wasm plugins), or
+  `host.HostEnv()` for the whole host environment (what Traefik gives a yaegi
+  plugin).
+- A read of a variable that the host did not pass calls
+  `Options.OnMissingEnv` with its name, once per name, never with the value
+  (`Machine.MissingEnv` lists them). A host logs it, so a user finds the
+  variable to add (`host.MissingEnvMessage`). A plugin that reads
+  `os.Environ` while some variables are left out reports
+  `vm.MissingEnvEnviron` once.
 - The copy has a lock, `os.Setenv` refuses a key with `=` or a NUL byte as Go
   does, and `os.Environ` is sorted.
 
@@ -131,14 +147,16 @@ first use (`vm/hostregs.go`, `TestPluginHostRegistries`):
 | `log/slog` | the default logger and its level |
 | `flag`, `os` | `flag.CommandLine`, `flag.Usage`, `os.Args` |
 | `net` | `DefaultResolver` (restricted machines) |
+| `runtime/pprof` | the profiles of `NewProfile`, `Lookup` and `Profiles`; the built-in `goroutine` profile is a stand-in with no entry |
 
 So a plugin cannot add routes to the host's `http.DefaultServeMux`, change the
 TLS settings of the host's default transport, or replace a hash function of
 the host.
 
-Limits: native code that the plugin calls uses the host's tables, the names of
-`gob.Register` are shared by the process (`vm/gob.go`), and `RealProcess`
-machines keep the host's tables.
+Limits: native code that the plugin calls uses the host's tables, with native
+gob (no AOT copy) the names of `gob.Register` are shared by the process
+(`vm/gob.go`; the AOT copy keeps them per machine), and `RealProcess` machines
+keep the host's tables.
 
 A host that imports `stdsyms/sideeffect` (`cmd/yaegi` does) links
 `net/http/pprof` and `expvar`, which register `/debug/pprof/` and `/debug/vars`
@@ -239,6 +257,17 @@ Design of `vm/budget.go`:
   call and every goroutine it starts while it runs take steps from one account
   (`Options.Budget`). Steps are the calls and backward jumps of the VM. When
   the account is empty, all its goroutines stop with `ErrBudget`.
+- **Rate**: with `Options.BudgetRate` (off by default; 1e8 in
+  `host.Options()`), `Budget` is the size of a token bucket per call, which
+  gets `BudgetRate` steps back per second. A call that uses less on average,
+  such as a long stream, runs for ever; a call that uses more stops with
+  `ErrBudget`. The rate counts steps, not CPU.
+- **Weights**: a native call counts 16 steps, plus 1 per 64 bytes of its
+  `[]byte` and `string` arguments, and a select 64 (`vm/budget.go`).
+- **Quiet stop**: with `Options.QuietBudget` (set by `host.Options()`), a
+  `ServeHTTP` that the budget stops panics with `http.ErrAbortHandler`, and
+  the stops go to `GoPanic` at most once per minute (`Machine.BudgetStops`
+  and `Machine.Stats` count them all).
 - **Cancellation**: off by default, as in Go. With `Options.Cancel` (and always
   for the context of `LoadContext` during init), a done context stops the call
   and its goroutines with `ErrCanceled` at their next step, channel wait,

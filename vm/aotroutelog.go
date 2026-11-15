@@ -33,7 +33,7 @@ var logSprint = map[string]string{
 // f of log (or method of *log.Logger) with the argument registers args,
 // when the AOT copy of fmt is routed or used (nil otherwise).
 func (m *Machine) logRouteCall(f *ssa.Function, args []int32) func([]Value) Value {
-	if m.vr == nil || aotPkg("fmt") == nil || !m.routed["fmt"] && m.modeOf("fmt") != ModeAOT || f.Pkg == nil || f.Pkg.Pkg.Path() != "log" {
+	if m.vr == nil || aotPkg("fmt") == nil || !m.routed["fmt"] && m.modeOf("fmt") != ModeAOT || funcPkg(f) == nil || funcPkg(f).Path() != "log" {
 		return nil
 	}
 	sprint, ok := logSprint[f.Name()]
@@ -64,8 +64,8 @@ func (m *Machine) logRouteCall(f *ssa.Function, args []int32) func([]Value) Valu
 		c := newConv(&wb)
 		c.g.aot = true
 		xs := make([]any, len(vs))
-		for j, v := range vs {
-			xs[j] = m.routeArg(v, c)
+		for j := range vs { // xs... passes program memory
+			xs[j] = m.routeArg(loadWord(&vs[j]), c)
 		}
 		var in []reflect.Value
 		if sprint == "Sprintf" {

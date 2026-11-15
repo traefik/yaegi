@@ -9376,16 +9376,6 @@ func (m *Machine) genFastInvoke(key string, rs []go_types.Type) func(recv any, r
 			r0 := x.CanSeq2()
 			return Value{N: b2i(bool(r0))}, true
 		}
-	case "Chdir func(string)":
-		return func(recv any, regs []Value, a []int32) (Value, bool) {
-			x, ok := recv.(interface{ Chdir(string) })
-			if !ok {
-				return Value{}, false
-			}
-			x0 := vStr(regs[a[0]])
-			x.Chdir(x0)
-			return Value{}, true
-		}
 	case "Close func() error":
 		return func(recv any, regs []Value, a []int32) (Value, bool) {
 			x, ok := recv.(interface{ Close() error })
@@ -10420,17 +10410,6 @@ func (m *Machine) genFastInvoke(key string, rs []go_types.Type) func(recv any, r
 			}
 			r0 := x.SetWriteDeadline(x0)
 			return m.natErrOut(r0, rs[0]), true
-		}
-	case "Setenv func(string, string)":
-		return func(recv any, regs []Value, a []int32) (Value, bool) {
-			x, ok := recv.(interface{ Setenv(string, string) })
-			if !ok {
-				return Value{}, false
-			}
-			x0 := vStr(regs[a[0]])
-			x1 := vStr(regs[a[1]])
-			x.Setenv(x0, x1)
-			return Value{}, true
 		}
 	case "Signal func()":
 		return func(recv any, regs []Value, a []int32) (Value, bool) {

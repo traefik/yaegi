@@ -331,4 +331,12 @@ func hostFDMethods(refused map[methodKey]reflect.Value) {
 		return httpDir(d).Open(name)
 	})
 	refused[methodKey{reflect.TypeFor[*os.Root](), "OpenRoot"}] = reflect.ValueOf(rootOpenRoot)
+	// ReadMsgUnix receives control messages: the kernel installs the
+	// descriptors of an SCM_RIGHTS message in the host process. With
+	// oob = nil it delivers none; the data path stays. The ReadMsg methods
+	// of the UDP and IP connections stay as in Go: only a unix socket
+	// carries descriptors, and quic-go reads ECN with them.
+	refused[methodKey{reflect.TypeFor[*net.UnixConn](), "ReadMsgUnix"}] = reflect.ValueOf(func(c *net.UnixConn, b, _ []byte) (int, int, int, *net.UnixAddr, error) {
+		return c.ReadMsgUnix(b, nil)
+	})
 }

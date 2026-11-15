@@ -55,8 +55,10 @@ func New(_ context.Context, next http.Handler, _ *Config, _ string) (http.Handle
 			fmt.Fprint(w, len(s))
 		case "/defer":
 			// The deferred fmt.Sprint runs first and fmt recovers the
-			// budget error of the String method: the other deferred call
-			// must not run.
+			// budget error of the String method: the error is raised
+			// again when fmt returns, and the other deferred call runs
+			// as a cleanup of ErrBudget (with the grace of a
+			// cancellation), as it would for ErrCanceled.
 			defer fmt.Fprint(w, "after")
 			defer fmt.Sprint(spin{})
 		case "/chain":

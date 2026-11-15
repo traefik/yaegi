@@ -10,7 +10,6 @@ package fmt
 
 import (
 	errors "github.com/traefik/yaegi/v2/aot/go1_26/errors"
-	aotvm "github.com/traefik/yaegi/v2/vm"
 
 	// Errorf formats according to a format specifier and returns the string as a
 	// value that satisfies error.
@@ -23,6 +22,7 @@ import (
 	// It is invalid to supply the %w verb with an operand that does not implement
 	// the error interface. The %w verb is otherwise a synonym for %v.
 	stringslite "github.com/traefik/yaegi/v2/aot/go1_26/internal/stringslite"
+	aotvm "github.com/traefik/yaegi/v2/vm"
 	"slices"
 )
 

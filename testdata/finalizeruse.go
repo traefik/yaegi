@@ -14,7 +14,13 @@ import (
 	"time"
 )
 
-type pair struct{ a, b int }
+// pair has a pointer: a small object without pointers (8 bytes on 386 and
+// arm) comes from the tiny allocator, and there a finalizer that sets
+// itself again never runs a second time (the program hung under go run).
+type pair struct {
+	a, b int
+	p    *int
+}
 
 func main() {
 	x := &pair{a: 1}

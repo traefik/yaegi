@@ -80,10 +80,12 @@ type ctx struct {
 	cells     int64
 	deferVals int
 	// charged is the part of cells and deferVals, in bytes, counted in the
-	// memory quota (Options.MaxMemory), held by the tokens of chargeTok
-	// (stacklimit.go).
+	// memory quota (Options.MaxMemory) by memCharge, which memTok holds
+	// (stacklimit.go). Both stay with the ctx in the pool; charged is 0
+	// there.
 	charged   int64
-	chargeTok []*[16]byte
+	memCharge *stackCharge
+	memTok    *[16]byte
 	ownBudget bool // does not share the budget of the ctx below (nestIn)
 
 	// The cells of the frame-local Allocs of the frames that returned,
@@ -91,14 +93,17 @@ type ctx struct {
 	// (escape.go). They stay with the ctx in the pool.
 	freeCells []freeList // by memSite.local
 	freeSize  int        // Values held by freeCells
+	freeID    uint64     // Machine.freeID of the Machine whose sites freeCells holds
 
 	// The budget (budget.go).
-	acct    *account // account of the call from the host (nil: background, or no budget)
-	owned   *account // account that this ctx opened, closed when its run ends
-	slice   int64    // steps at the last blocking point (background rule)
-	chunk   int64    // size of the next chunk taken from acct
-	rateEnd int64    // background: steps where the chunk of BackgroundRate ends
-	aotNest int      // recursive AOT calls running on top of this ctx (NestAOT)
+	acct    *account  // account of the call from the host (nil: background, or no budget)
+	owned   *account  // account that this ctx opened, closed when its run ends
+	slice   int64     // steps at the last blocking point (background rule)
+	chunk   int64     // size of the next chunk taken from acct
+	rateEnd int64     // steps where the chunk ends (of the account, or of BackgroundRate)
+	sliceAt int64     // with a BudgetRate: clock (budgetClock) of the last slice credit
+	inst    *Instance // the instance of the goroutine (instance.go), or nil
+	aotNest int       // recursive AOT calls running on top of this ctx (NestAOT)
 }
 
 var traceVM = os.Getenv("VM_TRACE") != ""
@@ -197,6 +202,10 @@ func (m *Machine) callCtx(fn *Func, args []Value, env []Value, p *panicState, ho
 	var outer *ctx
 	if fresh {
 		cx.gs = gs
+		// A call that handles errGoexit itself (Plugin.Call, init):
+		// a Goexit in a callback of native code must not end the
+		// goroutine of the host (runRecv).
+		gs.hostEntry = !hostGoexit
 		// A call from the host: the account of top (shared by all the
 		// runs of the call), or an account of its own (a callback on a
 		// goroutine of native code).
@@ -213,11 +222,9 @@ func (m *Machine) callCtx(fn *Func, args []Value, env []Value, p *panicState, ho
 		}
 		cx.useAcct(a)
 	} else {
-		if gs.fault != nil {
-			// Native code recovered a fault and calls back again: the
-			// execution is over (budget.go).
-			panic(gs.fault)
-		}
+		// Native code recovered a fault and calls back again: the
+		// execution is over (budget.go).
+		gs.reraise()
 		outer = gs.cur
 		cx.nestIn(outer)
 		if outer.m == m {
@@ -225,20 +232,34 @@ func (m *Machine) callCtx(fn *Func, args []Value, env []Value, p *panicState, ho
 		}
 	}
 	cx.hostGoexit = hostGoexit
+	// When the call ends with a panic (ErrStackOverflow, ErrBudget, a
+	// cancel, a panic of the plugin) or a runtime.Goexit, cx does not go
+	// back to the pool: give back its stack charge now. Without this, the
+	// charge stayed in the quota until a GC freed cx (sweepStacks), and
+	// about 60 calls that overflow filled a quota of 1 GiB. After putCtx,
+	// cx can belong to another call: pooled tells the defer not to touch it.
+	pooled := false
+	defer func() {
+		if !pooled {
+			cx.releaseMem()
+		}
+	}()
 	var rv Value
 	if fresh && m.GoPanic != nil {
 		// A callback on a goroutine that native code started (nativego.go).
 		var caught bool
 		if rv, caught = cx.callOutermost(g, fn, args, env); caught {
-			return rv // the ctx stopped in the middle: do not reuse it
+			return rv // the ctx stopped in the middle: do not reuse it (the defer gives back its charge)
 		}
 	} else {
 		if fresh {
 			cx.refuseClosed(g)
+			cx.refuseStopped(g)
 		}
 		rv = cx.callIn(g, outer, fn, args, env)
 	}
 	if optCtxPool {
+		pooled = true
 		putCtx(cx)
 	}
 	return rv
@@ -277,16 +298,24 @@ func getCtx(m *Machine, p *panicState) *ctx {
 	cx := ctxPool.Get().(*ctx)
 	cx.m, cx.limit, cx.steps, cx.panic, cx.hostGoexit = m, math.MaxInt64, 0, p, false
 	cx.gs, cx.depth, cx.nest, cx.maxFrames, cx.regsBelow = nil, 0, 0, m.MaxDepth, 0
-	cx.cells, cx.deferVals, cx.charged, cx.chargeTok = 0, 0, 0, nil
+	cx.cells, cx.deferVals = 0, 0
+	if cx.freeID != m.freeID {
+		// The free cells of another Machine: m cannot use them, and they
+		// would count in its quota and take its room under maxFreeBytes.
+		cx.dropFree()
+		cx.freeID = m.freeID
+	}
+	cx.chargeFree()
 	cx.fitStack()
 	cx.frames, cx.defers = cx.frames[:0], cx.defers[:0]
 	cx.parent, cx.kind, cx.ptrace, cx.unwound, cx.esc = nil, ctxNative, nil, cx.unwound[:0], escape{}
 	cx.native, cx.unwinding, cx.aotNest = false, false, 0
-	cx.acct, cx.owned, cx.slice, cx.chunk, cx.rateEnd = nil, nil, 0, 0, 0
+	cx.acct, cx.owned, cx.slice, cx.chunk, cx.rateEnd, cx.inst = nil, nil, 0, 0, 0, nil
 	return cx
 }
 
 func putCtx(cx *ctx) {
+	cx.releaseMem()
 	if len(cx.stack) > pooledRegs || cap(cx.frames) > pooledStack || cap(cx.defers) > pooledStack {
 		return // a deep recursion grew the stacks: let the GC free them
 	}
@@ -294,8 +323,7 @@ func putCtx(cx *ctx) {
 	cx.hw = 0
 	clear(cx.defers[:cap(cx.defers)])
 	cx.m, cx.fn, cx.panic, cx.gs, cx.parent = nil, nil, nil, nil, nil
-	cx.acct, cx.owned = nil, nil
-	cx.charged, cx.chargeTok = 0, nil
+	cx.acct, cx.owned, cx.inst = nil, nil, nil
 	ctxPool.Put(cx)
 }
 
@@ -317,8 +345,17 @@ const valueSize = int64(unsafe.Sizeof(Value{}))
 // size, so a deep call chain grows it a few times only (amortized). The
 // frames keep offsets into cx.stack, never pointers: the callers re-slice
 // their registers after a call that may grow (exec).
+//
+// The first growth, from an empty stack (a new ctx), is to n and a quarter
+// more: the frame of the entry function, and room for a small call. It
+// was 2*n before: 4 KB for the 86 registers of the handler of W1, most of
+// them never used by a request that waits in the next handler (round 3
+// review, M12-5).
 func (cx *ctx) grow(n int) {
 	size := max(2*n, 2*len(cx.stack), minStack)
+	if len(cx.stack) == 0 {
+		size = max(n+n/4, minStack)
+	}
 	if limit := cx.m.MaxStack; limit > 0 {
 		// The stacks of the ctxs below on the goroutine count too
 		// (nest.go), and the cells and deferred calls (stacklimit.go).
@@ -461,10 +498,25 @@ func (cx *ctx) runRecv(fn *Func, recv *Value, args []Value, env []Value) Value {
 			}
 			if len(cx.frames) == 0 {
 				if p.val == errGoexit && cx.hostGoexit {
-					// The deferred calls ran: end the goroutine like
-					// gc. Native code must not see errGoexit as a
-					// normal panic (it could recover or print it).
-					runtime.Goexit()
+					if cx.gs.hostEntry {
+						// A callback of native code under a call from
+						// the host (the less func of sort.Slice, an
+						// Error method that fmt calls): the goroutine
+						// is the host's. A real Goexit would end it
+						// and the call would never return. The
+						// Goexit goes on as a panic of errGoexit up
+						// to the call from the host, which returns
+						// ErrGoexit; if native code recovers it, it
+						// is raised again when the native call
+						// returns (gstate.goexit).
+						cx.gs.goexit = true
+					} else {
+						// The deferred calls ran: end the goroutine
+						// like gc. Native code must not see errGoexit
+						// as a normal panic (it could recover or
+						// print it).
+						runtime.Goexit()
+					}
 				}
 				cx.unwound = cx.unwound[:0]
 				// The panic leaves the VM: a native sentinel goes on as
@@ -509,18 +561,26 @@ type deferred struct {
 	natP func(p *panicState)
 }
 
-// isFatal reports whether r is a VM error that no recover() may stop: the
-// sandbox relies on them to stop a plugin (Options.Budget, MaxDepth).
-func isFatal(r any) bool {
-	return r == ErrBudget || r == ErrStackOverflow || r == errCanceledHard || r == errClosedHard
+// isFatal reports whether r stops the goroutine of cx at once, without
+// running any more deferred call: a stop whose grace is spent
+// (errCanceledHard, errClosedHard, and ErrBudget or ErrStackOverflow once
+// gstate.hard is set, nest.go). The sandbox relies on them to stop a
+// plugin whose deferred calls do not end.
+func (cx *ctx) isFatal(r any) bool {
+	if r == errCanceledHard || r == errClosedHard {
+		return true
+	}
+	return (r == ErrBudget || r == ErrStackOverflow) && cx.gs != nil && cx.gs.hard
 }
 
 // recoverable reports whether recover() may stop the panic value r.
 // runtime.Goexit is not a panic for recover, ErrCanceled and ErrClosed stop
-// the call like a Goexit (budget.go, close.go), and isFatal values must
-// reach the host (runDefers never stores them; this is a second guard).
+// the call like a Goexit (budget.go, close.go), and ErrBudget and
+// ErrStackOverflow must reach the host: their deferred calls run, but
+// recover cannot stop them (nest.go, fail).
 func recoverable(r any) bool {
-	return r != errGoexit && r != ErrCanceled && r != ErrClosed && !isFatal(r)
+	return r != errGoexit && r != ErrCanceled && r != ErrClosed &&
+		r != ErrBudget && r != ErrStackOverflow && r != errCanceledHard && r != errClosedHard
 }
 
 func (cx *ctx) protected(pc int) (rv Value, p *panicState) {
@@ -536,7 +596,7 @@ func (cx *ctx) protected(pc int) (rv Value, p *panicState) {
 			return
 		}
 		if r != nil {
-			if isFatal(r) {
+			if cx.isFatal(r) {
 				// Raised again by run, once this recover is complete: a
 				// panic raised here would start on top of the frames that
 				// are not unwound yet, and the Go runtime would walk them
@@ -619,7 +679,7 @@ func (cx *ctx) runDefers(depth int, p *panicState, unwinding bool) (recovered bo
 			// same frame was recovered by an earlier deferred call
 			// (recover1.go test6). While that newer panic is still active,
 			// it does nothing (recover1.go test7).
-			// It never stops a Goexit, ErrBudget or ErrStackOverflow.
+			// It never stops a Goexit, ErrBudget or ErrStackOverflow (recoverable).
 			if (p == nil || p.recovered) && depth == 0 && cx.panic != nil && !cx.panic.recovered && recoverable(cx.panic.val) {
 				cx.panic.recovered = true
 			}
@@ -628,6 +688,14 @@ func (cx *ctx) runDefers(depth int, p *panicState, unwinding bool) (recovered bo
 		var again any // panic to raise again once recovered (see protected)
 		done := false
 		func() {
+			if gs := cx.gs; p != nil && gs != nil && (gs.fault != nil || gs.goexit) {
+				// The goroutine stops with a fault (ErrBudget,
+				// ErrStackOverflow) or a Goexit, and this deferred call
+				// cleans up: the fault is not raised again inside it
+				// (reraise).
+				gs.cleanup++
+				defer func() { gs.cleanup-- }()
+			}
 			defer func() {
 				r := recover()
 				if r == nil && !done && p != nil {
@@ -637,9 +705,10 @@ func (cx *ctx) runDefers(depth int, p *panicState, unwinding bool) (recovered bo
 					return
 				}
 				if r != nil {
-					if p == nil || isFatal(r) {
-						// ErrBudget and ErrStackOverflow never become
-						// the current panic: recover() could stop them.
+					if p == nil || cx.isFatal(r) {
+						// A fatal stop never becomes the current panic:
+						// no deferred call runs any more. Without p
+						// (a normal return), the panic starts here.
 						again = r
 						return
 					}
@@ -969,6 +1038,7 @@ func (cx *ctx) exec(pc int) Value {
 					}
 					callee, env = cl.Fn, cl.Env
 				case reflect.Value:
+					cx.charge(nativeCallSteps)
 					put(regs, in, m.callNativeValue(cl, cs.sig, regs, argRegs))
 					cx.checkFault()
 					continue
@@ -998,6 +1068,7 @@ func (cx *ctx) exec(pc int) Value {
 							continue
 						}
 					}
+					cx.charge(nativeCallSteps)
 					if optFastNative {
 						s.once.Do(func() { s.fast = m.fastInvoke(s.name) })
 						if s.fast != nil {
@@ -1020,7 +1091,7 @@ func (cx *ctx) exec(pc int) Value {
 				if h := s.hit.Load(); h != nil && h.rt == iv.T {
 					callee = h.fn
 				} else {
-					callee = iv.T.Methods[s.name]
+					callee = iv.T.Methods[s.id]
 					if h == nil {
 						s.hit.Store(&invokeHit{rt: iv.T, fn: callee})
 					}
@@ -1117,7 +1188,9 @@ func (cx *ctx) exec(pc int) Value {
 			regs[f.dst] = rv
 
 		case OpCallNative:
-			put(regs, in, m.callNativeSite(in.X.(*nativeSite), regs))
+			ns := in.X.(*nativeSite)
+			cx.charge(ns.nativeSteps(regs))
+			put(regs, in, m.callNativeSite(ns, regs))
 			cx.checkFault()
 
 		case OpMakeClosure:
@@ -1171,7 +1244,7 @@ func (cx *ctx) exec(pc int) Value {
 			case *hdrWord:
 				regs[in.A] = p.load(s.t)
 			case *byteView:
-				regs[in.A] = p.load(s.t)
+				regs[in.A] = m.loadView(p, s.t)
 			case badAddr:
 				p.refuse()
 			default:
@@ -1577,6 +1650,7 @@ func (cx *ctx) exec(pc int) Value {
 		case OpClose:
 			closeChan(regs[in.B].R)
 		case OpSelect:
+			cx.charge(selectSteps)
 			put(regs, in, cx.execSelect(in.X.(*selectSite), regs))
 		case OpRange:
 			ms, _ := in.X.(*mapSite)
@@ -1656,6 +1730,12 @@ func (cx *ctx) exec(pc int) Value {
 				}
 				checkIndex(i, sl.Len(), in.F)
 				regs[in.A] = natScalar(sl.Index(int(i)))
+			case *byteView:
+				if b := sl.elemByte(i, in.F); b != nil {
+					regs[in.A] = Value{N: int64(*b)}
+					break
+				}
+				regs[in.A] = m.load(m.indexAddr(regs[in.B], i, in.F), s)
 			default:
 				regs[in.A] = m.load(m.indexAddr(regs[in.B], i, in.F), s)
 			}
@@ -1686,6 +1766,19 @@ func (cx *ctx) exec(pc int) Value {
 				checkIndex(i, sl.Len(), in.F)
 				m.hostWrite(sl.Index(int(i)))
 				setNatScalar(sl.Index(int(i)), regs[in.B])
+			case *byteView:
+				if b := sl.elemByte(i, in.F); b != nil {
+					// the checks of byteView.store
+					if sl.ro {
+						refuseROWrite()
+					}
+					if sl.host {
+						panic(errHostWrite)
+					}
+					*b = byte(regs[in.B].N)
+					break
+				}
+				m.store(m.indexAddr(regs[in.A], i, in.F), regs[in.B], s)
 			default:
 				m.store(m.indexAddr(regs[in.A], i, in.F), regs[in.B], s)
 			}
@@ -1873,6 +1966,10 @@ func appendValues(m *Machine, s, t []Value, et types.Type) []Value {
 // copy, so the old and the new array do not share memory.
 func growValues(ns, s []Value, et types.Type) {
 	if !needsCopy(et) {
+		if wordKind(et) {
+			readWords2(ns[:len(s)], s) // a racy writer of s must not make ns tear
+			return
+		}
 		copy(ns, s)
 		return
 	}
@@ -2082,6 +2179,9 @@ func (m *Machine) equal(a, b Value, t types.Type) bool {
 			return x.V.R == y.V.R
 		}
 		if x.T.Native != nil {
+			if x.T.fo != nil {
+				return m.equalForeign(x, y)
+			}
 			return x.V.R.(reflect.Value).Interface() == y.V.R.(reflect.Value).Interface()
 		}
 		if x.T.noCmp {
@@ -2115,7 +2215,7 @@ func (m *Machine) equal(a, b Value, t types.Type) bool {
 			}
 		}
 		for i := range xs {
-			if !m.equal(xs[i], ys[i], u.Elem()) {
+			if !m.equal(loadCell(&xs[i], u.Elem()), loadCell(&ys[i], u.Elem()), u.Elem()) {
 				return false
 			}
 		}
@@ -2175,7 +2275,11 @@ func (m *Machine) implements(rt *RType, it *types.Interface) bool {
 			fn := it.Method(i)
 			nm, ok := rt.Native.MethodByName(fn.Name())
 			if !ok || !m.nativeSigMatches(nm.Type, rt.Native.Kind() == reflect.Interface, fn.Type().(*types.Signature)) {
-				r = false
+				// a value of another machine: the methods of its type
+				// (foreign.go)
+				if rt.fo == nil || !m.foreignHas(rt, fn) {
+					r = false
+				}
 			}
 		}
 	}

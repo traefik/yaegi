@@ -46,7 +46,7 @@ func RegisterGeneric(name string, h GenericHook) {
 // its package runs in ModeAOT and its copy registered one.
 func (m *Machine) aotGeneric(f *ssa.Function) GenericHook {
 	o := f.Origin()
-	if o == nil || o.Pkg == nil || m.vr == nil || m.modeOf(o.Pkg.Pkg.Path()) != ModeAOT {
+	if o == nil || funcPkg(o) == nil || m.vr == nil || m.modeOf(funcPkg(o).Path()) != ModeAOT {
 		return nil
 	}
 	regMu.RLock()
@@ -163,7 +163,7 @@ func (m *Machine) callWithShadows(fn Value, args []Value, sig *types.Signature) 
 			cell := &Value{}
 			*cell = m.natToVM(p.Elem(), et)
 			args[j] = Value{R: cell}
-			back = append(back, func() { p.Elem().Set(m.toNative(*cell, et)) })
+			back = append(back, func() { p.Elem().Set(m.toNative(loadCell(cell, et), et)) })
 		}
 	}
 	if len(hs) == 0 && len(back) == 0 {
@@ -173,7 +173,7 @@ func (m *Machine) callWithShadows(fn Value, args []Value, sig *types.Signature) 
 		ss := m.suspendShadows()
 		defer m.resumeShadows(ss)
 		for _, h := range hs {
-			args[h.j] = *h.s.cell
+			args[h.j] = loadCell(h.s.cell, h.s.t)
 		}
 		return m.callValue(fn, args)
 	}()

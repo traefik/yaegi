@@ -153,10 +153,18 @@ func storeKey(k any) any {
 
 // RType is the runtime descriptor of a dynamic type stored in an interface.
 type RType struct {
-	T       types.Type // interpreted type (nil for purely native dynamic types)
+	T types.Type // interpreted type (nil for purely native dynamic types)
+	// Methods: the method set of T, keyed by types.Id. An exported method
+	// has its plain name ("String"); an unexported one has its package
+	// path and its name ("example.com/a.m"), because the unexported
+	// methods of two packages are two methods, even with the same name
+	// (a struct can have both, through its embedded fields).
 	Methods map[string]*Func
 	Native  reflect.Type // non-nil when payload is a native reflect.Value
 	noCmp   bool         // T is not comparable: == on two such values panics
+	// fo is set for the values of another machine boxed in the native
+	// type Native (foreign.go): they have the methods of their owner type.
+	fo *foreignType
 	// impl caches implements: *types.Interface -> bool. Reads take no
 	// lock (a type assertion to an interface type runs on every request,
 	// on every goroutine); a miss computes the answer under implMu.
@@ -230,6 +238,9 @@ type Func struct {
 	wrapper bool
 	// pos maps instruction indexes to source positions (callers.go).
 	pos []posRun
+	// ncode: len(code), kept when dropInitCode drops the code, so that
+	// the PCs taken in an init still decode (decodePC).
+	ncode int
 	// pcID numbers fn in the program counters of the stack (callers.go);
 	// 0 until a stack walk needs it.
 	pcID atomic.Int32

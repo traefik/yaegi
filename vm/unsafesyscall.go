@@ -134,12 +134,7 @@ func (m *Machine) syscallSubset() map[string]reflect.Value {
 		// host process. Without a copy, Getenv and Environ stay refused.
 		if e := m.env; e != nil {
 			if _, ok := all["Getenv"]; ok {
-				syms["Getenv"] = reflect.ValueOf(func(key string) (string, bool) {
-					e.mu.RLock()
-					defer e.mu.RUnlock()
-					v, ok := e.vars[key]
-					return v, ok
-				})
+				syms["Getenv"] = reflect.ValueOf(e.lookup)
 			}
 			if _, ok := all["Environ"]; ok {
 				syms["Environ"] = reflect.ValueOf(e.environ)
@@ -150,14 +145,20 @@ func (m *Machine) syscallSubset() map[string]reflect.Value {
 	return m.syscallSyms
 }
 
-// environ returns the variables of e as "key=value" entries, sorted.
+// environ returns the variables of e as "key=value" entries, sorted. When
+// the host left out some of its variables, and the plugin did not clear its
+// environment itself, it reports MissingEnvEnviron (once).
 func (e *vmEnv) environ() []string {
 	e.mu.RLock()
-	defer e.mu.RUnlock()
 	out := make([]string, 0, len(e.vars))
 	for k, v := range e.vars {
 		out = append(out, k+"="+v)
 	}
+	missing := e.partial && !e.cleared
+	e.mu.RUnlock()
 	sort.Strings(out)
+	if missing {
+		e.report(MissingEnvEnviron)
+	}
 	return out
 }
