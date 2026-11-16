@@ -35,8 +35,8 @@ hosts:
 |---|---|
 | native | `run` copies the module, adds a `main` package calling `CreateConfig`/`New` directly, and builds it with the module proxy; run twice |
 | yaegi | `yhost`: a GOPATH holding the module under `src/<module>`, `stdlib.Symbols`, unsafe and syscall only when the manifest sets `useUnsafe`, `Eval` of the import, then `<basePkg>.New` and `.CreateConfig` (Traefik's `pkg/plugins/middlewareyaegi.go`) |
-| govm (yaegi v2, the engine key of the results) | `vmhost`: `vm.Load` with `pluginhost.Options()` (budget, goroutine cap, load timeout, empty environment), then `CreateConfig`, `Object.Decode`, `New` through `Plugin.Call` (`internal/pluginhost`) |
-| aot | `vmhost -aot`: the same with the packages of `aot/` in AOT mode |
+| govm (yaegi v2, the engine key of the results) | `vmhost`: `vm.Load` with `host.Options()` (budget, goroutine cap, load timeout, empty environment), then `CreateConfig`, `Object.Decode`, `New` through `Plugin.Call` (`internal/pluginhost`) |
+| aot | `vmhost -aot`: the same with `host.Load` and the packages of `aot/` in AOT mode |
 
 In every host the manifest `testData` is decoded into the result of
 `CreateConfig` with mapstructure and Traefik's options (weakly typed input,

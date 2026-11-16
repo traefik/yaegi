@@ -57,12 +57,15 @@ func (e *EntryError) Unwrap() error { return &vm.LoadError{Msg: e.Error()} }
 // LoadKind is LoadContext, then CheckEntryPoints for kind: a plugin without
 // the entry points of its kind fails at load, as under yaegi (Traefik reads
 // New and CreateConfig when it builds the plugin, not at each router build).
+// The init functions of the plugin ran: on a CheckEntryPoints error, LoadKind
+// closes the plugin, so that the goroutines they started stop.
 func LoadKind(ctx context.Context, opts vm.Options, pkgPath string, kind Kind) (*vm.Plugin, error) {
 	p, err := LoadContext(ctx, opts, pkgPath)
 	if err != nil {
 		return nil, err
 	}
 	if err := CheckEntryPoints(p, kind); err != nil {
+		_ = p.Close()
 		return nil, err
 	}
 	return p, nil
@@ -235,9 +238,16 @@ func NewHandler(ctx context.Context, p *vm.Plugin, next http.Handler, cfg *vm.Ob
 // make a new New fail. inst.Goroutines shows them (Leaks reports the
 // ones that outlive their configuration). inst.Close stops them, for hosts
 // that know when an instance is gone; the Traefik adapter does not call it.
-// The plugin gets ctx itself in New, not the context of the instance.
+// On an error, no handler uses the instance: NewInstanceHandler closes it,
+// so that the goroutines that the failed New started stop, and returns it
+// too. The plugin gets ctx itself in New, not the context of the instance.
 func NewInstanceHandler(ctx context.Context, p *vm.Plugin, next http.Handler, cfg *vm.Object, name string) (h http.Handler, inst *vm.Instance, err error) {
 	inst = p.NewInstance()
+	defer func() {
+		if err != nil {
+			inst.Close()
+		}
+	}()
 	res, err := p.Call(inst.Context(ctx), "New", ctx, next, cfg, name)
 	if err != nil {
 		return nil, inst, err
@@ -261,9 +271,15 @@ func NewInstanceHandler(ctx context.Context, p *vm.Plugin, next http.Handler, cf
 
 // NewProvider calls New(ctx, cfg, name) (T, error) of p, and returns the T
 // value, whose methods CallMethod calls. New runs in a new vm.Instance, as
-// in NewInstanceHandler.
-func NewProvider(ctx context.Context, p *vm.Plugin, cfg *vm.Object, name string) (*vm.Object, error) {
-	res, err := p.Call(p.NewInstance().Context(ctx), "New", ctx, cfg, name)
+// in NewInstanceHandler, which is closed when New fails.
+func NewProvider(ctx context.Context, p *vm.Plugin, cfg *vm.Object, name string) (o *vm.Object, err error) {
+	inst := p.NewInstance()
+	defer func() {
+		if err != nil {
+			inst.Close()
+		}
+	}()
+	res, err := p.Call(inst.Context(ctx), "New", ctx, cfg, name)
 	if err != nil {
 		return nil, err
 	}

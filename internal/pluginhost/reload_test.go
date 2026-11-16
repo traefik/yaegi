@@ -120,11 +120,16 @@ func TestInstanceClose(t *testing.T) {
 		t.Fatalf("goroutines: instance 1 %d, instance 2 %d, plugin %d, want 3, 2, 9", i1.Goroutines(), i2.Goroutines(), p.M.Goroutines())
 	}
 	// One New past the cap of its instance fails; the others do not count.
-	if _, _, err := NewInstanceHandler(context.Background(), p, http.NotFoundHandler(), leakConfig(t, p, max+1, false), "d"); !errors.Is(err, vm.ErrTooManyGoroutines) {
+	_, i4, err := NewInstanceHandler(context.Background(), p, http.NotFoundHandler(), leakConfig(t, p, max+1, false), "d")
+	if !errors.Is(err, vm.ErrTooManyGoroutines) {
 		t.Fatalf("New with %d goroutines: %v, want %v", max+1, err, vm.ErrTooManyGoroutines)
 	}
-	if !waitGoroutines(p.M.Goroutines, 9+max) { // the goroutines that the failed New started still run
-		t.Fatalf("after the New past the cap: %d goroutines, want %d", p.M.Goroutines(), 9+max)
+	// The instance of the failed New is closed: its goroutines stop.
+	if !i4.Closed() {
+		t.Fatal("the instance of the failed New is not closed")
+	}
+	if !waitGoroutines(p.M.Goroutines, 9) {
+		t.Fatalf("after the New past the cap: %d goroutines, want 9", p.M.Goroutines())
 	}
 
 	i1.Close()

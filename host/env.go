@@ -15,16 +15,15 @@ package host
 //     process to third-party code. PluginEnv builds it from the allowlist
 //     of the configuration of a plugin ("FOO", "OIDC_*"): the model of
 //     Traefik.
+//   - an empty slice (DefaultEnv, what Options sets): no variable at all.
 //
 // A plugin that reads a variable the host did not pass gets "" (or false),
 // as if it was not set. vm.Options.OnMissingEnv gets its name once (never
 // its value), so the host can log "plugin X read env FOO, not passed; add it
 // to envs" (MissingEnvMessage, with the name quoted; vm.Machine.MissingEnv
 // lists the same names, at most 256).
-//   - an empty slice (DefaultEnv, what Options sets): no variable at all.
 //
-// The default stays empty (docs/SANDBOX.md).
-// Some plugins of the catalog read their settings or secrets from the
+// The default stays empty (docs/SANDBOX.md). Some plugins of the catalog read their settings or secrets from the
 // environment and need HostEnv or an EnvFilter: traefik-oidc-auth,
 // traefikoidc, jwt-middleware, keycloakopenid, cluster-ratelimit, ldapAuth,
 // mtlswhitelist and geoblock (docs/SANDBOX.md, "The environment of a

@@ -14,7 +14,7 @@
 # test name matches no shard or two: then change the patterns below.
 #
 # Shard 5 runs the hosts: ./host/..., ./internal/pluginhost/... and
-# ./compare/catalog/vmhost/... (the Traefik-like host of the catalog, the
+# ./catalog/vmhost/... of the compare module (the Traefik-like host of the catalog, the
 # reload test, the hostile corpus). It is slower under -race (each hostile
 # case is a child process that loads its plugin), so its timeout is longer.
 set -e
@@ -34,7 +34,11 @@ case $1 in
 run)
 	if [ "$2" = 5 ]; then
 		# shellcheck disable=SC2086
-		go test -race -count=1 -timeout 60m $RACEFLAGS ./host/... ./internal/pluginhost/... ./compare/catalog/vmhost/...
+		go test -race -count=1 -timeout 60m $RACEFLAGS ./host/... ./internal/pluginhost/...
+		# compare is its own module (compare/go.mod).
+		cd compare
+		# shellcheck disable=SC2086
+		go test -race -count=1 -timeout 60m $RACEFLAGS ./catalog/vmhost/...
 		exit
 	fi
 	re=$(shard "$2")

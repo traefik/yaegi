@@ -2,7 +2,8 @@ name: CI
 
 # Two levels, to keep the cost of CI low (job "plan" decides):
 #
-# - Each pull request runs the gate: linux/amd64 (gofmt, vet, all tests), the
+# - Each pull request runs the gate: linux/amd64 (gofmt, vet, all tests but
+#   cmd/runtests, which runs in the linux/386 shard "runtests"), the
 #   generated data, build and vet of the 32-bit platforms (and linux/arm
 #   with GOARM=6), go mod verify, govulncheck and staticcheck. About 30
 #   runner minutes. When the pull request changes code that runs on 32-bit
@@ -214,8 +215,8 @@ jobs:
     needs: plan
     if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
-    # cmd/runtests alone takes about 23 min: with the vm tests, 30 min was
-    # often too short on a slow runner. The test step has 40 min, plus setup.
+    # ./vm takes about 26 min on a loaded runner: the test step has 40 min,
+    # plus setup. cmd/runtests does not run here (step "test").
     timeout-minutes: 55
     strategy:
       fail-fast: false
@@ -763,8 +764,8 @@ jobs:
 
   differential:
     # Random programs compared with Go (internal/progen, TestGeneratedPrograms
-    # of cmd/runtests): the job "test" runs 40 fixed seeds (the default of
-    # go test ./...), this job 2000 new ones each night (the first seed is
+    # of cmd/runtests): the job "test386" (shard "runtests") runs 40 fixed
+    # seeds (the default of go test), this job 2000 new ones each night (the first seed is
     # the run number times 2000), so the search goes on. A failed seed is in the name of its test:
     # go run ./cmd/progen -seed N prints its program.
     name: differential (generated programs)
