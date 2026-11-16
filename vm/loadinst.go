@@ -37,6 +37,8 @@ import (
 	"go/token"
 	"go/types"
 	"sort"
+
+	"golang.org/x/tools/go/types/typeutil"
 )
 
 // instSite is one instance in the source: G[args] in the body of owner (nil:
@@ -45,6 +47,7 @@ type instSite struct {
 	owner  types.Object // generic func, method of a generic type, or generic type
 	target types.Object // the generic func or type instantiated
 	args   []types.Type
+	off    int // index of the type parameter of args[0] in typeParams(target)
 	pos    token.Pos
 }
 
@@ -65,6 +68,10 @@ func checkInstances(fset *token.FileSet, pkgs []*srcPkg) error {
 func measureInstances(fset *token.FileSet, pkgs []*srcPkg) (*instGraph, error) {
 	var sites []instSite
 	methods := map[types.Object][]types.Object{} // generic type -> its methods
+	// localArgs: a site has a type argument that uses a local type of a
+	// generic declaration (exactInstances cannot count it).
+	localArgs := false
+	localMemo := map[types.Type]bool{}
 	for _, p := range pkgs {
 		var owners []ownerRange
 		for _, f := range p.files {
@@ -75,10 +82,14 @@ func measureInstances(fset *token.FileSet, pkgs []*srcPkg) (*instGraph, error) {
 					if obj == nil {
 						continue
 					}
-					if d.Type.TypeParams != nil {
+					// A generic method of a generic type (Go 1.27) is both:
+					// it gets the sizes of the receiver type parameters
+					// from its type, and those of its own from its sites.
+					tn := genericRecv(p.info, d)
+					if d.Type.TypeParams != nil || tn != nil {
 						owners = append(owners, ownerRange{d.Pos(), d.End(), obj})
-					} else if tn := genericRecv(p.info, d); tn != nil {
-						owners = append(owners, ownerRange{d.Pos(), d.End(), obj})
+					}
+					if tn != nil {
 						methods[tn] = append(methods[tn], obj)
 					}
 				case *ast.GenDecl:
@@ -109,17 +120,37 @@ func measureInstances(fset *token.FileSet, pkgs []*srcPkg) (*instGraph, error) {
 			for i := range args {
 				args[i] = inst.TypeArgs.At(i)
 			}
-			sites = append(sites, instSite{ownerAt(id.Pos()), target, args, id.Pos()})
+			// The arguments of a generic method are its own type
+			// parameters, after those of its receiver (typeParams).
+			off := 0
+			if fn, ok := target.(*types.Func); ok {
+				fn = fn.Origin() // b.Map[int] on a Box[string]: the declared method
+				target = fn
+				off = fn.Type().(*types.Signature).RecvTypeParams().Len()
+			}
+			sites = append(sites, instSite{ownerAt(id.Pos()), target, args, off, id.Pos()})
+			if !localArgs {
+				owned := func(obj *types.TypeName) bool { return ownerAt(obj.Pos()) != nil }
+				for _, a := range args {
+					if usesOwnedLocal(a, owned, localMemo) {
+						localArgs = true
+						break
+					}
+				}
+			}
 		}
 	}
 	// A deterministic order: the first error is always the same.
 	sort.Slice(sites, func(i, j int) bool { return sites[i].pos < sites[j].pos })
 
-	g := newInstGraph(sites, methods)
-	if g.total > maxInstances {
-		return g, loadErrorf("vm load: the generic code of the plugin makes more than %d instances", int64(maxInstances))
-	}
+	g := newInstGraph(sites, dedupSites(sites), methods)
+	g.localArgs = localArgs
 	site, why := g.propagateSizes()
+	if why != sizesOK && g.workOver.target != nil {
+		// The work by paths passed its limit first: the error it gave
+		// before the exact count (exactInstances) existed.
+		site, why = g.workOver, tooMuchWork
+	}
 	switch why {
 	case tooLargeArg:
 		return g, loadErrorf("vm load: %s: generic instance too large to build: a type argument has more than %d nodes once the instances are expanded",
@@ -131,7 +162,75 @@ func measureInstances(fset *token.FileSet, pkgs []*srcPkg) (*instGraph, error) {
 		return g, loadErrorf("vm load: %s: a cycle of generic declarations is too long to check: more than %d types measured",
 			fset.Position(site.pos), int64(maxCycleVisits))
 	}
+	// g.total and g.work count the paths from non-generic code, not the
+	// distinct instances: the generic helpers of a cache called from many
+	// generic layers that all end on the same types are counted once per
+	// path (otter's node.Node[K, V]: 12732 paths). When one of them passes
+	// its limit, the instances are made with their type arguments
+	// (exactInstances), which stops at the same limits. The sizes are
+	// bounded at this point (maxTypeNodes).
+	//
+	// A local type of a generic function is a new type in each instance of
+	// the function (x/tools go/ssa/subst.go), but go/types has only one:
+	// exactInstances would count one instance where the builder makes one
+	// per instance of the owner. With such a type argument, the count by
+	// paths decides, as it did before exactInstances.
+	if g.localArgs {
+		if g.total > maxInstances {
+			return g, loadErrorf("vm load: the generic code of the plugin makes more than %d instances", int64(maxInstances))
+		}
+		if g.workOver.target != nil {
+			return g, loadErrorf("vm load: %s: the generic instances of the plugin are too large to build: their type arguments have more than %d nodes in all",
+				fset.Position(g.workOver.pos), int64(maxInstanceWork))
+		}
+	}
+	if g.total > maxInstances || g.workOver.target != nil {
+		n, over := g.exactInstances(maxInstances, maxInstanceWork)
+		if n > maxInstances {
+			return g, loadErrorf("vm load: the generic code of the plugin makes more than %d instances", int64(maxInstances))
+		}
+		if over.target != nil {
+			return g, loadErrorf("vm load: %s: the generic instances of the plugin are too large to build: their type arguments have more than %d nodes in all",
+				fset.Position(over.pos), int64(maxInstanceWork))
+		}
+	}
 	return g, nil
+}
+
+// dedupSites keeps the first of the sites that have the same owner, the
+// same target and identical type arguments. The SSA builder makes one
+// instance per target and type arguments: G[int] written at 100 places of
+// non-generic code is one instance, and F[T] written twice in the body of
+// G[T] is one instance per instance of G. The instances are counted on
+// these sites (countInstances, exactInstances); the work counts all the
+// sites, as the builder hashes the type arguments of each call. Counted
+// once per site and per path, the instances of the Souin cache plugin and
+// its dependencies were 537420, where the builder made 4647 function
+// instances.
+func dedupSites(sites []instSite) []instSite {
+	type key struct {
+		owner, target types.Object
+		off           int
+	}
+	seen := map[key]*typeutil.Map{}
+	out := sites[:0:0]
+	for _, st := range sites {
+		k := key{st.owner, st.target, st.off}
+		m := seen[k]
+		if m == nil {
+			m = new(typeutil.Map)
+			seen[k] = m
+		}
+		vars := make([]*types.Var, len(st.args))
+		for i, a := range st.args {
+			vars[i] = types.NewParam(token.NoPos, nil, "", a)
+		}
+		if t := types.NewTuple(vars...); m.At(t) == nil {
+			m.Set(t, true)
+			out = append(out, st)
+		}
+	}
+	return out
 }
 
 // genericRecv returns the generic type of the receiver of the method d, or
@@ -151,24 +250,30 @@ func genericRecv(info *types.Info, d *ast.FuncDecl) types.Object {
 	return nil
 }
 
-// typeParams returns the type parameters of a generic object.
-func typeParams(obj types.Object) *types.TypeParamList {
+// typeParams returns the type parameters of a generic object. For a
+// method, those of its generic receiver come first, then its own: a
+// generic method of a generic type (Go 1.27) has both, and its sites must
+// be measured with the sizes of all of them (with only the receiver ones,
+// a chain of generic methods on G[X] that doubles its argument at each
+// level was never bounded: 11 GB for 27 levels).
+func typeParams(obj types.Object) []*types.TypeParam {
+	var l *types.TypeParamList
 	switch obj := obj.(type) {
 	case *types.Func:
-		sig := obj.Type().(*types.Signature)
-		if sig.RecvTypeParams().Len() > 0 {
-			return sig.RecvTypeParams()
-		}
-		return sig.TypeParams()
+		return allTypeParams(obj)
 	case *types.TypeName:
 		switch t := obj.Type().(type) {
 		case *types.Named:
-			return t.TypeParams()
+			l = t.TypeParams()
 		case *types.Alias: // a generic alias: type A[T any] = P[T, T]
-			return t.TypeParams()
+			l = t.TypeParams()
 		}
 	}
-	return nil
+	out := make([]*types.TypeParam, l.Len())
+	for i := range out {
+		out[i] = l.At(i)
+	}
+	return out
 }
 
 // instGraph is the graph between the generic objects: an edge from the
@@ -176,6 +281,7 @@ func typeParams(obj types.Object) *types.TypeParamList {
 // Its strongly connected components are the cycles of generic declarations.
 type instGraph struct {
 	sites   []instSite
+	uniq    []instSite // sites without the copies (dedupSites)
 	methods map[types.Object][]types.Object
 
 	nodes   []types.Object
@@ -186,13 +292,15 @@ type instGraph struct {
 	count   []int64 // instances of each member of a component
 	total   int64   // instances in all
 
-	s        *sizer
-	sizes    map[types.Object][]int64 // the largest size of each type parameter
-	ver      map[types.Object]int     // changes of the sizes of each object
-	envs     map[types.Object]ownerEnv
-	work     int64          // instances times the size of their type arguments, so far
-	measures int64          // type arguments measured in cycles, so far (for the tests)
-	grown    []types.Object // the objects whose sizes the last measure raised
+	s         *sizer
+	sizes     map[types.Object][]int64 // the largest size of each type parameter
+	ver       map[types.Object]int     // changes of the sizes of each object
+	envs      map[types.Object]ownerEnv
+	work      int64          // instances times the size of their type arguments, so far
+	workOver  instSite       // the site where work passed maxInstanceWork, if any
+	localArgs bool           // a site uses a local type of a generic declaration
+	measures  int64          // type arguments measured in cycles, so far (for the tests)
+	grown     []types.Object // the objects whose sizes the last measure raised
 }
 
 // ownerEnv is the environment of an owner for a version of its sizes.
@@ -209,9 +317,13 @@ const (
 	tooLongCycle
 )
 
-func newInstGraph(sites []instSite, methods map[types.Object][]types.Object) *instGraph {
+// newInstGraph makes the graph of sites. uniq are the sites without the
+// copies (dedupSites): they make the edges and the instances, while all the
+// sites count in the work (propagateSizes), as each call costs the SSA
+// builder a hash of its type arguments.
+func newInstGraph(sites, uniq []instSite, methods map[types.Object][]types.Object) *instGraph {
 	g := &instGraph{
-		sites: sites, methods: methods,
+		sites: sites, uniq: uniq, methods: methods,
 		edges: map[types.Object][]types.Object{}, comp: map[types.Object]int{},
 		s: &sizer{typed: map[typedKey]pairSize{}}, sizes: map[types.Object][]int64{},
 		ver: map[types.Object]int{}, envs: map[types.Object]ownerEnv{},
@@ -223,7 +335,7 @@ func newInstGraph(sites []instSite, methods map[types.Object][]types.Object) *in
 			g.nodes = append(g.nodes, o)
 		}
 	}
-	for _, st := range sites {
+	for _, st := range uniq {
 		add(st.owner)
 		add(st.target)
 		if st.owner != nil {
@@ -305,7 +417,7 @@ func (g *instGraph) components() {
 // whose type arguments grow.
 func (g *instGraph) countInstances() {
 	g.count = make([]int64, len(g.members))
-	for _, st := range g.sites {
+	for _, st := range g.uniq {
 		if st.owner == nil {
 			c := g.comp[st.target]
 			g.count[c] = addCap(g.count[c], 1)
@@ -418,8 +530,8 @@ func (g *instGraph) envOf(owner types.Object) *typeEnv {
 	env := &typeEnv{params: map[*types.TypeParam]pairSize{}}
 	tps := typeParams(owner)
 	for i, n := range g.sizes[owner] {
-		if tps != nil && i < tps.Len() {
-			env.params[tps.At(i)] = pairSize{n, n}
+		if i < len(tps) {
+			env.params[tps[i]] = pairSize{n, n}
 		}
 	}
 	g.envs[owner] = ownerEnv{g.ver[owner], env}
@@ -437,13 +549,15 @@ func (g *instGraph) measure(st instSite, env *typeEnv, instances int64, final bo
 		if n > maxTypeNodes {
 			return tooLargeArg
 		}
-		g.raise(st.target, i, n)
+		g.raise(st.target, st.off+i, n)
 		size = addCap(size, n)
 	}
 	if final {
 		g.work = addCap(g.work, mulCap(instances, size))
-		if g.work > maxInstanceWork {
-			return tooMuchWork
+		if g.work > maxInstanceWork && g.workOver.target == nil {
+			// The instances are counted by paths: the exact count
+			// (exactInstances) decides at the end.
+			g.workOver = st
 		}
 	}
 	return sizesOK

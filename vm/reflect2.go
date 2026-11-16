@@ -142,6 +142,7 @@ func (m *Machine) r2SliceCopy(et types.Type, dst, src Value) int {
 	sc, sb := m.r2Cells(s[0], n, et)
 	switch {
 	case db != nil && sb != nil:
+		m.hostBytes(db, len(db)) // the bytes of a host []byte (hostmem.go)
 		return copy(db, sb)
 	case db == nil && sb == nil:
 		return copyValues(dc, sc, et)

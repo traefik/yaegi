@@ -372,75 +372,236 @@ func (m *Machine) fatalMethod(t reflect.Type, name string) (reflect.Value, bool)
 // native call. The VM sets the finalizer of an interpreted pointer on its
 // cell (a *Value): a pointer to a field or an element is a cell inside an
 // object ([]Value), which the runtime refuses ("pointer not at beginning of
-// allocated block") unless it is the first one. cellStart tells them apart
-// with runtime.findObject.
+// allocated block") unless it is the first one. A native pointer (a field
+// of a native struct, an element of a native array, the AOT mode) can be
+// inside its object too. objectStart tells them apart as the runtime does,
+// with runtime.findObject and the span of the object.
 
 //go:linkname runtimeFindObject runtime.findObject
 func runtimeFindObject(p, refBase, refOff uintptr) (base uintptr, s unsafe.Pointer, objIndex uintptr)
 
-const wordSize = unsafe.Sizeof(uintptr(0))
+const (
+	wordSize = unsafe.Sizeof(uintptr(0))
+	// mallocHeaderSize is gc.MallocHeaderSize (internal/runtime/gc): 8 on
+	// every platform, not one word (8-byte alignment on 32-bit platforms).
+	mallocHeaderSize = 8
+	// minSizeForMallocHeader is gc.MinSizeForMallocHeader: an object with
+	// pointers and of a larger size class has a malloc header (512 bytes
+	// on 64-bit platforms, 128 on 32-bit platforms).
+	minSizeForMallocHeader = wordSize * 8 * wordSize
+	// maxTinySize is the limit of the tiny allocator (runtime/malloc.go):
+	// the runtime allows a finalizer on a pointer inside an object when the
+	// type of the pointer has no pointers and is smaller.
+	maxTinySize = 16
+	// spanScanWords is how many words of a runtime.mspan the probe reads:
+	// the struct is longer than that on every platform.
+	spanScanWords = 20
+)
 
-// valueType is the address of the type of Value in the runtime (the first
-// word of an interface that holds a Value).
-var valueType = func() uintptr {
-	var v any = Value{}
-	return uintptr((*[2]unsafe.Pointer)(unsafe.Pointer(&v))[0])
-}()
+// spanLayout holds the offsets of the fields elemsize and spanclass in
+// runtime.mspan.
+type spanLayout struct {
+	elemOff, classOff uintptr
+	ok                bool
+}
 
-// cellStart reports whether the cell c is where its object starts, as
-// SetFinalizer computes it: the base of the object, after the malloc header
-// when the object has one. A Value has pointers, so a large []Value (more
-// than 512 bytes, runtime/mbitmap.go) starts with a header of one word that
-// holds the type of its elements: Value. Only the object of c is read
-// (findObject of another address can end the process with "found bad
-// pointer in Go heap"). ok is false when c is not in the heap.
-func cellStart(c *Value) (start, ok bool) {
-	p := uintptr(unsafe.Pointer(c))
-	base, _, _ := runtimeFindObject(p, 0, 0)
+// spans is the layout found by the start-up probe; spanLayoutOK is false
+// when the probe fails (TestRuntimeCouplings). Then objectStart
+// only knows that a pointer to the base of its object is the start, and
+// PanicOnFatal refuses every other pointer: the VM never calls
+// runtime.SetFinalizer with a pointer that it cannot prove to be the start
+// of its object.
+var (
+	spans        = probeSpanLayout()
+	spanLayoutOK = spans.ok
+)
+
+// objectStart reports whether p is where its object starts, as
+// runtime.SetFinalizer computes it: the base of the object, after the
+// malloc header when the object has one (a small size class with pointers,
+// larger than minSizeForMallocHeader). Only the object of p and its span
+// are read (findObject of another address can end the process with "found
+// bad pointer in Go heap"). inHeap is false when p is not in the heap (the
+// runtime ignores a pointer to a global, and throws on other memory).
+func objectStart(p uintptr) (start, inHeap bool) { return spans.start(p) }
+
+func (l spanLayout) start(p uintptr) (start, inHeap bool) {
+	base, s, _ := runtimeFindObject(p, 0, 0)
 	if base == 0 {
 		return false, false
 	}
 	if p == base {
+		// The base of an object with a malloc header is the header: no
+		// pointer of the program points there.
 		return true, true
 	}
-	if p != base+wordSize {
+	if !l.ok || p != base+mallocHeaderSize {
 		return false, true
 	}
-	// The word before c is base, in the object of c.
-	header := atomic.LoadUintptr((*uintptr)(unsafe.Add(unsafe.Pointer(c), -int(wordSize))))
-	return header == valueType, true
+	return l.hasHeader(s), true
 }
 
-// cellStartOK is the start-up probe of cellStart (TestRuntimeCouplings):
-// without it, the check of interior pointers is off and SetFinalizer keeps
-// the Go behaviour.
-var cellStartOK = func() bool {
-	one := new(Value)
-	small := make([]Value, 4)
-	header := make([]Value, 64)  // 1536 bytes: a header
-	large := make([]Value, 2000) // 48000 bytes: a large object, no header
-	pair := new(struct {
-		x uintptr
-		v Value
-	})
-	// In the heap, not on the stack (escape analysis).
-	cellProbeSink = []any{one, small, header, large, pair}
-	defer func() { cellProbeSink = nil }()
-	for _, c := range []struct {
-		v    *Value
-		want bool
-	}{
-		{one, true}, {&small[0], true}, {&small[1], false}, {&header[0], true}, {&header[1], false},
-		{&large[0], true}, {&large[1], false}, {&pair.v, false},
-	} {
-		if got, ok := cellStart(c.v); !ok || got != c.want {
-			return false
+// hasHeader reports whether the objects of the span s have a malloc header
+// (runtime.SetFinalizer: !noscan, a size class, !heapBitsInSpan).
+func (l spanLayout) hasHeader(s unsafe.Pointer) bool {
+	elemsize := *(*uintptr)(unsafe.Add(s, l.elemOff))
+	class := *(*uint8)(unsafe.Add(s, l.classOff))
+	return class&1 == 0 && class>>1 != 0 && elemsize > minSizeForMallocHeader
+}
+
+// probeSpanLayout finds the offsets of elemsize and spanclass in
+// runtime.mspan with objects of known sizes, then checks objectStart on
+// them, with and without a malloc header: each field must be at exactly
+// one offset of the first words of the span.
+func probeSpanLayout() spanLayout {
+	const w = int(wordSize)
+	type probe struct {
+		p      unsafe.Pointer
+		size   uintptr // a size class or a number of pages: the elemsize
+		noscan bool
+		large  bool
+		header bool
+	}
+	scanSmall := new([4]*int)                          // 16 or 32 bytes
+	scanLimit := new([8 * w]*int)                      // minSizeForMallocHeader: no header
+	scanAbove := new([8*w + 1]*int)                    // the next size class: a header
+	scan2K := new([(2048 - mallocHeaderSize) / w]*int) // with the header: 2048 bytes
+	scan4K := new([(4096 - mallocHeaderSize) / w]*int) // with the header: 4096 bytes
+	noscan2K := new([2048]byte)                        // no pointers, no header
+	noscan64 := new([64]byte)                          // not tiny
+	scanLarge := new([131072 / w]*int)                 // a large object: no header
+	noscanLarge := new([131072]byte)                   // a large object without pointers
+	probeSink = []any{scanSmall, scanLimit, scanAbove, scan2K, scan4K, noscan2K, noscan64, scanLarge, noscanLarge}
+	defer func() { probeSink = nil }()
+	aboveSize := uintptr(0) // the size class of scanAbove is not known here
+	probes := []probe{
+		{unsafe.Pointer(scanSmall), unsafe.Sizeof(*scanSmall), false, false, false},
+		{unsafe.Pointer(scanLimit), unsafe.Sizeof(*scanLimit), false, false, false},
+		{unsafe.Pointer(scanAbove), aboveSize, false, false, true},
+		{unsafe.Pointer(scan2K), 2048, false, false, true},
+		{unsafe.Pointer(scan4K), 4096, false, false, true},
+		{unsafe.Pointer(noscan2K), 2048, true, false, false},
+		{unsafe.Pointer(noscan64), 64, true, false, false},
+		{unsafe.Pointer(scanLarge), 131072, false, true, false},
+		{unsafe.Pointer(noscanLarge), 131072, true, true, false},
+	}
+	spans := make([]unsafe.Pointer, len(probes))
+	for i, pr := range probes {
+		base, s, _ := runtimeFindObject(uintptr(pr.p), 0, 0)
+		want := base
+		if pr.header {
+			want += mallocHeaderSize
+		}
+		if base == 0 || s == nil || uintptr(pr.p) != want {
+			return spanLayout{}
+		}
+		spans[i] = s
+	}
+	var elemOff, classOff uintptr
+	found := 0
+	for o := uintptr(0); o < spanScanWords*wordSize; o += wordSize {
+		match := true
+		for i, pr := range probes {
+			if pr.size != 0 && *(*uintptr)(unsafe.Add(spans[i], o)) != pr.size {
+				match = false
+				break
+			}
+		}
+		if match {
+			elemOff, found = o, found+1
 		}
 	}
-	return true
-}()
+	if found != 1 {
+		return spanLayout{}
+	}
+	found = 0
+	for o := uintptr(0); o < spanScanWords*wordSize; o++ {
+		class := func(i int) uint8 { return *(*uint8)(unsafe.Add(spans[i], o)) }
+		match := true
+		for i, pr := range probes {
+			c := class(i)
+			switch {
+			case pr.large:
+				match = match && c == b2u8(pr.noscan)
+			default:
+				match = match && c>>1 != 0 && c&1 == b2u8(pr.noscan)
+			}
+		}
+		// Same size, with and without pointers: the same size class.
+		match = match && class(3)^class(5) == 1
+		// Other sizes: other size classes.
+		match = match && class(0)>>1 != class(3)>>1 && class(3)>>1 != class(4)>>1 && class(1)>>1 != class(2)>>1
+		if match {
+			classOff, found = o, found+1
+		}
+	}
+	if found != 1 {
+		return spanLayout{}
+	}
+	l := spanLayout{elemOff, classOff, true}
+	for _, pr := range probes {
+		p := uintptr(pr.p)
+		if start, inHeap := l.start(p); !start || !inHeap {
+			return spanLayout{}
+		}
+		// The second word, and the second word after the header.
+		for _, q := range []uintptr{p + wordSize, p + mallocHeaderSize} {
+			if start, inHeap := l.start(q); start || !inHeap {
+				return spanLayout{}
+			}
+		}
+	}
+	return l
+}
 
-var cellProbeSink []any
+func b2u8(b bool) uint8 {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+var probeSink []any
+
+// hasPointers reports whether a value of type t holds pointers, as the
+// runtime type tells it (abi.Type.Pointers).
+func hasPointers(t reflect.Type) bool {
+	switch t.Kind() {
+	case reflect.Array:
+		return t.Len() > 0 && hasPointers(t.Elem())
+	case reflect.Struct:
+		for i := range t.NumField() {
+			if hasPointers(t.Field(i).Type) {
+				return true
+			}
+		}
+		return false
+	case reflect.Pointer, reflect.UnsafePointer, reflect.Map, reflect.Chan, reflect.Func,
+		reflect.Interface, reflect.Slice, reflect.String:
+		return true
+	}
+	return false
+}
+
+// valueRType is the type of the cells: runtime.SetFinalizer gets a *Value.
+var valueRType = reflect.TypeFor[Value]()
+
+// checkFinalizerStart panics with the fatal error of runtime.SetFinalizer
+// when p, a pointer to a value of type elem, is not the start of its
+// object, with PanicOnFatal. A pointer into an object that the runtime
+// allows (elem without pointers and smaller than maxTinySize: the object
+// can come from the tiny allocator) passes.
+func (m *Machine) checkFinalizerStart(p unsafe.Pointer, elem reflect.Type) {
+	if !m.panicOnFatal || p == nil {
+		return
+	}
+	if elem.Size() < maxTinySize && !hasPointers(elem) {
+		return
+	}
+	if start, inHeap := objectStart(uintptr(p)); inHeap && !start {
+		panic(&FatalError{"runtime.SetFinalizer: pointer not at beginning of allocated block"})
+	}
+}
 
 // finalized holds the cells that have a finalizer of the VM (the address:
 // an object with a finalizer is not freed before the finalizer runs, and
@@ -471,7 +632,6 @@ func (m *Machine) checkFinalizer(iv, fiv *Iface) {
 	case iv.T.Native != nil && iv.T.Native.Kind() != reflect.Pointer:
 		fail("first argument is " + iv.T.Native.String() + ", not pointer")
 	}
-	cell, isCell := iv.V.R.(*Value)
 	switch p := iv.V.R.(type) {
 	case nil:
 		fail("pointer not in allocated block")
@@ -479,6 +639,7 @@ func (m *Machine) checkFinalizer(iv, fiv *Iface) {
 		if p == nil {
 			fail("pointer not in allocated block")
 		}
+		m.checkFinalizerStart(unsafe.Pointer(p), valueRType)
 	case *byte:
 		if p == nil {
 			fail("pointer not in allocated block")
@@ -487,10 +648,8 @@ func (m *Machine) checkFinalizer(iv, fiv *Iface) {
 		if p.Kind() == reflect.Pointer && p.IsNil() {
 			fail("pointer not in allocated block")
 		}
-	}
-	if isCell && cellStartOK {
-		if start, ok := cellStart(cell); ok && !start {
-			fail("pointer not at beginning of allocated block")
+		if p.Kind() == reflect.Pointer {
+			m.checkFinalizerStart(p.UnsafePointer(), p.Type().Elem())
 		}
 	}
 	if fiv == nil {

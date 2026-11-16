@@ -333,6 +333,7 @@ func loadMain(opts RunOptions, pattern string, tm *Timings) (*Machine, *ssa.Pack
 	m.OpaqueAny = opts.OpaqueAny || opts.AOT || hasMode(opts.Modes, ModeAOT)
 	m.AOT = opts.AOT
 	m.Modes = opts.Modes
+	m.hostGo, m.allowStaleAOT = opts.hooks.hostGoVersion(), opts.AllowStaleAOT
 	m.AOTFallback = fallback
 	m.NativeFallback = natFallback
 	m.ownReflect = ownReflect(interp, func(p *types.Package) bool { return p == mainPkg.Pkg || nonStd[p.Path()] })

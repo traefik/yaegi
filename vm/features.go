@@ -24,6 +24,7 @@ type callDesc struct {
 	fnReg   int32
 	recvReg int32
 	method  string
+	id      string // the key of method in RType.Methods (invokeSite.id)
 	sig     *types.Signature
 	builtin string
 	args    []int32
@@ -46,7 +47,7 @@ func (c *compiler) callDesc(cc *ssa.CallCommon) *callDesc {
 		d.types = append(d.types, a.Type())
 	}
 	if cc.IsInvoke() {
-		d.recvReg, d.method, d.sig = c.reg(cc.Value), cc.Method.Name(), cc.Method.Type().(*types.Signature)
+		d.recvReg, d.method, d.id, d.sig = c.reg(cc.Value), cc.Method.Name(), cc.Method.Id(), cc.Method.Type().(*types.Signature)
 		d.memCheck = c.m.mem != nil && nativeMemMethodNames[d.method]
 		return d
 	}
@@ -108,7 +109,7 @@ func (cx *ctx) prepare(d *callDesc, regs []Value) deferred {
 			}
 			break
 		}
-		fn := iv.T.Methods[d.method]
+		fn := iv.T.Methods[d.id]
 		if !m.isInterp(fn.ssa) {
 			out.nat = func() {
 				if d.memCheck {
@@ -219,7 +220,19 @@ func (m *Machine) waitGoroutines() {
 
 func (cx *ctx) spawn(d deferred) {
 	m := cx.m
-	m.goReserve()
+	// A goroutine that stops (a fault, or its account is spent or
+	// canceled) starts no goroutine: the go statement panics with the
+	// error that stops it, as a blocking point does. The deferred calls
+	// that run for the stop each have a grace, and a new goroutine would
+	// take the stopped account and get a grace of its own at its first
+	// refill: a chain of goroutines, each started in a deferred call of
+	// the one before, ran for ever while the call waited in native code.
+	if gs := cx.gs; gs != nil && gs.fault != nil {
+		cx.fail(gs.fault)
+	}
+	cx.halted()
+	inst := cx.inst
+	m.goReserve(inst)
 	m.goStarted()
 	// The goroutine uses the account of the call that starts it, while
 	// that call runs, then the background rule (budget.go). It has a new
@@ -229,7 +242,7 @@ func (cx *ctx) spawn(d deferred) {
 	sub := m.goCtx(cx)
 	go func() {
 		defer m.goEnded()
-		defer m.goRelease()
+		defer m.goRelease(inst)
 		m.runGoroutine(d, sub)
 	}()
 }
@@ -251,7 +264,7 @@ func (m *Machine) runGoroutine(d deferred, sub *ctx) {
 				return // runtime.Goexit, or the call was canceled: the deferred calls ran
 			}
 			if m.GoPanic != nil {
-				m.GoPanic(r)
+				m.goPanic(r)
 				return
 			}
 			fmt.Fprintln(os.Stderr, panicLine(r))
@@ -260,6 +273,7 @@ func (m *Machine) runGoroutine(d deferred, sub *ctx) {
 		}
 	}()
 	defer sub.giveBack()
+	defer sub.releaseMem()
 	// The callbacks that d gets from native code continue from sub
 	// (nest.go), also when d is a native function.
 	g := getg()
@@ -482,7 +496,7 @@ func keyOf(v Value, t types.Type) any {
 		for i := len(fs) - 1; i >= 0; i-- {
 			var fk any // blank fields are not compared
 			if u.Field(i).Name() != "_" {
-				fk = keyOf(fs[i], u.Field(i).Type())
+				fk = keyOf(loadCell(&fs[i], u.Field(i).Type()), u.Field(i).Type())
 			}
 			k = tupleKey{fk, k}
 		}
@@ -491,7 +505,7 @@ func keyOf(v Value, t types.Type) any {
 		es, _ := v.R.([]Value)
 		var k any
 		for i := len(es) - 1; i >= 0; i-- {
-			k = tupleKey{keyOf(es[i], u.Elem()), k}
+			k = tupleKey{keyOf(loadCell(&es[i], u.Elem()), u.Elem()), k}
 		}
 		return k
 	case *types.Pointer:

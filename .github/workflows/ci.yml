@@ -2,14 +2,22 @@ name: CI
 
 # Two levels, to keep the cost of CI low (job "plan" decides):
 #
-# - Each pull request runs the gate: linux/amd64 (gofmt, vet, all tests), the
-#   generated data, build and vet of the 32-bit platforms, go mod verify,
-#   govulncheck and staticcheck. About 30 runner minutes.
+# - Each pull request runs the gate: linux/amd64 (gofmt, vet, all tests but
+#   cmd/runtests, which runs in the linux/386 shard "runtests"), the
+#   generated data, build and vet of the 32-bit platforms (and linux/arm
+#   with GOARM=6), go mod verify, govulncheck and staticcheck. About 30
+#   runner minutes. When the pull request changes code that runs on 32-bit
+#   (job "plan", output test386: vm/, host/, internal/, aot/ and the other
+#   trees of the VM, go.mod, the workflow), the gate also runs the tests on
+#   linux/386 (job test386, two shards, about 25 runner minutes): v2 went
+#   red on 32-bit after pull requests that only ran the amd64 gate.
 # - The nightly run (schedule, on v2) runs everything: also the other
-#   platforms, linux/386, qemu (arm, s390x), the race detector, the GOROOT
+#   platforms, qemu (arm, s390x, and a smoke subset on arm with GOARM=6,
+#   arm64, ppc64le and riscv64), the race detector, the tests with
+#   -shuffle=on and with GOMAXPROCS=1 (job stress), the GOROOT
 #   test suite, the standard library tests, the next Go release (latest release, release candidate,
 #   tip) and the manifest of the new Go patch releases (job gopatch). About
-#   300 runner minutes. When v2 has not changed since the last nightly
+#   400 runner minutes. When v2 has not changed since the last nightly
 #   run (or run by hand on v2), it does not run the jobs again, except the
 #   next Go jobs and gopatch (Go changes, not v2): if that run passed,
 #   there is nothing to do; if it failed, job "carried" fails and the run
@@ -62,7 +70,9 @@ env:
 # tag cannot change what runs here.
 jobs:
   plan:
-    # run: the gate jobs run. full: all the other jobs run too. nextgo: the
+    # run: the gate jobs run. full: all the other jobs run too. test386: the
+    # linux/386 tests run (full, or a pull request that changes code that
+    # runs on 32-bit). nextgo: the
     # next Go jobs run (each nightly run and each run by hand). carried: the
     # URL of the failed run whose failure this nightly run carries over (job
     # "carried"). kept: the URL of the passed run whose result it keeps.
@@ -71,9 +81,12 @@ jobs:
     timeout-minutes: 5
     permissions:
       actions: read
+      # the list of the files of the pull request (output test386)
+      pull-requests: read
     outputs:
       run: ${{ steps.plan.outputs.run }}
       full: ${{ steps.plan.outputs.full }}
+      test386: ${{ steps.plan.outputs.test386 }}
       nextgo: ${{ steps.plan.outputs.nextgo }}
       carried: ${{ steps.plan.outputs.carried }}
       kept: ${{ steps.plan.outputs.kept }}
@@ -86,9 +99,11 @@ jobs:
           ACTION: ${{ github.event.action }}
           LABEL: ${{ github.event.label.name }}
           HAS_FULL_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'ci:full') }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
           run=true
           full=false
+          test386=false
           nextgo=false
           carried=
           kept=
@@ -99,6 +114,22 @@ jobs:
             fi
             if [ "$HAS_FULL_LABEL" = true ]; then
               full=true
+            elif [ "$run" = true ]; then
+              # The linux/386 tests are a gate for a change to code that
+              # runs on 32-bit (int of 32 bits, 64-bit atomics, torn
+              # words). The pattern is wide on purpose: a change of the
+              # VM, of its data, of a package whose tests run in the
+              # packages shard (cmd, compare, tests), of the modules or of
+              # the workflow. When the list of files cannot be read, they
+              # run.
+              if files=$(gh api --paginate "repos/$GH_REPO/pulls/$PR/files?per_page=100" --jq '.[].filename'); then
+                if grep -qE '^(vm|vreflect|host|internal|aot|natsyms|stdsyms|stdtypes|plugins|cmd|compare|tests|testdata)/|^go\.(mod|sum)$|^\.github/|^scripts/' <<< "$files"; then
+                  test386=true
+                fi
+              else
+                echo "::warning::cannot list the files of pull request $PR: the linux/386 tests run"
+                test386=true
+              fi
             fi
             ;;
           schedule)
@@ -150,9 +181,13 @@ jobs:
             nextgo=true
             ;;
           esac
-          echo "run=$run full=$full nextgo=$nextgo carried=$carried kept=$kept"
+          if [ "$full" = true ]; then
+            test386=true
+          fi
+          echo "run=$run full=$full test386=$test386 nextgo=$nextgo carried=$carried kept=$kept"
           echo "run=$run" >> "$GITHUB_OUTPUT"
           echo "full=$full" >> "$GITHUB_OUTPUT"
+          echo "test386=$test386" >> "$GITHUB_OUTPUT"
           echo "nextgo=$nextgo" >> "$GITHUB_OUTPUT"
           echo "carried=$carried" >> "$GITHUB_OUTPUT"
           echo "kept=$kept" >> "$GITHUB_OUTPUT"
@@ -180,9 +215,9 @@ jobs:
     needs: plan
     if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
-    # cmd/runtests alone takes about 23 min: with the vm tests, 30 min was
-    # often too short on a slow runner.
-    timeout-minutes: 45
+    # ./vm takes about 26 min on a loaded runner: the test step has 40 min,
+    # plus setup. cmd/runtests does not run here (step "test").
+    timeout-minutes: 55
     strategy:
       fail-fast: false
       matrix:
@@ -228,10 +263,13 @@ jobs:
           if [ -n "$unformatted" ]; then
             echo "these files are not gofmt'd (run: gofmt -w vm cmd):"; echo "$unformatted"; exit 1
           fi
-      - name: test
-        # 30m, not the 10m default: ./vm alone takes about 10m on a loaded
-        # runner.
-        run: go test ./... -count=1 -timeout 30m
+      - name: test (all packages but cmd/runtests)
+        # 40m, not the 10m default: ./vm takes about 26m on a loaded runner.
+        # cmd/runtests is off here for now: it passed 30m on almost every
+        # run. TODO: turn it on again (shorter, or in its own shard).
+        # shell: bash sets pipefail: a failed go list fails the step.
+        shell: bash
+        run: go list ./... | grep -v '/cmd/runtests$' | xargs go test -count=1 -timeout 40m
       - name: test (compare module)
         # The catalog harness, the GOROOT test suite runner and the
         # benchmark host (compare/go.mod).
@@ -306,7 +344,9 @@ jobs:
     # and must build and vet. go vet type-checks every package and its tests
     # for the target: a constant that overflows int on 32-bit fails
     # here. The 32-bit part runs on each pull request (it is the one that
-    # catches the most); the two others in the full run.
+    # catches the most); the two others in the full run. linux/arm is built
+    # twice: with the default GOARM (7) and with GOARM=6, the release of
+    # Traefik for the Raspberry Pi 1 and Zero (an entry os/arch@GOARM).
     name: cross (${{ matrix.id }})
     needs: plan
     if: needs.plan.outputs.run == 'true'
@@ -334,14 +374,19 @@ jobs:
       - name: build and vet for each platform
         run: |
           case "${{ matrix.id }}" in
-          32bit) platforms="linux/386 linux/arm windows/386 freebsd/386 openbsd/386" ;;
+          32bit) platforms="linux/386 linux/arm linux/arm@6 windows/386 freebsd/386 openbsd/386" ;;
           64bit) platforms="linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64" ;;
           other) platforms="linux/ppc64le linux/s390x linux/riscv64 freebsd/amd64 openbsd/amd64 openbsd/riscv64" ;;
           esac
           for p in $platforms; do
             echo "== $p"
-            GOOS=${p%/*} GOARCH=${p#*/} go build ./...
-            GOOS=${p%/*} GOARCH=${p#*/} go vet ./...
+            goarm=
+            case $p in
+            *@*) goarm=${p#*@}; p=${p%@*} ;;
+            esac
+            # An empty GOARM is the default of the go command.
+            GOOS=${p%/*} GOARCH=${p#*/} GOARM=$goarm go build ./...
+            GOOS=${p%/*} GOARCH=${p#*/} GOARM=$goarm go vet ./...
           done
       - uses: ./.github/actions/go-cache
         # also after a failed test: the cache is for the build
@@ -354,10 +399,19 @@ jobs:
     # linux/386 runs natively on the amd64 runner: all the tests, with int,
     # uint and uintptr of 32 bits (the VM uses the sizes of runtime.GOARCH).
     # The testdata programs and the conformance sample are compared with
-    # go run on 386.
-    name: build, vet, test (linux/386)
+    # go run on 386. A gate of the pull requests that change code that runs
+    # on 32-bit (job "plan", output test386), and of the full run. One job
+    # took 27 minutes: two shards, so that the gate stays far from its
+    # timeout on a slow runner. Shard "runtests" is cmd/runtests (the
+    # testdata programs, the conformance sample, the generated programs),
+    # shard "packages" all the other packages.
+    name: build, vet, test (linux/386, ${{ matrix.shard }})
     needs: plan
-    if: needs.plan.outputs.full == 'true'
+    if: needs.plan.outputs.test386 == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [packages, runtests]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -373,21 +427,28 @@ jobs:
           cache: false
       - uses: ./.github/actions/go-cache
         with:
-          name: test-386
+          name: test-386-${{ matrix.shard }}
       - name: modules
         run: |
           go mod download
           (cd compare && go mod download)
-      - name: test
-        run: go test ./... -count=1 -timeout 40m
+      - name: test (all packages but cmd/runtests)
+        if: matrix.shard == 'packages'
+        # shell: bash sets pipefail: a failed go list fails the step.
+        shell: bash
+        run: go list ./... | grep -v '/cmd/runtests$' | xargs go test -count=1 -timeout 40m
       - name: test (compare module)
+        if: matrix.shard == 'packages'
         working-directory: compare
         run: go test ./... -count=1 -timeout 40m
+      - name: test (cmd/runtests)
+        if: matrix.shard == 'runtests'
+        run: go test -count=1 -timeout 40m ./cmd/runtests
       - uses: ./.github/actions/go-cache
         # also after a failed test: the cache is for the build
         if: ${{ !cancelled() }}
         with:
-          name: test-386
+          name: test-386-${{ matrix.shard }}
           save: true
 
   qemu:
@@ -455,16 +516,18 @@ jobs:
   race:
     # ./vm under -race took about 25 minutes on one runner: four shards run
     # at once (scripts/race-shards.sh splits the tests by name, and shard 1
-    # checks that each test is in exactly one shard).
-    name: race detector (vm, shard ${{ matrix.shard }})
+    # checks that each test is in exactly one shard). Shard 5 runs the
+    # hosts (host, internal/pluginhost, compare/catalog/vmhost: the reload
+    # test and the hostile corpus), with a longer timeout.
+    name: race detector (shard ${{ matrix.shard }})
     needs: plan
     if: needs.plan.outputs.full == 'true'
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5]
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: ${{ matrix.shard == 5 && 70 || 45 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -492,6 +555,116 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: race-${{ matrix.shard }}
+          save: true
+
+  qemusmoke:
+    # A smoke subset on the other targets of the Traefik releases, under
+    # qemu-user as in job qemu: linux/arm with GOARM=6 (the release for the
+    # Raspberry Pi 1 and Zero: other atomics than GOARM=7), linux/arm64,
+    # linux/ppc64le and linux/riscv64. The full suite would cost about six
+    # qemu shards per target; this subset checks what depends most on the
+    # platform: the couplings with the runtime (TestRuntimeCouplings), torn
+    # words of racy reads (testdata/tornwords.go), the sign of flag.Int
+    # values (gocompare stdlib/flag_int_sign.go) and the growth of the
+    # stack (gocompare funcs/stackgrow.go), each compared with go run on
+    # the same platform. Nightly (and ci:full, and by hand) only.
+    name: qemu smoke (linux/${{ matrix.arch }}${{ matrix.goarm && format(' GOARM={0}', matrix.goarm) || '' }})
+    needs: plan
+    if: needs.plan.outputs.full == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm
+            goarm: "6"
+          - arch: arm64
+          - arch: ppc64le
+          - arch: riscv64
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GOARCH: ${{ matrix.arch }}
+      GOARM: ${{ matrix.goarm }}
+      # Loading net/http under qemu takes longer than the 30s default.
+      YAEGI_CONFORMANCE_TIMEOUT: 5m
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: qemusmoke-${{ matrix.arch }}${{ matrix.goarm }}
+      - name: qemu-user and binfmt_misc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static binfmt-support
+          printf 'package main\n\nimport ("fmt"; "runtime")\n\nfunc main() { fmt.Println(runtime.GOARCH) }\n' > "$RUNNER_TEMP/arch.go"
+          test "$(go run "$RUNNER_TEMP/arch.go")" = "$GOARCH"
+      - name: modules
+        run: go mod download
+      - name: runtime couplings
+        run: go test -count=1 -timeout 30m -run 'TestRuntimeCouplings' ./vm
+      - name: tornwords, flag_int_sign, stackgrow (compared with go run)
+        if: ${{ !cancelled() }}
+        run: |
+          go test -count=1 -timeout 30m -run '^TestTestdata$/^tornwords\.go$' ./cmd/runtests
+          go test -count=1 -timeout 30m -run '^TestGoCompare$/^(stdlib|funcs)$/^(flag_int_sign|stackgrow)\.go' ./cmd/runtests
+      - uses: ./.github/actions/go-cache
+        # also after a failed test: the cache is for the build
+        if: ${{ !cancelled() }}
+        with:
+          name: qemusmoke-${{ matrix.arch }}${{ matrix.goarm }}
+          save: true
+
+  stress:
+    # The tests of the VM and of the hosts in another order (-shuffle=on: a
+    # test that depends on the state left by another one fails) and on one
+    # P (GOMAXPROCS=1: a test that needs a second thread to make progress,
+    # or a wall-clock deadline that a single P misses, fails). Each run
+    # prints its shuffle seed: go test -shuffle=<seed> runs the same order
+    # again. Nightly (and ci:full, and by hand) only.
+    name: stress (${{ matrix.mode }})
+    needs: plan
+    if: needs.plan.outputs.full == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [shuffle, gomaxprocs1]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          # The caches are per job: .github/actions/go-cache.
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: stress-${{ matrix.mode }}
+      - name: modules
+        run: go mod download
+      - name: go test (${{ matrix.mode }})
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          pkgs=(./vm/... ./vreflect/... ./host/... ./internal/...)
+          case "$MODE" in
+          shuffle) go test -count=1 -timeout 50m -shuffle=on "${pkgs[@]}" ;;
+          gomaxprocs1) GOMAXPROCS=1 go test -count=1 -timeout 50m "${pkgs[@]}" ;;
+          esac
+      - uses: ./.github/actions/go-cache
+        # also after a failed test: the cache is for the build
+        if: ${{ !cancelled() }}
+        with:
+          name: stress-${{ matrix.mode }}
           save: true
 
   generated:
@@ -591,8 +764,8 @@ jobs:
 
   differential:
     # Random programs compared with Go (internal/progen, TestGeneratedPrograms
-    # of cmd/runtests): the job "test" runs 40 fixed seeds (the default of
-    # go test ./...), this job 2000 new ones each night (the first seed is
+    # of cmd/runtests): the job "test386" (shard "runtests") runs 40 fixed
+    # seeds (the default of go test), this job 2000 new ones each night (the first seed is
     # the run number times 2000), so the search goes on. A failed seed is in the name of its test:
     # go run ./cmd/progen -seed N prints its program.
     name: differential (generated programs)
@@ -633,12 +806,17 @@ jobs:
     # offline check of the snapshot runs in the job "test" (go test). Here:
     # the real build with the committed snapshot, then with the go.mod of
     # traefik/traefik master (read only), so a change there shows up before
-    # a release. The network is needed (module proxy, checksum database).
+    # a release. Then the tests of vm and host and the conformance run with
+    # the versions that Traefik selects (cmd/hostgraph -hostversions): MVS
+    # picks Traefik's versions of the shared modules (golang.org/x/tools
+    # and its go/ssa, x/sys...), so yaegi v2 runs with them in Traefik, not
+    # with its own go.mod. The network is needed (module proxy, checksum
+    # database).
     name: AOT copies in Traefik's module graph
     needs: plan
     if: needs.plan.outputs.full == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -661,6 +839,31 @@ jobs:
           git diff --stat -- testdata/hostgraph
           go run ./cmd/hostgraph
           go run ./cmd/hostgraph -build
+      # The snapshot of the step before (traefik/traefik master), or the
+      # committed one when that step failed before -update.
+      - name: use the versions that Traefik selects
+        id: hostversions
+        if: ${{ !cancelled() }}
+        run: |
+          versions=$(go run ./cmd/hostgraph -hostversions)
+          echo "versions of traefik/traefik that MVS selects over go.mod:"
+          echo "${versions:-(none)}"
+          if [ -n "$versions" ]; then
+            # One module@version per line, no spaces: word splitting is
+            # wanted.
+            # shellcheck disable=SC2086
+            GOFLAGS=-mod=mod go get $versions
+            GOFLAGS=-mod=mod go mod tidy
+          fi
+          git diff -- go.mod
+      - name: test vm and host with Traefik's versions
+        if: ${{ !cancelled() && steps.hostversions.outcome == 'success' }}
+        run: go test -count=1 -timeout 60m ./vm ./host
+      - name: conformance with Traefik's versions (every program, against docs/conformance)
+        if: ${{ !cancelled() && steps.hostversions.outcome == 'success' }}
+        env:
+          YAEGI_CONFORMANCE: "1"
+        run: go test -count=1 -timeout 30m -run 'TestConformanceFull' ./cmd/runtests
       - uses: ./.github/actions/go-cache
         if: ${{ !cancelled() }}
         with:
@@ -981,7 +1184,7 @@ jobs:
     # (on Monday) in the issue with the label next-go-tip, closed when tip
     # passes again.
     name: report (nightly)
-    needs: [plan, carried, test, platforms, cross, test386, qemu, race, generated, checks, differential, hostgraph, gotestdir, battery, stdtests, forward, gopatch]
+    needs: [plan, carried, test, platforms, cross, test386, qemu, qemusmoke, race, stress, generated, checks, differential, hostgraph, gotestdir, battery, stdtests, forward, gopatch]
     if: ${{ always() && github.event_name == 'schedule' && (needs.plan.result != 'success' || needs.plan.outputs.run == 'true' || needs.plan.outputs.nextgo == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5

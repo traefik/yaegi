@@ -83,7 +83,7 @@ func (m *Machine) twinFromVM(v Value, rt reflect.Type) (reflect.Value, bool) {
 	}
 	x := decV(v)
 	if x.t != nil && x.t.isNat() && x.p != nil {
-		if n, ok := x.p.R.(reflect.Value); ok {
+		if n, ok := x.cur().R.(reflect.Value); ok { // a racy writer must not make it tear
 			// native data (vmreflect_nat.go): a native-backed value, so that
 			// native reflect decides what can be set
 			return reflect.ValueOf(RV{t: x.t, n: n, flag: x.flag & flagRO}), true
@@ -293,23 +293,67 @@ func natString(rt reflect.Type) string {
 
 type unsafeCell struct {
 	base uintptr
-	v    RV
+	size uintptr // a native value: NewAt may point inside [base, base+size)
+	v    RV      // a VM cell; v.t == nil for a native value
 }
 
+// The ring is shared by all the goroutines, so the UnsafeAddr calls of
+// other goroutines can push an entry out between UnsafeAddr and NewAt.
+// The idiom calls NewAt right after UnsafeAddr on the same goroutine:
+// unsafeByG keeps the last UnsafeAddr of each goroutine, which no other
+// goroutine can push out, and NewAt makes a native pointer only inside the
+// native value whose address this goroutine took (never from an address
+// it did not give: a VM cell has no Go layout).
 var (
 	unsafeMu   sync.Mutex
 	unsafeRing [64]unsafeCell
 	unsafeNext int
+	unsafeByG  = map[uintptr]unsafeCell{} // getg() -> the last UnsafeAddr
 )
+
+// maxUnsafeByG bounds unsafeByG. Its entries keep VM cells (and so their
+// Machine) alive, and the keys of goroutines that ended stay: the runtime
+// reuses its g structures, but on wasm getg() is a goroutine id that is
+// never reused. When the map is full it starts again: a goroutine between
+// its UnsafeAddr and its NewAt then finds its cell in the ring.
+const maxUnsafeByG = 4096
+
+// setUnsafeByG records c for the current goroutine (unsafeMu held).
+func setUnsafeByG(c unsafeCell) {
+	g := getg()
+	if _, ok := unsafeByG[g]; !ok && len(unsafeByG) >= maxUnsafeByG {
+		clear(unsafeByG)
+	}
+	unsafeByG[g] = c
+}
 
 func rememberUnsafe(v RV) {
 	if v.t == nil || v.t.isNat() || v.p == nil {
 		return
 	}
+	c := unsafeCell{base: uintptr(unsafe.Pointer(v.p)), v: v}
 	unsafeMu.Lock()
-	unsafeRing[unsafeNext] = unsafeCell{base: uintptr(unsafe.Pointer(v.p)), v: v}
+	unsafeRing[unsafeNext] = c
 	unsafeNext = (unsafeNext + 1) % len(unsafeRing)
+	setUnsafeByG(c)
 	unsafeMu.Unlock()
+}
+
+// rememberNative records the native value whose address UnsafeAddr gives:
+// NewAt may make a pointer inside it (go-cmp on a native struct).
+func rememberNative(n reflect.Value) {
+	unsafeMu.Lock()
+	setUnsafeByG(unsafeCell{base: n.UnsafeAddr(), size: n.Type().Size()})
+	unsafeMu.Unlock()
+}
+
+// unsafeNative reports whether p is inside the native value whose address
+// this goroutine last took with UnsafeAddr.
+func unsafeNative(p unsafe.Pointer) bool {
+	unsafeMu.Lock()
+	c, ok := unsafeByG[getg()]
+	unsafeMu.Unlock()
+	return ok && c.v.t == nil && uintptr(p) >= c.base && uintptr(p) < c.base+c.size
 }
 
 // unsafeField finds the remembered VM cell at address p (offset 0, e.g.
@@ -319,29 +363,38 @@ func unsafeField(t RT, p unsafe.Pointer) (RV, bool) {
 	addr := uintptr(p)
 	unsafeMu.Lock()
 	defer unsafeMu.Unlock()
+	if f, ok := unsafeByG[getg()].field(t, addr); ok {
+		return f, true
+	}
 	for i := range unsafeRing {
-		c := unsafeRing[i]
-		if c.v.t == nil || addr < c.base {
+		if f, ok := unsafeRing[i].field(t, addr); ok {
+			return f, true
+		}
+	}
+	return RV{}, false
+}
+
+// field is unsafeField for the one remembered cell c.
+func (c unsafeCell) field(t RT, addr uintptr) (RV, bool) {
+	if c.v.t == nil || addr < c.base {
+		return RV{}, false
+	}
+	if addr == c.base && (c.v.t.cn() == t || c.v.t == t) {
+		return mkVM(c.v.t, c.v.p, flagAddr), true
+	}
+	cells, ok := c.v.p.R.([]Value)
+	if !ok || c.v.t.kind != reflect.Struct {
+		return RV{}, false
+	}
+	for j, off := range c.v.t.fieldOffsets() {
+		if c.base+uintptr(off) != addr {
 			continue
 		}
-		if addr == c.base && (c.v.t.cn() == t || c.v.t == t) {
-			return mkVM(c.v.t, c.v.p, flagAddr), true
-		}
-		cells, ok := c.v.p.R.([]Value)
-		if !ok || c.v.t.kind != reflect.Struct {
+		ft := c.v.t.fieldT(j)
+		if ft.cn() != t && ft != t {
 			continue
 		}
-		offs := c.v.t.fieldOffsets()
-		for j, off := range offs {
-			if c.base+uintptr(off) != addr {
-				continue
-			}
-			ft := c.v.t.fieldT(j)
-			if ft.cn() != t && ft != t {
-				continue
-			}
-			return mkVM(ft, &cells[j], flagAddr), true
-		}
+		return mkVM(ft, &cells[j], flagAddr), true
 	}
 	return RV{}, false
 }
@@ -356,22 +409,32 @@ func unsafeField(t RT, p unsafe.Pointer) (RV, bool) {
 func unsafeCellAt(m *Machine, addr uintptr) (*Value, types.Type, bool) {
 	unsafeMu.Lock()
 	defer unsafeMu.Unlock()
+	if p, t, ok := unsafeByG[getg()].cellAt(m, addr); ok {
+		return p, t, true
+	}
 	for i := range unsafeRing {
-		c := unsafeRing[i]
-		if c.v.t == nil || c.v.t.t == nil || c.v.t.vr == nil || c.v.mach() != m || addr < c.base {
-			continue
+		if p, t, ok := unsafeRing[i].cellAt(m, addr); ok {
+			return p, t, true
 		}
-		if addr == c.base {
-			return c.v.p, c.v.t.t, true
-		}
-		cells, ok := c.v.p.R.([]Value)
-		if !ok || c.v.t.kind != reflect.Struct {
-			continue
-		}
-		for j, off := range c.v.t.fieldOffsets() {
-			if c.base+uintptr(off) == addr {
-				return &cells[j], c.v.t.fieldT(j).t, true
-			}
+	}
+	return nil, nil, false
+}
+
+// cellAt is unsafeCellAt for the one remembered cell c.
+func (c unsafeCell) cellAt(m *Machine, addr uintptr) (*Value, types.Type, bool) {
+	if c.v.t == nil || c.v.t.t == nil || c.v.t.vr == nil || c.v.mach() != m || addr < c.base {
+		return nil, nil, false
+	}
+	if addr == c.base {
+		return c.v.p, c.v.t.t, true
+	}
+	cells, ok := c.v.p.R.([]Value)
+	if !ok || c.v.t.kind != reflect.Struct {
+		return nil, nil, false
+	}
+	for j, off := range c.v.t.fieldOffsets() {
+		if c.base+uintptr(off) == addr {
+			return &cells[j], c.v.t.fieldT(j).t, true
 		}
 	}
 	return nil, nil, false

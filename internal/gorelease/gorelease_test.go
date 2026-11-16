@@ -34,6 +34,9 @@ func TestVersions(t *testing.T) {
 		{"go1.26.9 X:jsonv2", "go1.26", 9, true},
 		{"go1.26.9 X:boringcrypto,jsonv2", "go1.26", 9, true},
 		{"go1.27rc1 X:jsonv2", "go1.27", 0, true},
+		// the form of the linker for a version without a dash
+		{"go1.27.3-X:nogreenteagc", "go1.27", 3, true},
+		{"go1.27rc1-X:boringcrypto", "go1.27", 0, true},
 	} {
 		if got := Release(c.v); got != c.release {
 			t.Errorf("Release(%q) = %q, want %q", c.v, got, c.release)
@@ -309,6 +312,49 @@ func TestCompare(t *testing.T) {
 	} {
 		if got := Compare(c.a, c.b); got != c.want {
 			t.Errorf("Compare(%q, %q) = %d, want %d", c.a, c.b, got, c.want)
+		}
+	}
+}
+
+// TestExperiments checks the GOEXPERIMENT suffix of runtime.Version(), in
+// both forms of the linker: StripExperiments kept "go1.27.3-X:nogreenteagc"
+// whole, so a host built with GOEXPERIMENT=nogreenteagc refused the AOT
+// copies of its own Go version. The experiments that change the standard
+// library (jsonv2, boringcrypto, unknown ones) still make the copies
+// differ from the host.
+func TestExperiments(t *testing.T) {
+	for _, c := range []struct {
+		v, strip string
+		exps     []string
+	}{
+		{"go1.27.3", "go1.27.3", nil},
+		{"go1.27.3-X:nogreenteagc", "go1.27.3", []string{"nogreenteagc"}},
+		{"go1.27.3 X:jsonv2,boringcrypto", "go1.27.3", []string{"boringcrypto", "jsonv2"}},
+		{"go1.27.3-custom X:fieldtrack", "go1.27.3-custom", []string{"fieldtrack"}},
+		{"devel go1.28-abcdef X:nogreenteagc", "devel go1.28-abcdef", []string{"nogreenteagc"}},
+	} {
+		if got := StripExperiments(c.v); got != c.strip {
+			t.Errorf("StripExperiments(%q) = %q, want %q", c.v, got, c.strip)
+		}
+		if got := Experiments(c.v); !slices.Equal(got, c.exps) {
+			t.Errorf("Experiments(%q) = %q, want %q", c.v, got, c.exps)
+		}
+	}
+	for _, c := range []struct {
+		host, copies string
+		want         []string
+	}{
+		{"go1.27.3", "go1.27.3", nil},
+		{"go1.27.3-X:nogreenteagc", "go1.27.3", nil},
+		{"go1.27.3-X:nogreenteagc,sizespecializedmalloc", "go1.27.3-X:dwarf5", nil},
+		{"go1.27.3-X:nojsonv2", "go1.27.3", []string{"nojsonv2"}},
+		{"go1.26.9 X:boringcrypto,jsonv2", "go1.26.9", []string{"boringcrypto", "jsonv2"}},
+		{"go1.26.9 X:jsonv2", "go1.26.9 X:jsonv2", nil},
+		{"go1.27.3", "go1.27.3-X:fieldtrack", []string{"fieldtrack"}},
+		{"go1.27.3-X:somenewexperiment", "go1.27.3", []string{"somenewexperiment"}},
+	} {
+		if got := ExperimentsDiffer(c.host, c.copies); !slices.Equal(got, c.want) {
+			t.Errorf("ExperimentsDiffer(%q, %q) = %q, want %q", c.host, c.copies, got, c.want)
 		}
 	}
 }

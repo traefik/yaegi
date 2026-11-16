@@ -119,7 +119,7 @@ func (m *Machine) quickGenerators(f Value) []func(*rand.Rand, int) reflect.Value
 			continue
 		}
 		sel := m.prog.MethodSets.MethodSet(t).Lookup(nil, "Generate")
-		if sel == nil || !isQuickGenerate(sel.Type().(*types.Signature)) {
+		if sel == nil || !runtimeMethod(sel) || !isQuickGenerate(sel.Type().(*types.Signature)) {
 			continue
 		}
 		fn := m.funcOf(m.prog.MethodValue(sel))

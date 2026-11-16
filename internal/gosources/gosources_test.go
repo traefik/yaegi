@@ -33,6 +33,17 @@ func TestManifest(t *testing.T) {
 	if same, _, known := m.Same("go1.27.3", "go1.27.5"); same || known {
 		t.Errorf("Same(go1.27.3, go1.27.5): %v %v, want unknown", same, known)
 	}
+	// A copied package that the host release does not list (it was
+	// removed, or the manifest of the host is not complete) is a change:
+	// the copy cannot be known to match the sources of the host.
+	m["go1.27.6"] = map[string]string{"fmt": "s1:a"}
+	if same, changed, known := m.Same("go1.27.3", "go1.27.6"); same || !known || !reflect.DeepEqual(changed, []string{"html/template"}) {
+		t.Errorf("Same(go1.27.3, go1.27.6): %v %v %v, want html/template changed (missing on the host)", same, changed, known)
+	}
+	// A package of the host that was not copied does not count.
+	if same, changed, known := m.Same("go1.27.6", "go1.27.3"); !same || !known || len(changed) != 0 {
+		t.Errorf("Same(go1.27.6, go1.27.3): %v %v %v, want same", same, changed, known)
+	}
 	for _, bad := range []string{"go1.27.3 fmt\n", "nogo fmt s1:a\n", "go1.27.3 fmt s1:a\ngo1.27.3 fmt s1:b\n"} {
 		if _, err := Parse([]byte(bad)); err == nil {
 			t.Errorf("Parse(%q): no error", bad)

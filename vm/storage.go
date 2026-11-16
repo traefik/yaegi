@@ -195,7 +195,7 @@ func unhashableIn(v Value, t types.Type) string {
 		fs, _ := v.R.([]Value)
 		for i := range fs {
 			if f := u.Field(i); f.Name() != "_" {
-				if name := unhashableIn(fs[i], f.Type()); name != "" {
+				if name := unhashableIn(loadCell(&fs[i], f.Type()), f.Type()); name != "" {
 					return name
 				}
 			}
@@ -203,7 +203,7 @@ func unhashableIn(v Value, t types.Type) string {
 	case *types.Array:
 		es, _ := v.R.([]Value)
 		for i := range es {
-			if name := unhashableIn(es[i], u.Elem()); name != "" {
+			if name := unhashableIn(loadCell(&es[i], u.Elem()), u.Elem()); name != "" {
 				return name
 			}
 		}
@@ -422,7 +422,7 @@ func init() {
 
 // storageHook returns the replacement of f, or nil.
 func (m *Machine) storageHook(f *ssa.Function) storageHook {
-	if f.Pkg == nil || m.isInterp(f) || f.Signature.Recv() == nil {
+	if funcPkg(f) == nil || m.isInterp(f) || f.Signature.Recv() == nil {
 		return nil
 	}
 	return storageHooks[f.String()]
@@ -432,12 +432,15 @@ func (m *Machine) storageHook(f *ssa.Function) storageHook {
 // a native copy (reflect.StructOf fails on embedded unexported fields, and
 // an opaque handle is a fatal error), and a finalizer on a copy would run at
 // the wrong time anyway. The finalizer is set on the VM cell; it gets the
-// cell back as the interpreted pointer.
+// cell back as the interpreted pointer. A native pointer (a field of a
+// native struct, the AOT mode) gets a native func that calls the
+// interpreted finalizer.
 func init() {
 	vmHooks["runtime.SetFinalizer"] = func(m *Machine, a []Value) Value {
 		iv, _ := a[0].R.(*Iface)
-		fiv0, _ := a[1].R.(*Iface)
-		m.checkFinalizer(iv, fiv0) // PanicOnFatal: a panic instead of a throw
+		fiv, _ := a[1].R.(*Iface)
+		m.checkFinalizer(iv, fiv) // PanicOnFatal: a panic instead of a throw
+		inst := m.curInstance()   // the finalizer runs in the instance of this call
 		if iv == nil {
 			panic("runtime.SetFinalizer: first argument is nil")
 		}
@@ -446,78 +449,304 @@ func init() {
 			// A *byte into Go memory (unsafe.StringData, unsafe.SliceData
 			// of a native []byte): set the finalizer on it (GOROOT test
 			// fixedbugs/issue57823.go).
-			fiv, _ := a[1].R.(*Iface)
 			if fiv == nil {
-				runtime.SetFinalizer(bp, nil)
+				m.setFinalizer(unsafe.Pointer(bp), true, func() { runtime.SetFinalizer(bp, nil) })
 				return Value{}
 			}
-			rt, fn := iv.T, fiv.V
-			_, toIface := fiv.T.T.Underlying().(*types.Signature).Params().At(0).Type().Underlying().(*types.Interface)
-			runtime.SetFinalizer(bp, func(b *byte) {
-				arg := Value{R: b}
-				if toIface {
-					arg = Value{R: &Iface{T: rt, V: arg}}
-				}
-				m.callValue(fn, []Value{arg})
+			run := m.vmFinalizer(iv.T, fiv, inst)
+			track := m.panicOnFatal
+			m.setFinalizer(unsafe.Pointer(bp), false, func() {
+				runtime.SetFinalizer(bp, func(b *byte) {
+					if track {
+						finalized.Delete(uintptr(unsafe.Pointer(b)))
+					}
+					run(Value{R: b})
+				})
 			})
 			return Value{}
 		}
 		if iv.T.Native != nil || !ok {
 			obj := m.box(iv, newConv(nil))
-			var fin reflect.Value
-			if fiv, _ := a[1].R.(*Iface); fiv != nil {
-				fin = m.box(fiv, newConv(nil))
-			} else {
+			if obj.Kind() == reflect.Pointer && !obj.IsNil() {
+				// The pointer that the runtime gets, maybe not the one
+				// that checkFinalizer saw.
+				m.checkFinalizerStart(obj.UnsafePointer(), obj.Type().Elem())
+			}
+			call := func(fin reflect.Value) func() {
+				return func() { reflect.ValueOf(runtime.SetFinalizer).Call([]reflect.Value{obj, fin}) }
+			}
+			if fiv == nil {
 				// A nil any, not a typed nil func: SetFinalizer removes
 				// the finalizer only when its argument is a nil interface,
 				// and throws on a nil func() ("cannot pass *T to
 				// finalizer func()").
-				fin = reflect.Zero(reflect.TypeFor[any]())
+				fin := reflect.Zero(reflect.TypeFor[any]())
+				if obj.Kind() != reflect.Pointer || obj.IsNil() {
+					call(fin)()
+					return Value{}
+				}
+				m.setFinalizer(obj.UnsafePointer(), true, call(fin))
+				return Value{}
 			}
-			reflect.ValueOf(runtime.SetFinalizer).Call([]reflect.Value{obj, fin})
+			fin := m.box(fiv, newConv(nil))
+			if obj.Kind() != reflect.Pointer || obj.IsNil() {
+				call(fin)() // the runtime throws, as in Go
+				return Value{}
+			}
+			// The runtime gets a native func of the type of obj that calls
+			// the finalizer of the plugin (runFinalizer): an interpreted
+			// func is an opaque handle in AOT mode (the runtime throws "not
+			// a function"), and a panic of the finalizer, also of a native
+			// func, must not reach the finalizer goroutine of the runtime.
+			if nf, ok := m.nativeFinalizer(iv, fiv, fin, obj.Type(), inst); ok {
+				fin = nf
+			}
+			m.setFinalizer(obj.UnsafePointer(), false, call(fin))
 			return Value{}
 		}
-		fiv, _ := a[1].R.(*Iface)
-		key := uintptr(unsafe.Pointer(cell))
-		track := m.panicOnFatal // "finalizer already set"
-		if track {
-			// The check of finalized, the native call and the update of
-			// finalized are one step: two goroutines that set a finalizer
-			// on the same cell would both pass a check done before, and
-			// the second native call would throw.
-			finalizeMu.Lock()
-			defer finalizeMu.Unlock()
-			// The cell stays reachable until the update of finalized, so
-			// its finalizer cannot run (and delete the entry) before it.
-			defer runtime.KeepAlive(cell)
-		}
+		key := unsafe.Pointer(cell)
 		if fiv == nil {
-			runtime.SetFinalizer(cell, nil)
-			finalized.Delete(key)
+			m.setFinalizer(key, true, func() { runtime.SetFinalizer(cell, nil) })
 			return Value{}
 		}
-		if track {
-			if _, set := finalized.Load(key); set {
-				panic(&FatalError{"runtime.SetFinalizer: finalizer already set"})
-			}
-		}
-		rt := iv.T
-		_, toIface := fiv.T.T.Underlying().(*types.Signature).Params().At(0).Type().Underlying().(*types.Interface)
-		fn := fiv.V
-		// The finalizer must not capture the cell, or it would never run.
-		runtime.SetFinalizer(cell, func(c *Value) {
-			if track {
-				finalized.Delete(uintptr(unsafe.Pointer(c)))
-			}
-			arg := Value{R: c}
-			if toIface {
-				arg = Value{R: &Iface{T: rt, V: arg}}
-			}
-			m.callValue(fn, []Value{arg})
+		run := m.vmFinalizer(iv.T, fiv, inst)
+		track := m.panicOnFatal
+		m.setFinalizer(key, false, func() {
+			// The finalizer must not capture the cell, or it would never run.
+			runtime.SetFinalizer(cell, func(c *Value) {
+				if track {
+					finalized.Delete(uintptr(unsafe.Pointer(c)))
+				}
+				run(Value{R: c})
+			})
 		})
-		if track {
-			finalized.Store(key, struct{}{})
-		}
 		return Value{}
 	}
+}
+
+// finParamIsIface reports whether the parameter of the interpreted
+// finalizer fiv is an interface: it gets the pointer in an interface.
+func finParamIsIface(fiv *Iface) bool {
+	sig, ok := fiv.T.T.Underlying().(*types.Signature)
+	if !ok || sig.Params().Len() != 1 {
+		return false
+	}
+	_, isIface := sig.Params().At(0).Type().Underlying().(*types.Interface)
+	return isIface
+}
+
+// nativeFinalizer returns a native func(ot) that calls the finalizer fiv
+// (fin once boxed) with its argument, for a native pointer of type ot (the
+// runtime needs a real func). fiv is an interpreted func, or a native func
+// (reflect.TypeOf, (*os.File).Close). ok is false when fiv is not a func of
+// one parameter that can take an ot (the runtime then throws, as in Go;
+// checkFinalizer refused it before with PanicOnFatal). The finalizer runs
+// in the instance inst (nil: none, instance.go).
+func (m *Machine) nativeFinalizer(iv, fiv *Iface, fin reflect.Value, ot reflect.Type, inst *Instance) (reflect.Value, bool) {
+	nf, nat := m.finNative(fiv, fin)
+	if nat {
+		if !nf.IsValid() {
+			return reflect.Value{}, false
+		}
+		fin = nf
+		t := fin.Type()
+		if t.IsVariadic() || t.NumIn() != 1 || !ot.AssignableTo(t.In(0)) {
+			return reflect.Value{}, false
+		}
+	} else {
+		if fiv.T.T == nil {
+			return reflect.Value{}, false
+		}
+		sig, ok := fiv.T.T.Underlying().(*types.Signature)
+		if !ok || sig.Variadic() || sig.Params().Len() != 1 || !m.finAccepts(iv, sig.Params().At(0).Type()) {
+			return reflect.Value{}, false
+		}
+	}
+	rt, fn := iv.T, fiv.V
+	toIface := !nat && finParamIsIface(fiv)
+	track := m.panicOnFatal
+	native := iv.T.Native != nil
+	ft := reflect.FuncOf([]reflect.Type{ot}, nil, false)
+	return reflect.MakeFunc(ft, func(args []reflect.Value) []reflect.Value {
+		p := args[0]
+		if track {
+			finalized.Delete(p.Pointer())
+		}
+		if nat {
+			m.runFinalizer(Value{}, nil, fin, func() reflect.Value { return p }, inst)
+			return nil
+		}
+		var arg Value
+		if native {
+			arg = Value{R: p}
+		} else {
+			arg = m.fromNative(p, rt.T)
+		}
+		if toIface {
+			arg = Value{R: &Iface{T: rt, V: arg}}
+		}
+		m.runFinalizer(fn, []Value{arg}, reflect.Value{}, nil, inst)
+		return nil
+	}), true
+}
+
+// finNative returns the native func of the finalizer fiv, and true, when
+// fiv is not an interpreted func (reflect.TypeOf, json.Marshal, a method
+// value of a native object): callValue cannot call it. boxed is fiv once
+// boxed, or the zero Value. The func is invalid when fiv is not a non-nil
+// func.
+func (m *Machine) finNative(fiv *Iface, boxed reflect.Value) (reflect.Value, bool) {
+	if _, ok := fiv.V.R.(*Closure); ok {
+		return reflect.Value{}, false
+	}
+	fn, ok := fiv.V.R.(reflect.Value)
+	if !ok {
+		// The func itself: AOT mode boxes it as an opaque handle.
+		fn = boxed
+		if !fn.IsValid() {
+			fn = m.box(fiv, newConv(nil))
+		}
+	}
+	if fn.Kind() != reflect.Func || fn.IsNil() {
+		return reflect.Value{}, true
+	}
+	return fn, true
+}
+
+// vmFinalizer returns the call of the finalizer fiv of the plugin with a
+// pointer of the VM of type rt (a cell, a *byte): the native func that the
+// runtime calls, on its finalizer goroutine, calls it. The finalizer runs
+// in the instance inst (nil: none, instance.go).
+func (m *Machine) vmFinalizer(rt *RType, fiv *Iface, inst *Instance) func(p Value) {
+	if nf, nat := m.finNative(fiv, reflect.Value{}); nat {
+		if !nf.IsValid() {
+			// Not a func: callValue panics, and GoPanic gets it.
+			return func(Value) { m.runFinalizer(fiv.V, nil, reflect.Value{}, nil, inst) }
+		}
+		return func(p Value) {
+			m.runFinalizer(Value{}, nil, nf, func() reflect.Value {
+				return m.box(&Iface{T: rt, V: p}, newConv(nil))
+			}, inst)
+		}
+	}
+	toIface := finParamIsIface(fiv)
+	fn := fiv.V
+	return func(p Value) {
+		if toIface {
+			p = Value{R: &Iface{T: rt, V: p}}
+		}
+		m.runFinalizer(fn, []Value{p}, reflect.Value{}, nil, inst)
+	}
+}
+
+// runFinalizer runs a finalizer of the plugin. The finalizer is the
+// interpreted func fn with args, or, when nat is valid, the native func
+// nat with the argument that natArg gives.
+//
+// The runtime calls all the finalizers of the process, one after the
+// other, on one goroutine where nothing recovers. The call of the plugin
+// code does not run there: it goes to the queue of the Machine, and
+// runFinalizer returns at once. A finalizer of the plugin that blocks
+// (select{}) then stops only the later finalizers of the same plugin, as
+// in Go for its own program, and never the finalizers of the host (an
+// os.File that is never closed). One goroutine per Machine runs the
+// queue, in order, as Go runs finalizers. Each call runs as a goroutine of
+// the program (runGoroutine): a panic, ErrBudget or ErrStackOverflow goes
+// to GoPanic and does not end the host, and a runtime.Goexit ends only the
+// call. The call runs in inst, the instance of the call that set the
+// finalizer (nil: none, instance.go): the goroutines that it starts belong
+// to inst, and Instance.Close stops it.
+func (m *Machine) runFinalizer(fn Value, args []Value, nat reflect.Value, natArg func() reflect.Value, inst *Instance) {
+	var d deferred
+	switch cl, _ := fn.R.(*Closure); {
+	case nat.IsValid():
+		d = deferred{nat: func() { nat.Call([]reflect.Value{natArg()}) }}
+	case cl != nil && cl.Go == nil && cl.Fn != nil:
+		d = deferred{fn: cl.Fn, env: cl.Env, args: args}
+	default:
+		d = deferred{nat: func() { m.callValue(fn, args) }}
+	}
+	m.finMu.Lock()
+	m.finQ = append(m.finQ, func() { m.runGoroutine(d, m.instGoCtx(inst)) })
+	start := !m.finRun
+	m.finRun = true
+	m.finMu.Unlock()
+	if start {
+		go m.runFinalizers()
+	}
+}
+
+// runFinalizers runs the queue of finalizers of the Machine until it is
+// empty. A native finalizer can still end the goroutine with a real
+// runtime.Goexit: a new goroutine then takes the rest of the queue.
+func (m *Machine) runFinalizers() {
+	done := false
+	defer func() {
+		if !done {
+			go m.runFinalizers()
+		}
+	}()
+	for {
+		m.finMu.Lock()
+		if len(m.finQ) == 0 {
+			m.finRun = false
+			m.finMu.Unlock()
+			done = true
+			return
+		}
+		f := m.finQ[0]
+		m.finQ[0] = nil
+		m.finQ = m.finQ[1:]
+		m.finMu.Unlock()
+		f()
+	}
+}
+
+// finAccepts reports whether a finalizer with a parameter of type pt can
+// take the pointer of iv, as the runtime checks it.
+func (m *Machine) finAccepts(iv *Iface, pt types.Type) bool {
+	if iv.T.T != nil {
+		return types.AssignableTo(iv.T.T, pt)
+	}
+	if iv.T.Native == nil {
+		return false
+	}
+	nt := m.reflectType(pt)
+	if nt == nil {
+		return false
+	}
+	if nt.Kind() == reflect.Interface {
+		return iv.T.Native.Implements(nt)
+	}
+	return nt == iv.T.Native
+}
+
+// setFinalizer runs set, the native call of runtime.SetFinalizer on the
+// object at p (clear: with a nil finalizer). With PanicOnFatal, the check
+// of finalized ("finalizer already set"), the native call and the update
+// of finalized are one step: two goroutines that set a finalizer on the
+// same object would both pass a check done before, and the second native
+// call would throw. The finalizer that set installs must delete p from
+// finalized when it runs.
+func (m *Machine) setFinalizer(p unsafe.Pointer, clear bool, set func()) {
+	if !m.panicOnFatal {
+		set()
+		return
+	}
+	key := uintptr(p)
+	finalizeMu.Lock()
+	defer finalizeMu.Unlock()
+	// The object stays reachable until the update of finalized, so its
+	// finalizer cannot run (and delete the entry) before it.
+	defer runtime.KeepAlive(p)
+	if clear {
+		set()
+		finalized.Delete(key)
+		return
+	}
+	if _, set := finalized.Load(key); set {
+		panic(&FatalError{"runtime.SetFinalizer: finalizer already set"})
+	}
+	set()
+	finalized.Store(key, struct{}{})
 }

@@ -2,6 +2,7 @@ package vm
 
 import (
 	"errors"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
@@ -37,10 +38,22 @@ func TestAOTVersionPolicy(t *testing.T) {
 		{"go1.27.2", "go1.26.8", true, "AOT mode needs copies made for go1.27"},
 		{"go1.25.3", "go1.26.8", true, "AOT mode needs copies made for go1.25"},
 		{"devel go1.27-abcdef", "go1.26.8", true, "AOT mode needs copies made for"},
-		// GOEXPERIMENT builds: runtime.Version() has an " X:" suffix.
-		{"go1.26.8 X:jsonv2", "go1.26.8", false, ""},
-		{"go1.26.8 X:boringcrypto,jsonv2", "go1.26.9", false, ""},
-		{"go1.26.9 X:jsonv2", "go1.26.8", false, "miss the fixes"},
+		// GOEXPERIMENT builds: runtime.Version() has an " X:" or "-X:"
+		// suffix. An experiment of the runtime or the compiler does not
+		// matter; one that changes the standard library needs copies
+		// made with it.
+		{"go1.27.3-X:nogreenteagc", "go1.27.3", false, ""},
+		// go1.27.9 is not in the manifest (aot/all/gosources.txt): the copies
+		// may miss its fixes. A release in the manifest with no changed
+		// copied package (go1.27.4) is accepted.
+		{"go1.27.9-X:nogreenteagc", "go1.27.3", false, "miss the fixes"},
+		{"go1.27.9-X:nogreenteagc", "go1.27.3", true, ""},
+		{"go1.27.3-X:nojsonv2", "go1.27.3", false, "the GOEXPERIMENT nojsonv2"},
+		{"go1.27.3-X:nojsonv2", "go1.27.3", true, "changes the standard library"},
+		{"go1.26.8 X:jsonv2", "go1.26.8", false, "the GOEXPERIMENT jsonv2"},
+		{"go1.26.8 X:boringcrypto,jsonv2", "go1.26.9", false, "the GOEXPERIMENT boringcrypto,jsonv2"},
+		{"go1.26.8 X:jsonv2", "go1.26.8 X:jsonv2", false, ""},
+		{"go1.26.9 X:jsonv2", "go1.26.8 X:jsonv2", false, "miss the fixes"},
 		{"go1.26.9 X:jsonv2", "go1.26.8 X:jsonv2", true, ""},
 		{"go1.27.0 X:jsonv2", "go1.26.8", false, "AOT mode needs copies made for go1.27"},
 	} {
@@ -321,6 +334,58 @@ func main() {
 			t.Errorf("NewSession with StaleAOTFallback: AOT %v, mode of the stale copy %v, want default mode", s.m.AOT, s.m.modeOf("example.com/fakeaot"))
 		}
 	})
+}
+
+// TestStaleAOTLoadCached checks that LoadCached applies the same version
+// gate as Load: with AOT copies made with an older Go patch release than
+// the host, it refuses AOT mode when Load refuses it, and it falls back to
+// default mode with the note when Load falls back (StaleAOTFallback).
+// Before, LoadCached took opts.AOT and opts.Modes as they were and ran the
+// stale copies in AOT mode, with no error and no note.
+func TestStaleAOTLoadCached(t *testing.T) {
+	const pkg = "github.com/traefik/yaegi/v2/vm/testdata/subplugin"
+	dir := filepath.Join("testdata", "subplugin")
+	rel := gorelease.Release(runtime.Version())
+	h := fakeAOT(t, rel+".98", rel+".99")
+	modes := map[string]Mode{"example.com/fakeaot": ModeAOT}
+	// The first load falls back to default mode.
+	p, err := Load(Options{Dir: "..", AOT: true, StaleAOTFallback: true, hooks: h}, pkg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.M.AOT {
+		t.Fatal("Load: AOT mode with stale copies")
+	}
+	for name, opts := range map[string]Options{
+		"AOT":   {AOT: true, hooks: h},
+		"Modes": {Modes: modes, hooks: h},
+	} {
+		if _, err := Load(Options{Dir: "..", AOT: opts.AOT, Modes: opts.Modes, hooks: h}, pkg); err == nil || !strings.Contains(err.Error(), "miss the fixes") {
+			t.Fatalf("%s: Load: %v, want a stale copies error", name, err)
+		}
+		if q, err := p.LoadCached(dir, opts); err == nil || !strings.Contains(err.Error(), "miss the fixes") {
+			aot := q != nil && q.M.AOT
+			t.Errorf("%s: LoadCached: %v (AOT %v), want a stale copies error as Load", name, err, aot)
+		}
+		opts.StaleAOTFallback = true
+		q, err := p.LoadCached(dir, opts)
+		if err != nil {
+			t.Fatalf("%s: LoadCached with StaleAOTFallback: %v", name, err)
+		}
+		if q.M.AOT || hasMode(q.M.Modes, ModeAOT) || q.M.OpaqueAny {
+			t.Errorf("%s: LoadCached with StaleAOTFallback: AOT %v, Modes %v, OpaqueAny %v, want default mode", name, q.M.AOT, q.M.Modes, q.M.OpaqueAny)
+		}
+		note := false
+		for _, n := range q.Notes {
+			note = note || strings.Contains(n, "StaleAOTFallback") && strings.Contains(n, "miss the fixes")
+		}
+		if !note {
+			t.Errorf("%s: LoadCached with StaleAOTFallback: Notes = %q, want a StaleAOTFallback note", name, q.Notes)
+		}
+	}
+	if len(modes) != 1 || modes["example.com/fakeaot"] != ModeAOT {
+		t.Errorf("LoadCached changed the Modes of the caller: %v", modes)
+	}
 }
 
 // setGoSources adds the entries of m to the manifest of the Go sources

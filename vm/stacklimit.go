@@ -132,38 +132,100 @@ func (cx *ctx) fitStack() {
 	}
 }
 
-// chargeMem counts the cells and deferred calls of cx in the memory quota
-// (Options.MaxMemory), as grow counts a large register stack: MaxStack
-// bounds one goroutine, the quota bounds them all. The quota counts live
-// objects by weak pointers: the charge is held by small tokens that cx
-// keeps, in steps of a quarter of the charge (at least 1 MiB), so a
-// recursion pays a few reservations, not one per frame; the quota can stop
-// a stack that grows a step before it is full. The tokens go when the ctx ends (a
-// goroutine, or a ctx back in the pool): until then, the charge stays at
-// the largest stack of the ctx, as a Go stack does not shrink at once.
+// chargeMem counts the cells, deferred calls and free cells of cx in the
+// memory quota (Options.MaxMemory), as grow counts a large register
+// stack: MaxStack bounds one goroutine, the quota bounds them all. The
+// charge is held by cx.memCharge, which cx gives back when it ends
+// (releaseMem: back in the pool, or the end of its goroutine). Until
+// then, it stays at the largest stack of the ctx, as a Go stack does not
+// shrink at once. It grows by the missing bytes and an eighth more (at
+// most 1 MiB), so a recursion pays a few reservations, not one per frame.
 // Past the quota, the plugin panics with ErrMemory.
+//
+// Before, the charge was held by weak tokens, in steps of at least 1 MiB,
+// that only a garbage collection gave back: each call from the host with a
+// large frame-local array (a pooled ctx, its cell taken from the free
+// list) reserved 1 MiB more, and about 1000 calls filled a quota of 1 GiB
+// with dead tokens.
 func (cx *ctx) chargeMem() {
-	need := (cx.cells + int64(cx.deferVals)) * valueSize
+	need := cx.keptVals() * valueSize
 	if need <= cx.charged || need < memMin {
-		// Below memMin, as the other counts: else the first small local
-		// array of each call from the host reserved 1 MiB, held until the
-		// next garbage collection.
+		// Below memMin, as the other counts: the first small local array
+		// of each call from the host takes no lock of the quota.
 		return
 	}
-	tok := new([16]byte)
-	step := max(need-cx.charged, cx.charged/4, 1<<20)
-	if cx.m.mem.reserve(step, unsafe.Pointer(tok)) {
-		cx.chargeTok = append(cx.chargeTok, tok)
-		cx.charged += step
+	if cx.reserveMem(need, true) {
 		return
 	}
 	// The count of the cells can be too large after a panic: count them
 	// again. There is no smaller retry: near the quota, each one would
 	// force a garbage collection and wait for it, frame after frame.
-	if cx.stackUse(cx.topRegs()); (cx.cells+int64(cx.deferVals))*valueSize <= cx.charged {
+	if cx.stackUse(cx.topRegs()); cx.keptVals()*valueSize <= cx.charged {
 		return
 	}
 	panic(ErrMemory)
+}
+
+// reserveMem grows the stack charge of cx to need bytes and an eighth more
+// (at most 1 MiB), or reports false when they do not fit in the quota.
+// With gc false, it does not force a garbage collection to make room.
+func (cx *ctx) reserveMem(need int64, gc bool) bool {
+	q := cx.m.mem
+	sc := cx.memCharge
+	if sc == nil || sc.q != q {
+		if sc != nil {
+			sc.release(true) // a pooled ctx of another Machine
+		}
+		if cx.memTok == nil {
+			cx.memTok = new([16]byte)
+		}
+		sc = q.newStackCharge(cx.memTok)
+		cx.memCharge, cx.charged = sc, 0
+	}
+	step := need - cx.charged + min(need/8, 1<<20)
+	var ok bool
+	if gc {
+		ok = q.reserveFor(step, nil, sc)
+	} else {
+		ok = q.tryReserveFor(step, sc)
+	}
+	if ok {
+		cx.charged += step
+	}
+	return ok
+}
+
+// chargeFree counts in the quota the free cells that a pooled ctx brings
+// to a new call from the host (getCtx). They stay with the ctx in the
+// pool, but putCtx gave back their charge: without this, they were
+// counted again only at the next OpAllocLocal, and a call that runs none
+// held them outside MaxMemory for all its life (1000 requests in flight
+// kept 96 MB with no charge, round 3 review of PR 323). The free cells
+// are only a cache: when they do not fit in the quota, they are dropped
+// instead, with no garbage collection and no ErrMemory.
+func (cx *ctx) chargeFree() {
+	if cx.m.mem == nil || int64(cx.freeSize)*valueSize < memMin {
+		return
+	}
+	if !cx.reserveMem(int64(cx.freeSize)*valueSize, false) {
+		cx.dropFree()
+	}
+}
+
+// keptVals is the count in Values of what chargeMem counts: the cells of
+// the live frames, the deferred calls, and the free cells (escape.go).
+func (cx *ctx) keptVals() int64 {
+	return cx.cells + int64(cx.deferVals) + int64(cx.freeSize)
+}
+
+// releaseMem gives back the charge of cx in the memory quota (chargeMem),
+// when cx ends.
+func (cx *ctx) releaseMem() {
+	if cx.charged == 0 {
+		return
+	}
+	cx.memCharge.release(false)
+	cx.charged = 0
 }
 
 // belowVals is the regsBelow of a ctx that starts on top of cx (nestIn,
@@ -174,6 +236,18 @@ func (cx *ctx) belowVals() int {
 	top := cx.topRegs()
 	n := cx.stackVals(top)
 	if max := cx.m.MaxStack; max > 0 && n*valueSize >= max {
+		if gs := cx.gs; gs != nil && gs.fault != nil {
+			// The deferred calls of a fault (nest.go, fail) pay the
+			// recount from their grace: it walks every pending
+			// deferred call, and a loop of a million defers stopped
+			// by MaxStack made each of its deferred calls walk all
+			// the others.
+			gs.faultLeft -= int64(len(cx.defers) >> 10)
+			if gs.faultLeft <= 0 {
+				gs.hard = true
+				panic(gs.fault)
+			}
+		}
 		n = cx.stackUse(top)
 	}
 	return int(n)

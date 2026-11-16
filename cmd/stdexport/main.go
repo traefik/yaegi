@@ -42,6 +42,10 @@ import (
 var srcPkgs = stdsrc.All()
 
 func main() {
+	if dir := os.Getenv(toolexecEnv); dir != "" {
+		// A child of go build -toolexec (objsyms.go).
+		os.Exit(toolexec(dir, os.Getenv(nmEnv), os.Args[1:]))
+	}
 	out := flag.String("out", "stdtypes", "output directory")
 	flag.Parse()
 	release, err := gorelease.Constraint(runtime.Version())
@@ -218,7 +222,7 @@ func write(dir, goos, goarch, release, nm string) error {
 		raw.Write(b.Bytes())
 		n++
 	}
-	tasks, err := initTasks(nm, cfg.Env)
+	tasks, err := initTasks(nm, cfg.Env, "std")
 	if err != nil {
 		return err
 	}
@@ -267,29 +271,24 @@ var data []byte
 // packages with nm (the path of the go tool nm binary). It loads the
 // packages again, only for their object files: the types of the export data
 // written above are the ones of a load without them.
-func initTasks(nm string, env []string) (map[string][]string, error) {
-	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName | packages.NeedFiles | packages.NeedExportFile, Env: env}, "std")
+func initTasks(nm string, env []string, patterns ...string) (map[string][]string, error) {
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName | packages.NeedFiles | packages.NeedExportFile, Env: env}, patterns...)
+	if err != nil {
+		return nil, err
+	}
+	syms, err := objectSymbols(nm, env, pkgs, patterns)
 	if err != nil {
 		return nil, err
 	}
 	tasks := map[string][]string{}
 	for _, p := range pkgs {
-		if p.PkgPath == "unsafe" || strings.HasPrefix(p.PkgPath, "cmd/") {
+		out, ok := syms[p.PkgPath]
+		if !ok {
 			continue
-		}
-		if p.ExportFile == "" {
-			if len(p.GoFiles) == 0 {
-				continue // only test files on this platform
-			}
-			return nil, fmt.Errorf("%s: no export file", p.PkgPath)
-		}
-		out, err := exec.Command(nm, p.ExportFile).Output()
-		if err != nil {
-			return nil, fmt.Errorf("nm %s: %v", p.PkgPath, err)
 		}
 		var deps []string
 		defined := false
-		for _, l := range strings.Split(string(out), "\n") {
+		for _, l := range strings.Split(out, "\n") {
 			f := strings.Fields(l)
 			if len(f) < 2 {
 				continue
@@ -319,6 +318,18 @@ func initTasks(nm string, env []string) (map[string][]string, error) {
 			tasks[p.PkgPath] = slices.Compact(deps)
 		} else if len(deps) > 0 {
 			return nil, fmt.Errorf("%s: no init task, but refers to the one of %v", p.PkgPath, deps)
+		}
+	}
+	// runNM gives an empty output for a file without symbols. If nm gets the
+	// wrong file for every package (export data only, not the object file),
+	// the graph is empty: fail instead of writing data without init order.
+	// The runtime always has an init task.
+	if len(syms) > 0 && len(tasks) == 0 {
+		return nil, fmt.Errorf("no init task in the nm output of %d packages: nm did not read the object files", len(syms))
+	}
+	if _, ok := syms["runtime"]; ok {
+		if _, ok := tasks["runtime"]; !ok {
+			return nil, fmt.Errorf("runtime: no init task in the nm output: nm did not read the object file")
 		}
 	}
 	// Every dependency is a package of the graph.

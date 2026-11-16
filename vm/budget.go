@@ -26,6 +26,34 @@ package vm
 // Budget steps together, whatever the number of goroutines or iter.Pull
 // levels (before, each goroutine got a full budget of its own).
 //
+// Rate (Machine.BudgetRate, off by default; host.Options sets it). Budget
+// is then a burst, not a total: the account is a token bucket of size
+// Budget that gets BudgetRate steps back per second of wall time (addRate,
+// at each chunk taken, so the hot path does not read the clock). A call
+// that uses on average less than BudgetRate steps per second runs for
+// ever: a long stream, or a large download through a wrapper of the
+// ResponseWriter that reads each byte. Before, Budget was a total per
+// call: a stream of 1-byte writes through one wrapper died after about
+// Budget writes, and a 256 MiB download through a byte loop was cut at
+// 95 MiB. A call that uses more empties the bucket and stops with
+// ErrBudget: `for {}` runs about 4e8 steps per second, so with the host
+// defaults (1e8 and 1e8 per second) it stops after about 0.3 s, against
+// 0.23 s with a total. A heavy loop can run fewer steps per second than
+// the rate (a map write per round: about 1e7), so a call with a rate also
+// stops when one of its goroutines runs Budget steps without a blocking
+// point, the background rule below; here the end of a callback that native
+// code made (the Write of a wrapper, called by the next handler for each
+// part of the response) is a blocking point too. The bucket is per call,
+// not per Machine: a stuck call does not take the steps of the other
+// requests, and a Machine-wide cap would make one bad request slow down or
+// stop the others. Time spent in native code (a network read) refills the
+// bucket, and native code is still not stopped in the middle.
+//
+// Weights. A native call counts nativeCallSteps, plus steps for the bytes
+// of its []byte and string arguments (more for package regexp), and a
+// select counts selectSteps, so that the steps follow the CPU better
+// (charge; the measures are with the constants).
+//
 // Cancellation (Options.Cancel; always for the init of LoadContext). When
 // the context of the call is done (context.AfterFunc), the account is
 // canceled: every goroutine that uses it stops with
@@ -99,6 +127,8 @@ package vm
 // ErrStackOverflow must stop the execution, so the ctx that raises them
 // also records them in the gstate of its goroutine (gstate.fault), and the
 // VM raises them again as soon as the native call returns (checkFault).
+// Their deferred calls still run, with the grace of a cancellation, and
+// the fault is not raised again inside them (fail and reraise, nest.go).
 //
 // A call from the host is not a callback, even when it comes from inside
 // another call: when the same plugin comes twice in a middleware chain, the
@@ -114,13 +144,17 @@ package vm
 import (
 	"context"
 	"errors"
+	"fmt"
 	"go/types"
 	"math"
 	"net/http"
 	"reflect"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"golang.org/x/tools/go/ssa"
 )
 
 // ErrCanceled is the panic of the goroutines of a call from the host whose
@@ -157,31 +191,57 @@ const (
 // account is the budget of one call from the host, shared by the
 // goroutines that the call starts.
 type account struct {
-	left    atomic.Int64 // steps not handed out yet (when limited)
+	left    atomic.Int64 // steps not handed out yet (when limited), never negative
 	state   atomic.Int32
-	limited bool        // Machine.Budget > 0
-	release func() bool // stops the context.AfterFunc
+	limited bool  // Machine.Budget > 0
+	burst   int64 // Machine.Budget: the most steps the account holds
+	rate    int64 // Machine.BudgetRate: steps added per second (0: a total)
+	start   time.Time
+	last    atomic.Int64 // time of the last add of the rate, in ns since start
+	inst    *Instance    // the instance of the call (instance.go), or nil
+	release func() bool  // stops the context.AfterFunc
 	mu      sync.Mutex
 	stop    chan struct{} // made by the first wait (stopChan), closed when the account is spent or canceled
 	closed  bool          // halt ran (guarded by mu)
+	// fault is set on the account that a goroutine with a fault gives to
+	// native code with a value of the plugin (stoppedOrigin): the
+	// callbacks of that value do not run (refuseStopped).
+	fault error
+}
+
+// stoppedOrigin returns the account that originAcct gives on a goroutine
+// that stops with fault: it is spent for good, so a callback that uses it
+// does not start (refuseStopped), and a wait on it ends at once.
+func stoppedOrigin(fault error) *account {
+	a := &account{fault: fault, closed: true}
+	a.state.Store(acctSpent)
+	return a
 }
 
 // newAccount returns the account of a call from the host with the context
 // ctx (nil: none), or nil when there is nothing to count: no budget, and a
 // context that is never done.
 func (m *Machine) newAccount(ctx context.Context) *account {
+	return m.newAccountIn(ctx, nil)
+}
+
+// newAccountIn is newAccount for a call in the instance inst (nil: none).
+func (m *Machine) newAccountIn(ctx context.Context, inst *Instance) *account {
 	var done <-chan struct{}
 	if ctx != nil {
 		done = ctx.Done()
 	}
-	if done == nil && m.Budget <= 0 && m.BackgroundRate <= 0 && m.MaxGoroutines <= 0 {
+	if done == nil && m.Budget <= 0 && m.BackgroundRate <= 0 && m.MaxGoroutines <= 0 && inst == nil {
 		return nil
 	}
 	// With a BackgroundRate, a call needs an account so that it is not a
 	// background run; with a MaxGoroutines, so that a callback inside it is
 	// not counted as a goroutine of native code (nativeCallback).
-	a := &account{limited: m.Budget > 0}
+	a := &account{limited: m.Budget > 0, burst: m.Budget, inst: inst}
 	a.left.Store(m.Budget)
+	if a.limited && m.BudgetRate > 0 {
+		a.rate, a.start = m.BudgetRate, time.Now()
+	}
 	if done != nil {
 		a.release = context.AfterFunc(ctx, func() { a.halt(acctCanceled) })
 	}
@@ -230,34 +290,72 @@ func (a *account) close() {
 	}
 }
 
-// take returns up to n steps from pool (0: none left).
-func take(pool *atomic.Int64, n int64) int64 {
-	left := pool.Add(-n)
-	switch {
-	case left >= 0:
-		return n
-	case left+n > 0:
-		return left + n
+// take returns up to n steps from the account (0: none left). With a
+// BudgetRate, it first adds the steps of the time that passed.
+func (a *account) take(n int64) int64 {
+	if a.rate > 0 {
+		a.addRate()
 	}
-	return 0
+	for {
+		l := a.left.Load()
+		if l <= 0 {
+			return 0
+		}
+		g := min(n, l)
+		if a.left.CompareAndSwap(l, l-g) {
+			return g
+		}
+	}
+}
+
+// put adds n steps to the account, at most up to its burst.
+func (a *account) put(n int64) {
+	for {
+		l := a.left.Load()
+		nl := min(l+n, a.burst)
+		if nl <= l || a.left.CompareAndSwap(l, nl) {
+			return
+		}
+	}
+}
+
+// addRate adds to the account the steps of BudgetRate for the time since
+// the last add (a token bucket of size Budget). The slow path of the step
+// count calls it at most once per chunk (at most maxChunk steps), so the
+// clock read costs nothing on the hot path.
+func (a *account) addRate() {
+	now := int64(time.Since(a.start))
+	last := a.last.Load()
+	d := now - last
+	// float64: d * rate overflows an int64 after about 90 s at 1e8 steps
+	// per second.
+	n := float64(d) * float64(a.rate) / 1e9
+	if n < 1 || !a.last.CompareAndSwap(last, now) {
+		return // less than one step, or another goroutine adds it
+	}
+	a.put(int64(min(n, float64(a.burst))))
 }
 
 // giveBack returns the unused steps of a goroutine that ends.
 func (cx *ctx) giveBack() {
-	if a := cx.acct; a != nil && a.limited && cx.limit > cx.steps && a.state.Load() == acctOpen {
-		a.left.Add(cx.limit - cx.steps)
-		cx.limit = cx.steps
+	if a := cx.acct; a != nil && a.limited && cx.rateEnd > cx.steps && a.state.Load() == acctOpen {
+		a.put(cx.rateEnd - cx.steps)
+		cx.m.stats.steps.Add(cx.steps - cx.rateEnd)
+		cx.limit, cx.rateEnd = cx.steps, cx.steps
 	}
 }
 
 // useAcct makes cx count its steps against a (nil: the background rule, or
 // no limit without a budget).
 func (cx *ctx) useAcct(a *account) {
+	if a != nil {
+		cx.inst = a.inst // also for a closed account: a callback of native code (withOrigin)
+	}
 	if a == nil || a.state.Load() == acctClosed {
 		cx.background()
 		return
 	}
-	cx.acct, cx.limit = a, cx.steps // the next step refills
+	cx.acct, cx.limit, cx.rateEnd = a, cx.steps, cx.steps // the next step refills
 }
 
 // background makes cx a background goroutine: at most Budget steps since
@@ -293,9 +391,13 @@ func (cx *ctx) bgRefill() {
 	}
 	if m.BackgroundRate > 0 && cx.steps >= cx.rateEnd {
 		b := m.rateBucket()
-		if d := b.reserve(b.chunk); d > 0 {
+		// The steps past the end of the chunk (charge) are paid too.
+		n := b.chunk + cx.steps - cx.rateEnd
+		if d := b.reserve(n); d > 0 {
+			m.stats.bgWait.Add(int64(d))
 			time.Sleep(d)
 		}
+		m.stats.steps.Add(n)
 		cx.rateEnd = cx.steps + b.chunk
 	}
 	cx.bgLimit()
@@ -346,8 +448,12 @@ func (b *rateBucket) reserve(n int64) time.Duration {
 
 // refill is the slow path of the step count: cx.steps reached cx.limit.
 func (cx *ctx) refill() {
-	if cx.m.closed.Load() {
-		cx.closeStop(false) // close.go
+	if gs := cx.gs; gs != nil && gs.fault != nil {
+		cx.faultGrace() // nest.go
+		return
+	}
+	if cx.stopped() {
+		cx.closeStop(false) // close.go, instance.go
 		return
 	}
 	a := cx.acct
@@ -365,27 +471,183 @@ func (cx *ctx) refill() {
 		cx.cancel(false)
 		return
 	}
+	if a.rate > 0 {
+		cx.creditSlice(a)
+		if cx.steps >= cx.slice+cx.m.Budget {
+			// Budget steps without a blocking point: a loop that never
+			// waits, whatever the rate (a heavy loop can run fewer steps
+			// per second than BudgetRate).
+			a.halt(acctSpent)
+			cx.outOfBudget()
+		}
+		if cx.steps < cx.rateEnd {
+			cx.rateLimit() // only the slice ended: the chunk goes on
+			return
+		}
+	}
 	if cx.chunk < minChunk {
 		cx.chunk = minChunk
 	}
 	n := cx.chunk
 	if a.limited {
-		if n = take(&a.left, n); n == 0 {
+		// owe: the steps past the end of the chunk, counted at once by
+		// charge (a native call, a select).
+		owe := max(cx.steps-cx.rateEnd, 0)
+		got := a.take(n + owe)
+		if got <= owe {
 			a.halt(acctSpent)
 			cx.outOfBudget()
 		}
+		n = got - owe
+		cx.m.stats.steps.Add(got)
+	} else {
+		cx.m.stats.steps.Add(n + max(cx.steps-cx.rateEnd, 0))
 	}
-	cx.limit = cx.steps + n
+	cx.rateEnd = cx.steps + n // the end of the chunk
+	cx.limit = cx.rateEnd
+	if a.rate > 0 {
+		cx.rateLimit()
+	}
 	if cx.chunk < maxChunk {
 		cx.chunk *= 2
 	}
 }
 
+// budgetClock is the origin of ctx.sliceAt.
+var budgetClock = time.Now()
+
+// budgetNow is the time since budgetClock in ns.
+func budgetNow() int64 {
+	if f := budgetNowTest.Load(); f != nil {
+		return (*f)()
+	}
+	return int64(time.Since(budgetClock))
+}
+
+// budgetNowTest replaces the clock of budgetNow in a test (a slow clock:
+// TestBudgetRateSlowClock).
+var budgetNowTest atomic.Pointer[func() int64]
+
+// sliceRateDiv: with a BudgetRate, the steps since the last blocking point
+// of a goroutine also go down by BudgetRate/sliceRateDiv per second (1e6
+// with the host defaults). A loop that runs few steps per second but never
+// reaches a blocking point is not a runaway loop: a plugin that copies a
+// stream by itself (`for { n, _ := body.Read(buf); w.Write(buf[:n]) }`,
+// about 50 steps per round with the weights) waits in native code, which
+// is not a blocking point. Without the credit it stopped after Budget
+// steps (2e6 rounds: about 30 minutes of an SSE stream at 1000 messages
+// per second). A loop of the plugin that runs more steps per second than
+// that (a map write per round: 1e7) still stops, after about
+// Budget/(speed-credit) seconds.
+const sliceRateDiv = 100
+
+// creditSlice moves the last blocking point of cx (slice) forward by the
+// credit of the time since the last refill of cx. It runs on the slow path
+// (once per chunk), and the credit never passes cx.steps.
+func (cx *ctx) creditSlice(a *account) {
+	now := budgetNow()
+	if cx.sliceAt != 0 && cx.slice < cx.steps {
+		c := float64(now-cx.sliceAt) * float64(a.rate) / sliceRateDiv / 1e9
+		cx.slice = min(cx.slice+int64(min(c, float64(cx.m.Budget))), cx.steps)
+	}
+	cx.sliceAt = now
+}
+
+// rateLimit sets the limit of cx, which uses an account with a
+// BudgetRate: the end of its chunk, or Budget steps after its last
+// blocking point if that comes first.
+//
+// The second limit is at least sliceStep steps away (so a loop can pass
+// Budget by at most sliceStep). Without it, near the end of the slice the
+// limit came a few steps after cx.steps: each refill read the clock, and
+// the credit of the time of that read (creditSlice) moved the limit by
+// about the steps run since the last refill. Where the clock is slow
+// (linux/386), a `for {}` never reached the limit and ran for ever.
+func (cx *ctx) rateLimit() {
+	b := cx.m.Budget
+	cx.limit = min(cx.rateEnd, max(cx.slice+b, cx.steps+min(sliceStep, max(b/8, 1))))
+}
+
+// sliceStep is the least distance of the slice limit of rateLimit.
+const sliceStep = minChunk
+
+// charge counts n steps at once: the work of a native call or of a select,
+// which costs far more CPU than one step (see the weights below).
+func (cx *ctx) charge(n int64) {
+	cx.steps += n
+	if cx.steps >= cx.limit {
+		cx.refill()
+	}
+}
+
+// The weights of the work that the VM does not see step by step. A step
+// (a call or a backward jump) is about 2 ns in `for {}`, but a native
+// call or a select costs far more, and the budget and BackgroundRate
+// count steps, not CPU: 8 background goroutines in `for { select {
+// default: } }` used 3.7 cores of 4 for ever at a BackgroundRate of 5e7,
+// a loop that calls bytes.Count on 1 MiB used 3.95, and a regexp on 200
+// MiB ran 12.9 s in one step. Measured on main (4 cores, Go 1.26, Budget
+// 1e8): `for {}` 4.3e8 steps per second, strings.Repeat("x", 100) in a
+// loop 7.5e6 calls per second (130 ns, 57 steps of `for {}`), a select
+// with a default 4.1e6 per second (240 ns, 100 steps), bytes.Count on 1
+// MiB 17 us (7300 steps, 1 per 143 bytes), a regexp on 1 MiB 40 ms (16
+// steps per byte). The weights are below these costs, so that a plugin
+// that worked within its budget still does.
+const (
+	// nativeCallSteps: each call of a native function or method.
+	nativeCallSteps = 16
+	// selectSteps: each select (reflect.Select with its cases).
+	selectSteps = 64
+	// byteSteps: steps per 64 bytes of the []byte and string arguments of
+	// a native function (bytes.Count, strings.Index, a Write).
+	byteSteps = 1
+	// regexpByteSteps: steps per 64 bytes for package regexp (2 per
+	// byte), which reads its input far more slowly.
+	regexpByteSteps = 128
+)
+
+// weigh sets the weight of the native call site s of f: the arguments
+// whose length counts (nativeSteps).
+func (s *nativeSite) weigh(f *ssa.Function) {
+	s.byteMul = byteSteps
+	if f.Pkg != nil && f.Pkg.Pkg.Path() == "regexp" || f.Pkg == nil && strings.Contains(f.String(), "regexp.") {
+		s.byteMul = regexpByteSteps
+	}
+	for i, t := range s.params {
+		if i >= len(s.args) {
+			break
+		}
+		switch u := t.Underlying().(type) {
+		case *types.Basic:
+			if u.Info()&types.IsString == 0 {
+				continue
+			}
+		case *types.Slice:
+			if b, ok := u.Elem().Underlying().(*types.Basic); !ok || b.Kind() != types.Byte {
+				continue
+			}
+		default:
+			continue
+		}
+		s.byteArgs = append(s.byteArgs, s.args[i])
+	}
+}
+
+// nativeSteps returns the steps that one call of s costs: nativeCallSteps,
+// and byteMul steps per 64 bytes of its []byte and string arguments.
+func (s *nativeSite) nativeSteps(regs []Value) int64 {
+	n := int64(nativeCallSteps)
+	for _, a := range s.byteArgs {
+		n += int64(seqLen(regs[a].R)) * s.byteMul >> 6
+	}
+	return n
+}
+
 // halted stops cx when its machine was closed, or its account was spent or
 // canceled, while cx waited.
 func (cx *ctx) halted() {
-	if cx.m.closed.Load() {
-		cx.closeStop(true) // close.go
+	if cx.stopped() {
+		cx.closeStop(true) // close.go, instance.go
 	}
 	if cx.acct == nil {
 		return
@@ -408,6 +670,7 @@ func (cx *ctx) cancel(wait bool) {
 	gs := cx.gs
 	if gs.graceAcct != cx.acct {
 		gs.graceAcct, gs.graceLeft = cx.acct, cancelGrace
+		cx.limit = cx.steps // the call that passed the limit does not run
 		cx.grace(errCanceledHard)
 		panic(ErrCanceled)
 	}
@@ -418,9 +681,14 @@ func (cx *ctx) cancel(wait bool) {
 }
 
 // grace gives cx the next steps of the grace of its goroutine, or stops it
-// with hard (errCanceledHard, errClosedHard) when the grace is spent.
+// with hard (errCanceledHard, errClosedHard) when the grace is spent. The
+// steps past the limit (the weight of a native call or of a select, which
+// charge counts at once) are taken from the grace too: a deferred regexp
+// on 64 MiB (1.3e8 steps) stops before it starts, instead of running 1.8 s
+// after ErrCanceled.
 func (cx *ctx) grace(hard error) {
 	gs := cx.gs
+	gs.graceLeft -= max(cx.steps-cx.limit, 0)
 	n := min(gs.graceLeft, minChunk)
 	if n <= 0 {
 		cx.fail(hard)
@@ -432,8 +700,12 @@ func (cx *ctx) grace(hard error) {
 // blocked records a blocking point of cx (see the background rule above).
 func (cx *ctx) blocked() {
 	cx.slice = cx.steps
-	if cx.acct == nil && (cx.m.Budget > 0 || cx.m.BackgroundRate > 0) {
-		cx.bgLimit()
+	if a := cx.acct; a == nil {
+		if cx.m.Budget > 0 || cx.m.BackgroundRate > 0 {
+			cx.bgLimit()
+		}
+	} else if a.rate > 0 && a.state.Load() == acctOpen {
+		cx.rateLimit()
 	}
 }
 
@@ -451,24 +723,48 @@ func isStopped(r any) bool { return isCanceled(r) || isClosed(r) }
 // calls ran, and it is not a panic of the plugin: GoPanic does not get it.
 func quietStop(r any) bool { return isStopped(r) || r == http.ErrAbortHandler }
 
-// goReserve counts one more live goroutine of the program, or panics with
-// ErrTooManyGoroutines past the cap.
-func (m *Machine) goReserve() {
-	if m.closed.Load() {
-		panic(ErrClosed) // close.go
+// goReserve counts one more live goroutine of the program in the instance
+// inst (nil: none), or panics with ErrTooManyGoroutines past the cap, or
+// with ErrClosed when the machine or inst is closed.
+func (m *Machine) goReserve(inst *Instance) {
+	if m.closed.Load() || inst != nil && inst.closed.Load() {
+		panic(ErrClosed) // close.go, instance.go
 	}
-	if n := m.nGo.Add(1); m.MaxGoroutines > 0 && n > int64(m.MaxGoroutines) {
-		m.nGo.Add(-1)
+	if !m.goCount(inst) {
 		panic(ErrTooManyGoroutines)
 	}
 }
 
-// goRelease counts one goroutine of the program less.
-func (m *Machine) goRelease() { m.nGo.Add(-1) }
+// goCount counts one more live goroutine in inst (nil: none) and reports
+// whether it is under the cap: MaxGoroutines bounds the goroutines of each
+// instance, and the goroutines of no instance together (instance.go).
+func (m *Machine) goCount(inst *Instance) bool {
+	c := &m.nFree
+	if inst != nil {
+		c = &inst.n
+	}
+	if n := c.Add(1); m.MaxGoroutines > 0 && n > int64(m.MaxGoroutines) {
+		c.Add(-1)
+		return false
+	}
+	m.nGo.Add(1)
+	return true
+}
+
+// goRelease counts one goroutine of the program in inst less.
+func (m *Machine) goRelease(inst *Instance) {
+	if inst != nil {
+		inst.n.Add(-1)
+	} else {
+		m.nFree.Add(-1)
+	}
+	m.nGo.Add(-1)
+}
 
 // Goroutines returns the number of live goroutines that the program started
-// (go statements and iter.Pull sequences), the number that MaxGoroutines
-// bounds.
+// (go statements and iter.Pull sequences), the ones of the instances
+// included. MaxGoroutines bounds the ones of each instance, and the ones of
+// no instance (instance.go).
 func (m *Machine) Goroutines() int { return int(m.nGo.Load()) }
 
 // goCtx returns the ctx of a goroutine that parent (nil: native code)
@@ -477,6 +773,7 @@ func (m *Machine) Goroutines() int { return int(m.nGo.Load()) }
 func (m *Machine) goCtx(parent *ctx) *ctx {
 	sub := &ctx{m: m, maxFrames: m.MaxDepth, kind: ctxGo}
 	if parent != nil && parent.m == m {
+		sub.inst = parent.inst
 		sub.useAcct(parent.acct)
 	} else {
 		sub.background()
@@ -692,8 +989,9 @@ func peekPending(g uintptr) *account {
 
 // top runs f, a call from the host with the context ctx (nil: none), with
 // an account of its own, also when the goroutine already runs interpreted
-// code (the call then comes from inside that code, through host code).
-func (m *Machine) top(ctx context.Context, f func()) {
+// code (the call then comes from inside that code, through host code), in
+// the Instance inst (nil: none, instance.go).
+func (m *Machine) top(ctx context.Context, inst *Instance, f func()) {
 	// Counted before the check, so that CloseContext waits for every call
 	// that passed it (close.go).
 	m.inflight.Add(1)
@@ -701,7 +999,7 @@ func (m *Machine) top(ctx context.Context, f func()) {
 	if m.refused() {
 		panic(ErrClosed)
 	}
-	a := m.newAccount(ctx)
+	a := m.newAccountIn(ctx, inst)
 	defer a.close()
 	defer func() {
 		if r := recover(); r != nil {
@@ -725,29 +1023,54 @@ func (m *Machine) top(ctx context.Context, f func()) {
 		return
 	}
 	// The runs that f starts directly are nested on gs.cur (topOuter).
-	fault, top, pend, outer := gs.fault, gs.top, gs.pending, gs.topOuter
+	// f is a new call: it starts without the stop of the code below (a
+	// deferred call of a plugin that cleans up after ErrBudget calls the
+	// next handler, another plugin). Else f ran on the grace of that stop
+	// and then stopped with its error, without its own deferred calls.
+	fault, left, cleanup, hard, exit := gs.fault, gs.faultLeft, gs.cleanup, gs.hard, gs.goexit
+	gacct, gleft := gs.graceAcct, gs.graceLeft
+	top, pend, outer := gs.top, gs.pending, gs.topOuter
+	gs.fault, gs.faultLeft, gs.cleanup, gs.hard, gs.goexit = nil, 0, 0, false, false
+	gs.graceAcct, gs.graceLeft = nil, 0
 	gs.top, gs.pending, gs.topOuter = true, a, gs.cur
 	defer func() {
 		// A fault of f is a fault of f only: the panic goes on, but the
 		// code below does not record it.
-		gs.fault, gs.top, gs.pending, gs.topOuter = fault, top, pend, outer
+		gs.fault, gs.faultLeft, gs.cleanup, gs.hard, gs.goexit = fault, left, cleanup, hard, exit
+		gs.graceAcct, gs.graceLeft = gacct, gleft
+		gs.top, gs.pending, gs.topOuter = top, pend, outer
 	}()
 	f()
 }
 
 // originAcct returns the account of the run of m on this goroutine, or nil
-// (no budget and no Cancel, a background goroutine, or no VM code on this
-// goroutine). A func or a value of the plugin that native code gets keeps
-// it (withOrigin).
+// (no budget and no Cancel, a background goroutine of no instance, or no VM
+// code on this goroutine). A func or a value of the plugin that native code
+// gets keeps it (withOrigin). A background goroutine of an instance has no
+// account: it gives the closed account of its instance (Instance.bg), so
+// that a callback of native code that it starts (time.AfterFunc in a cache
+// janitor that New started) still belongs to the instance.
 func (m *Machine) originAcct() *account {
-	if m.Budget <= 0 && !m.Cancel && m.BackgroundRate <= 0 {
-		return nil // there are no accounts
+	if m.Budget <= 0 && !m.Cancel && m.BackgroundRate <= 0 && !m.instUsed.Load() {
+		return nil // there are no accounts, or none with an instance
 	}
 	gs := lookupG(getg())
 	if gs == nil || gs.cur == nil || gs.cur.m != m {
 		return nil
 	}
-	return gs.cur.acct
+	if gs.fault != nil {
+		// A goroutine that stops gives native code no callback that runs,
+		// as it starts no goroutine (spawn), also when its account is
+		// still open (ErrStackOverflow) or it is a background run.
+		return stoppedOrigin(gs.fault)
+	}
+	if a := gs.cur.acct; a != nil {
+		return a
+	}
+	if i := gs.cur.inst; i != nil {
+		return i.bg
+	}
+	return nil
 }
 
 // withOrigin makes a callback that native code runs on a goroutine of its
@@ -820,20 +1143,20 @@ func (cx *ctx) countNativeCallback(g uintptr) func() {
 	if _, ok := nativeCBs.Load(g); !ok {
 		return nil
 	}
-	if n := m.nGo.Add(1); n > int64(m.MaxGoroutines) {
-		m.nGo.Add(-1)
+	inst := cx.inst
+	if !m.goCount(inst) {
 		// The run does not start: forget it as callIn would.
 		leaveG(g, cx.gs)
 		cx.owned.close()
 		panic(ErrTooManyGoroutines)
 	}
-	return m.goRelease
+	return func() { m.goRelease(inst) }
 }
 
 // callTop is call (hostGoexit false) as a call from the host with the
-// context ctx (see top).
+// context ctx, in the Instance that ctx carries (see top).
 func (m *Machine) callTop(ctx context.Context, fn *Func, args []Value, env []Value) (rv Value) {
-	m.top(ctx, func() { rv = m.call(fn, args, env, false) })
+	m.top(ctx, m.instanceOf(ctx), func() { rv = m.call(fn, args, env, false) })
 	return rv
 }
 
@@ -850,26 +1173,130 @@ func (t topHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		serveClosed(w) // close.go
 		return
 	}
+	if t.m.restricted {
+		r = hideServer(r)
+	}
 	if t.m.recoverHandler {
 		defer t.recoverServe(w)
 	}
+	t.m.stats.requests.Add(1)
 	defer func() {
 		if rec := recover(); rec != nil {
+			t.m.countFault(rec)
 			if isStopped(rec) {
 				// the client is gone: net/http aborts the response, and
 				// does not log it as a panic of the handler
 				// (or the plugin was closed while the request ran)
 				panic(http.ErrAbortHandler)
 			}
+			if isBudget(rec) && !t.m.recoverHandler {
+				t.m.budgetStops.Add(1)
+				if t.m.quietBudget {
+					// net/http aborts the response without a log and
+					// a stack per request. The first stop of the
+					// machine goes to GoPanic.
+					t.m.reportBudget()
+					panic(http.ErrAbortHandler)
+				}
+			}
 			panic(rec)
 		}
 	}()
 	if !t.m.Cancel {
 		// Background is never done: the account is only for the budget.
-		t.m.top(context.Background(), func() { t.h.ServeHTTP(w, r) })
+		t.m.top(context.Background(), nil, func() { t.h.ServeHTTP(w, r) })
 		return
 	}
-	t.m.top(r.Context(), func() { t.h.ServeHTTP(w, r) })
+	t.m.top(r.Context(), nil, func() { t.h.ServeHTTP(w, r) }) // a request is in no instance
+}
+
+// hideServer returns r without the *http.Server of the host in its context.
+// net/http puts the server that serves the request under
+// http.ServerContextKey: a restricted plugin would write its fields
+// (Handler, TLSConfig, ConnContext), which the host memory check does not
+// see (hostmem.go knows the objects of the standard library variables
+// only). The next handler of the host gets the server back
+// (serverRestorer). Native code that the plugin calls itself does not: for
+// example, a directory read error of http.FileServer logs to the standard
+// logger, not to the ErrorLog of the server.
+func hideServer(r *http.Request) *http.Request {
+	if r == nil || r.Context().Value(http.ServerContextKey) == nil {
+		return r
+	}
+	return r.WithContext(hideServerCtx(r.Context()))
+}
+
+// hideServerCtx is hideServer for a context.
+func hideServerCtx(ctx context.Context) context.Context {
+	if ctx == nil {
+		return ctx
+	}
+	srv := ctx.Value(http.ServerContextKey)
+	if srv == nil {
+		return ctx
+	}
+	return &noServerCtx{ctx, srv}
+}
+
+// noServerCtx is a context where http.ServerContextKey gives nil. It does
+// not use context.WithValue: a valueCtx keeps its parent in the exported
+// field Context, and the reflect of the plugin would read the server
+// there. Here the parent and the server are in unexported fields, which
+// reflect does not give to the plugin.
+type noServerCtx struct {
+	parent context.Context
+	srv    any
+}
+
+// hostServerKey finds the noServerCtx of a request for restoreServer.
+// Value gives the *noServerCtx, never the server: a context of the plugin
+// in the chain sees the key and the result of Value, and the fields of
+// a *noServerCtx are not exported.
+type hostServerKey struct{}
+
+func (c *noServerCtx) Deadline() (time.Time, bool) { return c.parent.Deadline() }
+func (c *noServerCtx) Done() <-chan struct{}       { return c.parent.Done() }
+func (c *noServerCtx) Err() error                  { return c.parent.Err() }
+
+func (c *noServerCtx) Value(key any) any {
+	switch key {
+	case http.ServerContextKey:
+		return nil
+	case hostServerKey{}:
+		return c
+	}
+	return c.parent.Value(key)
+}
+
+// restoreServer puts the server that hideServer hid back in the context of
+// r, for the next handler of the host. httputil.ReverseProxy reads it: it
+// panics with http.ErrAbortHandler when the body of the backend fails, so
+// that the client does not take a cut response for a complete one.
+func restoreServer(r *http.Request) *http.Request {
+	if r == nil {
+		return r
+	}
+	ctx := r.Context()
+	if ctx.Value(http.ServerContextKey) != nil {
+		return r
+	}
+	// The plugin cannot make a *noServerCtx: its own context in the chain
+	// can only give back one that the vm made.
+	nsc, ok := ctx.Value(hostServerKey{}).(*noServerCtx)
+	if !ok {
+		return r
+	}
+	return r.WithContext(context.WithValue(ctx, http.ServerContextKey, nsc.srv))
+}
+
+// serverRestorer is a handler of the host that Plugin.Call gives to a
+// restricted plugin (its next): the host gets back its server. Only the
+// handlers of the host get it: a handler that the plugin gives to native
+// code is not wrapped.
+type serverRestorer struct{ h http.Handler }
+
+func (s serverRestorer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.h.ServeHTTP(w, restoreServer(r))
 }
 
 // recoverServe is the deferred call of ServeHTTP with
@@ -880,15 +1307,99 @@ func (t topHandler) recoverServe(w http.ResponseWriter) {
 	if r == nil || quietStop(r) {
 		return
 	}
+	if isBudget(r) {
+		t.m.budgetStops.Add(1)
+		if t.m.quietBudget {
+			t.m.reportBudget() // only the first stop
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
 	t.m.GoPanic(r)
 	w.WriteHeader(http.StatusInternalServerError)
 }
 
+// isBudget reports whether r is the end of the budget of a call.
+func isBudget(r any) bool {
+	err, ok := r.(error)
+	return ok && errors.Is(err, ErrBudget)
+}
+
+// ErrBudgetStopped is what GoPanic gets, with Options.QuietBudget, for the
+// first ServeHTTP of a machine that the budget stops (errors.Is(err,
+// ErrBudget) is true). The ServeHTTP panics with http.ErrAbortHandler:
+// net/http aborts the response without a log, so a plugin that the budget
+// stops at each request does not log a stack per request.
+// Machine.BudgetStops counts them all, and GoPanic gets a *BudgetStopsError
+// at most once per BudgetReportInterval while the stops go on.
+var ErrBudgetStopped = fmt.Errorf("%w: a request of the plugin was stopped (the next ones are counted by Machine.Stats, and reported at most once per minute)", ErrBudget)
+
+// reportBudget gives the first budget stop of the machine to GoPanic
+// (QuietBudget), then at most one *BudgetStopsError per
+// BudgetReportInterval while the stops go on. The Machine of a plugin lives
+// as long as the host (one Plugin per process, docs/RELOAD.md): with the
+// first stop only, a plugin that starts to loop weeks after its first stop
+// was not seen in the logs, unless the host polled Machine.Stats.
+func (m *Machine) reportBudget() {
+	if m.GoPanic == nil {
+		return
+	}
+	now := budgetNow()
+	if m.budgetReported.CompareAndSwap(false, true) {
+		m.budgetReportN.Store(m.budgetStops.Load())
+		m.budgetReportAt.Store(now)
+		m.GoPanic(ErrBudgetStopped)
+		return
+	}
+	last := m.budgetReportAt.Load()
+	if now-last < int64(BudgetReportInterval) || !m.budgetReportAt.CompareAndSwap(last, now) {
+		return
+	}
+	total := m.budgetStops.Load()
+	n := total - m.budgetReportN.Swap(total)
+	if n <= 0 {
+		return
+	}
+	m.GoPanic(&BudgetStopsError{Stops: n, Total: total, Since: time.Duration(now - last)})
+}
+
+// BudgetReportInterval is the least time between two reports of the budget
+// stops of a machine to GoPanic, with Options.QuietBudget: after the first
+// stop (ErrBudgetStopped), GoPanic gets at most one *BudgetStopsError per
+// interval, and only when there were new stops. So a plugin that the budget
+// stops at each request logs one line per minute, not one per request.
+const BudgetReportInterval = time.Minute
+
+// BudgetStopsError is what GoPanic gets, with Options.QuietBudget, when the
+// budget stopped more ServeHTTP calls of a machine since its last report
+// (reportBudget). errors.Is(err, ErrBudget) is true.
+type BudgetStopsError struct {
+	Stops int64         // ServeHTTP calls stopped since the last report
+	Total int64         // all of them since the load (Machine.BudgetStops)
+	Since time.Duration // time since the last report
+}
+
+func (e *BudgetStopsError) Error() string {
+	return fmt.Sprintf("%v: %d more requests of the plugin were stopped in the last %v (%d since the load; Machine.Stats)", ErrBudget, e.Stops, e.Since.Round(time.Second), e.Total)
+}
+
+// Unwrap returns ErrBudget.
+func (e *BudgetStopsError) Unwrap() error { return ErrBudget }
+
+// BudgetStops returns the number of ServeHTTP calls that the budget
+// stopped (ErrBudget), for the metrics of the host.
+func (m *Machine) BudgetStops() int64 { return m.budgetStops.Load() }
+
 // cancelCtx returns ctx when a call from the host stops when its context is
-// done (Options.Cancel), context.Background() otherwise (never done).
+// done (Options.Cancel), and otherwise a context that is never done: ctx
+// without its cancellation when it carries an Instance (instance.go),
+// context.Background() else.
 func (m *Machine) cancelCtx(ctx context.Context) context.Context {
 	if m.Cancel {
 		return ctx
+	}
+	if m.instanceOf(ctx) != nil {
+		return context.WithoutCancel(ctx)
 	}
 	return context.Background()
 }

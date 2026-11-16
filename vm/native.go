@@ -222,6 +222,11 @@ type nativeSite struct {
 	stores  int         // the argument a native container only stores (storeFuncs), or -1
 	deep    *nativeSite // native fmt for values nested too deep (deepprint.go)
 	plain   bool        // native copies, no opaque handles (convGraph.plain)
+	keep    keepMode    // keep the methods inside the values (keepmethods.go)
+	// The weight of the call for the budget (nativeSteps): the registers
+	// of the []byte and string arguments, and the steps per 64 bytes.
+	byteArgs []int32
+	byteMul  int64
 }
 
 func tupleTypes(t *types.Tuple) []types.Type {
@@ -235,6 +240,9 @@ func tupleTypes(t *types.Tuple) []types.Type {
 func (m *Machine) nativeSite(f *ssa.Function, args []int32) *nativeSite {
 	sig := f.Signature
 	s := &nativeSite{args: args, results: tupleTypes(sig.Results()), vari: sig.Variadic(), dst: decodeDstOf(f), prints: printFuncs[f.String()], plain: plainFuncs[f.String()], stores: -1}
+	if s.prints {
+		s.keep = keepFmt
+	}
 	if i, ok := storeFuncs[f.String()]; ok {
 		s.stores = i
 	}
@@ -246,6 +254,7 @@ func (m *Machine) nativeSite(f *ssa.Function, args []int32) *nativeSite {
 		s.params = tupleTypes(sig.Params())
 		s.deep = m.deepPrinter(f, s)
 	}
+	s.weigh(f)
 	return s
 }
 
@@ -316,7 +325,7 @@ func (m *Machine) callNativeSlow(s *nativeSite, regs []Value) Value {
 	}
 	var wb []func()
 	c := newConv(&wb)
-	c.g.prints, c.g.plain = s.prints, s.plain
+	c.g.prints, c.g.plain, c.g.keep = s.prints, s.plain, s.keep
 	in := make([]reflect.Value, len(s.args))
 	for i, a := range s.args {
 		if i == s.dst.arg {
@@ -341,16 +350,19 @@ func (m *Machine) callNativeSlow(s *nativeSite, regs []Value) Value {
 		if mf.fn.IsValid() && in[0].CanInterface() {
 			// mf.fn takes the receiver first: in lines up with its parameters.
 			m.realReflectArgs(mf.fn.Type(), in)
+			m.fitNativeArgs(mf.fn.Type(), 0, in, regs, s.args)
 			return m.pack(callRV(mf.fn, in, s.vari), s.results)
 		}
 		mv := in[0].MethodByName(s.method)
 		m.realReflectArgs(mv.Type(), in[1:])
+		m.fitNativeArgs(mv.Type(), 0, in[1:], regs, s.args[1:])
 		return m.pack(callRV(mv, in[1:], s.vari), s.results)
 	}
 	if s.prints {
 		m.topPrintArgs(in, s.vari)
 	}
 	m.realReflectArgs(s.fn.Type(), in)
+	m.fitNativeArgs(s.fn.Type(), 0, in, regs, s.args)
 	return m.pack(callRV(s.fn, in, s.vari), s.results)
 }
 
@@ -387,7 +399,7 @@ func (m *Machine) directArgs(s *nativeSite, regs []Value, in []reflect.Value) ([
 		if !ok || cell == nil {
 			return nil, false
 		}
-		rv, ok := cell.R.(reflect.Value)
+		rv, ok := loadWord(cell).R.(reflect.Value) // the pointee may be a word kind
 		if !ok || !rv.CanAddr() {
 			return nil, false
 		}
@@ -432,7 +444,15 @@ func lookupMethod(t reflect.Type, name string) *methodFunc {
 
 func isMapV(v Value) bool { _, ok := v.R.(*MapV); return ok }
 
-func (m *Machine) callNativeMethod(rv reflect.Value, name string, sig *types.Signature, regs []Value, args []int32) Value {
+func (m *Machine) callNativeMethod(rv reflect.Value, name string, sig *types.Signature, regs []Value, args []int32) (out Value) {
+	mf := m.lookupMethod(rv.Type(), name)
+	if !mf.fn.IsValid() && rv.Kind() != reflect.Interface {
+		// a method of a value of another machine that its box does not
+		// have (foreign.go)
+		if r, ok := m.callForeign(rv, name, sig, regs, args); ok {
+			return r
+		}
+	}
 	ps := tupleTypes(sig.Params())
 	in := make([]reflect.Value, len(args))
 	var wb []func()
@@ -441,6 +461,13 @@ func (m *Machine) callNativeMethod(rv reflect.Value, name string, sig *types.Sig
 		defer enterChanReader()() // before the data: see readsChans
 	}
 	c.g.prints = printMethods[methodKey{rv.Type(), name}]
+	switch {
+	case c.g.prints:
+		c.g.keep = keepFmt
+	case keepMethods[methodKey{rv.Type(), name}]:
+		c.g.keep = keepJSON
+		defer m.keepJSONResult(&out, sig)
+	}
 	dst := decodeDstOfMethod(rv.Type(), name)
 	for i, a := range args {
 		if i+1 == dst.arg { // dst.arg counts the receiver
@@ -454,14 +481,57 @@ func (m *Machine) callNativeMethod(rv reflect.Value, name string, sig *types.Sig
 	if c.g.prints {
 		m.topPrintArgs(in, sig.Variadic())
 	}
-	if mf := m.lookupMethod(rv.Type(), name); mf.fn.IsValid() && rv.CanInterface() {
+	if mf.fn.IsValid() && rv.CanInterface() {
 		all := append([]reflect.Value{rv}, in...)
 		m.realReflectArgs(mf.fn.Type(), all)
+		m.fitNativeArgs(mf.fn.Type(), 1, all[1:], regs, args)
 		return m.pack(callRV(mf.fn, all, sig.Variadic()), tupleTypes(sig.Results()))
 	}
 	mv := rv.MethodByName(name)
 	m.realReflectArgs(mv.Type(), in)
+	m.fitNativeArgs(mv.Type(), 0, in, regs, args)
 	return m.pack(callRV(mv, in, sig.Variadic()), tupleTypes(sig.Results()))
+}
+
+// keepJSONResult, deferred by a native call of a json encoder with a keep
+// conversion, sets *out to the result with the error when the value cannot
+// be kept, as lostCall does.
+func (m *Machine) keepJSONResult(out *Value, sig *types.Signature) {
+	r := recover()
+	if r == nil {
+		return
+	}
+	e, ok := r.(*LostMethodError)
+	if !ok {
+		panic(r)
+	}
+	*out = m.lostResult(e, sig.Results().Len())
+}
+
+// fitNativeArgs converts again each argument in[i] that the native function
+// type ft does not take as parameter i+skip: it converts regs[args[i]] to
+// the native type of that parameter (argNat). The static type of the
+// parameter, from which the argument was converted, may not give that
+// type: in AOT mode, a method of a type of an AOT copy takes an interface
+// of a package that the plugin interprets (FieldError.Translate takes a
+// ut.Translator of universal-translator). Its static type is then the
+// interpreted interface, which converts to a native any, but the native
+// method takes the native interface: reflect refused the call ("Call
+// using interface {} as type ut.Translator"). The static calls of these
+// methods go through the AOT hooks (vm.Arg), which convert to the native
+// type; the calls through an interface or a func value come here.
+func (m *Machine) fitNativeArgs(ft reflect.Type, skip int, in []reflect.Value, regs []Value, args []int32) {
+	for i := range in {
+		j := i + skip
+		if j >= ft.NumIn() {
+			return
+		}
+		want := ft.In(j)
+		if in[i].IsValid() && in[i].Type().AssignableTo(want) {
+			continue
+		}
+		in[i] = m.argNat(regs[args[i]], want)
+	}
 }
 
 // callBodyless invokes a native method on an interpreted representation of a
@@ -481,7 +551,7 @@ func (m *Machine) callBodyless(fn *ssa.Function, recv Value, regs []Value, args 
 	return m.callNativeMethod(rv, fn.Name(), sig, regs, args)
 }
 
-func (m *Machine) callNativeValue(fn reflect.Value, sig *types.Signature, regs []Value, args []int32) Value {
+func (m *Machine) callNativeValue(fn reflect.Value, sig *types.Signature, regs []Value, args []int32) (out Value) {
 	if fn.Pointer() == goexitPtr {
 		vmGoexit() // see goexitPtr
 	}
@@ -493,6 +563,13 @@ func (m *Machine) callNativeValue(fn reflect.Value, sig *types.Signature, regs [
 		defer enterChanReader()() // before the data: see readsChans
 	}
 	c.g.prints = printFuncPtrs[fn.Pointer()]
+	switch {
+	case c.g.prints:
+		c.g.keep = keepFmt
+	case keepFuncPtrs[fn.Pointer()]:
+		c.g.keep = keepJSON
+		defer m.keepJSONResult(&out, sig)
+	}
 	dst := decodeDstOfValue(fn) // a decoder held in a field, a map...
 	for i, a := range args {
 		if i == dst.arg {
@@ -507,6 +584,7 @@ func (m *Machine) callNativeValue(fn reflect.Value, sig *types.Signature, regs [
 		m.topPrintArgs(in, sig.Variadic())
 	}
 	m.realReflectArgs(fn.Type(), in)
+	m.fitNativeArgs(fn.Type(), 0, in, regs, args)
 	return m.pack(callRV(fn, in, sig.Variadic()), tupleTypes(sig.Results()))
 }
 
@@ -957,14 +1035,14 @@ func (m *Machine) toNativeAs(v Value, t types.Type, rt reflect.Type, c *natConv)
 			}
 		}
 		for i := range s {
-			out.Index(i).Set(m.toNativeAs(s[i], u.Elem(), rt.Elem(), c))
+			out.Index(i).Set(m.toNativeAs(loadCell(&s[i], u.Elem()), u.Elem(), rt.Elem(), c))
 		}
 		return out
 	case *types.Array:
 		out := reflect.New(rt).Elem()
 		es, _ := v.R.([]Value)
 		for i := range es {
-			out.Index(i).Set(m.toNativeAs(es[i], u.Elem(), rt.Elem(), c))
+			out.Index(i).Set(m.toNativeAs(loadCell(&es[i], u.Elem()), u.Elem(), rt.Elem(), c))
 		}
 		return out
 	case *types.Map:
@@ -1312,6 +1390,11 @@ type convGraph struct {
 	// maxBoxDepth bound, not one handle (and one Format call) per level
 	// (deepprint.go).
 	plain bool
+	// owner: with plain, a value of the program with methods and no hand
+	// wrapper stays a handle of its machine (vmOpaque), not a copy without
+	// methods: another machine sees its methods through the handle
+	// (foreignRType). Used for the values of a context (ctxConv).
+	owner bool
 	// aot: the call goes to an AOT copy in default mode (aotroute.go). box
 	// gives opaque handles, as with OpaqueAny, at every level, and a value
 	// of a native type that holds interfaces ([]any, map[string]any) is a
@@ -1323,6 +1406,11 @@ type convGraph struct {
 	// still convert, when bounded is set (see printCopyMax).
 	left    int
 	bounded bool
+	// keep: the call is a native printer or a json encoder that must see
+	// the methods of the plugin types inside its values (keepmethods.go);
+	// kept holds the pointers that the keep conversion met.
+	keep keepMode
+	kept map[*Value]reflect.Value
 }
 
 // maxBoxDepth bounds the nesting of interfaces that box copies for native
@@ -1645,6 +1733,8 @@ func (m *Machine) toNativeW(v Value, t types.Type, c *natConv) reflect.Value {
 		var nv reflect.Value
 		if iv.T.Native != nil {
 			nv = iv.V.R.(reflect.Value)
+		} else if kv, ok := m.keepIfaceOf(u, iv, c); ok {
+			nv = kv
 		} else if ow, ok := m.optWrapper(iv, rt); ok {
 			nv = ow
 		} else if w := m.ifaceWrapper(iv, rt); w != nil {
@@ -1703,7 +1793,7 @@ func (m *Machine) toNativeW(v Value, t types.Type, c *natConv) reflect.Value {
 				}
 			}
 			for i := range s {
-				out.Index(i).Set(elem(s[i]))
+				out.Index(i).Set(elem(loadCell(&s[i], u.Elem())))
 			}
 			return out
 		}
@@ -1778,7 +1868,11 @@ func (m *Machine) toNativeW(v Value, t types.Type, c *natConv) reflect.Value {
 			}
 			unsupported("pointer representation %T", v.R)
 		}
-		if rv, ok := cell.R.(reflect.Value); ok && rv.CanAddr() {
+		// The cell is read once, with loadCell: another goroutine may swap
+		// a map, slice or pointer variable while native code reads it
+		// (fmt.Sprint(&m)), and two plain reads could mix two writes.
+		cv := loadCell(cell, u.Elem())
+		if rv, ok := cv.R.(reflect.Value); ok && rv.CanAddr() {
 			// native struct living in native memory: share it
 			nv := rv.Addr()
 			if c.g.wb != nil {
@@ -1798,7 +1892,7 @@ func (m *Machine) toNativeW(v Value, t types.Type, c *natConv) reflect.Value {
 			c.g.shadows, c.g.cells = map[*Value]reflect.Value{}, map[uintptr]*Value{}
 		}
 		c.g.shadows[cell], c.g.cells[shadow.Pointer()] = shadow, cell
-		shadow.Elem().Set(m.toNativeW(*cell, u.Elem(), c.nested()))
+		shadow.Elem().Set(m.toNativeW(cv, u.Elem(), c.nested()))
 		if c.g.wb != nil {
 			if c.g.snaps == nil {
 				c.g.snaps = map[uintptr]reflect.Value{}
@@ -1839,7 +1933,7 @@ func (m *Machine) toNativeW(v Value, t types.Type, c *natConv) reflect.Value {
 		out := reflect.New(rt).Elem()
 		es, _ := v.R.([]Value)
 		for i := range es {
-			out.Index(i).Set(m.toNativeW(es[i], u.Elem(), c.nested()))
+			out.Index(i).Set(m.toNativeW(loadCell(&es[i], u.Elem()), u.Elem(), c.nested()))
 		}
 		return out
 	case *types.Chan:
@@ -1860,11 +1954,13 @@ func (m *Machine) toNativeW(v Value, t types.Type, c *natConv) reflect.Value {
 			if !f.CanSet() {
 				f = reflect.NewAt(f.Type(), f.Addr().UnsafePointer()).Elem()
 			}
+			ft := u.Field(i).Type()
+			fv := loadCell(&fs[i], ft) // a racy writer may swap a word field
 			if cut[i] {
-				f.Set(m.toNativeAs(fs[i], u.Field(i).Type(), f.Type(), c.nested()))
+				f.Set(m.toNativeAs(fv, ft, f.Type(), c.nested()))
 				continue
 			}
-			setNative(f, m.toNativeW(fs[i], u.Field(i).Type(), c.nested()))
+			setNative(f, m.toNativeW(fv, ft, c.nested()))
 		}
 		return out
 	}
@@ -1894,8 +1990,25 @@ func (m *Machine) sliceCopyOf(s []Value, rt reflect.Type, et types.Type, c *natC
 	if !basic && cap(s) > 0 {
 		nat = make([]reflect.Value, len(s))
 	}
+	// The elements are read once each (loadCell: a racy writer may swap a
+	// word element) and kept in orig: sliceBack writes back only the
+	// elements that native code changed, so that it does not undo the
+	// writes of other goroutines made during the call.
+	tail := basic && cap(s) > len(s)
+	var orig []Value
+	if cap(s) > 0 {
+		if tail {
+			orig = make([]Value, cap(s))
+		} else {
+			orig = make([]Value, len(s))
+		}
+	}
 	for i := range s {
-		nv := elem(s[i])
+		ev := loadCell(&s[i], et)
+		if orig != nil {
+			orig[i] = ev
+		}
+		nv := elem(ev)
 		out.Index(i).Set(nv)
 		if nat != nil {
 			nat[i] = nv // Set copied it: native code cannot change nv
@@ -1904,21 +2017,20 @@ func (m *Machine) sliceCopyOf(s []Value, rt reflect.Type, et types.Type, c *natC
 	if cap(s) == 0 {
 		return out // all empty slices share one address: nothing to write back
 	}
-	r := &sliceCopy{full: s[:cap(s)], n: len(s), out: out.Slice(0, cap(s)), et: et}
-	if basic && cap(s) > len(s) {
+	r := &sliceCopy{full: s[:cap(s)], n: len(s), out: out.Slice(0, cap(s)), et: et, orig: orig}
+	if tail {
 		// Native code may write past the length, inside the capacity, as
 		// an append in place does (hash.Hash.Sum(id[:0]) into a [32]byte
 		// field). The copy starts with the elements there, and sliceBack
 		// writes back the ones that changed, even when the program does
 		// not use the result.
 		for i := len(s); i < cap(s); i++ {
-			r.out.Index(i).Set(elem(r.full[i]))
+			orig[i] = r.full[i] // a basic type: not a word kind
+			r.out.Index(i).Set(elem(orig[i]))
 		}
 		r.tail = true
 	}
 	if !basic {
-		r.orig = make([]Value, len(s))
-		copy(r.orig, s)
 		r.nat = nat
 		r.keys = make(map[any]int, len(s))
 		for i := range s {
@@ -1945,13 +2057,23 @@ func (m *Machine) sliceBack(r *sliceCopy, c *natConv) {
 	}
 	r.done = true
 	for i := 0; i < r.n; i++ {
-		storeChanged(&r.full[i], m.sliceElemBack(r, i, c), r.et)
+		r.store(i, m.sliceElemBack(r, i, c))
 	}
 	if r.tail {
 		for i := r.n; i < len(r.full); i++ {
-			storeChanged(&r.full[i], m.fromNative(r.out.Index(i), r.et), r.et)
+			r.store(i, m.fromNative(r.out.Index(i), r.et))
 		}
 	}
+}
+
+// store writes back v, the element i after the call, unless it is the
+// value read before the call (orig): native code did not change it, and
+// the element may have been written since by another goroutine.
+func (r *sliceCopy) store(i int, v Value) {
+	if i < len(r.orig) && sameVMValue(r.orig[i], v, r.et) {
+		return
+	}
+	storeChanged(&r.full[i], v, r.et)
 }
 
 func (m *Machine) sliceElemBack(r *sliceCopy, i int, c *natConv) Value {
@@ -2304,8 +2426,8 @@ func (m *Machine) mapRebuild(r *mapCopy, c *natConv) {
 // goroutines can read it during the call, as in Go (json.Marshal of a shared
 // config).
 func storeChanged(dst *Value, v Value, t types.Type) {
-	if !sameVMValue(*dst, v, t) {
-		*dst = v
+	if !sameVMValue(loadCell(dst, t), v, t) {
+		storeCell(dst, v, t)
 	}
 }
 
@@ -2327,7 +2449,7 @@ func sameVMValue(a, b Value, t types.Type) bool {
 				return false
 			}
 			for i := range as {
-				if !sameVMValue(as[i], bs[i], u.Field(i).Type()) {
+				if !sameVMValue(loadCell(&as[i], u.Field(i).Type()), bs[i], u.Field(i).Type()) {
 					return false
 				}
 			}
@@ -2341,7 +2463,7 @@ func sameVMValue(a, b Value, t types.Type) bool {
 				return false
 			}
 			for i := range as {
-				if !sameVMValue(as[i], bs[i], u.Elem()) {
+				if !sameVMValue(loadCell(&as[i], u.Elem()), bs[i], u.Elem()) {
 					return false
 				}
 			}
@@ -2557,6 +2679,19 @@ func (m *Machine) unpack(res Value, rs *types.Tuple, ft reflect.Type) []reflect.
 	out := make([]reflect.Value, len(t))
 	for i := range t {
 		out[i] = m.resultToNative(t[i], rs.At(i).Type())
+	}
+	return out
+}
+
+// unpackRes is unpack with res in place of resultToNative.
+func (m *Machine) unpackRes(res Value, rs *types.Tuple, conv func(Value, types.Type) reflect.Value) []reflect.Value {
+	if rs.Len() == 1 {
+		return []reflect.Value{conv(res, rs.At(0).Type())}
+	}
+	t, _ := res.R.([]Value)
+	out := make([]reflect.Value, len(t))
+	for i := range t {
+		out[i] = conv(t[i], rs.At(i).Type())
 	}
 	return out
 }
@@ -2981,6 +3116,104 @@ func isCellShadow(rv reflect.Value, c *natConv) bool {
 	return ok && sh.Type() == rv.Type()
 }
 
+// holdsRefs reports whether a value of type t holds a slice or a map,
+// directly or in its fields and elements: memory that natSame compares by
+// identity, not by content.
+func holdsRefs(t types.Type) bool {
+	switch u := t.Underlying().(type) {
+	case *types.Slice, *types.Map:
+		return true
+	case *types.Array:
+		return holdsRefs(u.Elem())
+	case *types.Struct:
+		for i := 0; i < u.NumFields(); i++ {
+			if holdsRefs(u.Field(i).Type()) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// rtHoldsRefs is holdsRefs for a native type.
+func rtHoldsRefs(t reflect.Type) bool {
+	switch t.Kind() {
+	case reflect.Slice, reflect.Map:
+		return true
+	case reflect.Array:
+		return rtHoldsRefs(t.Elem())
+	case reflect.Struct:
+		for i := 0; i < t.NumField(); i++ {
+			if rtHoldsRefs(t.Field(i).Type) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// shareID is the identity of a native slice or map (see eachUntracked).
+type shareID struct {
+	p      uintptr
+	t      reflect.Type
+	n, cap int
+}
+
+func shareIDOf(v reflect.Value) shareID {
+	id := shareID{p: v.Pointer(), t: v.Type()}
+	if v.Kind() == reflect.Slice {
+		id.n, id.cap = v.Len(), v.Cap()
+	}
+	return id
+}
+
+// eachUntracked calls f for each slice and map in v (also in its fields
+// and elements, but not behind a pointer or an interface) that is not a
+// copy that the graph records (sliceCopyOf, mapCopyOf), and stops when f
+// returns false. The write-backs of the call (flushCopies) write in place
+// what native code changed in a recorded copy. A slice or a map that is
+// not recorded is either native memory that the cell shares (a native
+// slice view, a []byte, a native map: native code writes it directly), or
+// one that native code made (gob grows a []any, and a callback converted
+// it back): only fromNativeDeepC gives the content of the latter to the
+// program. An empty slice and a nil map hold nothing and are skipped.
+func (g *convGraph) eachUntracked(v reflect.Value, f func(reflect.Value) bool) bool {
+	switch v.Kind() {
+	case reflect.Slice:
+		if v.Cap() == 0 {
+			return true
+		}
+		if r, ok := g.slices[v.Pointer()]; ok && r.out.Type() == v.Type() {
+			return true
+		}
+		return f(v)
+	case reflect.Map:
+		if v.IsNil() {
+			return true
+		}
+		if r, ok := g.nmaps[v.Pointer()]; ok && r.out.Type() == v.Type() {
+			return true
+		}
+		return f(v)
+	case reflect.Array:
+		if !rtHoldsRefs(v.Type().Elem()) {
+			return true
+		}
+		for i := range v.Len() {
+			if !g.eachUntracked(v.Index(i), f) {
+				return false
+			}
+		}
+	case reflect.Struct:
+		for i := range v.NumField() {
+			if !g.eachUntracked(v.Field(i), f) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // ---- the reflect wall: boxing interpreted values with methods ----
 //
 // Native code can only see methods of interpreted values through a finite set
@@ -3051,6 +3284,12 @@ func (o vmObj) callGeneric(fn *ssa.Function, in []reflect.Value) []reflect.Value
 }
 
 func (o vmObj) call(name string, in ...reflect.Value) []reflect.Value {
+	return o.callRes(name, in, nil)
+}
+
+// callRes is call, with res (when not nil) in place of resultToNative for
+// the results of an interpreted method (callForeign).
+func (o vmObj) callRes(name string, in []reflect.Value, res func(Value, types.Type) reflect.Value) []reflect.Value {
 	if h, ok := o.host(); ok {
 		return h.MethodByName(name).Call(in)
 	}
@@ -3073,7 +3312,12 @@ func (o vmObj) call(name string, in ...reflect.Value) []reflect.Value {
 	}
 	defer o.m.resumeShadows(o.m.suspendShadows())
 	defer o.m.nativeCallback(o.origin)() // a method called on a goroutine of native code
-	out := o.m.unpack(o.m.Call(fn, args, nil), sig.Results(), nil)
+	var out []reflect.Value
+	if res == nil {
+		out = o.m.unpack(o.m.Call(fn, args, nil), sig.Results(), nil)
+	} else {
+		out = o.m.unpackRes(o.m.Call(fn, args, nil), sig.Results(), res)
+	}
 	// Slices alias in Go: copy back what the interpreted method stored in
 	// the elements of a native slice argument (e.g. driver.Rows.Next(dest)).
 	for i := range in {
@@ -3083,7 +3327,7 @@ func (o vmObj) call(name string, in ...reflect.Value) []reflect.Value {
 		if vs, ok := args[i+1].R.([]Value); ok {
 			et := sig.Params().At(i).Type().Underlying().(*types.Slice).Elem()
 			for j := 0; j < len(vs) && j < in[i].Len(); j++ {
-				in[i].Index(j).Set(o.m.toNative(vs[j], et))
+				in[i].Index(j).Set(o.m.toNative(loadCell(&vs[j], et), et))
 			}
 		}
 	}
@@ -3097,18 +3341,29 @@ func (o vmObj) callNative(name string, in []reflect.Value) []reflect.Value {
 	m, t := o.m, o.iv.T.T
 	if pt, ok := t.(*types.Pointer); ok {
 		if cell, ok := o.iv.V.R.(*Value); ok {
-			if r, ok := cell.R.(reflect.Value); ok && r.CanAddr() {
+			et := pt.Elem()
+			cv := loadCell(cell, et) // read once: a racy writer may swap it
+			if r, ok := cv.R.(reflect.Value); ok && r.CanAddr() {
 				return r.Addr().MethodByName(name).Call(in)
 			}
-			et := pt.Elem()
 			sh := reflect.New(m.reflectType(et))
-			sh.Elem().Set(m.toNative(*cell, et))
+			sh.Elem().Set(m.toNative(cv, et))
+			snap := reflect.New(sh.Type().Elem()).Elem()
+			snap.Set(sh.Elem())
 			mv := sh.MethodByName(name)
 			if !mv.IsValid() {
 				panic(fmt.Sprintf("vm: type %s has no method %s", t, name))
 			}
 			out := mv.Call(in)
-			*cell = m.fromNativeDeep(sh.Elem(), et)
+			// A method that did not change the receiver (String of a
+			// *json.Number) must not write the cell: it would undo the
+			// writes of other goroutines made during the call. natSame
+			// compares a slice or a map by identity, so a receiver that
+			// holds one is written back as before (its elements may have
+			// changed in place).
+			if !natSame(sh.Elem(), snap) || holdsRefs(et) {
+				storeCell(cell, m.fromNativeDeep(sh.Elem(), et), et)
+			}
 			return out
 		}
 	}
@@ -3198,7 +3453,21 @@ func (o vmObj) MarshalJSON() (b []byte, err error) {
 			}
 		}()
 	}
-	if fn, ok := o.iv.T.Methods["MarshalJSON"]; ok && fn.ssa.Signature.Params().Len() == 0 && fn.ssa.Signature.Results().Len() == 2 {
+	fn, ok := o.iv.T.Methods["MarshalJSON"]
+	text := false
+	if !ok || fn.ssa.Signature.Params().Len() != 0 || fn.ssa.Signature.Results().Len() != 2 {
+		fn, ok = o.iv.T.Methods["MarshalText"]
+		text = true
+	}
+	if ok && fn.ssa.Signature.Params().Len() == 0 && fn.ssa.Signature.Results().Len() == 2 {
+		if text {
+			// encoding/json writes the text of MarshalText as a string
+			res := o.call("MarshalText")
+			if err, _ := res[1].Interface().(error); err != nil {
+				return nil, err
+			}
+			return jsonText(res[0].Bytes())
+		}
 		res := o.call("MarshalJSON")
 		err, _ := res[1].Interface().(error)
 		return res[0].Bytes(), err
@@ -3314,7 +3583,7 @@ func (m *Machine) boxAs(iv *Iface, c *natConv, opaque bool) reflect.Value {
 			}
 		case *Value:
 			var nv reflect.Value
-			cv := p.R
+			cv := loadWord(p).R // the pointee may be a word kind
 			if s := ownShadow(p); s != nil {
 				cv = s
 			}
@@ -3428,6 +3697,11 @@ func (m *Machine) boxAs(iv *Iface, c *natConv, opaque bool) reflect.Value {
 	if hw, ok := m.handWrapper(o); ok {
 		return hw
 	}
+	if c != nil && c.g.owner {
+		// a value of the program nested in a context value, as at the
+		// top level (nativeVal)
+		return reflect.ValueOf(vmOpaque{o})
+	}
 	if c == nil || !c.g.prints {
 		if w, ok := m.optAny(iv); ok {
 			return w // optwrap.go
@@ -3463,7 +3737,7 @@ func (m *Machine) notePtr(nv reflect.Value, iv *Iface, t types.Type, c *natConv)
 	}
 	r := &ptrCopy{iv: iv, t: t, rt: nv.Type()}
 	if sh, ok := c.g.shadows[cell]; !ok || sh.Pointer() != nv.Pointer() {
-		cv := cell.R
+		cv := loadWord(cell).R // the pointee may be a word kind
 		if s := ownShadow(cell); s != nil {
 			cv = s
 		}

@@ -28,7 +28,7 @@ func TestRuntimeCouplings(t *testing.T) {
 		{"framesOK", framesOK, "runtime.Frames layout (callers.go): runtime.CallersFrames of interpreted frames loses them"},
 		{"embedFSLayout", embedFSLayout(), "embed.FS layout (embed.go): //go:embed of an embed.FS is refused"},
 		{"inHeapOK", inHeapOK, "runtime.AddCleanup on non-heap memory (unsafe.go): unsafe views keep strong references, string bytes are read-only"},
-		{"cellStartOK", cellStartOK, "runtime.findObject and the malloc header (fatal.go): with PanicOnFatal, runtime.SetFinalizer on a pointer inside an object still ends the host"},
+		{"spanLayoutOK", spanLayoutOK, "runtime.findObject and the layout of runtime.mspan (fatal.go): with PanicOnFatal, runtime.SetFinalizer refuses every pointer that is not the base of its object, and a large struct of the plugin cannot have a finalizer"},
 	}
 	if runtime.GOARCH != "wasm" {
 		probes = append(probes, struct {

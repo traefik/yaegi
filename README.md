@@ -137,7 +137,8 @@ res, err = p.Call(ctx, "New", ctx, next, cfg, "my-plugin")
 v, err := res[0].Interface()
 h := v.(http.Handler) // each ServeHTTP is a call into the plugin, with its own budget
 
-// Later, when the plugin is not used any more (for example after a reload):
+// At each new configuration, call CreateConfig and New again on the same p.
+// At shutdown, when the plugin is not used any more:
 err = p.Close()
 ```
 
@@ -394,7 +395,7 @@ riscv64), darwin (amd64, arm64), windows (amd64, arm64, 386), freebsd
 | [docs/AOTGEN.md](docs/AOTGEN.md) | the AOT copies of reflect libraries: generation, results, limits |
 | [docs/SANDBOX.md](docs/SANDBOX.md) | the guard rails and their limits |
 | [docs/UNSAFE.md](docs/UNSAFE.md) | what `unsafe` can and cannot do in this value model |
-| [docs/RELOAD.md](docs/RELOAD.md) | how a host reloads plugins |
+| [docs/RELOAD.md](docs/RELOAD.md) | the reload model: one `Plugin` for the life of the host, `New` at each new configuration |
 | [docs/BOUNDARY.md](docs/BOUNDARY.md) | every place where the standard library looks at the type or the methods of a value, with its test |
 | [docs/RESULTS.md](docs/RESULTS.md) | measured results: correctness, Traefik plugin catalog, speed, memory |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | layout, build and test, CI, following a new Go release |

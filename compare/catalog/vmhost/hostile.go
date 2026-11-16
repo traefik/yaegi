@@ -4,7 +4,7 @@ package main
 // and the guard rail of yaegi v2 that must stop each one (docs/SANDBOX.md).
 // Each case
 // loads its plugin with the options of the catalog host
-// (pluginhost.Options), sends its requests, and checks from the host that
+// (host.Options, through host.Load in AOT mode), sends its requests, and checks from the host that
 // the guard held: the request ended with the expected panic, the host state
 // did not change, the process is still alive.
 //
@@ -17,7 +17,7 @@ package main
 // (TestHostileCorpus).
 //
 // The memory quota of the cases is 256 MiB instead of the 1 GiB of
-// pluginhost.Options: the same mechanism, with less memory for the test.
+// host.Options: the same mechanism, with less memory for the test.
 //
 // This is not a proof that yaegi v2 is a sandbox (it is not, see the README):
 // the corpus checks that the guard rails that exist keep holding.
@@ -39,6 +39,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/traefik/yaegi/v2/host"
 	"github.com/traefik/yaegi/v2/internal/pluginhost"
 	"github.com/traefik/yaegi/v2/vm"
 )
@@ -71,14 +72,18 @@ type hostileHost struct {
 
 // load loads the plugin and calls CreateConfig and New.
 func (hh *hostileHost) load(name string) error {
-	opts := pluginhost.Options()
+	opts := host.Options()
 	opts.Dir, opts.AOT, opts.MaxMemory = hh.dir, hh.aot, hostileMaxMemory
 	opts.GoPanic = func(r any) {
 		hh.mu.Lock()
 		hh.gopanic = append(hh.gopanic, r)
 		hh.mu.Unlock()
 	}
-	p, err := vm.Load(opts, hostilePrefix+name)
+	load := vm.Load
+	if hh.aot {
+		load = host.Load // host.Check first, as Traefik
+	}
+	p, err := load(opts, hostilePrefix+name)
 	if err != nil {
 		return err
 	}
@@ -143,6 +148,22 @@ func panicIs(s served, err error) error {
 	return nil
 }
 
+// budgetStopped checks that the budget stopped the request: ServeHTTP
+// panics with http.ErrAbortHandler (net/http aborts the response without a
+// log), and the first stop of the plugin goes to GoPanic (vm/budget.go).
+func (hh *hostileHost) budgetStopped(s served) error {
+	if err := panicIs(s, http.ErrAbortHandler); err != nil {
+		return err
+	}
+	if got := hh.goPanics(1, 5*time.Second); len(got) != 1 || got[0] != vm.ErrBudgetStopped {
+		return fmt.Errorf("GoPanic got %v, want vm.ErrBudgetStopped", got)
+	}
+	if n := hh.p.M.BudgetStops(); n != 1 {
+		return fmt.Errorf("%d budget stops, want 1", n)
+	}
+	return nil
+}
+
 // panicAs checks that the request ended with a panic of type *T.
 func panicAs[T error](s served) error {
 	if s.timeout {
@@ -173,18 +194,38 @@ var hostileCases = []hostileCase{
 		if err := hh.mustLoad("spin"); err != nil {
 			return err
 		}
-		return panicIs(hh.serve("/", 30*time.Second), vm.ErrBudget)
+		return hh.budgetStopped(hh.serve("/", 30*time.Second))
 	}},
 	{"initspin", "Budget of init, LoadTimeout", func(hh *hostileHost) error {
+		// The init loops for ever. Two guards can stop the load, and the
+		// error says which one: the budget, after pluginhost.Budget steps
+		// (work, not wall time: about 1 s on an idle machine), or the
+		// LoadTimeout, when the load is slower than that (under -race on
+		// a loaded runner the steps alone took more than 30 s). Before,
+		// any error passed, and the time was compared with 30 s, the
+		// LoadTimeout itself: a load stopped by its LoadTimeout took 30 s
+		// and a few milliseconds, and failed the check.
+		timeout := pluginhost.Options().LoadTimeout
 		start := time.Now()
 		err := hh.load("initspin")
+		d := time.Since(start)
 		if err == nil {
 			return errors.New("the plugin loaded")
 		}
-		if d := time.Since(start); d > 30*time.Second {
-			return fmt.Errorf("the load took %v", d)
+		var le *vm.LoadError
+		switch {
+		case errors.Is(err, vm.ErrBudget):
+			return nil
+		case errors.As(err, &le) && (errors.Is(err, vm.ErrCanceled) || strings.Contains(err.Error(), context.DeadlineExceeded.Error())):
+			// LoadContext returns at the deadline, also while the init
+			// still runs: allow for a loaded scheduler, not for a load
+			// that runs on.
+			if d > timeout+10*time.Second {
+				return fmt.Errorf("the load stopped at its LoadTimeout (%v) after %v: %v", timeout, d, err)
+			}
+			return nil
 		}
-		return nil
+		return fmt.Errorf("the load failed after %v with %v, want vm.ErrBudget or the LoadTimeout", d, err)
 	}},
 	{"loadbomb", "load-time checks (loadbomb.go)", func(hh *hostileHost) error {
 		start := time.Now()
@@ -222,7 +263,7 @@ var hostileCases = []hostileCase{
 		// A round is about 100000 steps: rate/100000 rounds per second,
 		// plus one chunk per goroutine.
 		d := time.Since(t1).Seconds()
-		want := int(d*pluginhost.BackgroundRate/100000) + 12
+		want := int(d*host.BackgroundRate/100000) + 12
 		if n2-n1 > 2*want {
 			return fmt.Errorf("%d rounds in %.1f s, want at most about %d", n2-n1, d, want)
 		}
@@ -238,7 +279,7 @@ var hostileCases = []hostileCase{
 		if err := panicIs(hh.serve("/", 30*time.Second), vm.ErrTooManyGoroutines); err != nil {
 			return err
 		}
-		if n, max := hh.p.M.Goroutines(), pluginhost.Options().MaxGoroutines; n > max {
+		if n, max := hh.p.M.Goroutines(), host.MaxGoroutines; n > max {
 			return fmt.Errorf("%d live goroutines, more than MaxGoroutines %d", n, max)
 		}
 		return nil
@@ -250,7 +291,7 @@ var hostileCases = []hostileCase{
 		if s := hh.serve("/start", 30*time.Second); s.panic != nil || s.timeout {
 			return fmt.Errorf("/start: panic %v, timeout %v", s.panic, s.timeout)
 		}
-		max := pluginhost.Options().MaxGoroutines
+		max := host.MaxGoroutines
 		var most, ran int
 		for end := time.Now().Add(30 * time.Second); time.Now().Before(end); time.Sleep(50 * time.Millisecond) {
 			f := strings.Fields(hh.serve("/stat", 10*time.Second).body)

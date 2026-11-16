@@ -171,6 +171,80 @@ func TestLoadSourceTooLarge(t *testing.T) {
 	}
 }
 
+// TestLoadCachedSourceLimits checks that LoadCached applies LoadLimits to
+// the source files, with the same errors as Load: the total size and the
+// number of files. Before, LoadCached read each file whole and counted
+// nothing.
+func TestLoadCachedSourceLimits(t *testing.T) {
+	needSource(t)
+	baseDir, basePkg := writePlugin(t, "package p\n\nfunc F() int { return 1 }\n")
+	base, err := Load(Options{Dir: baseDir}, basePkg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	big := "package p\n\nvar S = \"" + strings.Repeat("a", 2<<20) + "\"\n"
+	bigDir, bigPkg := writePlugin(t, big)
+	limits := DefaultLoadLimits
+	limits.MaxTotalSourceBytes = 1 << 20 // 1 MiB, smaller than the file
+	_, loadErr := Load(Options{Dir: bigDir, LoadLimits: &limits}, bigPkg)
+	_, err = base.LoadCached(bigDir, Options{LoadLimits: &limits})
+	var le *LoadError
+	if !errors.As(err, &le) || loadErr == nil || err.Error() != loadErr.Error() {
+		t.Errorf("source size: LoadCached: %v, want the error of Load: %v", err, loadErr)
+	}
+
+	manyDir, manyPkg := writePlugin(t, "package p\n\nfunc F() int { return 1 }\n")
+	if err := os.WriteFile(filepath.Join(manyDir, "q.go"), []byte("package p\n\nfunc G() int { return 2 }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	limits = DefaultLoadLimits
+	limits.MaxFiles = 1
+	_, loadErr = Load(Options{Dir: manyDir, LoadLimits: &limits}, manyPkg)
+	_, err = base.LoadCached(manyDir, Options{LoadLimits: &limits})
+	if !errors.As(err, &le) || loadErr == nil || err.Error() != loadErr.Error() {
+		t.Errorf("file count: LoadCached: %v, want the error of Load: %v", err, loadErr)
+	}
+	// Within the limits, the cached load works.
+	if _, err := base.LoadCached(manyDir, Options{}); err != nil {
+		t.Errorf("LoadCached within the limits: %v", err)
+	}
+}
+
+// TestLoadCachedBombs checks that LoadCached refuses the load bombs with the
+// error of Load, at once: before, it gave the sources to go/types without
+// checkSourceSize and to the SSA builder without checkInstances, and ended
+// on LoadTimeout while go/types kept running.
+func TestLoadCachedBombs(t *testing.T) {
+	needSource(t)
+	baseDir, basePkg := writePlugin(t, "package p\n\nfunc F() int { return 1 }\n")
+	base, err := Load(Options{Dir: baseDir}, basePkg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"structAlias", "constDouble", "genericFuncChain"} {
+		var src, want string
+		for _, b := range loadBombs {
+			if b.name == name {
+				src, want = b.src, b.want
+			}
+		}
+		dir, pkg := writePlugin(t, src)
+		_, loadErr := Load(Options{Dir: dir}, pkg)
+		if loadErr == nil || !strings.Contains(loadErr.Error(), want) {
+			t.Fatalf("%s: Load: %v, want %q", name, loadErr, want)
+		}
+		start := time.Now()
+		_, err := base.LoadCached(dir, Options{LoadTimeout: 5 * time.Second})
+		var le *LoadError
+		if !errors.As(err, &le) || err.Error() != loadErr.Error() {
+			t.Errorf("%s: LoadCached: %v, want the error of Load: %v", name, err, loadErr)
+		}
+		if d := time.Since(start); d > time.Second {
+			t.Errorf("%s: LoadCached took %v", name, d)
+		}
+	}
+}
+
 // TestLoadHeaderReadBounded checks that the reads of go/build (the header
 // of each file) and of the yaegi:tags scan stop at the total source budget:
 // before, a file with a huge comment before its package clause was read

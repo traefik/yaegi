@@ -503,7 +503,7 @@ func (m *Machine) ifaceFrom(ws [2]Value, src types.Type) (Value, bool) {
 		if rt.T == nil {
 			unsupported("unsafe: the data word of a native %s must come from native memory", rt)
 		}
-		v = deepCopy(*p, rt.T)
+		v = deepCopy(loadCell(p, rt.T), rt.T)
 	case *byteView:
 		if rt.T == nil {
 			unsupported("unsafe: the data word of a native %s must come from native memory", rt)
@@ -611,7 +611,7 @@ func ifaceSlot(t types.Type, i int) int {
 // ifaceCur returns the words of the view: the pending ones, or the words of
 // the interface in the cell.
 func (v *hdrView) ifaceCur() [2]Value {
-	iv, _ := v.cell.R.(*Iface)
+	iv, _ := loadCell(v.cell, v.src).R.(*Iface)
 	if p := v.st.ipend; p != nil {
 		if iv == v.st.iseen {
 			return *p
@@ -625,12 +625,12 @@ func (v *hdrView) ifaceCur() [2]Value {
 // them, or pending words until they are complete.
 func (v *hdrView) ifaceSet(ws [2]Value) {
 	if val, ok := v.m.ifaceFrom(ws, v.src); ok {
-		*v.cell = val
+		storeCell(v.cell, val, v.src)
 		v.st.ipend = nil
 		return
 	}
 	v.st.ipend = &ws
-	v.st.iseen, _ = v.cell.R.(*Iface)
+	v.st.iseen, _ = loadCell(v.cell, v.src).R.(*Iface)
 }
 
 // ifaceSetWord writes x, of type t, as word k of ws. An integer must be 0
@@ -685,11 +685,11 @@ func (v *hdrView) ifaceStore(x Value, t types.Type) {
 	switch u := t.Underlying().(type) {
 	case *types.Struct:
 		for k, i := range ifaceWords(t) {
-			ifaceSetWord(&ws, k, fs[i], u.Field(i).Type())
+			ifaceSetWord(&ws, k, loadCell(&fs[i], u.Field(i).Type()), u.Field(i).Type())
 		}
 	case *types.Array:
 		for k := range ws {
-			ifaceSetWord(&ws, k, fs[k], u.Elem())
+			ifaceSetWord(&ws, k, loadCell(&fs[k], u.Elem()), u.Elem())
 		}
 	}
 	v.ifaceSet(ws)

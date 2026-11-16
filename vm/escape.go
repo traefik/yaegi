@@ -192,7 +192,7 @@ func (m *Machine) staticCallRunsBytecode(fn *ssa.Function) bool {
 		if fn.Origin() != nil {
 			o = fn.Origin()
 		}
-		if o.Pkg != nil && isReflectPkg(o.Pkg.Pkg) {
+		if p := funcPkg(o); p != nil && isReflectPkg(p) {
 			return false
 		}
 	}
@@ -283,7 +283,7 @@ func (cx *ctx) allocLocal(regs []Value, in *Instr) {
 	if cx.cells += s.cellVals; cx.m.MaxStack > 0 {
 		cx.checkStack(cx.topRegs())
 	}
-	if cx.m.mem != nil && cx.cells*valueSize > cx.charged {
+	if cx.m.mem != nil && cx.keptVals()*valueSize > cx.charged {
 		cx.chargeMem()
 	}
 }
@@ -296,16 +296,20 @@ func (cx *ctx) allocLocal(regs []Value, in *Instr) {
 // them in the free list of their site, in the ctx, and the next
 // OpAllocLocal of the same site on that ctx takes one back instead of
 // making a new one. Set to zero, a free cell keeps nothing alive but its
-// own memory (memSite.localSize, at most maxFreeCells for a ctx). A function called in a loop, or a recursion, then allocates no
-// cell after its first calls, as gc keeps such locals on the stack. A
-// frame that a panic or a Goexit unwinds gives nothing back.
+// own memory (memSite.localSize, at most maxFreeBytes for a ctx, counted
+// in MaxMemory). A function called in a loop, or a recursion, then
+// allocates no cell after its first calls, as gc keeps such locals on the
+// stack. A frame that a panic or a Goexit unwinds gives nothing back.
 //
 // The free lists stay with the ctx when it goes back to the pool (a call
 // from the host, such as a request of a plugin, takes a pooled ctx), so
 // they also work from one call from the host to the next. The index of a
 // site (memSite.local) is only unique in its Machine, and a pooled ctx can
-// serve another Machine next: a free list remembers its site, and a list
-// of another site is dropped. The pool itself is emptied by the GC.
+// serve another Machine next: getCtx drops the free cells of another
+// Machine (Machine.freeID), and a free list also remembers its site.
+// getCtx also charges the free cells again in the quota of the new call
+// (chargeFree), or drops them when they do not fit. The pool itself is
+// emptied by the GC.
 
 // localCell is the register of the cell of a frame-local Alloc of a
 // function, and its site.
@@ -320,10 +324,26 @@ type freeList struct {
 	cells []*Value
 }
 
-// maxFreeCells bounds the Values that the free cells of a ctx hold, as
-// pooledStack bounds the register stack that a pooled ctx keeps: a deep
-// recursion that is over keeps at most this much memory (1.5 MB).
-const maxFreeCells = pooledStack
+// maxFreeBytes bounds the bytes that the free cells of a ctx hold, for all
+// its sites together (maxFreeCells Values). A cell that does not fit is
+// dropped at the return of its frame, and the GC frees it.
+//
+// gc keeps the locals of a goroutine on its stack, so the memory they take
+// is the largest frame chain, not the sum of the frames that ever ran. The
+// free lists are a sum: one list per site. Before, a ctx kept up to 1.5 MB
+// (pooledStack Values) of free cells: 990 goroutines that called 16
+// functions with a local [4000]int and then blocked kept 1.5 GB, and 1000
+// requests in flight held their free cells in the ctx pool until the
+// second GC after them. 128 KiB keeps one [4096]byte buffer (98 KiB), the
+// common case of a handler called in a loop or from the host, and keeps a
+// burst of 1000 requests at 128 MB at most.
+//
+// The free cells count in the stack charge of the ctx (chargeMem), with its
+// live cells: MaxMemory counts what the ctx keeps.
+const maxFreeBytes = 128 << 10
+
+// maxFreeCells is maxFreeBytes in Values.
+const maxFreeCells = int(maxFreeBytes / valueSize)
 
 // reuseCell takes a free cell of the site s, or returns nil.
 func (cx *ctx) reuseCell(s *memSite) *Value {
@@ -375,6 +395,16 @@ func (cx *ctx) freeLocals(fn *Func, regs []Value) {
 		f.cells = append(f.cells, cell)
 		cx.freeSize += n
 	}
+}
+
+// dropFree drops all the free cells of cx: the GC frees them.
+func (cx *ctx) dropFree() {
+	for i := range cx.freeCells {
+		f := &cx.freeCells[i]
+		clear(f.cells)
+		f.site, f.cells = nil, f.cells[:0]
+	}
+	cx.freeSize = 0
 }
 
 // resetCell sets the cell of a frame-local Alloc (OpAllocLocal) to the

@@ -206,7 +206,7 @@ func (m *Machine) ptrUnmarshalerWrapper(o vmObj) (reflect.Value, bool) {
 	if !ok || cell == nil {
 		return reflect.Value{}, false
 	}
-	inner := vmObj{m: m, iv: &Iface{T: m.rtypeOf(pp.Elem()), V: *cell}}
+	inner := vmObj{m: m, iv: &Iface{T: m.rtypeOf(pp.Elem()), V: loadWord(cell)}} // a *T variable
 	if !inner.unmarshalMethod("UnmarshalJSON") {
 		return reflect.Value{}, false
 	}
@@ -223,16 +223,19 @@ type ptrJSONUnmarshalerP struct {
 }
 
 func (w *ptrJSONUnmarshalerP) UnmarshalJSON(b []byte) error {
+	// cell holds a *T: a word kind, read and written with the seqlock
 	if string(bytes.TrimSpace(b)) == "null" {
-		*w.cell = Value{}
+		storeWord(w.cell, Value{})
 		return nil
 	}
-	if w.cell.R == nil {
+	p := loadWord(w.cell)
+	if p.R == nil {
 		c := new(Value)
 		*c = w.m.zero(w.elem)
-		*w.cell = Value{R: c}
+		p = Value{R: c}
+		storeWord(w.cell, p)
 	}
-	return vmObj{m: w.m, iv: &Iface{T: w.rt, V: *w.cell}}.callUnmarshal("UnmarshalJSON", b)
+	return vmObj{m: w.m, iv: &Iface{T: w.rt, V: p}}.callUnmarshal("UnmarshalJSON", b)
 }
 
 // unmarshalMethod reports whether the method name of the boxed value has

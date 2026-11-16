@@ -4,4 +4,3 @@
 # WRONG is a silent difference (TODO.md section 1): fix it, or make it
 # fail with an error, and remove its line.
 # case	mode	verdict	why
-lib_validator	v1	REFUSED	golang.org/x/sys/cpu is interpreted and has assembly

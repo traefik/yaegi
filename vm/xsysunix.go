@@ -123,12 +123,7 @@ func (m *Machine) xsysSubset() *Package {
 		}
 		if e := m.env; e != nil {
 			if _, ok := all.Funcs["Getenv"]; ok {
-				funcs["Getenv"] = reflect.ValueOf(func(key string) (string, bool) {
-					e.mu.RLock()
-					defer e.mu.RUnlock()
-					v, ok := e.vars[key]
-					return v, ok
-				})
+				funcs["Getenv"] = reflect.ValueOf(e.lookup)
 			}
 			if _, ok := all.Funcs["Environ"]; ok {
 				funcs["Environ"] = reflect.ValueOf(e.environ)

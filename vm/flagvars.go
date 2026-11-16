@@ -221,7 +221,7 @@ func textVarHook(method bool) storageHook {
 		if !ok {
 			return m.callFlag(f, a) // a pointer to native memory
 		}
-		*cell = deepCopy(m.textDefault(a[i+2], pt.Elem()), pt.Elem())
+		storeCell(cell, deepCopy(m.textDefault(a[i+2], pt.Elem()), pt.Elem()), pt.Elem())
 		px := Value{R: reflect.ValueOf(&textProxy{vmObj{m: m, iv: iv, origin: m.originAcct()}})}
 		args := append([]Value(nil), a...)
 		args[i], args[i+2] = px, px
@@ -251,7 +251,7 @@ func (m *Machine) textDefault(v Value, et types.Type) Value {
 	if p, ok := t.Underlying().(*types.Pointer); ok {
 		t = p.Elem()
 		if c, ok := x.R.(*Value); ok {
-			x = *c
+			x = loadCell(c, t)
 		} else if rv, ok := x.R.(reflect.Value); ok {
 			x = m.fromNative(rv.Elem(), t)
 		}

@@ -159,6 +159,54 @@ func (m *Machine) cpart(t types.Type) reflect.Type {
 	return nil
 }
 
+// natIdentical reports whether the native struct type rt and the type t of
+// the program are identical, as Go sees them for an assignment or a
+// conversion. A struct of the program is never identical to a native struct
+// with an unexported field: the unexported fields of two packages are never
+// the same fields. Without this, reflect.Set or Convert of a *strings.Reader
+// into a struct of the same shape gave its text to the plugin, and the
+// fields of a host object that only unexported fields reach.
+func (m *Machine) natIdentical(rt reflect.Type, t types.Type) bool {
+	return m.natSame(rt, t, true)
+}
+
+// natConvertible reports whether a value of the native struct type rt and
+// one of the struct type t of the program convert to each other, as Go
+// sees it: the names of rt and t do not count, the struct tags neither
+// (they do in natIdentical), and an unexported field never matches.
+func (m *Machine) natConvertible(rt reflect.Type, t types.Type) bool {
+	return rt.Kind() == reflect.Struct && m.natSame(rt, t.Underlying(), false)
+}
+
+// natSame is natIdentical, with the struct tags compared when tags is
+// true.
+func (m *Machine) natSame(rt reflect.Type, t types.Type, tags bool) bool {
+	if m.isNativeNamed(t) {
+		return m.reflectType(t) == rt
+	}
+	if _, named := types.Unalias(t).(*types.Named); named && rt.Name() != "" {
+		return false // two named types of two packages
+	}
+	u, ok := t.Underlying().(*types.Struct)
+	if !ok || rt.Kind() != reflect.Struct || rt.NumField() != u.NumFields() {
+		return false
+	}
+	for i := range u.NumFields() {
+		f, g := rt.Field(i), u.Field(i)
+		if f.Name != g.Name() || !f.IsExported() || f.Anonymous != g.Embedded() || tags && string(f.Tag) != u.Tag(i) {
+			return false
+		}
+		if f.Type.Kind() == reflect.Struct {
+			if !m.natSame(f.Type, g.Type(), tags) {
+				return false
+			}
+		} else if c := m.counterpart(g.Type()); c == nil || c != f.Type {
+			return false
+		}
+	}
+	return true
+}
+
 func chanDir(d types.ChanDir) reflect.ChanDir {
 	switch d {
 	case types.SendOnly:

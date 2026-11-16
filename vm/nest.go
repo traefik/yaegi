@@ -44,12 +44,31 @@ const DefaultMaxNest = 10000
 // the outermost run (ctx.g), so registering a goroutine does not allocate.
 type gstate struct {
 	cur *ctx // innermost ctx running on the goroutine
+	// ctxAsker is the machine whose ctxValue runs a native Value call on
+	// the goroutine (context.go).
+	ctxAsker *Machine
 	// fault is set when a run of the goroutine stops with ErrBudget or
-	// ErrStackOverflow. Native code may recover the panic (fmt does it for
-	// String methods): the VM raises it again when the native call
-	// returns and when each nested run returns, so the outermost caller
-	// always gets it.
+	// ErrStackOverflow (or with errCanceledHard, errClosedHard). Native
+	// code may recover the panic (fmt does it for String methods): the VM
+	// raises it again when the native call returns and when each nested
+	// run returns, so the outermost caller always gets it (reraise).
 	fault error
+	// The deferred calls of the frames that ErrBudget or ErrStackOverflow
+	// stops run, as for a cancellation: faultLeft is the grace of steps
+	// that they share (cancelGrace at the first fault), cleanup counts the
+	// deferred calls that run for the fault (the fault is not raised again
+	// inside them), and hard is set when the grace is spent: the fault is
+	// then fatal (ctx.isFatal) and no deferred call runs any more.
+	faultLeft int64
+	cleanup   int
+	hard      bool
+	// hostEntry: the outermost run is a call that turns a Goexit into
+	// the panic errGoexit (Plugin.Call, init), and goexit is set when a
+	// Goexit of a callback of native code goes on as that panic
+	// (runRecv). Native code may recover it: it is raised again as a
+	// fault is.
+	hostEntry bool
+	goexit    bool
 	// top is set by Machine.top while it runs: the runs nested directly on
 	// topOuter are calls from the host, with the account pending
 	// (budget.go).
@@ -184,7 +203,8 @@ func (cx *ctx) nestIn(outer *ctx) {
 		// error chain) must still reach the end of the budget, even when
 		// the callback itself has no call and no loop.
 		cx.steps, cx.limit = outer.steps+1, outer.limit
-		cx.acct, cx.slice, cx.chunk, cx.rateEnd = outer.acct, outer.slice, outer.chunk, outer.rateEnd
+		cx.acct, cx.slice, cx.chunk, cx.rateEnd, cx.sliceAt = outer.acct, outer.slice, outer.chunk, outer.rateEnd, outer.sliceAt
+		cx.inst = outer.inst
 		if cx.steps >= cx.limit {
 			cx.refill()
 		}
@@ -209,7 +229,14 @@ func (cx *ctx) nestIn(outer *ctx) {
 func (cx *ctx) nestOut(outer *ctx) {
 	if !cx.ownBudget {
 		outer.steps, outer.limit = cx.steps, cx.limit
-		outer.acct, outer.slice, outer.chunk, outer.rateEnd = cx.acct, cx.slice, cx.chunk, cx.rateEnd
+		outer.acct, outer.slice, outer.chunk, outer.rateEnd, outer.sliceAt = cx.acct, cx.slice, cx.chunk, cx.rateEnd, cx.sliceAt
+		if a := outer.acct; a != nil && a.rate > 0 {
+			// With a BudgetRate, the end of a callback is a blocking
+			// point: native code that calls a method of the plugin for
+			// each part of a stream (the Write of a wrapper of the
+			// ResponseWriter) waits between two calls (budget.go).
+			outer.blocked()
+		}
 	} else {
 		cx.giveBack() // the account may be shared with the next runs (Machine.top)
 	}
@@ -256,19 +283,82 @@ func (cx *ctx) overflow() { cx.fail(ErrStackOverflow) }
 // outOfBudget stops the goroutine with ErrBudget.
 func (cx *ctx) outOfBudget() { cx.fail(ErrBudget) }
 
+// fail stops the goroutine with err. errCanceledHard and errClosedHard
+// stop it at once (budget.go, close.go). ErrBudget and ErrStackOverflow
+// unwind it as ErrCanceled does: the deferred calls of the stopped frames
+// run, so a deferred Unlock or wg.Done still runs, and recover cannot stop
+// the panic (recoverable). They share a grace of cancelGrace steps
+// (faultGrace): a deferred call that does not end stops once the grace is
+// spent, without running the deferred calls that are left. A new
+// ErrBudget or ErrStackOverflow during the deferred calls (a deferred
+// call that overflows the stack again) panics again, and the deferred
+// calls below it still run. Before, both errors skipped every deferred
+// call: a plugin that ran over its budget under a lock wedged every later
+// call that took the lock.
 func (cx *ctx) fail(err error) {
-	if cx.gs != nil {
-		cx.gs.fault = err
+	gs := cx.gs
+	if gs == nil {
+		panic(err)
+	}
+	if err == errCanceledHard || err == errClosedHard {
+		gs.fault, gs.hard = err, true
+		panic(err)
+	}
+	if gs.fault == nil {
+		gs.fault, gs.faultLeft = err, cancelGrace
+		panic(err)
+	}
+	// A new fault during the deferred calls of a fault: it costs
+	// faultCost steps of the grace, because it may come before any step
+	// (a deferred call that overflows the stack at once): the deferred
+	// calls of a million pending defers each panicked for free.
+	gs.faultLeft -= faultCost
+	if gs.hard || gs.faultLeft <= 0 {
+		gs.hard = true
+		panic(gs.fault)
 	}
 	panic(err)
+}
+
+// faultCost is the cost, in steps of the grace, of a fault raised again
+// during the deferred calls of a fault (fail).
+const faultCost = 64
+
+// faultGrace gives cx the next steps of the grace of its goroutine, which
+// stops with a fault, or stops it for good when the grace is spent. The
+// steps past the limit (the weight of a native call, which charge counts at
+// once) are taken from the grace too, as for a cancel (grace, budget.go): a
+// deferred regexp on a large input stops before it starts.
+func (cx *ctx) faultGrace() {
+	gs := cx.gs
+	gs.faultLeft -= max(cx.steps-cx.limit, 0)
+	n := min(gs.faultLeft, minChunk)
+	if gs.hard || n <= 0 {
+		gs.hard = true
+		panic(gs.fault)
+	}
+	gs.faultLeft -= n
+	cx.limit = cx.steps + n
+}
+
+// reraise raises again the fault (or the Goexit, hostEntry) of the
+// goroutine: always once the grace of the fault is spent, and else outside
+// the deferred calls that run for it.
+func (gs *gstate) reraise() {
+	if gs.fault != nil && (gs.hard || gs.cleanup == 0) {
+		panic(gs.fault)
+	}
+	if gs.goexit && gs.cleanup == 0 {
+		panic(errGoexit)
+	}
 }
 
 // checkFault raises again a fault that native code recovered during the
 // native call that just returned. On a 32-bit platform it also sign extends
 // the int variables that flag may have written (flagvars.go).
 func (cx *ctx) checkFault() {
-	if f := cx.gs.fault; f != nil {
-		panic(f)
+	if gs := cx.gs; gs.fault != nil || gs.goexit {
+		gs.reraise()
 	}
 	if intIs32 {
 		cx.m.flagInts.fix() // flagvars.go
@@ -291,8 +381,6 @@ func (cx *ctx) callIn(g uintptr, outer *ctx, fn *Func, args, env []Value) Value 
 		}
 	}()
 	rv := cx.run(fn, args, env)
-	if gs.fault != nil {
-		panic(gs.fault)
-	}
+	gs.reraise()
 	return rv
 }

@@ -9,17 +9,17 @@
 package asn1
 
 import (
-	aotvm "github.com/traefik/yaegi/v2/vm"
 	reflect "github.com/traefik/yaegi/v2/vreflect"
+
+	// ASN.1 objects have metadata preceding them:
+	//   the tag: the type of the object
+	//   a flag denoting if this object is compound or not
+	//   the class type: the namespace of the tag
+	//   the length of the object, in bytes
+	aotvm "github.com/traefik/yaegi/v2/vm"
 	"strconv"
 	"strings"
 )
-
-// ASN.1 objects have metadata preceding them:
-//   the tag: the type of the object
-//   a flag denoting if this object is compound or not
-//   the class type: the namespace of the tag
-//   the length of the object, in bytes
 
 // Here are some standard tags and classes
 

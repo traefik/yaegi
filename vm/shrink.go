@@ -52,6 +52,7 @@ import (
 	"sort"
 
 	"golang.org/x/tools/go/packages"
+	"golang.org/x/tools/go/ssa"
 )
 
 // dropSyntax drops the syntax and the type information that the source
@@ -248,4 +249,58 @@ func scanSyntax(n ast.Node, info *types.Info) (lits []*ast.FuncLit, arrayRange b
 		return true
 	})
 	return lits, arrayRange
+}
+
+// dropInitCode drops the compiled code of the package init functions fns
+// (and of their init#N functions) once they have run on m, and the SSA
+// blocks of those of root, the package of the plugin. An init runs once,
+// and for a package with large tables of literals its code and its SSA
+// are the largest part of what a load keeps: on a plugin with the tables
+// of brotli, about 70 MB of compiled code (registers, memory sites,
+// literal sites) and 40 MB of SSA (one constant and one store per
+// element). The function literals of an init keep their SSA and their
+// code: the init may have stored them in a variable.
+//
+// The code is m's own (each machine compiles its functions), but the SSA
+// belongs to the program, which another machine can share: LoadCached
+// builds a new package in the program of a plugin, and its machine runs
+// the init of the imported packages again for its own globals. So only
+// the SSA of root is dropped: no other package imports it.
+//
+// Nothing calls these functions again on m: the VM runs the init of a
+// package once, the host cannot call an unexported function, and an init
+// function of root without blocks is not interpreted any more (isInterp),
+// so initOrder does not return it.
+func (m *Machine) dropInitCode(root *ssa.Package, fns []*ssa.Function) {
+	drop := map[*ssa.Function]bool{}
+	for _, f := range fns {
+		drop[f] = true
+		if f.Pkg == nil {
+			continue
+		}
+		for _, mem := range f.Pkg.Members {
+			if g, ok := mem.(*ssa.Function); ok && isInitFunc(g) {
+				drop[g] = true
+			}
+		}
+	}
+	m.mu.Lock()
+	for f := range drop {
+		if fn := m.funcs[f]; fn != nil {
+			// A PC taken in the init (runtime.Callers in a package
+			// variable) can still be decoded: keep the Func, with
+			// ncode and the small position table pos (callers.go),
+			// without its code. Nothing here writes what decodePC
+			// and posAt read.
+			fn.code, fn.template = nil, nil
+			fn.insStart, fn.insReg, fn.problems = nil, nil, nil
+			fn.aggVals, fn.cells, fn.locals = nil, nil, nil
+		}
+	}
+	m.mu.Unlock()
+	for f := range drop {
+		if f.Pkg == root {
+			f.Blocks, f.Recover, f.Locals = nil, nil, nil
+		}
+	}
 }

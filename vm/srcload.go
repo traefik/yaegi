@@ -146,7 +146,10 @@ var errNoGoMod = errors.New("no go.mod")
 // regular file below the directory (without symbolic links), as in a
 // Kubernetes ConfigMap volume.
 //
-// When no go.mod is found, the error wraps errNoGoMod. root is an absolute
+// When no go.mod is found, the error wraps errNoGoMod. Its text names the
+// directory of the plugin twice: in full, which hidePaths replaces with "."
+// in a load error, and by its last element, which stays (the host sees which
+// plugin has no go.mod). root is an absolute
 // path (without symbolic links when underRoot had to resolve them).
 func findModule(dir, limit string) (root, path string, gomod *modFile, err error) {
 	abs, err := filepath.Abs(dir)
@@ -176,11 +179,11 @@ func findModule(dir, limit string) (root, path string, gomod *modFile, err error
 			}
 		}
 		if steps == 0 {
-			return "", "", nil, fmt.Errorf("%w in %s or its parents up to %s (Options.Root): the plugin needs a go.mod file", errNoGoMod, abs, top)
+			return "", "", nil, fmt.Errorf("%w in the plugin directory %s (Options.Dir, named %q) or its parents up to %s (Options.Root): the plugin needs a go.mod file", errNoGoMod, abs, filepath.Base(abs), top)
 		}
 		steps--
 		if p := filepath.Dir(d); p == d {
-			return "", "", nil, fmt.Errorf("%w in %s or its parents", errNoGoMod, abs)
+			return "", "", nil, fmt.Errorf("%w in the plugin directory %s (Options.Dir, named %q) or its parents: the plugin needs a go.mod file", errNoGoMod, abs, filepath.Base(abs))
 		}
 	}
 }
@@ -1175,21 +1178,9 @@ func (l *srcLoader) parseFile(name string) (*ast.File, error) {
 		return nil, err
 	}
 	defer file.Close()
-	st, err := file.Stat()
+	src, err := readBudgeted(l.budget, file, name)
 	if err != nil {
 		return nil, err
-	}
-	if err := l.budget.addFile(st.Size()); err != nil {
-		return nil, err
-	}
-	// Read at most the counted size: a file that grows after the check is
-	// not read past the budget.
-	src, err := io.ReadAll(io.LimitReader(file, st.Size()+1))
-	if err != nil {
-		return nil, err
-	}
-	if int64(len(src)) > st.Size() {
-		return nil, fmt.Errorf("%s changed while it was read", name)
 	}
 	// Without SkipObjectResolution: checkSourceSize (loadbomb.go) follows the
 	// local names to their declarations.
@@ -1201,9 +1192,30 @@ func (l *srcLoader) parseFile(name string) (*ast.File, error) {
 	return f, nil
 }
 
+// readBudgeted reads the Go file name, open as file, after it counts its
+// size in budget (a *LoadError when a limit of LoadLimits is passed). It
+// reads at most the counted size: a file that grows after the check is not
+// read past the budget.
+func readBudgeted(budget *loadBudget, file *os.File, name string) ([]byte, error) {
+	st, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if err := budget.addFile(st.Size()); err != nil {
+		return nil, err
+	}
+	src, err := io.ReadAll(io.LimitReader(file, st.Size()+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(src)) > st.Size() {
+		return nil, fmt.Errorf("%s changed while it was read", name)
+	}
+	return src, nil
+}
+
 // stdClosure returns the standard library packages the source packages
-// import, directly or not, sorted by path: SSA needs a package for every
-// package whose objects the program refers to, not for the whole library.
+// import, directly or not, sorted by path.
 func stdClosure(order []*srcPkg) []*types.Package {
 	seen := map[*types.Package]bool{}
 	var out []*types.Package
@@ -1231,6 +1243,105 @@ func stdClosure(order []*srcPkg) []*types.Package {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Path() < out[j].Path() })
 	return out
+}
+
+// vmNamedStd are the standard library packages that the VM looks up by
+// path at run time (Program.ImportedPackage): it needs their SSA package
+// whenever the plugin uses them, directly or not.
+var vmNamedStd = map[string]bool{
+	"context": true, "expvar": true, "flag": true, "net/http/pprof": true,
+	"reflect": true, "sort": true, "testing/quick": true,
+}
+
+// stdSSA returns the packages of closure (stdClosure) that the SSA program
+// must create, sorted by path:
+//
+//   - the standard library packages that a source package imports: its
+//     code may name their functions, variables and constants, and ssa finds
+//     them in the SSA package of their types.Package;
+//   - the imports of the packages built from embedded sources (hasSource),
+//     for the same reason;
+//   - vmNamedStd.
+//
+// The other packages of the closure, imported only by packages that run
+// natively, are left out. No source names their functions, variables or
+// constants; their types reach the program (http.Request.TLS is a
+// *tls.ConnectionState) and ssa creates the methods of these types on demand
+// from their types (Program.objectMethod), once per program, when the
+// program calls or converts them. CreatePackage of a package without
+// syntax makes an ssa.Function for every function and method of the
+// package, and each plugin has its own ssa.Program: for a small plugin that
+// imports net/http, that was 3.2 MB per plugin for about 3,800 functions,
+// almost all unused (cmd/loadmany).
+func stdSSA(order []*srcPkg, closure []*types.Package, hasSource func(string) bool) []*types.Package {
+	inClosure := map[*types.Package]bool{}
+	for _, tp := range closure {
+		inClosure[tp] = true
+	}
+	need := map[*types.Package]bool{}
+	var add func(*types.Package)
+	add = func(tp *types.Package) {
+		if need[tp] || !inClosure[tp] {
+			return
+		}
+		need[tp] = true
+		if hasSource(tp.Path()) {
+			for _, imp := range tp.Imports() {
+				add(imp)
+			}
+		}
+	}
+	for _, p := range order {
+		for _, imp := range p.types.Imports() {
+			add(imp)
+		}
+	}
+	for _, tp := range closure {
+		if vmNamedStd[tp.Path()] {
+			add(tp)
+		}
+	}
+	var out []*types.Package
+	for _, tp := range closure {
+		if need[tp] {
+			out = append(out, tp)
+		}
+	}
+	return out
+}
+
+// createStdImports creates in prog the SSA packages of the standard library
+// packages that tp imports and that prog does not have yet (stdSSA left
+// them out), as loadSource does: from their embedded sources, built, with
+// their own imports, or from their types only.
+func createStdImports(prog *ssa.Program, tp *types.Package) error {
+	std, err := stdtypes.Load()
+	if err != nil {
+		return err
+	}
+	var built []*ssa.Package
+	var create func(*types.Package)
+	create = func(imp *types.Package) {
+		if imp == types.Unsafe || prog.Package(imp) != nil || !stdtypes.IsStd(imp.Path()) {
+			return
+		}
+		s := std.Source(imp.Path())
+		if s == nil {
+			prog.CreatePackage(imp, nil, nil, true)
+			return
+		}
+		built = append(built, prog.CreatePackage(imp, s.Files, s.Info, true))
+		for _, d := range imp.Imports() {
+			create(d)
+		}
+	}
+	for _, imp := range tp.Imports() {
+		create(imp)
+	}
+	for _, sp := range built {
+		sp.Build()
+	}
+	return nil
 }
 
 // sourceLoad is the result of loadSource.
@@ -1310,7 +1421,8 @@ func loadSource(ctx context.Context, dir, limit, goPath, pkgPath string, limits 
 	r.prog.CreatePackage(types.Unsafe, nil, nil, true)
 	var stdSrc []*ssa.Package
 	defer func() { r.stdSrc = stdSrc }()
-	for _, tp := range stdClosure(l.order) {
+	hasSource := func(path string) bool { return std.Source(path) != nil }
+	for _, tp := range stdSSA(l.order, stdClosure(l.order), hasSource) {
 		if s := std.Source(tp.Path()); s != nil {
 			// Bodies for the instances of its generic functions,
 			// interpreted (isInterp); the rest stays native.

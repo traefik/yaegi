@@ -272,7 +272,7 @@ func (m *Machine) runInits(ctx context.Context, fns []*ssa.Function) {
 	for i, f := range fns {
 		compiled[i] = m.funcOf(f)
 	}
-	m.top(ctx, func() {
+	m.top(ctx, nil, func() {
 		for _, f := range compiled {
 			m.call(f, nil, nil, false)
 		}

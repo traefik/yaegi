@@ -108,8 +108,9 @@ func TestLoadOnePerPlugin(t *testing.T) {
 }
 
 // TestLoadDefaultSourceLimit checks the default bound of the source read by
-// a load (DefaultLoadLimits.MaxTotalSourceBytes, 64 MiB): about 60 to 150
-// MiB of heap per MiB of source at the peak of the load.
+// a load (DefaultLoadLimits.MaxTotalSourceBytes, 64 MiB): about 60 to 90
+// MiB of heap per MiB of real source at the peak of the load, up to about
+// 230 MiB per MiB for dense tables of literals.
 func TestLoadDefaultSourceLimit(t *testing.T) {
 	needSource(t)
 	if DefaultLoadLimits.MaxTotalSourceBytes != 64<<20 {

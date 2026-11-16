@@ -1,4 +1,4 @@
-package pluginhost
+package host
 
 import (
 	"context"
@@ -6,15 +6,15 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 
-	_ "github.com/traefik/yaegi/v2/aot/all" // AOT copies, for the AOT mode of TestPluginEnv
 	"github.com/traefik/yaegi/v2/vm"
 )
 
 const (
-	envPlug    = "github.com/traefik/yaegi/v2/internal/pluginhost/testdata/envplug"
-	envSysPlug = "github.com/traefik/yaegi/v2/internal/pluginhost/testdata/envsysplug"
+	envPlug    = "github.com/traefik/yaegi/v2/host/testdata/envplug"
+	envSysPlug = "github.com/traefik/yaegi/v2/host/testdata/envsysplug"
 )
 
 // call calls the function name of p and returns its results as native values.
@@ -70,6 +70,114 @@ func TestEnvFilter(t *testing.T) {
 	}
 }
 
+// TestEnvAllowlist checks the allowlist of the configuration of a plugin:
+// names and "PREFIX*", and the entries that would select everything or
+// cannot be a name.
+func TestEnvAllowlist(t *testing.T) {
+	f, err := EnvAllowlist([]string{"PATH", "OIDC_*", "A"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(f, EnvFilter{Names: []string{"PATH", "A"}, Prefixes: []string{"OIDC_"}}) {
+		t.Errorf("filter %+v", f)
+	}
+	env := []string{"OIDC_ID=1", "PATH=/bin", "HOME=/root", "AB=2", "A=3"}
+	if got := f.Filter(env); !reflect.DeepEqual(got, []string{"OIDC_ID=1", "PATH=/bin", "A=3"}) {
+		t.Errorf("Filter: %v", got)
+	}
+	for _, bad := range [][]string{{""}, {"*"}, {"A*B"}, {"A**"}, {"A=B"}, {"OK", "*"}} {
+		if _, err := EnvAllowlist(bad); err == nil {
+			t.Errorf("%q: no error", bad)
+		}
+		if env, err := PluginEnv(bad); err == nil || env != nil {
+			t.Errorf("PluginEnv(%q): %v, %v", bad, env, err)
+		}
+	}
+	t.Setenv("YAEGIENV_ALLOW", "x")
+	if env, err := PluginEnv(nil); err != nil || env == nil || len(env) != 0 {
+		t.Errorf("PluginEnv(nil): %#v, %v, want an empty, non-nil slice", env, err)
+	}
+	if env, err := PluginEnv([]string{"YAEGIENV_AL*"}); err != nil || !reflect.DeepEqual(env, []string{"YAEGIENV_ALLOW=x"}) {
+		t.Errorf("PluginEnv: %v, %v", env, err)
+	}
+}
+
+// TestMissingEnv checks the warning of a variable that the host did not
+// pass: OnMissingEnv gets its name once per name (never a value), for
+// os.Getenv, os.LookupEnv, os.ExpandEnv and syscall.Getenv, and not for a
+// variable that the plugin set, unset or cleared itself. Machine.MissingEnv
+// lists the same names.
+func TestMissingEnv(t *testing.T) {
+	t.Setenv("YAEGIENV_A", "host-a")
+	t.Setenv("YAEGIENV_SECRET", "host-secret")
+	for _, aot := range []bool{true, false} {
+		var mu sync.Mutex
+		var got []string
+		opts := Options()
+		opts.Dir, opts.AOT = "..", aot
+		opts.OnMissingEnv = func(name string) {
+			mu.Lock()
+			got = append(got, name)
+			mu.Unlock()
+		}
+		env, err := PluginEnv([]string{"YAEGIENV_A"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		SetEnv(&opts, env)
+		load := vm.Load // default mode: host.Check refuses it
+		if aot {
+			load = Load
+		}
+		p, err := load(opts, envPlug)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if v := call(t, p, "Get", "YAEGIENV_A")[0]; v != "host-a" {
+			t.Errorf("AOT %v: Getenv of a passed variable: %q", aot, v)
+		}
+		call(t, p, "Get", "YAEGIENV_SECRET")
+		call(t, p, "Get", "YAEGIENV_SECRET") // once per name
+		call(t, p, "Lookup", "YAEGIENV_LOOKUP")
+		call(t, p, "Expand", "$YAEGIENV_EXPAND")
+		// What the plugin sets, unsets or clears itself is not missing.
+		call(t, p, "Set", "YAEGIENV_OWN", "v")
+		call(t, p, "Unset", "YAEGIENV_OWN")
+		call(t, p, "Get", "YAEGIENV_OWN")
+		call(t, p, "Unset", "YAEGIENV_A")
+		call(t, p, "Get", "YAEGIENV_A")
+		want := []string{"YAEGIENV_SECRET", "YAEGIENV_LOOKUP", "YAEGIENV_EXPAND"}
+		mu.Lock()
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("AOT %v: OnMissingEnv got %v, want %v", aot, got, want)
+		}
+		mu.Unlock()
+		if m := p.M.MissingEnv(); !reflect.DeepEqual(m, want) {
+			t.Errorf("AOT %v: MissingEnv %v, want %v", aot, m, want)
+		}
+		call(t, p, "Clear")
+		call(t, p, "Get", "YAEGIENV_AFTER_CLEAR")
+		if m := p.M.MissingEnv(); len(m) != len(want) {
+			t.Errorf("AOT %v: after Clearenv: %v", aot, m)
+		}
+		if runtime.GOOS == "windows" || runtime.GOOS == "plan9" {
+			continue
+		}
+		opts.UseUnsafe = true
+		got = nil
+		q, err := load(opts, envSysPlug)
+		if err != nil {
+			t.Fatal(err)
+		}
+		call(t, q, "Get", "YAEGIENV_SECRET")
+		mu.Lock()
+		if !reflect.DeepEqual(got, []string{"YAEGIENV_SECRET"}) {
+			t.Errorf("AOT %v: syscall.Getenv: OnMissingEnv got %v", aot, got)
+		}
+		mu.Unlock()
+	}
+}
+
 // TestPluginEnv loads two plugins at once with the environments a host can
 // give (HostEnv, as Traefik with yaegi; an EnvFilter; the empty default of
 // Options), in AOT mode and default mode, and checks every function of
@@ -86,7 +194,7 @@ func TestPluginEnv(t *testing.T) {
 		load := func(env []string) *vm.Plugin {
 			t.Helper()
 			opts := Options()
-			opts.Dir, opts.AOT = "../..", aot
+			opts.Dir, opts.AOT = "..", aot
 			if env != nil {
 				SetEnv(&opts, env)
 			}
@@ -174,7 +282,7 @@ func TestPluginEnv(t *testing.T) {
 				t.Skip("the syscall subset of useUnsafe is for unix")
 			}
 			opts := Options()
-			opts.Dir, opts.AOT, opts.UseUnsafe = "../..", aot, true
+			opts.Dir, opts.AOT, opts.UseUnsafe = "..", aot, true
 			SetEnv(&opts, EnvFilter{Prefixes: []string{"YAEGIENV_A"}}.Env())
 			p, err := vm.Load(opts, envSysPlug)
 			if err != nil {
@@ -206,5 +314,98 @@ func TestPluginEnv(t *testing.T) {
 	}
 	if strings.Join(os.Environ(), "\n") != strings.Join(hostEnv, "\n") {
 		t.Errorf("the host environment changed")
+	}
+}
+
+// TestMissingEnvMessage checks that the warning quotes the name: the plugin
+// chooses it, and a newline or a terminal escape sequence in it must not
+// forge a log line of the host.
+func TestMissingEnvMessage(t *testing.T) {
+	msg := MissingEnvMessage("demo", "FOO\nlevel=error msg=\"forged\"\x1b[2J")
+	if strings.ContainsAny(msg, "\n\x1b") {
+		t.Errorf("the message holds a raw control character: %q", msg)
+	}
+	want := `plugin "demo" read env "FOO\nlevel=error msg=\"forged\"\x1b[2J", not passed; add it to envs`
+	if msg != want {
+		t.Errorf("got %s\nwant %s", msg, want)
+	}
+	if msg := MissingEnvMessage("demo", vm.MissingEnvMore); !strings.Contains(msg, "not reported") {
+		t.Errorf("MissingEnvMore: %s", msg)
+	}
+}
+
+// TestMissingEnvEnviron checks the note of a plugin that reads its whole
+// environment (os.Environ, syscall.Environ) while the host did not pass
+// every variable of its process: OnMissingEnv gets vm.MissingEnvEnviron
+// once. Such a plugin (jwt-middleware puts os.Environ() into its
+// templates) reads no name, so before nothing told the host that it
+// missed variables. With the whole host environment (HostEnv), or after
+// the plugin cleared its environment itself, there is no note.
+func TestMissingEnvEnviron(t *testing.T) {
+	t.Setenv("YAEGIENV_A", "host-a")
+	t.Setenv("YAEGIENV_SECRET", "host-secret")
+	load := func(pkg string, env []string, got *[]string) *vm.Plugin {
+		t.Helper()
+		opts := Options()
+		opts.Dir = ".."
+		opts.UseUnsafe = pkg == envSysPlug
+		var mu sync.Mutex
+		opts.OnMissingEnv = func(name string) {
+			mu.Lock()
+			*got = append(*got, name)
+			mu.Unlock()
+		}
+		SetEnv(&opts, env)
+		p, err := Load(opts, pkg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	filtered, err := PluginEnv([]string{"YAEGIENV_A"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		name string
+		env  []string
+		want []string
+	}{
+		{"filtered", filtered, []string{vm.MissingEnvEnviron}},
+		{"empty", DefaultEnv(), []string{"YAEGIENV_A", vm.MissingEnvEnviron}}, // YAEGIENV_A: read at init
+		{"host", HostEnv(), nil},
+	} {
+		var got []string
+		p := load(envPlug, c.env, &got)
+		call(t, p, "Environ", "YAEGIENV_")
+		call(t, p, "Environ", "YAEGIENV_") // once
+		if !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s: OnMissingEnv got %q, want %q", c.name, got, c.want)
+		}
+		if m := p.M.MissingEnv(); !reflect.DeepEqual(m, c.want) {
+			t.Errorf("%s: MissingEnv %q, want %q", c.name, m, c.want)
+		}
+		if n := p.M.Stats().MissingEnv; n != len(c.want) {
+			t.Errorf("%s: Stats.MissingEnv %d, want %d", c.name, n, len(c.want))
+		}
+	}
+	var got []string
+	p := load(envPlug, filtered, &got)
+	call(t, p, "Clear")
+	call(t, p, "Environ", "YAEGIENV_")
+	if got != nil {
+		t.Errorf("after Clearenv: OnMissingEnv got %q, want nothing", got)
+	}
+	if msg := MissingEnvMessage("jwt", vm.MissingEnvEnviron); !strings.Contains(msg, "whole environment") {
+		t.Errorf("MissingEnvMessage: %q", msg)
+	}
+	if runtime.GOOS == "windows" || runtime.GOOS == "plan9" {
+		return
+	}
+	got = nil
+	q := load(envSysPlug, filtered, &got)
+	call(t, q, "Environ", "YAEGIENV_")
+	if !reflect.DeepEqual(got, []string{vm.MissingEnvEnviron}) {
+		t.Errorf("syscall.Environ: OnMissingEnv got %q", got)
 	}
 }

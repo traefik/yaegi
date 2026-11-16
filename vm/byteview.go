@@ -57,6 +57,15 @@ func (c *compiler) bytesAlloc(a *ssa.Alloc) bool {
 	if !c.m.isPOD(t) || gcSizes.Sizeof(t) == 0 {
 		return false
 	}
+	// A big [n]byte goes to real bytes only when its address may outlive
+	// the call. A local that stays in the frame (frameLocal) keeps its
+	// frame-local cell: that cell is counted in MaxStack and in MaxMemory
+	// (stacklimit.go). Real bytes made per call are not: below memMin they
+	// are not counted at all, so a recursion with a local [4096]byte would
+	// pass both quotas. A frame-local cell also needs no allocation per call.
+	if bigByteArray(t) && !c.m.frameLocal(a) {
+		return true
+	}
 	if c.viewedAsOther(a, t, 0) || c.uintptrToNative(a, 0) {
 		return true
 	}
@@ -67,6 +76,22 @@ func (c *compiler) bytesAlloc(a *ssa.Alloc) bool {
 	// native code gets a copy of them and writes it back, as before. Only a
 	// variable that gives away the addresses of its parts goes to bytes.
 	return c.innerToNative(a, 0) && !(c.m.ownReflect && addrEscapes(a))
+}
+
+// bigByteArrayMin is the length from which a [n]byte variable lives in real
+// bytes (bigByteArray).
+const bigByteArrayMin = 64
+
+// bigByteArray reports whether t is a [n]byte with n >= bigByteArrayMin. In
+// cells, such an array takes 24 bytes per byte, and each native call on a
+// slice of it copies the whole array (sliceCopyOf): with the 4 MiB block
+// buffers of lz4, that a pool hands out as *[4 << 20]byte, one call of
+// binary.LittleEndian.Uint32 allocated about 100 MiB. In real bytes, a slice
+// of the array is a Go []byte, as for make([]byte, n). bytesAlloc keeps a
+// local that does not escape (frameLocal) in cells.
+func bigByteArray(t types.Type) bool {
+	a, ok := t.Underlying().(*types.Array)
+	return ok && isByteType(a.Elem()) && a.Len() >= bigByteArrayMin
 }
 
 // addrEscapes reports whether the address of the whole variable at a goes
@@ -304,6 +329,9 @@ type byteView struct {
 	off int        // offset of the value in b
 	t   types.Type // the type the program sees
 	ro  bool       // b is read-only (the bytes of a string outside the heap)
+	// host: b is a []byte of the host (hostmem.go). The view reads it, a
+	// store through it is refused.
+	host bool
 }
 
 // isPOD reports whether values of type t are plain data: bytes with no
@@ -348,7 +376,10 @@ func (m *Machine) byteViewAt(r *uregion, off int, to types.Type) (Value, string)
 	if off < 0 || int64(off)+size > int64(len(r.bytes)) {
 		return Value{}, "reaches outside the memory known to the VM"
 	}
-	return Value{R: &byteView{b: r.bytes, off: off, t: to, ro: r.ro}}, ""
+	// The bytes of a host []byte: the view reads them, a store through it
+	// is refused (hostmem.go), as a plain store into the []byte is.
+	host := size > 0 && m.restricted && hostMem().has(uintptr(unsafe.Pointer(&r.bytes[off])))
+	return Value{R: &byteView{b: r.bytes, off: off, t: to, ro: r.ro, host: host}}, ""
 }
 
 // byteViewOf returns the pointer p to a byte of a Go byte array seen as a
@@ -416,10 +447,32 @@ func (v *byteView) bytes(t types.Type) []byte {
 // load decodes the value of type t.
 func (v *byteView) load(t types.Type) Value { return decodeBytes(v.bytes(t), t) }
 
+// loadView is p.load(t) for a load of the program: an array is counted in
+// the quota of m (MaxMemory) before it is decoded. Each byte of a big
+// [n]byte (bigByteArray) becomes a Value of 24 bytes, and the quota counted
+// only the n bytes of the array: *p == *p on a new([1 << 26]byte) made 3
+// GiB of Values under a quota of 256 MiB.
+func (m *Machine) loadView(p *byteView, t types.Type) Value {
+	if m.mem != nil {
+		if _, ok := t.Underlying().(*types.Array); ok {
+			if n := satMulBytes(gcSizes.Sizeof(t), valueSize); n >= memMin {
+				m.memCheck(n)
+				x := p.load(t)
+				m.memSlice(x.R)
+				return x
+			}
+		}
+	}
+	return p.load(t)
+}
+
 // store encodes x, of type t, into the bytes.
 func (v *byteView) store(x Value, t types.Type) {
 	if v.ro {
 		refuseROWrite()
+	}
+	if v.host {
+		panic(errHostWrite)
 	}
 	encodeBytes(v.bytes(t), x, t)
 }
@@ -427,14 +480,28 @@ func (v *byteView) store(x Value, t types.Type) {
 // field is the address of field i of the struct the view points to.
 func (v *byteView) field(i int) Value {
 	st := v.t.Underlying().(*types.Struct)
-	return Value{R: &byteView{b: v.b, off: v.off + int(fieldOffsets(st)[i]), t: st.Field(i).Type(), ro: v.ro}}
+	return Value{R: &byteView{b: v.b, off: v.off + int(fieldOffsets(st)[i]), t: st.Field(i).Type(), ro: v.ro, host: v.host}}
 }
 
 // index is the address of element i of the array the view points to.
 func (v *byteView) index(i int64, flags uint8) Value {
 	at := v.t.Underlying().(*types.Array)
 	checkIndex(i, int(at.Len()), flags)
-	return Value{R: &byteView{b: v.b, off: v.off + int(i*gcSizes.Sizeof(at.Elem())), t: at.Elem(), ro: v.ro}}
+	return Value{R: &byteView{b: v.b, off: v.off + int(i*gcSizes.Sizeof(at.Elem())), t: at.Elem(), ro: v.ro, host: v.host}}
+}
+
+// elemByte is the byte i of the [n]byte the view points to, or nil when
+// the view is not a byte array. OpIndexLoad and OpIndexStore read and
+// write it in place: with index, each a[i] of a big byte array
+// (bigByteArray) made a new byteView, two allocations per iteration of a
+// loop over a local [256]byte.
+func (v *byteView) elemByte(i int64, flags uint8) *byte {
+	at, ok := v.t.Underlying().(*types.Array)
+	if !ok || !isByteType(at.Elem()) {
+		return nil
+	}
+	checkIndex(i, int(at.Len()), flags)
+	return &v.b[v.off+int(i)]
 }
 
 // slice is a[lo:hi:max] of the array a the view points to: a Go slice that
@@ -575,13 +642,13 @@ func encodeBytes(b []byte, x Value, t types.Type) {
 		offs := fieldOffsets(u)
 		for i := 0; i < u.NumFields() && i < len(fs); i++ {
 			ft := u.Field(i).Type()
-			encodeBytes(b[offs[i]:offs[i]+gcSizes.Sizeof(ft)], fs[i], ft)
+			encodeBytes(b[offs[i]:offs[i]+gcSizes.Sizeof(ft)], loadCell(&fs[i], ft), ft)
 		}
 	case *types.Array:
 		es, _ := x.R.([]Value)
 		size := gcSizes.Sizeof(u.Elem())
 		for i := 0; i < int(u.Len()) && i < len(es); i++ {
-			encodeBytes(b[int64(i)*size:int64(i+1)*size], es[i], u.Elem())
+			encodeBytes(b[int64(i)*size:int64(i+1)*size], loadCell(&es[i], u.Elem()), u.Elem())
 		}
 	default:
 		unsupported("unsafe: writing a %s into bytes", t)

@@ -30,7 +30,7 @@ func TestOptions(t *testing.T) {
 	if !o.PanicOnFatal {
 		t.Error("PanicOnFatal is off: a plugin that unlocks an unlocked mutex ends the host")
 	}
-	if o.Budget == 0 || o.BackgroundRate == 0 || o.MaxMemory == 0 || o.MaxStack == 0 || o.MaxGoroutines == 0 || o.LoadTimeout == 0 || o.Env == nil {
+	if o.Budget == 0 || o.BudgetRate == 0 || o.BackgroundRate == 0 || o.MaxMemory == 0 || o.MaxStack == 0 || o.MaxGoroutines == 0 || o.LoadTimeout == 0 || o.Env == nil {
 		t.Errorf("a limit is missing: %+v", o)
 	}
 	// The stack of a goroutine of a Traefik plugin: 256 MiB, below the

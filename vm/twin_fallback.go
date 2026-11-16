@@ -206,7 +206,7 @@ func (vr *vmReflect) twinArg(v Value, t types.Type, rt reflect.Type) reflect.Val
 		et := t.Underlying().(*types.Slice).Elem()
 		out := reflect.MakeSlice(rt, len(vs), len(vs))
 		for i := range vs {
-			out.Index(i).Set(vr.twinArg(vs[i], et, rt.Elem()))
+			out.Index(i).Set(vr.twinArg(loadCell(&vs[i], et), et, rt.Elem()))
 		}
 		return out
 	case rt == anyType:
@@ -223,10 +223,10 @@ func (vr *vmReflect) twinArg(v Value, t types.Type, rt reflect.Type) reflect.Val
 	case rt == structFieldNative:
 		fs, _ := v.R.([]Value) // reflect.StructField: Name, PkgPath, Type, Tag, Offset, Index, Anonymous
 		sf := StructField{Name: valStr(fs[0]), PkgPath: valStr(fs[1]), Tag: reflect.StructTag(valStr(fs[3])), Offset: uintptr(fs[4].N), Anonymous: fs[6].N != 0}
-		if t, ok := m.twinFromVM(fs[2], rtNative); ok {
+		if t, ok := m.twinFromVM(loadWord(&fs[2]), rtNative); ok { // Type: an interface
 			sf.Type = t.Interface().(RT)
 		}
-		idx, _ := fs[5].R.([]Value)
+		idx, _ := loadWord(&fs[5]).R.([]Value) // Index: a slice
 		for _, x := range idx {
 			sf.Index = append(sf.Index, int(x.N))
 		}
@@ -265,6 +265,56 @@ func (vr *vmReflect) twinResult(r reflect.Value, t types.Type) Value {
 		typ, _ := m.twinToVM(reflect.ValueOf(mt.Type))
 		fn, _ := m.twinToVM(reflect.ValueOf(mt.Func))
 		return Value{R: []Value{{R: mt.Name}, {R: mt.PkgPath}, typ, fn, {N: int64(mt.Index)}}}
+	case isTwinSeq(r.Type()):
+		return vr.twinSeq(r, t)
 	}
 	return m.fromNative(r, t)
+}
+
+// isTwinSeq reports whether rt is an iterator of the twin over its own
+// types (Type.Fields, Type.Methods, Value.Fields, Value.Methods...):
+// func(yield func(E) bool) or func(yield func(K, V) bool).
+func isTwinSeq(rt reflect.Type) bool {
+	if rt.Kind() != reflect.Func || rt.NumIn() != 1 || rt.NumOut() != 0 {
+		return false
+	}
+	y := rt.In(0)
+	if y.Kind() != reflect.Func || y.NumIn() < 1 || y.NumIn() > 2 || y.NumOut() != 1 || y.Out(0).Kind() != reflect.Bool {
+		return false
+	}
+	for i := 0; i < y.NumIn(); i++ {
+		switch y.In(i) {
+		case structFieldNative, methodNative, rvNative, rtNative:
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// twinSeq converts the twin iterator r (isTwinSeq) to a VM func value of
+// the reflect type t (iter.Seq[reflect.StructField]...). The yield of the
+// program gets each element converted by twinResult. As a plain native
+// func, the yield of the program was converted to func(reflect.StructField)
+// bool, and the call of the twin iterator, which takes a func(vm.StructField)
+// bool, panicked.
+func (vr *vmReflect) twinSeq(r reflect.Value, t types.Type) Value {
+	if r.IsNil() {
+		return Value{}
+	}
+	m := vr.m
+	yt := t.Underlying().(*types.Signature).Params().At(0).Type().Underlying().(*types.Signature)
+	nyt := r.Type().In(0)
+	return Value{R: &Closure{Go: func(args []Value) Value {
+		yield := args[0]
+		ny := reflect.MakeFunc(nyt, func(in []reflect.Value) []reflect.Value {
+			vs := make([]Value, len(in))
+			for i := range in {
+				vs[i] = vr.twinResult(in[i], yt.Params().At(i).Type())
+			}
+			return []reflect.Value{reflect.ValueOf(m.callValue(yield, vs).N != 0)}
+		})
+		r.Call([]reflect.Value{ny})
+		return Value{}
+	}}}
 }

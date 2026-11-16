@@ -230,9 +230,10 @@ boundary.
 
 This work touches traefik/traefik and needs the maintainers' approval.
 
-- [ ] Release the old plugins at each reload with `Plugin.CloseContext`
-  (`vm/close.go`, `docs/RELOAD.md`). Left: whether a plugin whose
-  configuration did not change keeps its `Plugin`.
+- [ ] Reloads in the adapter, with the yaegi model (`docs/RELOAD.md`): one
+  `Plugin` per plugin for the life of the process, `CreateConfig` and `New`
+  at each new configuration, `Close` at shutdown, and a warning for the
+  goroutines that a `New` left (`host.Leaks`).
 - [ ] An adapter in Traefik's plugin loader (the API mapping is in the
   README), behind an experimental flag, opt-in per plugin.
 - [ ] AOT mode only for plugins, with the AOT copies chosen from the catalog.
@@ -250,8 +251,7 @@ This work touches traefik/traefik and needs the maintainers' approval.
 - [ ] Keep the double `useUnsafe` gate; never set `Unrestricted` or
   `RealProcess` from plugin data.
 - [ ] Import only package `host`, start from `host.Options()`, pass `Env`
-  (empty by default, or a per-plugin filter as `pluginhost.EnvFilter`),
-  `GoPanic`, `Stdout` and `Stderr`, and load with `host.Load`. Decide
-  whether `host.Options` also sets `StaleAOTFallback`.
+  (empty by default, or the allowlist of the plugin with `host.PluginEnv`),
+  `GoPanic`, `Stdout` and `Stderr`, and load with `host.Load`.
 - [ ] Shadow traffic against yaegi v0 for one release, and a soak on real
   traffic.

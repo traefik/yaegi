@@ -103,7 +103,8 @@ func init() {
 // genericName is "pkg.Func" or "pkg.Type.Method" for the generic function
 // or method o (an origin, see ssa.Function.Origin).
 func genericName(o *ssa.Function) string {
-	if o.Pkg == nil {
+	p := funcPkg(o)
+	if p == nil {
 		return ""
 	}
 	name := o.Name()
@@ -116,7 +117,7 @@ func genericName(o *ssa.Function) string {
 			name = n.Obj().Name() + "." + name
 		}
 	}
-	return o.Pkg.Pkg.Path() + "." + name
+	return p.Path() + "." + name
 }
 
 // isVMGeneric reports whether calls of f run genericIntrinsic: f is an
@@ -352,14 +353,15 @@ func addCleanup(m *Machine, f *ssa.Function, args []int32) func([]Value) Value {
 		// on the cleanup goroutine of the runtime, where nothing recovers:
 		// it runs as a goroutine of the program (runGoroutine), so a panic,
 		// ErrBudget or ErrStackOverflow goes to GoPanic and does not end the
-		// host.
+		// host. It runs in the instance of this call (instance.go).
+		inst := m.curInstance()
 		c := runtime.AddCleanup((*byte)(target), func(arg Value) {
 			args := []Value{arg}
 			if cl, _ := fn.R.(*Closure); cl != nil && cl.Go == nil && cl.Fn != nil {
-				m.runGoroutine(deferred{fn: cl.Fn, env: cl.Env, args: args}, nil)
+				m.runGoroutine(deferred{fn: cl.Fn, env: cl.Env, args: args}, m.instGoCtx(inst))
 				return
 			}
-			m.runGoroutine(deferred{nat: func() { m.callValue(fn, args) }}, nil)
+			m.runGoroutine(deferred{nat: func() { m.callValue(fn, args) }}, m.instGoCtx(inst))
 		}, arg)
 		return m.fromNative(reflect.ValueOf(c), ct)
 	}
@@ -505,10 +507,10 @@ var (
 // driver.Value of the package of f (database/sql), or nil.
 func sqlValuerSig(f *ssa.Function) *types.Signature {
 	o := f.Origin()
-	if o == nil || o.Pkg == nil {
+	if o == nil || funcPkg(o) == nil {
 		return nil
 	}
-	for _, p := range o.Pkg.Pkg.Imports() {
+	for _, p := range funcPkg(o).Imports() {
 		if p.Path() == "database/sql/driver" {
 			if tn, ok := p.Scope().Lookup("Value").(*types.TypeName); ok {
 				return types.NewSignatureType(nil, nil, nil, nil,
@@ -786,7 +788,7 @@ func (m *Machine) sqlNullNative(f *ssa.Function, args []int32, t types.Type, vi,
 			}
 			out := n.MethodByName("Scan").Call([]reflect.Value{src})
 			recv := regs[args[0]]
-			*m.fieldAddr(recv, vi).R.(*Value) = m.fromNative(n.Elem().Field(0), ut)
+			storeCell(m.fieldAddr(recv, vi).R.(*Value), m.fromNative(n.Elem().Field(0), ut), ut)
 			*m.fieldAddr(recv, oki).R.(*Value) = Value{N: b2i(n.Elem().Field(1).Bool())}
 			return m.pack(out, rs)
 		}

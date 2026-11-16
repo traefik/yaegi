@@ -94,7 +94,7 @@ type vmSortSlice struct {
 // slice returns the elements: those of *cell now for a pointer.
 func (s *vmSortSlice) slice() []Value {
 	if s.cell != nil {
-		vals, _ := s.cell.R.([]Value)
+		vals, _ := loadWord(s.cell).R.([]Value) // a slice variable: a word kind
 		return vals
 	}
 	return s.vals

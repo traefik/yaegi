@@ -9,8 +9,17 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync/atomic"
 	"time"
 )
+
+// spun counts the rounds of the /spin loops, for the host (/spun), in
+// steps of spinStep rounds (an atomic add each round made the loop ten
+// times slower): the test waits for the budget to stop the loop as long as
+// the loop makes progress, and checks that it ran at most Budget+1 rounds.
+var spun atomic.Int64
+
+const spinStep = 1 << 16
 
 type Config struct {
 	Name string `json:"name,omitempty"`
@@ -41,10 +50,13 @@ func New(ctx context.Context, next http.Handler, cfg *Config, name string) (http
 func (p *plug) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	switch req.URL.Path {
 	case "/spin":
-		n := 0
-		for {
-			n++
+		for n := 1; ; n++ {
+			if n%spinStep == 0 {
+				spun.Add(spinStep)
+			}
 		}
+	case "/spun":
+		fmt.Fprint(rw, spun.Load())
 	case "/read":
 		_, err := os.ReadFile("/etc/hostname")
 		fmt.Fprint(rw, err)

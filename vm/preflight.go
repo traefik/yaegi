@@ -9,6 +9,7 @@ package vm
 // the problems with their positions.
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"go/constant"
@@ -66,7 +67,12 @@ func (e *PreflightError) Error() string {
 // the VM (instances of its generic functions, Options.Src) is walked, to
 // reach the plugin functions it calls, but its problems are gaps of the VM
 // that the plugin author cannot fix: they still panic when they run.
-func (m *Machine) preflight(root *ssa.Package, own func(*types.Package) bool) error {
+//
+// The init functions (initCode) are compiled on initM, the machine that
+// runs them next, when it is not nil: their code is kept for the init and
+// is not compiled a second time (a package with large tables of literals
+// takes as long to compile as to check).
+func (m *Machine) preflight(ctx context.Context, root *ssa.Package, own func(*types.Package) bool, initM *Machine) error {
 	seen := map[*ssa.Function]bool{}
 	var seenT typeutil.Map
 	var work []*ssa.Function
@@ -87,7 +93,12 @@ func (m *Machine) preflight(root *ssa.Package, own func(*types.Package) bool) er
 		ms := m.prog.MethodSets.MethodSet(t)
 		for i := 0; i < ms.Len(); i++ {
 			sel := ms.At(i)
-			if isGenericMethod(sel) {
+			if !runtimeMethod(sel) {
+				// A generic method (its instances are reached at the
+				// call sites), or a method of a generic type that is not
+				// instantiated. Walking the signature of Box[T].Map[R]
+				// would give Box[R] with a new R each time: the walk
+				// never ended.
 				continue
 			}
 			add(m.prog.MethodValue(sel))
@@ -104,9 +115,19 @@ func (m *Machine) preflight(root *ssa.Package, own func(*types.Package) bool) er
 	// a value of t (Field(i).Interface(), Elem, Index, MapIndex, Method(i))
 	// or create them from its type (reflect.New(t.Field(i).Type)).
 	// seenT stops the walk on recursive types.
+	// stopped is the error of a done context: a load whose deadline passed
+	// (LoadContext has already returned) stops the walk and the work loop
+	// below, and frees the slot of the plugin (acquireLoadSlot).
+	var stopped error
+	steps := 0
 	addMethods = func(t types.Type) {
-		if seenT.At(t) != nil {
+		if stopped != nil || seenT.At(t) != nil {
 			return
+		}
+		if steps++; steps%1024 == 0 {
+			if stopped = ctxErr(ctx); stopped != nil {
+				return
+			}
 		}
 		seenT.Set(t, true)
 		switch u := types.Unalias(t).(type) {
@@ -162,7 +183,13 @@ func (m *Machine) preflight(root *ssa.Package, own func(*types.Package) bool) er
 	var probs []problem
 	var other []string
 	var ops []*ssa.Value
-	for len(work) > 0 {
+	for n := 0; len(work) > 0; n++ {
+		if n%64 == 0 && stopped == nil {
+			stopped = ctxErr(ctx)
+		}
+		if stopped != nil {
+			return stopped
+		}
 		f := work[len(work)-1]
 		work = work[:len(work)-1]
 		if f.TypeParams().Len() > 0 && len(f.TypeArgs()) == 0 {
@@ -182,16 +209,31 @@ func (m *Machine) preflight(root *ssa.Package, own func(*types.Package) bool) er
 		if !m.isInterp(f) {
 			continue // native: its callers check that the registry has it
 		}
-		if err := m.compileChecked(m.funcOf(f)); err != nil && mine {
+		cm := m
+		if initM != nil && initCode(f) {
+			cm = initM
+		}
+		fn := cm.funcOf(f)
+		err := cm.compileChecked(fn)
+		if err != nil && mine {
 			other = append(other, fmt.Sprintf("%s: %v (in %s)", m.prog.Fset.Position(f.Pos()), err, f))
 		}
 		live := liveBlocks(f)
 		if mine {
-			for _, p := range m.funcOf(f).problems {
+			for _, p := range fn.problems {
 				if p.block == nil || live[p.block] {
 					probs = append(probs, p)
 				}
 			}
+		}
+		if err != nil && cm != m {
+			// The compiler panicked on the machine that runs the init
+			// next. sync.Once counts the panic as done, so the init
+			// would run a Func without code: reset it, and the init
+			// compiles it again and fails with the panic of the
+			// compiler (the error is not reported here when the
+			// package is not the plugin's).
+			fn.reset()
 		}
 		for _, b := range f.Blocks {
 			if !live[b] {
@@ -213,6 +255,9 @@ func (m *Machine) preflight(root *ssa.Package, own func(*types.Package) bool) er
 			}
 		}
 	}
+	if stopped != nil {
+		return stopped
+	}
 	if len(probs) == 0 && len(other) == 0 {
 		return nil
 	}
@@ -230,6 +275,16 @@ func (m *Machine) preflight(root *ssa.Package, own func(*types.Package) bool) er
 	}
 	list = append(list, other...)
 	return &PreflightError{Pkg: root.Pkg.Path(), Problems: list}
+}
+
+// initCode reports whether f is the code of a package init: the init
+// function of a package, an init#N function, or a function literal in one
+// of them.
+func initCode(f *ssa.Function) bool {
+	for f.Parent() != nil {
+		f = f.Parent()
+	}
+	return f.Synthetic == "package initializer" || isInitFunc(f)
 }
 
 // compileChecked compiles fn and returns the panic of the compiler, if any
@@ -299,15 +354,4 @@ func isOwnFunc(f *ssa.Function, own func(*types.Package) bool) bool {
 		return own(obj.Pkg())
 	}
 	return true
-}
-
-// isGenericMethod reports whether the method of sel is a method of a generic
-// type that is not instantiated (no code exists for it).
-func isGenericMethod(sel *types.Selection) bool {
-	recv := sel.Recv()
-	if p, ok := recv.(*types.Pointer); ok {
-		recv = p.Elem()
-	}
-	n, ok := types.Unalias(recv).(*types.Named)
-	return ok && n.TypeParams().Len() > 0 && n.TypeArgs().Len() == 0
 }

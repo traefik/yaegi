@@ -4,6 +4,7 @@ import (
 	"runtime"
 
 	"golang.org/x/tools/go/packages"
+	"golang.org/x/tools/go/ssa"
 
 	"github.com/traefik/yaegi/v2/stdtypes"
 )
@@ -29,6 +30,9 @@ type loadHooks struct {
 	// exact point, to see that a cancelled init stopped, or to run the GC at
 	// an exact point.
 	stage func(stage string)
+	// compiled is called each time a machine of the load compiles a
+	// function (the check machine and the machine of the plugin).
+	compiled func(*ssa.Function)
 }
 
 func (h *loadHooks) hostGoVersion() string {

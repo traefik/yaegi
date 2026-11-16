@@ -3,11 +3,13 @@ package vm
 import (
 	"context"
 	"net/http"
+	"reflect"
 	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 	"unsafe"
 )
 
@@ -166,6 +168,14 @@ func TestPanicOnFatalHost(t *testing.T) {
 			fin("finalizer already set"),
 			"ok", "ok", "ok", "ok", "ok",
 		}, "\n")},
+		{"/finalizerinner", strings.Join([]string{
+			fin("pointer not at beginning of allocated block"), // struct field
+			fin("pointer not at beginning of allocated block"), // array element
+			fin("pointer not at beginning of allocated block"), // native field
+			fin("pointer not at beginning of allocated block"), // native field, nil
+			fin("finalizer already set"),                       // &b[0] twice
+		}, "\n")},
+		{"/finalizerstart", "ok\nok\nok\nok\nok\nok\nok"},
 		{"/finalizerrace", "ok"},
 	}
 	for _, aot := range []bool{false, true} {
@@ -185,4 +195,138 @@ func TestPanicOnFatalHost(t *testing.T) {
 			t.Errorf("aot=%v: %d panics of plugin goroutines, want none", aot, n)
 		}
 	}
+}
+
+// TestFinalizerStartFallback: when the probe of the layout of
+// runtime.mspan fails (a new Go release), objectStart only proves the
+// base of an object, and PanicOnFatal refuses a pointer after a malloc
+// header instead of calling runtime.SetFinalizer with a pointer that may
+// not be the start of its object.
+func TestFinalizerStartFallback(t *testing.T) {
+	if !spanLayoutOK {
+		t.Skip("the probe fails here: TestRuntimeCouplings reports it")
+	}
+	small := new([4]*int)
+	header := new([300]*int)            // larger than minSizeForMallocHeader: a header
+	fallbackSink = []any{small, header} // in the heap
+	defer func() { fallbackSink = nil }()
+	p0, p1 := uintptr(unsafe.Pointer(small)), uintptr(unsafe.Pointer(header))
+	for _, c := range []struct {
+		name   string
+		l      spanLayout
+		p      uintptr
+		want   bool
+		inHeap bool
+	}{
+		{"base", spans, p0, true, true},
+		{"after header", spans, p1, true, true},
+		{"inside", spans, p0 + wordSize, false, true},
+		{"base, no layout", spanLayout{}, p0, true, true},
+		{"after header, no layout", spanLayout{}, p1, false, true},
+		// The offsets of the probe, but not proved (ok false): start must
+		// not read the span with them. With the zero offsets above, the
+		// words read by mistake are often 0, which hides a missing check.
+		{"after header, layout not proved", spanLayout{spans.elemOff, spans.classOff, false}, p1, false, true},
+	} {
+		if got, in := c.l.start(c.p); got != c.want || in != c.inHeap {
+			t.Errorf("%s: start %v inHeap %v, want %v %v", c.name, got, in, c.want, c.inHeap)
+		}
+	}
+	saved := spans
+	spans = spanLayout{}
+	defer func() { spans = saved }()
+	m := &Machine{panicOnFatal: true}
+	defer func() {
+		fe, ok := recover().(*FatalError)
+		if !ok || !strings.Contains(fe.Msg, "pointer not at beginning") {
+			t.Errorf("no layout: got %v, want a FatalError", fe)
+		}
+	}()
+	m.checkFinalizerStart(unsafe.Pointer(header), reflect.TypeFor[*int]())
+}
+
+var fallbackSink []any
+
+// TestFinalizerNativeFunc: a native func (reflect.TypeOf, json.Marshal,
+// a method expression, a method value) is a valid finalizer of a native
+// pointer, of a cell of the plugin and of a *byte. It runs, and it does
+// not end the host: the runtime calls finalizers on a goroutine where
+// nothing recovers. In both modes, with and without PanicOnFatal.
+func TestFinalizerNativeFunc(t *testing.T) {
+	const want = "ok\nclose 0 <nil>\nencode \"{}\\n\" <nil>\n"
+	for _, aot := range []bool{false, true} {
+		for _, pof := range []bool{false, true} {
+			var goPanics atomic.Int32
+			h := loadFatalPlug(t, Options{PanicOnFatal: pof, AOT: aot, GoPanic: func(r any) {
+				t.Logf("aot=%v PanicOnFatal=%v: GoPanic %v", aot, pof, r)
+				goPanics.Add(1)
+			}})
+			body, p := serveBG(h, "/finalizernative")
+			if p != nil {
+				t.Fatalf("aot=%v PanicOnFatal=%v: panic %v", aot, pof, p)
+			}
+			if body != want {
+				t.Errorf("aot=%v PanicOnFatal=%v:\n%s\nwant:\n%s", aot, pof, body, want)
+			}
+			if n := goPanics.Load(); n != 0 {
+				t.Errorf("aot=%v PanicOnFatal=%v: %d panics of plugin goroutines, want none", aot, pof, n)
+			}
+		}
+	}
+	if !hostFinalizerRuns() {
+		t.Error("a finalizer of the host does not run any more")
+	}
+}
+
+// TestFinalizerBlockGoexit: the runtime runs all the finalizers of the
+// process on one goroutine. A finalizer of the plugin that blocks, or
+// that calls runtime.Goexit, must not stop the finalizers of the host.
+// A Goexit ends only that finalizer: the next one of the plugin runs.
+func TestFinalizerBlockGoexit(t *testing.T) {
+	for _, aot := range []bool{false, true} {
+		var goPanics atomic.Int32
+		h := loadFatalPlug(t, Options{AOT: aot, GoPanic: func(r any) {
+			t.Logf("aot=%v: GoPanic %v", aot, r)
+			goPanics.Add(1)
+		}})
+		serve := func(path, want string) {
+			t.Helper()
+			body, p := serveBG(h, path)
+			if p != nil {
+				t.Fatalf("aot=%v %s: panic %v", aot, path, p)
+			}
+			if body != want {
+				t.Errorf("aot=%v %s: %q, want %q", aot, path, body, want)
+			}
+		}
+		serve("/finalizerexit", "goexit ok\nnext ok\n")
+		if !hostFinalizerRuns() {
+			t.Fatalf("aot=%v: a finalizer of the host does not run after a Goexit in a finalizer of the plugin", aot)
+		}
+		serve("/finalizerblock", "blocked\n")
+		ok := hostFinalizerRuns()
+		serve("/finalizerrelease", "released\n")
+		if !ok {
+			t.Fatalf("aot=%v: a finalizer of the host does not run while a finalizer of the plugin blocks", aot)
+		}
+		if n := goPanics.Load(); n != 0 {
+			t.Errorf("aot=%v: %d panics of plugin goroutines, want none", aot, n)
+		}
+	}
+}
+
+// hostFinalizerRuns reports whether a finalizer of the host still runs
+// (the finalizer goroutine of the runtime is not stuck), within 5 s.
+func hostFinalizerRuns() bool {
+	ran := make(chan struct{})
+	runtime.SetFinalizer(new([4]*int), func(*[4]*int) { close(ran) })
+	for end := time.Now().Add(5 * time.Second); time.Now().Before(end); {
+		runtime.GC()
+		select {
+		case <-ran:
+			return true
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+	return false
 }

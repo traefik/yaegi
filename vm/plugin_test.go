@@ -215,9 +215,16 @@ func TestRestrictions(t *testing.T) {
 		{"vendorunsafe", true, vendorUnsafe},
 		{"procplug", true, "os.StartProcess is not allowed"},
 		{"procplug", true, "os.FindProcess is not allowed"},
+		{"msgstaticplug", true, "(*net.UnixConn).WriteMsgUnix is not allowed"},
+		{"procplug", true, "(*os.Process).Signal is not allowed"},
 		{"cgiplug", true, `import "net/http/cgi" is not allowed`},
 		{"testingplug", true, "testing.Main is not allowed"},
 		{"testingplug", true, "testing.Init is not allowed"},
+		{"testingplug", true, "(*testing.M).Run is not allowed"},
+		{"testingplug", true, "(*testing.T).Chdir is not allowed"},
+		{"testingplug", true, "(*testing.T).Setenv is not allowed"},
+		{"testingplug", true, "(*testing.common).Chdir is not allowed"},
+		{"testingplug", true, "(*testing.common).Setenv is not allowed"},
 		{"internalplug", true, `import "internal/godebug" is not allowed`},
 		{"hostpkgplug", true, `import "go/build" is not allowed`},
 		{"hostpkgplug", true, `import "go/importer" is not allowed`},
@@ -225,6 +232,18 @@ func TestRestrictions(t *testing.T) {
 		{"typesplug", true, `import "go/types" is not allowed`},
 		{"profplug", true, "runtime/pprof.StartCPUProfile is not allowed"},
 		{"profplug", true, "runtime/trace.Start is not allowed"},
+		{"profplug", true, "runtime.SetDefaultGOMAXPROCS is not allowed"},
+		{"profplug", true, "runtime.SetCPUProfileRate is not allowed"},
+		{"profplug", true, "runtime.SetBlockProfileRate is not allowed"},
+		{"profplug", true, "runtime.SetMutexProfileFraction is not allowed"},
+		{"profplug", true, "runtime/trace.NewFlightRecorder is not allowed"},
+		{"profplug", true, "(*runtime/trace.FlightRecorder).Start is not allowed"},
+		{"profplug", true, "runtime.StartTrace is not allowed"},
+		{"profplug", true, "runtime.ReadTrace is not allowed"},
+		{"profplug", true, "runtime.StopTrace is not allowed"},
+		{"profplug", true, "runtime/trace.Stop is not allowed"},
+		{"profplug", true, "runtime/pprof.StopCPUProfile is not allowed"},
+		{"testingplug", true, "testing.AllocsPerRun is not allowed"},
 		{"quickplug", true, `import "testing/quick" needs the host to import github.com/traefik/yaegi/v2/stdsyms/sideeffect`},
 		{"reflectplug", false, "reflect.NewAt is restricted"},
 		{"reflectplug", false, "(reflect.Value).UnsafePointer is restricted"},
@@ -1163,10 +1182,15 @@ func TestPluginBudgetCallbacks(t *testing.T) {
 		h.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
 		return
 	}
-	for _, path := range []string{"/fmt", "/map", "/defer"} {
+	for _, path := range []string{"/fmt", "/map"} {
 		if body, r := serve(path); r != ErrBudget || body != "" {
 			t.Errorf("%s: panic %v and body %q, want %v and no body", path, r, body, ErrBudget)
 		}
+	}
+	// The deferred calls still run after ErrBudget (with a grace, nest.go
+	// fail): the host gets ErrBudget, and the deferred Fprint wrote.
+	if body, r := serve("/defer"); r != ErrBudget || body != "after" {
+		t.Errorf("/defer: panic %v and body %q, want %v and body \"after\"", r, body, ErrBudget)
 	}
 	// Under the budget, callbacks run, and an ordinary panic in a String
 	// method is still printed by fmt, as with go run.

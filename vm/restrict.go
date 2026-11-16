@@ -106,10 +106,37 @@ var refusedFuncs = map[string]bool{
 	"os.Chdir":         true, // working directory of the whole process
 	"(*os.File).Chdir": true,
 
+	// The oob argument names descriptors of the host (refusedmeth.go).
+	"(*net.UnixConn).WriteMsgUnix": true,
+
+	// A plugin builds an os.Process itself (&os.Process{Pid: n}: Pid is
+	// the only exported field) and gets past the refusal of FindProcess:
+	// Signal and Kill call syscall.Kill(n, sig), Wait reaps a child of the
+	// host. Allowed with Options.Exec, as os.StartProcess (checkUses); at
+	// run time only ExecReal runs them (refusedMethodOf).
+	"(*os.Process).Kill":   true,
+	"(*os.Process).Signal": true,
+	"(*os.Process).Wait":   true,
+
 	// runtime.GOMAXPROCS stays: libraries call GOMAXPROCS(0) to size
 	// their worker pools (klauspost/compress). With n > 0 it does not
 	// change the setting for a restricted machine (hostregs.go).
 	"runtime.Breakpoint": true,
+	// SetDefaultGOMAXPROCS discards the setting of the host (GOMAXPROCS
+	// variable, automaxprocs) and restarts the automatic updater.
+	"runtime.SetDefaultGOMAXPROCS": true,
+	// The primitives under pprof.StartCPUProfile and the block and mutex
+	// profiles of the whole process: a rate of 0 cuts the profile the host
+	// takes, with no error.
+	"runtime.SetCPUProfileRate":       true,
+	"runtime.SetBlockProfileRate":     true,
+	"runtime.SetMutexProfileFraction": true,
+	// The primitives under trace.Start and trace.Stop: ReadTrace gives the
+	// trace of every goroutine of the host, StopTrace cuts the trace that
+	// the host takes.
+	"runtime.StartTrace": true,
+	"runtime.ReadTrace":  true,
+	"runtime.StopTrace":  true,
 
 	"runtime/debug.SetGCPercent":    true,
 	"runtime/debug.SetMemoryLimit":  true,
@@ -134,18 +161,42 @@ var refusedFuncs = map[string]bool{
 	// (traefikoidc) uses them to watch its memory.
 	"runtime/pprof.StartCPUProfile": true,
 	"runtime/trace.Start":           true,
+	// The flight recorder: WriteTo gives the trace of every goroutine of
+	// the host. A zero FlightRecorder starts too, so Start is refused as
+	// well (and at run time, refusedmeth.go).
+	"runtime/trace.NewFlightRecorder":       true,
+	"(*runtime/trace.FlightRecorder).Start": true,
+	// Stop the trace or the CPU profile that the host takes.
+	"runtime/trace.Stop":           true,
+	"runtime/pprof.StopCPUProfile": true,
 
 	// The test driver of package testing: it parses the host's
 	// flag.CommandLine with the host's os.Args, ends the process with
 	// os.Exit (native code: the restricted os.Exit of the plugin is not
 	// used), or replaces os.Stdout (RunExamples). Init defines the test
-	// flags in the host's flag.CommandLine.
+	// flags in the host's flag.CommandLine. (*testing.M).Run calls the
+	// native flag.Parse on a zero M (new(testing.M)): the host's flags and
+	// os.Args, and os.Exit(2) on a flag the host did not define.
 	"testing.Init":          true,
 	"testing.Main":          true,
 	"testing.MainStart":     true,
 	"testing.RunTests":      true,
 	"testing.RunBenchmarks": true,
 	"testing.RunExamples":   true,
+	// AllocsPerRun sets GOMAXPROCS of the process to 1 while its callback
+	// runs (native code: not the restricted GOMAXPROCS), and leaves the
+	// automatic updater off.
+	"testing.AllocsPerRun": true,
+	"(*testing.M).Run":     true,
+
+	// Native code that calls the real os.Chdir and os.Setenv: the working
+	// directory and the environment of the whole process, not the copy of
+	// the plugin. A zero testing.T is enough, and its cleanups never run.
+	// *testing.B and *testing.F get the methods of common by promotion.
+	"(*testing.T).Chdir":       true,
+	"(*testing.T).Setenv":      true,
+	"(*testing.common).Chdir":  true,
+	"(*testing.common).Setenv": true,
 }
 
 // unsafeFuncs need Options.UseUnsafe: they make pointers from addresses.
@@ -321,7 +372,7 @@ func checkUses(p sourcePkg, useUnsafe, exec bool) []error {
 		}
 		name := f.Origin().FullName()
 		switch {
-		case name == "os.StartProcess" && exec:
+		case (name == "os.StartProcess" || strings.HasPrefix(name, "(*os.Process).")) && exec:
 		case refusedFuncs[name]:
 			report(id, name, false)
 		case unsafeFuncs[name] && !useUnsafe:

@@ -455,7 +455,7 @@ func (s *Session) step(ctx context.Context, src string, imports map[string]strin
 	sp.Build()
 	s.m.evalInterp.Store(tp, true)
 	s.p.Pkg = sp
-	if err := s.opts.preflight(s.p, func() *Machine { return s.m }, isEvalPkg); err != nil {
+	if err := s.opts.preflight(context.Background(), s.p, func() *Machine { return s.m }, nil, isEvalPkg); err != nil {
 		return nil, err
 	}
 	// The input is accepted: its declarations and imports are visible to

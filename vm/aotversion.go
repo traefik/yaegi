@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"sort"
@@ -43,13 +44,20 @@ import (
 // A host that prefers to load the plugin anyway, without the copies, sets
 // Options.StaleAOTFallback: when the check fails, the load runs in default
 // mode instead of AOT mode (aotGate). No copy runs then, so no fix is
-// missed: the standard library is the native one of the host. The cost is
+// missed: the standard library is the native one of the host. The parts of
+// default mode that use the copies check the same version: the AOT
+// triggers (stdAOTModes) and the routes of fmt, encoding/json and
+// encoding/xml (setupAOTRoutes) do not use stale copies. The cost is
 // the behavior of AOT mode (the copies see the methods of the plugin
 // types; native packages do not), and the load says it in Plugin.Notes.
 
 // CheckAOT returns the error that Load and RunMain return in AOT mode when
 // the registered AOT copies (import github.com/traefik/yaegi/v2/aot/all)
 // cannot run in this host, or nil. allowStale is Options.AllowStaleAOT.
+// It also returns an error when the host has no AOT copy of the standard
+// library at all (errNoAOTCopies): AOT mode then runs the standard library
+// natively, as default mode does, and a CheckAOT(false) test in a host
+// that forgot to import aot/all passed.
 //
 // A host that loads plugins in AOT mode calls it in a test of its own
 // (CheckAOT(false) must be nil), so that its CI fails when its Go toolchain
@@ -57,7 +65,31 @@ import (
 // load in production. It is the same check as Load: there is no need to
 // call it before Load.
 func CheckAOT(allowStale bool) error {
+	if !hasStdAOT() {
+		return errNoAOTCopies
+	}
 	return checkAOTVersion(runtime.Version(), allowStale)
+}
+
+// errNoAOTCopies is the error of CheckAOT in a host without the AOT copies
+// of the standard library.
+var errNoAOTCopies = errors.New("vm: the host has no AOT copy of the standard library: import github.com/traefik/yaegi/v2/aot/all (without it, AOT mode runs the standard library natively, as default mode)")
+
+// noAOTCopiesNote is the note of a load in AOT mode in a host without the
+// AOT copies of the standard library (Plugin.Notes).
+const noAOTCopiesNote = "AOT mode is on, but the host has no AOT copy of the standard library (import github.com/traefik/yaegi/v2/aot/all): the plugin runs the standard library natively, as in default mode"
+
+// hasStdAOT reports whether an AOT copy of a standard package is
+// registered.
+func hasStdAOT() bool {
+	regMu.RLock()
+	defer regMu.RUnlock()
+	for path := range aotPkgs {
+		if isStdPath(path) {
+			return true
+		}
+	}
+	return false
 }
 
 // aotGate applies the version check of the AOT copies to a load that asks
@@ -90,7 +122,12 @@ func aotGate(hostGo string, aot bool, modes map[string]Mode, allowStale, fallbac
 			out[k] = v
 		}
 	}
-	note := fmt.Sprintf("AOT mode is off for this load (StaleAOTFallback): %v. The plugin runs in default mode: native standard library (with the fixes of the host), other libraries interpreted", err)
+	reason := err.Error()
+	var e *aotVersionErr
+	if errors.As(err, &e) {
+		reason = e.reason // the fix is for the host, CheckAOT gives it
+	}
+	note := fmt.Sprintf("AOT mode is off for this load (StaleAOTFallback): %s. The plugin runs in default mode: native standard library (with the fixes of the host), other libraries interpreted", reason)
 	return false, out, note, nil
 }
 
@@ -163,21 +200,61 @@ func checkAOTVersion(host string, allowStale bool) error {
 			if len(paths) > 3 {
 				paths = append(paths[:3:3], "...")
 			}
-			return fmt.Errorf("%v (AOT copies of %s)", err, strings.Join(paths, ", "))
+			err.paths = strings.Join(paths, ", ")
+			return err
 		}
 	}
 	return nil
 }
 
+// aotVersionErr is the error of checkAOTVersion. Its text has three parts:
+// why the copies cannot run (reason), what to do about it (fix), and some of
+// the copies. The note of a StaleAOTFallback load (aotGate) only gives the
+// reason: the host chose the fallback, and the note comes once per plugin.
+type aotVersionErr struct {
+	reason, fix, paths string
+	copies, host       string // the Go versions
+}
+
+func (e *aotVersionErr) Error() string {
+	s := "vm: " + e.reason + ": " + e.fix
+	if e.paths != "" {
+		s += " (AOT copies of " + e.paths + ")"
+	}
+	return s
+}
+
+// staleShort returns a short text for err, an error of checkAOTVersion: the
+// two Go versions, for the messages that come once per call (a
+// *LostMethodError); Plugin.Notes and CheckAOT give the reason.
+func staleShort(err error) string {
+	var e *aotVersionErr
+	if errors.As(err, &e) {
+		return fmt.Sprintf("the AOT copies were made with %s and the host is built with %s; Plugin.Notes and vm.CheckAOT say why", e.copies, e.host)
+	}
+	return err.Error()
+}
+
 // aotVersionError applies the policy above to a host built with Go version
 // host and AOT copies made with Go version copies.
-func aotVersionError(host, copies string, allowStale bool) error {
-	// A toolchain built with GOEXPERIMENT gives "go1.26.9 X:jsonv2": the
-	// experiments do not change the patch release.
+func aotVersionError(host, copies string, allowStale bool) *aotVersionErr {
+	// A binary built with GOEXPERIMENT gives "go1.27.3-X:nogreenteagc" or
+	// "go1.26.9 X:jsonv2": the experiments do not change the patch
+	// release, but some of them change the standard library (jsonv2,
+	// boringcrypto): the copies must then be made with them
+	// (gorelease.ExperimentsDiffer, README "GOEXPERIMENT").
+	diff := gorelease.ExperimentsDiffer(host, copies)
+	fullHost, fullCopies := host, copies // with the experiments, for staleShort
 	host, copies = gorelease.StripExperiments(host), gorelease.StripExperiments(copies)
 	if gorelease.Release(host) != gorelease.Release(copies) {
-		return fmt.Errorf("vm: the AOT copies were made with %s and the host is built with %s: AOT mode needs copies made for %s (sh scripts/aotgen.sh)",
-			copies, host, gorelease.Release(host))
+		return &aotVersionErr{copies: copies, host: host,
+			reason: fmt.Sprintf("the AOT copies were made with %s and the host is built with %s", copies, host),
+			fix:    fmt.Sprintf("AOT mode needs copies made for %s (sh scripts/aotgen.sh)", gorelease.Release(host))}
+	}
+	if len(diff) > 0 {
+		return &aotVersionErr{copies: fullCopies, host: fullHost,
+			reason: fmt.Sprintf("the GOEXPERIMENT %s of the host or of the AOT copies (made with %s) changes the standard library", strings.Join(diff, ","), copies),
+			fix:    "AOT mode needs copies made with the GOEXPERIMENT of the host (sh scripts/aotgen.sh)"}
 	}
 	if allowStale || host == copies {
 		return nil
@@ -185,7 +262,9 @@ func aotVersionError(host, copies string, allowStale bool) error {
 	_, hok := gorelease.Patch(host)
 	_, cok := gorelease.Patch(copies)
 	if !hok || !cok {
-		return fmt.Errorf("vm: the AOT copies were made with %s and the host is built with %s: regenerate the copies (sh scripts/aotgen.sh) or set AllowStaleAOT", copies, host)
+		return &aotVersionErr{copies: copies, host: host,
+			reason: fmt.Sprintf("the AOT copies were made with %s and the host is built with %s", copies, host),
+			fix:    "regenerate the copies (sh scripts/aotgen.sh) or set AllowStaleAOT"}
 	}
 	// A release candidate comes before the first patch release of its
 	// release: go1.27rc2 < go1.27.0 (the order of gosources.Less too).
@@ -204,7 +283,9 @@ func aotVersionError(host, copies string, allowStale bool) error {
 		case known:
 			why = fmt.Sprintf("%s changed the sources of %s", host, strings.Join(changed, ", "))
 		}
-		return fmt.Errorf("vm: the AOT copies of the standard library were made with %s, older than the Go version of the host (%s), and %s: they miss the fixes of the newer patch releases. Regenerate the copies with %s (sh scripts/aotgen.sh), or set AllowStaleAOT to load anyway", copies, host, why, host)
+		return &aotVersionErr{copies: copies, host: host,
+			reason: fmt.Sprintf("the AOT copies of the standard library were made with %s, older than the Go version of the host (%s), and %s: they miss the fixes of the newer patch releases", copies, host, why),
+			fix:    fmt.Sprintf("regenerate the copies with %s (sh scripts/aotgen.sh), or set AllowStaleAOT to load anyway", host)}
 	}
 	return nil
 }

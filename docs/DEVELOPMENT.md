@@ -104,15 +104,19 @@ interpreted values to native `any` parameters as opaque handles.
 ## CI
 
 `.github/workflows/ci.yml` runs on each pull request and every night. Each
-pull request runs the gate (about 30 runner minutes): linux/amd64 (`go mod
-verify`, `go mod tidy -diff`, gofmt, vet and all tests, for the root module
-and `compare/`), the generated data, build and vet of the 32-bit
+pull request runs the gate: linux/amd64 with Go N and N-1 (`go mod
+verify`, `go mod tidy -diff`, gofmt, vet and all tests but `cmd/runtests`,
+for the root module and `compare/`), the tests on linux/386 when the pull
+request changes code that runs on 32-bit (two shards, one of them
+`cmd/runtests`), the generated data, build and vet of the 32-bit
 platforms, govulncheck and staticcheck. The nightly run also runs:
 
-- linux/arm64, macOS arm64, Windows amd64, linux/386, and linux/arm and
-  linux/s390x under qemu-user;
+- linux/arm64, macOS arm64, Windows amd64, and linux/arm and linux/s390x
+  under qemu-user;
 - `go build` and `go vet` for every platform of `gorelease.Platforms`;
-- `go test -race` on `vm` and `vreflect`;
+- `go test -race` in five shards (`scripts/race-shards.sh`): `vm`,
+  `vreflect`, and the hosts (`host`, `internal/pluginhost` and
+  `compare/catalog/vmhost`);
 - the GOROOT test suite (`compare/gotestdir/gate.sh`): no test of the
   frozen pass list may stop passing;
 - the standard library tests (`cmd/stdtests -check`) and the reflect

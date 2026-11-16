@@ -15,3 +15,6 @@ func Kill(pid int) error {
 	}
 	return p.Kill()
 }
+
+// Signal builds the process itself: os.FindProcess is not named.
+func Signal(pid int) error { return (&os.Process{Pid: pid}).Signal(os.Kill) }

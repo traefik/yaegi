@@ -76,10 +76,14 @@ type LoadLimits struct {
 // builder use about 60 to 90 MiB of heap at their peak per MiB of real
 // source (measured on October 23, 2026: 1.7 GiB for the 30 MiB of the
 // Kubernetes client of compare/complex, the largest plugin measured; 0.3 to
-// 0.8 GiB for grpc, otel, openai and goja, 5 to 9 MiB each), and up to 150
-// MiB per MiB for dense generated code. The largest plugin of the Traefik
-// catalog reads 1.3 MiB. 64 MiB keeps twice the Kubernetes client and bounds
-// a crafted plugin to about 10 GiB, where 256 MiB allowed about 38 GiB.
+// 0.8 GiB for grpc, otel, openai and goja, 5 to 9 MiB each). Dense tables
+// of literals cost much more: about 200 to 230 MiB of resident memory at
+// the peak per MiB of source (November 10, 2026, arrays of 130,000 structs
+// and 260,000 numbers in a package init, the shape of the tables of
+// brotli), 270 to 470 MiB per MiB before branch ai/r3-init-once (the
+// init was compiled twice). The largest plugin of the Traefik catalog reads
+// 1.3 MiB. 64 MiB keeps twice the Kubernetes client and bounds a crafted
+// plugin of tables to about 15 GiB.
 var DefaultLoadLimits = LoadLimits{
 	MaxTotalSourceBytes: 1 << 26, // 64 MiB of Go source
 	MaxFiles:            50000,
@@ -254,15 +258,29 @@ func checkMakeSlice(n int64, elem int64, t types.Type) {
 // (type T2 struct{ a, b T1 }, and so on) costs one step per level.
 func (m *Machine) zeroEntries(t types.Type) int64 {
 	var memo map[types.Type]int64
-	return m.zeroEntriesMemo(t, &memo, true)
+	return m.zeroEntriesMemo(t, &memo, true, false)
+}
+
+// cellEntries is zeroEntries, with a native struct counted by its gc size
+// in Values. It sizes the cells of the frame-local Allocs (escape.go): a
+// free cell of a native struct counted as one Value, whatever its size, so
+// the free cells of a ctx were not bounded by maxFreeBytes and MaxMemory
+// did not count them (a local base64.Encoding is 14 Values).
+func (m *Machine) cellEntries(t types.Type) int64 {
+	var memo map[types.Type]int64
+	return m.zeroEntriesMemo(t, &memo, true, true)
 }
 
 // zeroEntriesMemo is zeroEntries with the map of counts (nil until a nested
 // count is kept). top is true for the type of the whole value, whose count
-// is not kept: the zero value of a flat struct allocates no map.
-func (m *Machine) zeroEntriesMemo(t types.Type, memo *map[types.Type]int64, top bool) int64 {
+// is not kept: the zero value of a flat struct allocates no map. nat is
+// true for cellEntries.
+func (m *Machine) zeroEntriesMemo(t types.Type, memo *map[types.Type]int64, top, nat bool) int64 {
 	if m.isNativeNamed(t) {
 		if _, ok := t.Underlying().(*types.Struct); ok {
+			if nat {
+				return min((gcSizes.Sizeof(t)+valueSize-1)/valueSize, maxZeroElems+1)
+			}
 			return 0 // a native Go value (reflect.New), sized by gc
 		}
 	}
@@ -273,7 +291,7 @@ func (m *Machine) zeroEntriesMemo(t types.Type, memo *map[types.Type]int64, top 
 			return c
 		}
 		for i := 0; i < u.NumFields() && n <= maxZeroElems; i++ {
-			n = satAdd(n, satAdd(1, m.zeroEntriesMemo(u.Field(i).Type(), memo, false)))
+			n = satAdd(n, satAdd(1, m.zeroEntriesMemo(u.Field(i).Type(), memo, false, nat)))
 		}
 	case *types.Array:
 		if u.Len() <= 0 {
@@ -282,7 +300,7 @@ func (m *Machine) zeroEntriesMemo(t types.Type, memo *map[types.Type]int64, top 
 		if c, ok := (*memo)[t]; ok {
 			return c
 		}
-		e := m.zeroEntriesMemo(u.Elem(), memo, false)
+		e := m.zeroEntriesMemo(u.Elem(), memo, false, nat)
 		if u.Len() >= zsliceMin && zeroSized(u.Elem()) {
 			n = e // a zslice: one zero element for the whole array
 		} else {

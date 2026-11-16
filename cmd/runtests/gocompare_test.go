@@ -168,7 +168,7 @@ func itoa(i int) string {
 // package main, a first comment that says what the program checks, and a
 // directory per area. The other rules are checked by the runs: an import
 // that a restricted plugin may not have fails the -restricted run, and a
-// program that only works with a 64-bit int fails the nightly linux/386 job.
+// program that only works with a 64-bit int fails the linux/386 job of CI.
 func TestGoCompareRules(t *testing.T) {
 	for _, f := range discoverGoCompare(t) {
 		path := filepath.Join(root, "testdata", "gocompare", filepath.FromSlash(f))
@@ -187,5 +187,5 @@ func TestGoCompareRules(t *testing.T) {
 			t.Errorf("%s: put it in the directory of its area (testdata/gocompare/<area>/)", f)
 		}
 	}
-	// A 32-bit int: the nightly CI job "linux/386" runs this test there.
+	// A 32-bit int: the CI job "test386" runs this test there.
 }

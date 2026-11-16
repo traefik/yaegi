@@ -122,3 +122,43 @@ func TestMaxMemoryOff(t *testing.T) {
 		t.Fatal("a memory count without MaxMemory")
 	}
 }
+
+// TestMaxMemoryClose: Close forgets what the quota counts. The plugin
+// keeps its buffers in a global, so they stay alive after Close, but
+// nothing of the plugin may allocate any more: the quota drops its weak
+// pointers to them and its stack charges, and Memory reports 0. Without
+// this, the quota of a closed machine that the host still holds keeps a
+// weak pointer per counted object, and Memory counts the closed plugin.
+func TestMaxMemoryClose(t *testing.T) {
+	const max = 16 << 20
+	p, err := Load(Options{Dir: "..", MaxMemory: max}, memPlug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	cfg, err := createConfig(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h, err := newHandler(context.Background(), p, http.NotFoundHandler(), cfg, "x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if body, r := serveBG(h, "/keep"); r != nil || !strings.HasPrefix(body, ErrMemory.Error()) {
+		t.Fatalf("/keep: %q, panic %v, want the panic %q", body, r, ErrMemory)
+	}
+	if used := p.M.Memory(); used < max/2 {
+		t.Fatalf("Memory() = %d before Close, want at least %d (the kept buffers)", used, max/2)
+	}
+	p.M.Close()
+	if used := p.M.Memory(); used != 0 {
+		t.Errorf("Memory() = %d after Close, want 0", used)
+	}
+	q := p.M.mem
+	q.mu.Lock()
+	objs, stacks := len(q.objs), len(q.stacks)
+	q.mu.Unlock()
+	if objs != 0 || stacks != 0 {
+		t.Errorf("after Close: the quota keeps %d objects and %d stack charges, want none", objs, stacks)
+	}
+}

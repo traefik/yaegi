@@ -188,9 +188,12 @@ func TestMaxMemorySmallLocals(t *testing.T) {
 // recursion run: 3000 frames with a local [4096]byte use about 12 MB of
 // stack under gc, but 290 MiB in the VM (a Value of 24 bytes per byte of the
 // array). It stopped with ErrStackOverflow when the default was 256 MiB.
+// A Value is 16 bytes on 32-bit platforms: the depth grows to pass 256 MiB
+// there too.
 func TestDefaultMaxStackDeep(t *testing.T) {
 	needSource(t)
-	dir, pkg := writePlugin(t, "package p\n\nfunc f(n int) int {\n\tvar b [4096]byte\n\tb[n%4096] = byte(n)\n\tif n == 0 {\n\t\treturn int(b[0])\n\t}\n\treturn f(n-1) + int(b[n%4096])\n}\n\nfunc F() int { return f(3000) }\n")
+	depth := 3000 * 24 / int(valueSize)
+	dir, pkg := writePlugin(t, fmt.Sprintf("package p\n\nfunc f(n int) int {\n\tvar b [4096]byte\n\tb[n%%4096] = byte(n)\n\tif n == 0 {\n\t\treturn int(b[0])\n\t}\n\treturn f(n-1) + int(b[n%%4096])\n}\n\nfunc F() int { return f(%d) }\n", depth))
 	p, err := Load(Options{Dir: dir}, pkg)
 	if err != nil {
 		t.Fatal(err)
@@ -198,17 +201,21 @@ func TestDefaultMaxStackDeep(t *testing.T) {
 	if _, err := p.Call(context.Background(), "F"); err != nil {
 		t.Fatalf("F: %v, want no error with the default MaxStack", err)
 	}
-	if f := stackFunc(t, p, "f"); len(f.locals) != 1 || f.locals[0].site.cellVals*valueSize*3000 <= 256<<20 {
+	if f := stackFunc(t, p, "f"); len(f.locals) != 1 || f.locals[0].site.cellVals*valueSize*int64(depth) <= 256<<20 {
 		t.Fatalf("f: the frames must pass 256 MiB in the VM: %d frame-local cells", len(f.locals))
 	}
 }
 
 // TestMaxMemoryGlobals checks that the package-level variables count in
 // MaxMemory: a variable that does not fit is a load error before it is
-// allocated, one that fits is counted.
+// allocated, one that fits is counted. The sizes in MiB are for a Value of
+// 24 bytes.
 func TestMaxMemoryGlobals(t *testing.T) {
 	needSource(t)
-	const quota = 64 << 20
+	// 64 MiB with a Value of 24 bytes (64-bit platforms): the quota
+	// scales with valueSize (16 bytes on 32-bit platforms), so the sizes
+	// below are on the same side of it on every platform.
+	quota := int64(64<<20) * valueSize / 24
 	dir, pkg := writePlugin(t, "package p\n\nvar big [4 << 20]byte\n\nfunc F() int { return int(big[1]) }\n")
 	_, err := Load(Options{Dir: dir, MaxMemory: quota}, pkg)
 	if err == nil || !strings.Contains(err.Error(), "package-level variable example.com/p.big") || !strings.Contains(err.Error(), "MaxMemory") {
@@ -246,10 +253,47 @@ var stackHostileCases = map[string]struct{ src, want string }{
 	"manyLocals":   {"package p\n\nfunc f(n int) int {\n" + manyLocals(400) + "\treturn f(n+1)" + sumLocals(400) + "\n}\n\nfunc F() int { return f(0) }\n", ErrStackOverflow.Error()},
 	"deferLoop":    {"package p\n\nfunc g(a, b int) {}\n\nfunc F() int { for i := 0; i < 1<<30; i++ { defer g(i, i) }; return 0 }\n", ErrStackOverflow.Error()},
 	"deferClosure": {"package p\n\nfunc F() (s int) { for i := 0; i < 1<<30; i++ { defer func() { s += i }() }; return 0 }\n", ErrStackOverflow.Error()},
-	"goroutines":   {"package p\n\nfunc f(n int) int { var a [2000]int; a[n%2000] = n; return f(n+1) + a[0] }\n\nfunc F() int { for i := 0; i < 4; i++ { go f(0) }; return 0 }\n", "4 goroutines, ErrMemory: true"},
+	"goroutines":   {goroutinesSrc, "ErrMemory: true"},
 	"global":       {"package p\n\nvar big [60 << 20]byte\n\nfunc F() int { return int(big[1]) }\n", "package-level variable"},
 	"globals":      {"package p\n\nvar a, b, c, d, e, f [8 << 20]byte\n\nfunc F() int { return int(a[1] + b[1] + c[1] + d[1] + e[1] + f[1]) }\n", "package-level variable"},
 }
+
+// goroutinesSrc starts 4 goroutines that each recurse to depth 1000 with
+// frames of about 48 KB (about 46 MiB, under MaxStack 64 MiB: the bound
+// stops this recursion near depth 1390), then wait on stop. The stacks stay
+// alive together, so they pass the quota of 128 MiB. Before, the goroutines
+// recursed until MaxStack and the test needed the stacks of the goroutines
+// that had already stopped to stay counted: a stopped goroutine now gives
+// its charge back, so with few CPUs (one goroutine after the other) none
+// got ErrMemory. The array has 48000/valueSize elements, so a frame takes
+// about 48 KB on every architecture: with a fixed [2000]int, a frame took
+// half of it on linux/386 (smaller cells), the 4 stacks stayed under the
+// quota and none got ErrMemory.
+var goroutinesSrc = strings.ReplaceAll(goroutinesTmpl, "SIZE", fmt.Sprint(48000/valueSize))
+
+const goroutinesTmpl = `package p
+
+var ready = make(chan int, 4)
+
+var stop = make(chan int)
+
+func f(n int) int {
+	var a [SIZE]int
+	a[n%SIZE] = n
+	if n == 1000 {
+		ready <- 1
+		<-stop
+		return a[0]
+	}
+	return f(n+1) + a[0]
+}
+
+func F() int { for i := 0; i < 4; i++ { go f(0) }; return 0 }
+
+func Ready() int { return len(ready) }
+
+func Stop() int { close(stop); return 0 }
+`
 
 // manyLocals declares n int locals v0..vn-1 that stay in registers.
 func manyLocals(n int) string {
@@ -301,22 +345,35 @@ func TestStackHostileChild(t *testing.T) {
 	}
 	_, err = p.Call(context.Background(), "F")
 	if name == "goroutines" {
-		// The goroutines of the plugin stop on their own: GoPanic gets
-		// each error.
+		// Each goroutine either waits at depth 1000 (Ready counts it) or
+		// stopped with an error (GoPanic gets it). Then Stop ends the
+		// waiting ones.
+		ready := 0
 		for deadline := time.Now().Add(time.Minute); time.Now().Before(deadline); time.Sleep(10 * time.Millisecond) {
+			res, rerr := p.Call(context.Background(), "Ready")
+			if rerr != nil {
+				fmt.Printf("RESULT: Ready: %v\n", rerr)
+				return
+			}
+			v, _ := res[0].Interface()
+			ready, _ = v.(int)
 			mu.Lock()
 			n := len(panics)
 			mu.Unlock()
-			if n == 4 {
+			if ready+n == 4 {
 				break
 			}
+		}
+		if _, serr := p.Call(context.Background(), "Stop"); serr != nil {
+			fmt.Printf("RESULT: Stop: %v\n", serr)
+			return
 		}
 		mu.Lock()
 		mem := false
 		for _, r := range panics {
 			mem = mem || r == ErrMemory
 		}
-		err = fmt.Errorf("%d goroutines, ErrMemory: %v: %v", len(panics), mem, panics)
+		err = fmt.Errorf("%d waiting, %d stopped, ErrMemory: %v: %v", ready, len(panics), mem, panics)
 		mu.Unlock()
 	}
 	fmt.Printf("RESULT: %v\n", err)
@@ -347,5 +404,71 @@ func TestStackHostile(t *testing.T) {
 				t.Fatalf("want an error with %q, got:\n%s", c.want, out)
 			}
 		})
+	}
+}
+
+// TestMaxStackPooledCtx checks that a ctx of the pool fits the MaxStack of
+// the machine that takes it (fitStack). A machine with a large MaxStack
+// runs a deep recursion that returns: its ctx goes back to the pool with a
+// long register stack. A machine with a small MaxStack that takes this ctx
+// must stop its recursion at the same depth as with a new ctx: the check
+// of the registers only runs when the stack grows, so without fitStack the
+// recursion ran in the long stack, far past the bound.
+func TestMaxStackPooledCtx(t *testing.T) {
+	needSource(t)
+	const src = stackLimitSrc + `
+func r(n int) int {
+	if n == 0 {
+		return 0
+	}
+	return r(n-1) + 1
+}
+
+func R(n int) int { return r(n) }
+`
+	dir, pkg := writePlugin(t, src)
+	big, err := Load(Options{Dir: dir, MaxStack: 64 << 20}, pkg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer big.Close()
+	// The pool keeps register stacks of up to pooledRegs Values: the bound
+	// of small is far below.
+	const limit = pooledRegs * valueSize / 16
+	small, err := Load(Options{Dir: dir, MaxStack: limit}, pkg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer small.Close()
+	// The first call compiles F and f: their frames give the depth.
+	got := stackDepth(t, small, "F")
+	fF, f := stackFunc(t, small, "F"), stackFunc(t, small, "f")
+	want := int((limit/valueSize - int64(fF.nregs)) / int64(f.nregs))
+	if got != want {
+		t.Fatalf("MaxStack %d: f reached depth %d, want %d", limit, got, want)
+	}
+	// fitStack itself, without the pool: a ctx with a stack of pooledRegs
+	// Values, with and without stacks of ctxs below it on the goroutine.
+	for _, below := range []int{0, 100, 1000} {
+		cx := &ctx{m: small.M, stack: make([]Value, pooledRegs), regsBelow: below}
+		cx.fitStack()
+		if n := int64(len(cx.stack)+below) * valueSize; n > max(limit, int64(below)*valueSize) {
+			t.Errorf("fitStack with %d registers below: %d Values, %d bytes with the ones below, more than MaxStack %d", below, len(cx.stack), n, limit)
+		}
+	}
+	// sync.Pool gives no promise: a few rounds, so that the small machine
+	// gets the long ctx of the big one at least once.
+	for range 20 {
+		const deep = pooledRegs / 32 // a stack of more than limit and at most pooledRegs Values: kept by the pool
+		res, err := big.Call(context.Background(), "R", deep)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if v, _ := res[0].Interface(); v != deep {
+			t.Fatalf("R(%d) = %v", deep, v)
+		}
+		if got := stackDepth(t, small, "F"); got != want {
+			t.Fatalf("MaxStack %d after a deep call of another machine: f reached depth %d, want %d", limit, got, want)
+		}
 	}
 }

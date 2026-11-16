@@ -240,7 +240,7 @@ func (cx *ctx) callOutermost(g uintptr, fn *Func, args, env []Value) (rv Value, 
 		// A catcher of the VM (top, recovering) handles ErrClosed itself:
 		// the panic goes on to it, as before (top aborts a ServeHTTP).
 		catcher := underCatcher(callOutermostName)
-		if catcher && (!m.closed.Load() || below(callOutermostName, callerRecovers)) {
+		if catcher && (!cx.stopped() || below(callOutermostName, callerRecovers)) {
 			return
 		}
 		r := recover()
@@ -259,7 +259,7 @@ func (cx *ctx) callOutermost(g uintptr, fn *Func, args, env []Value) (rv Value, 
 			// context is done stops with ErrCanceled, or gives
 			// http.ErrAbortHandler: its deferred calls ran, and it is not a
 			// panic of the plugin (quietStop, as in runGoroutine).
-			m.GoPanic(r)
+			m.goPanic(r)
 		}
 		if fn != nil && fn.ssa != nil && isStringMethod(fn.ssa.Name(), fn.ssa.Signature) {
 			rv, caught = m.fromNative(reflect.ValueOf(panicString), types.Typ[types.String]), true
@@ -272,6 +272,7 @@ func (cx *ctx) callOutermost(g uintptr, fn *Func, args, env []Value) (rv Value, 
 		rv, caught = m.afterPanic(res, callOutermostName), true
 	}()
 	cx.refuseClosed(g)
+	cx.refuseStopped(g)
 	if release := cx.countNativeCallback(g); release != nil {
 		defer release()
 	}
@@ -285,12 +286,46 @@ func (cx *ctx) callOutermost(g uintptr, fn *Func, args, env []Value) (rv Value, 
 // plugin that the host (or native code) calls after Close does not run, as
 // Plugin.Call returns ErrClosed. The run is forgotten as callIn would.
 func (cx *ctx) refuseClosed(g uintptr) {
-	if !cx.m.closed.Load() {
+	if !cx.stopped() {
 		return
 	}
 	leaveG(g, cx.gs)
 	cx.owned.close()
 	panic(ErrClosed)
+}
+
+// refuseStopped panics before cx, the outermost run of goroutine g, starts
+// when its account is already spent or canceled, or comes from a goroutine
+// that stopped with a fault (stoppedOrigin). This is the one place where
+// every callback that native code starts on a goroutine of its own
+// (time.AfterFunc, context.AfterFunc, a handler of an http.Server) begins,
+// and the same rule as for a go statement (spawn): a stopped call starts
+// no new code. Before, the callback took the stopped account, stopped at
+// its first refill and got a grace of its own for its deferred calls, and
+// that grace did not use BackgroundRate. So a chain of callbacks, each
+// given to time.AfterFunc in a deferred call of the one before, ran for
+// ever while the call waited in native code (defer gate.Wait()). No code
+// of the plugin ran yet, so no deferred call is skipped. The run is
+// forgotten as callIn would.
+func (cx *ctx) refuseStopped(g uintptr) {
+	a := cx.acct
+	if a == nil {
+		return
+	}
+	var err error
+	switch {
+	case a.fault != nil:
+		err = a.fault
+	case a.state.Load() == acctSpent:
+		err = ErrBudget
+	case a.state.Load() == acctCanceled:
+		err = ErrCanceled
+	default:
+		return
+	}
+	leaveG(g, cx.gs)
+	cx.owned.close()
+	panic(err)
 }
 
 // closedResult is what an outermost run of fn that Close stopped or refused
@@ -403,7 +438,7 @@ func (m *Machine) goOutermost(cl *Closure, args []Value, sig *types.Signature) (
 			// The stop func of iter.Pull gives the panic of the sequence
 			// again. A sequence on a canceled account stops with
 			// ErrCanceled: not a panic of the plugin (as in callOutermost).
-			m.GoPanic(r)
+			m.goPanic(r)
 		}
 		rv = m.afterPanic(sig.Results(), goOutermostName)
 	}()
@@ -525,7 +560,7 @@ func (n *nativeNext) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if p == errAbortCallback {
 			return // a callback below gave its panic to GoPanic (afterPanic)
 		}
-		n.m.GoPanic(p)
+		n.m.goPanic(p)
 	}()
 	n.next.ServeHTTP(w, r)
 	ok = true
@@ -646,7 +681,7 @@ func (m *Machine) nativeGo(f func()) {
 		if r == nil {
 			return // runtime.Goexit: the goroutine ends, as in Go
 		}
-		m.GoPanic(r)
+		m.goPanic(r)
 	}()
 	f()
 	ok = true

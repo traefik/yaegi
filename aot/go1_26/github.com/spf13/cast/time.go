@@ -11,15 +11,16 @@ package cast
 
 import (
 	json "github.com/traefik/yaegi/v2/aot/go1_26/encoding/json"
+	aotvm "github.com/traefik/yaegi/v2/vm"
+
+	// ToTimeE any value to a [time.Time] type.
 	errors "github.com/traefik/yaegi/v2/aot/go1_26/errors"
 	fmt "github.com/traefik/yaegi/v2/aot/go1_26/fmt"
 	internal "github.com/traefik/yaegi/v2/aot/go1_26/github.com/spf13/cast/internal"
-	aotvm "github.com/traefik/yaegi/v2/vm"
 	"strings"
 	"time"
 )
 
-// ToTimeE any value to a [time.Time] type.
 func ToTimeE(i any) (time.Time, error) {
 	return ToTimeInDefaultLocationE(i, time.UTC)
 }

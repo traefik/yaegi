@@ -213,9 +213,10 @@ func (m *Machine) decodePC(pc uintptr) (*Func, int, bool) {
 	}
 	// Past the end of the code (a return address may be one past the
 	// last instruction), the PC is not in fn: like gc's past the end of
-	// a function.
+	// a function. ncode, not len(code): the code of an init is dropped
+	// once it ran (dropInitCode), and the PCs taken in it still decode.
 	fn, k := m.pcFuncs[id-1], int(pc&(1<<pcKBits-1))
-	if k > len(fn.code) {
+	if k > fn.ncode {
 		return nil, 0, false
 	}
 	return fn, k, true

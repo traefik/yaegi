@@ -27,6 +27,14 @@
 //	hostgraph -update    online: replace the snapshot with the go.mod of
 //	                     traefik/traefik at -ref (read only: nothing is sent
 //	                     there).
+//	hostgraph -hostversions
+//	                     offline: print module@version for each module of
+//	                     yaegi v2's go.mod that the snapshot requires at a
+//	                     higher version, the version MVS selects in the
+//	                     host. The CI job hostgraph gives them to go get and
+//	                     runs the tests of vm and host and the conformance
+//	                     with them: yaegi v2 runs in Traefik with these
+//	                     versions, not with its own.
 //
 // When it fails, regenerate the copy at the version of the host: update the
 // module in yaegi v2's go.mod (go get module@version), then run
@@ -67,10 +75,13 @@ func main() {
 	update := flag.Bool("update", false, "replace the snapshot with the go.mod of traefik/traefik at -ref (needs the network)")
 	ref := flag.String("ref", "master", "-update: branch, tag or commit of traefik/traefik")
 	keep := flag.Bool("keep", false, "-build: keep the throwaway module (its path is printed)")
+	versions := flag.Bool("hostversions", false, "print module@version for each module of go.mod that the host snapshot requires at a higher version (for go get)")
 	flag.Parse()
 
 	var err error
 	switch {
+	case *versions:
+		err = runHostVersions(*root)
 	case *update:
 		err = runUpdate(*root, *ref)
 	case *build:
@@ -281,6 +292,50 @@ func runOffline(root string) ([]string, error) {
 		problems = append(problems, checkCopies(filepath.Base(tree), copies, own, host)...)
 	}
 	return problems, nil
+}
+
+// hostVersions returns, as "module@version" and sorted, the modules of
+// yaegi v2's go.mod that the host snapshot requires at a higher version: the
+// versions that MVS selects in the host instead of yaegi v2's. A module that
+// the host replaces is left out.
+func hostVersions(own, host map[string]string) []string {
+	var out []string
+	for mod, v := range own {
+		hv, ok := host[mod]
+		if !ok || strings.HasPrefix(hv, replacedBy) || strings.HasPrefix(v, replacedBy) {
+			continue
+		}
+		if semver.Compare(hv, v) > 0 {
+			out = append(out, mod+"@"+hv)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// runHostVersions prints hostVersions for this checkout, one per line, for
+// go get: the CI job hostgraph runs the tests of yaegi v2 with them.
+func runHostVersions(root string) error {
+	gomod, err := os.ReadFile(filepath.Join(root, "go.mod"))
+	if err != nil {
+		return err
+	}
+	own, err := requires("go.mod", gomod)
+	if err != nil {
+		return err
+	}
+	snap, err := os.ReadFile(filepath.Join(root, snapshotPath))
+	if err != nil {
+		return err
+	}
+	host, err := requires(snapshotPath, snap)
+	if err != nil {
+		return err
+	}
+	for _, mv := range hostVersions(own, host) {
+		fmt.Println(mv)
+	}
+	return nil
 }
 
 // checkCopies returns the problems of the copies of one tree, given the

@@ -163,14 +163,15 @@ func (m *Machine) linkTarget(f *ssa.Function) string {
 	return ""
 }
 
-// bodylessHook returns the function that the VM runs for f, a function
-// without a Go body of a package run from source: a runtimeLinks entry, or
-// with Options.StubAssembly a stub. nil when f has a body, has a native
-// implementation, or stays refused.
 // maxUintptr is ^uintptr(0), a variable: as a constant, int64(^uintptr(0))
 // does not compile on 64-bit.
 var maxUintptr = ^uintptr(0)
 
+// bodylessHook returns the function that the VM runs for f, a function
+// without a Go body of a package run from source: a runtimeLinks entry, an
+// assembly function of golang.org/x/sys/cpu (xsyscpu.go), or with
+// Options.StubAssembly a stub. nil when f has a body, has a native
+// implementation, or stays refused.
 func (m *Machine) bodylessHook(f *ssa.Function) NativeHook {
 	if len(f.Blocks) != 0 || f.Pkg == nil || !m.interpPkg(f.Pkg.Pkg) || f.Signature.Recv() != nil {
 		return nil
@@ -179,22 +180,27 @@ func (m *Machine) bodylessHook(f *ssa.Function) NativeHook {
 	if h := runtimeLinks[target]; h != nil && linkSignatureOK(target, f.Signature) {
 		return h
 	}
+	if h := m.xsysCPUHook(f); h != nil {
+		return h
+	}
 	if !m.stubAsm || m.hasNativeFunc(f) {
 		return nil
 	}
 	if (libcSyscalls[target] || rawSyscalls[f.Pkg.Pkg.Path()+"."+f.Name()]) && f.Signature.Results().Len() == 3 {
-		// r1, r2 uintptr, err Errno: the call fails, as on a system
-		// without this call; nothing is called. r1 is ^uintptr(0) at the
-		// size of uintptr (truncN): -1 was another value on 32-bit.
-		return func(m *Machine, a []Value) Value {
-			return Value{R: []Value{{N: int64(maxUintptr)}, {}, {N: int64(syscall.ENOSYS)}}}
-		}
+		return enosysHook
 	}
 	name := f.String()
 	return func(m *Machine, a []Value) Value {
 		unsupported("%s has no Go body (it is written in assembly): Options.StubAssembly loaded the plugin, but the VM cannot run the function", name)
 		return Value{}
 	}
+}
+
+// enosysHook is a system call (r1, r2 uintptr, err Errno) that fails, as on
+// a system without this call; nothing is called. r1 is ^uintptr(0) at the
+// size of uintptr (truncN): -1 was another value on 32-bit.
+func enosysHook(m *Machine, a []Value) Value {
+	return Value{R: []Value{{N: int64(maxUintptr)}, {}, {N: int64(syscall.ENOSYS)}}}
 }
 
 // linkSignatureOK reports whether sig, the signature a program declares
@@ -324,6 +330,9 @@ func (m *Machine) knownBytes(p Value, n uint64, write bool, name string) []byte 
 	b := r.bytes[i:]
 	if n > uint64(len(b)) {
 		unsupported("%s: %d bytes reach outside the memory known to the VM (%d bytes)", name, n, len(b))
+	}
+	if write {
+		m.hostBytes(b, int(n)) // the bytes of a host []byte (hostmem.go)
 	}
 	return b[:n:n]
 }

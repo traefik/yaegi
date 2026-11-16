@@ -100,7 +100,7 @@ func (m *Machine) load(addr Value, s *memSite) Value {
 	case *hdrWord:
 		return p.load(s.t)
 	case *byteView:
-		return p.load(s.t)
+		return m.loadView(p, s.t)
 	case badAddr:
 		p.refuse()
 	}
@@ -221,6 +221,6 @@ func assign(p *Value, v Value, t types.Type) {
 		return
 	}
 	for i := range dst {
-		assign(&dst[i], src[i], elem(i))
+		assign(&dst[i], loadCell(&src[i], elem(i)), elem(i))
 	}
 }

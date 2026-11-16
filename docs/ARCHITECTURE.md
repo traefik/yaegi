@@ -88,10 +88,13 @@ source ──go/packages──▶ go/types ──go/ssa──▶ SSA ──vm.co
   `runtime.Frames` (`callers.go`), of `embed.FS` (`embed.go`), the stack
   bounds of the goroutine structure (`stackguard_g.go`), and the way
   `runtime.AddCleanup` treats globals and string constants (`inHeap`,
-  `unsafe.go`), and the malloc header of a large `[]Value` that
-  `runtime.findObject` shows (`cellStartOK`, `fatal.go`: with
-  `PanicOnFatal`, `runtime.SetFinalizer` on a pointer inside an object is a
-  panic of the plugin). `TestRuntimeCouplings` fails when one of these
+  `unsafe.go`), and the offsets of `elemsize` and `spanclass` in the
+  `runtime.mspan` that `runtime.findObject` returns (`spanLayoutOK`,
+  `fatal.go`: with `PanicOnFatal`, `runtime.SetFinalizer` on a pointer
+  inside an object, a cell or a native pointer, is a panic of the plugin;
+  without the layout, every pointer that is not the base of its object is
+  refused, so the runtime never gets a pointer that the VM cannot prove to
+  be the start of its object). `TestRuntimeCouplings` fails when one of these
   checks fails, so a new Go release shows it at once. The `//go:linkname`
   pulls of `runtime.nanotime`, `runtime.getAuxv` (`linkname.go`) and
   `runtime.findObject` (`fatal.go`) fail at link time.
@@ -117,7 +120,11 @@ source ──go/packages──▶ go/types ──go/ssa──▶ SSA ──vm.co
   the same work without assembly or unsafe). A standard library package
   that the VM interprets (`-src`) and that the tags would change keeps the
   files of go run instead (its native code is compiled without the tags),
-  and the assembly is refused as before. The `// yaegi:tags t1 t2` comment
+  and the assembly is refused as before. golang.org/x/sys/cpu has no pure
+  Go version of its feature probes (`cpuid`, `xgetbv`, `getisar0`...):
+  the VM gives them as functions that return zero, a CPU without
+  extensions, so the libraries that read its feature variables take their
+  pure Go code (`xsyscpu.go`). The `// yaegi:tags t1 t2` comment
   lines of the plugin package (a directive of yaegi) add build tags only
   with `Options.YaegiTags` (and `RunOptions.YaegiTags`, `yaegi -yaegi-tags`,
   which the conformance runner sets): go build ignores them, and so do
@@ -146,9 +153,11 @@ source ──go/packages──▶ go/types ──go/ssa──▶ SSA ──vm.co
 - `Plugin.Close` (`close.go`) stops every goroutine of a plugin with
   `ErrClosed` at its next blocking point or step refill, and makes later
   calls fail; `Plugin.CloseContext` lets the calls that run end first, up
-  to a deadline. A host reloads a plugin by loading it again and draining
-  the old one (`docs/RELOAD.md`): Go cannot stop the goroutines of one
-  `New` only.
+  to a deadline. A host keeps one `Plugin` for its whole life, calls `New`
+  at each reload and `Close` at shutdown (`docs/RELOAD.md`).
+- `Instance` (`instance.go`) groups the goroutines that one call from the
+  host (one `New`) starts, and their children: `MaxGoroutines` bounds each
+  instance, `Instance.Goroutines` shows them, `Instance.Close` stops them.
 - What a load keeps of the front end (`vm/shrink.go`): ssa keeps the
   syntax and the `types.Info` of every function built from source, to build
   instances of generic functions on demand. After the SSA build and the
@@ -206,7 +215,12 @@ One uniform `Value{N int64; R any}` for every interpreted value, no
 `RType` is the dynamic type descriptor stored in interfaces: the go/types type,
 its method set (compiled `*Func`s), and a cached `implements` table.
 `Machine.rtypeOf` builds the method set before it publishes the `RType`, so
-other goroutines read `Methods` with no lock.
+other goroutines read `Methods` with no lock. `Methods` is keyed by
+`types.Id`: an exported method by its name, an unexported one by its package
+path and its name. The unexported methods `m` of two packages are two
+different methods (a struct can have both, through its embedded fields), and
+an interface call (`invokeSite.id`) finds the one of the package of its
+interface, as gc does.
 
 ## Compiler (`vm/compile.go`, `vm/features.go`)
 
@@ -233,7 +247,12 @@ other goroutines read `Methods` with no lock.
   an unsupported construct. Problems in standard library code run in the VM
   are not reported (the plugin author cannot fix them). `Options.NoPreflight`
   turns the check off. The machine of the plugin still compiles each
-  function at its first call.
+  function at its first call. The check stops when the context of the load
+  is done, so a load abandoned after its deadline frees the slot of the
+  plugin. The generic methods of Go 1.27 (`func (b Box[T]) Map[U any]...`)
+  are skipped there and in every run-time method set (`vm/genmethod.go`):
+  they have no code until a call instantiates them, they satisfy no
+  interface, and reflect does not list them.
 - Optimizations behind `VM_OPT` (`vm/opts.go`; `VM_OPT=none` disables all,
   `VM_OPT=-name,...` some): `pool` (pooled execution contexts), `tuple`
   (multi-value results in consecutive registers), `fastnative` (direct native
@@ -531,8 +550,21 @@ Function names follow gc: `init.0` for the first init function (ssa's
   value (`UnmarshalJSON`, `MarshalText`, `UnmarshalXML`... of a field, an
   element, a map key) is never silently wrong (`lostmethods.go`): when the
   type is known at compile time, it is a problem of the load-time check;
-  otherwise the call returns a `*vm.LostMethodError`. The routes need the
-  twin, but they do not turn on the VM reflect for the program's own
+  otherwise the call returns a `*vm.LostMethodError`. The native printers
+  of fmt and the json encoders do better (`keepmethods.go`): their `any`
+  arguments get a "keep" conversion, where a value of a plugin type with
+  a method that native code calls (`String`, `Error`, `Format`,
+  `GoString`; `MarshalJSON`, `MarshalText`) is a `keptW`, whose `Format`
+  and `MarshalJSON` call it in the VM, inside native structs, slices and
+  maps of the same shape (field names and tags; `*keptW` for an
+  `omitempty` field, nil when json omits it; a recursive type is cut by an
+  `any`). What it cannot keep is a `*vm.LostMethodError` (json) or
+  `%!v(yaegi v2: ...)` (fmt). A known limit: a struct that embeds a struct
+  of an unexported type with such a method inside (`type Outer struct {
+  inner; X int }`, `inner` has a field `C Color`) cannot be kept, as
+  reflect cannot build a struct with an unexported embedded field; json
+  returns the `*vm.LostMethodError` (go run writes the value). The
+  routes need the twin, but they do not turn on the VM reflect for the program's own
   reflect calls (`progVR`): a plugin (`Load`) without `OpaqueAny` whose
   own packages do not import `reflect` keeps native reflect, with its
   checks on host objects (`TestPluginAOTRoute`). A value of a native type
@@ -576,6 +608,10 @@ Function names follow gc: `init.0` for the first init function (ssa's
   headers are views of the variable (`unsafehdr.go`).
 - `OpaqueAny`: interpreted values passed to native `any` parameters become
   opaque handles that round-trip unchanged (sync.Pool, sync.Map, context).
+  A context value that native code or another machine reads is in its
+  native form instead (a copy, or a wrapper with methods), and a value of
+  another machine gets an RType with the methods of its owner type
+  (`vm/foreign.go`, see "Values that cross machines" in docs/SANDBOX.md).
   The native printers (`printFuncs` in `native.go`: the fmt print functions,
   `Errorf`, the log functions and `*log.Logger` methods) only read their
   arguments: a value without methods gets a native copy, as without

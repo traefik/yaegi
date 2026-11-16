@@ -7,9 +7,9 @@ package validator
 import (
 	"context"
 	fmt "github.com/traefik/yaegi/v2/aot/go1_26/fmt"
-	aotvm "github.com/traefik/yaegi/v2/vm"
 
 	// per validate construct
+	aotvm "github.com/traefik/yaegi/v2/vm"
 	reflect "github.com/traefik/yaegi/v2/vreflect"
 	"strconv"
 )

@@ -78,22 +78,43 @@ func TestBudgetBackgroundTicker(t *testing.T) {
 			t.Errorf("%d live goroutines after /bgstop", p.M.Goroutines())
 		}
 	}()
-	ok := waitFor(60*time.Second, func() bool {
-		body, _ := serveBG(h, "/ticks")
+	// The test counts rounds, not wall time: it waits until both loops
+	// ran more than 3*budget rounds, as long as both still make progress.
+	// Under load with GOMAXPROCS=1, a sleep of 1µs can take 10 ms, and the
+	// sleep loop needed more than the 60 s of a fixed deadline. A loop that
+	// the budget stops panics (GoPanic, at once); a loop that stops without
+	// a panic makes no progress for stall, and fails too.
+	const stall = 60 * time.Second
+	ticks := func() (s, k int, body string) {
+		body, _ = serveBG(h, "/ticks")
 		f := strings.Fields(body)
 		if len(f) != 2 {
-			return false
+			return -1, -1, body
 		}
-		s, _ := strconv.Atoi(f[0])
-		k, _ := strconv.Atoi(f[1])
-		return s > 3*budget && k > 3*budget || panics.Load() != nil
-	})
-	if r := panics.Load(); r != nil {
-		t.Fatalf("background goroutine stopped: %v", r)
+		s, _ = strconv.Atoi(f[0])
+		k, _ = strconv.Atoi(f[1])
+		return s, k, body
 	}
-	if !ok {
-		body, _ := serveBG(h, "/ticks")
-		t.Fatalf("ticks %s, want more than %d each", body, 3*budget)
+	lastS, lastK := -1, -1
+	movedS, movedK := time.Now(), time.Now()
+	for {
+		if r := panics.Load(); r != nil {
+			t.Fatalf("background goroutine stopped: %v", r)
+		}
+		s, k, body := ticks()
+		if s > 3*budget && k > 3*budget {
+			return
+		}
+		if s > lastS {
+			lastS, movedS = s, time.Now()
+		}
+		if k > lastK {
+			lastK, movedK = k, time.Now()
+		}
+		if time.Since(movedS) > stall || time.Since(movedK) > stall {
+			t.Fatalf("ticks %s: a loop made no progress for %v, want more than %d rounds each", body, stall, 3*budget)
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
 }
 
@@ -680,12 +701,12 @@ func TestBudgetCanceledPullStop(t *testing.T) {
 func TestBudgetPendingNested(t *testing.T) {
 	ma, mb := &Machine{Budget: 100}, &Machine{Budget: 100}
 	g := getg()
-	ma.top(context.Background(), func() {
+	ma.top(context.Background(), nil, func() {
 		outer := peekPending(g)
 		if outer == nil {
 			t.Fatal("no pending account in the outer call")
 		}
-		mb.top(context.Background(), func() {
+		mb.top(context.Background(), nil, func() {
 			if a := peekPending(g); a == nil || a == outer {
 				t.Fatal("the inner call does not use an account of its own")
 			}

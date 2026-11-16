@@ -57,7 +57,7 @@ func (m *Machine) natIface(x any) Value {
 		return Value{}
 	}
 	rv := reflect.ValueOf(x)
-	return Value{R: &Iface{T: m.nativeRType(rv.Type()), V: Value{R: rv}}}
+	return Value{R: &Iface{T: m.nativeRTypeOf(rv), V: Value{R: rv}}}
 }
 
 func (m *Machine) errVal(err error) Value {
@@ -252,7 +252,7 @@ func (m *Machine) natInvoke(s *invokeSite, v Value, regs []Value, a []int32) (Va
 // called directly (natInvoke).
 func (m *Machine) natInvokeOK(t reflect.Type, name string) bool {
 	k := methodKey{t, name}
-	if readsChans(t, name) || printMethods[k] {
+	if readsChans(t, name) || printMethods[k] || keepMethods[k] {
 		return false
 	}
 	if _, ok := decodeDstMethods[k]; ok {
@@ -367,7 +367,8 @@ func basicAnys(v Value) ([]any, bool) {
 		return nil, false
 	}
 	out := make([]any, len(s))
-	for i, e := range s {
+	for i := range s {
+		e := loadWord(&s[i]) // xs... passes program memory
 		if e.R == nil {
 			continue // nil interface
 		}
@@ -497,7 +498,7 @@ func (m *Machine) fastMethodExpr(s *nativeSite) fastFn {
 // struct lives in native memory, see toNativeW), or nil.
 func nativeCellPtr(v Value, rt reflect.Type) any {
 	if cell, ok := v.R.(*Value); ok {
-		if rv, ok := cell.R.(reflect.Value); ok && rv.CanAddr() && rv.Type() == rt {
+		if rv, ok := loadWord(cell).R.(reflect.Value); ok && rv.CanAddr() && rv.Type() == rt {
 			return rv.Addr().Interface()
 		}
 	}

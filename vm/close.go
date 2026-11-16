@@ -2,14 +2,11 @@ package vm
 
 // Closing a machine (Plugin.Close, Machine.Close).
 //
-// A host that loads a plugin once and builds many instances of it (Traefik
-// calls New at each reload of its dynamic configuration) cannot stop the
-// goroutines that an instance started: a cache janitor with a time.Ticker,
-// a refresh loop. They run for ever, and they count in MaxGoroutines for
-// the whole life of the machine, so a plugin that starts 2 of them in New
-// fails at every New after about 500 reloads with MaxGoroutines 1000. Go
-// has no way to stop the goroutines of one instance: the host releases a
-// plugin as a whole, by loading it again and closing the old Plugin.
+// A host loads a plugin once and keeps its Plugin for the life of the
+// process; it calls New at each reload of its configuration (Traefik), and
+// Close at shutdown (docs/RELOAD.md). The goroutines that one New call
+// started are an Instance (instance.go): Instance.Close stops them only,
+// in the same way as Close stops all the goroutines of the machine.
 //
 // Close stops every goroutine of the machine, as a canceled call stops
 // (ErrCanceled, budget.go), with ErrClosed:
@@ -99,11 +96,16 @@ func (m *Machine) Close() {
 	if c := m.done.Load(); c != nil {
 		close(*c)
 	}
+	m.closeInstances()
 	if q := m.mem; q != nil {
 		// Nothing of the plugin may allocate any more: forget the counted
 		// objects, so that the quota does not keep their weak pointers.
 		q.mu.Lock()
 		q.objs, q.used = nil, 0
+		for _, sc := range q.stacks {
+			sc.n, sc.gone = 0, true
+		}
+		q.stacks = nil
 		q.mu.Unlock()
 	}
 }
@@ -182,6 +184,9 @@ func (cx *ctx) stopChans() (acct, closed chan struct{}) {
 	if a := cx.acct; a != nil {
 		acct = a.stopChan()
 	}
+	if i := cx.inst; i != nil {
+		return acct, i.stopChan() // also closed by Machine.Close
+	}
 	return acct, cx.m.closeChan()
 }
 
@@ -191,6 +196,7 @@ func (cx *ctx) closeStop(wait bool) {
 	gs := cx.gs
 	if gs.graceAcct != closedGrace {
 		gs.graceAcct, gs.graceLeft = closedGrace, cancelGrace
+		cx.limit = cx.steps // the call that passed the limit does not run
 		cx.grace(errClosedHard)
 		panic(ErrClosed)
 	}
@@ -216,13 +222,10 @@ func (p *Plugin) Close() error {
 // Called from inside a call of the plugin (a host func that the plugin
 // calls), it waits for that call too: with context.Background(), for ever.
 //
-// A host that builds a new instance of a plugin at each configuration
-// reload (Traefik) releases the old instances this way: at the reload, it
-// loads the plugin again (LoadCached reuses the program of a first load),
-// calls New on the new Plugin, and makes the new handlers live; then it
-// calls CloseContext on the old Plugin with a deadline (docs/RELOAD.md), so
-// the requests that the old handlers serve end, and every goroutine of the
-// old instances stops.
+// A host calls Close or CloseContext at shutdown, once its entry points
+// stopped serving (docs/RELOAD.md). It does not close the Plugin at a
+// reload of its configuration: it calls New again on the same Plugin, so
+// the package state of the plugin lives on, as under yaegi.
 func (p *Plugin) CloseContext(ctx context.Context) error {
 	return p.M.CloseContext(ctx)
 }

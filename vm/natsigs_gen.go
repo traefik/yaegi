@@ -84,6 +84,12 @@ var typesPkgs = map[string]bool{
 	"net/url": true, "regexp": true, "strconv": true, "strings": true, "time": true,
 }
 
+// refusedInvokes are the invoke keys of methods that a restricted machine
+// refuses (refusedNative in refusedmeth.go): Chdir and Setenv of
+// testing.TB. natInvokeOK refuses them at run time too, but
+// TestGenInvokeReplaced wants no direct call for them.
+var refusedInvokes = map[string]bool{"Chdir func(string)": true, "Setenv func(string, string)": true}
+
 // invInfo is a method of an interface: its name and signature.
 type invInfo struct {
 	name string
@@ -111,8 +117,9 @@ func main() {
 			f := it.Method(i)
 			sig := f.Type().(*types.Signature)
 			// invokeKey never matches a variadic method
-			if f.Exported() && !sig.Variadic() && supported(nil, sig) && invokeResults(sig) {
-				invs[f.Name()+" "+goType(nil, sig)] = invInfo{f.Name(), sig}
+			key := f.Name() + " " + goType(nil, sig)
+			if f.Exported() && !sig.Variadic() && supported(nil, sig) && invokeResults(sig) && !refusedInvokes[key] {
+				invs[key] = invInfo{f.Name(), sig}
 			}
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/asn1"
 	"encoding/base64"
+	"fmt"
 	"go/doc"
 	"io"
 	"math/rand/v2"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 	"unicode"
@@ -239,5 +241,159 @@ func BenchmarkHostWriteCheck(b *testing.B) {
 	hostMem()
 	for b.Loop() {
 		m.hostWritePtr(p)
+	}
+}
+
+// TestHostServerHidden checks that a restricted plugin does not find the
+// *http.Server of the host in the context of a request
+// (http.ServerContextKey), so it cannot replace its Handler: the host
+// memory check does not know that object. Its requests come through the
+// handler that the host gets (topHandler) and through Plugin.Call. An
+// unrestricted plugin sees the server, as in Go.
+func TestHostServerHidden(t *testing.T) {
+	const pkg = "github.com/traefik/yaegi/v2/vm/testdata/restricted/srvctxplug"
+	for _, opts := range []Options{{}, {AOT: true}, {Unrestricted: true}} {
+		opts.Dir = ".."
+		p, err := Load(opts, pkg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cfg, _ := createConfig(p)
+		// The next handler of the host gets the server, also for a
+		// restricted plugin: httputil.ReverseProxy reads it.
+		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if _, ok := r.Context().Value(http.ServerContextKey).(*http.Server); ok {
+				w.Write([]byte("next found"))
+				return
+			}
+			w.Write([]byte("next none"))
+		})
+		h, err := newHandler(context.Background(), p, next, cfg, "srvctx")
+		if err != nil {
+			t.Fatal(err)
+		}
+		srv := httptest.NewServer(h)
+		want := "none"
+		if opts.Unrestricted {
+			want = "found"
+		}
+		get := func(path string) string {
+			t.Helper()
+			res, err := srv.Client().Get(srv.URL + path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer res.Body.Close()
+			b, _ := io.ReadAll(res.Body)
+			return string(b)
+		}
+		if got := get("/"); got != want {
+			t.Errorf("unrestricted %v, aot %v: got %q, want %q", opts.Unrestricted, opts.AOT, got, want)
+		}
+		if got := get("/next"); got != "next found" {
+			t.Errorf("unrestricted %v, aot %v: the next handler of the host got %q, want %q", opts.Unrestricted, opts.AOT, got, "next found")
+		}
+		if !opts.Unrestricted {
+			for _, path := range []string{"/field?write=1", "/reflect?write=1", "/spy", "/shape"} {
+				get(path)
+				if got := get("/"); got != "none" {
+					t.Errorf("aot %v, %s: the Handler of the host server changed (%q)", opts.AOT, path, got)
+					srv.Config.Handler = h
+				}
+			}
+		}
+		srv.Close()
+
+		ctx := context.WithValue(context.Background(), http.ServerContextKey, &http.Server{})
+		res, err := p.Call(ctx, "Has", ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, _ := res[0].Interface(); got != opts.Unrestricted {
+			t.Errorf("unrestricted %v, aot %v, Call: Has = %v", opts.Unrestricted, opts.AOT, got)
+		}
+	}
+}
+
+// TestHostMemUnsafe checks that the write paths that UseUnsafe opens (a
+// plain-data view, runtime.memmove) refuse the bytes of a host []byte
+// variable, as a plain store does (hostmemunsafeplug), and that the host
+// keeps its bytes.
+func TestHostMemUnsafe(t *testing.T) {
+	const want = `view store: refused
+view store own: done
+view load: done
+memmove: refused
+memmove own: done
+`
+	before := bytes.Clone(net.IPv4bcast)
+	for _, opts := range []Options{{}, {AOT: true}} {
+		opts.Dir, opts.UseUnsafe = "..", true
+		p, err := Load(opts, "github.com/traefik/yaegi/v2/vm/testdata/restricted/hostmemunsafeplug")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out bytes.Buffer
+		if _, err := p.Call(context.Background(), "Run", &out); err != nil {
+			t.Fatal(err)
+		}
+		if got := out.String(); got != want {
+			t.Errorf("aot %v: plugin output:\n%s\nwant:\n%s", opts.AOT, got, want)
+		}
+		if !bytes.Equal(net.IPv4bcast, before) {
+			t.Fatalf("aot %v: the host's net.IPv4bcast changed: %v", opts.AOT, net.IPv4bcast)
+		}
+	}
+}
+
+// TestNativeShapeCopy checks that a plugin cannot copy a native struct with
+// unexported fields into a struct of its own of the same shape, with
+// reflect.Value.Set or Value.Convert (shapeplug): Go refuses both, and
+// the copy gave the plugin the fields of a host object.
+func TestNativeShapeCopy(t *testing.T) {
+	for _, opts := range []Options{{}, {AOT: true}} {
+		opts.Dir = ".."
+		p, err := Load(opts, "github.com/traefik/yaegi/v2/vm/testdata/restricted/shapeplug")
+		if err != nil {
+			t.Fatal(err)
+		}
+		res, err := p.Call(context.Background(), "Copy")
+		if err != nil {
+			t.Fatal(err)
+		}
+		set, _ := res[0].Interface()
+		conv, _ := res[1].Interface()
+		ptr, _ := res[2].Interface()
+		if !strings.HasPrefix(fmt.Sprint(set), "panic: reflect.Set: value of type ") {
+			t.Errorf("aot %v: Set gave %q, want a panic", opts.AOT, set)
+		}
+		if !strings.HasPrefix(fmt.Sprint(ptr), "panic: ") {
+			t.Errorf("aot %v: Set of the pointer gave %q, want a panic", opts.AOT, ptr)
+		}
+		if !strings.HasPrefix(fmt.Sprint(conv), "panic: reflect.Value.Convert: value of type ") {
+			t.Errorf("aot %v: Convert gave %q, want a panic", opts.AOT, conv)
+		}
+		// A struct with only exported fields still converts, as in Go:
+		// the names and the tags do not count.
+		res, err = p.Call(context.Background(), "Exported")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i, want := range []string{"{1 2}", "{1 2}", "1 2"} {
+			if got, _ := res[i].Interface(); got != want {
+				t.Errorf("aot %v: Exported result %d: %q, want %q", opts.AOT, i, got, want)
+			}
+		}
+		// The other stores of reflect apply the same rule.
+		res, err = p.Call(context.Background(), "Stores")
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, _ := res[0].Interface()
+		for _, s := range got.([]string) {
+			if !strings.HasPrefix(s, "panic: reflect.") {
+				t.Errorf("aot %v: a store gave %q, want a panic", opts.AOT, s)
+			}
+		}
 	}
 }
