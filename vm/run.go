@@ -278,7 +278,7 @@ func loadMain(opts RunOptions, pattern string, tm *Timings) (*Machine, *ssa.Pack
 	}
 	switch {
 	case opts.Restricted:
-		if err := checkSource(src, opts.UseUnsafe, opts.Exec != ExecRefused); err != nil {
+		if err := checkSource(src, opts.UseUnsafe, opts.Exec != ExecRefused, false); err != nil {
 			return nil, nil, time.Time{}, &LoadError{Msg: err.Error()}
 		}
 	case realStd:
@@ -286,7 +286,7 @@ func loadMain(opts RunOptions, pattern string, tm *Timings) (*Machine, *ssa.Pack
 			return nil, nil, time.Time{}, &LoadError{Msg: err.Error()}
 		}
 	}
-	if err := checkSideEffectStd(src); err != nil {
+	if err := checkSideEffectStd(src, false); err != nil {
 		return nil, nil, time.Time{}, &LoadError{Msg: err.Error()}
 	}
 	if err := checkAOTSymbols(opts.Modes, opts.AOT, src); err != nil {

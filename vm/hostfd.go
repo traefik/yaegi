@@ -118,6 +118,7 @@ func (m *Machine) guardHostFiles() {
 		http.ServeFileFS(w, r, httpDirFS(dir), file)
 	})
 	m.ownStdio()
+	m.trackOwnFiles()
 }
 
 // netFileError is the error of net.FileConn, net.FileListener and

@@ -80,7 +80,7 @@ func (m *Machine) nativeView(p Value, from, to types.Type) (Value, bool) {
 				break
 			}
 			b := unsafe.Slice((*byte)(base), src.Size())
-			return Value{R: &byteView{b: b, t: to}}, true
+			return Value{R: &byteView{b: b, t: to, m: m}}, true
 		}
 	}
 	unsupported("unsafe: viewing a %s as a %s needs byte-level memory: %s", name, to, why)

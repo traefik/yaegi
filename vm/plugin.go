@@ -551,6 +551,18 @@ type Options struct {
 	// (runtime.nanotime, runtime.getAuxv, runtime.memmove with the checks of
 	// unsafe.Slice) work without this option (linkname.go).
 	StubAssembly bool
+	// RefuseAtCall loads a restricted plugin that names refused functions in
+	// code it may never run: a function that acts on the host process
+	// (os.FindProcess, os/signal.Ignore, runtime/debug.SetMemoryLimit...),
+	// or a function of package plugin or net/http/pprof, which it may then
+	// import. By default the load-time check refuses such a plugin, with the
+	// position of each use. With RefuseAtCall, a call of such a function
+	// panics with a *RefusedError, in the middle of the request, and calls
+	// nothing (refuseatcall.go). The plugin gets no more access to the host:
+	// the refused functions never run. Off by default; a host that loads
+	// plugins with big dependency graphs (a cache with its storage
+	// libraries) can set it, as StubAssembly.
+	RefuseAtCall bool
 
 	// hooks are set by the tests only (loadhooks.go).
 	hooks *loadHooks
@@ -574,7 +586,7 @@ func (opts Options) realStd() bool { return !opts.restricted() && opts.RealProce
 func (opts Options) check(src []sourcePkg) error {
 	switch {
 	case opts.restricted():
-		if err := checkSource(src, opts.UseUnsafe, opts.Exec != ExecRefused); err != nil {
+		if err := checkSource(src, opts.UseUnsafe, opts.Exec != ExecRefused, opts.RefuseAtCall); err != nil {
 			return err
 		}
 	case opts.realStd():
@@ -582,7 +594,7 @@ func (opts Options) check(src []sourcePkg) error {
 			return err
 		}
 	}
-	return checkSideEffectStd(src)
+	return checkSideEffectStd(src, opts.restricted() && opts.RefuseAtCall)
 }
 
 // preflight runs the load-time check of the plugin package root, unless
@@ -654,6 +666,7 @@ func (opts Options) newMachine(prog *ssa.Program, interp map[*types.Package]bool
 	m.restricted = opts.restricted()
 	m.unsafeSyscall = opts.restricted() && opts.UseUnsafe
 	m.stubAsm = opts.StubAssembly
+	m.refuseAtCall = opts.restricted() && opts.RefuseAtCall
 	m.execMode = opts.Exec
 	if opts.Sandbox != nil && m.execMode == ExecReal {
 		m.execMode = ExecMock // a Sandbox never runs programs

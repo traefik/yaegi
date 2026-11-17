@@ -188,6 +188,50 @@ func refuse(h hdr, n int) {
 	unsupported("unsafe: a string or slice header of length %d and capacity %d reaches outside the memory known to the VM (%d elements)", h.len, h.cap, n)
 }
 
+// wordCells reports whether h is data of cells of integers wider than a
+// byte that a header of type t (a []byte) sees: the cells have no bytes, so
+// the slice is a copy of their bytes (wordBytes).
+func (h *hdr) wordCells(t types.Type) bool {
+	if h.elems == nil || h.et == nil || h.nat.IsValid() || isString(t) || !isByteType(sliceElem(t)) || isByteType(h.et) {
+		return false
+	}
+	b, ok := types.Unalias(h.et).(*types.Basic)
+	return ok && b.Info()&types.IsInteger != 0 && gcSizes.Sizeof(b) > 1
+}
+
+// extentAs is extent in elements of the slice type t: in bytes for the
+// cells of wordCells.
+func (h *hdr) extentAs(t types.Type) int {
+	if h.wordCells(t) {
+		return len(h.elems) * int(gcSizes.Sizeof(h.et))
+	}
+	return h.extent()
+}
+
+// wordBytes returns the bytes of the integer cells es of type et, in the
+// order of the host: what gc has in memory for them. badger writes the
+// offsets of a block to its table with y.U32SliceToBytes, a slice header
+// that makes a []byte of a []uint32. It is a copy: a later write to the
+// cells is not seen in the bytes, nor the other way (docs/UNSAFE.md).
+func wordBytes(es []Value, et types.Type) []byte {
+	size := int(gcSizes.Sizeof(et))
+	b := make([]byte, len(es)*size)
+	for i, e := range es {
+		u := uint64(e.N)
+		for j := range size {
+			k := j
+			if !littleEndian {
+				k = size - 1 - j
+			}
+			b[i*size+k] = byte(u >> (8 * j))
+		}
+	}
+	return b
+}
+
+// littleEndian reports whether the host stores the low byte of a word first.
+var littleEndian = func() bool { x := uint16(1); return *(*byte)(unsafe.Pointer(&x)) == 1 }()
+
 // extent is the number of elements reachable from the data pointer.
 func (h *hdr) extent() int {
 	switch {
@@ -243,6 +287,9 @@ func makeHdr(h hdr, t types.Type) (Value, bool) {
 		// The bytes are cells: the string is a copy.
 		return Value{R: string(valBytes(Value{R: h.elems[:h.len]}))}, true
 	}
+	if h.wordCells(t) {
+		n = h.extentAs(t)
+	}
 	if h.len > n || h.cap > n {
 		refuse(h, n)
 	}
@@ -250,6 +297,9 @@ func makeHdr(h hdr, t types.Type) (Value, bool) {
 		return Value{}, false // capacity not written yet
 	}
 	et := sliceElem(t)
+	if h.wordCells(t) {
+		return Value{R: wordBytes(h.elems, h.et)[:h.len:h.cap]}, true
+	}
 	switch {
 	case h.nat.IsValid():
 		ne := h.nat.Type().Elem()
@@ -259,7 +309,12 @@ func makeHdr(h hdr, t types.Type) (Value, bool) {
 		return Value{R: h.nat.Slice3(0, h.len, h.cap)}, true
 	case h.bytes != nil:
 		if !isByteType(et) {
-			unsupported("unsafe: viewing bytes as a %s needs byte-level memory", t)
+			// integers or floats over the bytes, as unsafe.Slice gives them
+			// (badger's y.BytesToU32Slice): a native slice over the same
+			// bytes; wordSlice refuses the other element types.
+			r := &uregion{bytes: h.bytes, ro: h.ro}
+			s := r.wordSlice(0, h.cap, et, false, "Slice (a slice header)").R.(reflect.Value)
+			return Value{R: s.Slice3(0, h.len, h.cap)}, true
 		}
 		if h.ro {
 			// writable bytes of read-only memory: a copy
@@ -546,7 +601,7 @@ func (v *hdrView) set(h hdr, wrote int) {
 	// itself wrote outside the memory is refused at once.
 	var val Value
 	ok := false
-	n := h.extent()
+	n := h.extentAs(v.src)
 	if late := h.ptr.R != nil && h.known && (h.len > n || h.cap > n) &&
 		!(wrote&wroteLen != 0 && h.len > n) && !(wrote&wroteCap != 0 && h.cap > n); !late {
 		val, ok = makeHdr(h, v.src)
@@ -635,7 +690,9 @@ func (v *hdrView) setWord(h *hdr, w int, x Value, t types.Type) {
 			if x.R != h.ptr.R {
 				h.setData(v.m.dataPtr(x))
 			}
-		} else if u := uintptr(x.N); u != h.addr {
+		} else if u := uintptr(x.N); u != h.addr || v.m != nil && v.m.mappingAt(u) != nil {
+			// The same address of a mapping may have more memory now: mremap
+			// grows a mapping in place (filemap.go).
 			h.setData(v.m.dataAt(u))
 		}
 	case 1:

@@ -20,6 +20,11 @@ func nanotime() int64
 //go:linkname getAuxv runtime.getAuxv
 func getAuxv() []uintptr
 
+// as ristretto's z.Memclr (badger)
+//
+//go:linkname memclrNoHeapPointers runtime.memclrNoHeapPointers
+func memclrNoHeapPointers(p unsafe.Pointer, n uintptr)
+
 // as wazero's internal/engine/wazevo/memmove.go
 var memmovePtr = reflect.ValueOf(memmove).Pointer()
 
@@ -36,6 +41,9 @@ func main() {
 	memmove(unsafe.Pointer(&dst[0]), unsafe.Pointer(unsafe.StringData(s)), 3)
 	fmt.Println(string(dst))
 	memmove(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), 0)
+	memclrNoHeapPointers(unsafe.Pointer(&src[2]), 3)
+	fmt.Println(src)
+	memclrNoHeapPointers(unsafe.Pointer(&src[0]), 0)
 
 	t0 := nanotime()
 	t1 := nanotime()

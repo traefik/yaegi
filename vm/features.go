@@ -66,6 +66,8 @@ func (c *compiler) callDesc(cc *ssa.CallCommon) *callDesc {
 			d.hook = h // defer strings.Repeat(s, n): the size check, then the call
 		} else if c.m.isInterp(callee) {
 			d.static = c.m.funcOf(callee)
+		} else if h := c.m.refusedCallHook(callee); h != nil {
+			d.hook = h // refuseatcall.go
 		} else if h := hookOf(callee); h != nil {
 			d.hook = h // defer runtime.Goexit(), go sort.Slice(...)
 		} else if h := c.m.bodylessHook(callee); h != nil {

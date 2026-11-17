@@ -139,6 +139,15 @@ var testdataCases = map[string][]testdataCase{
 	// syscall.RawConn as gRPC uses it: dialer Control, and syscall.Read of
 	// the lent descriptor in RawConn.Read (a plugin with useUnsafe)
 	"rawconnread.go": {{}, {flags: []string{"-restricted", "-unsafe"}}, {flags: []string{"-restricted", "-unsafe", "-aot"}}},
+	// flock and mmap of the files of the plugin, and munmap and mremap of
+	// its mappings with raw system calls (badger, nutsdb): vm/filemap.go.
+	// Without -restricted, golang.org/x/sys/unix is the native package and
+	// the VM does not know the address that mremap returns.
+	"unsafemmap.go": {{}, {flags: []string{"-aot"}}, {flags: []string{"-opaque"}}, {flags: []string{"-restricted", "-unsafe"}}},
+	// the slice headers, the receiver copied from bytes and the bloom
+	// filter of badger and ristretto (intpart.go, wordBytes)
+	"unsafebadger.go": {{}, {flags: []string{"-aot"}}, {flags: []string{"-opaque"}}, {flags: []string{"-restricted", "-unsafe"}}},
+	"unsafemremap.go": {{flags: []string{"-restricted", "-unsafe"}}, {flags: []string{"-restricted", "-unsafe", "-aot"}}},
 	// syscall.Statfs in the syscall subset of useUnsafe (prometheus/procfs)
 	"statfs.go": {{}, {flags: []string{"-restricted", "-unsafe"}}, {flags: []string{"-restricted", "-unsafe", "-aot"}}},
 	// syscall.SetsockoptInt and GetsockoptInt on the socket that a RawConn

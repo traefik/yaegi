@@ -37,7 +37,9 @@ func New(_ context.Context, _ http.Handler, _ *Config, _ string) (http.Handler, 
 		ts := syscall.NsecToTimespec(1_500_000_001)
 		tsOK := ts.Sec == 1 && ts.Nsec == 500_000_001 && syscall.TimespecToNsec(ts) == 1_500_000_001 &&
 			ts.Nano() == 1_500_000_001 && timevalOK()
-		fmt.Fprintf(w, "pid=%v ppid=%v ids=%v page=%v time=%v env=%s,%v,%v,%d errno=%v timespec=%v",
+		// The standard descriptors, as chzyer/readline compares them.
+		stdio := syscall.Stdin != syscall.Stdout && syscall.Stdout != syscall.Stderr
+		fmt.Fprintf(w, "pid=%v ppid=%v ids=%v page=%v time=%v env=%s,%v,%v,%d errno=%v timespec=%v stdio=%v",
 			syscall.Getpid() == os.Getpid() && getpid() == os.Getpid(),
 			syscall.Getppid() == os.Getppid(),
 			ids,
@@ -45,6 +47,6 @@ func New(_ context.Context, _ http.Handler, _ *Config, _ string) (http.Handler, 
 			tvErr == nil && tv.Sec > 0,
 			v, found, hasPath, n,
 			errors.As(err, &errno) && errno == syscall.ENOENT && errors.Is(err, syscall.ENOENT),
-			tsOK)
+			tsOK, stdio)
 	}), nil
 }
