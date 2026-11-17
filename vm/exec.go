@@ -1243,6 +1243,8 @@ func (cx *ctx) exec(pc int) Value {
 				regs[in.A] = p.load(s.t)
 			case *hdrWord:
 				regs[in.A] = p.load(s.t)
+			case *intPart:
+				regs[in.A] = p.load(s.t)
 			case *byteView:
 				regs[in.A] = m.loadView(p, s.t)
 			case badAddr:
@@ -2381,6 +2383,8 @@ func (cx *ctx) store(p, v Value, s *memSite) {
 	case *hdrView:
 		p.store(v, s.t)
 	case *hdrWord:
+		p.store(v, s.t)
+	case *intPart:
 		p.store(v, s.t)
 	case *byteView:
 		p.store(v, s.t)

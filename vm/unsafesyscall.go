@@ -79,6 +79,13 @@ import (
 //     interfaces are only for the standard library as in Go (wrappers.go),
 //     so native code (the sendfile of net) never calls a RawConn of the
 //     plugin and never acts on a descriptor that the plugin chose.
+//   - Stdin, Stdout, Stderr: variables that hold the numbers 0, 1 and 2,
+//     which no function of the subset accepts (the checks of restrict.go
+//     and hostmem.go refuse a write to them). chzyer/readline compares a
+//     descriptor with them.
+//   - Sysinfo_t (linux): a plain struct, the argument of syscall.Sysinfo,
+//     which stays refused (a stub with Options.StubAssembly).
+//     pbnjay/memory declares one before it calls Sysinfo.
 //
 // The constants of syscall need no table: the compiler knows them.
 var unsafeSyscallNames = []string{
@@ -88,6 +95,7 @@ var unsafeSyscallNames = []string{
 	"Errno", "Signal", "Timeval", "Timespec", "Statfs", "Statfs_t",
 	"NsecToTimespec", "TimespecToNsec", "NsecToTimeval", "TimevalToNsec",
 	"RawConn", "Conn",
+	"Stdin", "Stdout", "Stderr", "Sysinfo_t",
 }
 
 // syscallSubset returns the syscall table of a restricted machine with

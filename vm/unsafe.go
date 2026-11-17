@@ -416,6 +416,10 @@ func descend(cell *Value, t types.Type, off int64) (Value, types.Type, string) {
 			v := &hdrView{cell: cell, src: t, t: t, st: &hdrState{}}
 			return Value{R: &hdrWord{v: v, word: int(off / ptrSize)}}, nil, ""
 		}
+		// bytes inside an integer (intpart.go)
+		if p, ok := intPartOf(cell, t, off); ok {
+			return p, nil, ""
+		}
 	}
 	return Value{}, nil, fmt.Sprintf("unsafe: offset %d inside a %s value needs byte-level memory", off, t)
 }
@@ -444,6 +448,8 @@ func addrOf(v Value) uintptr {
 		return uintptr(unsafe.Pointer(p.cell))
 	case *hdrWord:
 		return uintptr(unsafe.Pointer(p.v.cell)) + uintptr(p.word)*uintptr(ptrSize)
+	case *intPart:
+		return uintptr(unsafe.Pointer(p.cell)) + uintptr(p.off)
 	case *byteView:
 		return p.addr()
 	case badAddr:
@@ -783,8 +789,12 @@ func (m *Machine) addRegion(r *uregion) {
 	m.uregions.add(r)
 }
 
-// findRegion is uregions.find, in the ring of the goroutine first.
+// findRegion is uregions.find, in the ring of the goroutine first. A
+// mapping of the plugin comes first (mappingRegion).
 func (m *Machine) findRegion(addr uintptr) *uregion {
+	if r := m.mappingRegion(addr); r != nil {
+		return r
+	}
 	if g := m.goRing(false); g != nil {
 		if r := g.find(addr); r != nil {
 			return r
@@ -793,14 +803,33 @@ func (m *Machine) findRegion(addr uintptr) *uregion {
 	return m.uregions.find(addr)
 }
 
-// findRegionPtr is uregions.findPtr, in the ring of the goroutine first.
+// findRegionPtr is uregions.findPtr, in the ring of the goroutine first. A
+// mapping of the plugin comes first (mappingRegion).
 func (m *Machine) findRegionPtr(p Value) *uregion {
+	if b, ok := rawByte(p); ok {
+		if r := m.mappingRegion(uintptr(unsafe.Pointer(b))); r != nil {
+			return r
+		}
+	}
 	if g := m.goRing(false); g != nil {
 		if r := g.findPtr(p); r != nil {
 			return r
 		}
 	}
 	return m.uregions.findPtr(p)
+}
+
+// mappingRegion returns the region of the mapping of the plugin that holds
+// the address addr (filemap.go), or nil. A mapping lives until Munmap, and
+// its size is the current one: the rings forget a region after 64 newer
+// ones, and may still hold the smaller region of a mapping that mremap grew
+// in place.
+func (m *Machine) mappingRegion(addr uintptr) *uregion {
+	b := m.mappingAt(addr)
+	if b == nil {
+		return nil
+	}
+	return &uregion{base: uintptr(unsafe.Pointer(&b[0])), bytes: b}
 }
 
 // regionPointerAt is uregions.pointerAt, in the ring of the goroutine
@@ -817,6 +846,8 @@ func (m *Machine) regionPointerAt(addr uintptr) Value {
 		// the address of a cell given by reflect.Value.UnsafeAddr
 		if c, ct, ok := unsafeCellAt(m, addr); ok {
 			v, t = Value{R: c}, ct
+		} else if r := m.mappingRegion(addr); r != nil {
+			v, t = r.pointerAt(int64(addr - r.base))
 		}
 	}
 	m.reached(v, t)

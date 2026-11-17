@@ -46,6 +46,8 @@ func runtimeGetAuxv() []uintptr
 //     address of memmove in an init. When the SSA shows the same type T
 //     behind both pointers and n is the size of T, the call is the
 //     assignment *dst = *src, also for a T held in cells (memmoveTyped).
+//   - runtime.memclrNoHeapPointers: n zero bytes from a pointer, with the
+//     checks of memmove (ristretto's z.Memclr, used by badger).
 var runtimeLinks = map[string]NativeHook{
 	"runtime.nanotime": func(m *Machine, a []Value) Value { return Value{N: runtimeNanotime()} },
 	"runtime.getAuxv": func(m *Machine, a []Value) Value {
@@ -61,6 +63,12 @@ var runtimeLinks = map[string]NativeHook{
 	},
 	"runtime.memmove": func(m *Machine, a []Value) Value {
 		m.memmove(a[0], a[1], uint64(a[2].N))
+		return Value{}
+	},
+	"runtime.memclrNoHeapPointers": func(m *Machine, a []Value) Value {
+		if n := uint64(a[1].N); n > 0 {
+			clear(m.knownBytes(a[0], n, true, "runtime.memclrNoHeapPointers"))
+		}
 		return Value{}
 	},
 }
@@ -234,6 +242,9 @@ func linkSignatureOK(target string, sig *types.Signature) bool {
 	case "runtime.memmove":
 		return ps.Len() == 3 && rs.Len() == 0 && !sig.Variadic() &&
 			isPtr(ps.At(0).Type()) && isPtr(ps.At(1).Type()) && isInt(ps.At(2).Type())
+	case "runtime.memclrNoHeapPointers":
+		return ps.Len() == 2 && rs.Len() == 0 && !sig.Variadic() &&
+			isPtr(ps.At(0).Type()) && isInt(ps.At(1).Type())
 	}
 	return randLinkSignatureOK(target, sig)
 }

@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"go/types"
@@ -65,9 +66,17 @@ type RunOptions struct {
 	// UseUnsafe then allows unsafe and syscall (with the read-only syscall
 	// subset of plugins, unsafesyscall.go).
 	Restricted, UseUnsafe bool
+	// FileMapping and Mounts are Options.FileMapping and Options.Mounts,
+	// with Restricted.
+	FileMapping bool
+	Mounts      []Mount
 	// Exec is Options.Exec for a program run with Restricted or
 	// RestrictedStd (without them, os/exec is the real one).
 	Exec ExecMode
+	// Shims is Options.Shims. OnShim, when set, receives the note of each
+	// replaced file.
+	Shims  []Shim
+	OnShim func(note string)
 	// RestrictedStd gives the program the standard library of plugins
 	// (yaegi's restricted stdlib: os.Exit and log.Fatal panic, os/exec and
 	// syscall have no symbols) without the import checks of Restricted,
@@ -207,7 +216,7 @@ func loadMain(opts RunOptions, pattern string, tm *Timings) (*Machine, *ssa.Pack
 	if opts.YaegiTags {
 		tags = append(tags, yaegiTags(opts.Dir, pattern, nil)...)
 	}
-	pkgs, err := load(opts.Dir, pattern, tags, allSyntax)
+	pkgs, err := load(opts.Dir, pattern, tags, allSyntax, nil)
 	if err != nil {
 		return nil, nil, time.Time{}, err
 	}
@@ -217,7 +226,7 @@ func loadMain(opts RunOptions, pattern string, tm *Timings) (*Machine, *ssa.Pack
 	nonStd := nonStdDeps(pkgs)
 	if (len(nonStd) > 0 || usesInterpretedStd(pkgs)) && !allSyntax {
 		allSyntax = true
-		if pkgs, err = load(opts.Dir, pattern, tags, true); err != nil {
+		if pkgs, err = load(opts.Dir, pattern, tags, true, nil); err != nil {
 			return nil, nil, time.Time{}, err
 		}
 		nonStd = nonStdDeps(pkgs)
@@ -229,10 +238,23 @@ func loadMain(opts RunOptions, pattern string, tm *Timings) (*Machine, *ssa.Pack
 	}
 	if needsAsmTags(pkgs, func(path string) bool { return nonStd[path] }, stdSrc, tags) {
 		tags = append(tags, asmTags...)
-		if pkgs, err = load(opts.Dir, pattern, tags, allSyntax); err != nil {
+		if pkgs, err = load(opts.Dir, pattern, tags, allSyntax, nil); err != nil {
 			return nil, nil, time.Time{}, err
 		}
 		nonStd = nonStdDeps(pkgs)
+	}
+	if allSyntax {
+		if srcs, notes := newShimSet(opts.Shims).sources(pkgs); len(srcs) > 0 {
+			if pkgs, err = load(opts.Dir, pattern, tags, allSyntax, srcs); err != nil {
+				return nil, nil, time.Time{}, err
+			}
+			nonStd = nonStdDeps(pkgs)
+			for _, n := range notes {
+				if opts.OnShim != nil {
+					opts.OnShim(n) // after the load: a failed load gives no note
+				}
+			}
+		}
 	}
 
 	var prog *ssa.Program
@@ -278,7 +300,7 @@ func loadMain(opts RunOptions, pattern string, tm *Timings) (*Machine, *ssa.Pack
 	}
 	switch {
 	case opts.Restricted:
-		if err := checkSource(src, opts.UseUnsafe, opts.Exec != ExecRefused); err != nil {
+		if err := checkSource(src, opts.UseUnsafe, opts.Exec != ExecRefused, false); err != nil {
 			return nil, nil, time.Time{}, &LoadError{Msg: err.Error()}
 		}
 	case realStd:
@@ -286,7 +308,7 @@ func loadMain(opts RunOptions, pattern string, tm *Timings) (*Machine, *ssa.Pack
 			return nil, nil, time.Time{}, &LoadError{Msg: err.Error()}
 		}
 	}
-	if err := checkSideEffectStd(src); err != nil {
+	if err := checkSideEffectStd(src, false); err != nil {
 		return nil, nil, time.Time{}, &LoadError{Msg: err.Error()}
 	}
 	if err := checkAOTSymbols(opts.Modes, opts.AOT, src); err != nil {
@@ -318,6 +340,10 @@ func loadMain(opts RunOptions, pattern string, tm *Timings) (*Machine, *ssa.Pack
 		m.SetEnv(os.Environ())
 		m.restricted = true
 		m.unsafeSyscall = opts.UseUnsafe
+		m.fileMapping = opts.UseUnsafe && opts.FileMapping
+		if opts.Mounts != nil {
+			m.mounts = newMountTable(opts.Mounts)
+		}
 	}
 	m.realStd = realStd
 	m.execMode = opts.Exec
@@ -501,11 +527,27 @@ func goListEnv() []string {
 	return append(os.Environ(), "GOOS="+runtime.GOOS, "GOARCH="+runtime.GOARCH)
 }
 
-func load(dir, pattern string, tags []string, allSyntax bool) ([]*packages.Package, error) {
+func load(dir, pattern string, tags []string, allSyntax bool, shimSrcs map[string][]byte) ([]*packages.Package, error) {
 	cfg := &packages.Config{Mode: packages.LoadSyntax | packages.NeedModule, Dir: dir, Env: goListEnv()}
 	cfg.ParseFile = parseFile // the syntax errors of gc (parseerr.go)
+	if len(shimSrcs) > 0 {
+		// The files that a shim replaces (shim.go), for go list and for the
+		// parser.
+		flag, cleanup, err := writeOverlay(nil, shimSrcs)
+		if err != nil {
+			return nil, &LoadError{Msg: "load: " + err.Error()}
+		}
+		defer cleanup()
+		cfg.BuildFlags = []string{flag}
+		cfg.ParseFile = func(fset *token.FileSet, name string, src []byte) (*ast.File, error) {
+			if s, ok := shimSrcs[name]; ok {
+				src = s
+			}
+			return parseFile(fset, name, src)
+		}
+	}
 	if len(tags) > 0 {
-		cfg.BuildFlags = []string{"-tags=" + strings.Join(tags, ",")}
+		cfg.BuildFlags = append(cfg.BuildFlags, "-tags="+strings.Join(tags, ","))
 	}
 	if allSyntax {
 		// Keep NeedModule: nonStdDeps needs p.Module to see the packages

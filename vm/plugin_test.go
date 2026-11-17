@@ -564,11 +564,11 @@ func TestUnsafeSyscall(t *testing.T) {
 		want string
 	}{
 		{"Env", Options{Dir: "..", UseUnsafe: true, Env: []string{"YAEGI_TEST_VAR=given", "YAEGI_TEST_OTHER=x"}},
-			"pid=true ppid=true ids=true page=true time=true env=given,true,false,2 errno=true timespec=true"},
+			"pid=true ppid=true ids=true page=true time=true env=given,true,false,2 errno=true timespec=true stdio=true"},
 		{"empty Env", Options{Dir: "..", UseUnsafe: true, Env: []string{}},
-			"pid=true ppid=true ids=true page=true time=true env=,false,false,0 errno=true timespec=true"},
+			"pid=true ppid=true ids=true page=true time=true env=,false,false,0 errno=true timespec=true stdio=true"},
 		{"Sandbox", Options{Dir: "..", UseUnsafe: true, Sandbox: &Sandbox{Env: []string{"YAEGI_TEST_VAR=sandbox"}}},
-			"pid=true ppid=true ids=true page=true time=true env=sandbox,true,false,1 errno=true timespec=true"},
+			"pid=true ppid=true ids=true page=true time=true env=sandbox,true,false,1 errno=true timespec=true stdio=true"},
 	} {
 		for _, golist := range []bool{false, true} {
 			opts := c.opts

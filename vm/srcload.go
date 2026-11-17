@@ -100,6 +100,7 @@ type loadPolicy struct {
 	allowNewerGo      bool          // AllowNewerGo (capVersion)
 	importFromArchive bool          // ImportFromArchive (dirOf)
 	ignoreVendor      bool          // IgnoreInconsistentVendoring (checkVendor)
+	shims             *shimSet      // Shims (shim.go)
 }
 
 // loadPolicy returns the policy of the default loader for opts.
@@ -112,6 +113,7 @@ func (opts Options) loadPolicy() loadPolicy {
 		allowNewerGo:      opts.AllowNewerGo,
 		importFromArchive: opts.ImportFromArchive,
 		ignoreVendor:      opts.IgnoreInconsistentVendoring,
+		shims:             newShimSet(opts.Shims),
 	}
 }
 
@@ -1181,6 +1183,10 @@ func (l *srcLoader) parseFile(name string) (*ast.File, error) {
 	src, err := readBudgeted(l.budget, file, name)
 	if err != nil {
 		return nil, err
+	}
+	if sh := l.pol.shims.replace(name, src); sh != nil {
+		src = sh.Src // shim.go
+		l.notes = append(l.notes, sh.note(name))
 	}
 	// Without SkipObjectResolution: checkSourceSize (loadbomb.go) follows the
 	// local names to their declarations.

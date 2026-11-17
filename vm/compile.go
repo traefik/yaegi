@@ -150,11 +150,20 @@ type Machine struct {
 	// syscall (unsafesyscall.go). Set by Load and RunMain for a restricted
 	// plugin with UseUnsafe.
 	unsafeSyscall bool
+	// fileMapping is Options.FileMapping for a machine with unsafeSyscall
+	// (filemap.go).
+	fileMapping bool
+	// mounts are the directories of Options.Mounts (mount.go), nil without
+	// Mounts.
+	mounts *mountTable
 	// linknames are the //go:linkname targets of the functions of the
 	// packages run from source; stubAsm is Options.StubAssembly
 	// (linkname.go).
 	linknames map[*types.Func]string
 	stubAsm   bool
+	// refuseAtCall is Options.RefuseAtCall for a restricted machine
+	// (refuseatcall.go).
+	refuseAtCall bool
 	// execMode is Options.Exec (osexec.go), execSyms its os/exec table,
 	// execEnviron the (*exec.Cmd).Environ of ExecMock.
 	execMode    ExecMode
@@ -172,6 +181,9 @@ type Machine struct {
 	// GetsockoptInt (rawconn.go).
 	fdMu    sync.Mutex
 	lentFDs map[lentFD]int
+	// fmaps are the open files and the mappings of the plugin, for Flock
+	// and Mmap of the golang.org/x/sys/unix subset (filemap.go).
+	fmaps fileMaps
 	// env is the environment copy of SetEnv (nil: the environment of the
 	// process).
 	env *vmEnv
@@ -1272,6 +1284,9 @@ func (c *compiler) reg(v ssa.Value) int32 {
 				c.template[r] = Value{R: reflect.ValueOf(goexitValue)}
 			} else if mv, ok := c.m.nativeMemValue(v); ok {
 				c.template[r] = mv // checked calls with a quota (nativemem.go)
+			} else if h := c.m.refusedCallHook(v); h != nil {
+				m := c.m
+				c.template[r] = Value{R: &Closure{Go: func(a []Value) Value { return h(m, a) }}}
 			} else if h := c.m.bodylessHook(v); h != nil {
 				m := c.m
 				c.template[r] = Value{R: &Closure{Go: func(a []Value) Value { return h(m, a) }}}
@@ -1502,9 +1517,9 @@ func (c *compiler) instr(ins ssa.Instruction) {
 			m := c.m
 			c.emit(Instr{Op: OpFunc, A: c.reg(v), X: func([]Value) Value {
 				if m.mem != nil && size >= memMin {
-					return Value{R: &byteView{b: m.memBytes(int(size)), t: et}}
+					return Value{R: &byteView{b: m.memBytes(int(size)), t: et, m: m}}
 				}
-				return Value{R: &byteView{b: make([]byte, size), t: et}}
+				return Value{R: &byteView{b: make([]byte, size), t: et, m: m}}
 			}})
 			break
 		}
@@ -2169,6 +2184,11 @@ func (c *compiler) call(v *ssa.Call) {
 		if h := c.m.storageHook(callee); h != nil {
 			m, f := c.m, callee
 			c.emitGo(dst, func(a []Value) Value { return h(m, f, a) }, c.regList(cc.Args))
+			return
+		}
+		if h := c.m.refusedCallHook(callee); h != nil {
+			m := c.m
+			c.emitGo(dst, func(a []Value) Value { return h(m, a) }, c.regList(cc.Args))
 			return
 		}
 		if funcPkg(callee) != nil && !c.m.isInterp(callee) {

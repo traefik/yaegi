@@ -88,6 +88,21 @@ func (m *Machine) guardHostFiles() {
 			m.addOverride(key, fn)
 		}
 	}
+	set("net.FileConn", func(*os.File) (net.Conn, error) { return nil, netFileError() })
+	set("net.FileListener", func(*os.File) (net.Listener, error) { return nil, netFileError() })
+	set("net.FilePacketConn", func(*os.File) (net.PacketConn, error) { return nil, netFileError() })
+	if m.mounts != nil {
+		m.installMounts(set) // Options.Mounts (mount.go)
+	} else {
+		m.guardPaths(set)
+	}
+	m.ownStdio()
+	m.trackOwnFiles()
+}
+
+// guardPaths installs the functions that open a path with openNoAlias, for
+// a restricted machine without Mounts.
+func (m *Machine) guardPaths(set func(key string, fn any)) {
 	set("os.Open", func(name string) (*os.File, error) { return openFile(name, os.O_RDONLY, 0) })
 	set("os.OpenFile", openFile)
 	set("os.Create", createFile)
@@ -105,19 +120,15 @@ func (m *Machine) guardHostFiles() {
 		defer r.Close()
 		return r.Open(name)
 	})
-	set("net.FileConn", func(*os.File) (net.Conn, error) { return nil, netFileError() })
-	set("net.FileListener", func(*os.File) (net.Listener, error) { return nil, netFileError() })
-	set("net.FilePacketConn", func(*os.File) (net.PacketConn, error) { return nil, netFileError() })
-	set("net/http.FileServer", func(root http.FileSystem) http.Handler { return http.FileServer(ownHTTPDir(root)) })
+	set("net/http.FileServer", func(root http.FileSystem) http.Handler { return http.FileServer(m.ownHTTPDir(root)) })
 	set("net/http.NewFileTransport", func(root http.FileSystem) http.RoundTripper {
-		return http.NewFileTransport(ownHTTPDir(root))
+		return http.NewFileTransport(m.ownHTTPDir(root))
 	})
 	set("net/http.ServeFile", func(w http.ResponseWriter, r *http.Request, name string) {
 		// As http.ServeFile, which serves file from http.Dir(dir).
 		dir, file := filepath.Split(name)
 		http.ServeFileFS(w, r, httpDirFS(dir), file)
 	})
-	m.ownStdio()
 }
 
 // netFileError is the error of net.FileConn, net.FileListener and
@@ -232,29 +243,29 @@ func (dir dirFS) ReadLink(name string) (string, error) {
 // openNoAlias.
 type httpDir string
 
-// ownHTTPDir returns root, or an httpDir when root is an http.Dir.
-func ownHTTPDir(root http.FileSystem) http.FileSystem {
-	if d, ok := root.(http.Dir); ok {
-		return httpDir(d)
-	}
-	return root
-}
-
-// Open is the Open method of http.Dir.
-func (d httpDir) Open(name string) (http.File, error) {
+// httpDirPath is the path of the file name of the http.Dir dir, as the Open
+// method of http.Dir computes it.
+func httpDirPath(dir, name string) (string, error) {
 	p := path.Clean("/" + name)[1:]
 	if p == "" {
 		p = "."
 	}
 	p, err := filepath.Localize(p)
 	if err != nil {
-		return nil, errors.New("http: invalid or unsafe file path")
+		return "", errors.New("http: invalid or unsafe file path")
 	}
-	dir := string(d)
 	if dir == "" {
 		dir = "."
 	}
-	full := filepath.Join(dir, p)
+	return filepath.Join(dir, p), nil
+}
+
+// Open is the Open method of http.Dir.
+func (d httpDir) Open(name string) (http.File, error) {
+	full, err := httpDirPath(string(d), name)
+	if err != nil {
+		return nil, err
+	}
 	f, err := openFile(full, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, mapOpenError(err, full, filepath.Separator, os.Stat)
@@ -328,7 +339,7 @@ func rootOpenRoot(r *os.Root, name string) (*os.Root, error) {
 // (*os.Root).OpenRoot.
 func hostFDMethods(refused map[methodKey]reflect.Value) {
 	refused[methodKey{reflect.TypeFor[http.Dir](), "Open"}] = reflect.ValueOf(func(d http.Dir, name string) (http.File, error) {
-		return httpDir(d).Open(name)
+		return curMachine().ownHTTPDir(d).Open(name) // on the mounts of the plugin (mount.go)
 	})
 	refused[methodKey{reflect.TypeFor[*os.Root](), "OpenRoot"}] = reflect.ValueOf(rootOpenRoot)
 	// ReadMsgUnix receives control messages: the kernel installs the

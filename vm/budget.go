@@ -606,12 +606,25 @@ const (
 	regexpByteSteps = 128
 )
 
+// memRangeFuncs are the functions of golang.org/x/sys/unix and syscall whose
+// []byte argument only names a range of memory for the kernel: the call
+// does not read the bytes, so their length does not count. badger syncs and
+// advises its mappings of hundreds of MiB (filemap.go): at one step per 64
+// bytes, each Msync cost millions of steps, and the BackgroundRate slowed
+// every write down to about a second.
+var memRangeFuncs = map[string]bool{
+	"Msync": true, "Madvise": true, "Munmap": true, "Mlock": true, "Munlock": true, "Mprotect": true,
+}
+
 // weigh sets the weight of the native call site s of f: the arguments
 // whose length counts (nativeSteps).
 func (s *nativeSite) weigh(f *ssa.Function) {
 	s.byteMul = byteSteps
 	if f.Pkg != nil && f.Pkg.Pkg.Path() == "regexp" || f.Pkg == nil && strings.Contains(f.String(), "regexp.") {
 		s.byteMul = regexpByteSteps
+	}
+	if f.Pkg != nil && (f.Pkg.Pkg.Path() == xsysUnixPath || f.Pkg.Pkg.Path() == "syscall") && memRangeFuncs[f.Name()] {
+		return // the []byte is a range of memory for the kernel: no byte is read
 	}
 	for i, t := range s.params {
 		if i >= len(s.args) {

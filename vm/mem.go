@@ -99,6 +99,8 @@ func (m *Machine) load(addr Value, s *memSite) Value {
 		return p.load(s.t)
 	case *hdrWord:
 		return p.load(s.t)
+	case *intPart:
+		return p.load(s.t)
 	case *byteView:
 		return m.loadView(p, s.t)
 	case badAddr:
@@ -160,6 +162,9 @@ func (m *Machine) store(addr Value, v Value, s *memSite) {
 		p.store(v, s.t)
 		return
 	case *hdrWord:
+		p.store(v, s.t)
+		return
+	case *intPart:
 		p.store(v, s.t)
 		return
 	case *byteView:

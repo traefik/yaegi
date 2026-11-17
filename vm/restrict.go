@@ -264,24 +264,26 @@ func isStdInternal(path string) bool {
 
 // checkSource applies the restrictions to the packages run from source.
 // exec is true when the plugin may use os/exec (Options.Exec): its import
-// and os.StartProcess are allowed.
-func checkSource(pkgs []sourcePkg, useUnsafe, exec bool) error {
+// and os.StartProcess are allowed. atCall is Options.RefuseAtCall: the
+// functions of refusedFuncs and the imports of refusedAtCallImports are
+// refused when they are called (refuseatcall.go).
+func checkSource(pkgs []sourcePkg, useUnsafe, exec, atCall bool) error {
 	src := map[string]bool{}
 	for _, p := range pkgs {
 		src[p.types.Path()] = true
 	}
 	var errs []error
 	for _, p := range pkgs {
-		errs = append(errs, checkImports(p.types, useUnsafe, exec)...)
+		errs = append(errs, checkImports(p.types, useUnsafe, exec, atCall)...)
 		if p.info != nil {
-			errs = append(errs, checkUses(p, useUnsafe, exec)...)
+			errs = append(errs, checkUses(p, useUnsafe, exec, atCall)...)
 			errs = append(errs, checkWrites(p, src)...)
 		}
 	}
 	return errors.Join(errs...)
 }
 
-func checkImports(p *types.Package, useUnsafe, exec bool) []error {
+func checkImports(p *types.Package, useUnsafe, exec, atCall bool) []error {
 	imps := p.Imports()
 	paths := make([]string, 0, len(imps))
 	for _, imp := range imps {
@@ -292,6 +294,7 @@ func checkImports(p *types.Package, useUnsafe, exec bool) []error {
 	for _, path := range paths {
 		switch {
 		case path == "os/exec" && exec:
+		case refusedAtCallImports[path] && atCall:
 		case refusedImports[path] || isStdInternal(path):
 			errs = append(errs, &ImportError{Pkg: p.Path(), Path: path})
 		case unsafeImports[path] && !useUnsafe:
@@ -338,11 +341,16 @@ var sideEffectStd = []string{"expvar", "net/http/pprof", "testing/quick"}
 
 // checkSideEffectStd refuses the imports of sideEffectStd when the host
 // did not import stdsyms/sideeffect: without their table, the program
-// would load, then panic at its first call with "not in registry".
-func checkSideEffectStd(pkgs []sourcePkg) error {
+// would load, then panic at its first call with "not in registry". With
+// atCall (Options.RefuseAtCall), the packages of refusedAtCallImports need
+// no table: their functions are stubs.
+func checkSideEffectStd(pkgs []sourcePkg, atCall bool) error {
 	var errs []error
 	for _, p := range pkgs {
 		for _, imp := range p.types.Imports() {
+			if atCall && refusedAtCallImports[imp.Path()] {
+				continue
+			}
 			if slices.Contains(sideEffectStd, imp.Path()) && stdsyms.Symbols[imp.Path()+"/"+imp.Name()] == nil {
 				errs = append(errs, fmt.Errorf("%s: import %q needs the host to import github.com/traefik/yaegi/v2/stdsyms/sideeffect",
 					p.types.Path(), imp.Path()))
@@ -355,7 +363,7 @@ func checkSideEffectStd(pkgs []sourcePkg) error {
 // checkUses reports the refused functions a package refers to and, without
 // useUnsafe, its expressions of type unsafe.Pointer (an unsafe.Pointer can be
 // had without importing unsafe, from reflect.Value.UnsafePointer).
-func checkUses(p sourcePkg, useUnsafe, exec bool) []error {
+func checkUses(p sourcePkg, useUnsafe, exec, atCall bool) []error {
 	type found struct {
 		pos int
 		err error
@@ -373,6 +381,9 @@ func checkUses(p sourcePkg, useUnsafe, exec bool) []error {
 		name := f.Origin().FullName()
 		switch {
 		case (name == "os.StartProcess" || strings.HasPrefix(name, "(*os.Process).")) && exec:
+		case refusedFuncs[name] && atCall:
+			// refuseatcall.go for the functions, refusedmeth.go for the
+			// methods
 		case refusedFuncs[name]:
 			report(id, name, false)
 		case unsafeFuncs[name] && !useUnsafe:

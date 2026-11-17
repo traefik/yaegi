@@ -76,6 +76,14 @@ A `Sandbox` always keeps the restrictions, whatever `Unrestricted` and
 without a Go body (assembly, `//go:linkname`) loads, and a call of such a
 function panics or returns `ENOSYS`. The VM never runs assembly.
 
+`Options.RefuseAtCall` removes no protection either: a plugin that names a
+refused function (`os.FindProcess`, `os/signal.Ignore`,
+`runtime/debug.SetMemoryLimit`...) or imports `plugin` or `net/http/pprof`
+loads, and a call of such a function panics with a `*RefusedError`
+(`vm/refuseatcall.go`). The refused function never runs. Big dependency
+graphs name them in code that a plugin does not run (caddy, go-systemd,
+olric). `host.Options` sets it, with `Exec` set to `ExecMock` for `os/exec`.
+
 ## Safe defaults
 
 The zero `Options` set no limit, as Go has none: no `Budget`, no
@@ -199,6 +207,37 @@ In a restricted plugin:
   the host descriptors, or pipes to `Options.Stdout` and `Options.Stderr` when
   the host sets them (`vm/stdio.go`): closing them does not close the host's.
 
+## `Options.Mounts`
+
+Without `Options.Mounts`, a restricted plugin reaches the whole file system
+except the descriptors of the host: it can read, write, rename and remove any
+file that the host process can (`acme.json`, the TLS keys). With `Mounts`, the
+plugin reaches only the directories that the host lists (`vm/mount.go`,
+`TestMounts`):
+
+- each `vm.Mount` is a directory, seen by the plugin at its own path, and
+  `ReadOnly` refuses the writes;
+- the functions that take a path find the mount of the path and act through
+  the `os.Root` of the mount, so `..`, a symbolic link and a change of the tree
+  during the call cannot leave it: `os` (open, stat, read and write, mkdir,
+  remove, rename, link and symlink, chmod, chown, chtimes, truncate, temporary
+  files, `DirFS`, `OpenRoot`), `io/ioutil`, `filepath.Walk`, `WalkDir`, `Glob`
+  and `EvalSymlinks`, `http.Dir` and the file server of `net/http`,
+  `go/parser.ParseFile` and `syscall.Statfs`;
+- a path outside the mounts, or a write in a read-only mount, fails with an
+  error that wraps `fs.ErrPermission`. `/dev/stdout` and `/dev/stderr` still
+  open the plugin's own streams;
+- the native functions that open a path by themselves (`tls.LoadX509KeyPair`,
+  `template.ParseFiles`, `zip.OpenReader`...) panic with a `*vm.RefusedError`
+  when the plugin calls them.
+
+Not covered: native code that opens a path by itself in other ways (the AOT
+copies, a method of a native value called through an interface), and unix
+socket paths (`net.Dial("unix", path)`), which are network addresses.
+
+With `Options.Sandbox`, the paths are checked by the sandbox first, then
+opened through the mounts.
+
 ## `Options.Sandbox`
 
 `Options.Sandbox` (`vm/sandbox.go`) adds capability checks on top of the
@@ -247,6 +286,25 @@ restricted plugin with `UseUnsafe` gets a read-only subset with the same rules
 as the `syscall` subset (`vm/xsysunix.go`, `TestXSysSubset`): process and
 time information, the environment copy, pure functions, and the socket options
 and terminal queries on lent descriptors.
+
+**Files and mappings of the plugin.** Embedded databases (badger, nutsdb) lock
+their directory and map their files. With `Options.FileMapping` (off by
+default, and only with `UseUnsafe`), the `golang.org/x/sys/unix` subset gives
+these calls on the plugin's own files and mappings only (`vm/filemap.go`,
+`TestFileMap`). The host should set `Mounts` with it, so that the plugin maps
+only the files of its own directories:
+
+| Name | Rule |
+|---|---|
+| `Flock` | a file that the plugin opened (`os.Open`, `os.OpenFile`, `os.Create`) and that is still open |
+| `Mmap` | such a file, with `PROT_READ` and `PROT_WRITE` only, and `MAP_SHARED` or `MAP_PRIVATE` only (no `MAP_FIXED`, no `MAP_ANON`) |
+| `Munmap`, `Madvise`, `Msync` | a mapping that the plugin made |
+| `Syscall`, `Syscall6` | only `munmap` of a mapping of the plugin, and on linux `mremap` of one with `MREMAP_MAYMOVE` only (ristretto, the cache of badger, makes these calls itself); any other system call panics with a `*RefusedError` |
+
+A write to a shared mapping is a write to the file, which the plugin can do
+already. As in Go, a read or a write of a mapping after `munmap` stops the
+whole process: the VM does not check it. The mapped memory does not count in
+`MaxMemory`.
 
 ## CPU, goroutines and cancellation
 

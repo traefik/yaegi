@@ -43,6 +43,9 @@ package vm
 //     terminal this way. The request is fixed because ioctl writes as many
 //     bytes as the request says, wherever the pointer points: another
 //     request would write past the value.
+//   - Flock, Mmap, Munmap, Madvise, Msync, and munmap and mremap through
+//     Syscall and Syscall6: only on the files that the plugin opened and
+//     the mappings that it made (filemap.go).
 //
 // The types and the variables of the package are given: types are plain
 // data, their methods only read and write the value (Timespec.Unix,
@@ -71,6 +74,9 @@ var xsysPlainNames = []string{
 	"NsecToTimespec", "NsecToTimeval", "TimespecToNsec", "TimevalToNsec", "TimeToTimespec",
 	"ByteSliceToString", "ByteSliceFromString", "ErrnoName", "SignalName", "SignalNum",
 	"Major", "Minor", "Mkdev",
+	// Sizes of socket control messages: arithmetic only. quic-go calls
+	// CmsgSpace in the initializer of a package variable.
+	"CmsgSpace", "CmsgLen",
 }
 
 // xsysSubset returns the golang.org/x/sys/unix table of a restricted machine
@@ -129,6 +135,7 @@ func (m *Machine) xsysSubset() *Package {
 				funcs["Environ"] = reflect.ValueOf(e.environ)
 			}
 		}
+		m.fileMapFuncs(all, funcs)
 		m.xsysSyms = &Package{Path: xsysUnixPath, Funcs: funcs, Types: all.Types, Vars: all.Vars, Module: all.Module, Version: all.Version}
 	})
 	return m.xsysSyms

@@ -9,3 +9,5 @@ import "reflect"
 func lentFstatfs(m *Machine) reflect.Value { return reflect.Value{} }
 
 func (c *fsCaps) installUnix(m *Machine, readOnly func(op, name string) error) {}
+
+func (m *Machine) installMountsUnix(set func(key string, fn any)) {}

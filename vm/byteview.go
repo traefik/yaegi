@@ -267,6 +267,14 @@ func (c *compiler) viewedAsOther(v ssa.Value, t types.Type, depth int) bool {
 					return true
 				}
 			}
+		case ssa.CallInstruction:
+			// the address given to a function of the program that views
+			// its parameter as another type: badger's var h header;
+			// h.Decode(buf), where Decode copies buf into
+			// (*[4]byte)(unsafe.Pointer(h))
+			if c.paramViewedAsOther(r.Common(), v, t, depth+1) {
+				return true
+			}
 		case *ssa.Convert:
 			if !isUnsafePointer(r.Type()) {
 				continue
@@ -285,6 +293,22 @@ func (c *compiler) viewedAsOther(v ssa.Value, t types.Type, depth int) bool {
 					return true
 				}
 			}
+		}
+	}
+	return false
+}
+
+// paramViewedAsOther reports whether the static call cc of a function of the
+// program gets v as an argument, and the function views that parameter as
+// another type (viewedAsOther).
+func (c *compiler) paramViewedAsOther(cc *ssa.CallCommon, v ssa.Value, t types.Type, depth int) bool {
+	fn, ok := cc.Value.(*ssa.Function)
+	if !ok || cc.IsInvoke() || len(fn.Blocks) == 0 || !c.m.isInterp(fn) || len(fn.Params) != len(cc.Args) {
+		return false
+	}
+	for i, a := range cc.Args {
+		if a == v && c.viewedAsOther(fn.Params[i], t, depth) {
+			return true
 		}
 	}
 	return false
@@ -332,11 +356,15 @@ type byteView struct {
 	// host: b is a []byte of the host (hostmem.go). The view reads it, a
 	// store through it is refused.
 	host bool
+	// m is the machine of the program: a field or an element of a native
+	// type (podPart) needs it.
+	m *Machine
 }
 
 // isPOD reports whether values of type t are plain data: bytes with no
 // pointer word, no string, no interface, no complex number, and no type
-// that the VM keeps in native memory.
+// that the VM keeps in native memory. A field or an element may be of a
+// native type of plain data (podPart).
 func (m *Machine) isPOD(t types.Type) bool {
 	if m.isNativeNamed(t) {
 		return false
@@ -352,15 +380,25 @@ func (m *Machine) isPOD(t types.Type) bool {
 		return u.Info()&(types.IsInteger|types.IsFloat|types.IsBoolean) != 0
 	case *types.Struct:
 		for i := 0; i < u.NumFields(); i++ {
-			if !m.isPOD(u.Field(i).Type()) {
+			if !m.podPart(u.Field(i).Type()) {
 				return false
 			}
 		}
 		return true
 	case *types.Array:
-		return m.isPOD(u.Elem())
+		return m.podPart(u.Elem())
 	}
 	return false
+}
+
+// podPart reports whether t can be a field or an element of plain data: plain
+// data, or a native type of plain data (nativePlainType). The skiplist nodes of
+// badger, laid over a []byte, have sync/atomic.Uint64 and [n]atomic.Uint32
+// fields: the address of such a field is the native value at the address of
+// its bytes (nativeBytesView), so the native methods (Load, Store,
+// CompareAndSwap) act on the bytes themselves, atomically, as in gc.
+func (m *Machine) podPart(t types.Type) bool {
+	return m.isPOD(t) || m.nativePlainType(t) != nil
 }
 
 // byteViewAt returns the view of a *to at offset off of the bytes of r,
@@ -379,7 +417,7 @@ func (m *Machine) byteViewAt(r *uregion, off int, to types.Type) (Value, string)
 	// The bytes of a host []byte: the view reads them, a store through it
 	// is refused (hostmem.go), as a plain store into the []byte is.
 	host := size > 0 && m.restricted && hostMem().has(uintptr(unsafe.Pointer(&r.bytes[off])))
-	return Value{R: &byteView{b: r.bytes, off: off, t: to, ro: r.ro, host: host}}, ""
+	return Value{R: &byteView{b: r.bytes, off: off, t: to, ro: r.ro, host: host, m: m}}, ""
 }
 
 // byteViewOf returns the pointer p to a byte of a Go byte array seen as a
@@ -445,7 +483,7 @@ func (v *byteView) bytes(t types.Type) []byte {
 }
 
 // load decodes the value of type t.
-func (v *byteView) load(t types.Type) Value { return decodeBytes(v.bytes(t), t) }
+func (v *byteView) load(t types.Type) Value { return v.m.decodeBytes(v.bytes(t), t) }
 
 // loadView is p.load(t) for a load of the program: an array is counted in
 // the quota of m (MaxMemory) before it is decoded. Each byte of a big
@@ -474,20 +512,39 @@ func (v *byteView) store(x Value, t types.Type) {
 	if v.host {
 		panic(errHostWrite)
 	}
-	encodeBytes(v.bytes(t), x, t)
+	v.m.encodeBytes(v.bytes(t), x, t)
 }
 
 // field is the address of field i of the struct the view points to.
 func (v *byteView) field(i int) Value {
 	st := v.t.Underlying().(*types.Struct)
-	return Value{R: &byteView{b: v.b, off: v.off + int(fieldOffsets(st)[i]), t: st.Field(i).Type(), ro: v.ro, host: v.host}}
+	return v.part(v.off+int(fieldOffsets(st)[i]), st.Field(i).Type())
 }
 
 // index is the address of element i of the array the view points to.
 func (v *byteView) index(i int64, flags uint8) Value {
 	at := v.t.Underlying().(*types.Array)
 	checkIndex(i, int(at.Len()), flags)
-	return Value{R: &byteView{b: v.b, off: v.off + int(i*gcSizes.Sizeof(at.Elem())), t: at.Elem(), ro: v.ro, host: v.host}}
+	return v.part(v.off+int(i*gcSizes.Sizeof(at.Elem())), at.Elem())
+}
+
+// part is the address of a field or an element of type t at offset off: a
+// view further in, or for a native type of plain data (podPart) the native
+// value at the address of its bytes.
+func (v *byteView) part(off int, t types.Type) Value {
+	if v.m != nil && !v.m.isPOD(t) {
+		if rt := v.m.nativePlainType(t); rt != nil {
+			if v.host {
+				panic(errHostWrite) // native methods write through the pointer
+			}
+			nv, why := v.m.nativeBytesView(&uregion{bytes: v.b, ro: v.ro}, off, rt)
+			if why != "" {
+				unsupported("unsafe: a %s laid over bytes %s", t, why)
+			}
+			return nv
+		}
+	}
+	return Value{R: &byteView{b: v.b, off: off, t: t, ro: v.ro, host: v.host, m: v.m}}
 }
 
 // elemByte is the byte i of the [n]byte the view points to, or nil when
@@ -557,10 +614,26 @@ func fieldOffsets(st *types.Struct) []int64 {
 	return gcSizes.Offsetsof(fs)
 }
 
+// nativePart returns the native type of t when t is a native type of plain
+// data inside plain data (podPart), for decodeBytes and encodeBytes. m is nil
+// for a view made without a machine: then there is none.
+func (m *Machine) nativePart(t types.Type) reflect.Type {
+	if m == nil || m.isPOD(t) {
+		return nil
+	}
+	return m.nativePlainType(t)
+}
+
 // decodeBytes reads a value of type t (plain data) from b, in the host
 // order. Integers get the canonical form of the VM (sign or zero
-// extended), booleans 0 or 1, floats the float64 bits.
-func decodeBytes(b []byte, t types.Type) Value {
+// extended), booleans 0 or 1, floats the float64 bits. A part of a native
+// type (podPart) is a native copy of its bytes.
+func (m *Machine) decodeBytes(b []byte, t types.Type) Value {
+	if rt := m.nativePart(t); rt != nil {
+		cp := reflect.New(rt)
+		copy(unsafe.Slice((*byte)(cp.UnsafePointer()), rt.Size()), b)
+		return m.fromNative(cp.Elem(), t)
+	}
 	switch u := t.Underlying().(type) {
 	case *types.Basic:
 		if u.Info()&(types.IsString|types.IsComplex) != 0 || u.Kind() == types.UnsafePointer {
@@ -600,14 +673,14 @@ func decodeBytes(b []byte, t types.Type) Value {
 		fs := make([]Value, u.NumFields())
 		for i := range fs {
 			ft := u.Field(i).Type()
-			fs[i] = decodeBytes(b[offs[i]:offs[i]+gcSizes.Sizeof(ft)], ft)
+			fs[i] = m.decodeBytes(b[offs[i]:offs[i]+gcSizes.Sizeof(ft)], ft)
 		}
 		return Value{R: fs}
 	case *types.Array:
 		n, size := int(u.Len()), gcSizes.Sizeof(u.Elem())
 		es := make([]Value, n)
 		for i := range es {
-			es[i] = decodeBytes(b[int64(i)*size:int64(i+1)*size], u.Elem())
+			es[i] = m.decodeBytes(b[int64(i)*size:int64(i+1)*size], u.Elem())
 		}
 		return Value{R: es}
 	}
@@ -615,8 +688,15 @@ func decodeBytes(b []byte, t types.Type) Value {
 	return Value{}
 }
 
-// encodeBytes writes x, of type t (plain data), into b in the host order.
-func encodeBytes(b []byte, x Value, t types.Type) {
+// encodeBytes writes x, of type t (plain data), into b in the host order. A
+// part of a native type (podPart) is the bytes of its native value.
+func (m *Machine) encodeBytes(b []byte, x Value, t types.Type) {
+	if rt := m.nativePart(t); rt != nil {
+		cp := reflect.New(rt)
+		cp.Elem().Set(m.toNative(x, t))
+		copy(b, unsafe.Slice((*byte)(cp.UnsafePointer()), rt.Size()))
+		return
+	}
 	switch u := t.Underlying().(type) {
 	case *types.Basic:
 		if u.Info()&(types.IsString|types.IsComplex) != 0 || u.Kind() == types.UnsafePointer {
@@ -642,13 +722,13 @@ func encodeBytes(b []byte, x Value, t types.Type) {
 		offs := fieldOffsets(u)
 		for i := 0; i < u.NumFields() && i < len(fs); i++ {
 			ft := u.Field(i).Type()
-			encodeBytes(b[offs[i]:offs[i]+gcSizes.Sizeof(ft)], loadCell(&fs[i], ft), ft)
+			m.encodeBytes(b[offs[i]:offs[i]+gcSizes.Sizeof(ft)], loadCell(&fs[i], ft), ft)
 		}
 	case *types.Array:
 		es, _ := x.R.([]Value)
 		size := gcSizes.Sizeof(u.Elem())
 		for i := 0; i < int(u.Len()) && i < len(es); i++ {
-			encodeBytes(b[int64(i)*size:int64(i+1)*size], loadCell(&es[i], u.Elem()), u.Elem())
+			m.encodeBytes(b[int64(i)*size:int64(i+1)*size], loadCell(&es[i], u.Elem()), u.Elem())
 		}
 	default:
 		unsupported("unsafe: writing a %s into bytes", t)
