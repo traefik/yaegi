@@ -1,7 +1,7 @@
 #!/bin/sh
 # Regenerates aot/go1_NN/ (AOT copies for the Go release of the go command in
 # use), natsyms/ (native symbol tables) and aot/go1_NN/REPORT.txt for the
-# libraries evaluated in docs/AOTGEN.md. Run it once with the toolchain of
+# libraries listed below. Run it once with the toolchain of
 # each Go release of the window of yaegi v2 (internal/gorelease.Window).
 set -e
 cd "$(dirname "$0")/.."
@@ -14,7 +14,7 @@ if go list encoding/json/v2 >/dev/null 2>&1; then
 	jsonv2="encoding/json/v2 encoding/json/jsontext"
 fi
 # json-iterator reads runtime internals through reflect2 and cannot be
-# copied: it stays native (docs/AOTGEN.md). Any other target that does not
+# copied: it stays native. Any other target that does not
 # build makes aotgen fail.
 ./bin/aotgen -allow-fail github.com/json-iterator/go,github.com/modern-go/reflect2 "$@" \
 	encoding/json $jsonv2 fmt errors sort encoding/xml encoding/gob encoding/binary encoding/asn1 \

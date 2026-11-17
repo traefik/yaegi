@@ -6,7 +6,7 @@ import (
 	"unsafe"
 )
 
-// Uses of package unsafe the VM emulates (docs/UNSAFE.md).
+// Uses of package unsafe the VM emulates.
 
 type Point struct {
 	X, Y int64

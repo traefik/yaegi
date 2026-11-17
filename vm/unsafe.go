@@ -1,6 +1,6 @@
 package vm
 
-// Emulation of package unsafe on the VM value model (see docs/UNSAFE.md).
+// Emulation of package unsafe on the VM value model.
 //
 // Interpreted memory is not bytes: a variable is a Value cell, a struct or
 // an array a []Value of cells, a []byte a []byte or a []Value. An

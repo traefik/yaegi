@@ -2,7 +2,7 @@
 // runtime with //go:linkname (mapiterinit, mapiternext, unsafe_New,
 // unsafe_NewArray, typedmemmove, typedslicecopy, mapassign, mapaccess):
 // the VM emulates these functions (vm/reflect2.go). Also a slice in an
-// interface, read through its data word (docs/UNSAFE.md).
+// interface, read through its data word.
 package main
 
 import (

@@ -22,8 +22,7 @@ import (
 // sees. A load decodes the bytes in the host order, a store encodes them,
 // a field or element address is a window further in. Every access is a
 // bounds-checked slice access, so the view never reaches outside the
-// array the VM holds, and no pointer is ever made from an integer (the
-// rules of docs/UNSAFE.md).
+// array the VM holds, and no pointer is ever made from an integer.
 //
 // Only plain data gets a view: integers, floats, booleans, structs and
 // arrays of them (isPOD). A type with a pointer, a string, a slice, a map,
@@ -49,7 +48,7 @@ import (
 // struct, a float32 read as a uint32 and a uint16 seen as [2]byte. The
 // variable then is a byteView over a new Go []byte of its gc size: loads
 // and stores decode and encode its fields, and the views of other types
-// share its bytes (docs/UNSAFE.md). Conversions that cells can show (the
+// share its bytes. Conversions that cells can show (the
 // same layout, an array and its element type) keep the cells, so atomic
 // operations through (*int64)(unsafe.Pointer(&s.n)) do not change.
 func (c *compiler) bytesAlloc(a *ssa.Alloc) bool {
@@ -69,8 +68,8 @@ func (c *compiler) bytesAlloc(a *ssa.Alloc) bool {
 	if c.viewedAsOther(a, t, 0) || c.uintptrToNative(a, 0) {
 		return true
 	}
-	// The reflect of the program reads a variable in bytes through a copy
-	// (docs/UNSAFE.md): reflect.ValueOf(&c).Elem().Field(i).SetInt(1) would
+	// The reflect of the program reads a variable in bytes through a copy:
+	// reflect.ValueOf(&c).Elem().Field(i).SetInt(1) would
 	// panic where gc sets the field. In a program that has its own reflect
 	// (ownReflect), a variable whose own address escapes keeps its cells:
 	// native code gets a copy of them and writes it back, as before. Only a

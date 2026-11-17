@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// TestLeaks checks the check of docs/RELOAD.md: after the context of a
+// TestLeaks checks the leak check: after the context of a
 // configuration is canceled (the next reload), Leaks.Check reports the
 // instance whose New left goroutines, once, and not the instance whose
 // goroutine ended with the context, nor an instance of the live

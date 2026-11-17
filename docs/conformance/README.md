@@ -5,8 +5,8 @@ Two sets of results:
 - `results.tsv`, `summary.txt`: the yaegi conformance programs (below);
 - `stdlib.tsv`, `stdlib-summary.txt`: the external tests of standard
   library packages, natively, in VM mode and in AOT mode, written by
-  `go run ./cmd/stdtests -out docs/conformance/stdlib.tsv -summary docs/conformance/stdlib-summary.txt`
-  (see [../STDTESTS.md](../STDTESTS.md)). `stdlib-causes.tsv` gives the
+  `go run ./cmd/stdtests -out docs/conformance/stdlib.tsv -summary docs/conformance/stdlib-summary.txt`.
+  `stdlib-causes.tsv` gives the
   class and the issue of each yaegi v2 failure.
 
 ## yaegi conformance programs

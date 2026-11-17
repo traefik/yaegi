@@ -26,7 +26,7 @@ func loadLeakPlug(t *testing.T, aot bool) *vm.Plugin {
 	return p
 }
 
-// TestReloadLeakedGoroutines is the reload model of docs/RELOAD.md: one
+// TestReloadLeakedGoroutines is the reload model: one
 // Plugin for the life of the host, and New at each reload of the dynamic
 // configuration, as Traefik does with yaegi. Each New of leakplug leaves a
 // goroutine that never ends (darkweak/souin leaves 2). Before, they all

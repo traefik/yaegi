@@ -800,8 +800,8 @@ jobs:
           save: true
 
   hostgraph:
-    # The AOT copies in the module graph of Traefik (cmd/hostgraph,
-    # docs/AOTGEN.md): Traefik may require newer versions of the copied
+    # The AOT copies in the module graph of Traefik (cmd/hostgraph):
+    # Traefik may require newer versions of the copied
     # modules than the go.mod of yaegi v2, and aot/all must still build there. The
     # offline check of the snapshot runs in the job "test" (go test). Here:
     # the real build with the committed snapshot, then with the go.mod of
@@ -962,7 +962,7 @@ jobs:
   stdtests:
     # The external tests of standard library packages (fmt, sort, io,
     # encoding/json...) under yaegi v2, in VM mode and in AOT mode, against
-    # docs/conformance/stdlib.tsv (cmd/stdtests, docs/STDTESTS.md): a test
+    # docs/conformance/stdlib.tsv (cmd/stdtests): a test
     # that passes there natively and in a yaegi v2 mode, and passes natively
     # here, must still pass in that mode. New passes do not fail. Nightly
     # (and ci:full, and by hand) only.

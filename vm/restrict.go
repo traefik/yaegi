@@ -63,7 +63,7 @@ import (
 // refusedImports are never available to a plugin. yaegi's restricted stdlib
 // has no symbols for os/exec and plugin; net/http/cgi runs any program
 // (cgi.Handler), which defeats the os/exec ban. The others act on the host
-// process, and no plugin of the catalog (docs/CATALOG.md) imports them:
+// process, and no plugin of the catalog imports them:
 //
 //   - go/build runs the go command (Context.Import calls "go list" in
 //     module mode), another way around the os/exec ban, and go/importer

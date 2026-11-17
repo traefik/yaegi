@@ -67,6 +67,15 @@ cd compare && go run ./catalog/run -src complex/plugins -only '^(k8s|opa|otel)$'
 | [zap](plugins/zap/plugin.go) | go.uber.org/zap, github.com/rs/zerolog | structured logs with object marshalers into buffers |
 | [cbor](plugins/cbor/plugin.go) | github.com/fxamacker/cbor/v2, github.com/vmihailenco/msgpack/v5 | CBOR (toarray, keyasint, canonical, diagnostic) and MessagePack with custom encoders |
 
-## Results
+## Results (17 November 2026)
 
-See [REPORT.md](REPORT.md).
+darwin/arm64, Go 1.26.10, middleware scenario, `useUnsafe: true` in every
+manifest. yaegi v0.16.1 loads none of the 20 plugins. yaegi v2 gives the
+output of the native build for 13 of them, in VM mode and in AOT mode:
+protobuf, grpc, openai, anthropic, expr, cel, goja, aws, jose, graphql,
+html, zap and cbor.
+
+The 7 others are refused at load time. Six import a package that the rules
+of Traefik plugins refuse: `os/exec` (k8s, opa, otel, lua, redis) or
+`expvar` (prometheus). With `-vmexec mock`, k8s, opa and otel give the
+output of the native build. wazero was not measured in this run.

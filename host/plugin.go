@@ -231,7 +231,7 @@ func NewHandler(ctx context.Context, p *vm.Plugin, next http.Handler, cfg *vm.Ob
 
 // NewInstanceHandler calls New(ctx, next, cfg, name) (http.Handler, error)
 // of p in a new vm.Instance, and returns the instance too. This is the
-// reload model of docs/RELOAD.md: one Plugin for the life of the host, and
+// reload model: one Plugin for the life of the host, and
 // New at each reload. The goroutines that New starts belong to the
 // instance: MaxGoroutines bounds them per New, so the goroutines that the
 // New calls of old reloads left (a cache janitor that never ends) do not

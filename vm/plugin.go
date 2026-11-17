@@ -1595,7 +1595,7 @@ var cachedSeq atomic.Int64
 // version of the AOT copies as Load does (AllowStaleAOT, StaleAOTFallback),
 // and refuses the load bombs with the errors of Load (loadbomb.go).
 //
-// It is not a way to reload a plugin (docs/RELOAD.md: one Plugin for the
+// It is not a way to reload a plugin (one Plugin for the
 // life of the host, and New at each reload): the packages of each call stay
 // in the SSA program and the token.FileSet of p while p lives, also after
 // the new Plugin is closed (about 64 KB per call for a small test plugin,

@@ -9,8 +9,8 @@ import (
 )
 
 // g2Race is a data race report of vmhost -race -aot in the conc scenario, on
-// a plugin that decodes a json.RawMessage in each request (bug G2 of
-// docs/CATALOG.md): the engine races in its own code. Stacks shortened.
+// a plugin that decodes a json.RawMessage in each request (since fixed):
+// the engine races in its own code. Stacks shortened.
 const g2Race = `==================
 WARNING: DATA RACE
 Read at 0x00c001e8a030 by goroutine 34:

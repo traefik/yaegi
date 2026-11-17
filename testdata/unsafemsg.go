@@ -1,5 +1,5 @@
 // The unsafe idioms of protobuf's internal/impl on the structs of a
-// program (docs/UNSAFE.md): a message and its first field (messageState)
+// program: a message and its first field (messageState)
 // have the same address, fields are reached with the offsets of
 // reflect.StructField, a []*T is read as a []pointer, and the walk of a tree
 // of messages comes back to the outer ones.

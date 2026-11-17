@@ -28,7 +28,6 @@ cpu*.txt
 /compare/yaegi/bin/
 /compare/yaegi/out/
 /compare/yaegi/emptygp/
-/compare/yaegi/gp16/
 
 # compare/catalog: clones, native builds, per-plugin outputs (fetch.sh, run)
 /compare/catalog/src/

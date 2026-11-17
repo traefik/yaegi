@@ -1,4 +1,4 @@
-// unsafe idioms of real libraries that the VM refused before (docs/UNSAFE.md).
+// unsafe idioms of real libraries that the VM refused before.
 package main
 
 import (

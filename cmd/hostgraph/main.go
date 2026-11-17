@@ -38,7 +38,7 @@
 //
 // When it fails, regenerate the copy at the version of the host: update the
 // module in yaegi v2's go.mod (go get module@version), then run
-// scripts/aotgen.sh with each Go release of the window (docs/AOTGEN.md).
+// scripts/aotgen.sh with each Go release of the window.
 package main
 
 import (

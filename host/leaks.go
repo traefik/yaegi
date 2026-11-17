@@ -10,7 +10,7 @@ import (
 	"github.com/traefik/yaegi/v2/vm"
 )
 
-// LeakDelay is the delay that docs/RELOAD.md recommends for Leaks.Check:
+// LeakDelay is the recommended delay for Leaks.Check:
 // a goroutine that ends with the context of New stops about 1 ms after the
 // cancel, and one that waits for a short timer a little later.
 const LeakDelay = 5 * time.Second
@@ -20,7 +20,7 @@ const LeakDelay = 5 * time.Second
 // canceled. In Traefik this context is the one of a configuration, canceled
 // when the next configuration is built, so the goroutines of an instance
 // that still run then are goroutines that New left: under the reload model
-// of docs/RELOAD.md they live until Plugin.Close at shutdown. Leaks does
+// (one Plugin for the life of the host) they live until Plugin.Close at shutdown. Leaks does
 // not log: the host logs each Leak that Check returns, once.
 //
 // Leaks keeps no instance alive (weak pointers), and forgets an instance
@@ -57,7 +57,7 @@ func (l *Leaks) Add(ctx context.Context, inst *vm.Instance, name string) {
 
 // Check returns the instances whose New context was canceled at least
 // delay ago (LeakDelay) and that still have more than max goroutines
-// (docs/RELOAD.md recommends 0). Each instance is reported once.
+// (0 is the recommended value). Each instance is reported once.
 func (l *Leaks) Check(max int, delay time.Duration) []Leak {
 	now := time.Now().UnixNano()
 	var out []Leak

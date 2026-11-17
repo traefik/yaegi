@@ -496,7 +496,7 @@ package %s
 // these files, which this build selects in the source package:
 %s
 // Generate the copy again with the GOOS, GOARCH and GOEXPERIMENT of this
-// build (docs/AOTGEN.md).
+// build.
 var _ = aotgen_copy_generated_for_another_build_see_aotgen_guard_go
 `, x, pi.p.Name, pi.p.PkgPath, strings.Join(names, "\n"))
 	return copied, x, os.WriteFile(filepath.Join(pi.dir, "aotgen_guard.go"), []byte(src), 0o644)

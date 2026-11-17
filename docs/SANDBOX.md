@@ -59,7 +59,7 @@ Traefik) from the plugins it runs, and what it does not do. The open work is in
   - writes to the variables of the standard library and to the objects they
     reach are refused (see "Host memory").
 - **`Options.UseUnsafe`**: `unsafe` is emulated on the values of the VM
-  (`docs/UNSAFE.md`), and `syscall` and `golang.org/x/sys/unix` give a
+ , and `syscall` and `golang.org/x/sys/unix` give a
   read-only subset (see "The `syscall` subset").
 - **`Options.Unrestricted`** lifts the load-time refusals and gives the plugin
   the environment of the process. `os.Exit` and `log.Fatal` still panic.
@@ -98,7 +98,7 @@ zero limit, a nil `Env`, `PanicOnFatal` off...). The values are: AOT mode
 (with `StaleAOTFallback`), `Budget` 1e8, `BudgetRate` 1e8, `BackgroundRate`
 5e7, `QuietBudget`, `MaxGoroutines` 1000, `MaxMemory` 1 GiB, `MaxStack`
 256 MiB, `PanicOnFatal`, `LoadTimeout` 30 s, and an empty environment. On the plugins of the Traefik catalog, these limits give the same
-output as the zero `Options` (`docs/CATALOG.md`).
+output as the zero `Options`.
 
 `Options.RecoverHandler` makes `ServeHTTP` recover a panic of the plugin: the
 panic goes to `Options.GoPanic` and the response gets the status 500.
@@ -306,6 +306,20 @@ already. As in Go, a read or a write of a mapping after `munmap` stops the
 whole process: the VM does not check it. The mapped memory does not count in
 `MaxMemory`.
 
+## Shims
+
+A library that reads the internals of the runtime (the layout of a runtime
+type, a field of a map header) cannot run: the VM has no runtime types. The
+VM does not learn each library. A shim (`vm.Shim`, `Options.Shims`,
+`vm/shim.go`) replaces one file of the library with plain Go that the VM
+runs, under the same restrictions as the plugin. It applies only to a file
+with one of its SHA-256 sums, and `Plugin.Notes` names each replaced file.
+Package `shims` has them, and `host.Options` sets them: `runtime.go` of
+`github.com/dolthub/maphash` v0.1.0 (used by otter v1) hashes the key with
+`hash/maphash.WriteComparable` instead of the hash function of a runtime map
+type. The loaders that use `go list` (`GoList`, `RunMain`) replace only
+vendored files: `go` refuses an overlay of the module cache.
+
 ## CPU, goroutines and cancellation
 
 Design of `vm/budget.go`:
@@ -346,7 +360,7 @@ Design of `vm/budget.go`:
   grow exponentially (`vm/loadbomb.go`, `vm/loadinst.go`). Only one load at a
   time runs per plugin.
 - **Close**: `Plugin.Close` stops every goroutine of the plugin at its next
-  blocking point (`vm/close.go`, `docs/RELOAD.md`).
+  blocking point (`vm/close.go`).
 
 Native code is never stopped in the middle: Go cannot preempt a goroutine from
 the outside. The budget counts VM steps, not native work.

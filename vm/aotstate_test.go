@@ -50,8 +50,7 @@ func TestAOTStatePerPlugin(t *testing.T) {
 
 // TestAOTUnload loads and drops plugins N times: the AOT caches indexed by
 // type (encoding/json, encoding/xml, encoding/binary) must not keep the
-// machines alive, and the heap must stay stable. encoding/gob still does
-// (docs/AOTGEN.md).
+// machines alive, and the heap must stay stable. encoding/gob still does.
 func TestAOTUnload(t *testing.T) {
 	if testing.Short() {
 		t.Skip("loads plugins many times")

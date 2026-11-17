@@ -14,5 +14,5 @@ package json
 //	v2_scanner.go
 //	v2_stream.go
 // Generate the copy again with the GOOS, GOARCH and GOEXPERIMENT of this
-// build (docs/AOTGEN.md).
+// build.
 var _ = aotgen_copy_generated_for_another_build_see_aotgen_guard_go

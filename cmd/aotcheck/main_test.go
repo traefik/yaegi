@@ -8,13 +8,12 @@ import (
 )
 
 // knownAOTFailures are the programs of testdata/aot whose AOT run is known
-// not to match `go run` (see docs/AOTGEN.md).
+// not to match `go run`.
 var knownAOTFailures = map[string]string{}
 
 // knownFallbackFailures are the programs of testdata/aot whose fallback
 // run (the library interpreted from source in AOT mode, as when a plugin
-// vendors another version of it) is known not to match `go run` (see
-// "Version check of the non-standard copies" in docs/AOTGEN.md). The reason
+// vendors another version of it) is known not to match `go run`. The reason
 // starts with the status of the failure (DIFF, UNSUP, FAIL): runMode checks
 // it.
 var knownFallbackFailures = map[string]string{}

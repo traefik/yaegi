@@ -2,7 +2,7 @@
 
 Measures how the public Traefik plugins behave under yaegi v0.16.1 (configured
 as Traefik configures it) and under yaegi v2, against a native build of each
-plugin. The report is [docs/CATALOG.md](../../docs/CATALOG.md).
+plugin.
 
 The Go commands run from `compare/`, the module of the comparison tools
 (`compare/go.mod`, it requires yaegi v0); the shell scripts run from the
