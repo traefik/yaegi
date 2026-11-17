@@ -1,12 +1,15 @@
 package vm
 
 // The files and the memory mappings of a restricted plugin with
-// Options.UseUnsafe.
+// Options.UseUnsafe and Options.FileMapping.
 //
 // Embedded databases (badger, nutsdb) lock their directory with flock and
-// map their files with mmap. A restricted plugin with UseUnsafe gets these
-// calls of golang.org/x/sys/unix (xsysunix.go) on its own files and its own
-// mappings only (filemap_unix.go):
+// map their files with mmap. A restricted plugin with UseUnsafe and
+// FileMapping gets these calls of golang.org/x/sys/unix (xsysunix.go) on its
+// own files and its own mappings only (filemap_unix.go); without
+// FileMapping, they are outside the subset, as the other system calls. With
+// Options.Mounts, the files of the plugin are files of its mounts
+// (mount.go), so it maps only them:
 //
 //   - Flock: only on a file that the plugin opened (os.Open, os.OpenFile,
 //     os.Create) and that is still open. A descriptor of the host, or a
@@ -65,7 +68,7 @@ func (m *Machine) setMappingLocked(addr uintptr, b []byte) {
 // the plugin (Flock and Mmap accept only them). It wraps the functions that
 // guardHostFiles or a Sandbox installed.
 func (m *Machine) trackOwnFiles() {
-	if !m.unsafeSyscall || m.realStd {
+	if !m.fileMapping || m.realStd {
 		return
 	}
 	wrap := func(key string, open func(f *os.File)) {

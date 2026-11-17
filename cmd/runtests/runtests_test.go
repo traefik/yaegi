@@ -143,11 +143,11 @@ var testdataCases = map[string][]testdataCase{
 	// its mappings with raw system calls (badger, nutsdb): vm/filemap.go.
 	// Without -restricted, golang.org/x/sys/unix is the native package and
 	// the VM does not know the address that mremap returns.
-	"unsafemmap.go": {{}, {flags: []string{"-aot"}}, {flags: []string{"-opaque"}}, {flags: []string{"-restricted", "-unsafe"}}},
+	"unsafemmap.go": {{}, {flags: []string{"-aot"}}, {flags: []string{"-opaque"}}, {flags: []string{"-restricted", "-unsafe", "-filemap"}}},
 	// the slice headers, the receiver copied from bytes and the bloom
 	// filter of badger and ristretto (intpart.go, wordBytes)
 	"unsafebadger.go": {{}, {flags: []string{"-aot"}}, {flags: []string{"-opaque"}}, {flags: []string{"-restricted", "-unsafe"}}},
-	"unsafemremap.go": {{flags: []string{"-restricted", "-unsafe"}}, {flags: []string{"-restricted", "-unsafe", "-aot"}}},
+	"unsafemremap.go": {{flags: []string{"-restricted", "-unsafe", "-filemap"}}, {flags: []string{"-restricted", "-unsafe", "-filemap", "-aot"}}},
 	// syscall.Statfs in the syscall subset of useUnsafe (prometheus/procfs)
 	"statfs.go": {{}, {flags: []string{"-restricted", "-unsafe"}}, {flags: []string{"-restricted", "-unsafe", "-aot"}}},
 	// syscall.SetsockoptInt and GetsockoptInt on the socket that a RawConn

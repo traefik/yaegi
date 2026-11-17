@@ -13,6 +13,9 @@ import (
 // restricted machine (xsysSubset), the calls of filemap.go on the files and
 // the mappings of the plugin. all is the table of the host.
 func (m *Machine) fileMapFuncs(all *Package, funcs map[string]reflect.Value) {
+	if !m.fileMapping {
+		return
+	}
 	if flock, ok := funcOf[func(fd, how int) error](all, "Flock"); ok {
 		funcs["Flock"] = reflect.ValueOf(func(fd, how int) error {
 			if !m.ownFD(fd) {

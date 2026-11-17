@@ -1,0 +1,44 @@
+// Shim of yaegi v2 for runtime.go of github.com/dolthub/maphash
+// (github.com/traefik/yaegi/v2/shims).
+//
+// The original reads the hash function of the runtime type of a map, which
+// the interpreter does not have. This file hashes the key with hash/maphash:
+// as with the original, equal keys have the same hash for one seed in one
+// process.
+
+//go:build go1.18 || go1.19
+// +build go1.18 go1.19
+
+package maphash
+
+import (
+	stdmaphash "hash/maphash"
+	"math/rand"
+	"unsafe"
+)
+
+type hashfn func(unsafe.Pointer, uintptr) uintptr
+
+var processSeed = stdmaphash.MakeSeed()
+
+func getRuntimeHasher[K comparable]() (h hashfn) {
+	return func(p unsafe.Pointer, seed uintptr) uintptr {
+		var mh stdmaphash.Hash
+		mh.SetSeed(processSeed)
+		var b [8]byte
+		for i := range b {
+			b[i] = byte(uint64(seed) >> (8 * i))
+		}
+		mh.Write(b[:])
+		stdmaphash.WriteComparable(&mh, *(*K)(p))
+		return uintptr(mh.Sum64())
+	}
+}
+
+func newHashSeed() uintptr {
+	return uintptr(rand.Int())
+}
+
+func noescape(p unsafe.Pointer) unsafe.Pointer {
+	return p
+}

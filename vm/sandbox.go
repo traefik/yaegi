@@ -107,6 +107,7 @@ func (c *fsCaps) denied(op, name string) error {
 }
 
 func (c *fsCaps) install(m *Machine) {
+	p := m.pathFuncs() // on Options.Mounts (mount.go), when the plugin has them
 	readOnly := func(op, name string) error {
 		if !allows(c.read, name) {
 			return c.denied(op, name)
@@ -123,32 +124,32 @@ func (c *fsCaps) install(m *Machine) {
 		if err := readOnly("open", name); err != nil {
 			return nil, err
 		}
-		return openFile(name, os.O_RDONLY, 0)
+		return p.openFile(name, os.O_RDONLY, 0)
 	})
 	m.addOverride("os.ReadFile", func(name string) ([]byte, error) {
 		if err := readOnly("open", name); err != nil {
 			return nil, err
 		}
-		return readFile(name)
+		return p.readFile(name)
 	})
 	m.addOverride("os.ReadDir", func(name string) ([]os.DirEntry, error) {
 		if err := readOnly("open", name); err != nil {
 			return nil, err
 		}
-		return os.ReadDir(name)
+		return p.readDir(name)
 	})
 	m.addOverride("os.Stat", func(name string) (os.FileInfo, error) {
 		if err := readOnly("stat", name); err != nil {
 			return nil, err
 		}
-		return os.Stat(name)
+		return p.stat(name)
 	})
 	c.installUnix(m, readOnly)
 	m.addOverride("os.Lstat", func(name string) (os.FileInfo, error) {
 		if err := readOnly("lstat", name); err != nil {
 			return nil, err
 		}
-		return os.Lstat(name)
+		return p.lstat(name)
 	})
 	m.addOverride("os.OpenFile", func(name string, flag int, perm os.FileMode) (*os.File, error) {
 		op, check := "open", readOnly
@@ -158,43 +159,43 @@ func (c *fsCaps) install(m *Machine) {
 		if err := check(op, name); err != nil {
 			return nil, err
 		}
-		return openFile(name, flag, perm)
+		return p.openFile(name, flag, perm)
 	})
 	m.addOverride("os.Create", func(name string) (*os.File, error) {
 		if err := writable("open", name); err != nil {
 			return nil, err
 		}
-		return createFile(name)
+		return p.create(name)
 	})
 	m.addOverride("os.WriteFile", func(name string, data []byte, perm os.FileMode) error {
 		if err := writable("open", name); err != nil {
 			return err
 		}
-		return writeFile(name, data, perm)
+		return p.writeFile(name, data, perm)
 	})
 	m.addOverride("os.Mkdir", func(name string, perm os.FileMode) error {
 		if err := writable("mkdir", name); err != nil {
 			return err
 		}
-		return os.Mkdir(name, perm)
+		return p.mkdir(name, perm)
 	})
 	m.addOverride("os.MkdirAll", func(name string, perm os.FileMode) error {
 		if err := writable("mkdir", name); err != nil {
 			return err
 		}
-		return os.MkdirAll(name, perm)
+		return p.mkdirAll(name, perm)
 	})
 	m.addOverride("os.Remove", func(name string) error {
 		if err := writable("remove", name); err != nil {
 			return err
 		}
-		return os.Remove(name)
+		return p.remove(name)
 	})
 	m.addOverride("os.RemoveAll", func(name string) error {
 		if err := writable("removeall", name); err != nil {
 			return err
 		}
-		return os.RemoveAll(name)
+		return p.removeAll(name)
 	})
 	m.addOverride("os.Rename", func(oldp, newp string) error {
 		if err := writable("rename", oldp); err != nil {
@@ -203,7 +204,7 @@ func (c *fsCaps) install(m *Machine) {
 		if err := writable("rename", newp); err != nil {
 			return err
 		}
-		return os.Rename(oldp, newp)
+		return p.rename(oldp, newp)
 	})
 }
 

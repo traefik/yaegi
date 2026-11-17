@@ -20,17 +20,12 @@ package vm
 // does not depend on the loader or on the other imports of the plugin.
 //
 // database/sql.Null[T] works only for some T: see sqlNullTypes.
-//
-// One function of a third-party package is here too, for the same reason:
-// getRuntimeHasher of github.com/dolthub/maphash reads the runtime type of a
-// map (dolthubRuntimeHasher).
 
 import (
 	"crypto/hkdf"
 	"crypto/pbkdf2"
 	"database/sql"
 	"database/sql/driver"
-	"encoding/binary"
 	"fmt"
 	"go/types"
 	"hash"
@@ -102,7 +97,6 @@ func init() {
 		"database/sql.Null.Value":            {true, sqlNullMethod},
 		"slices.overlaps":                    {true, slicesOverlaps},
 	}
-	genericImpls["github.com/dolthub/maphash.getRuntimeHasher"] = genericImpl{true, dolthubRuntimeHasher}
 	maps.Copy(genericImpls, jsonv2Generics())
 }
 
@@ -394,30 +388,6 @@ func maphashWriteComparable(m *Machine, f *ssa.Function, args []int32) func([]Va
 		writeBack(wb)
 		return Value{}
 	}
-}
-
-// dolthubRuntimeHasher implements getRuntimeHasher[K] of
-// github.com/dolthub/maphash (used by github.com/maypok86/otter). Its source
-// reads the hash function of the runtime type of map[K]struct{} through the
-// type word of an interface, and the VM has no runtime type (ifaceview.go).
-// The VM gives a function of the same type, func(p unsafe.Pointer, seed
-// uintptr) uintptr: the hash of the key *p that VM maps use (keyOf) and of
-// the seed. As with the function of the runtime, equal keys have the same
-// hash for one seed in one process.
-func dolthubRuntimeHasher(m *Machine, f *ssa.Function, args []int32) func([]Value) Value {
-	kt := f.TypeArgs()[0]
-	s := newMemSite(kt)
-	hash := &Closure{Go: func(a []Value) Value {
-		k := m.load(a[0], s)
-		var h maphash.Hash
-		h.SetSeed(hashSeed)
-		var b [8]byte
-		binary.LittleEndian.PutUint64(b[:], uint64(a[1].N))
-		h.Write(b[:])
-		maphash.WriteComparable[any](&h, keyOf(k, kt))
-		return Value{N: int64(uintptr(h.Sum64()))}
-	}}
-	return func([]Value) Value { return Value{R: hash} }
 }
 
 // bytesGeneric implements a generic function whose first type parameter is

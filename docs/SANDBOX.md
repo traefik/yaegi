@@ -207,6 +207,37 @@ In a restricted plugin:
   the host descriptors, or pipes to `Options.Stdout` and `Options.Stderr` when
   the host sets them (`vm/stdio.go`): closing them does not close the host's.
 
+## `Options.Mounts`
+
+Without `Options.Mounts`, a restricted plugin reaches the whole file system
+except the descriptors of the host: it can read, write, rename and remove any
+file that the host process can (`acme.json`, the TLS keys). With `Mounts`, the
+plugin reaches only the directories that the host lists (`vm/mount.go`,
+`TestMounts`):
+
+- each `vm.Mount` is a directory, seen by the plugin at its own path, and
+  `ReadOnly` refuses the writes;
+- the functions that take a path find the mount of the path and act through
+  the `os.Root` of the mount, so `..`, a symbolic link and a change of the tree
+  during the call cannot leave it: `os` (open, stat, read and write, mkdir,
+  remove, rename, link and symlink, chmod, chown, chtimes, truncate, temporary
+  files, `DirFS`, `OpenRoot`), `io/ioutil`, `filepath.Walk`, `WalkDir`, `Glob`
+  and `EvalSymlinks`, `http.Dir` and the file server of `net/http`,
+  `go/parser.ParseFile` and `syscall.Statfs`;
+- a path outside the mounts, or a write in a read-only mount, fails with an
+  error that wraps `fs.ErrPermission`. `/dev/stdout` and `/dev/stderr` still
+  open the plugin's own streams;
+- the native functions that open a path by themselves (`tls.LoadX509KeyPair`,
+  `template.ParseFiles`, `zip.OpenReader`...) panic with a `*vm.RefusedError`
+  when the plugin calls them.
+
+Not covered: native code that opens a path by itself in other ways (the AOT
+copies, a method of a native value called through an interface), and unix
+socket paths (`net.Dial("unix", path)`), which are network addresses.
+
+With `Options.Sandbox`, the paths are checked by the sandbox first, then
+opened through the mounts.
+
 ## `Options.Sandbox`
 
 `Options.Sandbox` (`vm/sandbox.go`) adds capability checks on top of the
@@ -257,9 +288,11 @@ time information, the environment copy, pure functions, and the socket options
 and terminal queries on lent descriptors.
 
 **Files and mappings of the plugin.** Embedded databases (badger, nutsdb) lock
-their directory and map their files. The `golang.org/x/sys/unix` subset gives
+their directory and map their files. With `Options.FileMapping` (off by
+default, and only with `UseUnsafe`), the `golang.org/x/sys/unix` subset gives
 these calls on the plugin's own files and mappings only (`vm/filemap.go`,
-`TestFileMap`):
+`TestFileMap`). The host should set `Mounts` with it, so that the plugin maps
+only the files of its own directories:
 
 | Name | Rule |
 |---|---|

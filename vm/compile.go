@@ -150,6 +150,12 @@ type Machine struct {
 	// syscall (unsafesyscall.go). Set by Load and RunMain for a restricted
 	// plugin with UseUnsafe.
 	unsafeSyscall bool
+	// fileMapping is Options.FileMapping for a machine with unsafeSyscall
+	// (filemap.go).
+	fileMapping bool
+	// mounts are the directories of Options.Mounts (mount.go), nil without
+	// Mounts.
+	mounts *mountTable
 	// linknames are the //go:linkname targets of the functions of the
 	// packages run from source; stubAsm is Options.StubAssembly
 	// (linkname.go).

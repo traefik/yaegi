@@ -102,6 +102,16 @@ The refusal is a panic: the program can recover it. This is the protection of pl
 `unsafe.Slice`, after the 64 regions have changed, when the pointer was not given by `SliceData` or `StringData`
 (an `&b[i]`), or points to a string constant of the host.
 
+### Shims
+
+A library that reads the internals of the runtime (the layout of a runtime type, a field of a map header) cannot run:
+the VM has no runtime types. The VM does not learn each library. A shim (`vm.Shim`, `Options.Shims`, `vm/shim.go`)
+replaces one file of the library with plain Go that the VM runs, under the same restrictions as the plugin. It applies
+only to a file with one of its SHA-256 sums, and `Plugin.Notes` names each replaced file. Package `shims` has them, and
+`host.Options` sets them: `runtime.go` of `github.com/dolthub/maphash` v0.1.0 (used by otter v1) hashes the key with
+`hash/maphash.WriteComparable` instead of the hash function of a runtime map type. The loaders that use `go list`
+(`GoList`, `RunMain`) replace only vendored files: `go` refuses an overlay of the module cache.
+
 ## What cannot work in this value model
 
 - **Reinterpreting cells**: a slice of cells seen as another element type (`[]uint32{...}` as a `[]byte`), or a variable

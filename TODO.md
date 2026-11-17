@@ -35,7 +35,7 @@ the docs and messages say "yaegi v2". Left:
 ## 1. Before an experimental flag in Traefik
 
 - [ ] **Silent differences in the default ("VM") mode.** The reflect battery
-  (`testdata/modes/check.sh`, nightly CI) runs 32 programs against the
+  (`testdata/modes/check.sh`, nightly CI) runs 31 programs against the
   compiled program, in default mode and AOT mode; `testdata/modes/known.tsv`
   lists the cases that fail today. Remove its lines as fixes merge. Left:
   - decide whether a plugin that imports a template package, log/slog,

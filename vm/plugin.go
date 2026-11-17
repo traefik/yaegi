@@ -224,6 +224,28 @@ type Options struct {
 	// Getenv and Environ over its own environment copy (unsafesyscall.go).
 	// The other syscall functions are refused at load time.
 	UseUnsafe bool
+	// FileMapping, with UseUnsafe, gives a restricted plugin the file locks
+	// and the memory mappings of golang.org/x/sys/unix (Flock, Mmap, Munmap,
+	// Madvise, Msync, and munmap and mremap through Syscall) on the files
+	// that it opened and the mappings that it made, as embedded databases
+	// (badger, nutsdb) need (filemap.go). The plugin then reads and writes
+	// these files through memory: a mapping is real bytes of the process,
+	// as a []byte of make. Use it with Mounts, so that the plugin opens only
+	// the files of its own directories. Off by default: these calls are then
+	// outside the subset, as the other system calls.
+	FileMapping bool
+	// Mounts, when not nil, are the only directories of the host that a
+	// restricted plugin can reach by path (mount.go): os.Open and the other
+	// functions of os, io/ioutil and path/filepath that take a path, os.DirFS,
+	// http.Dir and os.OpenRoot. A path outside them fails with an error that
+	// wraps fs.ErrPermission. Each directory is opened with os.OpenRoot, so
+	// "..", symbolic links and a change of the directory tree during a call
+	// cannot leave it. nil keeps the whole file system, without the
+	// descriptors of the host (hostfd.go); an empty slice gives no
+	// directory. With a Sandbox, its ReadPaths and WritePaths are checked
+	// too. Native code that opens a path by itself is not covered (see
+	// mount.go).
+	Mounts []Mount
 	// Unrestricted lifts the load-time restrictions of plugins
 	// (restrict.go) and gives the plugin the environment of the process
 	// instead of its own copy (env.go). The plugin keeps the restricted
@@ -563,6 +585,16 @@ type Options struct {
 	// plugins with big dependency graphs (a cache with its storage
 	// libraries) can set it, as StubAssembly.
 	RefuseAtCall bool
+	// Shims replace source files of the dependencies of the plugin, which
+	// read the internals of the Go runtime, with plain Go that the VM runs
+	// (shim.go). A shim applies only to a file with one of its SHA-256
+	// sums, and Plugin.Notes says which files were replaced. A shim runs as
+	// the code of the plugin, with the same restrictions: it gives the
+	// plugin no access. host.Options sets the shims of package
+	// github.com/traefik/yaegi/v2/shims. With GoList, only the files of a
+	// vendor directory are replaced (go refuses an overlay of the module
+	// cache).
+	Shims []Shim
 
 	// hooks are set by the tests only (loadhooks.go).
 	hooks *loadHooks
@@ -665,6 +697,10 @@ func (opts Options) newMachine(prog *ssa.Program, interp map[*types.Package]bool
 	m.onMissingEnv = opts.OnMissingEnv
 	m.restricted = opts.restricted()
 	m.unsafeSyscall = opts.restricted() && opts.UseUnsafe
+	m.fileMapping = m.unsafeSyscall && opts.FileMapping
+	if opts.restricted() && opts.Mounts != nil {
+		m.mounts = newMountTable(opts.Mounts)
+	}
 	m.stubAsm = opts.StubAssembly
 	m.refuseAtCall = opts.restricted() && opts.RefuseAtCall
 	m.execMode = opts.Exec
@@ -1016,8 +1052,19 @@ func loadImpl(ctx context.Context, opts *Options, pkgPath string) (p *Plugin, er
 		}
 		return pkgs, nil
 	}
+	shims := newShimSet(opts.Shims)
+	var shimNotes []string
 	loadPkgs := func(mode packages.LoadMode) ([]*packages.Package, error) {
 		pkgs, err := loadOnce(mode)
+		// A file that a shim replaces (shim.go): go list reads the shim
+		// through the overlay, as the files of IgnoreDuplicateDecls.
+		if err == nil && mode == packages.LoadAllSyntax {
+			if srcs, notes := shims.sources(pkgs); len(srcs) > 0 {
+				maps.Copy(dupSrcs, srcs)
+				shimNotes = notes
+				pkgs, err = loadOnce(mode)
+			}
+		}
 		// With IgnoreDuplicateDecls, a package with errors is loaded again
 		// with its repeated declarations blanked. Each new load blanks more
 		// files (or stops): a few rounds are enough for the dependencies
@@ -1140,6 +1187,7 @@ func loadImpl(ctx context.Context, opts *Options, pkgPath string) (p *Plugin, er
 	}
 	p = &Plugin{LoadTime: t1.Sub(t0), BuildTime: t2.Sub(t1)}
 	p.Notes = goListYaegiNotes(pkgs, pkgPath, yaegiExtra, func(path string) bool { return path == pkgPath || nonStd[path] })
+	p.Notes = append(p.Notes, shimNotes...)
 	for _, sp := range spkgs {
 		if sp.Pkg.Path() == pkgPath {
 			p.Pkg = sp

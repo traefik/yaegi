@@ -4,6 +4,7 @@ package vm
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 
@@ -143,31 +144,44 @@ func RawGetpid() uintptr {
 `
 
 // TestFileMap checks the calls of filemap.go in a restricted plugin with
-// UseUnsafe: flock, mmap, msync and munmap work on the files and the
-// mappings of the plugin, and are refused on anything else. The length of
-// a mapping does not count in the budget of Msync and Madvise
+// UseUnsafe and FileMapping: flock, mmap, msync and munmap work on the
+// files and the mappings of the plugin, and are refused on anything else,
+// also with Mounts. Without FileMapping, they are outside the subset. The
+// length of a mapping does not count in the budget of Msync and Madvise
 // (memRangeFuncs): 1000 of each on 64 MiB cost 2e9 steps before.
 func TestFileMap(t *testing.T) {
 	if !stdtypes.Available() || natPkg(xsysUnixPath) == nil {
 		t.Skip("no embedded standard library types or no golang.org/x/sys/unix table")
 	}
 	dir := writeXSysPlugin(t, "v0.48.0", "", xsysSources(t), map[string]string{"plug.go": fileMapPlug})
+	if _, err := Load(Options{Dir: dir, UseUnsafe: true}, "example.com/plug"); err == nil || !strings.Contains(err.Error(), "unix.Mmap not in registry") {
+		t.Errorf("without FileMapping: %v, want unix.Mmap not in registry", err)
+	}
+	base := t.TempDir()
+	tempDir := func() string {
+		d, err := os.MkdirTemp(base, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return d
+	}
 	for _, opts := range []Options{
-		{Dir: dir, UseUnsafe: true, Budget: 1e7},
-		{Dir: dir, UseUnsafe: true, Budget: 1e7, AOT: true},
+		{Dir: dir, UseUnsafe: true, FileMapping: true, Budget: 1e7},
+		{Dir: dir, UseUnsafe: true, FileMapping: true, Budget: 1e7, AOT: true},
+		{Dir: dir, UseUnsafe: true, FileMapping: true, Budget: 1e7, Mounts: []Mount{{Dir: base}}},
 	} {
 		p, err := Load(opts, "example.com/plug")
 		if err != nil {
 			t.Fatalf("AOT=%v: %v", opts.AOT, err)
 		}
-		res, err := p.Call(context.Background(), "Own", t.TempDir())
+		res, err := p.Call(context.Background(), "Own", tempDir())
 		if err != nil {
 			t.Fatalf("AOT=%v Own: %v", opts.AOT, err)
 		}
 		if v, _ := res[0].Interface(); v != "mapped" {
 			t.Errorf("AOT=%v Own: %v, want mapped", opts.AOT, v)
 		}
-		res, err = p.Call(context.Background(), "Advise", t.TempDir(), 1000)
+		res, err = p.Call(context.Background(), "Advise", tempDir(), 1000)
 		if err != nil {
 			t.Fatalf("AOT=%v Advise: %v", opts.AOT, err)
 		}
@@ -190,7 +204,7 @@ func TestFileMap(t *testing.T) {
 		} {
 			var args []any
 			if c.dir {
-				args = append(args, t.TempDir())
+				args = append(args, tempDir())
 			}
 			_, err := p.Call(context.Background(), c.name, args...)
 			if err == nil || !strings.Contains(err.Error(), c.want) {

@@ -32,6 +32,7 @@ import (
 
 	// The AOT copies: Options is AOT mode, which needs them.
 	_ "github.com/traefik/yaegi/v2/aot/all"
+	"github.com/traefik/yaegi/v2/shims"
 	"github.com/traefik/yaegi/v2/vm"
 )
 
@@ -92,8 +93,10 @@ const (
 // dependencies name refused functions in code it does not run loads; a call
 // of a refused function fails at run time, and the VM never runs it),
 // Exec set to vm.ExecMock (a plugin whose dependencies import os/exec loads;
-// running a program returns an error, and no process starts), and every
-// option that accepts what
+// running a program returns an error, and no process starts), the shims of
+// package shims (plain Go files for libraries that read the internals of
+// the runtime; Plugin.Notes lists the replaced files), and every option that
+// accepts what
 // yaegi accepted (Traefik plugins were written for yaegi): unused names,
 // unused expression values, the test files and the identical copies of a
 // declaration left out, the "// yaegi:tags" lines, a go directive newer than
@@ -142,6 +145,7 @@ func Options() vm.Options {
 		StubAssembly:                true,
 		RefuseAtCall:                true,
 		Exec:                        vm.ExecMock,
+		Shims:                       shims.All(),
 	}
 }
 

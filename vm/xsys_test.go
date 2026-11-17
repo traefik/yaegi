@@ -219,14 +219,8 @@ func New(_ context.Context, _ http.Handler, _ *Config, _ string) (http.Handler, 
 // as gRPC sets it in its dialer; go-isatty's IoctlGetTermios on os.Stdout
 // gives what Go gives. The functions outside the subset are refused at load
 // time, and with StubAssembly they return ENOSYS without calling the system
-// (or panic, without an error result); the descriptors, requests, mappings
-// and system calls outside the rules panic with a *RefusedError
-// (TestFileMap: the files and the mappings of the plugin).
-// sysGetpid is the system call of the plugin's /syscall.
-//
-//lint:ignore SA1019 the plugin makes this raw system call on purpose
-const sysGetpid = unix.SYS_GETPID
-
+// (or panic, without an error result); the descriptors and requests outside
+// the rules panic with a *RefusedError.
 func TestXSysSubset(t *testing.T) {
 	if !stdtypes.Available() || natPkg(xsysUnixPath) == nil {
 		t.Skip("no embedded standard library types or no golang.org/x/sys/unix table")
@@ -238,16 +232,14 @@ func TestXSysSubset(t *testing.T) {
 	if !errors.As(err, &pe) {
 		t.Fatalf("without StubAssembly: %v, want a *PreflightError", err)
 	}
-	// Mmap and Syscall are in the subset, for the files and the mappings
-	// of the plugin only (filemap.go): they are refused at run time.
-	for _, name := range []string{"Kill", "IoctlSetTermios"} {
+	for _, name := range []string{"Mmap", "Kill", "Syscall", "IoctlSetTermios"} {
 		want := "golang.org/x/sys/unix." + name + " not in registry: it is not in the read-only golang.org/x/sys/unix subset"
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("without StubAssembly: %v\nwant %q", err, want)
 		}
 	}
-	if len(pe.Problems) != 2 {
-		t.Errorf("without StubAssembly: problems %q, want 2", pe.Problems)
+	if len(pe.Problems) != 4 {
+		t.Errorf("without StubAssembly: problems %q, want 4", pe.Problems)
 	}
 
 	var u unix.Utsname
@@ -282,9 +274,9 @@ func TestXSysSubset(t *testing.T) {
 			{"/ioctl-get-request", refused(fmt.Sprintf("unix.IoctlGetTermios with the request %#x (only %#x)", uint64(termiosSetHost), uint64(termiosReqHost)))},
 			{"/ioctl-fd", refused("unix.IoctlGetWinsize of a file descriptor that is not the plugin's os.Stdin, os.Stdout or os.Stderr and that no RawConn callback lends to the plugin")},
 			{"/clock", refused("unix.ClockGettime of the clock -2 (only the clocks of the system, 0 to 31)")},
-			{"/mmap", refused("unix.Mmap of a file descriptor that is not a file the plugin opened")},
+			{"/mmap", "function not implemented"},
 			{"/kill", "function not implemented"},
-			{"/syscall", refused(fmt.Sprintf("unix.Syscall of the system call %d (only munmap and mremap of a mapping the plugin made)", sysGetpid))},
+			{"/syscall", refused("unix.Syscall (outside the read-only golang.org/x/sys/unix subset; Options.StubAssembly loaded the plugin)")},
 		} {
 			if got := serveOnce(t, opts, "example.com/plug", c.path); got != c.want {
 				t.Errorf("AOT %v, %s: %q\nwant %q", opts.AOT, c.path, got, c.want)

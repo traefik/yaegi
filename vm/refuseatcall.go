@@ -48,8 +48,11 @@ var refusedAtCallImports = map[string]bool{"plugin": true, "net/http/pprof": tru
 // the native function f when it is refused: a function of refusedFuncs (not
 // a method: refusedmeth.go has them), or a function or method of a package of
 // refusedAtCallImports. nil otherwise.
+//
+// With Options.Mounts, the functions and methods of mountRefused, which
+// open a path by themselves, get a stub too (mount.go).
 func (m *Machine) refusedCallHook(f *ssa.Function) NativeHook {
-	if !m.refuseAtCall || f.Pkg == nil || m.isInterp(f) {
+	if !m.refuseAtCall && m.mounts == nil || f.Pkg == nil || m.isInterp(f) {
 		return nil
 	}
 	obj, ok := f.Object().(*types.Func)
@@ -57,6 +60,15 @@ func (m *Machine) refusedCallHook(f *ssa.Function) NativeHook {
 		return nil
 	}
 	name := obj.Origin().FullName()
+	if m.mounts != nil && mountRefused[name] {
+		what := name + " (it opens a path outside Options.Mounts)"
+		return func(*Machine, []Value) Value {
+			panic(&RefusedError{What: what})
+		}
+	}
+	if !m.refuseAtCall {
+		return nil
+	}
 	switch {
 	case refusedAtCallImports[f.Pkg.Pkg.Path()]:
 	case f.Signature.Recv() != nil || !refusedFuncs[name]:
