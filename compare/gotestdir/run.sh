@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # run.sh: runs the official Go test suite (GOROOT/test of go1.27.3) under
-# go (reference), yaegi v2 (VM v1, VM v1 -aot, and VM v2 when YAEGI_V2 is
-# set) and yaegi v0.16.1 (run and errorcheck only; GOTESTDIR_NO_YAEGI=1
-# leaves it out), and writes results/*.tsv.
+# go (reference), yaegi v2 (VM mode and -aot) and yaegi v0.16.1 (run and
+# errorcheck only; GOTESTDIR_NO_YAEGI=1 leaves it out), and writes
+# results/*.tsv.
 #
 #   compare/gotestdir/run.sh [jobs] [timeout]
 #
@@ -62,15 +62,6 @@ run -engine go -bin "$G/bin/go" > results/go.tsv
 run -engine govm -bin "$D/out/yaegi-v2" -load "$D/out/loadcheck" > results/govm.tsv
 run -engine govm -bin "$D/out/yaegi-v2-aot" > results/govm-aot.tsv
 engines="go govm govm-aot"
-# v2 (experimental/vm2) is on another branch: set YAEGI_V2 to a yaegi v2
-# binary built from it (go build of its command on the branch) to measure it
-# too.
-if [ -n "${YAEGI_V2:-}" ]; then
-	printf '#!/bin/sh\nexec %s -engine=v2 "$@"\n' "$YAEGI_V2" > out/yaegi-v2-vm2
-	chmod +x out/yaegi-v2-vm2
-	run -engine govm -bin "$D/out/yaegi-v2-vm2" > results/govm-v2.tsv
-	engines="$engines govm-v2"
-fi
 # yaegi: only run and errorcheck, the actions of the first measure.
 if [ -z "${GOTESTDIR_NO_YAEGI:-}" ]; then
 	run -engine yaegi -bin "$D/out/yaegi" -actions run,errorcheck > results/yaegi.tsv

@@ -23,7 +23,7 @@ of what `go get` downloads.
 | `cmd/aotgosrc/`, `internal/gosources/` | the manifest of the Go sources of the AOT copies, per Go patch release |
 | `cmd/hostgraph/`, `testdata/hostgraph/` | checks that the AOT copies fit the module graph of Traefik |
 | `cmd/boundaryscan/`, `internal/boundary/`, `testdata/boundary/` | the inventory of the native boundary of the standard library ([BOUNDARY.md](BOUNDARY.md)) and its probes |
-| `cmd/stdtests/` | the external tests of standard library packages, run natively, in VM mode and in AOT mode ([STDTESTS.md](STDTESTS.md)) |
+| `cmd/stdtests/` | the external tests of standard library packages, run natively, in VM mode and in AOT mode |
 | `cmd/runtests/` | the conformance runner over the yaegi v0 test programs, and the Go tests that compare `testdata/` with `go run` |
 | `cmd/loadtime/`, `cmd/loadmem/` | plugin load times; heap, RSS and request times of one plugin |
 | `cmd/progen/`, `internal/progen/` | random programs compared with Go |
@@ -145,7 +145,7 @@ Yaegi v2 supports two Go releases, N-1 and N. To follow a new release N+1:
 4. Handle new SSA instructions in the VM, if any (`vm/compile.go`):
    `TestSSAInstructionsHandled` and `TestCompileCorpus` find them, and
    `TestRuntimeCouplings` fails when a start-up probe of a runtime internal
-   fails ([ARCHITECTURE.md](ARCHITECTURE.md)). Behaviors of the standard
+   fails. Behaviors of the standard
    library that changed go in `vm/release_go1NN.go`.
 5. `go test ./...` with both toolchains, and `go run ./cmd/runtests`: no
    conformance regression.

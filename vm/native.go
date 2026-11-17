@@ -1668,7 +1668,7 @@ func (g *convGraph) reopen() {
 // methods (ast.Expr's exprNode, promoted from an embedded *ast.Ident), and
 // Go cannot make a native type with them at run time. The wrapper of the
 // VM made reflect.Set panic with "value of type vm.stringerW is not
-// assignable to type ast.Expr" (docs/ARCHITECTURE.md).
+// assignable to type ast.Expr".
 func unexportedIfaceError(iv *Iface, rt reflect.Type) {
 	for i := 0; i < rt.NumMethod(); i++ {
 		if mt := rt.Method(i); !mt.IsExported() {

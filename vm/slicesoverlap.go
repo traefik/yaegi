@@ -5,7 +5,7 @@ package vm
 // slices.Insert and slices.Replace call overlaps(a, b), which compares the
 // unsafe addresses of the first and last elements of a and b. In the VM
 // the address of an element through unsafe depends on the subslice it
-// comes from (docs/UNSAFE.md): &a[2] taken from a[1:] and from a[2:] are
+// comes from: &a[2] taken from a[1:] and from a[2:] are
 // two different uintptr values. The check was wrong, and Insert with
 // overlapping values gave a wrong result. The VM implements overlaps with
 // the real memory of the two slices: the cells of a []Value, the bytes of a

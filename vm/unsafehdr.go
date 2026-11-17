@@ -1,6 +1,6 @@
 package vm
 
-// Views of the header of a string or a slice (see docs/UNSAFE.md).
+// Views of the header of a string or a slice.
 //
 // In gc a string is a header {data, len} and a slice a header {data, len,
 // cap}. Programs read and write these words through unsafe pointers:
@@ -212,7 +212,7 @@ func (h *hdr) extentAs(t types.Type) int {
 // order of the host: what gc has in memory for them. badger writes the
 // offsets of a block to its table with y.U32SliceToBytes, a slice header
 // that makes a []byte of a []uint32. It is a copy: a later write to the
-// cells is not seen in the bytes, nor the other way (docs/UNSAFE.md).
+// cells is not seen in the bytes, nor the other way.
 func wordBytes(es []Value, et types.Type) []byte {
 	size := int(gcSizes.Sizeof(et))
 	b := make([]byte, len(es)*size)
@@ -347,7 +347,7 @@ func oneField(t types.Type) types.Type {
 // stores the slice it appended back (impl.pointer.PointerSlice and
 // AppendPointerSlice). In gc both have the same memory; in the VM a struct
 // is a cell of fields, so the elements are copied: a later write to an
-// element of one slice is not seen in the other (docs/UNSAFE.md).
+// element of one slice is not seen in the other.
 func rewrap(es []Value, from, to types.Type) ([]Value, bool) {
 	like := func(a, b types.Type) bool { return b != nil && (sameLayout(a, b) || sameLayout(b, a)) }
 	switch {

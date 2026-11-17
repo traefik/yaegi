@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reproduces the W1/W2/W3 measurements of docs/BENCHMARKS.md.
+# Measures the W1/W2/W3 workloads (the benchmarks of the README).
 #
 #   compare/bench/run.sh [label] [count] [benchtime]
 #

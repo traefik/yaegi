@@ -9,7 +9,7 @@
 // ways: compiled by the Go toolchain (native), by yaegi v2 in VM mode (vm),
 // and by yaegi v2 in AOT mode (aot). It records the result of each TestXxx,
 // FuzzXxx (its f.Add seeds) and ExampleXxx (compared with its Output:
-// comment by package testing). See docs/STDTESTS.md.
+// comment by package testing).
 //
 // Usage:
 //

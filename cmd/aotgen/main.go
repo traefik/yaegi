@@ -15,8 +15,6 @@
 // (and is not part of the native floor: runtime, sync, os, net/http...) is
 // converted too; internal packages they need are copied. The report (-report)
 // lists, per package, the reflect API used and what the twin lacks.
-//
-// See docs/AOTGEN.md.
 package main
 
 import (

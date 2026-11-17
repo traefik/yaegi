@@ -1,6 +1,6 @@
 package vm
 
-// Views of the two words of an interface (see docs/UNSAFE.md).
+// Views of the two words of an interface.
 //
 // In gc an interface value is two words: the type (or the itab) and the
 // data, a pointer for the pointer-shaped types and a pointer to a boxed copy

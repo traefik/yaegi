@@ -6,7 +6,7 @@ import (
 	"unsafe"
 )
 
-// Views of string and slice headers through unsafe (docs/UNSAFE.md): the
+// Views of string and slice headers through unsafe: the
 // reflect headers, local structs with the same layout, the zero-copy
 // conversions of byte slices and strings, and addresses of the data.
 

@@ -8,8 +8,8 @@ import (
 // Optimization 5: byte slices coming from native code stay []byte (zero-copy,
 // shared with native memory, 1 byte per element instead of a 24-byte Value),
 // and make([]byte, n) and []byte(s) make a Go []byte too (memSite.bytes,
-// byteArrayOnlySliced): unsafe views of their bytes are real memory
-// (docs/UNSAFE.md). Literals and [N]byte arrays used as arrays are cells.
+// byteArrayOnlySliced): unsafe views of their bytes are real memory.
+// Literals and [N]byte arrays used as arrays are cells.
 // []byte values may therefore be either []byte- or []Value-backed; the
 // slice operations below accept both. A *byte is a Go pointer into a []byte.
 

@@ -1,7 +1,6 @@
 // A program with its own generated protobuf messages (vm/testdata/pbplug):
 // Marshal, Unmarshal, Equal, Clone, Merge, Reset, Any, protojson,
-// prototext and protoreflect, then round trips on 8 goroutines
-// (docs/UNSAFE.md).
+// prototext and protoreflect, then round trips on 8 goroutines.
 package main
 
 import (

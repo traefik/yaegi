@@ -3,7 +3,7 @@ package vm
 // Instances: the goroutines of one New call (Machine.NewInstance).
 //
 // Traefik loads a plugin once, at startup, and calls its New function at
-// each reload of the dynamic configuration (docs/RELOAD.md). Many plugins
+// each reload of the dynamic configuration. Many plugins
 // start goroutines in New that never end: a cache janitor with a
 // time.Ticker, a refresh loop (darkweak/souin starts 2 per New). Under
 // yaegi they run for ever. Before instances, they also counted in the

@@ -3,7 +3,7 @@ package vm
 // The counters of a Machine for the metrics of the host (Machine.Stats).
 //
 // A host such as Traefik keeps one Plugin per plugin for the life of the
-// process (the reload model of docs/RELOAD.md), so these counters are the
+// process, so these counters are the
 // only view it has of a plugin that goes wrong weeks after its load: a loop
 // that the budget stops at each request, a panic per request, a background
 // goroutine that the BackgroundRate slows down. Each counter is an atomic

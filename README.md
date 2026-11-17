@@ -12,24 +12,20 @@ and type check the code, and only adds an executor. The module is
 `github.com/traefik/yaegi/v2`. Yaegi v0 (module `github.com/traefik/yaegi`,
 releases v0.x) stays on branch `master`.
 
-**Status: experimental.** The API is not stable yet, and Traefik does not
-use yaegi v2 yet. Much of the code was written with AI assistance and is
-still under review. The open work is in [TODO.md](TODO.md).
+**Status: experimental.** The API is not stable yet. The open work is in
+[TODO.md](TODO.md).
 
-- [Why a v2](#why-a-v2)
-- [Install](#install)
-- [Quick start](#quick-start)
-- [How it works](#how-it-works)
-- [Execution modes](#execution-modes)
-- [Restriction levels](#restriction-levels)
-- [Security: not a sandbox](#security-not-a-sandbox)
-- [Coming from yaegi v0](#coming-from-yaegi-v0)
-- [Supported Go releases](#supported-go-releases)
+- [Architecture](#architecture)
+- [Usage](#usage)
+- [Conformance results](#conformance-results)
+- [Benchmarks](#benchmarks)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
 - [License](#license)
 
-## Why a v2
+## Architecture
+
+### Why a new engine
 
 Yaegi v0 has its own type checker and its own implementation of the
 semantics of Go. This has three costs:
@@ -46,18 +42,18 @@ semantics of Go. This has three costs:
 
 Yaegi v2 changes the foundation:
 
-- **The Go tools do the language.** Parsing, type checking, generics and
-  the meaning of the code come from `go/parser`, `go/types` and
+- The Go tools do the language. Parsing, type checking, generics and the
+  meaning of the code come from `go/parser`, `go/types` and
   `golang.org/x/tools/go/ssa`. Error messages are the ones of the Go
   compiler. A new Go release is mostly new generated data, not new
   interpreter code.
-- **A bytecode VM runs the code.** The SSA form of each function is
-  compiled to a register bytecode and run by a loop.
-- **Reflection sees interpreted types.** Yaegi v2 has a second
-  implementation of `reflect` that understands interpreted values (the
-  "reflect twin"), and copies of reflect-based libraries rewritten to use it
-  (the "AOT copies"). With them, `json.Marshal` of a plugin value calls the
-  plugin's `MarshalJSON`, as in Go.
+- A bytecode VM runs the code. The SSA form of each function is compiled
+  to a register bytecode and run by a loop.
+- Reflection sees interpreted types. Yaegi v2 has a second implementation
+  of `reflect` that understands interpreted values (the "reflect twin"),
+  and copies of reflect-based libraries rewritten to use it (the "AOT
+  copies"). With them, `json.Marshal` of a plugin value calls the plugin's
+  `MarshalJSON`, as in Go.
 
 For example, this middleware gives `{"status":{}}` with yaegi v0 and
 `{"status":"status-200"}` with yaegi v2, as compiled Go does:
@@ -74,100 +70,7 @@ func (h *handler) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
 }
 ```
 
-## Install
-
-Command line:
-
-```bash
-go install github.com/traefik/yaegi/v2/cmd/yaegi@latest
-```
-
-Library:
-
-```go
-import "github.com/traefik/yaegi/v2/vm"
-```
-
-Yaegi v2 needs no Go toolchain at run time: the types of the standard
-library are embedded in the binary (about 0.9 MB compressed per platform).
-
-## Quick start
-
-Run a program, like `go run`:
-
-```bash
-yaegi hello.go
-yaegi ./cmd/tool arg1 arg2      # a directory or an import path of a main package
-yaegi -aot prog.go              # AOT mode (see below)
-yaegi -restricted plugin.go     # the restrictions of Traefik plugins
-```
-
-Evaluate Go source, or start a REPL:
-
-```bash
-yaegi -e 'import "strings"; strings.ToUpper("yaegi")'
-yaegi -i
-```
-
-`yaegi -h` lists the flags. Exit codes: 0 success, 2 unrecovered panic, 3
-construct not supported by the VM, 4 load or type error.
-
-Load a plugin from a Go program. A plugin is a Go package loaded from its
-source; the host calls its exported functions by name, and the methods of
-the values they return:
-
-```go
-import (
-	"github.com/traefik/yaegi/v2/host"
-	"github.com/traefik/yaegi/v2/vm"
-)
-
-opts := host.Options()  // safe defaults for code you do not trust: AOT mode, limits, empty environment
-opts.Dir = pluginDir    // the plugin module (go.mod, vendor/)
-opts.Root = rootDir     // no go.mod is read above it
-opts.Stdout, opts.Stderr = stdoutLogger, stderrLogger
-
-p, err := host.Load(opts, "github.com/user/myplugin")
-
-// A Traefik middleware: CreateConfig() *Config, then New(ctx, next, *Config, name).
-res, err := p.Call(ctx, "CreateConfig")
-cfg := res[0] // a *vm.Object: the interpreted *Config
-err = cfg.Decode(func(ptr any) error { return decode(ptr, data) })
-res, err = p.Call(ctx, "New", ctx, next, cfg, "my-plugin")
-v, err := res[0].Interface()
-h := v.(http.Handler) // each ServeHTTP is a call into the plugin, with its own budget
-
-// At each new configuration, call CreateConfig and New again on the same p.
-// At shutdown, when the plugin is not used any more:
-err = p.Close()
-```
-
-An argument of `Plugin.Call` and `Object.Call` is an `*vm.Object` of the
-same plugin, passed as is, or a native value converted to the type of the
-parameter. `Object.Interface` converts a result to a native value,
-`Object.Decode` lets a native decoder (mapstructure, encoding/json) fill a
-pointer, and `Object.SetFields` sets fields of a pointed struct.
-
-`vm.Load` returns a `*vm.LoadError` for a load or type error, and a
-`*vm.PreflightError` (with the file and line of each problem) for code the
-VM cannot run: the load-time check compiles every function the plugin can
-reach, so such code fails the load, not a request. `Plugin.Notes` holds
-messages about a load that worked, for the host to log.
-
-`host` is the entry point for code you do not trust: `host.Options()`
-returns safe options in one place, and `host.Load` refuses unsafe ones
-(VM mode, no limits, the whole host environment, `Unrestricted`...).
-`vm.Load` is the permissive API (the CLI, tests). [docs/RELOAD.md](docs/RELOAD.md)
-explains how a host reloads plugins.
-
-`vm.Session` runs Go source one input at a time, as the REPL does:
-
-```go
-s, err := vm.NewSession(opts)
-res, err := s.Eval(ctx, `x := 40; x + 2`) // res: the values of a last expression, as *vm.Object
-```
-
-## How it works
+### Pipeline
 
 ```mermaid
 flowchart LR
@@ -184,8 +87,7 @@ flowchart LR
     end
 ```
 
-Code goes through five steps. Each step is a package or a file of `vm/`;
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) has the details.
+Code goes through five steps. Each step is a package or a file of `vm/`.
 
 1. **Load** (`vm/srcload.go`). The loader reads the module and its
    `vendor/` directory from disk. It selects the files of the platform with
@@ -230,27 +132,25 @@ copies.
 
 ### The reflect twin and AOT copies
 
-- **The reflect twin** (`vm/twin_*.go`, facade package `vreflect/`) is a
-  second implementation of the whole `reflect` API that works on VM values
-  and on native values. Through it, code sees the real interpreted types,
-  with their names and methods.
-- **`cmd/aotgen`** copies a library that uses `reflect` (for example
+- The reflect twin (`vm/twin_*.go`, facade package `vreflect/`) is a second
+  implementation of the whole `reflect` API that works on VM values and on
+  native values. Through it, code sees the real interpreted types, with
+  their names and methods.
+- `cmd/aotgen` copies a library that uses `reflect` (for example
   `encoding/json`), replaces its `import "reflect"` with the twin, and
   generates the glue. The copy is compiled into the host binary like normal
-  Go code (`aot/`). It is an **AOT copy** (ahead of time: compiled before
-  the plugin is known).
+  Go code (`aot/`). It is an AOT copy (ahead of time: compiled before the
+  plugin is known).
 - An AOT copy runs at the speed of compiled Go, but it reads and writes
   interpreted values through the twin. 24 libraries have AOT copies today:
   from the standard library json, xml, gob, binary, asn1, fmt, errors,
   sort, text/template, html/template, flag, net/rpc, log/slog,
   database/sql; and yaml.v3, sigs.k8s.io/yaml, goccy/go-yaml,
   BurntSushi/toml, go-toml/v2, mapstructure, go-viper/mapstructure,
-  validator, spf13/cast, go-cmp. See [docs/AOTGEN.md](docs/AOTGEN.md).
+  validator, spf13/cast, go-cmp.
 - An AOT copy is only used when it matches the version the plugin vendors
   (same module version and same source hash); otherwise the plugin's own
   version is interpreted.
-
-## Execution modes
 
 ### Package modes
 
@@ -258,9 +158,9 @@ Each import path runs in one of three modes (`vm.Mode`):
 
 | Mode | What runs | Speed | Sees interpreted types through reflect? | Example |
 |---|---|---|---|---|
-| **native** | the real compiled package of the host | fast (compiled Go, plus the cost of converting values) | no | `strings`, `net/http`, `regexp` |
-| **AOT** | a copy of the package, compiled into the host, that uses the reflect twin | fast (median 4.9× compiled Go per call) | yes | `encoding/json`, `fmt`, yaml, validator |
-| **interpreted** | the source of the package, compiled to bytecode and run by the VM | slower | yes | the plugin, its vendored libraries |
+| native | the real compiled package of the host | fast (compiled Go, plus the cost of converting values) | no | `strings`, `net/http`, `regexp` |
+| AOT | a copy of the package, compiled into the host, that uses the reflect twin | fast (median 4.9× compiled Go per call) | yes | `encoding/json`, `fmt`, yaml, validator |
+| interpreted | the source of the package, compiled to bytecode and run by the VM | slower | yes | the plugin, its vendored libraries |
 
 Native and AOT code must be compiled into the host binary, so the list of
 these packages is fixed when the host is built. The interpreted mode
@@ -268,8 +168,8 @@ accepts any source: this is why the plugin itself is always interpreted.
 
 ### VM mode and AOT mode
 
-**VM mode** (the default, `Options.AOT` false) is the plain interpreter:
-the program and its non-standard imports are interpreted, and the standard
+VM mode (the default, `Options.AOT` false) is the plain interpreter: the
+program and its non-standard imports are interpreted, and the standard
 library is native. When the host imports the AOT copies
 (`github.com/traefik/yaegi/v2/aot/all`), VM mode still sends the calls of
 `fmt`, `json` and `xml` with interpreted types to the copies. When a call
@@ -277,7 +177,7 @@ would silently lose a method and cannot go to a copy, the load-time check
 refuses the program, or the call returns an error: the result is never
 silently wrong.
 
-**AOT mode** (`Options.AOT = true`, `yaegi -aot`; the host must import
+AOT mode (`Options.AOT = true`, `yaegi -aot`; the host must import
 `github.com/traefik/yaegi/v2/aot/all`) is VM mode plus the AOT copies:
 every package that has a matching copy runs in AOT mode. `json.Marshal`,
 `fmt.Sprintf("%v")`, templates, `slog` and validators then see the
@@ -288,23 +188,120 @@ the Go patch releases (see [Supported Go releases](#supported-go-releases)).
 `Options.Modes` (or `yaegi -mode path=native|aot|interp,...`) forces the
 mode of single import paths.
 
-## Restriction levels
+## Usage
+
+### Install
+
+Command line:
+
+```bash
+go install github.com/traefik/yaegi/v2/cmd/yaegi@latest
+```
+
+Library:
+
+```go
+import "github.com/traefik/yaegi/v2/vm"
+```
+
+Yaegi v2 needs no Go toolchain at run time: the types of the standard
+library are embedded in the binary (about 0.9 MB compressed per platform).
+
+### Command line
+
+Run a program, like `go run`:
+
+```bash
+yaegi hello.go
+yaegi ./cmd/tool arg1 arg2      # a directory or an import path of a main package
+yaegi -aot prog.go              # AOT mode
+yaegi -restricted plugin.go     # the restrictions of Traefik plugins
+```
+
+Evaluate Go source, or start a REPL:
+
+```bash
+yaegi -e 'import "strings"; strings.ToUpper("yaegi")'
+yaegi -i
+```
+
+`yaegi -h` lists the flags. Exit codes: 0 success, 2 unrecovered panic, 3
+construct not supported by the VM, 4 load or type error.
+
+### Load a plugin from a Go program
+
+A plugin is a Go package loaded from its source; the host calls its
+exported functions by name, and the methods of the values they return:
+
+```go
+import (
+	"github.com/traefik/yaegi/v2/host"
+	"github.com/traefik/yaegi/v2/vm"
+)
+
+opts := host.Options()  // safe defaults for code you do not trust: AOT mode, limits, empty environment
+opts.Dir = pluginDir    // the plugin module (go.mod, vendor/)
+opts.Root = rootDir     // no go.mod is read above it
+opts.Stdout, opts.Stderr = stdoutLogger, stderrLogger
+
+p, err := host.Load(opts, "github.com/user/myplugin")
+
+// A Traefik middleware: CreateConfig() *Config, then New(ctx, next, *Config, name).
+res, err := p.Call(ctx, "CreateConfig")
+cfg := res[0] // a *vm.Object: the interpreted *Config
+err = cfg.Decode(func(ptr any) error { return decode(ptr, data) })
+res, err = p.Call(ctx, "New", ctx, next, cfg, "my-plugin")
+v, err := res[0].Interface()
+h := v.(http.Handler) // each ServeHTTP is a call into the plugin, with its own budget
+
+// At each new configuration, call CreateConfig and New again on the same p.
+// At shutdown, when the plugin is not used any more:
+err = p.Close()
+```
+
+An argument of `Plugin.Call` and `Object.Call` is an `*vm.Object` of the
+same plugin, passed as is, or a native value converted to the type of the
+parameter. `Object.Interface` converts a result to a native value,
+`Object.Decode` lets a native decoder (mapstructure, encoding/json) fill a
+pointer, and `Object.SetFields` sets fields of a pointed struct.
+
+`vm.Load` returns a `*vm.LoadError` for a load or type error, and a
+`*vm.PreflightError` (with the file and line of each problem) for code the
+VM cannot run: the load-time check compiles every function the plugin can
+reach, so such code fails the load, not a request. `Plugin.Notes` holds
+messages about a load that worked, for the host to log.
+
+`host` is the entry point for code you do not trust: `host.Options()`
+returns safe options in one place, and `host.Load` refuses unsafe ones
+(VM mode, no limits, the whole host environment, `Unrestricted`...).
+`vm.Load` is the permissive API (the CLI, tests).
+
+### Evaluate source
+
+`vm.Session` runs Go source one input at a time, as the REPL does:
+
+```go
+s, err := vm.NewSession(opts)
+res, err := s.Eval(ctx, `x := 40; x + 2`) // res: the values of a last expression, as *vm.Object
+```
+
+### Restriction levels
 
 Independently of the execution mode, code runs with one of these levels of
 access to the host process:
 
 | Level | Options | What the code gets |
 |---|---|---|
-| **Restricted** (default of `vm.Load`) | none | the rules of Traefik plugins: no `os/exec`, `plugin`, `net/http/cgi` or internal packages; `unsafe` and `syscall` only with `UseUnsafe` (and of `syscall`, a read-only subset); `os.Exit` and `log.Fatal` panic instead of ending the host; its own copy of the environment and of the process-wide registries of the standard library; refused functions that act on the process |
-| **Unrestricted** | `Unrestricted` | no load-time checks and the real environment, but still the restricted standard library |
-| **Real process** | `Unrestricted` + `RealProcess` | the standard library as in Go: `os.Exit` ends the host, `os/exec` and `syscall` work. Only for trusted code |
+| Restricted (default of `vm.Load`) | none | the rules of Traefik plugins: no `os/exec`, `plugin`, `net/http/cgi` or internal packages; `unsafe` and `syscall` only with `UseUnsafe` (and of `syscall`, a read-only subset); `os.Exit` and `log.Fatal` panic instead of ending the host; its own copy of the environment and of the process-wide registries of the standard library; refused functions that act on the process |
+| Unrestricted | `Unrestricted` | no load-time checks and the real environment, but still the restricted standard library |
+| Real process | `Unrestricted` + `RealProcess` | the standard library as in Go: `os.Exit` ends the host, `os/exec` and `syscall` work. Only for trusted code |
 
 `Exec: vm.ExecMock` lets a plugin import `os/exec` without running
 anything. The `yaegi` command runs programs at the real process level by
 default, as `go run` does; `-restrictedstd` and `-restricted` select the
 other levels.
 
-## Security: not a sandbox
+### Security: not a sandbox
 
 Yaegi v2 runs the code inside the host process, in the same memory. It is
 a correctness improvement over yaegi v0, not an isolation layer: a plugin
@@ -312,27 +309,15 @@ written to harm its host can do it. Untrusted code needs a separate
 process; for Traefik, that is its Wasm plugins.
 
 What yaegi v2 offers is guard rails against clumsy plugins and simple
-mistakes:
+mistakes: the refusals of the restriction levels, an execution budget per
+call, limits on goroutines and memory, `os.Exit` and panics of the plugin
+that do not stop the host, and an environment, standard streams and
+registries of its own for each plugin. `Options.Sandbox` adds capability
+checks (environment variables, paths and hosts) for a part of the `os` and
+`net` functions. [docs/SANDBOX.md](docs/SANDBOX.md) describes the guard
+rails and their limits.
 
-- the import and function refusals of the restriction levels;
-- an execution budget per call (`Budget`), a rate for background
-  goroutines (`BackgroundRate`), a goroutine cap (`MaxGoroutines`), an
-  approximate memory quota (`MaxMemory`), a load timeout and source size
-  limits;
-- `os.Exit`, `log.Fatal` and panics in goroutines of the plugin do not stop
-  the host (`GoPanic` receives them), and `PanicOnFatal` turns some fatal
-  runtime errors into panics of the plugin;
-- the plugin has its own environment, standard streams and registries
-  (`http.DefaultServeMux`, sql drivers...), and may not assign host
-  variables;
-- the loader refuses code from outside the plugin module.
-
-`Options.Sandbox` adds capability checks (environment variables, paths
-and hosts) for a part of the `os` and `net` functions, as a help against
-accidents. [docs/SANDBOX.md](docs/SANDBOX.md) describes the guard rails and
-their limits.
-
-## Coming from yaegi v0
+### Coming from yaegi v0
 
 Yaegi v2 has no `interp.New`, `Eval` of a whole program or `Use`. A plugin
 is loaded with `vm.Load` (or `host.Load`), and its functions are called by
@@ -368,7 +353,7 @@ Yaegi v0 selects files with `// +build` lines only; yaegi v2 selects them
 as `go build` does, and `Plugin.Notes` names each package where the two
 differ.
 
-## Supported Go releases
+### Supported Go releases
 
 One yaegi v2 version supports two Go releases, N-1 and N (today Go 1.26
 and Go 1.27): a host can update yaegi v2 first and move to the new Go
@@ -387,17 +372,131 @@ riscv64), darwin (amd64, arm64), windows (amd64, arm64, 386), freebsd
 (amd64, 386) and openbsd (amd64, 386, riscv64). On other platforms,
 `Options.GoList` loads with the `go` command instead.
 
+## Conformance results
+
+Each line is a number of tests or programs that give the result of Go.
+"yaegi v0" is yaegi v0.16.1. An empty cell means not measured. The method
+and the full results are in the linked documents.
+
+### Language and standard library
+
+| Suite | Go | yaegi v0 | yaegi v2 (VM mode) | yaegi v2 (AOT mode) |
+|---|---|---|---|---|
+| Official Go test suite, `run` tests (1040) | 1040 | 628 | 1023 | 1022 |
+| Official Go test suite, `errorcheck` tests (522) | 520 | 156 | 450 | 450 |
+| Test programs of yaegi v0 with an expected output (868) | | reference | 860 | |
+| External tests of 16 standard library packages (868 pass natively) | 868 | | 847 | 847 |
+
+- The official Go test suite is `test/` of the Go repository
+  ([compare/gotestdir](compare/gotestdir/README.md)). The two lines above
+  are of the suite of go1.26.9 (23 October 2026), with all the symbol
+  tables of yaegi v0. On the suite of go1.27.3 and all its kinds of tests
+  (run, compile, errorcheck and their directory forms), yaegi v2 passes
+  2343 of 2457 tests. CI fails when one of them stops passing.
+- The test programs of yaegi v0 are `_test/*.go` of branch `master`,
+  copied in `tests/yaegi/` ([docs/conformance](docs/conformance/README.md),
+  measured again on 17 November 2026). Two of the 8 failures print
+  `main.T` like `go run`: their expected `int` is a limit of yaegi v0.
+- The standard library tests are the external tests of fmt, sort, slices,
+  maps, io, bufio, bytes, strings, strconv, errors, encoding/json,
+  encoding/xml, flag, context, math/big and text/template
+  (`go run ./cmd/stdtests`, go1.27.3, 6 November 2026). 17 of
+  the 21 failures are tests that count allocations.
+
+### Plugins
+
+| Measure | yaegi v0 | yaegi v2 (VM mode) | yaegi v2 (AOT mode) |
+|---|---|---|---|
+| 93 real Traefik middlewares, same output as the native binary | 88 | 88 | 88 |
+| 93 real Traefik middlewares, same output as yaegi v0 | | 91 | 90 |
+| 84 programs that copy what plugins do, same output as `go run` | 37 | 76 | 76 |
+| 25 common reflect libraries, same output as `go run` | 1 | | 24 |
+| Native boundary: probes that give the output of `go run` (1984) | | 1487 | 1657 |
+
+- The catalog is the public middlewares of the Traefik plugin catalog
+  ([compare/catalog](compare/catalog/README.md), 23 October 2026). On the middleware
+  scenario yaegi v2 has no failure of its own: the plugin that is not valid
+  Go loads with `IgnoreSoftErrors`, and the one AOT difference with yaegi
+  v0 is a timestamp. The other scenarios (credentials, reloads, streaming,
+  concurrency, soak) found one yaegi v2 failure in VM mode (a `json.Number`
+  written as a string, fixed since).
+- The 84 programs are in [compare/yaegi](compare/yaegi/README.md) (unsafe,
+  reflect, third-party libraries, recent language features; measured again
+  on 17 November 2026). The reflect libraries are the programs of
+  `testdata/aot/`, checked by `go run ./cmd/aotcheck`.
+- The native boundary is every place where the standard library looks at
+  the type or the methods of a value ([docs/BOUNDARY.md](docs/BOUNDARY.md),
+  Go 1.26).
+
+## Benchmarks
+
+Measured on 17 November 2026 on an Apple Silicon laptop (darwin/arm64),
+Go 1.26.10, `GOMAXPROCS=4`, against compiled Go and yaegi v0.16.1.
+
+### Time per request of a plugin
+
+Three Traefik-like middlewares (`plugins/`), µs per request, median of 10
+runs, lower is better:
+
+| Workload | Go | yaegi v0 | yaegi v2 (VM mode) | yaegi v2 (AOT mode) |
+|---|---|---|---|---|
+| W1 headers | 2.3 | 12.7 | 5.0 | 5.2 |
+| W2 JSON | 13.1 | 23.9 (wrong output) | 39.5 | 38.3 |
+| W3 regexp | 1.2 | 6.1 | 3.2 | 3.3 |
+
+Allocations per request:
+
+| Workload | Go | yaegi v0 | yaegi v2 (VM mode) | yaegi v2 (AOT mode) |
+|---|---|---|---|---|
+| W1 headers | 31 | 255 | 75 | 75 |
+| W2 JSON | 104 | 337 | 374 | 369 |
+| W3 regexp | 22 | 149 | 65 | 65 |
+
+On W2, yaegi v0 ignores the `MarshalJSON` method of a plugin type and
+writes `{"Sec":1700000000,"Zone":"UTC"}`; Go and yaegi v2 write
+`"1700000000@UTC"`.
+
+### Interpreted code only
+
+`fib(35)`, recursive, best of 5:
+
+| Go | yaegi v0 | yaegi v2 |
+|---|---|---|
+| 28 ms | 7.1 s | 0.67 s |
+
+In AOT mode, a call into a library costs 1.9 to 20 times compiled Go
+(median 4.9×; sort is an outlier at 52× because it calls the program back
+at each comparison).
+
+### Load time and memory
+
+Measured on linux/amd64 on 23 October 2026 with the plugins of the catalog:
+
+| Measure | yaegi v0 | yaegi v2 (VM mode) | yaegi v2 (AOT mode) |
+|---|---|---|---|
+| Load of a catalog plugin, new process, median | 15 ms | 116 ms | 111 ms |
+
+- About 85 ms of the first load is the decoding of the embedded standard
+  library types, paid once per process. Next loads in the same process take
+  6 to 24 ms. The largest catalog plugin (traefikoidc) loads in 226 ms.
+- Memory kept after a load: about 16 MB for any plugin (the standard
+  library types, shared), 37 MB for traefikoidc, and 51 MB for the Coraza
+  WAF plugin with the OWASP CRS.
+- Memory per in-flight request: about 6 KB, as with yaegi v0.
+
+### Reproduce
+
+```bash
+(cd compare && go build -o ../bench ./bench)
+./bench -w w1 -cfg native,yaegi,vm-native,vm-aot   # also w2, w3
+```
+
 ## Documentation
 
 | Document | Content |
 |---|---|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | how the VM is built, file by file |
-| [docs/AOTGEN.md](docs/AOTGEN.md) | the AOT copies of reflect libraries: generation, results, limits |
 | [docs/SANDBOX.md](docs/SANDBOX.md) | the guard rails and their limits |
-| [docs/UNSAFE.md](docs/UNSAFE.md) | what `unsafe` can and cannot do in this value model |
-| [docs/RELOAD.md](docs/RELOAD.md) | the reload model: one `Plugin` for the life of the host, `New` at each new configuration |
 | [docs/BOUNDARY.md](docs/BOUNDARY.md) | every place where the standard library looks at the type or the methods of a value, with its test |
-| [docs/RESULTS.md](docs/RESULTS.md) | measured results: correctness, Traefik plugin catalog, speed, memory |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | layout, build and test, CI, following a new Go release |
 | [TODO.md](TODO.md) | open work, by priority |
 

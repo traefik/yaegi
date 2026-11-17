@@ -1,6 +1,6 @@
 // slices.Insert and slices.Replace with values that overlap the slice:
 // slices.overlaps compares the memory of the two slices (the unsafe
-// addresses of the VM depend on the subslice, docs/UNSAFE.md).
+// addresses of the VM depend on the subslice).
 package main
 
 import (

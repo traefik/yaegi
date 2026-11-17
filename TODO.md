@@ -3,12 +3,9 @@
 The open work on yaegi v2, by priority. Each fix needs a regression test that
 fails before it (see "Contributing" in the [README](README.md#contributing)).
 
-## 0. Migration from go-vm to yaegi v2
+## 0. Repository and releases
 
-Done: the interpreter formerly named go-vm is imported on branch `v2` on top
-of `master` (yaegi v0). The module is `github.com/traefik/yaegi/v2`, the CLI
-is `cmd/yaegi`, the study tools are in the separate module `compare/`, and
-the docs and messages say "yaegi v2". Left:
+Yaegi v2 lives on branch `v2`; `master` is yaegi v0.
 
 - [ ] **Nightly CI.** GitHub runs scheduled workflows only on the default
   branch (`master`, yaegi v0), so the nightly run of `ci.yml` does not run
@@ -176,7 +173,7 @@ boundary.
 
 - [ ] **Measure W1 to W3 again** on a quiet machine
   (`compare/bench/run.sh final 10 300ms`); the current times were measured on
-  a loaded machine (docs/BENCHMARKS.md).
+  a loaded machine.
 - [ ] **Trampolines still missing**: `...any` arguments other than basic
   types, the methods of packages outside `typesPkgs` of
   `vm/natsigs_gen.go`, and interface parameters other than `error`,
@@ -230,7 +227,7 @@ boundary.
 
 This work touches traefik/traefik and needs the maintainers' approval.
 
-- [ ] Reloads in the adapter, with the yaegi model (`docs/RELOAD.md`): one
+- [ ] Reloads in the adapter, with the yaegi model: one
   `Plugin` per plugin for the life of the process, `CreateConfig` and `New`
   at each new configuration, `Close` at shutdown, and a warning for the
   goroutines that a `New` left (`host.Leaks`).

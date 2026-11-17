@@ -269,7 +269,7 @@ func TestPluginCloseNoLimits(t *testing.T) {
 // TestLoadCachedClose loads a plugin again with LoadCached, builds an
 // instance, and closes the Plugin of the round before: the goroutines of a
 // closed Plugin stop. It logs the cost of each LoadCached. This is not the
-// reload model of a host (docs/RELOAD.md: one Plugin for the life of the
+// reload model of a host (one Plugin for the life of the
 // process, and New at each reload): LoadCached keeps its packages in the
 // program of the first load (TestLoadCachedKeepsProgram).
 func TestLoadCachedClose(t *testing.T) {
@@ -315,7 +315,7 @@ func TestLoadCachedClose(t *testing.T) {
 // of each call are added to the SSA program and the token.FileSet of the
 // first load, and stay there while the first Plugin lives, also after the
 // new Plugin is closed and dropped. This is why a host must not reload a
-// plugin with LoadCached (docs/RELOAD.md). The test fails when the cost per
+// plugin with LoadCached. The test fails when the cost per
 // call goes past 16 MB, and logs it (about 64 KB for this small plugin; it
 // grows with the code of the plugin).
 func TestLoadCachedKeepsProgram(t *testing.T) {

@@ -79,7 +79,7 @@ func main() {
 
 	// This program has its own reflect: a variable whose own address
 	// escapes keeps its cells, so reflect sets its fields through &r (a
-	// variable in bytes is read by reflect through a copy, docs/UNSAFE.md).
+	// variable in bytes is read by reflect through a copy).
 	var r struct {
 		Count int
 		Rate  float64

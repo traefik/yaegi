@@ -1350,7 +1350,7 @@ var ErrBudgetStopped = fmt.Errorf("%w: a request of the plugin was stopped (the 
 // reportBudget gives the first budget stop of the machine to GoPanic
 // (QuietBudget), then at most one *BudgetStopsError per
 // BudgetReportInterval while the stops go on. The Machine of a plugin lives
-// as long as the host (one Plugin per process, docs/RELOAD.md): with the
+// as long as the host (one Plugin per process): with the
 // first stop only, a plugin that starts to loop weeks after its first stop
 // was not seen in the logs, unless the host polled Machine.Stats.
 func (m *Machine) reportBudget() {

@@ -1,5 +1,5 @@
 // The two words of an interface read and written through unsafe, as real
-// libraries do (docs/UNSAFE.md): protobuf (protoreflect.ifaceHeader,
+// libraries do: protobuf (protoreflect.ifaceHeader,
 // impl.pointerOfIface), zerolog (isNilValue) and reflect2 (eface, and its
 // cache of types keyed by the type word).
 package main

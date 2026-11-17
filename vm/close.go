@@ -4,7 +4,7 @@ package vm
 //
 // A host loads a plugin once and keeps its Plugin for the life of the
 // process; it calls New at each reload of its configuration (Traefik), and
-// Close at shutdown (docs/RELOAD.md). The goroutines that one New call
+// Close at shutdown. The goroutines that one New call
 // started are an Instance (instance.go): Instance.Close stops them only,
 // in the same way as Close stops all the goroutines of the machine.
 //
@@ -223,7 +223,7 @@ func (p *Plugin) Close() error {
 // calls), it waits for that call too: with context.Background(), for ever.
 //
 // A host calls Close or CloseContext at shutdown, once its entry points
-// stopped serving (docs/RELOAD.md). It does not close the Plugin at a
+// stopped serving. It does not close the Plugin at a
 // reload of its configuration: it calls New again on the same Plugin, so
 // the package state of the plugin lives on, as under yaegi.
 func (p *Plugin) CloseContext(ctx context.Context) error {

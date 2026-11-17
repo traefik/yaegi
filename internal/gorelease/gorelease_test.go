@@ -101,8 +101,7 @@ func built(t *testing.T, expr string, minor int, goos, goarch string) bool {
 }
 
 // TestGuard checks the guard file: built by every release outside the
-// window, and, once built, a type error that carries the message. The build with a real newer toolchain is checked by hand (see
-// docs/AOTGEN.md): a test cannot download a toolchain.
+// window, and, once built, a type error that carries the message. The build with a real newer toolchain is checked by hand: a test cannot download a toolchain.
 func TestGuard(t *testing.T) {
 	src := Guard("test", "example.com/x/stdtypes", "go generate ./stdtypes")
 	fset := token.NewFileSet()
