@@ -7,6 +7,17 @@ body:
       value: |
         ⚠️ Make sure to browse the opened and closed issues before submit your issue.
 
+  - type: dropdown
+    id: major
+    attributes:
+      label: Yaegi major version
+      description: Which major version of Yaegi is affected?
+      options:
+        - v1
+        - v2
+    validations:
+      required: true
+
   - type: textarea
     id: sample
     attributes:
