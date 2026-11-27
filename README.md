@@ -12,8 +12,11 @@ and type check the code, and only adds an executor. The module is
 `github.com/traefik/yaegi/v2`. Yaegi v0 (module `github.com/traefik/yaegi`,
 releases v0.x) stays on branch `master`.
 
-**Status: experimental.** The API is not stable yet, and Traefik does not
-use yaegi v2 yet. Much of the code was written with AI assistance and is
+**Status: experimental.** The API is not stable yet. Traefik v3.8 can run
+its Yaegi plugins with yaegi v2, as an experimental option: set
+`experimental.defaultRuntimeVersion: v2` for all the plugins, or
+`runtimeVersion: v2` in the manifest (`.traefik.yml`) of one plugin. The
+default is still yaegi v0. Much of the code was written with AI assistance and is
 still under review. The open work is in [TODO.md](TODO.md).
 
 - [Why a v2](#why-a-v2)
